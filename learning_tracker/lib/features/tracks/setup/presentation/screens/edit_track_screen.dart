@@ -307,9 +307,18 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
           stackTrace: st,
         );
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.errorSaveTrackFailed)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                tutorSaveErrorText(
+                  l10n,
+                  e,
+                  fallback: l10n.errorSaveTrackFailed,
+                  learnerName: ref.read(tutorLearnerNameProvider),
+                ),
+              ),
+            ),
+          );
         }
         return;
       }
@@ -408,9 +417,18 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
           stackTrace: st,
         );
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.errorSaveTrackFailed)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                tutorSaveErrorText(
+                  l10n,
+                  e,
+                  fallback: l10n.errorSaveTrackFailed,
+                  learnerName: ref.read(tutorLearnerNameProvider),
+                ),
+              ),
+            ),
+          );
         }
         return;
       }

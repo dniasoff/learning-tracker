@@ -128,7 +128,7 @@ void main() {
   });
 
   for (final (code, message) in [
-    ('permission-denied', 'Grant lacks can_edit_learning'),
+    ('permission-denied', 'Grant is not active'),
     ('invalid-argument', 'A void must target a learn event'),
   ]) {
     testWidgets('a rejected correction ($code) leaves the row and list '
@@ -152,6 +152,33 @@ void main() {
       expect(h.analytics.captures, isEmpty);
     });
   }
+
+  testWidgets('a correction refused because the parent turned editing off '
+      'leaves the row unchanged and says so (DNI-487 AC-6)', (tester) async {
+    h.invoker.respond = (_) => throw FirebaseFunctionsException(
+      code: 'permission-denied',
+      message: 'Grant lacks can_edit_learning',
+    );
+    await pump(tester);
+
+    await tester.tap(_row(2));
+    await tester.pumpAndSettle();
+    await tester.tap(_action('remove'));
+    await tester.pumpAndSettle();
+
+    expect(h.invoker.calls, hasLength(1));
+    expect(
+      find.text("$tutorFixtureLearnerName's parent has turned off editing"),
+      findsOneWidget,
+    );
+    expect(find.text(_rolledBack), findsNothing);
+    expect(
+      find.descendant(of: _row(2), matching: find.text('Removed')),
+      findsNothing,
+    );
+    expect(find.text('Learning events: 2'), findsOneWidget);
+    expect(h.analytics.captures, isEmpty);
+  });
 
   group('place and date corrections (commands level)', () {
     test(

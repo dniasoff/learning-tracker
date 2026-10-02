@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
@@ -922,24 +923,46 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final repo = ref.read(goalRepositoryProvider);
     final paceTarget = result.paceTarget;
 
-    if (existingEntity == null) {
-      await repo.createGoal(
-        curriculumId: curriculum,
-        paceTarget: paceTarget,
-        description: result.description,
-        dateType: result.dateType,
-        paceGranularity: result.paceGranularityKey,
+    try {
+      if (existingEntity == null) {
+        await repo.createGoal(
+          curriculumId: curriculum,
+          paceTarget: paceTarget,
+          description: result.description,
+          dateType: result.dateType,
+          paceGranularity: result.paceGranularityKey,
+        );
+      } else {
+        await repo.updateGoal(
+          goal: existingEntity,
+          paceTarget: paceTarget,
+          clearPaceTarget: paceTarget == null,
+          description: result.description,
+          paceGranularity: result.paceGranularity,
+          clearLearningUnit: result.paceGranularityKey == null,
+        );
+      }
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event: 'track_detail_goal_save_failed',
+        exception: e,
+        stackTrace: st,
       );
-    } else {
-      await repo.updateGoal(
-        goal: existingEntity,
-        paceTarget: paceTarget,
-        // 'none' goals clear the pace target entirely.
-        clearPaceTarget: paceTarget == null,
-        description: result.description,
-        paceGranularity: result.paceGranularity,
-        clearLearningUnit: result.paceGranularityKey == null,
-      );
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              tutorSaveErrorText(
+                l10n,
+                e,
+                fallback: l10n.errorSaveFailed,
+                learnerName: ref.read(tutorLearnerNameProvider),
+              ),
+            ),
+          ),
+        );
+      }
+      return;
     }
 
     await onTrackChanged(ref);
