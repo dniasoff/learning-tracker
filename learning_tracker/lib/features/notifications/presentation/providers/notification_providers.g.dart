@@ -971,7 +971,14 @@ String _$allProfilesReminderBootstrapHash() =>
 ///
 /// Only the device's own selected profile is evaluated: in a tutored
 /// session the active learner is another profile, whose streak is not
-/// this device's to alert on.
+/// this device's to alert on. While the selected profile is not the active
+/// learner (no scope, logout, a tutored session) its alerts are cancelled,
+/// since its streak is no longer being evaluated; they are re-evaluated
+/// when it is the active learner again.
+///
+/// A run superseded while awaiting its inputs touches no alert: the alert
+/// work is serialized through [streakAlertWorkQueueProvider] and skipped
+/// once the run is stale.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -987,7 +994,14 @@ final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
 ///
 /// Only the device's own selected profile is evaluated: in a tutored
 /// session the active learner is another profile, whose streak is not
-/// this device's to alert on.
+/// this device's to alert on. While the selected profile is not the active
+/// learner (no scope, logout, a tutored session) its alerts are cancelled,
+/// since its streak is no longer being evaluated; they are re-evaluated
+/// when it is the active learner again.
+///
+/// A run superseded while awaiting its inputs touches no alert: the alert
+/// work is serialized through [streakAlertWorkQueueProvider] and skipped
+/// once the run is stale.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -1003,7 +1017,14 @@ final class StreakAlertSyncEffectProvider
   ///
   /// Only the device's own selected profile is evaluated: in a tutored
   /// session the active learner is another profile, whose streak is not
-  /// this device's to alert on.
+  /// this device's to alert on. While the selected profile is not the active
+  /// learner (no scope, logout, a tutored session) its alerts are cancelled,
+  /// since its streak is no longer being evaluated; they are re-evaluated
+  /// when it is the active learner again.
+  ///
+  /// A run superseded while awaiting its inputs touches no alert: the alert
+  /// work is serialized through [streakAlertWorkQueueProvider] and skipped
+  /// once the run is stale.
   ///
   /// Kept alive so that time/enable changes always trigger a reschedule,
   /// even if no UI is watching this provider at the moment.
@@ -1033,4 +1054,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'b21d03a99f980b9d4b411609d705981c6e5f2c56';
+    r'd3bbab20cc93df2a9e8d995df2f66fe64566235d';
