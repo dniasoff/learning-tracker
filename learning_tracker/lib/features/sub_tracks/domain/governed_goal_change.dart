@@ -25,6 +25,12 @@ String deadlineGoalDocId(String curriculumId) => '${curriculumId}_deadline';
 /// `goals/{curriculumId}_pace` (AD-43).
 String paceGoalDocId(String curriculumId) => '${curriculumId}_pace';
 
+/// The `pace_granularity` of a pace goal counted in the curriculum's leaf
+/// units: what the goal setup screen counts in for a curriculum without a
+/// unit picker (e.g. Mishnayos). A governed pace goal always carries a
+/// granularity (AD-43; `writeWithChangeLog` rejects one without it).
+const kLeafPaceGranularity = 'item';
+
 /// What the parent chose on the goal setup screen.
 sealed class GoalChoice {
   const GoalChoice();
@@ -45,7 +51,7 @@ final class PaceGoalChoice extends GoalChoice {
   const PaceGoalChoice({
     required this.value,
     required this.unit,
-    this.granularity,
+    required this.granularity,
   });
 
   /// How many.
@@ -54,8 +60,9 @@ final class PaceGoalChoice extends GoalChoice {
   /// The pace period, storage form (e.g. `per_week`).
   final String unit;
 
-  /// The learning granularity, storage form, if any.
-  final String? granularity;
+  /// The learning granularity, storage form ([kLeafPaceGranularity] for
+  /// leaf units). Required: AD-43 pace goals always carry one.
+  final String granularity;
 }
 
 /// No goal: any live goal of the curriculum is ended.
@@ -103,7 +110,7 @@ GovernedAction? governedGoalAction({
         },
         if (pace?.paceValue != value) 'pace_value': value,
         if (pace?.paceUnit != unit) 'pace_unit': unit,
-        if (granularity != null && pace?.paceGranularity != granularity)
+        if (pace?.paceGranularity != granularity)
           'pace_granularity': granularity,
         if (pace?.endedAt != null) 'ended_at': null,
       };

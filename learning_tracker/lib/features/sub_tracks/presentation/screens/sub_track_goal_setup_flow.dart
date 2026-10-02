@@ -172,6 +172,8 @@ GoalEntity? goalEntityOf(CurriculumId curriculum, CurriculumGoals? goals) {
 
 /// The governed choice of the goal screen's [result], or null for an
 /// incomplete result (a deadline without a date, a pace without a value).
+/// A pace without a granularity counts in leaf units
+/// ([kLeafPaceGranularity]).
 GoalChoice? goalChoiceOf(GoalEntity result) => switch (result.goalType) {
   'deadline' => switch (result.targetDate) {
     final date? => DeadlineGoalChoice(
@@ -183,7 +185,10 @@ GoalChoice? goalChoiceOf(GoalEntity result) => switch (result.goalType) {
     (final value?, final unit?) => PaceGoalChoice(
       value: value,
       unit: unit,
-      granularity: result.paceGranularityKey,
+      // A curriculum without a unit picker (e.g. Mishnayos) returns no
+      // granularity: it counts in leaf units, which a governed pace goal
+      // must still name (AD-43).
+      granularity: result.paceGranularityKey ?? kLeafPaceGranularity,
     ),
     _ => null,
   },
