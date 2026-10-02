@@ -781,5 +781,42 @@ void main() {
       gated.release();
       expect(await pending, MishnaCorrectionOutcome.applied);
     });
+
+    test('a move to Before tracking sends a replacement that clears the '
+        'date, and in flight the row shows no date', () async {
+      ports.events.seed(ports.scope, [historyLearn(1)]);
+      final fake = FakeLearningCommands();
+      final gated = GatedLearningCommands(fake);
+      final container = _container(ports, counted: {eid(1)}, commands: gated);
+      final history = await _history(container);
+      final original = history.items.single;
+      expect(original.learnedOn, isNotNull);
+
+      const replacement = EventReplacement(
+        source: LearningEvent.sourceMain,
+        dateState: DateState.beforeTracking,
+      );
+      final pending = container
+          .read(mishnaHistoryCorrectionsProvider(historyArgs).notifier)
+          .correct(original, const ReplaceEventRequest(replacement));
+      await pumpEventQueue();
+      final shown = container
+          .read(mishnaHistoryViewProvider(historyArgs))
+          .requireValue
+          .items
+          .single;
+      expect(shown.pending, isTrue);
+      expect(shown.isBeforeTracking, isTrue);
+      expect(shown.learnedOn, isNull);
+
+      final call = fake.calls.singleWhere((c) => c.name == 'replace');
+      expect(call.args['targetId'], eid(1));
+      final sent = call.args['replacement']! as EventReplacement;
+      expect(sent, replacement);
+      expect(sent.resolveLearnedOn(original.learnedOn), isNull);
+
+      gated.release();
+      expect(await pending, MishnaCorrectionOutcome.applied);
+    });
   });
 }

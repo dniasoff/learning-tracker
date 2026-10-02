@@ -230,9 +230,7 @@ MishnaHistoryItem optimisticItem(
     ref: e.ref!,
     source: source,
     dateState: dateState,
-    learnedOn: dateState == DateState.beforeTracking
-        ? null
-        : r.learnedOn ?? e.learnedOn,
+    learnedOn: r.resolveLearnedOn(e.learnedOn),
     recordedAt: effectiveAt(e),
     actor: e.actor,
     level: e.level,
