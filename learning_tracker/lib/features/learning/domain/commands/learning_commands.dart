@@ -32,6 +32,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_fail
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_chunker.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_dispatcher.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
 import 'package:learning_tracker/features/learning/domain/commands/unlearn_plan.dart';
 
 export 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart'
@@ -237,8 +238,10 @@ final class DefaultLearningCommands implements LearningCommands {
     GovernedLearningCommands? governed,
     SubTrackCommands? subTrackCommands,
     AchievementLatch? achievements,
+    SubTrackSourceCheck? sourceCheck,
   }) : _scope = scope,
        _achievements = achievements,
+       _sourceCheck = sourceCheck,
        _pointsWait = pointsWait,
        _actor = actor,
        _reads = reads,
@@ -263,6 +266,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final UtcClock _clock;
   final UlidSource _newUlid;
   final GovernedLearningCommands? _governed;
+  final SubTrackSourceCheck? _sourceCheck;
   final SubTrackCommands? _subTrackCommands;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
@@ -335,6 +339,20 @@ final class DefaultLearningCommands implements LearningCommands {
   static bool _validSource(String source) =>
       source == LearningEvent.sourceMain || isUlid(source);
 
+  /// Whether [source] may name a learn event of [curriculumId]: `main`, or
+  /// a live sub-track of that curriculum in this scope when a
+  /// [SubTrackSourceCheck] is bound (AD-33). A check that throws or times
+  /// out fails closed.
+  Future<bool> _sourceAllowed(String curriculumId, String source) async {
+    final check = _sourceCheck;
+    if (source == LearningEvent.sourceMain || check == null) return true;
+    try {
+      return await check(curriculumId, source);
+    } on Object {
+      return false;
+    }
+  }
+
   @override
   Future<CaptureResult> capture({
     required String curriculumId,
@@ -346,6 +364,7 @@ final class DefaultLearningCommands implements LearningCommands {
     int? stage,
   }) => _gated((stamp, history) async {
     if (curriculumId.isEmpty || !_validSource(source)) return _invalid;
+    if (!await _sourceAllowed(curriculumId, source)) return _invalid;
     if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
       return _invalid;
     }
@@ -446,6 +465,12 @@ final class DefaultLearningCommands implements LearningCommands {
     final fields = _resolve(target, replacement, stamp, history);
     if (fields == null) return _invalid;
     if (fields.sameAs(target)) return const CaptureResult.success();
+    final newSource = replacement.source;
+    if (newSource != null &&
+        newSource != target.source &&
+        !await _sourceAllowed(target.curriculumId!, newSource)) {
+      return _invalid;
+    }
     if (fields.redate &&
         _actor.role == ActorRole.child &&
         !childMayRedate(

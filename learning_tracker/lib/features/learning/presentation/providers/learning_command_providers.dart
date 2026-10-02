@@ -32,7 +32,12 @@ import 'package:learning_tracker/features/learning/domain/commands/governed_acti
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
+<<<<<<< HEAD
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
+=======
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
+>>>>>>> 79dd8695e (fix(sub-tracks): DNI-501 owner capture checks a sub-track source belongs to the learner and curriculum)
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -224,6 +229,8 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     newUlid: newUlid,
     governed: governed,
     achievements: achievements,
+    // A sub-track source must be live in this learner's scope and curriculum.
+    sourceCheck: subTrackSourceCheckFrom(subTracks, scope),
   );
   // Recover any latch a failed check left absent (app start, learner
   // switch); runs in the background and retries its own failures.
