@@ -142,6 +142,7 @@ final class FakeLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
   }) async => _record('capture', {
     'curriculumId': curriculumId,
     'refs': refs,
@@ -150,6 +151,7 @@ final class FakeLearningCommands implements LearningCommands {
     'dateState': dateState,
     'learnedOn': learnedOn,
     'stage': stage,
+    if (skipRecorded) 'skipRecorded': true,
   }, events: refs.length + nodes.length);
 
   @override

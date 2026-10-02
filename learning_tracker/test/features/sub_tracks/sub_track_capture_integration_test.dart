@@ -263,6 +263,42 @@ void main() {
     expect(find.text('All ground recorded'), findsOneWidget);
   });
 
+  testWidgets('a leaf another device records while the picker is open is '
+      'not written again (stale picker, AC-2)', (tester) async {
+    final rig = await _pump(
+      tester,
+      rig: CaptureRig(
+        now: _evening,
+        subTracks: [fixtureSubTrack(schoolId, 'School')],
+      ),
+    );
+    await tester.tap(find.byKey(Key('subTrackUpTo-$schoolId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Berakhot 1:3'));
+    await tester.pump();
+    // The rows are frozen as first loaded; meanwhile another device
+    // records 1:2 in School.
+    rig.recordElsewhere(
+      engineLearn(1, 'Mishnah Berakhot 1:2', source: schoolId, minutes: 600),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('upToRecord')));
+    await tester.pumpAndSettle();
+    expect(
+      [for (final e in rig.written) e.ref],
+      ['Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:3'],
+    );
+    expect(
+      [
+        for (final e in rig.events)
+          if (e.isLearn && e.ref == 'Mishnah Berakhot 1:2') e,
+      ],
+      hasLength(1),
+      reason: 'never written twice',
+    );
+    expect(find.text('Recorded 2'), findsOneWidget);
+  });
+
   testWidgets('Cancel records nothing (AC-4)', (tester) async {
     final rig = await _pump(tester);
     await _pickTargetUntick(tester);
