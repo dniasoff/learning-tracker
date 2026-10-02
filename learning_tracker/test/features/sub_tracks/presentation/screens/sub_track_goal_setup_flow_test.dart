@@ -122,6 +122,29 @@ void main() {
     ]);
   });
 
+  testWidgets(
+    'a pace goal on a curriculum without a unit picker saves with the leaf '
+    'granularity',
+    (tester) async {
+      h = SubTrackHarness();
+      await pumpFlow(tester);
+      // Drive the real goal screen: Mishnayos has no granularity picker.
+      await tester.tap(find.text('Pace'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(FilledButton));
+      await settleCommands(tester);
+      await tester.pumpAndSettle();
+      expect(outcome, SubTrackGoalSetupOutcome.saved);
+      expect(h.commands.governed, hasLength(1));
+      final fields =
+          h.commands.governed.single.changes.single.docs.single.fields;
+      expect(fields['goal_type'], 'pace');
+      expect(fields['pace_unit'], 'per_day');
+      expect(fields['pace_value'], isA<num>());
+      expect(fields['pace_granularity'], kLeafPaceGranularity);
+    },
+  );
+
   testWidgets('a refused governed save is reported as failed', (tester) async {
     h = SubTrackHarness();
     h.commands.nextGovernedResult = const CaptureResult.onlineRequired();
@@ -179,7 +202,8 @@ void main() {
       ),
       isA<PaceGoalChoice>()
           .having((c) => c.value, 'value', 3)
-          .having((c) => c.unit, 'unit', 'per_day'),
+          .having((c) => c.unit, 'unit', 'per_day')
+          .having((c) => c.granularity, 'granularity', kLeafPaceGranularity),
     );
     expect(
       goalChoiceOf(

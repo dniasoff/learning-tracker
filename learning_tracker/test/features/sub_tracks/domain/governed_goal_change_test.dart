@@ -138,6 +138,27 @@ void main() {
     );
   });
 
+  test('a leaf-unit pace goal still names its granularity', () {
+    expect(
+      _action(
+        const PaceGoalChoice(
+          value: 4,
+          unit: 'per_week',
+          granularity: kLeafPaceGranularity,
+        ),
+      ),
+      GovernedAction([
+        _goal('mishnayos_pace', {
+          'goal_type': 'pace',
+          'curriculum_id': _c,
+          'pace_value': 4,
+          'pace_unit': 'per_week',
+          'pace_granularity': 'item',
+        }),
+      ]),
+    );
+  });
+
   test('no goal ends every live goal doc and nothing else', () {
     expect(
       _action(
