@@ -109,6 +109,9 @@ bool isVelocityEvent(LearningEvent e, int? firstStage) {
 /// * Status: [ProjectionStatus.noDeadline] without a live [deadline];
 ///   otherwise [ProjectionStatus.onTrack] when the finish is on or before
 ///   `target_date`, else [ProjectionStatus.behindPace].
+/// * `deadline` = the live [deadline]'s `target_date` (null without one)
+///   and `newlyLearntToday` = the [newlyLearnt] leaves dated [today], in
+///   every status (DNI-502).
 Projection deriveProjection({
   required Map<LeafRef, CivilDate> newlyLearnt,
   required CivilDate? historyStart,
@@ -116,9 +119,18 @@ Projection deriveProjection({
   required int remaining,
   required DeadlineGoal? deadline,
 }) {
+  var learntToday = 0;
+  for (final day in newlyLearnt.values) {
+    if (day == today) learntToday++;
+  }
   final window = velocityWindow(historyStart: historyStart, through: today);
-  if (window == null)
-    return const Projection(status: ProjectionStatus.tooEarly);
+  if (window == null) {
+    return Projection(
+      status: ProjectionStatus.tooEarly,
+      deadline: deadline?.targetDate,
+      newlyLearntToday: learntToday,
+    );
+  }
   final (from: windowStart, days: windowDays) = window;
   var learnt = 0;
   for (final day in newlyLearnt.values) {
@@ -149,6 +161,8 @@ Projection deriveProjection({
     status: status,
     velocityPerDay: velocity,
     projectedFinish: finish,
+    deadline: deadline?.targetDate,
+    newlyLearntToday: learntToday,
   );
 }
 
