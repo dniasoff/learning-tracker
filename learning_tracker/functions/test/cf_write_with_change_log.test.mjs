@@ -925,3 +925,150 @@ describe('ownerOversizedGovernedWrite — wire contract fixture', () => {
     });
   }
 });
+
+// ── Story 2.1 / DNI-492 — sub-track create claim, replay and AD-45 ──────────
+// The callable is the only path that CLAIMS a create (ruling B6); the owner
+// offline path is an ordinary doc + entry batch (rules suite). Windows are
+// open-ended from 2020 so the cases count on any run date.
+
+describe('writeWithChangeLog — sub-track create claim, replay and AD-45 (DNI-492)', () => {
+  const SC = 'shas';
+  const track = (overrides = {}) => ({
+    curriculum_id: SC, name: 'Night seder', type: 'ongoing', window_start: '2020-01-01',
+    rate_per_week: 5, weeks_per_year: 40, learns_on_shabbos: false,
+    ground: [{ level: 'masechta', ref: 'Berakhot' }], ...overrides,
+  });
+  const subTrackAction = (entryId, docId, fields, mode) =>
+    ownerAction(entryId, 'subTrack', docId, [{ collection: 'sub_tracks', docId, fields, ...(mode ? { mode } : {}) }]);
+  const subTracks = () => profileRef().collection('sub_tracks');
+  const seedTracks = async (n, overrides = {}) => {
+    for (let i = 0; i < n; i++) {
+      await subTracks().doc(ulid(900 + i)).set({ ...track(overrides), last_change_id: ulid(0) });
+    }
+  };
+  async function expectViolation(promise, code, violations) {
+    await assert.rejects(promise, (err) => {
+      assert.equal(err.code ?? err.httpErrorCode?.canonicalName, code, err.message);
+      assert.deepEqual(err.details?.sub_track_violations, violations);
+      return true;
+    });
+  }
+
+  beforeEach(async () => {
+    await seedProfile();
+  });
+
+  test('claims an absent sub-track: before null per field, last_change_id stamped', async () => {
+    const id = ulid(500);
+    const res = await call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), id, track(), 'create'), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+    const [entry] = await changeLog();
+    assert.equal(entry.entity, 'subTrack');
+    assert.equal(entry.entity_id, id);
+    for (const v of Object.values(entry.before)) assert.equal(v, null);
+    assert.equal(entry.after[`sub_tracks/${id}.name`], 'Night seder');
+    const doc = (await subTracks().doc(id).get()).data();
+    assert.equal(doc.last_change_id, ulid(1));
+    assert.equal(doc.rate_per_week, 5);
+  });
+
+  test('an identical ULID replay returns the stored result and writes nothing new', async () => {
+    const id = ulid(500);
+    const action = subTrackAction(ulid(1), id, track(), 'create');
+    const first = await call(fns.ownerOversizedGovernedWrite, action, parentAuth);
+    const again = await call(fns.ownerOversizedGovernedWrite, action, parentAuth);
+    assert.equal(again.replayed, true);
+    assert.deepEqual(again.change_ids, first.change_ids);
+    assert.equal((await changeLog()).length, 1);
+  });
+
+  test('a non-replay create of an existing sub-track is rejected, not overwritten', async () => {
+    const id = ulid(500);
+    await call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), id, track(), 'create'), parentAuth);
+    await expectHttpsError(
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(2), id, track({ name: 'Other' }), 'create'), parentAuth),
+      'already-exists',
+    );
+    assert.equal((await subTracks().doc(id).get()).data().name, 'Night seder');
+  });
+
+  test('a sixth counting ongoing sub-track → failed-precondition ongoing_limit, nothing written', async () => {
+    await seedTracks(5);
+    await expectViolation(
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track()), parentAuth),
+      'failed-precondition', ['ongoing_limit'],
+    );
+    assert.equal((await subTracks().doc(ulid(500)).get()).exists, false);
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('ended and passed-window sub-tracks do not count toward the cap', async () => {
+    await seedTracks(4);
+    await subTracks().doc(ulid(950)).set({ ...track({ window_end: '2000-01-01' }), last_change_id: ulid(0) });
+    await subTracks().doc(ulid(951)).set({
+      ...track(), ended_at: new Date('2021-01-01T00:00:00Z'), end_reason: 'ended', last_change_id: ulid(0),
+    });
+    const res = await call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track()), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+  });
+
+  test('editing one of six reconciled ongoing sub-tracks (name only) is tolerated', async () => {
+    await seedTracks(6);
+    const res = await call(fns.ownerOversizedGovernedWrite,
+      subTrackAction(ulid(1), ulid(900), { name: 'Renamed' }, 'update'), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+  });
+
+  test('a create on a calendar-program curriculum → calendar_program_curriculum', async () => {
+    await profileRef().collection('profile_programs').doc(SC).set({
+      curriculum_id: SC, program_id: 'daf_yomi', tracking_start_date: '2026-01-01', last_change_id: ulid(0),
+    });
+    await expectViolation(
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track()), parentAuth),
+      'failed-precondition', ['calendar_program_curriculum'],
+    );
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('setting a calendar program on a curriculum with a non-ended sub-track → calendar_program_has_sub_tracks', async () => {
+    await seedTracks(1);
+    await expectViolation(
+      call(fns.ownerOversizedGovernedWrite, ownerAction(ulid(1), 'mainTrackProgram', SC, [{
+        collection: 'profile_programs', docId: SC,
+        fields: { curriculum_id: SC, program_id: 'daf_yomi', tracking_start_date: '2026-01-01' },
+      }]), parentAuth),
+      'failed-precondition', ['calendar_program_has_sub_tracks'],
+    );
+    assert.equal((await profileRef().collection('profile_programs').doc(SC).get()).exists, false);
+  });
+
+  test('a calendar program is allowed once every sub-track is ended', async () => {
+    await subTracks().doc(ulid(900)).set({
+      ...track(), ended_at: new Date('2021-01-01T00:00:00Z'), end_reason: 'deleted', last_change_id: ulid(0),
+    });
+    const res = await call(fns.ownerOversizedGovernedWrite, ownerAction(ulid(1), 'mainTrackProgram', SC, [{
+      collection: 'profile_programs', docId: SC,
+      fields: { curriculum_id: SC, program_id: 'daf_yomi', tracking_start_date: '2026-01-01' },
+    }]), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+  });
+
+  test('malformed intent → invalid-argument naming each rule (AC-5)', async () => {
+    await expectViolation(
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track({
+        ground: [{ level: 'masechta', ref: 'Berakhot' }, { level: 'masechta', ref: 'Berakhot' }],
+        rate_per_week: 0, window_end: '2019-01-01',
+      })), parentAuth),
+      'invalid-argument', ['duplicate_ground', 'non_positive_rate', 'window_reversed'],
+    );
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('ending a sub-track over the cap is always allowed (tombstones skip limits)', async () => {
+    await seedTracks(6);
+    const res = await call(fns.ownerOversizedGovernedWrite,
+      subTrackAction(ulid(1), ulid(905), { ended_at: true, end_reason: 'ended' }, 'update'), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+    assert.equal((await subTracks().doc(ulid(905)).get()).data().end_reason, 'ended');
+  });
+});
