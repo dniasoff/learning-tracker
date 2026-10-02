@@ -11,7 +11,8 @@
 /// 3. tri-state and main-track position (DNI-465; order and held ground
 ///    by DNI-467);
 /// 4. completed units (DNI-465);
-/// 5. planning, streak, points (DNI-466, 467, 468).
+/// 5. streak (`streak.dart`, DNI-466: per curriculum, evaluated
+///    curricula only); planning and points (DNI-467, 468).
 ///
 /// No I/O, clock read or global state: every input is in
 /// [LearnerStateInputs], and identical inputs give equal outputs.
@@ -30,12 +31,14 @@ import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
 import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_position.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ordered_leaves.dart';
 import 'package:learning_tracker/domain/learner_state/predicates.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
+import 'package:learning_tracker/domain/learner_state/streak.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 /// One calendar program assignment: [node] is assigned on [date].
@@ -103,6 +106,10 @@ final class LearnerStateInputs {
   final DateTime nowUtc;
 }
 
+/// How far before `nowUtc` locks are computed: enough for every catch-up
+/// window that can still be open (AD-40 streak pending days).
+const Duration _streakLookBack = Duration(days: 21);
+
 /// The pure learner-state engine.
 final class LearnerStateEngine {
   /// The engine has no state.
@@ -120,6 +127,7 @@ final class LearnerStateEngine {
       inputs.settingsHistory,
       inputs.events,
       inputs.nowUtc,
+      lookBack: _streakLookBack,
     );
     final counted = countEvents(
       inputs.events,
@@ -138,7 +146,7 @@ final class LearnerStateEngine {
       nowUtc: inputs.nowUtc,
       curricula: {
         for (final c in curricula)
-          c: _curriculum(c, inputs, learnsByCurriculum[c] ?? const []),
+          c: _curriculum(c, inputs, learnsByCurriculum[c] ?? const [], locks),
       },
       countedEventIds: counted.countedIds,
       lockIgnoredEventIds: counted.lockIgnoredIds,
@@ -151,6 +159,7 @@ final class LearnerStateEngine {
     String curriculumId,
     LearnerStateInputs inputs,
     List<LearningEvent> learns,
+    List<LockWindow> locks,
   ) {
     final corpus = inputs.corpora[curriculumId];
     final intent = inputs.mainTrackIntent[curriculumId];
@@ -192,6 +201,14 @@ final class LearnerStateEngine {
         countedLearns: learns,
         firstStage: firstStage,
       ),
+      streak: evaluated
+          ? curriculumStreak(
+              learns,
+              settingsHistory: inputs.settingsHistory,
+              locks: locks,
+              nowUtc: inputs.nowUtc,
+            )
+          : null,
     );
   }
 
