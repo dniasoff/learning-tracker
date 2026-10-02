@@ -141,6 +141,29 @@ describe('inviteTutor', () => {
     );
     assert.equal(after.tutor_uid, TUTOR, 'tutor_uid must not be cleared');
   });
+
+  // DNI-487 review: the active-state check and the grant write share one
+  // transaction (and acceptance re-reads the grant in its own), so a
+  // re-invite racing acceptance can never leave a pending grant behind a live
+  // tutor_active_access index doc, or activate a reissued invite blindly.
+  test('a re-invite racing acceptance leaves grant state and access index consistent', async () => {
+    const { grantId } = await call(fns.inviteTutor, goodArgs, parentAuth);
+    await seedAuthUser({ uid: TUTOR, email: goodArgs.tutorEmail, emailVerified: true });
+
+    await Promise.allSettled([
+      call(fns.inviteTutor, goodArgs, parentAuth),
+      call(fns.acceptTutorInvite, { grantId }),
+    ]);
+
+    const after = (await db.collection('tutor_grants').doc(grantId).get()).data();
+    const access = await db
+      .collection('tutor_active_access')
+      .doc(`${TUTOR}_${PARENT}_${PROFILE}`)
+      .get();
+    assert.equal(after.state === 'active', access.exists,
+      `grant state ${after.state} must match the access index (exists=${access.exists})`);
+    if (after.state === 'active') assert.equal(after.invite_token, undefined);
+  });
 });
 
 // ── inviteTutor — AD-53 can_edit_learning (Story 1.25 / DNI-487 AC-1, AC-4) ──

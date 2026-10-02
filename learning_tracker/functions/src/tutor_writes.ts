@@ -270,17 +270,20 @@ export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
   if (typeof completionId !== "string" || !completionId)
     throw new HttpsError("invalid-argument", "completionId must be a non-empty string");
 
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_learning",
-  );
-
-  const completionRef = profilePath.collection("completions").doc(completionId);
-
-  // Capture before-value for audit log.
-  const beforeSnap = await completionRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await completionRef.delete();
+  // The grant check and the delete run in ONE transaction (AD-53, DNI-487
+  // AC-6): a revocation that commits first aborts the delete (the grant is
+  // re-read on retry and denied), so a revoked tutor can never remove a
+  // completion.
+  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
+    const verified = await verifyTutorGrant(
+      callerUid, grantId, ownerUid, profileId, "can_edit_learning", txn,
+    );
+    const completionRef = verified.profilePath.collection("completions").doc(completionId);
+    // Capture before-value for audit log.
+    const beforeSnap = await txn.get(completionRef);
+    txn.delete(completionRef);
+    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,

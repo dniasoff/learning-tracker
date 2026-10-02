@@ -55,100 +55,19 @@ interface CompletionPayload {
   points: number;
 }
 
-export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
-  // ── 1. Authentication check ────────────────────────────────────────────
-  const callerUid = request.auth?.uid;
-  if (!callerUid) {
-    throw new HttpsError("unauthenticated", "Must be signed in");
-  }
-
-  // ── 2. Input validation ────────────────────────────────────────────────
-  const { grantId, ownerUid, profileId, completions } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId) {
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  }
-  if (typeof ownerUid !== "string" || !ownerUid) {
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  }
-  if (typeof profileId !== "string" || !profileId) {
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  }
-  if (!Array.isArray(completions) || completions.length === 0) {
-    throw new HttpsError("invalid-argument", "completions must be a non-empty array");
-  }
-  if (completions.length > MAX_BULK_COMPLETIONS) {
-    throw new HttpsError(
-      "invalid-argument",
-      `completions array exceeds max size of ${MAX_BULK_COMPLETIONS}`
-    );
-  }
-
-  // ── 3. Grant verification ──────────────────────────────────────────────
-  const grantRef = db.collection("tutor_grants").doc(grantId);
-  const grantSnap = await grantRef.get();
-
-  if (!grantSnap.exists) {
-    throw new HttpsError("not-found", `Grant not found: ${grantId}`);
-  }
-
-  const grant = grantSnap.data()!;
-
-  // Verify grant is active.
-  if (grant.state !== "active") {
-    throw new HttpsError(
-      "permission-denied",
-      `Grant ${grantId} is not active (state=${grant.state})`
-    );
-  }
-
-  // Verify caller is the tutor on this grant.
-  if (grant.tutor_uid !== callerUid) {
-    throw new HttpsError(
-      "permission-denied",
-      "Grant tutor_uid does not match caller uid"
-    );
-  }
-
-  // Verify ownerUid matches the grant's parent_uid (caller sanity check).
-  if (grant.parent_uid !== ownerUid) {
-    throw new HttpsError(
-      "permission-denied",
-      "Grant parent_uid does not match supplied ownerUid"
-    );
-  }
-
-  // Verify the profile ID matches the grant's child_profile_id.
-  if (String(grant.child_profile_id) !== String(profileId)) {
-    throw new HttpsError(
-      "permission-denied",
-      "Grant child_profile_id does not match supplied profileId"
-    );
-  }
-
-  // ── 4. Permission check: can_edit_learning (AD-53, DNI-487) ────────────
-  // Recording prior learning is a learning write, so it follows the single
-  // parent-set `can_edit_learning` permission and fails closed: a grant
-  // without it (every pre-AD-53 grant) is read-only. The legacy
-  // `can_bulk_prior_completion` key is no longer consulted. This callable is
-  // itself retired by Story 1.26 (DNI-488).
-  const permissions = grant.permissions ?? {};
-  if (permissions.can_edit_learning !== true) {
-    throw new HttpsError(
-      "permission-denied",
-      "Grant lacks can_edit_learning"
-    );
-  }
-
-  // ── 5. Enforce bulk-prior only — no live-forward completions ─────────────
-  // LOAD-BEARING SECURITY CHECK: completedAt MUST be strictly in the past.
-  // "Past" means before today's UTC midnight. This is the Cloud Function
-  // enforcement of the canMarkLiveCompletion=false policy (W4.34).
-  // Even one live completion in the batch rejects the entire request.
+/**
+ * Enforce bulk-prior only — no live-forward completions.
+ *
+ * LOAD-BEARING SECURITY CHECK: completedAt MUST be strictly in the past.
+ * "Past" means before today's UTC midnight. This is the Cloud Function
+ * enforcement of the canMarkLiveCompletion=false policy (W4.34).
+ * Even one live completion in the batch rejects the entire request.
+ */
+function assertBulkPriorPayload(completions: CompletionPayload[]): void {
   const todayUtcMidnight = new Date();
   todayUtcMidnight.setUTCHours(0, 0, 0, 0);
 
-  for (const completion of completions as CompletionPayload[]) {
+  for (const completion of completions) {
     const completedAt = new Date(completion.completedAt);
     if (isNaN(completedAt.getTime())) {
       throw new HttpsError(
@@ -186,44 +105,137 @@ export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
       throw new HttpsError("invalid-argument", "stageId must be an integer");
     }
   }
+}
 
-  // ── 6. Write completions as the owner (Admin SDK) ─────────────────────
-  // All writes are batched. Each completion document is written to the owner's
-  // profile subcollection, indistinguishable from an owner-written completion.
-  // The tutor_uid is stored as `created_by_tutor_uid` for audit purposes.
+export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
+  // ── 1. Authentication check ────────────────────────────────────────────
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  // ── 2. Input validation ────────────────────────────────────────────────
+  const { grantId, ownerUid, profileId, completions } = request.data ?? {};
+
+  if (typeof grantId !== "string" || !grantId) {
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  }
+  if (typeof ownerUid !== "string" || !ownerUid) {
+    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
+  }
+  if (typeof profileId !== "string" || !profileId) {
+    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
+  }
+  if (!Array.isArray(completions) || completions.length === 0) {
+    throw new HttpsError("invalid-argument", "completions must be a non-empty array");
+  }
+  if (completions.length > MAX_BULK_COMPLETIONS) {
+    throw new HttpsError(
+      "invalid-argument",
+      `completions array exceeds max size of ${MAX_BULK_COMPLETIONS}`
+    );
+  }
+
+  // ── 3. Grant verification + writes in ONE transaction (AD-53, DNI-487) ──
+  // The grant is read inside the same transaction that writes the
+  // completions, so a revocation (state change or can_edit_learning=false)
+  // that commits first aborts this write: on retry the grant is re-read and
+  // denied. A revoked tutor can never land a completion (AC-6).
+  const grantRef = db.collection("tutor_grants").doc(grantId);
   const profilePath = db
     .collection("users")
     .doc(ownerUid)
     .collection("learner_profiles")
     .doc(String(profileId));
-
-  // Firestore max batch size is 500 — we already validated the input cap.
-  const batch = db.batch();
   const writtenAt = admin.firestore.Timestamp.now();
 
-  for (const completion of completions as CompletionPayload[]) {
-    const completionRef = profilePath
-      .collection("completions")
-      .doc(completion.completionId);
+  // Firestore allows 500 writes per transaction — the input cap matches.
+  const grant = await db.runTransaction(async (txn) => {
+    const grantSnap = await txn.get(grantRef);
 
-    batch.set(completionRef, {
-      completion_id: completion.completionId,
-      curriculum_id: completion.curriculumId,
-      sefaria_ref: completion.sefariaRef,
-      stage_id: completion.stageId,
-      track_type: completion.trackType,
-      completed_at: admin.firestore.Timestamp.fromDate(new Date(completion.completedAt)),
-      points: completion.points,
-      // Provenance — identifies this as a tutor-proxied write.
-      created_by_tutor_uid: callerUid,
-      grant_id: grantId,
-      written_at: writtenAt,
-    });
-  }
+    if (!grantSnap.exists) {
+      throw new HttpsError("not-found", `Grant not found: ${grantId}`);
+    }
 
-  await batch.commit();
+    const g = grantSnap.data()!;
 
-  // ── 7. Write audit log entry ───────────────────────────────────────────
+    // Verify grant is active.
+    if (g.state !== "active") {
+      throw new HttpsError(
+        "permission-denied",
+        `Grant ${grantId} is not active (state=${g.state})`
+      );
+    }
+
+    // Verify caller is the tutor on this grant.
+    if (g.tutor_uid !== callerUid) {
+      throw new HttpsError(
+        "permission-denied",
+        "Grant tutor_uid does not match caller uid"
+      );
+    }
+
+    // Verify ownerUid matches the grant's parent_uid (caller sanity check).
+    if (g.parent_uid !== ownerUid) {
+      throw new HttpsError(
+        "permission-denied",
+        "Grant parent_uid does not match supplied ownerUid"
+      );
+    }
+
+    // Verify the profile ID matches the grant's child_profile_id.
+    if (String(g.child_profile_id) !== String(profileId)) {
+      throw new HttpsError(
+        "permission-denied",
+        "Grant child_profile_id does not match supplied profileId"
+      );
+    }
+
+    // Permission check: can_edit_learning (AD-53, DNI-487). Recording prior
+    // learning is a learning write, so it follows the single parent-set
+    // `can_edit_learning` permission and fails closed: a grant without it
+    // (every pre-AD-53 grant) is read-only. The legacy
+    // `can_bulk_prior_completion` key is no longer consulted. This callable
+    // is itself retired by Story 1.26 (DNI-488).
+    const permissions = g.permissions ?? {};
+    if (permissions.can_edit_learning !== true) {
+      throw new HttpsError(
+        "permission-denied",
+        "Grant lacks can_edit_learning"
+      );
+    }
+
+    // Payload checks run after the grant checks (unchanged order).
+    assertBulkPriorPayload(completions as CompletionPayload[]);
+
+    // Write completions as the owner (Admin SDK). Each completion document
+    // lands in the owner's profile subcollection, indistinguishable from an
+    // owner-written completion; the tutor_uid is kept as
+    // `created_by_tutor_uid` for audit purposes.
+    for (const completion of completions as CompletionPayload[]) {
+      const completionRef = profilePath
+        .collection("completions")
+        .doc(completion.completionId);
+
+      txn.set(completionRef, {
+        completion_id: completion.completionId,
+        curriculum_id: completion.curriculumId,
+        sefaria_ref: completion.sefariaRef,
+        stage_id: completion.stageId,
+        track_type: completion.trackType,
+        completed_at: admin.firestore.Timestamp.fromDate(new Date(completion.completedAt)),
+        points: completion.points,
+        // Provenance — identifies this as a tutor-proxied write.
+        created_by_tutor_uid: callerUid,
+        grant_id: grantId,
+        written_at: writtenAt,
+      });
+    }
+
+    return g;
+  });
+
+  // ── 4. Write audit log entry ───────────────────────────────────────────
   const auditRef = db
     .collection("tutor_grants")
     .doc(grantId)

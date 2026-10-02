@@ -134,23 +134,6 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
   const encodedEmail = encodeEmailForDocId(normalEmail);
   const grantId = `${encodedEmail}__${callerUid}__${childProfileId}`;
 
-  // AUD-firebase-02: grantId is deterministic, so a second inviteTutor call
-  // for the same tutor+child pair would otherwise silently overwrite the
-  // SAME doc unconditionally — resetting an already-active grant back to
-  // 'pending' with fresh request-supplied default permissions (while the
-  // existing tutor_active_access index doc is untouched, leaving the tutor
-  // with live read access even though tutor_grants.state now says
-  // 'pending'). Reject re-invites while the grant is active; the caller
-  // should use the permission-editing flow instead.
-  const existingSnap = await db.collection("tutor_grants").doc(grantId).get();
-  if (existingSnap.exists && existingSnap.data()!.state === "active") {
-    throw new HttpsError(
-      "failed-precondition",
-      `A tutor grant for ${normalEmail} on this child is already active. ` +
-        "Use the permission-editing flow to change it instead of re-inviting."
-    );
-  }
-
   const now = admin.firestore.Timestamp.now();
   const expiresAt = new Date(now.toDate().getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -173,7 +156,30 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
     expires_at: admin.firestore.Timestamp.fromDate(expiresAt),
   };
 
-  await db.collection("tutor_grants").doc(grantId).set(grantData, { merge: false });
+  // AUD-firebase-02: grantId is deterministic, so a second inviteTutor call
+  // for the same tutor+child pair would otherwise silently overwrite the
+  // SAME doc unconditionally — resetting an already-active grant back to
+  // 'pending' with fresh request-supplied permissions (while the existing
+  // tutor_active_access index doc is untouched, leaving the tutor with live
+  // read access even though tutor_grants.state now says 'pending'). Reject
+  // re-invites while the grant is active; the caller should use the
+  // permission-editing flow instead.
+  //
+  // The active-state check and the overwrite run in ONE transaction, so an
+  // acceptance that commits between them aborts this write (re-read on retry
+  // and rejected) instead of reverting the active grant to pending.
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  await db.runTransaction(async (txn) => {
+    const existingSnap = await txn.get(grantRef);
+    if (existingSnap.exists && existingSnap.data()!.state === "active") {
+      throw new HttpsError(
+        "failed-precondition",
+        `A tutor grant for ${normalEmail} on this child is already active. ` +
+          "Use the permission-editing flow to change it instead of re-inviting."
+      );
+    }
+    txn.set(grantRef, grantData, { merge: false });
+  });
 
   logger.info(`inviteTutor: parent=${callerUid} grantId=${grantId} email=${normalEmail}`);
   return { success: true, grantId };
@@ -260,6 +266,23 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
   const accessId = buildAccessId(callerUid, parentUid, profileId);
 
   await db.runTransaction(async (txn) => {
+    // 0. Re-read the grant inside the transaction (DNI-487): a concurrent
+    //    re-invite or revoke that committed after the pre-checks above must
+    //    not be activated blindly. Require the same pending invite that was
+    //    validated — same state and same single-use token.
+    const freshSnap = await txn.get(grantRef);
+    const fresh = freshSnap.data();
+    if (
+      !freshSnap.exists ||
+      fresh!.state !== "pending" ||
+      fresh!.invite_token !== grant.invite_token
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Grant ${grantId} changed while accepting; reopen the invite`
+      );
+    }
+
     // 1. Update the grant document.
     txn.update(grantRef, {
       state: "active",
