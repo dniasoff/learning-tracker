@@ -14,6 +14,8 @@ const _a = 'Mishnah Berakhot 1:1';
 const _b = 'Mishnah Berakhot 1:2';
 const _e1 = '01ARZ3NDEKTSV4RRFFQ69G0001';
 const _e2 = '01ARZ3NDEKTSV4RRFFQ69G0002';
+const _d = 'Mishnah Berakhot 1:3';
+const _e3 = '01ARZ3NDEKTSV4RRFFQ69G0003';
 
 void main() {
   late ProviderContainer c;
@@ -56,6 +58,46 @@ void main() {
       ..dropEvents([_e2]);
     expect(c.read(pendingCapturesProvider).refsOf(_c, _school), {_a});
     pending.dropEvents([_e1]);
+    expect(c.read(pendingCapturesProvider).entries, isEmpty);
+  });
+
+  test('a partly rejected capture keeps only its saved leaves, each bound '
+      'to its own event', () {
+    final token = pending.add(_c, _school, [_a, _b, _d]);
+    // The first chunk (_a, _b) was rejected; only _e3 was saved.
+    pending.bind(token, [_e1, _e2, _e3], notSaved: [_e1, _e2]);
+    expect(c.read(pendingCapturesProvider).refsOf(_c, _school), {_d});
+    expect(c.read(pendingCapturesProvider).entries.single.refs, {_e3: _d});
+    pending.dropEvents([_e3]);
+    expect(c.read(pendingCapturesProvider).entries, isEmpty);
+  });
+
+  test('a failure reported before its capture binds is never bound as '
+      'recorded', () {
+    final token = pending.add(_c, _school, [_a, _b]);
+    pending
+      ..rollBack([_e2])
+      ..bind(token, [_e1, _e2]);
+    expect(c.read(pendingCapturesProvider).refsOf(_c, _school), {_a});
+    // A saved retry forgets the failure.
+    pending.retried([_e2]);
+    final again = pending.add(_c, _school, [_b]);
+    pending.bind(again, [_e2]);
+    expect(c.read(pendingCapturesProvider).refsOf(_c, _school), {_a, _b});
+  });
+
+  test('a later rejection rolls back exactly its leaves', () {
+    final token = pending.add(_c, _school, [_a, _b]);
+    pending
+      ..bind(token, [_e1, _e2])
+      ..rollBack([_e1]);
+    expect(c.read(pendingCapturesProvider).refsOf(_c, _school), {_b});
+  });
+
+  test('a plan that does not match the leaves one to one drops the '
+      'capture', () {
+    final token = pending.add(_c, _school, [_a, _b]);
+    pending.bind(token, [_e1]);
     expect(c.read(pendingCapturesProvider).entries, isEmpty);
   });
 

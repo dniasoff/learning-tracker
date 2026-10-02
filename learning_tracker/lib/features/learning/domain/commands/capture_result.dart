@@ -20,6 +20,7 @@ sealed class CaptureResult {
     bool queued,
     List<ChangedSinceField> changedSince,
     List<String> keptNotCounted,
+    List<String> rejectedEventIds,
   }) = CaptureSuccess;
 
   /// Refused: the learner is inside lock [window] (AD-36).
@@ -49,10 +50,20 @@ final class CaptureSuccess extends CaptureResult {
     this.queued = false,
     this.changedSince = const [],
     this.keptNotCounted = const [],
+    this.rejectedEventIds = const [],
   });
 
   /// The learning events written.
   final List<String> eventIds;
+
+  /// The learning events of a partly rejected command that the server
+  /// rejected for good (each chunk is now in
+  /// `LearningCommands.watchPendingFailures` with a retry; AD-54
+  /// Recovery); disjoint from [eventIds]. Empty unless some, but not
+  /// every, chunk was rejected within the ack window — a command whose
+  /// every chunk is rejected is [CaptureRejection.notSaved]. Added by
+  /// DNI-501 so a caller can tell which of its leaves were not saved.
+  final List<String> rejectedEventIds;
 
   /// The change-log entries written.
   final List<String> changeIds;
@@ -90,6 +101,7 @@ final class CaptureSuccess extends CaptureResult {
       other.queued == queued &&
       _listEquals(other.changedSince, changedSince) &&
       _listEquals(other.keptNotCounted, keptNotCounted);
+      _listEquals(other.rejectedEventIds, rejectedEventIds);
 
   @override
   int get hashCode => Object.hash(
@@ -99,6 +111,7 @@ final class CaptureSuccess extends CaptureResult {
     queued,
     Object.hashAll(changedSince),
     Object.hashAll(keptNotCounted),
+    Object.hashAll(rejectedEventIds),
   );
 
   @override

@@ -59,9 +59,10 @@ class _Rows extends ConsumerWidget {
     final writable = ref.watch(subTrackWritesAllowedProvider);
     final pending = ref.watch(pendingCapturesProvider);
     return PendingCaptureFailureListener(
-      onFailure: (failure) => ref
-          .read(pendingCapturesProvider.notifier)
-          .dropEvents(failure.eventIds),
+      onFailure: (failure) =>
+          ref.read(pendingCapturesProvider.notifier).rollBack(failure.eventIds),
+      onRetried: (failure) =>
+          ref.read(pendingCapturesProvider.notifier).retried(failure.eventIds),
       child: Column(
         key: const Key('subTrackSection'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
