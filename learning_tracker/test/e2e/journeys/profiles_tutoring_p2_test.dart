@@ -80,8 +80,6 @@ Future<void> _insertTrack(
     curriculumId: track.curriculumId,
     state: track.state,
     activatedAt: track.activatedAt,
-    stateChangedAt: track.stateChangedAt,
-    paceResetDate: track.paceResetDate,
   );
 }
 

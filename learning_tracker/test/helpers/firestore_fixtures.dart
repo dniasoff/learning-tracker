@@ -94,15 +94,11 @@ Future<void> seedTrack(
   required CurriculumId curriculumId,
   String state = 'active',
   DateTime? activatedAt,
-  DateTime? stateChangedAt,
-  DateTime? paceResetDate,
 }) async {
   final track = CurriculumTrackEntity(
     curriculumId: curriculumId,
     state: state,
-    stateChangedAt: _fixtureTime(stateChangedAt ?? activatedAt),
     activatedAt: _fixtureTime(activatedAt),
-    paceResetDate: paceResetDate,
   );
   await firestore
       .collection('users')

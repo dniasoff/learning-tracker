@@ -122,28 +122,6 @@ Map<String, dynamic> learnerProfileMap({
   'updatedAt': updatedAt,
 };
 
-/// Returns a `curriculumTracks` row using the current (W3.28/W3.29)
-/// `state` / `stateChangedAt` shape. `importData()` also back-compat-parses
-/// the older `isActive` / `deactivatedAt` shape, but new fixtures should
-/// use this one — it is what a real export produces today.
-Map<String, dynamic> curriculumTrackMap({
-  int id = 1,
-  int profileId = 1,
-  String curriculumId = 'bavli',
-  String state = 'active',
-  String stateChangedAt = '2026-01-01T00:00:00.000Z',
-  String activatedAt = '2026-01-01T00:00:00.000Z',
-  String? paceResetDate,
-}) => {
-  'id': id,
-  'profileId': profileId,
-  'curriculumId': curriculumId,
-  'state': state,
-  'stateChangedAt': stateChangedAt,
-  'activatedAt': activatedAt,
-  'paceResetDate': paceResetDate,
-};
-
 /// Returns a `curriculumScopes` row.
 Map<String, dynamic> curriculumScopeMap({
   int id = 1,

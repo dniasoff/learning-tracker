@@ -562,7 +562,6 @@ void main() {
             CurriculumTrackEntity(
               curriculumId: c,
               state: 'active',
-              stateChangedAt: DateTime.utc(2026),
               activatedAt: DateTime.utc(2026),
             ),
         ],

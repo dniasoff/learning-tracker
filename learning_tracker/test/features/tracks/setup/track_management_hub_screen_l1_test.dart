@@ -43,7 +43,6 @@ const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 CurriculumTrackEntity _track(CurriculumId curriculum) => CurriculumTrackEntity(
   curriculumId: curriculum,
   state: 'active',
-  stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
 );
 

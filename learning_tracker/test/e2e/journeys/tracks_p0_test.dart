@@ -45,8 +45,6 @@ Future<void> _seedTrack(
     curriculumId: stub.curriculumId,
     state: stub.state,
     activatedAt: stub.activatedAt,
-    stateChangedAt: stub.stateChangedAt,
-    paceResetDate: stub.paceResetDate,
   );
 }
 

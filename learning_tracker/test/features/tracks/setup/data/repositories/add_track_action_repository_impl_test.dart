@@ -328,7 +328,7 @@ void main() {
       expect(track['ended_at'], isNull);
       expect(track['state'], 'active');
       expect(track['activated_at'], before['activated_at']);
-      expect(track['state_changed_at'], before['state_changed_at']);
+      expect(track, isNot(contains('state_changed_at')));
       // Prior stages, study days, scope and goal are untouched.
       expect(
         await writer.doc('stage_definitions', 'mishnayos_3'),
@@ -356,7 +356,6 @@ void main() {
         await firestore.doc(trackPath).set({
           'curriculum_id': 'mishnayos',
           'state': 'active',
-          'state_changed_at': '2026-01-01T00:00:00.000Z',
           'activated_at': '2026-01-01T00:00:00.000Z',
           'ended_at': DateTime.utc(2026, 9, 5),
         });
@@ -392,7 +391,6 @@ void main() {
       await firestore.doc(trackPath).set({
         'curriculum_id': 'mishnayos',
         'state': 'retired',
-        'state_changed_at': '2026-01-01T00:00:00.000Z',
         'activated_at': '2025-01-01T00:00:00.000Z',
         'ended_at': DateTime.utc(2026, 9, 5),
       });

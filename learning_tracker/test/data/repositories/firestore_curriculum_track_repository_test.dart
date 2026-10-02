@@ -110,7 +110,37 @@ void main() {
 
       expect(track.state, CurriculumTrackState.active.storageKey);
       expect(track.isActive, isTrue);
-      expect(track.activatedAt, track.stateChangedAt);
+      expect(track.activatedAt, isNotNull);
+    });
+
+    test('R16 (DNI-484): the activation write carries only live keys — no '
+        'state_changed_at, pace_reset_date, last_reorder_at, progress '
+        'passthrough or governed updated_at / synced_at', () async {
+      final repo = buildRepo();
+      await repo.activateTrack(CurriculumId.mishnayos);
+      await repo.activateTrack(CurriculumId.bavli);
+      await repo.retireTrack(CurriculumId.mishnayos);
+      await repo.activateTrack(CurriculumId.mishnayos);
+
+      final data = (await rawDoc(CurriculumId.mishnayos).get()).data()!;
+      for (final key in const [
+        'state_changed_at',
+        'purged',
+        'purged_at',
+        'pace_reset_date',
+        'last_reorder_at',
+        'progress_schema_version',
+        'progress_computed_at',
+        'progress_model',
+        'program_progress',
+        'self_paced_progress',
+        'updated_at',
+        'synced_at',
+      ]) {
+        expect(data, isNot(contains(key)), reason: key);
+      }
+      expect(data['state'], CurriculumTrackState.active.storageKey);
+      expect(data['activated_at'], isA<String>());
     });
 
     test('is idempotent: re-activating an already-active track returns the '
@@ -121,11 +151,10 @@ void main() {
       final second = await repo.activateTrack(CurriculumId.bavli);
 
       expect(second.activatedAt, first.activatedAt);
-      expect(second.stateChangedAt, first.stateChangedAt);
     });
 
     test(
-      'reactivates a retired track, bumping activatedAt/stateChangedAt',
+      'reactivates a retired track, bumping activatedAt',
       () async {
         final repo = buildRepo();
         await repo.activateTrack(CurriculumId.mishnayos);
@@ -141,23 +170,19 @@ void main() {
       },
     );
 
-    test('reactivating a retired track does not clear a previously-set '
-        'paceResetDate (matches TrackDao.activateTrack: paceResetDate is '
-        'never touched by the reactivation branch)', () async {
+    test('R16 (DNI-484): a legacy pace_reset_date stamp is never read back '
+        'or rewritten — pace intent is the goals/{c}_pace doc only', () async {
       final repo = buildRepo();
       await repo.activateTrack(CurriculumId.mishnayos);
       await repo.activateTrack(CurriculumId.bavli);
-      // A legacy pace-reset stamp (Reset pace is retired; the stamp stays).
       await rawDoc(CurriculumId.mishnayos).set({
         'pace_reset_date': '2026-01-01T00:00:00.000Z',
       }, SetOptions(merge: true));
-      final beforeRetire = await repo.getTrack(CurriculumId.mishnayos);
-      expect(beforeRetire!.paceResetDate, isNotNull);
       await repo.retireTrack(CurriculumId.mishnayos);
 
       final reactivated = await repo.activateTrack(CurriculumId.mishnayos);
 
-      expect(reactivated.paceResetDate, beforeRetire.paceResetDate);
+      expect(reactivated.toFirestore(), isNot(contains('pace_reset_date')));
     });
   });
 
@@ -187,13 +212,13 @@ void main() {
       await repo.activateTrack(CurriculumId.mishnayos);
       await repo.activateTrack(CurriculumId.bavli);
       await repo.retireTrack(CurriculumId.mishnayos);
-      final retired = await repo.getTrack(CurriculumId.mishnayos);
+      final before = (await rawDoc(CurriculumId.mishnayos).get()).data();
 
-      // Second retire must not throw and must not touch stateChangedAt again.
+      // Second retire must not throw and must not write anything.
       await repo.retireTrack(CurriculumId.mishnayos);
 
-      final stillRetired = await repo.getTrack(CurriculumId.mishnayos);
-      expect(stillRetired!.stateChangedAt, retired!.stateChangedAt);
+      final after = (await rawDoc(CurriculumId.mishnayos).get()).data();
+      expect(after, before);
     });
 
     test('throws StateError when this is the profile\'s only active '
@@ -317,7 +342,7 @@ void main() {
       final good = await repo.activateTrack(CurriculumId.mishnayos);
       await rawDoc(CurriculumId.bavli).set({
         'curriculum_id': CurriculumId.bavli.storageKey,
-        // state / state_changed_at / activated_at deliberately missing.
+        // state deliberately missing.
       });
 
       final all = await repo.getAllTracks();
@@ -331,9 +356,9 @@ void main() {
       final repo = buildRepo();
       final good = await repo.activateTrack(CurriculumId.mishnayos);
       await rawDoc(CurriculumId.bavli).set({
-        'curriculum_id': CurriculumId.bavli.storageKey,
+        // An unknown curriculum_id: decode throws for this document only.
+        'curriculum_id': 'not-a-real-curriculum',
         'state': CurriculumTrackState.active.storageKey,
-        // state_changed_at / activated_at deliberately missing.
       });
 
       final active = await repo.getActiveTracks();

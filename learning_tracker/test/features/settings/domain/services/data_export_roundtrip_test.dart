@@ -46,7 +46,6 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.mishnayos,
       state: 'retired',
-      paceResetDate: DateTime.utc(2026, 2, 3),
     );
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
@@ -55,7 +54,7 @@ void main() {
     final track = collectionDocuments(profile, 'curriculum_tracks');
     expect(track, hasLength(1));
     expect(documentData(track.single)['state'], 'retired');
-    expect(documentData(track.single)['pace_reset_date'], isNotNull);
+    expect(documentData(track.single)['activated_at'], isNotNull);
   });
 
   test('exports goal with all fields serialized', () async {

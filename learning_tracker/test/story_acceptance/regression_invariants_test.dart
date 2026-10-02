@@ -126,7 +126,6 @@ void main() {
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos,
             activatedAt: originalActivatedAt,
-            stateChangedAt: originalActivatedAt,
           );
           // The repository protects the last active curriculum from archival.
           await seedTrack(
@@ -168,7 +167,7 @@ void main() {
                 CurriculumId.mishnayos,
               )).where(
                 (completion) =>
-                    !completion.completedAt.isBefore(restored.activatedAt),
+                    !completion.completedAt.isBefore(restored.activatedAt!),
               );
           expect(
             currentSession,
@@ -207,7 +206,6 @@ void main() {
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos,
             activatedAt: originalActivatedAt,
-            stateChangedAt: originalActivatedAt,
           );
           await seedTrack(
             firestore,

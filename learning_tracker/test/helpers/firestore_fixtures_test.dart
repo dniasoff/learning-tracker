@@ -104,7 +104,6 @@ void main() {
     expect(track.data(), {
       'curriculum_id': 'bavli',
       'state': 'active',
-      'state_changed_at': _time.toIso8601String(),
       'activated_at': _time.toIso8601String(),
     });
 

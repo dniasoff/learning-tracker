@@ -88,7 +88,6 @@ CurriculumTrackEntity stubTrack({
   return CurriculumTrackEntity(
     curriculumId: curriculum,
     state: 'active',
-    stateChangedAt: now,
     activatedAt: now,
   );
 }

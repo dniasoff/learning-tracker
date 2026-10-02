@@ -8,48 +8,51 @@
 /// guard, decode leniency in a live collection) is covered by
 /// `test/data/repositories/firestore_curriculum_track_repository_test.dart`.
 ///
-/// `curriculum_tracks` has a real `.hasOnly()` field whitelist
-/// (`firestore.rules`, `match /curriculum_tracks/{trackId}`): `profile_id`,
-/// `track_id`, `curriculum_id`, `state`, `state_changed_at`, `activated_at`,
-/// `pace_reset_date`, `progress_schema_version`, `progress_computed_at`,
-/// `progress_model`, `program_progress`, `self_paced_progress`, `synced_at`,
-/// `purged`, `purged_at`. The field-name test below asserts `toFirestore`'s
-/// key set is a subset of exactly that list — a key outside it would be
-/// silently accepted by every local test (`fake_cloud_firestore`'s rules
-/// companion cannot evaluate `request.resource`) while failing with
-/// permission-denied in production.
+/// DNI-484 (R16): the codec carries only the live fields — `curriculum_id`,
+/// `state` and the display-only `activated_at`. The retired fields
+/// (`state_changed_at`, `purged`, `purged_at`, `pace_reset_date`,
+/// `last_reorder_at`, `progress_schema_version`, `progress_computed_at`,
+/// `progress_model`, `program_progress`, `self_paced_progress`, the governed
+/// `updated_at` / `synced_at`) are never encoded and never surfaced on
+/// decode.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
-/// The exact firestore.rules `curriculum_tracks` `.hasOnly()` whitelist.
+/// The firestore.rules `curriculum_tracks` `.hasOnly()` whitelist after R16.
 const _rulesWhitelist = <String>{
   'profile_id',
   'track_id',
   'curriculum_id',
   'state',
-  'state_changed_at',
   'activated_at',
+  'last_change_id',
+  'ended_at',
+};
+
+/// Every R16 retired `curriculum_tracks` key.
+const _retiredKeys = <String>[
+  'state_changed_at',
+  'purged',
+  'purged_at',
   'pace_reset_date',
+  'last_reorder_at',
   'progress_schema_version',
   'progress_computed_at',
   'progress_model',
   'program_progress',
   'self_paced_progress',
+  'updated_at',
   'synced_at',
-  'purged',
-  'purged_at',
-};
+];
 
 void main() {
   final base = CurriculumTrackEntity(
     curriculumId: CurriculumId.chumash,
     state: CurriculumTrackState.active.storageKey,
-    stateChangedAt: DateTime.utc(2026, 1, 1),
     activatedAt: DateTime.utc(2026, 1, 1),
-    paceResetDate: DateTime.utc(2026, 1, 2),
   );
 
   group('CurriculumTrackState', () {
@@ -85,8 +88,6 @@ void main() {
         final entity = CurriculumTrackEntity(
           curriculumId: CurriculumId.chumash,
           state: state,
-          stateChangedAt: DateTime.utc(2026, 1, 1),
-          activatedAt: DateTime.utc(2026, 1, 1),
         );
         expect(entity.isActive, isFalse, reason: 'state=$state');
       }
@@ -94,31 +95,13 @@ void main() {
   });
 
   group('round-trip', () {
-    test('every field survives toFirestore -> fromFirestore, including '
-        'paceResetDate', () {
+    test('curriculum_id, state and activated_at survive toFirestore -> '
+        'fromFirestore', () {
       final decoded = curriculumTrackFromFirestore(base.toFirestore());
 
       expect(decoded.curriculumId, base.curriculumId);
       expect(decoded.state, base.state);
-      expect(decoded.stateChangedAt, base.stateChangedAt);
       expect(decoded.activatedAt, base.activatedAt);
-      expect(decoded.paceResetDate, base.paceResetDate);
-    });
-
-    test('no paceResetDate: field is omitted from the payload and decodes '
-        'back to null', () {
-      final neverReset = CurriculumTrackEntity(
-        curriculumId: CurriculumId.bavli,
-        state: CurriculumTrackState.active.storageKey,
-        stateChangedAt: DateTime.utc(2026, 1, 3),
-        activatedAt: DateTime.utc(2026, 1, 3),
-      );
-
-      final payload = neverReset.toFirestore();
-      expect(payload, isNot(contains('pace_reset_date')));
-
-      final decoded = curriculumTrackFromFirestore(payload);
-      expect(decoded.paceResetDate, isNull);
     });
 
     test('an unrecognised state string round-trips as-is — decode does not '
@@ -126,86 +109,85 @@ void main() {
       final decoded = curriculumTrackFromFirestore({
         'curriculum_id': 'chumash',
         'state': 'some-future-state',
-        'state_changed_at': '2026-01-01T00:00:00.000Z',
-        'activated_at': '2026-01-01T00:00:00.000Z',
       });
 
       expect(decoded.state, 'some-future-state');
       expect(decoded.isActive, isFalse);
     });
+  });
 
-    test('progress passthrough fields (schema_version/computed_at/model/'
-        'program_progress/self_paced_progress) and syncedAt are decode-only '
-        '— never written by toFirestore even when set on the entity, but '
-        'decode back when the document already has them (e.g. a future '
-        'progress-writer or a tutor-CF-stamped synced_at)', () {
-      final withPassthrough = CurriculumTrackEntity(
-        curriculumId: CurriculumId.nach,
-        state: CurriculumTrackState.active.storageKey,
-        stateChangedAt: DateTime.utc(2026, 1, 4),
-        activatedAt: DateTime.utc(2026, 1, 4),
-        progressSchemaVersion: 1,
-        progressComputedAt: DateTime.utc(2026, 1, 5),
-        progressModel: 'self_paced',
-        programProgress: {'percent': 42},
-        selfPacedProgress: {'percent': 42},
-        syncedAt: DateTime.utc(2026, 1, 6),
-      );
-
-      final payload = withPassthrough.toFirestore();
-      for (final key in [
-        'progress_schema_version',
-        'progress_computed_at',
-        'progress_model',
-        'program_progress',
-        'self_paced_progress',
-        'synced_at',
-      ]) {
-        expect(payload, isNot(contains(key)), reason: key);
-      }
-
+  group('R16 retired fields (DNI-484)', () {
+    test('a minimal document (state only, no activated_at, no retired '
+        'field) decodes; activatedAt is null', () {
       final decoded = curriculumTrackFromFirestore({
-        ...payload,
+        'curriculum_id': 'bavli',
+        'state': 'retired',
+      });
+      expect(decoded.state, 'retired');
+      expect(decoded.activatedAt, isNull);
+    });
+
+    test('a track without activated_at encodes no activated_at key', () {
+      final payload = const CurriculumTrackEntity(
+        curriculumId: CurriculumId.bavli,
+        state: 'active',
+      ).toFirestore();
+      expect(payload.keys.toSet(), {'curriculum_id', 'state'});
+    });
+
+    test('a legacy document carrying every retired field at once decodes, '
+        'and re-encoding it drops every retired key', () {
+      final legacy = <String, dynamic>{
+        'curriculum_id': 'nach',
+        'state': 'active',
+        'activated_at': '2026-01-04T00:00:00.000Z',
+        'state_changed_at': '2026-01-04T00:00:00.000Z',
+        'purged': false,
+        'purged_at': '2026-01-05T00:00:00.000Z',
+        'pace_reset_date': '2026-01-06T00:00:00.000Z',
+        'last_reorder_at': '2026-01-07T00:00:00.000Z',
         'progress_schema_version': 2,
         'progress_computed_at': '2026-01-07T00:00:00.000Z',
         'progress_model': 'program',
         'program_progress': {'percent': 7},
         'self_paced_progress': {'percent': 9},
+        'updated_at': '2026-01-08T00:00:00.000Z',
         'synced_at': '2026-01-08T00:00:00.000Z',
-      });
-      expect(decoded.progressSchemaVersion, 2);
-      expect(decoded.progressComputedAt, DateTime.utc(2026, 1, 7));
-      expect(decoded.progressModel, 'program');
-      expect(decoded.programProgress, {'percent': 7});
-      expect(decoded.selfPacedProgress, {'percent': 9});
-      expect(decoded.syncedAt, DateTime.utc(2026, 1, 8));
+      };
+      final decoded = curriculumTrackFromFirestore(legacy);
+      expect(decoded.state, 'active');
+      expect(decoded.activatedAt, DateTime.utc(2026, 1, 4));
+
+      final payload = decoded.toFirestore();
+      for (final key in _retiredKeys) {
+        expect(payload, isNot(contains(key)), reason: key);
+      }
+    });
+
+    test('pace_reset_date can never be encoded: no entity field or '
+        'constructor parameter carries it', () {
+      final payload = base.toFirestore();
+      expect(payload, isNot(contains('pace_reset_date')));
+      expect(payload.keys.toSet(), {'curriculum_id', 'state', 'activated_at'});
     });
   });
 
   group('field names match the firestore.rules `curriculum_tracks` '
       '.hasOnly() whitelist', () {
-    test('toFirestore emits exactly the expected snake_case keys', () {
+    test('toFirestore emits exactly the live snake_case keys', () {
       expect(base.toFirestore().keys.toSet(), <String>{
         'curriculum_id',
         'state',
-        'state_changed_at',
         'activated_at',
-        'pace_reset_date',
       });
     });
 
     test('every key toFirestore can ever emit is inside the rules '
-        '.hasOnly() whitelist', () {
-      final full = base.toFirestore();
-      final minimal = CurriculumTrackEntity(
-        curriculumId: CurriculumId.bavli,
-        state: CurriculumTrackState.retired.storageKey,
-        stateChangedAt: DateTime.utc(2026, 1, 1),
-        activatedAt: DateTime.utc(2026, 1, 1),
-      ).toFirestore();
-
-      expect(_rulesWhitelist.containsAll(full.keys), isTrue);
-      expect(_rulesWhitelist.containsAll(minimal.keys), isTrue);
+        '.hasOnly() whitelist, and no retired key is in it', () {
+      expect(_rulesWhitelist.containsAll(base.toFirestore().keys), isTrue);
+      for (final key in _retiredKeys) {
+        expect(_rulesWhitelist, isNot(contains(key)), reason: key);
+      }
     });
   });
 
@@ -218,16 +200,10 @@ void main() {
     });
   });
 
-  group('state_changed_at/activated_at/pace_reset_date are ISO-8601 Strings '
-      '— documented-safe here: curriculum_tracks has no is-timestamp rules '
-      'guard at all (unlike completions/streak_events/learning_ledger/'
-      'points_ledger)', () {
-    test('toFirestore encodes all three date fields as String, not '
-        'DateTime', () {
-      final payload = base.toFirestore();
-      expect(payload['state_changed_at'], isA<String>());
-      expect(payload['activated_at'], isA<String>());
-      expect(payload['pace_reset_date'], isA<String>());
+  group('activated_at is an ISO-8601 String — documented-safe here: '
+      'curriculum_tracks has no is-timestamp rules guard', () {
+    test('toFirestore encodes activated_at as String, not DateTime', () {
+      expect(base.toFirestore()['activated_at'], isA<String>());
     });
   });
 
@@ -235,7 +211,6 @@ void main() {
     Map<String, dynamic> validMap() => {
       'curriculum_id': 'chumash',
       'state': 'active',
-      'state_changed_at': '2026-01-01T00:00:00.000Z',
       'activated_at': '2026-01-01T00:00:00.000Z',
     };
 
@@ -271,20 +246,9 @@ void main() {
       );
     });
 
-    test('throws FormatException when state_changed_at is missing', () {
-      final data = validMap()..remove('state_changed_at');
-      expect(
-        () => curriculumTrackFromFirestore(data),
-        throwsA(isA<FormatException>()),
-      );
-    });
-
-    test('throws FormatException when activated_at is missing', () {
+    test('a missing activated_at is not an error (display-only field)', () {
       final data = validMap()..remove('activated_at');
-      expect(
-        () => curriculumTrackFromFirestore(data),
-        throwsA(isA<FormatException>()),
-      );
+      expect(curriculumTrackFromFirestore(data).activatedAt, isNull);
     });
 
     test('a fully valid map decodes without throwing', () {

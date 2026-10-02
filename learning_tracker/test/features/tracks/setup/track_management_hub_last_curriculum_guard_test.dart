@@ -22,7 +22,6 @@ class _Router extends Mock implements StackRouter {}
 final _track = CurriculumTrackEntity(
   curriculumId: CurriculumId.mishnayos,
   state: 'active',
-  stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
 );
 

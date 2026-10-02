@@ -40,7 +40,8 @@ void main() {
   // ── Track parity ──────────────────────────────────────────────────────────────
   //
   // TrackConfigMerger reads via TrackCodec.decode:
-  //   curriculum_id, state, activated_at, state_changed_at, pace_reset_date.
+  //   curriculum_id, state, activated_at (R16, DNI-484: state_changed_at and
+  //   pace_reset_date are retired).
   // TutorWriteService passes the typed track payload to the CF; doc-id is
   // supplied as the callable's trackId argument.
 
@@ -56,7 +57,6 @@ void main() {
           'curriculum_id': 'mishnayos',
           'state': 'active',
           'activated_at': now.toIso8601String(),
-          'state_changed_at': now.toIso8601String(),
         };
 
         await service.upsertTrack(
@@ -89,9 +89,9 @@ void main() {
           reason: 'TrackCodec.decode reads activated_at',
         );
         expect(
-          trackData['state_changed_at'],
-          now.toIso8601String(),
-          reason: 'TrackCodec.decode reads state_changed_at (LWW timestamp)',
+          trackData,
+          isNot(contains('state_changed_at')),
+          reason: 'R16: state_changed_at is retired',
         );
 
         // Doc-id supplied to the current callable seam.

@@ -915,7 +915,6 @@ void main() {
       final track = CurriculumTrackEntity(
         curriculumId: CurriculumId.mishnayos,
         state: 'active',
-        stateChangedAt: now,
         activatedAt: now,
       );
 

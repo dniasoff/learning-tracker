@@ -68,7 +68,6 @@ Future<void> _seedTrack(
     uid: identity.accountId,
     profileId: identity.profileId,
     curriculumId: stub.curriculumId,
-    stateChangedAt: stub.stateChangedAt,
     activatedAt: stub.activatedAt,
   );
 }
