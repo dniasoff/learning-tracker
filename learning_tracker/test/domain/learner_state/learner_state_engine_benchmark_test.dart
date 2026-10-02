@@ -17,7 +17,9 @@
 // named-device run is part of the release verification sweep.
 //
 // Tagged `perf` (ruling B12): excluded from the blocking main lane and run
-// by `make test-perf` in the non-blocking CI `perf` job.
+// by `make test-perf` in the non-blocking CI `perf` job. It also skips
+// unless `CI` is set or `LT_PERF=1` (perfGateSkipReason), so a plain
+// `flutter test` on a shared, loaded host never runs it.
 @Tags(['perf'])
 library;
 
@@ -311,72 +313,77 @@ Duration _reportStage(
 }
 
 void main() {
-  test('AR-11/NFR-5: full LearnerState with the report projection < '
-      '${kRecomputeBudget.inMilliseconds} ms; report stage ≤ '
-      '${kProjectionDeltaBudget.inMilliseconds} ms ($_leafEvents leaf + '
-      '$_nodeEvents node events, ${_curricula.length} curricula, 15 '
-      'sub-tracks; $kReferenceDevice)', () {
-    final corpora = {for (final c in _curricula) c: bundledCorpus(c)};
-    final inputs = _inputs(corpora);
-    expect(inputs.subTracks, hasLength(15));
-    expect(
-      inputs.subTracks.where((s) => reportGroupKey(s.name) == 'school'),
-      hasLength(8),
-    );
-    expect(
-      inputs.events.where((e) => e.isLearn && e.level != null),
-      hasLength(_nodeEvents),
-    );
-    const engine = LearnerStateEngine();
-
-    final cold = Stopwatch()..start();
-    final state = engine.run(inputs);
-    cold.stop();
-    final school = state['mishnayos']!.report.groups.firstWhere(
-      (g) => g.key == 'school',
-    );
-    expect(school.members, hasLength(8));
-    expect(state[_retired]!.report.allSources, isNull);
-    for (final c in _curricula) {
-      expect(state[c]!.report.distinctLearnt, state[c]!.distinctLearnt);
-    }
-
-    var total = const Duration(days: 1);
-    for (var run = 0; run < _warmRuns; run++) {
-      final sw = Stopwatch()..start();
-      final again = engine.run(inputs);
-      sw.stop();
-      expect(again['mishnayos']!.report, state['mishnayos']!.report);
-      if (sw.elapsed < total) total = sw.elapsed;
-    }
-
-    var delta = const Duration(days: 1);
-    for (var run = 0; run < _warmRuns; run++) {
-      final d = _reportStage(
-        inputs,
-        state,
-        check: (reports) {
-          for (final c in _curricula) {
-            expect(reports[c], state[c]!.report, reason: c);
-          }
-        },
+  test(
+    'AR-11/NFR-5: full LearnerState with the report projection < '
+    '${kRecomputeBudget.inMilliseconds} ms; report stage ≤ '
+    '${kProjectionDeltaBudget.inMilliseconds} ms ($_leafEvents leaf + '
+    '$_nodeEvents node events, ${_curricula.length} curricula, 15 '
+    'sub-tracks; $kReferenceDevice)',
+    () {
+      final corpora = {for (final c in _curricula) c: bundledCorpus(c)};
+      final inputs = _inputs(corpora);
+      expect(inputs.subTracks, hasLength(15));
+      expect(
+        inputs.subTracks.where((s) => reportGroupKey(s.name) == 'school'),
+        hasLength(8),
       );
-      if (d < delta) delta = d;
-    }
-    final baseline = total - delta;
-    // ignore: avoid_print
-    print(
-      'DNI-516 AR-11: cold ${cold.elapsedMilliseconds} ms, warm total '
-      '${total.inMilliseconds} ms (budget ${kRecomputeBudget.inMilliseconds} '
-      'ms), baseline ${baseline.inMilliseconds} ms, report stage '
-      '${delta.inMilliseconds} ms (budget '
-      '${kProjectionDeltaBudget.inMilliseconds} ms); $kReferenceDevice',
-    );
-    expect(total, lessThan(kRecomputeBudget), reason: 'warm total');
-    expect(
-      delta,
-      lessThanOrEqualTo(kProjectionDeltaBudget),
-      reason: 'report projection delta',
-    );
-  }, timeout: const Timeout(Duration(minutes: 10)));
+      expect(
+        inputs.events.where((e) => e.isLearn && e.level != null),
+        hasLength(_nodeEvents),
+      );
+      const engine = LearnerStateEngine();
+
+      final cold = Stopwatch()..start();
+      final state = engine.run(inputs);
+      cold.stop();
+      final school = state['mishnayos']!.report.groups.firstWhere(
+        (g) => g.key == 'school',
+      );
+      expect(school.members, hasLength(8));
+      expect(state[_retired]!.report.allSources, isNull);
+      for (final c in _curricula) {
+        expect(state[c]!.report.distinctLearnt, state[c]!.distinctLearnt);
+      }
+
+      var total = const Duration(days: 1);
+      for (var run = 0; run < _warmRuns; run++) {
+        final sw = Stopwatch()..start();
+        final again = engine.run(inputs);
+        sw.stop();
+        expect(again['mishnayos']!.report, state['mishnayos']!.report);
+        if (sw.elapsed < total) total = sw.elapsed;
+      }
+
+      var delta = const Duration(days: 1);
+      for (var run = 0; run < _warmRuns; run++) {
+        final d = _reportStage(
+          inputs,
+          state,
+          check: (reports) {
+            for (final c in _curricula) {
+              expect(reports[c], state[c]!.report, reason: c);
+            }
+          },
+        );
+        if (d < delta) delta = d;
+      }
+      final baseline = total - delta;
+      // ignore: avoid_print
+      print(
+        'DNI-516 AR-11: cold ${cold.elapsedMilliseconds} ms, warm total '
+        '${total.inMilliseconds} ms (budget ${kRecomputeBudget.inMilliseconds} '
+        'ms), baseline ${baseline.inMilliseconds} ms, report stage '
+        '${delta.inMilliseconds} ms (budget '
+        '${kProjectionDeltaBudget.inMilliseconds} ms); $kReferenceDevice',
+      );
+      expect(total, lessThan(kRecomputeBudget), reason: 'warm total');
+      expect(
+        delta,
+        lessThanOrEqualTo(kProjectionDeltaBudget),
+        reason: 'report projection delta',
+      );
+    },
+    skip: perfGateSkipReason(),
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
 }

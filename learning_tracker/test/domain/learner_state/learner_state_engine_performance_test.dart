@@ -10,7 +10,10 @@
 //
 // Tagged `perf` (ruling B12): excluded from the blocking main lane
 // (Makefile `test:`) and run by `make test-perf` in the non-blocking CI
-// `perf` job, so runner speed variance never fails a merge.
+// `perf` job, so runner speed variance never fails a merge. It also skips
+// unless `CI` is set or `LT_PERF=1` (perfGateSkipReason), so a plain
+// `flutter test` on a shared, loaded host never runs it; run it locally
+// with `LT_PERF=1 make test-perf`.
 @Tags(['perf'])
 library;
 
@@ -169,50 +172,55 @@ LearnerStateInputs _learnerInputs(int learner, Corpus corpus) {
 final _actor = engineLearn(0, 'x').actor;
 
 void main() {
-  test('AD-54: warm FR-19 recompute < $kRecomputeBudget per learner '
-      '($_learners learners × $_leafEvents leaf + $_nodeEvents node '
-      'events, 2 sub-tracks; $kReferenceDevice)', () {
-    final corpus = bundledCorpus(_curriculum);
-    expect(corpus.leaves.length, greaterThan(25000));
-    const engine = LearnerStateEngine();
-    final warm = <Duration>[];
-    for (var learner = 0; learner < _learners; learner++) {
-      final inputs = _learnerInputs(learner, corpus);
-      expect(inputs.events, hasLength(_leafEvents + _nodeEvents));
-      final cold = Stopwatch()..start();
-      final first = engine.run(inputs);
-      cold.stop();
-      final state = first[_curriculum]!;
-      expect(state.dailyTarget, isNotNull);
-      expect(state.subTracks, hasLength(2));
-      expect(state.subTracks.values.every((s) => s.capacity != null), isTrue);
-      var best = const Duration(days: 1);
-      for (var run = 0; run < _warmRuns; run++) {
-        final sw = Stopwatch()..start();
-        final again = engine.run(inputs)[_curriculum]!;
-        sw.stop();
-        expect(again.dailyTarget, state.dailyTarget);
-        if (sw.elapsed < best) best = sw.elapsed;
+  test(
+    'AD-54: warm FR-19 recompute < $kRecomputeBudget per learner '
+    '($_learners learners × $_leafEvents leaf + $_nodeEvents node '
+    'events, 2 sub-tracks; $kReferenceDevice)',
+    () {
+      final corpus = bundledCorpus(_curriculum);
+      expect(corpus.leaves.length, greaterThan(25000));
+      const engine = LearnerStateEngine();
+      final warm = <Duration>[];
+      for (var learner = 0; learner < _learners; learner++) {
+        final inputs = _learnerInputs(learner, corpus);
+        expect(inputs.events, hasLength(_leafEvents + _nodeEvents));
+        final cold = Stopwatch()..start();
+        final first = engine.run(inputs);
+        cold.stop();
+        final state = first[_curriculum]!;
+        expect(state.dailyTarget, isNotNull);
+        expect(state.subTracks, hasLength(2));
+        expect(state.subTracks.values.every((s) => s.capacity != null), isTrue);
+        var best = const Duration(days: 1);
+        for (var run = 0; run < _warmRuns; run++) {
+          final sw = Stopwatch()..start();
+          final again = engine.run(inputs)[_curriculum]!;
+          sw.stop();
+          expect(again.dailyTarget, state.dailyTarget);
+          if (sw.elapsed < best) best = sw.elapsed;
+        }
+        warm.add(best);
+        // ignore: avoid_print
+        print(
+          'learner $learner: cold ${cold.elapsedMilliseconds} ms, '
+          'warm ${best.inMilliseconds} ms, dailyTarget ${state.dailyTarget}',
+        );
       }
-      warm.add(best);
+      final worst = warm.reduce((a, b) => a > b ? a : b);
       // ignore: avoid_print
       print(
-        'learner $learner: cold ${cold.elapsedMilliseconds} ms, '
-        'warm ${best.inMilliseconds} ms, dailyTarget ${state.dailyTarget}',
+        'AD-54 worst warm recompute: ${worst.inMilliseconds} ms '
+        '(budget ${kRecomputeBudget.inMilliseconds} ms, $kReferenceDevice)',
       );
-    }
-    final worst = warm.reduce((a, b) => a > b ? a : b);
-    // ignore: avoid_print
-    print(
-      'AD-54 worst warm recompute: ${worst.inMilliseconds} ms '
-      '(budget ${kRecomputeBudget.inMilliseconds} ms, $kReferenceDevice)',
-    );
-    for (final (learner, d) in warm.indexed) {
-      expect(
-        d,
-        lessThan(kRecomputeBudget),
-        reason: 'learner $learner warm recompute',
-      );
-    }
-  }, timeout: const Timeout(Duration(minutes: 10)));
+      for (final (learner, d) in warm.indexed) {
+        expect(
+          d,
+          lessThan(kRecomputeBudget),
+          reason: 'learner $learner warm recompute',
+        );
+      }
+    },
+    skip: perfGateSkipReason(),
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
 }
