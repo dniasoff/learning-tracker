@@ -35,6 +35,12 @@ export 'package:learning_tracker/data/firestore/learner_state_repository_provide
 /// stays current, per the `CompleteRead` contract). A stream-level error
 /// from either source is forwarded, so the consumer can show a retryable
 /// failure instead of silently relabelling a source.
+///
+/// A complete read that holds undecodable rows
+/// ([CompleteReadReady.rejected]) is a failure too: no log is published
+/// from it — the join emits an [UnreadableHistoryException] carrying every
+/// rejected document id and error — and the next clean complete pair
+/// publishes again.
 Stream<ProfileHistoryLog> joinCompleteHistoryReads(
   Stream<CompleteRead<LearningEvent>> events,
   Stream<CompleteRead<SubTrack>> subTracks,
@@ -49,13 +55,17 @@ Stream<ProfileHistoryLog> joinCompleteHistoryReads(
     final e = latestEvents;
     final s = latestTracks;
     if (e == null || s == null) return;
-    out.add(
-      ProfileHistoryLog(
-        events: e.items,
-        subTracks: s.items,
-        rejected: [...e.rejected, ...s.rejected],
-      ),
-    );
+    if (!e.isClean || !s.isClean) {
+      out.addError(
+        UnreadableHistoryException(
+          eventRows: e.rejected,
+          subTrackRows: s.rejected,
+        ),
+        StackTrace.current,
+      );
+      return;
+    }
+    out.add(ProfileHistoryLog(events: e.items, subTracks: s.items));
   }
 
   out = StreamController<ProfileHistoryLog>(

@@ -1613,7 +1613,6 @@
   "mishnaHistoryTagCatchUp": "catch-up",
   "mishnaHistoryTagChazara": "chazara",
   "mishnaHistoryTitle": "Mishna history",
-  "mishnaHistoryUnreadableRows": "Some records couldn't be read.",
   "missedReview": "Missed review ({count})",
   "@missedReview": {
     "placeholders": {

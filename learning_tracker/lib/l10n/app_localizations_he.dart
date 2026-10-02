@@ -2662,9 +2662,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get mishnaHistoryTitle => 'היסטוריית משנה';
 
   @override
-  String get mishnaHistoryUnreadableRows => 'חלק מהרשומות לא נקראו.';
-
-  @override
   String missedReview(int count) {
     return 'חזרה שהוחמצה ($count)';
   }

@@ -1391,7 +1391,6 @@
   "mishnaHistoryTagCatchUp": "השלמה",
   "mishnaHistoryTagChazara": "חזרה",
   "mishnaHistoryTitle": "היסטוריית משנה",
-  "mishnaHistoryUnreadableRows": "חלק מהרשומות לא נקראו.",
   "missedReview": "חזרה שהוחמצה ({count})",
   "@missedReview": {
     "placeholders": {

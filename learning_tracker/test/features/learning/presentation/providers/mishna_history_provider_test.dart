@@ -6,6 +6,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -138,6 +139,34 @@ void main() {
       );
       expect(value.error, isA<StateError>());
     });
+
+    for (final (label, malformed) in [
+      (
+        'event',
+        (HistoryPorts p) => p.events.seedRejected(p.scope, const [
+          RejectedRow(ulidD, 'bad kind'),
+        ]),
+      ),
+      (
+        'sub-track',
+        (HistoryPorts p) => p.tracks.seedRejected(p.scope, const [
+          RejectedRow(ulidB, 'bad name'),
+        ]),
+      ),
+    ]) {
+      test('a malformed $label row fails the history read (retryable); no '
+          'history rows are published', () async {
+        ports.events.seed(ports.scope, [historyLearn(1, source: ulidB)]);
+        ports.tracks.seed(ports.scope, [endedSubTrack()]);
+        malformed(ports);
+        final value = await settledAsync(
+          _container(ports, counted: {eid(1)}),
+          mishnaHistoryProvider(historyArgs),
+        );
+        expect(value.error, isA<UnreadableHistoryException>());
+        expect(value.hasValue, isFalse, reason: 'no partial history');
+      });
+    }
 
     test('rows of other leaves and curricula never appear', () async {
       ports.events.seed(ports.scope, [

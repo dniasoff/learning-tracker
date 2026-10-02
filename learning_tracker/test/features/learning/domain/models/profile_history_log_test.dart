@@ -15,11 +15,21 @@ void main() {
     final log = ProfileHistoryLog(
       events: [historyLearn(1), historyVoid(2, eid(1))],
       subTracks: [endedSubTrack()],
-      rejected: const [RejectedRow(ulidD, 'bad')],
     );
     expect(log.events.map((e) => e.id), [eid(1), eid(2)]);
     expect(log.subTrackName(ulidB), 'Cheder shiur');
     expect(log.subTrackName(ulidE), isNull);
-    expect(log.rejected.single.docId, ulidD);
+  });
+
+  test('UnreadableHistoryException keeps every rejected id and error for '
+      'diagnostics', () {
+    final error = UnreadableHistoryException(
+      eventRows: const [RejectedRow(ulidD, 'bad kind')],
+      subTrackRows: const [RejectedRow(ulidB, 'bad name')],
+    );
+    expect(error.eventRows.single.docId, ulidD);
+    expect(error.subTrackRows.single.docId, ulidB);
+    expect(error.toString(), allOf(contains(ulidD), contains('bad kind')));
+    expect(error.toString(), allOf(contains(ulidB), contains('bad name')));
   });
 }

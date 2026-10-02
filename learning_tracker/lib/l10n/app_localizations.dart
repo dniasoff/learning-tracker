@@ -4757,12 +4757,6 @@ abstract class AppLocalizations {
   /// **'Mishna history'**
   String get mishnaHistoryTitle;
 
-  /// No description provided for @mishnaHistoryUnreadableRows.
-  ///
-  /// In en, this message translates to:
-  /// **'Some records couldn\'t be read.'**
-  String get mishnaHistoryUnreadableRows;
-
   /// No description provided for @missedReview.
   ///
   /// In en, this message translates to:

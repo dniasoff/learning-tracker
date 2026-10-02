@@ -161,16 +161,6 @@ class MishnaHistoryBody extends StatelessWidget {
       padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 32),
       children: [
         _HistoryHeader(history: history),
-        if (history.unreadableRows > 0)
-          Padding(
-            padding: const EdgeInsetsDirectional.only(top: 8),
-            child: Text(
-              l10n.mishnaHistoryUnreadableRows,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: context.colors.brandWarningDeep,
-              ),
-            ),
-          ),
         if (rows.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(

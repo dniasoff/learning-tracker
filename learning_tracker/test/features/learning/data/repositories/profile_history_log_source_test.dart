@@ -122,13 +122,69 @@ void main() {
       expect(errors, [isA<StateError>()]);
     });
 
-    test('rejected rows of either read are carried, never dropped', () async {
+    test('a malformed event row fails the read: no log is published, the '
+        'error keeps the rejected id and decode error', () async {
       final (events, tracks) = _controllers();
       final out = <ProfileHistoryLog>[];
+      final errors = <Object>[];
       final sub = joinCompleteHistoryReads(
         events.stream,
         tracks.stream,
-      ).listen(out.add);
+      ).listen(out.add, onError: errors.add);
+      addTearDown(sub.cancel);
+
+      final decodeError = StateError('bad kind');
+      events.add(
+        CompleteReadReady(
+          [_learn(ulidA)],
+          rejected: [RejectedRow(ulidD, decodeError)],
+        ),
+      );
+      tracks.add(CompleteReadReady([_ended(ulidB)]));
+      await pumpEventQueue();
+
+      expect(out, isEmpty, reason: 'no partial history');
+      final error = errors.single as UnreadableHistoryException;
+      expect(error.eventRows.single.docId, ulidD);
+      expect(error.eventRows.single.error, same(decodeError));
+      expect(error.subTrackRows, isEmpty);
+    });
+
+    test('a malformed sub-track row fails the read: no log is published, '
+        'never an unknown-source relabel', () async {
+      final (events, tracks) = _controllers();
+      final out = <ProfileHistoryLog>[];
+      final errors = <Object>[];
+      final sub = joinCompleteHistoryReads(
+        events.stream,
+        tracks.stream,
+      ).listen(out.add, onError: errors.add);
+      addTearDown(sub.cancel);
+
+      events.add(CompleteReadReady([_learn(ulidA, source: ulidB)]));
+      tracks.add(
+        CompleteReadReady(
+          const [],
+          rejected: const [RejectedRow(ulidB, 'bad name')],
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(out, isEmpty, reason: 'no partial history');
+      final error = errors.single as UnreadableHistoryException;
+      expect(error.subTrackRows.single.docId, ulidB);
+      expect(error.eventRows, isEmpty);
+    });
+
+    test('once the rows read cleanly again, the next complete pair '
+        'publishes', () async {
+      final (events, tracks) = _controllers();
+      final out = <ProfileHistoryLog>[];
+      final errors = <Object>[];
+      final sub = joinCompleteHistoryReads(
+        events.stream,
+        tracks.stream,
+      ).listen(out.add, onError: errors.add);
       addTearDown(sub.cancel);
 
       events.add(
@@ -139,7 +195,11 @@ void main() {
       );
       tracks.add(CompleteReadReady(const []));
       await pumpEventQueue();
-      expect(out.single.rejected.map((r) => r.docId), [ulidD]);
+      events.add(CompleteReadReady([_learn(ulidA)]));
+      await pumpEventQueue();
+
+      expect(errors, hasLength(1));
+      expect(out.single.events.map((e) => e.id), [ulidA]);
     });
   });
 

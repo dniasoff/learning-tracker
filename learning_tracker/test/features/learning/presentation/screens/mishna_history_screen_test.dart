@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -293,6 +294,41 @@ void main() {
       expect(find.text('Learnt'), findsOneWidget);
       expect(_row(1), findsOneWidget);
       expect(scopes, [ports.scope, ports.scope]);
+    });
+  });
+
+  group('AC-1 malformed history rows', () {
+    testWidgets('a malformed event row shows AppErrorView and no rows; '
+        'Retry reloads once the log reads cleanly', (tester) async {
+      _seedLearnt(ports);
+      ports.events.seedRejected(ports.scope, const [
+        RejectedRow(ulidD, 'bad kind'),
+      ]);
+      await _pump(tester, historyOverrides(ports, state: _learntState()));
+
+      expect(find.byType(AppErrorView), findsOneWidget);
+      expect(find.byKey(const Key('mishnaHistoryLearntState')), findsNothing);
+      expect(_row(1), findsNothing);
+
+      ports.events.seedRejected(ports.scope, const []);
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppErrorView), findsNothing);
+      expect(_row(1), findsOneWidget);
+    });
+
+    testWidgets('a malformed sub-track row shows AppErrorView and no rows, '
+        'never an unknown-source label', (tester) async {
+      _seedLearnt(ports);
+      ports.tracks.seedRejected(ports.scope, const [
+        RejectedRow(ulidB, 'bad name'),
+      ]);
+      await _pump(tester, historyOverrides(ports, state: _learntState()));
+
+      expect(find.byType(AppErrorView), findsOneWidget);
+      expect(_row(1), findsNothing);
+      expect(find.text('Ended sub-track'), findsNothing);
     });
   });
 

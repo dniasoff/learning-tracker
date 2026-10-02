@@ -169,7 +169,6 @@ final class MishnaHistory {
     required this.eventCount,
     required List<MishnaHistoryItem> items,
     List<LeafRef> placeChoices = const [],
-    this.unreadableRows = 0,
   }) : items = List.unmodifiable(items),
        placeChoices = List.unmodifiable(placeChoices);
 
@@ -272,7 +271,6 @@ final class MishnaHistory {
           .length,
       items: [for (final e in newestFirst) itemOf(e)],
       placeChoices: placeChoices,
-      unreadableRows: log.rejected.length,
     );
   }
 
@@ -295,9 +293,6 @@ final class MishnaHistory {
 
   /// Leaves a parent may move an event to (the leaf's siblings).
   final List<LeafRef> placeChoices;
-
-  /// Rows of the profile log that could not be decoded.
-  final int unreadableRows;
 
   /// Whether the header shows the [eventCount]: always for a learnt leaf,
   /// and for an unlearnt one whenever a non-voided (lock-ignored) event
@@ -336,7 +331,6 @@ final class MishnaHistory {
       eventCount: eventCount,
       items: [for (final item in items) overlays[item.eventId] ?? item],
       placeChoices: placeChoices,
-      unreadableRows: unreadableRows,
     );
   }
 }

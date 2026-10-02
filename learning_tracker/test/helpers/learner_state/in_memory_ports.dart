@@ -64,6 +64,7 @@ List<T> _sortedById<T>(Iterable<T> rows, String Function(T) id) =>
 final class InMemoryLearningEventRepository implements LearningEventRepository {
   final _changes = _ScopeChanges();
   final Map<LearnerScope, Map<String, LearningEvent>> _events = {};
+  final Map<LearnerScope, List<RejectedRow>> _rejected = {};
 
   /// Every event actually written by [create] (replays excluded), in order.
   final List<(LearnerScope, LearningEvent)> created = [];
@@ -77,19 +78,27 @@ final class InMemoryLearningEventRepository implements LearningEventRepository {
     _changes.notify(scope);
   }
 
+  /// Makes every complete read of [scope] report [rows] as undecodable
+  /// (`CompleteReadReady.rejected`), as a malformed stored document would;
+  /// an empty list makes the reads clean again.
+  void seedRejected(LearnerScope scope, List<RejectedRow> rows) {
+    _rejected[scope] = List.of(rows);
+    _changes.notify(scope);
+  }
+
   /// The events of [scope] in document-id order.
   List<LearningEvent> eventsOf(LearnerScope scope) =>
       _sortedById(_events[scope]?.values ?? const [], (e) => e.id);
+
+  CompleteReadReady<LearningEvent> _ready(LearnerScope scope) =>
+      CompleteReadReady(eventsOf(scope), rejected: _rejected[scope] ?? []);
 
   @override
   Stream<CompleteRead<LearningEvent>> watchAll(LearnerScope scope) =>
       _changes.watch<CompleteRead<LearningEvent>>(
         scope,
-        () => [
-          const CompleteReadLoading<LearningEvent>(),
-          CompleteReadReady(eventsOf(scope)),
-        ],
-        () => CompleteReadReady(eventsOf(scope)),
+        () => [const CompleteReadLoading<LearningEvent>(), _ready(scope)],
+        () => _ready(scope),
       );
 
   @override
@@ -118,6 +127,7 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
   final _changes = _ScopeChanges();
   final Map<LearnerScope, Map<String, SubTrack>> _tracks = {};
   final Map<LearnerScope, Map<String, ChangeLogEntry>> _log = {};
+  final Map<LearnerScope, List<RejectedRow>> _rejected = {};
 
   /// Every change-log entry actually written (replays excluded), in order.
   final List<(LearnerScope, ChangeLogEntry)> entries = [];
@@ -131,19 +141,26 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
     _changes.notify(scope);
   }
 
+  /// Makes every complete read of [scope] report [rows] as undecodable
+  /// (`CompleteReadReady.rejected`); an empty list makes them clean again.
+  void seedRejected(LearnerScope scope, List<RejectedRow> rows) {
+    _rejected[scope] = List.of(rows);
+    _changes.notify(scope);
+  }
+
   /// The sub-tracks of [scope] in document-id order.
   List<SubTrack> tracksOf(LearnerScope scope) =>
       _sortedById(_tracks[scope]?.values ?? const [], (t) => t.id);
+
+  CompleteReadReady<SubTrack> _ready(LearnerScope scope) =>
+      CompleteReadReady(tracksOf(scope), rejected: _rejected[scope] ?? []);
 
   @override
   Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) =>
       _changes.watch<CompleteRead<SubTrack>>(
         scope,
-        () => [
-          const CompleteReadLoading<SubTrack>(),
-          CompleteReadReady(tracksOf(scope)),
-        ],
-        () => CompleteReadReady(tracksOf(scope)),
+        () => [const CompleteReadLoading<SubTrack>(), _ready(scope)],
+        () => _ready(scope),
       );
 
   @override

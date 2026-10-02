@@ -2693,9 +2693,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mishnaHistoryTitle => 'Mishna history';
 
   @override
-  String get mishnaHistoryUnreadableRows => 'Some records couldn\'t be read.';
-
-  @override
   String missedReview(int count) {
     return 'Missed review ($count)';
   }
