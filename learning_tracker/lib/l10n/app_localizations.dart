@@ -7214,6 +7214,12 @@ abstract class AppLocalizations {
   /// **'End month'**
   String get subTrackFormEndMonthLabel;
 
+  /// School-year form: end month choice that keeps an already open-ended sub-track open (window_end = null) (DNI-495 AC-8).
+  ///
+  /// In en, this message translates to:
+  /// **'No end month'**
+  String get subTrackFormEndMonthOpen;
+
   /// School-year form: rate stepper label in the curriculum's leaf unit, e.g. 'Mishnayos per week' (DNI-495 AC-4, prd-deviations #12).
   ///
   /// In en, this message translates to:

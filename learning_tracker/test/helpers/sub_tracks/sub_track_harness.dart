@@ -51,7 +51,8 @@ const subTrackTestCurriculum = 'mishnayos';
 /// "Today" in every sub-track test: academic year 2026.
 const subTrackTestToday = '2026-10-02';
 
-/// A stored school-year sub-track of [subTrackTestCurriculum].
+/// A stored school-year sub-track of [subTrackTestCurriculum]; [openEnd]
+/// stores `window_end` = null.
 SubTrack storedSchoolYear(
   String id, {
   String name = 'School',
@@ -61,6 +62,7 @@ SubTrack storedSchoolYear(
   double rate = 10,
   double weeks = 39,
   bool ended = false,
+  bool openEnd = false,
   String curriculumId = subTrackTestCurriculum,
 }) => SubTrack(
   id: id,
@@ -69,7 +71,7 @@ SubTrack storedSchoolYear(
   type: SubTrackType.schoolYear,
   academicYear: academicYear,
   windowStart: windowStart ?? '$academicYear-09-01',
-  windowEnd: windowEnd ?? '${academicYear + 1}-07-31',
+  windowEnd: openEnd ? null : windowEnd ?? '${academicYear + 1}-07-31',
   ratePerWeek: rate,
   weeksPerYear: weeks,
   learnsOnShabbos: false,
