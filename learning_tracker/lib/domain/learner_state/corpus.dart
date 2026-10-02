@@ -41,6 +41,15 @@ abstract interface class Corpus {
 
   /// The leaf refs at or below [node], in ContentIndex order.
   List<LeafRef> leavesUnder(NodeEntry node);
+
+  /// The ContentIndex levels whose nodes are units, outermost first
+  /// (Consistency → Siyum; AD-33 FR-12a). Mishnayos: `[seder, masechta]`.
+  ///
+  /// Every node at one of these levels is a siyum unit, and the innermost
+  /// level is the FR-12a main-track unit (the "current unit"). Resolved
+  /// from ContentIndex metadata by the corpus builder; empty when the
+  /// curriculum has no unit level. Added by DNI-465 (additive C0 change).
+  List<String> get unitLevels;
 }
 
 /// One node of an [InMemoryCorpus] tree.
@@ -62,15 +71,43 @@ final class CorpusNode {
 /// false. [nodeForRef] returns the first node in ContentIndex order whose
 /// ref matches. A tree that holds the same [NodeEntry] twice throws
 /// [ArgumentError].
+///
+/// [unitLevels] defaults to the levels of the non-leaf nodes at the top
+/// two depths, in ContentIndex order (a Mishnayos-shaped tree yields
+/// `[seder, masechta]`). The ContentIndex adapter
+/// (`lib/core/content/content_index_corpus.dart`) always passes them
+/// explicitly from hierarchy metadata.
 final class InMemoryCorpus implements Corpus {
   /// Indexes [roots] for [curriculumId].
-  InMemoryCorpus(this.curriculumId, List<CorpusNode> roots)
-    : roots = List.unmodifiable(roots.map((n) => n.entry)) {
+  InMemoryCorpus(
+    this.curriculumId,
+    List<CorpusNode> roots, {
+    List<String>? unitLevels,
+  }) : roots = List.unmodifiable(roots.map((n) => n.entry)),
+       unitLevels = List.unmodifiable(unitLevels ?? _defaultUnitLevels(roots)) {
     for (final root in roots) {
       _index(root, null);
     }
     _leaves = List.unmodifiable(_order.where(isLeaf).map((n) => n.ref));
   }
+
+  static List<String> _defaultUnitLevels(List<CorpusNode> roots) {
+    final levels = <String>[];
+    void add(CorpusNode node) {
+      if (node.children.isNotEmpty && !levels.contains(node.entry.level)) {
+        levels.add(node.entry.level);
+      }
+    }
+
+    roots.forEach(add);
+    for (final root in roots) {
+      root.children.forEach(add);
+    }
+    return levels;
+  }
+
+  @override
+  final List<String> unitLevels;
 
   @override
   final String curriculumId;
