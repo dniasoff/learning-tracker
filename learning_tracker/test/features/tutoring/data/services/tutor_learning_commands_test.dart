@@ -198,6 +198,51 @@ void main() {
         [for (final r in plan['reissues'] as List) (r as Map)['ref']],
         ['Mishnah Berakhot 2:2'],
       );
+      expect(call.args['leafEventIds'], isEmpty);
+    });
+
+    test('AC-7: a lock-window learn that is stored but not counted is never '
+        'voided — only the counted event ids are sent', () async {
+      const leaf = 'Mishnah Berakhot 2:1';
+      final h = TutorHarness(
+        events: [
+          engineLearn(1, leaf),
+          // Recorded inside the talmid's Shabbos lock: stored, not counted.
+          engineLearn(2, leaf, minutes: 6000),
+        ],
+        corpora: {_curriculum: mishnayosCorpus()},
+      );
+      addTearDown(h.dispose);
+
+      final result = await h.commands.unlearn(_curriculum, {leaf});
+
+      expect(result, isA<CaptureSuccess>());
+      final call = h.invoker.calls.single;
+      expect(call.fn, 'tutorUnlearn');
+      expect(call.args['leafSet'], [leaf]);
+      expect(call.args['leafEventIds'], [engineUlid(1)]);
+      expect(call.args['leafEventIds'], isNot(contains(engineUlid(2))));
+    });
+
+    test('an unlearn the server answers without a validated success is '
+        'not shown as done: notSaved, parked for an identical retry', () async {
+      final h = TutorHarness(
+        events: [engineLearn(1, 'Mishnah Berakhot 2:1')],
+        corpora: {_curriculum: mishnayosCorpus()},
+      );
+      addTearDown(h.dispose);
+      h.invoker.respond = (call) => {'success': false};
+
+      final result = await h.commands.unlearn(_curriculum, {
+        'Mishnah Berakhot 2:1',
+      });
+
+      expect(result, const CaptureResult.rejected(CaptureRejection.notSaved));
+      final pending = (await h.commands.watchPendingFailures().first).single;
+      final first = h.invoker.calls.single;
+      h.invoker.respond = null;
+      expect(await h.commands.retry(pending.id), isA<CaptureSuccess>());
+      expect(h.invoker.calls.last.args, first.args);
     });
   });
 

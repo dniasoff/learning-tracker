@@ -419,56 +419,72 @@ final class TutorLearningCommands implements LearningCommands {
   });
 
   @override
-  Future<CaptureResult> unlearn(String curriculumId, Set<LeafRef> leafSet) =>
-      _preflight((now, history) async {
-        if (leafSet.isEmpty) return const CaptureResult.success();
-        final corpus = await _corpus(curriculumId);
-        if (corpus == null) return _invalid;
-        final log = await _log(now, history);
-        final plan = planUnlearn(
-          curriculumId: curriculumId,
-          leafSet: leafSet,
-          counted: log.counted.learns,
-          corpus: corpus,
-        );
-        if (plan.isEmpty) return const CaptureResult.success();
-        final leaves = leafSet.toList();
-        final chunkCount = (leaves.length / tutorUnlearnChunkSize).ceil();
-        final reissueCount = plan.nodes.fold<int>(
-          0,
-          (n, node) => n + node.reissues.length,
-        );
-        final ids = _ids(now, chunkCount + reissueCount);
-        var r = chunkCount;
-        final reissues = [
-          for (final node in plan.nodes)
-            TutorNodeReissue(
-              targetEventId: node.target.id,
-              reissues: [
-                for (final entry in node.reissues)
-                  (eventId: ids[r++], ref: entry.ref, level: entry.level),
-              ],
-            ),
-        ];
-        return _dispatch([
-          for (var c = 0; c < chunkCount; c++)
-            _unlearnCall(
-              actionId: ids[c],
-              curriculumId: curriculumId,
-              leafSet: leaves.sublist(
-                c * tutorUnlearnChunkSize,
-                ((c + 1) * tutorUnlearnChunkSize).clamp(0, leaves.length),
-              ),
-              // The node plan rides with the first chunk only.
-              nodeReissues: c == 0 ? reissues : const [],
-            ),
-        ], history: history);
-      });
+  Future<CaptureResult> unlearn(
+    String curriculumId,
+    Set<LeafRef> leafSet,
+  ) => _preflight((now, history) async {
+    if (leafSet.isEmpty) return const CaptureResult.success();
+    final corpus = await _corpus(curriculumId);
+    if (corpus == null) return _invalid;
+    final log = await _log(now, history);
+    final plan = planUnlearn(
+      curriculumId: curriculumId,
+      leafSet: leafSet,
+      counted: log.counted.learns,
+      corpus: corpus,
+    );
+    if (plan.isEmpty) return const CaptureResult.success();
+    final leaves = leafSet.toList();
+    final chunkCount = (leaves.length / tutorUnlearnChunkSize).ceil();
+    final reissueCount = plan.nodes.fold<int>(
+      0,
+      (n, node) => n + node.reissues.length,
+    );
+    final ids = _ids(now, chunkCount + reissueCount);
+    var r = chunkCount;
+    final reissues = [
+      for (final node in plan.nodes)
+        TutorNodeReissue(
+          targetEventId: node.target.id,
+          reissues: [
+            for (final entry in node.reissues)
+              (eventId: ids[r++], ref: entry.ref, level: entry.level),
+          ],
+        ),
+    ];
+    // AD-36 / AC-7: the server voids exactly the leaf events the engine
+    // COUNTS (`plan.leafVoids`), never a stored but lock-ignored event
+    // that shares a ref — it cannot evaluate the lock predicate itself.
+    final leafEventsByRef = <String, List<String>>{};
+    for (final e in plan.leafVoids) {
+      // Epic 1 tutors un-learn main-track learning only (as the server).
+      if (e.source != LearningEvent.sourceMain) continue;
+      (leafEventsByRef[e.ref!] ??= []).add(e.id);
+    }
+    return _dispatch([
+      for (var c = 0; c < chunkCount; c++)
+        if (leaves.sublist(
+              c * tutorUnlearnChunkSize,
+              ((c + 1) * tutorUnlearnChunkSize).clamp(0, leaves.length),
+            )
+            case final chunk
+            when c == 0 || chunk.any((ref) => leafEventsByRef.containsKey(ref)))
+          _unlearnCall(
+            actionId: ids[c],
+            curriculumId: curriculumId,
+            leafSet: chunk,
+            leafEventIds: [for (final ref in chunk) ...?leafEventsByRef[ref]],
+            // The node plan rides with the first chunk only.
+            nodeReissues: c == 0 ? reissues : const [],
+          ),
+    ], history: history);
+  });
 
   _PlannedCall _unlearnCall({
     required String actionId,
     required String curriculumId,
     required List<String> leafSet,
+    required List<String> leafEventIds,
     required List<TutorNodeReissue> nodeReissues,
   }) => _PlannedCall(
     [
@@ -481,6 +497,7 @@ final class TutorLearningCommands implements LearningCommands {
       actionId: actionId,
       curriculumId: curriculumId,
       leafSet: leafSet,
+      leafEventIds: leafEventIds,
       nodeReissues: nodeReissues,
     ),
   );

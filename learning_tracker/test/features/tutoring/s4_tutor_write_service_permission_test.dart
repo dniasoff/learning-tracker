@@ -30,6 +30,29 @@ import 'package:learning_tracker/l10n/app_localizations_he.dart';
 /// Simulates a successful CF call.
 Future<void> _successInvoker(String _, Map<String, dynamic> __) async {}
 
+/// Simulates a successful Story 1.23 learning callable: the
+/// `writeWithChangeLog` answer echoing the request's client ids.
+Future<Object?> _learningSuccessInvoker(
+  String _,
+  Map<String, dynamic> args,
+) async {
+  final ids = <String>[
+    if (args['events'] case final List<Object?> events)
+      for (final e in events) (e! as Map)['id']! as String,
+    if (args['eventId'] case final String id) id,
+    if (args['replacement'] case final Map<Object?, Object?> r)
+      r['id']! as String,
+  ];
+  return {
+    'success': true,
+    'action_id': args['actionId'],
+    'event_ids': ids,
+    'recorded_at': ids.isEmpty ? null : '2026-10-02T15:20:00.000Z',
+    'replayed': false,
+    'noop': ids.isEmpty,
+  };
+}
+
 /// Simulates the CF rejecting with permission-denied (flag=false on grant).
 Future<void> _permissionDeniedInvoker(String _, Map<String, dynamic> __) async {
   throw FirebaseFunctionsException(
@@ -381,7 +404,17 @@ void main() {
       });
 
       test('$name: success → TutorLearningWritten', () async {
-        expect(await run(_svc(_successInvoker)), isA<TutorLearningWritten>());
+        expect(
+          await run(_svc(_learningSuccessInvoker)),
+          isA<TutorLearningWritten>(),
+        );
+      });
+
+      test('$name: an answer that is not a validated success → retryable '
+          'TutorWriteInvalidResponse', () async {
+        final result = await run(_svc(_successInvoker));
+        expect(result, isA<TutorWriteInvalidResponse>());
+        expect((result as TutorWriteFailure).isRetryable, isTrue);
       });
     }
   });
