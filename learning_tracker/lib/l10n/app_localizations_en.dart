@@ -422,6 +422,44 @@ class AppLocalizationsEn extends AppLocalizations {
       'All covered — any extra learning is a bonus.';
 
   @override
+  String get todayTargetGoalDone => 'Today\'s goal is done — wonderful!';
+
+  @override
+  String todayTargetLearntToday(String count) {
+    return '$count learnt today';
+  }
+
+  @override
+  String todayTargetLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Great pace! Only $count left to finish today\'s goal.',
+      one: 'Great pace! Only one left to finish today\'s goal.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String todayTargetProgress(String done, String target) {
+    return 'Today $done of $target done';
+  }
+
+  @override
+  String get todayTargetStart => 'Every step counts — let\'s begin!';
+
+  @override
+  String todayTargetStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-day streak',
+      one: '1-day streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get onboarding => 'Onboarding';
 
   @override

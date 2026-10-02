@@ -419,6 +419,44 @@ class AppLocalizationsHe extends AppLocalizations {
   String get todayTargetAllCovered => 'הכול מכוסה — כל לימוד נוסף הוא בונוס.';
 
   @override
+  String get todayTargetGoalDone => 'היעד של היום הושלם — כל הכבוד!';
+
+  @override
+  String todayTargetLearntToday(String count) {
+    return '$count נלמדו היום';
+  }
+
+  @override
+  String todayTargetLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'קצב מצוין! נשארו רק $count כדי להשלים את היעד של היום.',
+      one: 'קצב מצוין! נשאר רק אחד כדי להשלים את היעד של היום.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String todayTargetProgress(String done, String target) {
+    return 'היום $done מתוך $target הושלמו';
+  }
+
+  @override
+  String get todayTargetStart => 'כל צעד נחשב — בואו נתחיל!';
+
+  @override
+  String todayTargetStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'רצף של $count ימים',
+      one: 'רצף של יום אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get onboarding => 'הגדרה ראשונית';
 
   @override
