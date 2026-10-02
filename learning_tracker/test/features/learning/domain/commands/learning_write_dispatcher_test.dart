@@ -124,6 +124,76 @@ void main() {
     expect(reporter.reports.last.command, LearningCommandKind.retry);
   });
 
+  test('a retry that fails without an acknowledgement keeps the failure; '
+      'a second retry saves it', () async {
+    port.failNextWith(const PermanentWriteRejection('permission-denied'));
+    final chunk = _chunk(1);
+    await dispatcher.dispatch(LearningCommandKind.capture, [chunk]);
+    final seen = <List<PendingFailure>>[];
+    final sub = dispatcher.watchPendingFailures().listen(seen.add);
+    addTearDown(sub.cancel);
+
+    port.holdNext();
+    final first = dispatcher.retry(engineUlid(1));
+    await pumpEventQueue();
+    expect(dispatcher.pendingFailures, isEmpty, reason: 'retry in flight');
+    port.reject(StateError('unavailable'));
+    await expectLater(first, throwsStateError);
+    expect(dispatcher.pendingFailures.single.id, engineUlid(1));
+    await pumpEventQueue();
+    expect(seen.last.single.id, engineUlid(1), reason: 'observers see it');
+
+    final second = await dispatcher.retry(engineUlid(1));
+    expect(second!.allRejected, isFalse);
+    expect(second.queued, isFalse);
+    expect(port.chunks.single, same(chunk));
+    expect(dispatcher.pendingFailures, isEmpty);
+    await pumpEventQueue();
+    expect(seen.last, isEmpty);
+  });
+
+  test('a retry still unacknowledged after the window is queued; a later '
+      'non-permanent failure restores the failure for another retry', () async {
+    port.failNextWith(const PermanentWriteRejection('permission-denied'));
+    final chunk = _chunk(1);
+    await dispatcher.dispatch(LearningCommandKind.capture, [chunk]);
+
+    port.holdNext();
+    final queued = await dispatcher.retry(engineUlid(1));
+    expect(queued!.queued, isTrue);
+    expect(queued.eventIds, [engineUlid(1), engineUlid(2)]);
+    expect(dispatcher.pendingFailures, isEmpty);
+
+    final again = await dispatcher.retry(engineUlid(1));
+    expect(again!.queued, isTrue, reason: 'still in flight');
+    expect(port.attempts, hasLength(2), reason: 'nothing re-sent');
+
+    port.reject(StateError('lost'));
+    await pumpEventQueue();
+    expect(dispatcher.pendingFailures.single.id, engineUlid(1));
+
+    final saved = await dispatcher.retry(engineUlid(1));
+    expect(saved!.queued, isFalse);
+    expect(port.chunks.single, same(chunk));
+    expect(dispatcher.pendingFailures, isEmpty);
+  });
+
+  test(
+    'a queued retry the server later rejects for good is pending again',
+    () async {
+      port.failNextWith(const PermanentWriteRejection('permission-denied'));
+      await dispatcher.dispatch(LearningCommandKind.capture, [_chunk(1)]);
+      port.holdNext();
+      await dispatcher.retry(engineUlid(1));
+      port.reject(const PermanentWriteRejection('failed-precondition'));
+      await pumpEventQueue();
+      expect(
+        dispatcher.pendingFailures.single.reason,
+        PendingFailureReason.failedPrecondition,
+      );
+    },
+  );
+
   test('retry of an unknown id is null', () async {
     expect(await dispatcher.retry(engineUlid(77)), isNull);
   });

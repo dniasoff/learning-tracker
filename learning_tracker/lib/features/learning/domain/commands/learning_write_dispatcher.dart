@@ -68,6 +68,11 @@ final class _Pending {
   final LearningWriteChunk chunk;
   final PendingFailureReason reason;
 
+  /// Whether a retry of [chunk] is awaiting the server. An in-flight entry
+  /// stays tracked (it is the only retry handle for an unsaved chunk) but
+  /// is not offered for retry again until the attempt fails.
+  bool inFlight = false;
+
   PendingFailure get failure => PendingFailure(
     id: chunk.events.first.id,
     eventIds: [for (final e in chunk.events) e.id],
@@ -99,9 +104,11 @@ final class LearningWriteDispatcher {
   final StreamController<List<PendingFailure>> _changes =
       StreamController<List<PendingFailure>>.broadcast();
 
-  /// The current pending failures, oldest first.
-  List<PendingFailure> get pendingFailures =>
-      List.unmodifiable(_pending.values.map((p) => p.failure));
+  /// The current pending failures, oldest first; a failure whose retry
+  /// is awaiting the server is withheld until that retry fails.
+  List<PendingFailure> get pendingFailures => List.unmodifiable(
+    _pending.values.where((p) => !p.inFlight).map((p) => p.failure),
+  );
 
   /// [pendingFailures] now, then after every change.
   Stream<List<PendingFailure>> watchPendingFailures() async* {
@@ -118,8 +125,16 @@ final class LearningWriteDispatcher {
   Future<DispatchOutcome> dispatch(
     LearningCommandKind command,
     List<LearningWriteChunk> chunks,
-  ) async {
-    final statuses = [for (final c in chunks) _commit(command, c)];
+  ) => _dispatch(command, chunks);
+
+  Future<DispatchOutcome> _dispatch(
+    LearningCommandKind command,
+    List<LearningWriteChunk> chunks, {
+    bool retrying = false,
+  }) async {
+    final statuses = [
+      for (final c in chunks) _commit(command, c, retrying: retrying),
+    ];
     final settled = <int, _ChunkStatus>{};
     final all = Future.wait([
       for (var i = 0; i < statuses.length; i++)
@@ -157,23 +172,43 @@ final class LearningWriteDispatcher {
 
   /// Re-commits the chunk of pending failure [id] unchanged (same ids,
   /// same timestamps). Null when there is no such pending failure.
+  ///
+  /// The failure stays tracked until the server acknowledges the retry:
+  /// it is withheld from [pendingFailures] while the retry is in flight
+  /// and restored on every outcome that is not an acknowledgement (a new
+  /// rejection, any other error, in or after the ack window). A second
+  /// retry while one is in flight writes nothing and reports it queued.
   Future<DispatchOutcome?> retry(String id) async {
-    final pending = _pending.remove(id);
+    final pending = _pending[id];
     if (pending == null) return null;
+    if (pending.inFlight) {
+      return DispatchOutcome(
+        eventIds: [for (final e in pending.chunk.events) e.id],
+        queued: true,
+        rejectedChunks: 0,
+        totalChunks: 1,
+      );
+    }
+    pending.inFlight = true;
     _notify();
-    return dispatch(LearningCommandKind.retry, [pending.chunk]);
+    return _dispatch(LearningCommandKind.retry, [
+      pending.chunk,
+    ], retrying: true);
   }
 
   Future<_ChunkStatus> _commit(
     LearningCommandKind command,
-    LearningWriteChunk chunk,
-  ) async {
+    LearningWriteChunk chunk, {
+    bool retrying = false,
+  }) async {
+    final id = chunk.events.first.id;
     try {
       await _port.commit(scope, chunk);
+      if (retrying && _pending.remove(id) != null) _notify();
       return _ChunkStatus.acked;
     } on PermanentWriteRejection catch (rejection) {
       final reason = pendingFailureReasonOf(rejection.code);
-      _pending[chunk.events.first.id] = _Pending(command, chunk, reason);
+      _pending[id] = _Pending(command, chunk, reason);
       _notify();
       _reporter.writeRejected(
         command: command,
@@ -181,6 +216,14 @@ final class LearningWriteDispatcher {
         writeCount: chunk.events.length + chunk.awards.length,
       );
       return _ChunkStatus.rejected;
+    } on Object {
+      // Not acknowledged: a retried failure becomes retryable again.
+      final pending = retrying ? _pending[id] : null;
+      if (pending != null) {
+        pending.inFlight = false;
+        _notify();
+      }
+      rethrow;
     }
   }
 
