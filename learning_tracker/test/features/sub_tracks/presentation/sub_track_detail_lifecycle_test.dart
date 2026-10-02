@@ -5,7 +5,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_lifecycle_detail_screen.dart';
@@ -243,6 +245,142 @@ void main() {
       addTearDown(child.dispose);
       await _openDetail(tester, child, lifecycleId(1));
       expect(_pill, findsNothing);
+    });
+  });
+
+  group('AC-3 / AC-4 overflow Delete and End', () {
+    final menu = find.byKey(const ValueKey('subTrackLifecycleMenu'));
+
+    Future<void> choose(WidgetTester tester, String id) async {
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey('subTrackMenu:$id')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Delete opens the shared dialog: warning icon, copy, '
+        'destructive confirm and Cancel', (tester) async {
+      final world = LifecycleWorld([schoolYear()]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+      await choose(tester, 'delete');
+      expect(find.text('Delete School?'), findsOneWidget);
+      expect(
+        find.text(
+          'Its unfinished ground goes back to home learning. Everything '
+          'already learnt stays in the lifetime record.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+    });
+
+    testWidgets('Cancel, a barrier tap and back issue no command', (
+      tester,
+    ) async {
+      final world = LifecycleWorld([schoolYear()]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+
+      await choose(tester, 'delete');
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      await choose(tester, 'delete');
+      await tester.tapAt(const Offset(4, 4));
+      await tester.pumpAndSettle();
+
+      await choose(tester, 'end');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete School?'), findsNothing);
+      expect(find.text('End School now?'), findsNothing);
+      expect(world.commands.calls, isEmpty);
+      expect(world.repo.calls, isEmpty);
+      expect(world.analytics.lifecycles, isEmpty);
+      expect(
+        find.byKey(ValueKey('subTrackLifecycleDetail:${lifecycleId(1)}')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('confirmed Delete tombstones the sub-track, returns to the '
+        'hub and confirms', (tester) async {
+      final source = schoolYear();
+      final world = LifecycleWorld([source]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, source.id);
+      await choose(tester, 'delete');
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      expect(world.commands.calls, ['deleteSubTrack']);
+      final stored = world.stored.single;
+      expect(stored.id, source.id);
+      expect(stored.endedAt, isNotNull);
+      expect(stored.endReason, SubTrackEndReason.deleted);
+      expect(stored.name, 'School', reason: 'the source label survives');
+      final change = world.repo.calls.single.$2;
+      expect(change.changedFields.keys.toSet(), {'ended_at', 'end_reason'});
+      expect(world.repo.entries.single.$2.entity, GovernedEntity.subTrack);
+      expect(
+        find.byKey(const ValueKey('lifecycleHubHost')),
+        findsOneWidget,
+        reason: 'back on the hub',
+      );
+      expect(
+        find.byKey(ValueKey('subTrackLifecycleDetail:${source.id}')),
+        findsNothing,
+      );
+      expect(find.text('School deleted'), findsOneWidget);
+    });
+
+    testWidgets('confirmed End writes end_reason ended and returns to the '
+        'hub', (tester) async {
+      final track = ongoing();
+      final world = LifecycleWorld([track]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, track.id);
+      await choose(tester, 'end');
+      expect(find.text('End Night seder now?'), findsOneWidget);
+      await tester.tap(find.text('End sub-track'));
+      await tester.pumpAndSettle();
+
+      expect(world.commands.calls, ['endSubTrack']);
+      expect(world.stored.single.endReason, SubTrackEndReason.ended);
+      expect(world.repo.entries, hasLength(1));
+      expect(find.byKey(const ValueKey('lifecycleHubHost')), findsOneWidget);
+      expect(find.text('Night seder ended'), findsOneWidget);
+    });
+
+    testWidgets('a refused or offline-required command stays on the detail, '
+        'writes nothing and says so', (tester) async {
+      final world = LifecycleWorld([schoolYear()]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+      world.commands.nextResult = const CaptureResult.onlineRequired();
+      await choose(tester, 'delete');
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(world.repo.calls, isEmpty);
+      expect(world.stored.single.endedAt, isNull);
+      expect(find.text("Couldn't save the change. Try again."), findsOneWidget);
+      expect(
+        find.byKey(ValueKey('subTrackLifecycleDetail:${lifecycleId(1)}')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('no ⋮ for a read-only viewer', (tester) async {
+      final world = LifecycleWorld([
+        schoolYear(),
+      ], viewer: SubTrackLifecycleViewer.readOnly);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+      expect(menu, findsNothing);
     });
   });
 }
