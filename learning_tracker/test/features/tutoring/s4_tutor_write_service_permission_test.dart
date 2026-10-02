@@ -30,6 +30,20 @@ import 'package:learning_tracker/l10n/app_localizations_he.dart';
 /// Simulates a successful CF call.
 Future<void> _successInvoker(String _, Map<String, dynamic> __) async {}
 
+/// Simulates a successful Story 1.10 governed callable: the
+/// `writeWithChangeLog` receipt (one change_log entry, server `at`).
+Future<Object?> _governedSuccessInvoker(
+  String _,
+  Map<String, dynamic> args,
+) async => {
+  'success': true,
+  'action_id': args['actionId'] ?? '01JT7T0SV0AAAAAAAAAAAAAAAA',
+  'change_ids': const ['01JT7T0SV0AAAAAAAAAAAAAAAA'],
+  'at': '2026-10-02T15:20:00.000Z',
+  'replayed': false,
+  'noop': false,
+};
+
 /// Simulates a successful Story 1.23 learning callable: the
 /// `writeWithChangeLog` answer echoing the request's client ids.
 Future<Object?> _learningSuccessInvoker(
@@ -230,7 +244,7 @@ void main() {
         );
 
         test('upsertGoal succeeds when can_edit_goals=true', () async {
-          final result = await _svc(_successInvoker).upsertGoal(
+          final result = await _svc(_governedSuccessInvoker).upsertGoal(
             grantId: _grantId,
             ownerUid: _ownerUid,
             profileId: _profileId,
