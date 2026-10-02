@@ -21,6 +21,8 @@
 ///    `earningEventIds`, from every curriculum with a corpus.
 ///    Sub-track states (`sub_track_positions.dart`, DNI-493): each
 ///    sub-track's own position, ticked count and remaining path;
+///    (`goal_target.dart`) and projection (`projection.dart`; held at
+///    the lock's start while a lock is active, DNI-494);
 ///    sub-track states (`sub_track_positions.dart`, DNI-493): each
 ///    sub-track's own position, ticked count and remaining path; and the
 ///    AD-44 deadline forecast (`sub_track_forecast.dart` over
@@ -280,6 +282,7 @@ final class LearnerStateEngine {
               learns,
               firstStage,
               mainTrack,
+              locks,
               configHistory!,
               reviews!,
             )
@@ -356,6 +359,7 @@ final class LearnerStateEngine {
     List<LearningEvent> learns,
     int? firstStage,
     MainTrackRecord mainTrack,
+    List<LockWindow> locks,
     MainTrackConfigHistory configHistory,
     ReviewSchedule reviews,
   ) {
@@ -395,7 +399,12 @@ final class LearnerStateEngine {
         program?.endedAt == null ? program?.trackingStartDate : null,
         learns,
       ),
-      today: today,
+      // NFR-9/FR-23: during a lock, as evaluated at the lock's start.
+      today: projectionDay(
+        locks: locks,
+        nowUtc: inputs.nowUtc,
+        settingsHistory: inputs.settingsHistory,
+      ),
       remaining: learnt.scopedLeaves.length - learnt.learntLeaves.length,
       deadline: deadline,
     );

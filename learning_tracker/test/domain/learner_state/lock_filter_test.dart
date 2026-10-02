@@ -31,6 +31,14 @@ void main() {
       expect(insideLock(locks, DateTime.utc(2026, 9, 8)), isFalse);
       expect(insideLock(const [], a.startUtc), isFalse);
     });
+
+    test('lockAt returns the containing lock (DNI-494)', () {
+      final locks = [a, b];
+      expect(lockAt(locks, a.startUtc), a);
+      expect(lockAt(locks, b.endUtc), b);
+      expect(lockAt(locks, DateTime.utc(2026, 9, 8)), isNull);
+      expect(lockAt(const [], a.startUtc), isNull);
+    });
   });
 
   group('engineLockWindows', () {
