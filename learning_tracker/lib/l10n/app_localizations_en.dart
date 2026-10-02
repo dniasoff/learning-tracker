@@ -4133,6 +4133,171 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String subTrackHubHeader(int count) {
+    return 'Sub-tracks · $count active';
+  }
+
+  @override
+  String get subTrackHubHelper =>
+      'Learning that happens outside home — school, a rebbe, a chavrusa.';
+
+  @override
+  String get subTrackHubAdd => 'Add sub-track';
+
+  @override
+  String get subTrackTypeSchoolYear => 'School year';
+
+  @override
+  String get subTrackTypeOngoing => 'Ongoing';
+
+  @override
+  String subTrackRowSchoolYearSubtitle(
+    String startMonth,
+    String endMonth,
+    String rate,
+  ) {
+    return 'School year · $startMonth–$endMonth · $rate/week';
+  }
+
+  @override
+  String subTrackRowOngoingSubtitle(String rate) {
+    return 'Ongoing · $rate/week';
+  }
+
+  @override
+  String subTrackHubDailyTarget(int count, String unit) {
+    return 'Daily target: $count $unit';
+  }
+
+  @override
+  String get subTrackSyncRejected => 'Your change couldn\'t be saved.';
+
+  @override
+  String get subTrackSaveFailed => 'Couldn\'t save the sub-track.';
+
+  @override
+  String get subTrackCalendarProgramRejected =>
+      'This track follows a calendar program, so it can\'t have sub-tracks.';
+
+  @override
+  String get subTrackFormEditSchoolYearTitle => 'Edit school year';
+
+  @override
+  String get subTrackFormNameLabel => 'Sub-track name';
+
+  @override
+  String get subTrackFormAcademicYearLabel => 'Academic year';
+
+  @override
+  String get subTrackYearUsed => 'Used';
+
+  @override
+  String get subTrackYearActive => 'Active';
+
+  @override
+  String get subTrackYearOpen => 'Open';
+
+  @override
+  String get subTrackFormStartMonthLabel => 'Start month';
+
+  @override
+  String get subTrackFormEndMonthLabel => 'End month';
+
+  @override
+  String subTrackFormRateLabel(String unit) {
+    return '$unit per week';
+  }
+
+  @override
+  String subTrackFormPerSchoolDay(String count, String unit) {
+    return '~$count $unit / school day';
+  }
+
+  @override
+  String subTrackFormRateDecrease(String unit) {
+    return 'Decrease $unit per week';
+  }
+
+  @override
+  String subTrackFormRateIncrease(String unit) {
+    return 'Increase $unit per week';
+  }
+
+  @override
+  String get subTrackFormWeeksLabel => 'Weeks per year';
+
+  @override
+  String get subTrackFormWeeksHelper =>
+      'Prefilled — edit if the school year is shorter';
+
+  @override
+  String get subTrackFormShabbosLabel => 'Learns on shabbos / yom tov';
+
+  @override
+  String get subTrackFormShabbosHelper =>
+      'Include this source on the catch-up card after shabbos';
+
+  @override
+  String get subTrackFormGroundNote =>
+      'You can add ground later — the school\'s masechtos don\'t need to be known yet.';
+
+  @override
+  String get subTrackFormSave => 'Save sub-track';
+
+  @override
+  String get subTrackNoDeadlineNote =>
+      'Without a deadline, a sub-track can\'t lower the daily target.';
+
+  @override
+  String get subTrackNoDeadlineLink => 'Set a deadline';
+
+  @override
+  String get subTrackErrorNameRequired => 'Enter a name';
+
+  @override
+  String get subTrackErrorYearRequired => 'Choose an academic year';
+
+  @override
+  String get subTrackErrorYearUsed =>
+      'This academic year already has a school sub-track';
+
+  @override
+  String get subTrackErrorWindowOverlap =>
+      'These months overlap another school sub-track';
+
+  @override
+  String get subTrackErrorWindowReversed =>
+      'The end month must come after the start month';
+
+  @override
+  String get subTrackErrorPositiveNumber => 'Enter a number greater than 0';
+
+  @override
+  String get subTrackSummaryTitle => 'Sub-tracks';
+
+  @override
+  String get subTrackSummaryEmpty => 'No sub-tracks yet';
+
+  @override
+  String subTrackSummaryCapacity(
+    int count,
+    String unit,
+    String rate,
+    String weeks,
+  ) {
+    return 'Capacity $count $unit ($rate/wk × $weeks weeks)';
+  }
+
+  @override
+  String subTrackSummaryPlan(String rate, String weeks) {
+    return '$rate/wk × $weeks weeks';
+  }
+
+  @override
+  String get onboardingSubTrackMention =>
+      'School and rebbe sub-tracks can be added later from Settings → Manage tracks.';
+
+  @override
   String get startingPositionTitle => 'Starting Position';
 
   @override

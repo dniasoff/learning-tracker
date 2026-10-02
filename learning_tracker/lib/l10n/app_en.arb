@@ -2907,6 +2907,248 @@
       }
     }
   },
+  "subTrackHubHeader": "Sub-tracks · {count} active",
+  "@subTrackHubHeader": {
+    "description": "Manage tracks hub: Sub-tracks group header with the number of non-ended sub-tracks (DNI-495 AC-1, screens.md #04).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackHubHelper": "Learning that happens outside home — school, a rebbe, a chavrusa.",
+  "@subTrackHubHelper": {
+    "description": "Manage tracks hub: helper under the Sub-tracks header (DNI-495 AC-1)."
+  },
+  "subTrackHubAdd": "Add sub-track",
+  "@subTrackHubAdd": {
+    "description": "Manage tracks hub: action that opens the sub-track type chooser (DNI-495 AC-1)."
+  },
+  "subTrackTypeSchoolYear": "School year",
+  "@subTrackTypeSchoolYear": {
+    "description": "Sub-track type chooser option and school-year form title (DNI-495 AC-1, AC-4)."
+  },
+  "subTrackTypeOngoing": "Ongoing",
+  "@subTrackTypeOngoing": {
+    "description": "Sub-track type chooser option for an ongoing sub-track (form in DNI-496) (DNI-495 AC-1)."
+  },
+  "subTrackRowSchoolYearSubtitle": "School year · {startMonth}–{endMonth} · {rate}/week",
+  "@subTrackRowSchoolYearSubtitle": {
+    "description": "Manage tracks hub: subtitle of a school-year sub-track row (screens.md #04).",
+    "placeholders": {
+      "startMonth": {
+        "type": "String"
+      },
+      "endMonth": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowOngoingSubtitle": "Ongoing · {rate}/week",
+  "@subTrackRowOngoingSubtitle": {
+    "description": "Manage tracks hub: subtitle of an ongoing sub-track row (screens.md #04).",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHubDailyTarget": "Daily target: {count} {unit}",
+  "@subTrackHubDailyTarget": {
+    "description": "Manage tracks hub: the curriculum's recomputed daily target shown under its sub-tracks (DNI-495 AC-7/AC-8). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackSyncRejected": "Your change couldn't be saved.",
+  "@subTrackSyncRejected": {
+    "description": "Snackbar when a queued sub-track change is permanently rejected at sync (UX-DR-119, UX-DR-121)."
+  },
+  "subTrackSaveFailed": "Couldn't save the sub-track.",
+  "@subTrackSaveFailed": {
+    "description": "Retryable snackbar when saving the sub-track form fails; the form keeps its values (UX-DR-120). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackCalendarProgramRejected": "This track follows a calendar program, so it can't have sub-tracks.",
+  "@subTrackCalendarProgramRejected": {
+    "description": "Snackbar when a create is refused because the curriculum follows a calendar program (AD-45). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackFormEditSchoolYearTitle": "Edit school year",
+  "@subTrackFormEditSchoolYearTitle": {
+    "description": "School-year sub-track form title while editing (DNI-495 AC-8). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackFormNameLabel": "Sub-track name",
+  "@subTrackFormNameLabel": {
+    "description": "School-year form: name field label (DNI-495 AC-4)."
+  },
+  "subTrackFormAcademicYearLabel": "Academic year",
+  "@subTrackFormAcademicYearLabel": {
+    "description": "School-year form: academic-year chip row label (DNI-495 AC-4)."
+  },
+  "subTrackYearUsed": "Used",
+  "@subTrackYearUsed": {
+    "description": "Academic-year chip state: the year already has a school-year sub-track; the chip is disabled (UX-DR-32)."
+  },
+  "subTrackYearActive": "Active",
+  "@subTrackYearActive": {
+    "description": "Academic-year chip state: the current academic year (UX-DR-32)."
+  },
+  "subTrackYearOpen": "Open",
+  "@subTrackYearOpen": {
+    "description": "Academic-year chip state: a future year with no school-year sub-track (UX-DR-32)."
+  },
+  "subTrackFormStartMonthLabel": "Start month",
+  "@subTrackFormStartMonthLabel": {
+    "description": "School-year form: start month field label (DNI-495 AC-4)."
+  },
+  "subTrackFormEndMonthLabel": "End month",
+  "@subTrackFormEndMonthLabel": {
+    "description": "School-year form: end month field label (DNI-495 AC-4)."
+  },
+  "subTrackFormRateLabel": "{unit} per week",
+  "@subTrackFormRateLabel": {
+    "description": "School-year form: rate stepper label in the curriculum's leaf unit, e.g. 'Mishnayos per week' (DNI-495 AC-4, prd-deviations #12).",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormPerSchoolDay": "~{count} {unit} / school day",
+  "@subTrackFormPerSchoolDay": {
+    "description": "School-year form: per-school-day helper under the rate stepper (DNI-495 AC-4). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormRateDecrease": "Decrease {unit} per week",
+  "@subTrackFormRateDecrease": {
+    "description": "Accessibility label for the rate stepper's minus button.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormRateIncrease": "Increase {unit} per week",
+  "@subTrackFormRateIncrease": {
+    "description": "Accessibility label for the rate stepper's plus button.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormWeeksLabel": "Weeks per year",
+  "@subTrackFormWeeksLabel": {
+    "description": "School-year form: weeks-per-year field label (DNI-495 AC-4)."
+  },
+  "subTrackFormWeeksHelper": "Prefilled — edit if the school year is shorter",
+  "@subTrackFormWeeksHelper": {
+    "description": "School-year form: helper under weeks per year (DNI-495 AC-4)."
+  },
+  "subTrackFormShabbosLabel": "Learns on shabbos / yom tov",
+  "@subTrackFormShabbosLabel": {
+    "description": "School-year form: shabbos switch label (DNI-495 AC-4)."
+  },
+  "subTrackFormShabbosHelper": "Include this source on the catch-up card after shabbos",
+  "@subTrackFormShabbosHelper": {
+    "description": "School-year form: shabbos switch helper (DNI-495 AC-4)."
+  },
+  "subTrackFormGroundNote": "You can add ground later — the school's masechtos don't need to be known yet.",
+  "@subTrackFormGroundNote": {
+    "description": "School-year form: info note about adding ground later (DNI-495 AC-4)."
+  },
+  "subTrackFormSave": "Save sub-track",
+  "@subTrackFormSave": {
+    "description": "School-year form: save pill (DNI-495 AC-4)."
+  },
+  "subTrackNoDeadlineNote": "Without a deadline, a sub-track can't lower the daily target.",
+  "@subTrackNoDeadlineNote": {
+    "description": "Sub-track forms: inline note when the curriculum has no deadline goal (DNI-495 AC-6, SPEC CAP-3). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackNoDeadlineLink": "Set a deadline",
+  "@subTrackNoDeadlineLink": {
+    "description": "Sub-track forms: link from the no-deadline note to the curriculum's goal setup (DNI-495 AC-6). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorNameRequired": "Enter a name",
+  "@subTrackErrorNameRequired": {
+    "description": "Sub-track form inline error: blank name (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorYearRequired": "Choose an academic year",
+  "@subTrackErrorYearRequired": {
+    "description": "Sub-track form inline error: no academic year selected (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorYearUsed": "This academic year already has a school sub-track",
+  "@subTrackErrorYearUsed": {
+    "description": "Sub-track form inline error: the academic year is used (AD-45, UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorWindowOverlap": "These months overlap another school sub-track",
+  "@subTrackErrorWindowOverlap": {
+    "description": "Sub-track form inline error: overlapping school-year windows (AD-45, UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorWindowReversed": "The end month must come after the start month",
+  "@subTrackErrorWindowReversed": {
+    "description": "Sub-track form inline error: window start after window end (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorPositiveNumber": "Enter a number greater than 0",
+  "@subTrackErrorPositiveNumber": {
+    "description": "Sub-track form inline error: blank, zero, negative or non-numeric rate or weeks (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackSummaryTitle": "Sub-tracks",
+  "@subTrackSummaryTitle": {
+    "description": "Tablet summary panel title next to the sub-track form (UX-DR-162)."
+  },
+  "subTrackSummaryEmpty": "No sub-tracks yet",
+  "@subTrackSummaryEmpty": {
+    "description": "Tablet summary panel when the curriculum has no sub-tracks. DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackSummaryCapacity": "Capacity {count} {unit} ({rate}/wk × {weeks} weeks)",
+  "@subTrackSummaryCapacity": {
+    "description": "Tablet summary panel: one sub-track's capacity (AD-44, UX-DR-162).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackSummaryPlan": "{rate}/wk × {weeks} weeks",
+  "@subTrackSummaryPlan": {
+    "description": "Tablet summary panel: a sub-track's rate plan when capacity is not computed (no deadline, AD-44).",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSubTrackMention": "School and rebbe sub-tracks can be added later from Settings → Manage tracks.",
+  "@onboardingSubTrackMention": {
+    "description": "Onboarding goal step: the one passive sub-track mention; no button, link or field (FR-4a, UX-DR-33). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
   "startingPositionTitle": "Starting Position",
   "startingPositionHint": "Can start up to 30 days back from today",
   "startingPositionWhereAreYou": "Where are you in {programName}?",
