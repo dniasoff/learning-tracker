@@ -8,8 +8,14 @@
 /// Oversized actions (an entity over the AD-54 budget) go to
 /// [ApplyingOversizedPort], which applies them to the same fake (as the
 /// `ownerOversizedGovernedWrite` callable would) and records each request;
-/// set [ApplyingOversizedPort.online] to false to simulate offline.
+/// set [ApplyingOversizedPort.online] to false to simulate offline. Like the
+/// callable, it refuses (`invalid-argument`) any field its
+/// `writeWithChangeLog` `FIELD_SPECS` does not allow — read from the
+/// functions source, so a client payload the callable would reject fails
+/// here too.
 library;
+
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -35,6 +41,37 @@ const governedTestProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
 /// The governed-writer test clock.
 final governedTestNow = DateTime.utc(2026, 9, 10, 12);
 
+/// The client-writable fields per governed collection, parsed from the
+/// `FIELD_SPECS` table of `functions/src/write_with_change_log.ts` (the
+/// callable's own allow-list; tests run from the package root).
+final Map<String, Set<String>> callableFieldSpecs = _parseCallableFieldSpecs();
+
+Map<String, Set<String>> _parseCallableFieldSpecs() {
+  final source = File(
+    'functions/src/write_with_change_log.ts',
+  ).readAsStringSync();
+  final start = source.indexOf('const FIELD_SPECS');
+  final end = source.indexOf('\n};', start);
+  if (start < 0 || end < 0) {
+    throw StateError('FIELD_SPECS not found in write_with_change_log.ts');
+  }
+  final collection = RegExp(r'^  (\w+): \{$');
+  final field = RegExp(r'^    (\w+):');
+  final specs = <String, Set<String>>{};
+  Set<String>? current;
+  for (final line in source.substring(start, end).split('\n')) {
+    final c = collection.firstMatch(line);
+    if (c != null) {
+      current = specs[c.group(1)!] = {};
+      continue;
+    }
+    final f = field.firstMatch(line);
+    if (f != null) current?.add(f.group(1)!);
+  }
+  if (specs.isEmpty) throw StateError('FIELD_SPECS parsed empty');
+  return specs;
+}
+
 /// Applies oversized actions to the fake Firestore and records them.
 final class ApplyingOversizedPort implements OversizedGovernedWritePort {
   /// Creates the port over [firestore].
@@ -56,6 +93,18 @@ final class ApplyingOversizedPort implements OversizedGovernedWritePort {
   ) async {
     if (!online) throw const OnlineRequiredException();
     requests.add(request);
+    // The callable validates every field before writing anything.
+    for (final entry in request.entries) {
+      for (final doc in entry.change.docs) {
+        final allowed = callableFieldSpecs[doc.collection];
+        final unknown = doc.fields.keys.where(
+          (k) => !(allowed?.contains(k) ?? false),
+        );
+        if (unknown.isNotEmpty) {
+          throw const PermanentWriteRejection('invalid-argument');
+        }
+      }
+    }
     final profile = firestore.doc(scope.profilePath);
     final batch = firestore.batch();
     for (final entry in request.entries) {

@@ -29,9 +29,11 @@
 /// ## Fields
 ///
 /// Only the changed fields are written (field-level `set(merge: true)`):
-/// the AD-52 keys plus the legacy display keys the rules still accept
+/// the AD-52 keys plus the legacy display keys the rules and the
+/// `ownerOversizedGovernedWrite` callable's field specs still accept
 /// (`description`, `date_type`, and `created_at` when a goal doc is created
-/// or revived). `updated_at` / `synced_at` are retired from governed docs
+/// or revived), so a goal in an oversized (online-only) action is accepted
+/// exactly as one under the budget. `updated_at` / `synced_at` are retired from governed docs
 /// and `target_percent` is retired by AD-43, so none of them is written.
 ///
 /// ## Calendar programs

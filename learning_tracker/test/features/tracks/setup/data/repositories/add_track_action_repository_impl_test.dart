@@ -166,6 +166,43 @@ void main() {
     },
   );
 
+  test('an oversized Add track with a new goal goes online as one action '
+      'the callable accepts (its field specs allow every key sent)', () async {
+    final actionId = await repo.applyAddTrack(
+      AddTrackPlan(
+        curriculumId: _c,
+        // 11 stages: one entity over the 10-doc budget sends the whole
+        // action through the online-only callable.
+        stages: _stages(11),
+        studyDays: _allDays,
+        goal: GoalEntity(
+          curriculumId: _c,
+          goalType: 'deadline',
+          targetDate: DateTime.utc(2027, 6, 1),
+          description: 'Siyum',
+          dateType: 'hebrew',
+          createdAt: governedTestNow,
+          updatedAt: governedTestNow,
+        ),
+      ),
+    );
+
+    final request = writer.oversized.requests.single;
+    expect(actionId, request.actionId);
+    expect(writer.results.single, isA<CaptureSuccess>());
+    expect([
+      for (final e in request.entries) e.change.entity,
+    ], containsAllInOrder([GovernedEntity.mainTrack, GovernedEntity.goal]));
+    final goal = await writer.doc('goals', 'mishnayos_deadline');
+    expect(goal?['description'], 'Siyum');
+    expect(goal?['date_type'], 'hebrew');
+    expect(goal?['target_date'], '2027-06-01');
+    expect(
+      (await writer.doc('curriculum_tracks', 'mishnayos'))?['state'],
+      'active',
+    );
+  });
+
   test('a calendar-program track: the program is set and no goal is '
       'written (AD-43: the calendar sets the pace)', () async {
     await repo.applyAddTrack(
