@@ -19,7 +19,6 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
@@ -103,7 +102,6 @@ Future<ProviderContainer> _container({
   bool includeGoal = true,
   Map<CurriculumId, DateTime>? activatedAt,
   Map<String, DateTime>? completions,
-  Set<String> sentinelCompletions = const {},
   List<String> skippedRefs = const [],
   List<String> previouslySkippedRefs = const [],
 }) async {
@@ -179,14 +177,8 @@ Future<ProviderContainer> _container({
       profileId: _profileId,
       curriculumId: CurriculumId.chumash,
       sefariaRef: entry.key,
-      completedAt: sentinelCompletions.contains(entry.key)
-          ? DateTime.fromMillisecondsSinceEpoch(
-              SchedulerEngine.kBulkPriorSentinelMs,
-            )
-          : entry.value,
-      source: sentinelCompletions.contains(entry.key)
-          ? CompletionSource.bulkInTrack
-          : CompletionSource.live,
+      completedAt: entry.value,
+      source: CompletionSource.live,
     );
   }
 
@@ -302,31 +294,6 @@ void main() {
       'Genesis 1:2',
       'Genesis 1:3',
     ]);
-  });
-
-  test('sentinel completions do not ghost the active queue', () async {
-    final now = DateTime.utc(2026, 5, 27);
-    final refs = {for (var i = 1; i <= 6; i++) 'Genesis 1:$i': now};
-    final container = await _container(
-      clock: now,
-      paceValue: 3,
-      completions: refs,
-      sentinelCompletions: refs.keys.toSet(),
-    );
-    addTearDown(container.dispose);
-    final subscription = container.listen(allDailyTasksProvider, (_, __) {});
-    addTearDown(subscription.close);
-
-    final tasks = await container.read(allDailyTasksProvider.future);
-    expect(tasks, isNotEmpty);
-    expect(
-      tasks.map((task) => task.contentItemSefariaRef),
-      isNot(contains('Genesis 1:1')),
-    );
-    expect(
-      tasks.map((task) => task.contentItemSefariaRef),
-      isNot(contains('Genesis 1:6')),
-    );
   });
 
   test('today-skipped refs are excluded at provider read time', () async {

@@ -78,9 +78,8 @@ void main() {
     );
 
     test('construction is synchronous — reading it needs no await, so every '
-        'existing plain-Provider watcher (completionOrchestratorProvider, '
-        'bulkPriorCompletionServiceProvider) keeps compiling and working '
-        'unchanged', () {
+        'existing plain-Provider watcher (beforeTrackingRecorderProvider) '
+        'keeps compiling and working unchanged', () {
       final container = ProviderContainer(
         overrides: [
           contentRepositoryProvider.overrideWithValue(MockContentRepository()),

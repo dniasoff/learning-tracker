@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -107,8 +106,10 @@ final _trackGoalProvider = FutureProvider.autoDispose
 
 /// Computes a [ProgressPaceCalculator] for the given [CurriculumTrackEntity].
 ///
-/// Live completions: `completedAt >= track.activatedAt` (excluding sentinel).
-/// Bulk baseline: completions with the sentinel date (2000-01-01).
+/// Live completions: `completedAt >= track.activatedAt`.
+/// Baseline: completions before the track started (R10, DNI-473: no
+/// sentinel rows are written any more; prior learning is a
+/// `before_tracking` learning event read by the R3 story).
 /// Total items: from [scopedItemCountProvider].
 /// targetDate: deadline-goal date when available; otherwise today (so
 ///   requiredVelocity returns 0 — not meaningful for pace goals).
@@ -124,19 +125,11 @@ final _trackPaceCalcProvider = FutureProvider.autoDispose
       final trackStart = track.activatedAt.toLocal();
 
       final liveCount = allCompletions
-          .where(
-            (c) =>
-                !c.completedAt.isBefore(trackStart) &&
-                !c.completedAt.isAtSameMomentAs(kBulkPriorSentinelDate),
-          )
+          .where((c) => !c.completedAt.isBefore(trackStart))
           .length;
 
       final bulkBaseline = allCompletions
-          .where(
-            (c) =>
-                c.completedAt.isAtSameMomentAs(kBulkPriorSentinelDate) ||
-                c.completedAt.isBefore(trackStart),
-          )
+          .where((c) => c.completedAt.isBefore(trackStart))
           .length;
 
       final totalItems = await ref.watch(

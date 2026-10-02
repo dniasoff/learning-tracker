@@ -13,9 +13,9 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -649,45 +649,33 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     }
   }
 
-  /// `service.execute()` doesn't take a profileId (owner decision 2,
-  /// `docs/firestore-rewrite-map.md`): bulk-marking always targets the
-  /// CURRENTLY ACTIVE profile. See `bulk_prior_completion_service.dart`'s
-  /// `execute` doc comment for the storage-layer side of the same fix.
+  /// Records the prior-learning [selections] as ONE `before_tracking`
+  /// capture for the CURRENTLY ACTIVE learner (Story 1.11, DNI-473; R10
+  /// retired the `2000-01-01` sentinel completions).
   Future<({int itemCount, int completionCount})>
   _applySelfPacedPriorCompletions(Set<HierarchySelection> selections) async {
     if (selections.isEmpty) return (itemCount: 0, completionCount: 0);
 
-    final service = ref.read(bulkPriorCompletionServiceProvider);
-    final curriculum = _state.curriculumId!;
-
-    final resolved = await service.resolveSelections(
-      curriculumId: curriculum,
-      selections: selections.toList(),
-    );
-    if (resolved.isEmpty) {
-      return (itemCount: 0, completionCount: 0);
+    final result = await ref
+        .read(beforeTrackingRecorderProvider)
+        .record(
+          curriculumId: _state.curriculumId!,
+          selections: selections.toList(),
+        );
+    if (result.capture is! CaptureSuccess) {
+      throw StateError('prior learning was not recorded: ${result.capture}');
     }
-
-    final completion = await service.execute(
-      curriculumId: curriculum,
-      resolvedItems: resolved,
-      stageIds: const [1],
-    );
 
     // Refresh dashboard/progress/task views immediately.
     await onTrackChanged(ref);
 
     // onTrackChanged() above hand-invalidates the track/dashboard surfaces
     // but does not fire completionCommittedProvider, so any watcher of that
-    // shared signal (e.g. journeyViewModelProvider) is missed here — the
-    // same staleness class as BulkMarkScreen's entry point, which uses this
-    // identical service. Fire it too so both entry points stay in sync.
+    // shared signal (e.g. journeyViewModelProvider) is missed here — fire
+    // it too so both entry points stay in sync.
     ref.read(completionCommittedProvider.notifier).increment();
 
-    return (
-      itemCount: completion.itemCount,
-      completionCount: completion.completionCount,
-    );
+    return (itemCount: result.itemCount, completionCount: result.eventCount);
   }
 
   String _getSmartDefault() => smartDefaultTrackName(

@@ -1,4 +1,4 @@
-// L1 widget tests — OnboardingScreen phase flow + BulkMarkScreen sentinel-date
+// L1 widget tests — OnboardingScreen phase flow + BulkMarkScreen before-tracking
 // crediting.
 //
 // Coverage:
@@ -25,8 +25,8 @@
 //     • "Next" button disabled when no selections
 //     • Skip button is present and calls Navigator.pop(null)
 //     • Search icon toggles to search-bar TextField
-//     • Pre-ticked refs loaded from sentinel-dated completions (B7)
-//     • Unticking a pre-ticked item triggers expungePriorCompletions (B8)
+//     • Pre-ticked refs loaded from before-tracking learning events (B7)
+//     • Unticking a pre-ticked item un-learns it (B8)
 //     • Confirmation phase shows item count and Confirm/Back buttons
 //     • Back from confirmation returns to selection phase
 //     • Execute bulk-mark: shows processing indicator then done phase
@@ -35,7 +35,7 @@
 //     • Error in _executeBulkMark stays on confirmation phase with error text
 //     • "mark everything" guard: snackbar if all items selected
 //     • RTL smoke — mounts in he locale without overflow
-//     • Sentinel date: bulk-mark uses kBulkPriorSentinelDate (2000-01-01 UTC)
+//     • Bulk mark records ONE before_tracking capture (R10, DNI-473)
 //       credits siyumim + lifetime — not streak (product rule)
 //
 // BUG / product-rule notes:
@@ -51,7 +51,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart'
@@ -60,11 +59,11 @@ import 'package:learning_tracker/features/account/domain/models/auth_state.dart'
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -87,8 +86,8 @@ class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
-class _MockBulkPriorCompletionService extends Mock
-    implements BulkPriorCompletionService {}
+class _MockBeforeTrackingRecorder extends Mock
+    implements BeforeTrackingRecorder {}
 
 // ── Shared content fixtures ───────────────────────────────────────────────────
 
@@ -168,7 +167,7 @@ Widget _onboardingRig({
 Widget _bulkMarkRig({
   _MockCompletionRepository? completionRepo,
   _MockContentRepository? contentRepo,
-  _MockBulkPriorCompletionService? service,
+  _MockBeforeTrackingRecorder? service,
   List<ContentItem> allItems = const [],
 
   /// Only applied when completionRepo is null (auto-created).
@@ -197,7 +196,10 @@ Widget _bulkMarkRig({
     ).thenAnswer((_) async => <ContentItem>[]);
   }
 
-  final svc = service ?? _MockBulkPriorCompletionService();
+  final svc = service ?? _MockBeforeTrackingRecorder();
+  if (service == null) {
+    when(() => svc.recordedRefs(any())).thenAnswer((_) async => <String>{});
+  }
 
   return ProviderScope(
     overrides: [
@@ -208,7 +210,7 @@ Widget _bulkMarkRig({
       ),
       contentSearchProvider.overrideWith((ref, args) => Future.value([])),
       completionRepositoryProvider.overrideWithValue(cRepo),
-      bulkPriorCompletionServiceProvider.overrideWithValue(svc),
+      beforeTrackingRecorderProvider.overrideWithValue(svc),
       activeProfileIdProvider.overrideWithValue('profile-1'),
     ],
     child: MaterialApp(
@@ -270,7 +272,9 @@ void main() {
 
     setUp(() {
       router = _MockStackRouter();
-      when(() => router.replaceAll(any())).thenAnswer((_) async {});
+      when(
+        () => router.replaceAll(any()),
+      ).thenAnswer((_) async => const CaptureResult.success());
       SharedPreferences.setMockInitialValues({});
     });
 
@@ -377,7 +381,9 @@ void main() {
       tester,
     ) async {
       final router = _MockStackRouter();
-      when(() => router.replaceAll(any())).thenAnswer((_) async {});
+      when(
+        () => router.replaceAll(any()),
+      ).thenAnswer((_) async => const CaptureResult.success());
       SharedPreferences.setMockInitialValues({});
 
       await tester.pumpWidget(
@@ -410,7 +416,9 @@ void main() {
       });
 
       final router = _MockStackRouter();
-      when(() => router.replaceAll(any())).thenAnswer((_) async {});
+      when(
+        () => router.replaceAll(any()),
+      ).thenAnswer((_) async => const CaptureResult.success());
 
       await tester.pumpWidget(_onboardingRig(router: router));
       await tester.pump();
@@ -439,7 +447,9 @@ void main() {
       });
 
       final router = _MockStackRouter();
-      when(() => router.replaceAll(any())).thenAnswer((_) async {});
+      when(
+        () => router.replaceAll(any()),
+      ).thenAnswer((_) async => const CaptureResult.success());
 
       await tester.pumpWidget(_onboardingRig(router: router));
       await tester.pump();
@@ -469,7 +479,9 @@ void main() {
       });
 
       final router = _MockStackRouter();
-      when(() => router.replaceAll(any())).thenAnswer((_) async {});
+      when(
+        () => router.replaceAll(any()),
+      ).thenAnswer((_) async => const CaptureResult.success());
 
       await tester.pumpWidget(_onboardingRig(router: router));
       await tester.pump();
@@ -501,7 +513,9 @@ void main() {
       });
 
       final router = _MockStackRouter();
-      when(() => router.replaceAll(any())).thenAnswer((_) async {});
+      when(
+        () => router.replaceAll(any()),
+      ).thenAnswer((_) async => const CaptureResult.success());
 
       await tester.pumpWidget(_onboardingRig(router: router));
       await tester.pump();
@@ -527,7 +541,9 @@ void main() {
       });
 
       final router = _MockStackRouter();
-      when(() => router.replaceAll(any())).thenAnswer((_) async {});
+      when(
+        () => router.replaceAll(any()),
+      ).thenAnswer((_) async => const CaptureResult.success());
 
       await tester.pumpWidget(_onboardingRig(router: router));
       await tester.pump();
@@ -544,7 +560,9 @@ void main() {
   group('OnboardingScreen — RTL smoke', () {
     testWidgets('mounts without overflow in he locale', (tester) async {
       final router = _MockStackRouter();
-      when(() => router.replaceAll(any())).thenAnswer((_) async {});
+      when(
+        () => router.replaceAll(any()),
+      ).thenAnswer((_) async => const CaptureResult.success());
       SharedPreferences.setMockInitialValues({});
 
       await tester.pumpWidget(
@@ -660,10 +678,13 @@ void main() {
     });
   });
 
-  group('BulkMarkScreen — pre-tick from sentinel completions (B7)', () {
-    testWidgets('sentinel-dated completion pre-ticks the item', (tester) async {
+  group('BulkMarkScreen — pre-tick from before-tracking events (B7)', () {
+    testWidgets('a leaf recorded before tracking pre-ticks the item', (
+      tester,
+    ) async {
       final completionRepo = _MockCompletionRepository();
       final contentRepo = _MockContentRepository();
+      final service = _MockBeforeTrackingRecorder();
 
       when(
         () => contentRepo.getContentForCurriculum(any()),
@@ -675,27 +696,17 @@ void main() {
         ),
       ).thenAnswer((_) async => <ContentItem>[]);
 
-      // leafA has a sentinel-dated completion → pre-ticked
-      when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
-        (_) async => [
-          CompletionEntity(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: _leafA.sefariaRef,
-            stageId: 1,
-            trackType: 'daily',
-            source: CompletionSource.bulkInTrack,
-            completedAt: kBulkPriorSentinelDate, // sentinel 2000-01-01 UTC
-            points: 0,
-          ),
-        ],
-      );
+      // leafA was recorded before tracking → pre-ticked
+      when(
+        () => service.recordedRefs(any()),
+      ).thenAnswer((_) async => {_leafA.sefariaRef});
 
       await tester.pumpWidget(
         _bulkMarkRig(
           completionRepo: completionRepo,
           contentRepo: contentRepo,
+          service: service,
           allItems: _twoLeaves,
-          existingCompletions: const [], // provider already mocked above
         ),
       );
       await tester.pump();
@@ -713,52 +724,17 @@ void main() {
 
       await _tearDown(tester);
     });
-
-    test(
-      'sentinel date is 2000-01-01 UTC (product rule: not recent/streak)',
-      () {
-        // Verify the sentinel constant used by the bulk-mark flow.
-        // This is the key product rule: sentinel date credits lifetime/siyumim
-        // but is NOT in the recent-activity window (2000 CE is decades ago).
-        expect(kBulkPriorSentinelDate.year, 2000);
-        expect(kBulkPriorSentinelDate.month, 1);
-        expect(kBulkPriorSentinelDate.day, 1);
-        expect(kBulkPriorSentinelDate.isUtc, isTrue);
-      },
-    );
-
-    test('isBulkPriorSentinel returns true for kBulkPriorSentinelDate', () {
-      expect(isBulkPriorSentinel(kBulkPriorSentinelDate), isTrue);
-    });
-
-    test(
-      'isBulkPriorSentinel returns true for non-UTC DateTime at same moment',
-      () {
-        // Simulate a completion coming back from Firestore/Drift without UTC flag
-        final nonUtc = kBulkPriorSentinelDate.toLocal();
-        expect(
-          isBulkPriorSentinel(nonUtc),
-          isTrue,
-          reason:
-              'Moment-based comparison must survive isUtc=false round-trips',
-        );
-      },
-    );
-
-    test('isBulkPriorSentinel returns false for today', () {
-      expect(isBulkPriorSentinel(DateTime.now()), isFalse);
-    });
   });
 
   group('BulkMarkScreen — confirmation phase', () {
     late _MockCompletionRepository completionRepo;
     late _MockContentRepository contentRepo;
-    late _MockBulkPriorCompletionService service;
+    late _MockBeforeTrackingRecorder service;
 
     setUp(() {
       completionRepo = _MockCompletionRepository();
       contentRepo = _MockContentRepository();
-      service = _MockBulkPriorCompletionService();
+      service = _MockBeforeTrackingRecorder();
 
       when(
         () => contentRepo.getContentForCurriculum(any()),
@@ -770,20 +746,10 @@ void main() {
         ),
       ).thenAnswer((_) async => <ContentItem>[]);
 
-      // Pre-tick leafA via sentinel completion so Next is enabled immediately
-      when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
-        (_) async => [
-          CompletionEntity(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: _leafA.sefariaRef,
-            stageId: 1,
-            trackType: 'daily',
-            source: CompletionSource.bulkInTrack,
-            completedAt: kBulkPriorSentinelDate,
-            points: 0,
-          ),
-        ],
-      );
+      // Pre-tick leafA (recorded before tracking) so Next is enabled
+      when(
+        () => service.recordedRefs(any()),
+      ).thenAnswer((_) async => {_leafA.sefariaRef});
 
       when(
         () => service.resolveSelections(
@@ -857,12 +823,12 @@ void main() {
   group('BulkMarkScreen — execute bulk-mark', () {
     late _MockCompletionRepository completionRepo;
     late _MockContentRepository contentRepo;
-    late _MockBulkPriorCompletionService service;
+    late _MockBeforeTrackingRecorder service;
 
     setUp(() {
       completionRepo = _MockCompletionRepository();
       contentRepo = _MockContentRepository();
-      service = _MockBulkPriorCompletionService();
+      service = _MockBeforeTrackingRecorder();
 
       when(
         () => contentRepo.getContentForCurriculum(any()),
@@ -874,19 +840,9 @@ void main() {
         ),
       ).thenAnswer((_) async => <ContentItem>[]);
 
-      when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
-        (_) async => [
-          CompletionEntity(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: _leafA.sefariaRef,
-            stageId: 1,
-            trackType: 'daily',
-            source: CompletionSource.bulkInTrack,
-            completedAt: kBulkPriorSentinelDate,
-            points: 0,
-          ),
-        ],
-      );
+      when(
+        () => service.recordedRefs(any()),
+      ).thenAnswer((_) async => {_leafA.sefariaRef});
 
       when(
         () => service.resolveSelections(
@@ -896,15 +852,11 @@ void main() {
       ).thenAnswer((_) async => [_leafA]);
 
       when(
-        () => service.execute(
+        () => service.record(
           curriculumId: any(named: 'curriculumId'),
-          resolvedItems: any(named: 'resolvedItems'),
-          stageIds: any(named: 'stageIds'),
+          selections: any(named: 'selections'),
         ),
-      ).thenAnswer(
-        (_) async =>
-            const BulkPriorCompletionResult(itemCount: 1, completionCount: 1),
-      );
+      ).thenAnswer((_) async => _bt(1, 1));
     });
 
     testWidgets('shows processing indicator then done phase', (tester) async {
@@ -989,7 +941,7 @@ void main() {
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
             completionRepositoryProvider.overrideWithValue(completionRepo),
-            bulkPriorCompletionServiceProvider.overrideWithValue(service),
+            beforeTrackingRecorderProvider.overrideWithValue(service),
             activeProfileIdProvider.overrideWithValue('profile-1'),
           ],
           child: MaterialApp(
@@ -1061,10 +1013,9 @@ void main() {
         '(${locale.languageCode})',
         (tester) async {
           when(
-            () => service.execute(
+            () => service.record(
               curriculumId: any(named: 'curriculumId'),
-              resolvedItems: any(named: 'resolvedItems'),
-              stageIds: any(named: 'stageIds'),
+              selections: any(named: 'selections'),
             ),
           ).thenThrow(Exception('Network error'));
 
@@ -1111,7 +1062,7 @@ void main() {
     testWidgets('shows snackbar when all items selected', (tester) async {
       final completionRepo = _MockCompletionRepository();
       final contentRepo = _MockContentRepository();
-      final service = _MockBulkPriorCompletionService();
+      final service = _MockBeforeTrackingRecorder();
 
       // Only one leaf — selecting it covers 100% of content
       const singleLeaf = ContentItem(
@@ -1137,20 +1088,10 @@ void main() {
         ),
       ).thenAnswer((_) async => <ContentItem>[]);
 
-      // Pre-tick the only leaf (sentinel completion)
-      when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
-        (_) async => [
-          CompletionEntity(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: singleLeaf.sefariaRef,
-            stageId: 1,
-            trackType: 'daily',
-            source: CompletionSource.bulkInTrack,
-            completedAt: kBulkPriorSentinelDate,
-            points: 0,
-          ),
-        ],
-      );
+      // Pre-tick the only leaf (recorded before tracking)
+      when(
+        () => service.recordedRefs(any()),
+      ).thenAnswer((_) async => {singleLeaf.sefariaRef});
 
       // resolveSelections returns the single leaf (all content selected)
       when(
@@ -1188,12 +1129,10 @@ void main() {
   });
 
   group('BulkMarkScreen — expunge on untick (B8)', () {
-    testWidgets('unticking pre-ticked item calls expungePriorCompletions', (
-      tester,
-    ) async {
+    testWidgets('unticking a pre-ticked item un-learns it', (tester) async {
       final completionRepo = _MockCompletionRepository();
       final contentRepo = _MockContentRepository();
-      final service = _MockBulkPriorCompletionService();
+      final service = _MockBeforeTrackingRecorder();
 
       when(
         () => contentRepo.getContentForCurriculum(any()),
@@ -1205,26 +1144,16 @@ void main() {
         ),
       ).thenAnswer((_) async => <ContentItem>[]);
 
-      when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
-        (_) async => [
-          CompletionEntity(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: _leafA.sefariaRef,
-            stageId: 1,
-            trackType: 'daily',
-            source: CompletionSource.bulkInTrack,
-            completedAt: kBulkPriorSentinelDate,
-            points: 0,
-          ),
-        ],
-      );
+      when(
+        () => service.recordedRefs(any()),
+      ).thenAnswer((_) async => {_leafA.sefariaRef});
 
       when(
-        () => service.expungePriorCompletions(
-          sefariaRefs: any(named: 'sefariaRefs'),
+        () => service.unrecord(
           curriculumId: any(named: 'curriculumId'),
+          sefariaRefs: any(named: 'sefariaRefs'),
         ),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => const CaptureResult.success());
 
       await tester.pumpWidget(
         _bulkMarkRig(
@@ -1253,12 +1182,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      // expungePriorCompletions must have been called — once, batched, with
+      // unrecord (unlearn) must have been called — once, batched, with
       // every un-ticked pre-ticked ref (Fix 4), not once per ref.
       verify(
-        () => service.expungePriorCompletions(
-          sefariaRefs: any(named: 'sefariaRefs'),
+        () => service.unrecord(
           curriculumId: any(named: 'curriculumId'),
+          sefariaRefs: any(named: 'sefariaRefs'),
         ),
       ).called(1);
 
@@ -1279,3 +1208,12 @@ void main() {
     });
   });
 }
+
+/// A successful before-tracking capture of [items] leaves in [events]
+/// learning events.
+BeforeTrackingResult _bt(int items, int events) => BeforeTrackingResult(
+  capture: CaptureResult.success(
+    eventIds: [for (var i = 0; i < events; i++) 'event-$i'],
+  ),
+  itemCount: items,
+);

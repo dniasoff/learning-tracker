@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
@@ -109,14 +108,12 @@ class FirestoreLearningLedgerRepositoryAdapter
     }
   }
 
-  /// Rule 4 / DEC-19: only a `live` source stamps the real moment. Every other
-  /// source writes [kBulkPriorSentinelDate], so a siyum earned by a bulk mark
-  /// does not surface as today's recent activity or inflate streak and
-  /// points-per-day reads.
+  /// The real moment of the write. R10 (Story 1.11, DNI-473) retired the
+  /// `2000-01-01` sentinel the non-live sources used to stamp: prior
+  /// learning is now a `before_tracking` learning event, and no non-live
+  /// writer of this legacy ledger remains (R5 retires the repository).
   static DateTime _completedAtFor(CompletionSource source) =>
-      source == CompletionSource.live
-      ? DateTimeFactory.nowUtc()
-      : kBulkPriorSentinelDate;
+      DateTimeFactory.nowUtc();
 
   @override
   Future<LearningLedgerEntry> recordCompletion({

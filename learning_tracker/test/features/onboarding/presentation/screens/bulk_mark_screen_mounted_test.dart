@@ -15,15 +15,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -34,8 +32,8 @@ class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
-class _MockBulkPriorCompletionService extends Mock
-    implements BulkPriorCompletionService {}
+class _MockBeforeTrackingRecorder extends Mock
+    implements BeforeTrackingRecorder {}
 
 const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
@@ -72,7 +70,7 @@ Widget _toggleableHost({
   required ValueNotifier<bool> show,
   required _MockContentRepository contentRepo,
   required _MockCompletionRepository completionRepo,
-  required _MockBulkPriorCompletionService service,
+  required _MockBeforeTrackingRecorder service,
 }) {
   return ProviderScope(
     overrides: [
@@ -83,7 +81,7 @@ Widget _toggleableHost({
       ),
       contentSearchProvider.overrideWith((ref, args) => Future.value([])),
       completionRepositoryProvider.overrideWithValue(completionRepo),
-      bulkPriorCompletionServiceProvider.overrideWithValue(service),
+      beforeTrackingRecorderProvider.overrideWithValue(service),
       activeProfileIdProvider.overrideWithValue(_profileId),
     ],
     child: MaterialApp(
@@ -107,13 +105,13 @@ void main() {
 
   late _MockContentRepository contentRepo;
   late _MockCompletionRepository completionRepo;
-  late _MockBulkPriorCompletionService service;
+  late _MockBeforeTrackingRecorder service;
   late ValueNotifier<bool> show;
 
   setUp(() {
     contentRepo = _MockContentRepository();
     completionRepo = _MockCompletionRepository();
-    service = _MockBulkPriorCompletionService();
+    service = _MockBeforeTrackingRecorder();
 
     when(
       () => contentRepo.getContentForCurriculum(any()),
@@ -126,19 +124,9 @@ void main() {
     ).thenAnswer((_) async => <ContentItem>[]);
     // leafA pre-ticked via a sentinel prior-completion so "Next" is live
     // without needing to drive the hierarchy panel.
-    when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
-      (_) async => [
-        CompletionEntity(
-          curriculumId: CurriculumId.mishnayos,
-          sefariaRef: _leafA.sefariaRef,
-          stageId: 1,
-          trackType: 'personal',
-          source: CompletionSource.bulkInTrack,
-          completedAt: kBulkPriorSentinelDate,
-          points: 0,
-        ),
-      ],
-    );
+    when(
+      () => service.recordedRefs(any()),
+    ).thenAnswer((_) async => {_leafA.sefariaRef});
 
     show = ValueNotifier<bool>(true);
   });
@@ -195,19 +183,16 @@ void main() {
         ),
       ).thenAnswer((_) async => [_leafA]);
 
-      final executeGate = Completer<BulkPriorCompletionResult>();
+      final executeGate = Completer<BeforeTrackingResult>();
       addTearDown(() {
         if (!executeGate.isCompleted) {
-          executeGate.complete(
-            const BulkPriorCompletionResult(itemCount: 1, completionCount: 1),
-          );
+          executeGate.complete(_bt(1, 1));
         }
       });
       when(
-        () => service.execute(
+        () => service.record(
           curriculumId: any(named: 'curriculumId'),
-          resolvedItems: any(named: 'resolvedItems'),
-          stageIds: any(named: 'stageIds'),
+          selections: any(named: 'selections'),
         ),
       ).thenAnswer((_) => executeGate.future);
 
@@ -232,9 +217,7 @@ void main() {
       show.value = false; // pop the screen while execute() is pending
       await tester.pump();
 
-      executeGate.complete(
-        const BulkPriorCompletionResult(itemCount: 1, completionCount: 1),
-      );
+      executeGate.complete(_bt(1, 1));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -253,17 +236,16 @@ void main() {
         ),
       ).thenAnswer((_) async => [_leafA]);
 
-      final executeGate = Completer<BulkPriorCompletionResult>();
+      final executeGate = Completer<BeforeTrackingResult>();
       addTearDown(() {
         if (!executeGate.isCompleted) {
           executeGate.completeError(Exception('Network error'));
         }
       });
       when(
-        () => service.execute(
+        () => service.record(
           curriculumId: any(named: 'curriculumId'),
-          resolvedItems: any(named: 'resolvedItems'),
-          stageIds: any(named: 'stageIds'),
+          selections: any(named: 'selections'),
         ),
       ).thenAnswer((_) => executeGate.future);
 
@@ -296,3 +278,12 @@ void main() {
     },
   );
 }
+
+/// A successful before-tracking capture of [items] leaves in [events]
+/// learning events.
+BeforeTrackingResult _bt(int items, int events) => BeforeTrackingResult(
+  capture: CaptureResult.success(
+    eventIds: [for (var i = 0; i < events; i++) 'event-$i'],
+  ),
+  itemCount: items,
+);

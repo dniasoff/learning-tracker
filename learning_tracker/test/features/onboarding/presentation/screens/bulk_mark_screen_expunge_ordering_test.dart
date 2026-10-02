@@ -23,17 +23,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -44,8 +42,8 @@ class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
-class _MockBulkPriorCompletionService extends Mock
-    implements BulkPriorCompletionService {}
+class _MockBeforeTrackingRecorder extends Mock
+    implements BeforeTrackingRecorder {}
 
 const _leafA = ContentItem(
   curriculumId: 'mishnayos',
@@ -87,7 +85,7 @@ void main() {
     (tester) async {
       final contentRepo = _MockContentRepository();
       final completionRepo = _MockCompletionRepository();
-      final service = _MockBulkPriorCompletionService();
+      final service = _MockBeforeTrackingRecorder();
 
       when(
         () => contentRepo.getContentForCurriculum(any()),
@@ -98,19 +96,9 @@ void main() {
           query: any(named: 'query'),
         ),
       ).thenAnswer((_) async => <ContentItem>[]);
-      when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
-        (_) async => [
-          CompletionEntity(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: _leafA.sefariaRef,
-            stageId: 1,
-            trackType: 'personal',
-            source: CompletionSource.bulkInTrack,
-            completedAt: kBulkPriorSentinelDate,
-            points: 0,
-          ),
-        ],
-      );
+      when(
+        () => service.recordedRefs(any()),
+      ).thenAnswer((_) async => {_leafA.sefariaRef});
 
       // Stand-in "database" for the dashboard percentage: 1.0 while leafA's
       // completion is still present, flipped to 0.0 only once the fake
@@ -122,13 +110,14 @@ void main() {
       });
 
       when(
-        () => service.expungePriorCompletions(
-          sefariaRefs: any(named: 'sefariaRefs'),
+        () => service.unrecord(
           curriculumId: any(named: 'curriculumId'),
+          sefariaRefs: any(named: 'sefariaRefs'),
         ),
       ).thenAnswer((_) async {
         await expungeGate.future;
         dashboardValue = 0.0;
+        return const CaptureResult.success();
       });
 
       await tester.pumpWidget(
@@ -141,7 +130,7 @@ void main() {
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
             completionRepositoryProvider.overrideWithValue(completionRepo),
-            bulkPriorCompletionServiceProvider.overrideWithValue(service),
+            beforeTrackingRecorderProvider.overrideWithValue(service),
             activeProfileIdProvider.overrideWithValue(_profileId),
             // Mirrors the real dashboardCompletionPercentageProvider's own
             // `ref.watch<int>(completionCommittedProvider)` (dashboard_providers
