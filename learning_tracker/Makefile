@@ -1,4 +1,4 @@
-.PHONY: help test test-invariants test-rules test-functions emit-fixtures test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.1 test-story-24.4 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-story-F5 test-epic-27 test-story-i4 test-epic-28 ci analyze format format-check validate-calendar seed seed-mongo-up seed-restore seed-down audit lint lint-rules-test gen-arch-tables check-arch-tables check-feature-graph gen-dart-test-tags check-dart-test-tags check-coverage-denominator check-profile-path-keying check-retired-symbols check-profile-id-int-sites test-quarantine
+.PHONY: help test test-invariants test-rules test-functions emit-fixtures test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.1 test-story-24.4 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-story-F5 test-epic-27 test-story-i4 test-epic-28 ci analyze format format-check validate-calendar seed seed-mongo-up seed-restore seed-down audit lint lint-rules-test gen-arch-tables check-arch-tables check-feature-graph gen-dart-test-tags check-dart-test-tags check-coverage-denominator check-profile-path-keying check-retired-symbols check-profile-id-int-sites check-dependency-direction test-quarantine
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -93,6 +93,9 @@ check-profile-path-keying: ## Run the profile-scoped-collection keying-split gat
 
 check-retired-symbols: ## Run the AD-49 retired-symbols gate standalone (DNI-521; inventory in tool/retired_symbols/)
 	dart run tool/check_retired_symbols.dart
+
+check-dependency-direction: ## Run the AD-23 dependency-direction + AD-35 pure-domain gate standalone (hard gate, no baseline)
+	dart run tool/check_dependency_direction.dart
 
 test-functions: ## Run Cloud Functions tests (real handlers vs firestore emulator) (L5)
 	npm --prefix functions run build
@@ -293,7 +296,7 @@ test-story-i4: ## Run Story I-4 (Curriculum overlap deduplication) acceptance te
 test-epic-28: ## Run all Epic 28 (Curriculum overlap) acceptance tests
 	flutter test test/story_acceptance/epic_28_curriculum_overlap_test.dart
 
-ci: analyze validate-calendar lint-rules-test test test-serial-tools test-rules test-functions check-profile-path-keying check-retired-symbols check-profile-id-int-sites ## Run full CI pipeline (analyze + seed validation + lint-rules-test + all tests + rules tests + Cloud Functions tests + profile-path-keying gate + retired-symbols gate + profile-id-int-sites gate)
+ci: analyze check-dependency-direction validate-calendar lint-rules-test test test-serial-tools test-rules test-functions check-profile-path-keying check-retired-symbols check-profile-id-int-sites ## Run full CI pipeline (analyze + dependency-direction/pure-domain gate + seed validation + lint-rules-test + all tests + rules tests + Cloud Functions tests + profile-path-keying gate + retired-symbols gate + profile-id-int-sites gate)
 
 analyze: ## Run dart analyze (matches CI --fatal-infos flag)
 	dart analyze --fatal-infos
@@ -1231,7 +1234,7 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/bare_firebase_instance_check.$$$$.log; \
 	fi; \
-	echo "102/102 — AD-23/AD-28 (Story 2.6): no lib/features/** (outside its own data/repositories/ implementation dirs) or lib/domain/** file imports the data-access ring (lib/data/firestore/**) past a repository interface — hard gate, zero tolerated"; \
+	echo "102/102 — AD-23/AD-28 (Story 2.6) + AD-35 (sub-tracks 1.1): no lib/features/** (outside its own data/repositories/ implementation dirs) file imports the data-access ring (lib/data/firestore/**) past a repository interface, and no lib/domain/** file (generated included) imports cloud_firestore, firebase_*, flutter/, flutter_riverpod, riverpod* or learning_tracker/data/** — hard gate, zero tolerated"; \
 	if ! dart run tool/check_dependency_direction.dart > /tmp/dependency_direction_check.$$$$.log 2>&1; then \
 	  cat /tmp/dependency_direction_check.$$$$.log; \
 	  rm -f /tmp/dependency_direction_check.$$$$.log; \

@@ -1,0 +1,127 @@
+{
+  "_comment": "Wire contract for ownerOversizedGovernedWrite (the online OversizedGovernedWritePort, sub-tracks Story 1.8 / 1.10, AD-38). Shared by the Functions emulator suite (functions/test/cf_write_with_change_log.test.mjs) and the Dart port codec (Story 1.8, DNI-470). Field values use AD-52 storage names; ended_at: true means tombstone now (server-stamped). {{PROFILE}} is replaced with the fixture profile id by each consumer.",
+  "valid": [
+    {
+      "name": "two-doc mainTrackOrder reorder",
+      "request": {
+        "profileId": "{{PROFILE}}",
+        "actorRole": "parent",
+        "entries": [
+          {
+            "id": "01JC0NTRACT0000000000000A1",
+            "entity": "mainTrackOrder",
+            "entityId": "mishnah",
+            "docs": [
+              {
+                "collection": "track_learning_order",
+                "docId": "mishnah_masechet_Berakhot",
+                "fields": { "curriculum_id": "mishnah", "level": "masechet", "ref": "Berakhot", "user_sort_order": 1 }
+              },
+              {
+                "collection": "track_learning_order",
+                "docId": "mishnah_masechet_Peah",
+                "fields": { "curriculum_id": "mishnah", "level": "masechet", "ref": "Peah", "user_sort_order": 0 }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": { "change_ids": ["01JC0NTRACT0000000000000A1"], "action_id": "01JC0NTRACT0000000000000A1" }
+    },
+    {
+      "name": "deadline goal create as a child owner",
+      "request": {
+        "profileId": "{{PROFILE}}",
+        "actorRole": "child",
+        "actionId": "01JC0NTRACT0000000000000B1",
+        "entries": [
+          {
+            "id": "01JC0NTRACT0000000000000B1",
+            "entity": "goal",
+            "entityId": "mishnah_deadline",
+            "docs": [
+              {
+                "collection": "goals",
+                "docId": "mishnah_deadline",
+                "mode": "create",
+                "fields": { "goal_type": "deadline", "target_date": "2027-06-01", "curriculum_id": "mishnah" }
+              }
+            ]
+          }
+        ]
+      },
+      "expect": { "change_ids": ["01JC0NTRACT0000000000000B1"], "action_id": "01JC0NTRACT0000000000000B1" }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "entry without a ULID id",
+      "request": {
+        "profileId": "{{PROFILE}}",
+        "entries": [{ "entity": "goal", "entityId": "mishnah_pace", "docs": [] }]
+      },
+      "code": "invalid-argument"
+    },
+    {
+      "name": "unknown request field",
+      "request": {
+        "profileId": "{{PROFILE}}",
+        "actor": { "uid": "someone", "role": "tutor" },
+        "entries": [
+          {
+            "id": "01JC0NTRACT0000000000000C1",
+            "entity": "mainTrack",
+            "entityId": "mishnah",
+            "docs": [{ "collection": "curriculum_tracks", "docId": "mishnah", "fields": { "state": "active" } }]
+          }
+        ]
+      },
+      "code": "invalid-argument"
+    },
+    {
+      "name": "entity does not own the collection",
+      "request": {
+        "profileId": "{{PROFILE}}",
+        "entries": [
+          {
+            "id": "01JC0NTRACT0000000000000D1",
+            "entity": "mainTrackOrder",
+            "entityId": "mishnah",
+            "docs": [{ "collection": "goals", "docId": "mishnah_pace", "fields": { "curriculum_id": "mishnah" } }]
+          }
+        ]
+      },
+      "code": "invalid-argument"
+    },
+    {
+      "name": "retired field on a governed doc",
+      "request": {
+        "profileId": "{{PROFILE}}",
+        "entries": [
+          {
+            "id": "01JC0NTRACT0000000000000E1",
+            "entity": "mainTrack",
+            "entityId": "mishnah",
+            "docs": [{ "collection": "curriculum_tracks", "docId": "mishnah", "fields": { "state": "active", "updated_at": "2026-01-01" } }]
+          }
+        ]
+      },
+      "code": "invalid-argument"
+    },
+    {
+      "name": "client-written last_change_id",
+      "request": {
+        "profileId": "{{PROFILE}}",
+        "entries": [
+          {
+            "id": "01JC0NTRACT0000000000000F1",
+            "entity": "mainTrack",
+            "entityId": "mishnah",
+            "docs": [{ "collection": "curriculum_tracks", "docId": "mishnah", "fields": { "state": "active", "last_change_id": "01JC0NTRACT0000000000000F1" } }]
+          }
+        ]
+      },
+      "code": "invalid-argument"
+    }
+  ]
+}
