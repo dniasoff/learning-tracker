@@ -23,9 +23,10 @@ const studyDayType = 'study';
 /// The weekday (ISO 1 = Monday … 7 = Sunday) of [date].
 int weekdayOf(CivilDate date) => parseCivilDay(date).weekday;
 
-/// [date] plus [days] civil days.
-CivilDate addCivilDays(CivilDate date, int days) =>
-    formatCivilDay(parseCivilDay(date).add(Duration(days: days)));
+/// The `YYYY-MM-DD` date [days] civil days after [date] (`addCivilDays`
+/// over the string form).
+CivilDate shiftCivilDate(CivilDate date, int days) =>
+    formatCivilDay(addCivilDays(parseCivilDay(date), days));
 
 /// The study-day configuration of one curriculum at one instant.
 final class StudyDays {
@@ -98,7 +99,7 @@ final class StudyDays {
     if (activeWeekdays.length == 7 || activeWeekdays.isEmpty) return date;
     var day = date;
     while (!activeWeekdays.contains(weekdayOf(day))) {
-      day = addCivilDays(day, 1);
+      day = shiftCivilDate(day, 1);
     }
     return day;
   }
