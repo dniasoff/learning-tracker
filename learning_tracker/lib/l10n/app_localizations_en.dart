@@ -1774,6 +1774,256 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeParentPin => 'Change Parent PIN';
 
   @override
+  String changeHistoryAlsoChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count more changes in this action',
+      one: '+1 more change in this action',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get changeHistoryBeforeTracking => 'Before tracking';
+
+  @override
+  String get changeHistoryDateCatchUp => 'catch-up';
+
+  @override
+  String get changeHistoryDayToday => 'Today';
+
+  @override
+  String get changeHistoryDayYesterday => 'Yesterday';
+
+  @override
+  String changeHistoryDeadlineSet(String date) {
+    return 'Changed the deadline to $date';
+  }
+
+  @override
+  String get changeHistoryDetailsTitle => 'Change details';
+
+  @override
+  String get changeHistoryDetailsWhat => 'What changed';
+
+  @override
+  String get changeHistoryDetailsWhen => 'When';
+
+  @override
+  String get changeHistoryDetailsWho => 'Changed by';
+
+  @override
+  String get changeHistoryEmpty => 'No changes yet.';
+
+  @override
+  String get changeHistoryFieldDates => 'dates';
+
+  @override
+  String get changeHistoryFieldGround => 'what it covers';
+
+  @override
+  String get changeHistoryFieldLocation => 'location';
+
+  @override
+  String get changeHistoryFieldName => 'name';
+
+  @override
+  String get changeHistoryFieldOther => 'settings';
+
+  @override
+  String get changeHistoryFieldPace => 'pace';
+
+  @override
+  String get changeHistoryFieldShabbos => 'Shabbos learning';
+
+  @override
+  String get changeHistoryFieldTimeZone => 'time zone';
+
+  @override
+  String get changeHistoryFilterAll => 'All';
+
+  @override
+  String get changeHistoryFilterLabel => 'Show';
+
+  @override
+  String get changeHistoryFilterLearning => 'Learning';
+
+  @override
+  String get changeHistoryFilterParent => 'Parent';
+
+  @override
+  String get changeHistoryFilterTutor => 'Tutor';
+
+  @override
+  String get changeHistoryGoalChanged => 'Changed the goal';
+
+  @override
+  String get changeHistoryGoalCreated => 'Set a goal';
+
+  @override
+  String get changeHistoryGoalEnded => 'Removed the goal';
+
+  @override
+  String changeHistoryLearned(String refs, String source) {
+    return 'Learned $refs · $source';
+  }
+
+  @override
+  String get changeHistoryLockIgnored =>
+      'kept, not counted — recorded during Shabbos/Yom Tov';
+
+  @override
+  String get changeHistoryMainTrackChanged => 'Changed the main track';
+
+  @override
+  String get changeHistoryMainTrackCreated => 'Added the main track';
+
+  @override
+  String get changeHistoryMainTrackEnded => 'Removed the main track';
+
+  @override
+  String get changeHistoryNoMatches => 'No changes match this filter.';
+
+  @override
+  String get changeHistoryNotAvailable =>
+      'Change history is open to the parent only.';
+
+  @override
+  String get changeHistoryNotified => 'Parent notified';
+
+  @override
+  String get changeHistoryOrderChanged => 'Changed the learning order';
+
+  @override
+  String get changeHistoryProgramChanged => 'Changed the program';
+
+  @override
+  String changeHistoryRefList(String first, String second) {
+    return '$first, $second';
+  }
+
+  @override
+  String changeHistoryRefRange(String first, String last, int count) {
+    return '$first – $last ($count)';
+  }
+
+  @override
+  String changeHistoryRemovedLearning(String refs, String source) {
+    return 'Removed $refs · $source';
+  }
+
+  @override
+  String get changeHistoryRemovedUnknown =>
+      'Removed an earlier learning record';
+
+  @override
+  String changeHistoryReverted(String summary) {
+    return 'Reverted change: $summary';
+  }
+
+  @override
+  String get changeHistoryRoleChild => 'Child';
+
+  @override
+  String get changeHistoryRoleParent => 'Parent';
+
+  @override
+  String get changeHistoryRoleTutor => 'Tutor';
+
+  @override
+  String get changeHistoryScopeChanged => 'Changed what the main track covers';
+
+  @override
+  String get changeHistorySelectPrompt => 'Select a change to see its details.';
+
+  @override
+  String changeHistorySettingsChanged(String fields) {
+    return 'Changed learner settings: $fields';
+  }
+
+  @override
+  String get changeHistorySettingsSubtitle =>
+      'Every change to tracks, goals and learning, by anyone';
+
+  @override
+  String get changeHistorySourceMain => 'Main track';
+
+  @override
+  String get changeHistoryStagesChanged => 'Changed the review stages';
+
+  @override
+  String get changeHistoryStudyDaysChanged => 'Changed the study days';
+
+  @override
+  String changeHistorySubTrackChanged(String name, String fields) {
+    return 'Changed $name: $fields';
+  }
+
+  @override
+  String changeHistorySubTrackCreated(String name) {
+    return 'Added $name';
+  }
+
+  @override
+  String changeHistorySubTrackEnded(String name) {
+    return 'Ended $name';
+  }
+
+  @override
+  String changeHistorySubTrackRemoved(String name) {
+    return 'Removed $name';
+  }
+
+  @override
+  String changeHistorySubTrackRenamed(String name) {
+    return 'Renamed a sub-track to $name';
+  }
+
+  @override
+  String get changeHistorySubTrackUnnamed => 'a sub-track';
+
+  @override
+  String get changeHistoryTitle => 'Change history';
+
+  @override
+  String get changeHistoryUndo => 'Undo';
+
+  @override
+  String get changeHistoryUndone => 'Undone';
+
+  @override
+  String changeHistoryUndoneBy(String name, String time) {
+    return 'Undone by $name · $time';
+  }
+
+  @override
+  String changeHistoryUpdates(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count updates',
+      one: '1 update',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String changeHistoryVoidedBy(String name, String time) {
+    return 'Removed by $name · $time';
+  }
+
+  @override
+  String changeHistoryVoidedSome(
+    int count,
+    int total,
+    String name,
+    String time,
+  ) {
+    return '$count of $total removed by $name · $time';
+  }
+
+  @override
   String get pinChangedSuccessfully => 'PIN changed successfully';
 
   @override
