@@ -106,4 +106,155 @@ void main() {
       expect(h.invoker.calls, isEmpty);
     });
   });
+
+  group('frozen action ids — a retry re-sends the same id (AC-5)', () {
+    FirebaseFunctionsException timeout() => FirebaseFunctionsException(
+      code: 'deadline-exceeded',
+      message: 'timeout',
+    );
+
+    test('a timed-out study-day replace is retried with the SAME actionId, '
+        'even when the volatile updated_at stamp moved', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+      var first = true;
+      h.invoker.respond = (call) {
+        if (first) {
+          first = false;
+          throw timeout();
+        }
+        return h.invoker.successFor(call, replayed: true);
+      };
+
+      Future<void> save(String stamp) => h.governed.replaceStudyDays(
+        curriculumId: 'mishnayos',
+        upserts: [
+          (docId: 'mishnayos_1', data: {'day_of_week': 1, 'updated_at': stamp}),
+        ],
+        removedDocIds: ['mishnayos_7'],
+      );
+
+      await expectLater(
+        save('2026-10-01T09:00:00Z'),
+        throwsA(isA<TutorGovernedWriteException>()),
+      );
+      await save('2026-10-01T09:00:07Z');
+
+      expect(h.invoker.calls, hasLength(2));
+      expect(
+        h.invoker.calls[1].args['actionId'],
+        h.invoker.calls[0].args['actionId'],
+      );
+    });
+
+    test('a success releases the id: the next identical action is a NEW '
+        'action', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+
+      await h.governed.upsertGoal(goalId: 'g1', data: {'description': 'x'});
+      await h.governed.upsertGoal(goalId: 'g1', data: {'description': 'x'});
+
+      expect(
+        h.invoker.calls[1].args['actionId'],
+        isNot(h.invoker.calls[0].args['actionId']),
+      );
+    });
+
+    test(
+      'a definitive rejection releases the id (nothing was written)',
+      () async {
+        final h = TutorHarness();
+        addTearDown(h.dispose);
+        var first = true;
+        h.invoker.respond = (call) {
+          if (first) {
+            first = false;
+            throw FirebaseFunctionsException(
+              code: 'invalid-argument',
+              message: 'bad',
+            );
+          }
+          return h.invoker.successFor(call);
+        };
+
+        await expectLater(
+          h.governed.endGoal('g1'),
+          throwsA(isA<TutorGovernedWriteException>()),
+        );
+        await h.governed.endGoal('g1');
+
+        expect(
+          h.invoker.calls[1].args['actionId'],
+          isNot(h.invoker.calls[0].args['actionId']),
+        );
+      },
+    );
+
+    test('a changed payload after a timeout is a different action', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+      var first = true;
+      h.invoker.respond = (call) {
+        if (first) {
+          first = false;
+          throw timeout();
+        }
+        return h.invoker.successFor(call);
+      };
+
+      await expectLater(
+        h.governed.setProfileProgram(
+          curriculumId: 'mishnayos',
+          data: {'tracking_start_ref': 'a'},
+        ),
+        throwsA(isA<TutorGovernedWriteException>()),
+      );
+      await h.governed.setProfileProgram(
+        curriculumId: 'mishnayos',
+        data: {'tracking_start_ref': 'b'},
+      );
+
+      expect(
+        h.invoker.calls[1].args['actionId'],
+        isNot(h.invoker.calls[0].args['actionId']),
+      );
+    });
+
+    test('the session ledger outlives a rebuilt writes instance', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+      final ledger = TutorGovernedActionLedger();
+      var n = 0;
+      TutorGovernedWrites build() => TutorGovernedWrites(
+        selection: h.selection,
+        service: h.service,
+        preflight: h.preflight,
+        clock: () => DateTime.utc(2026, 10, 1, 9),
+        newUlid: (_) => 'ULID${n++}',
+        ledger: ledger,
+      );
+      var first = true;
+      h.invoker.respond = (call) {
+        if (first) {
+          first = false;
+          throw timeout();
+        }
+        return h.invoker.successFor(call, replayed: true);
+      };
+
+      await expectLater(
+        build().endGoal('g1'),
+        throwsA(isA<TutorGovernedWriteException>()),
+      );
+      expect(ledger.length, 1);
+      await build().endGoal('g1');
+
+      expect(h.invoker.calls.map((c) => c.args['actionId']), [
+        'ULID0',
+        'ULID0',
+      ]);
+      expect(ledger.length, 0);
+    });
+  });
 }

@@ -93,6 +93,13 @@ final tutorLearningCommandsProvider = FutureProvider<TutorLearningCommands?>((
   return commands;
 }, retry: (retryCount, error) => null);
 
+/// The session-wide frozen action ids of governed tutor actions awaiting a
+/// definitive receipt (DNI-486 AC-5): kept alive so a retry from a
+/// re-opened form, or after the writes provider rebuilt, reuses the id.
+final tutorGovernedActionLedgerProvider = Provider<TutorGovernedActionLedger>(
+  (ref) => TutorGovernedActionLedger(),
+);
+
 /// The [TutorGovernedWrites] of the active tutored selection, or null
 /// outside a tutored session or while the talmid's scope is not ready.
 final tutorGovernedWritesProvider = FutureProvider<TutorGovernedWrites?>((
@@ -108,6 +115,7 @@ final tutorGovernedWritesProvider = FutureProvider<TutorGovernedWrites?>((
     preflight: preflight,
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
+    ledger: ref.watch(tutorGovernedActionLedgerProvider),
   );
 }, retry: (retryCount, error) => null);
 
