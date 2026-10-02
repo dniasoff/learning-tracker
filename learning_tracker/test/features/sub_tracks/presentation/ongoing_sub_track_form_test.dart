@@ -339,6 +339,24 @@ void main() {
     });
   });
 
+  group('AC-3: a later start re-checks the end', () {
+    testWidgets('moving the start past a chosen end shows the error', (
+      tester,
+    ) async {
+      await _open(tester);
+      await _pickDay(tester, 'ongoingSubTrackEnd', 10);
+      expect(
+        find.text("The end date can't be before the start date"),
+        findsNothing,
+      );
+      await _pickDay(tester, 'ongoingSubTrackStart', 20);
+      expect(
+        find.text("The end date can't be before the start date"),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('AC-4: future start', () {
     testWidgets('a future start is written unchanged', (tester) async {
       await _open(tester);

@@ -301,7 +301,18 @@ class _OngoingSubTrackFormScreenState
           content: Text(l10n.ongoingSubTrackSaveFailed),
           action: SnackBarAction(
             label: l10n.actionRetry,
-            onPressed: () => unawaited(_save(data)),
+            // Retry with the values still in the form (UX-DR-120) against
+            // the latest sub-track read.
+            onPressed: () => unawaited(
+              _save(
+                ref
+                        .read(
+                          ongoingSubTrackContextProvider(widget.curriculumId),
+                        )
+                        .value ??
+                    data,
+              ),
+            ),
           ),
         ),
       );
@@ -466,6 +477,8 @@ class _OngoingSubTrackFormScreenState
             today: data.today,
             onPicked: (d) {
               _start = d;
+              // A new start re-checks an end already chosen (UX-DR-80).
+              if (_end != null) _touched.add(OngoingFormField.end);
               _clearCommandError(OngoingFormField.end);
             },
           ),
