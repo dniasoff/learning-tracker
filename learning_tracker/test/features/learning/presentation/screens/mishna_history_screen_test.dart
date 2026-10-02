@@ -543,6 +543,51 @@ void main() {
       );
     });
 
+    testWidgets('a queued removal stays pending with no snackbar; a later '
+        'server rejection restores the row and shows the rollback snackbar', (
+      tester,
+    ) async {
+      _seedLearnt(ports);
+      final fake = FakeLearningCommands();
+      final voidId = fake.freshId();
+      fake.nextResult = CaptureResult.success(
+        eventIds: [voidId],
+        queued: true,
+      );
+      await _pump(
+        tester,
+        historyOverrides(ports, state: _learntState(), commands: fake),
+      );
+      await openActions(tester, 5);
+      await tester.tap(action('remove'));
+      await tester.pumpAndSettle();
+
+      const rolledBack =
+          "Couldn't save that change — the entry is back as it was.";
+      expect(
+        find.descendant(of: _row(5), matching: find.text('Saving…')),
+        findsOneWidget,
+      );
+      expect(find.text(rolledBack), findsNothing);
+
+      fake.pendingFailures.add([
+        PendingFailure(
+          id: 'pf-1',
+          eventIds: [voidId],
+          changeIds: const [],
+          reason: PendingFailureReason.permissionDenied,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: _row(5), matching: find.text('Saving…')),
+        findsNothing,
+      );
+      expect(find.text(rolledBack), findsOneWidget);
+      await fake.dispose();
+    });
+
     testWidgets('a child re-date refused by the catch-up window shows the '
         'child-limit snackbar', (tester) async {
       _seedLearnt(ports);

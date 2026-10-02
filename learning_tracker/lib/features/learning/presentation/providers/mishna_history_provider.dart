@@ -9,10 +9,15 @@
 ///   changes at once, the write goes through [LearningCommands]
 ///   (`voidEvent` / `replace`), and a refused or failed write removes the
 ///   overlay — restoring the original row — before the caller shows the
-///   rollback snackbar (UX-DR-142).
+///   rollback snackbar (UX-DR-142). A successful write keeps the overlay
+///   until the refreshed history confirms it; a queued (offline) write the
+///   server later rejects (`watchPendingFailures`) rolls back then, counted
+///   in [MishnaHistoryCorrectionsState.lateRollbacks] for the snackbar.
 ///
 /// Plain Riverpod providers (no codegen), matching the C0 provider style.
 library;
+
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -129,8 +134,14 @@ final class ReplaceEventRequest extends MishnaCorrectionRequest {
 
 /// How a correction ended.
 enum MishnaCorrectionOutcome {
-  /// The command succeeded (or is queued offline).
+  /// The command succeeded and the server has it.
   applied,
+
+  /// The command was accepted offline (`CaptureSuccess.queued`): the row
+  /// stays pending until the history shows it, and a later server
+  /// rejection rolls it back with feedback
+  /// ([MishnaHistoryCorrectionsState.lateRollbacks]).
+  queued,
 
   /// A child may not make this change (`CaptureResult.childLimit`).
   childLimit,
@@ -178,48 +189,140 @@ MishnaHistoryItem optimisticItem(
   );
 }
 
-/// Optimistic overlays by event id for one history, plus the correction
-/// commands.
+/// The optimistic overlays of one history and its late-rollback count.
+final class MishnaHistoryCorrectionsState {
+  /// Creates the state.
+  const MishnaHistoryCorrectionsState({
+    this.overlays = const {},
+    this.lateRollbacks = 0,
+  });
+
+  /// Optimistic rows by event id.
+  final Map<String, MishnaHistoryItem> overlays;
+
+  /// How many queued corrections the server rejected after `correct`
+  /// returned. Each increase is one rollback the screen announces with the
+  /// rollback snackbar (UX-DR-142).
+  final int lateRollbacks;
+
+  /// A copy with the given fields replaced.
+  MishnaHistoryCorrectionsState copyWith({
+    Map<String, MishnaHistoryItem>? overlays,
+    int? lateRollbacks,
+  }) => MishnaHistoryCorrectionsState(
+    overlays: overlays ?? this.overlays,
+    lateRollbacks: lateRollbacks ?? this.lateRollbacks,
+  );
+}
+
+/// Whether [history] shows the correction of [eventId]: a removal or a
+/// replacement both void the target (AD-31), so the row is voided or gone.
+bool _confirms(MishnaHistory history, String eventId) {
+  for (final item in history.items) {
+    if (item.eventId == eventId) {
+      return item.status == MishnaHistoryStatus.voided;
+    }
+  }
+  return true;
+}
+
+/// Optimistic overlays for one history, plus the correction commands.
+///
+/// An overlay lives until the refreshed history confirms its correction
+/// (the target is voided or gone) — an unrelated history emission never
+/// clears it. A queued (offline) correction is also tracked by the event
+/// ids it wrote: if `LearningCommands.watchPendingFailures` later reports
+/// one of them, the overlay is dropped (restoring the row the history
+/// shows once the local write is reverted) and
+/// [MishnaHistoryCorrectionsState.lateRollbacks] grows.
 final class MishnaHistoryCorrections
-    extends Notifier<Map<String, MishnaHistoryItem>> {
+    extends Notifier<MishnaHistoryCorrectionsState> {
   /// Creates the notifier for [args].
   MishnaHistoryCorrections(this.args);
 
   /// The history this notifier corrects.
   final MishnaHistoryArgs args;
 
-  /// Overlays whose command succeeded; cleared when new history data lands.
-  final Set<String> _confirmed = {};
+  /// Targets whose command succeeded; their overlay waits for the history.
+  final Set<String> _awaitingHistory = {};
+
+  /// Queued corrections: target id → the event ids the write carries.
+  final Map<String, Set<String>> _queued = {};
+
+  StreamSubscription<List<PendingFailure>>? _failures;
 
   @override
-  Map<String, MishnaHistoryItem> build() {
-    ref.listen(mishnaHistoryProvider(args), (previous, next) {
-      if (!next.hasValue || _confirmed.isEmpty) return;
-      final done = {..._confirmed};
-      _confirmed.clear();
-      state = {
-        for (final MapEntry(:key, :value) in state.entries)
-          if (!done.contains(key)) key: value,
-      };
-    });
-    return const {};
+  MishnaHistoryCorrectionsState build() {
+    ref
+      ..onDispose(() => unawaited(_failures?.cancel()))
+      ..listen(mishnaHistoryProvider(args), (previous, next) {
+        final history = next.value;
+        if (history == null || _awaitingHistory.isEmpty) return;
+        final confirmed = {
+          for (final id in _awaitingHistory)
+            if (_confirms(history, id)) id,
+        };
+        if (confirmed.isEmpty) return;
+        _awaitingHistory.removeAll(confirmed);
+        _dropOverlays(confirmed);
+      });
+    return const MishnaHistoryCorrectionsState();
+  }
+
+  void _dropOverlays(Set<String> ids) {
+    if (!ids.any(state.overlays.containsKey)) return;
+    state = state.copyWith(
+      overlays: {
+        for (final MapEntry(:key, :value) in state.overlays.entries)
+          if (!ids.contains(key)) key: value,
+      },
+    );
+  }
+
+  void _watchFailures(LearningCommands commands) {
+    _failures ??= commands.watchPendingFailures().listen(
+      _onPendingFailures,
+      onError: (Object _) {},
+    );
+  }
+
+  void _onPendingFailures(List<PendingFailure> failures) {
+    final failed = {
+      for (final failure in failures) ...failure.eventIds,
+    };
+    final rolledBack = {
+      for (final MapEntry(:key, :value) in _queued.entries)
+        if (value.any(failed.contains)) key,
+    };
+    if (rolledBack.isEmpty) return;
+    for (final id in rolledBack) {
+      _queued.remove(id);
+    }
+    _awaitingHistory.removeAll(rolledBack);
+    _dropOverlays(rolledBack);
+    state = state.copyWith(
+      lateRollbacks: state.lateRollbacks + rolledBack.length,
+    );
   }
 
   /// Applies [request] to [item] optimistically and runs the command.
   ///
   /// On any refusal or failure the overlay is removed — restoring the
   /// original row — before this future completes, so the caller's
-  /// snackbar always follows the rollback.
+  /// snackbar always follows the rollback. On success the overlay stays
+  /// (pending) until the history confirms the correction.
   Future<MishnaCorrectionOutcome> correct(
     MishnaHistoryItem item,
     MishnaCorrectionRequest request,
   ) async {
     final id = item.eventId;
-    final before = ref.read(mishnaHistoryProvider(args)).value;
-    state = {...state, id: optimisticItem(item, request)};
+    state = state.copyWith(
+      overlays: {...state.overlays, id: optimisticItem(item, request)},
+    );
     CaptureResult result;
+    LearningCommands? commands;
     try {
-      final commands = await ref.read(learningCommandsProvider.future);
+      commands = await ref.read(learningCommandsProvider.future);
       if (commands == null) throw const NoActiveLearnerException();
       result = await switch (request) {
         RemoveEventRequest() => commands.voidEvent(id),
@@ -231,28 +334,28 @@ final class MishnaHistoryCorrections
     } on Object {
       result = const CaptureResult.rejected(CaptureRejection.invalid);
     }
-    if (!ref.mounted) {
-      return result is CaptureSuccess
-          ? MishnaCorrectionOutcome.applied
-          : MishnaCorrectionOutcome.rolledBack;
-    }
-    if (result is CaptureSuccess) {
-      // A local write usually lands before the command returns: if the
-      // history already changed, drop the overlay now; otherwise when the
-      // next history arrives.
-      if (identical(ref.read(mishnaHistoryProvider(args)).value, before)) {
-        _confirmed.add(id);
-        return MishnaCorrectionOutcome.applied;
-      }
-    }
-    state = {
-      for (final MapEntry(:key, :value) in state.entries)
-        if (key != id) key: value,
+    final outcome = switch (result) {
+      CaptureSuccess(queued: true) => MishnaCorrectionOutcome.queued,
+      CaptureSuccess() => MishnaCorrectionOutcome.applied,
+      CaptureChildLimit() => MishnaCorrectionOutcome.childLimit,
+      _ => MishnaCorrectionOutcome.rolledBack,
     };
-    if (result is CaptureSuccess) return MishnaCorrectionOutcome.applied;
-    return result is CaptureChildLimit
-        ? MishnaCorrectionOutcome.childLimit
-        : MishnaCorrectionOutcome.rolledBack;
+    if (!ref.mounted) return outcome;
+    if (result is! CaptureSuccess) {
+      _dropOverlays({id});
+      return outcome;
+    }
+    if (result.queued && commands != null) {
+      _queued[id] = {...result.eventIds};
+      _watchFailures(commands);
+    }
+    final history = ref.read(mishnaHistoryProvider(args)).value;
+    if (history != null && _confirms(history, id)) {
+      _dropOverlays({id});
+    } else {
+      _awaitingHistory.add(id);
+    }
+    return outcome;
   }
 }
 
@@ -260,7 +363,7 @@ final class MishnaHistoryCorrections
 final mishnaHistoryCorrectionsProvider = NotifierProvider.autoDispose
     .family<
       MishnaHistoryCorrections,
-      Map<String, MishnaHistoryItem>,
+      MishnaHistoryCorrectionsState,
       MishnaHistoryArgs
     >(MishnaHistoryCorrections.new);
 
@@ -269,6 +372,8 @@ final mishnaHistoryCorrectionsProvider = NotifierProvider.autoDispose
 final mishnaHistoryViewProvider = Provider.autoDispose
     .family<AsyncValue<MishnaHistory>, MishnaHistoryArgs>((ref, args) {
       final history = ref.watch(mishnaHistoryProvider(args));
-      final overlays = ref.watch(mishnaHistoryCorrectionsProvider(args));
+      final overlays = ref.watch(
+        mishnaHistoryCorrectionsProvider(args).select((s) => s.overlays),
+      );
       return history.whenData((h) => h.withOverlays(overlays));
     });

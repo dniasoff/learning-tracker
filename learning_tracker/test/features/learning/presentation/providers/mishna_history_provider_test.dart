@@ -395,7 +395,7 @@ void main() {
       await pumpEventQueue();
 
       expect(
-        container.read(mishnaHistoryCorrectionsProvider(historyArgs)),
+        container.read(mishnaHistoryCorrectionsProvider(historyArgs)).overlays,
         isEmpty,
       );
       final view = container
@@ -404,6 +404,129 @@ void main() {
       expect(view.items.single.status, MishnaHistoryStatus.voided);
       expect(view.items.single.pending, isFalse);
       expect(view.eventCount, 0);
+    });
+
+    test('an unrelated history emission keeps the pending overlay; only the '
+        'history that voids the target clears it', () async {
+      ports.events.seed(ports.scope, [historyLearn(1)]);
+      final container = _container(
+        ports,
+        counted: {eid(1)},
+        commands: FakeLearningCommands(),
+      );
+      final history = await _history(container);
+      await container
+          .read(mishnaHistoryCorrectionsProvider(historyArgs).notifier)
+          .correct(history.items.single, const RemoveEventRequest());
+
+      ports.events.seed(ports.scope, [historyLearn(2, ref: historySibling)]);
+      await pumpEventQueue();
+      final overlays = container
+          .read(mishnaHistoryCorrectionsProvider(historyArgs))
+          .overlays;
+      expect(overlays.keys, [eid(1)]);
+      expect(overlays[eid(1)]!.pending, isTrue);
+
+      ports.events.seed(ports.scope, [historyVoid(3, eid(1))]);
+      await pumpEventQueue();
+      expect(
+        container.read(mishnaHistoryCorrectionsProvider(historyArgs)).overlays,
+        isEmpty,
+      );
+    });
+
+    group('a queued (offline) correction', () {
+      PendingFailure failureOf(List<String> eventIds) => PendingFailure(
+        id: 'pf-1',
+        eventIds: eventIds,
+        changeIds: const [],
+        reason: PendingFailureReason.permissionDenied,
+      );
+
+      Future<(ProviderContainer, FakeLearningCommands, String)> queuedRemove(
+        HistoryPorts ports,
+      ) async {
+        ports.events.seed(ports.scope, [historyLearn(1)]);
+        final fake = FakeLearningCommands();
+        addTearDown(fake.dispose);
+        final voidId = fake.freshId();
+        fake.nextResult = CaptureResult.success(
+          eventIds: [voidId],
+          queued: true,
+        );
+        final container = _container(ports, counted: {eid(1)}, commands: fake);
+        final history = await _history(container);
+        final outcome = await container
+            .read(mishnaHistoryCorrectionsProvider(historyArgs).notifier)
+            .correct(history.items.single, const RemoveEventRequest());
+        expect(outcome, MishnaCorrectionOutcome.queued);
+        return (container, fake, voidId);
+      }
+
+      test('is reported as queued, not applied, and stays pending until the '
+          'history shows it', () async {
+        final (container, fake, _) = await queuedRemove(ports);
+        expect(fake.calls.map((c) => c.name), contains('watchPendingFailures'));
+        final view = container
+            .read(mishnaHistoryViewProvider(historyArgs))
+            .requireValue;
+        expect(view.items.single.pending, isTrue);
+        expect(view.items.single.status, MishnaHistoryStatus.voided);
+      });
+
+      test('rejected by the server before the history shows it: the overlay '
+          'goes, the original row is back and the rollback is counted', () async {
+        final (container, fake, voidId) = await queuedRemove(ports);
+
+        fake.pendingFailures.add([failureOf([voidId])]);
+        await pumpEventQueue();
+
+        final corrections = container.read(
+          mishnaHistoryCorrectionsProvider(historyArgs),
+        );
+        expect(corrections.overlays, isEmpty);
+        expect(corrections.lateRollbacks, 1);
+        final view = container
+            .read(mishnaHistoryViewProvider(historyArgs))
+            .requireValue;
+        expect(view.items.single.status, MishnaHistoryStatus.counted);
+        expect(view.items.single.pending, isFalse);
+      });
+
+      test('rejected after the local write showed in the history: the '
+          'rollback is still announced', () async {
+        final (container, fake, voidId) = await queuedRemove(ports);
+        ports.events.seed(ports.scope, [historyVoid(2, eid(1))]);
+        await pumpEventQueue();
+        expect(
+          container
+              .read(mishnaHistoryCorrectionsProvider(historyArgs))
+              .overlays,
+          isEmpty,
+        );
+
+        fake.pendingFailures.add([failureOf([voidId])]);
+        await pumpEventQueue();
+        expect(
+          container
+              .read(mishnaHistoryCorrectionsProvider(historyArgs))
+              .lateRollbacks,
+          1,
+        );
+      });
+
+      test('a pending failure of another write changes nothing', () async {
+        final (container, fake, _) = await queuedRemove(ports);
+        fake.pendingFailures.add([
+          failureOf([fake.freshId()]),
+        ]);
+        await pumpEventQueue();
+        final corrections = container.read(
+          mishnaHistoryCorrectionsProvider(historyArgs),
+        );
+        expect(corrections.lateRollbacks, 0);
+        expect(corrections.overlays.keys, [eid(1)]);
+      });
     });
 
     test('a date correction calls replace with the new learned_on', () async {
@@ -485,7 +608,7 @@ void main() {
 
       expect(outcome, MishnaCorrectionOutcome.childLimit);
       expect(
-        container.read(mishnaHistoryCorrectionsProvider(historyArgs)),
+        container.read(mishnaHistoryCorrectionsProvider(historyArgs)).overlays,
         isEmpty,
       );
     });

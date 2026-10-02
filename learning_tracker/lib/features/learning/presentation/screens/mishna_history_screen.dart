@@ -51,6 +51,17 @@ class MishnaHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    // A queued correction the server rejected after it returned: its row is
+    // already restored, so announce the rollback (UX-DR-142).
+    ref.listen(
+      mishnaHistoryCorrectionsProvider(_args).select((s) => s.lateRollbacks),
+      (previous, next) {
+        if (next <= (previous ?? 0)) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.mishnaHistoryCorrectionRolledBack)),
+        );
+      },
+    );
     // AD-36: nothing of the history is built while the lock is up.
     if (ref.watch(currentSacredWindowProvider) != null) {
       return const Scaffold(body: SizedBox.shrink());
@@ -524,7 +535,8 @@ class _Tag extends StatelessWidget {
 /// Every write goes through `LearningCommands` via
 /// [mishnaHistoryCorrectionsProvider]; a refused or failed write has
 /// already restored the original row when the snackbar is shown
-/// (UX-DR-142).
+/// (UX-DR-142). A queued write rejected later is announced by the screen's
+/// `lateRollbacks` listener.
 Future<void> openMishnaCorrections(
   BuildContext context,
   WidgetRef ref, {
@@ -565,7 +577,9 @@ Future<void> openMishnaCorrections(
   final messenger = ScaffoldMessenger.of(context);
   final outcome = await corrections.correct(item, request);
   final message = switch (outcome) {
-    MishnaCorrectionOutcome.applied => null,
+    // Queued offline: the row stays pending; a later server rejection is
+    // announced through `lateRollbacks`.
+    MishnaCorrectionOutcome.applied || MishnaCorrectionOutcome.queued => null,
     MishnaCorrectionOutcome.childLimit =>
       l10n.mishnaHistoryCorrectionChildLimit,
     MishnaCorrectionOutcome.rolledBack =>
