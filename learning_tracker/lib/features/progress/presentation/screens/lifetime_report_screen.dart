@@ -11,7 +11,11 @@ import 'package:learning_tracker/features/learner_state/data/repositories/learne
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_view.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/pace_report_view.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/per_source_pace_report_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_report_sections.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/on_track_report_block.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/per_source_pace_section.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The lifetime report (Story 5.2, DNI-517; screen #14, FR-31).
@@ -27,7 +31,14 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// is the engine projection's (AD-48). While the learner state is still
 /// paging it shows [LoadingIndicator], never partial totals; a failed
 /// read shows [AppErrorView] with a retry of the whole input chain
-/// (AC-10). Per-source pace and *Export PDF* arrive with Story 5.3.
+/// (AC-10).
+///
+/// Story 5.3 (DNI-518) adds, after the totals, the On-track block and the
+/// Per-source pace section of an evaluated curriculum
+/// ([perSourcePaceReportProvider]); a retired or archived curriculum keeps
+/// only its lifetime totals (AC-9). Both are built only inside the parent
+/// session this screen already requires (AC-10). *Export PDF* arrives
+/// with Story 5.4.
 @RoutePage()
 class LifetimeReportScreen extends ConsumerStatefulWidget {
   /// Creates the screen for [curriculumId] (a storage key); null picks
@@ -101,9 +112,12 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
           : const SizedBox.shrink();
     } else {
       final report = ref.watch(lifetimeReportProvider(_curriculumId));
+      // The same state as the report: data together with it.
+      final pace = ref.watch(perSourcePaceReportProvider(_curriculumId));
       body = report.when(
         data: (view) => _ReportBody(
           view: view,
+          pace: pace.value,
           onCurriculum: (id) => setState(() => _curriculumId = id),
         ),
         loading: () => const LoadingIndicator(),
@@ -136,10 +150,18 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
 /// UX-DR-164): one column on a phone, a centered column at 600–839 dp and
 /// a two-pane composition from 840 dp (mockup #14 tablet).
 class _ReportBody extends StatelessWidget {
-  const _ReportBody({required this.view, required this.onCurriculum});
+  const _ReportBody({
+    required this.view,
+    required this.onCurriculum,
+    this.pace,
+  });
 
   final LifetimeReportView view;
   final ValueChanged<String> onCurriculum;
+
+  /// The Per-source pace and On-track view; null for a curriculum that is
+  /// not evaluated (AC-9).
+  final PaceReportView? pace;
 
   @override
   Widget build(BuildContext context) {
@@ -151,6 +173,19 @@ class _ReportBody extends StatelessWidget {
     final years = view.isEmpty || view.groups.isEmpty
         ? null
         : LifetimeReportSchoolYears(view: view);
+    // Story 5.3: evaluated curricula only (AC-9), after the totals; the
+    // On-track block above the per-source rows (AC-6).
+    final paceView = view.isEmpty ? null : pace;
+    final onTrack = switch (paceView?.onTrack) {
+      final OnTrackView v => OnTrackReportBlock(
+        view: v,
+        curriculum: paceView!.curriculum,
+      ),
+      null => null,
+    };
+    final paceSection = paceView == null || paceView.rows.isEmpty
+        ? null
+        : PerSourcePaceSection(view: paceView);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -161,6 +196,17 @@ class _ReportBody extends StatelessWidget {
             switcher,
             gap,
             totals,
+            if (onTrack != null || paceSection != null) ...[
+              gap,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: onTrack ?? const SizedBox.shrink()),
+                  const SizedBox(width: 16),
+                  Expanded(child: paceSection ?? const SizedBox.shrink()),
+                ],
+              ),
+            ],
             if (bySource != null || years != null) ...[
               gap,
               Row(
@@ -178,6 +224,8 @@ class _ReportBody extends StatelessWidget {
             switcher,
             gap,
             totals,
+            if (onTrack != null) ...[gap, onTrack],
+            if (paceSection != null) ...[gap, paceSection],
             if (bySource != null) ...[gap, bySource],
             if (years != null) ...[gap, years],
           ];
