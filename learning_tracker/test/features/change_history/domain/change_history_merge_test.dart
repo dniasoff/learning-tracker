@@ -194,6 +194,76 @@ void main() {
     });
   });
 
+  group('AC-4 an undo whose reverted action is older than the loaded '
+      'pages', () {
+    // The deadline change (minute 1) sits below 150 newer entries; its
+    // undo (minute 1000) is on the first page.
+    ChangeLogEntry deadline() => historyEntry(
+      1,
+      minutes: 1,
+      actor: historyTutor,
+      entityId: 'deadline',
+      before: {'goals/deadline.target_date': '2026-10-01'},
+      after: {'goals/deadline.target_date': '2026-11-03'},
+    );
+    ChangeLogEntry undo() => historyEntry(
+      500,
+      minutes: 1000,
+      entityId: 'deadline',
+      reverts: 1,
+      before: {'goals/deadline.target_date': '2026-11-03'},
+      after: {'goals/deadline.target_date': '2026-10-01'},
+    );
+    FakeChangeHistoryRepository repoWithFiller() => FakeChangeHistoryRepository(
+      entries: [
+        deadline(),
+        for (var n = 1; n <= 150; n++) historyEntry(100 + n, minutes: 100 + n),
+        undo(),
+      ],
+    );
+
+    test('the pager reads the reverted action by action_id without paging '
+        'down to it, once', () async {
+      final repo = repoWithFiller();
+      final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+      await pager.fill((v) => v.isNotEmpty);
+      expect(repo.changeLogReads, 1, reason: 'no page read to reach it');
+      expect(repo.actionLookups, [
+        {historyId(1)},
+      ]);
+      expect(
+        pager.buffer.visibleItems().whereType<GovernedActionItem>().map(
+          (i) => i.actionId,
+        ),
+        isNot(contains(historyId(1))),
+        reason: 'a looked-up action is context, not a row',
+      );
+      expect(pager.buffer.entriesOfAction(historyId(1)).single, deadline());
+
+      await pager.fill((v) => v.isNotEmpty);
+      expect(repo.actionLookups, hasLength(1), reason: 'looked up once');
+    });
+
+    test('a failed lookup is not a history failure and is retried on the '
+        'next fill', () async {
+      final repo = repoWithFiller()..failActionLookups = 1;
+      final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+      await pager.fill((v) => v.isNotEmpty);
+      expect(pager.buffer.entriesOfAction(historyId(1)), isEmpty);
+
+      await pager.fill((v) => v.isNotEmpty);
+      expect(repo.actionLookups, hasLength(2));
+      expect(pager.buffer.entriesOfAction(historyId(1)).single, deadline());
+    });
+
+    test('no lookup once change_log is read to its end', () async {
+      final repo = FakeChangeHistoryRepository(entries: [deadline(), undo()]);
+      final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+      await pager.fill(_never);
+      expect(repo.actionLookups, isEmpty);
+    });
+  });
+
   group('AC-9 failure and retry', () {
     test('a failed page keeps what was loaded and retries the same page '
         'without duplicating rows', () async {

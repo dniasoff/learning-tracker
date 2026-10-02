@@ -62,6 +62,7 @@ final class ChangeHistoryBuffer {
   final Map<String, ChangeLogEntry> _entries = {};
   final Map<String, LearningEvent> _events = {};
   final Map<String, LearningEvent> _lookups = {};
+  final Map<String, ChangeLogEntry> _actionLookups = {};
 
   /// `change_log` read state.
   final HistorySourceState changeLog = HistorySourceState();
@@ -104,6 +105,21 @@ final class ChangeHistoryBuffer {
       _lookups[e.id] = e;
     }
   }
+
+  /// Adds `change_log` entries read by `action_id` (the actions undos
+  /// revert); they are context, not rows.
+  void addActionLookups(Iterable<ChangeLogEntry> entries) {
+    for (final e in entries) {
+      _actionLookups[e.id] = e;
+    }
+  }
+
+  /// Every known entry of [actionId], from a page or an action lookup,
+  /// de-duplicated by id.
+  List<ChangeLogEntry> entriesOfAction(String actionId) => [
+    for (final e in {..._actionLookups, ..._entries}.values)
+      if (e.actionId == actionId) e,
+  ];
 
   /// Whether both sources have had a first page read.
   bool get started => changeLog.started && learningEvents.started;

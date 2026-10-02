@@ -66,6 +66,12 @@ final class _PerLearner implements ChangeHistoryRepository {
     LearnerScope scope,
     Set<String> ids,
   ) => byScope[scope]!.learningEventsById(scope, ids);
+
+  @override
+  Future<List<ChangeLogEntry>> changeLogEntriesOfActions(
+    LearnerScope scope,
+    Set<String> actionIds,
+  ) => byScope[scope]!.changeLogEntriesOfActions(scope, actionIds);
 }
 
 void main() {
@@ -189,6 +195,42 @@ void main() {
       );
       await tester.tap(find.descendant(of: plain, matching: find.text('Undo')));
       expect(undone, ['action:${historyId(3)}']);
+    });
+
+    testWidgets('an undo whose reverted action is older than the loaded '
+        'pages still reads Reverted change: <that action>', (tester) async {
+      final base = _m(DateTime.utc(2026, 9, 2, 10));
+      final repo = FakeChangeHistoryRepository(
+        entries: [
+          _deadline(),
+          // 150 newer changes push the deadline change off the first page.
+          for (var n = 1; n <= 150; n++)
+            historyEntry(
+              100 + n,
+              minutes: base + n,
+              entity: GovernedEntity.mainTrackOrder,
+            ),
+          historyEntry(
+            500,
+            minutes: base + 1000,
+            actor: historyParent,
+            entityId: 'deadline',
+            reverts: 1,
+            before: {'goals/deadline.target_date': '2026-11-03'},
+            after: {'goals/deadline.target_date': '2027-01-01'},
+          ),
+        ],
+      );
+      await pumpChangeHistory(tester, changeHistoryOverrides(repository: repo));
+
+      expect(repo.changeLogReads, 1, reason: 'the action was not paged to');
+      expect(repo.actionLookups, [
+        {historyId(1)},
+      ]);
+      expect(
+        find.text('Reverted change: Changed the deadline to Nov 3'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('without the Story 4.6 handler no Undo is shown', (

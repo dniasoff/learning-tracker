@@ -1,10 +1,12 @@
 /// Maps merged history items to display rows (Story 4.5 / DNI-513 AC-3 –
 /// AC-6, E-2, E-3).
 ///
-/// Everything a row derives is read from the loaded pages, and is
-/// complete for every visible row: an undo, a void and a later rename are
-/// all newer than what they act on, and every item newer than a visible
-/// row is loaded (`change_history_merge.dart`).
+/// Undone, voided and source-name state is read from the loaded pages,
+/// and is complete for every visible row: an undo, a void and a later
+/// rename are all newer than what they act on, and every item newer than a
+/// visible row is loaded (`change_history_merge.dart`). The reverse — what
+/// a visible undo or void acts on — may be older than every loaded page,
+/// so the pager reads it by `action_id` / id (`change_history_pager.dart`).
 ///
 /// - **Day and time** use the learner's IANA `time_zone` in force at the
 ///   instant (AD-41), never the device's.
@@ -217,11 +219,10 @@ final class _Context {
     );
   }
 
+  /// The reverted action [actionId], from the loaded pages and the
+  /// pager's by-`action_id` lookups (it may be older than every page).
   GovernedActionItem? _actionItem(String actionId) {
-    final entries = [
-      for (final e in buffer.entries)
-        if (e.actionId == actionId) e,
-    ];
+    final entries = buffer.entriesOfAction(actionId);
     return entries.isEmpty ? null : GovernedActionItem(actionId, entries);
   }
 

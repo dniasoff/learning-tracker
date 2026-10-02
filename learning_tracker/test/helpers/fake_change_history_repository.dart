@@ -42,6 +42,12 @@ final class FakeChangeHistoryRepository implements ChangeHistoryRepository {
   /// Ids requested by [learningEventsById].
   final List<Set<String>> lookups = [];
 
+  /// Action ids requested by [changeLogEntriesOfActions].
+  final List<Set<String>> actionLookups = [];
+
+  /// The next N [changeLogEntriesOfActions] calls throw.
+  int failActionLookups = 0;
+
   /// The next N `change_log` page reads throw.
   int failChangeLogReads = 0;
 
@@ -127,6 +133,22 @@ final class FakeChangeHistoryRepository implements ChangeHistoryRepository {
     return [
       for (final e in events)
         if (ids.contains(e.id)) e,
+    ];
+  }
+
+  @override
+  Future<List<ChangeLogEntry>> changeLogEntriesOfActions(
+    LearnerScope scope,
+    Set<String> actionIds,
+  ) async {
+    actionLookups.add(actionIds);
+    if (failActionLookups > 0) {
+      failActionLookups--;
+      throw const FakeHistoryReadFailure('lookup');
+    }
+    return [
+      for (final e in entries)
+        if (actionIds.contains(e.actionId)) e,
     ];
   }
 }
