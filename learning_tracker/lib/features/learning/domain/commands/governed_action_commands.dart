@@ -9,7 +9,10 @@
 /// 1. The action is validated as a whole before any read or write (each
 ///    doc lives in its entity's collection, a doc-is-entity entity patches
 ///    only its own doc, no field is `last_change_id`, a `subTrack` change
-///    has exactly one doc).
+///    has exactly one doc). A live `goal` on a curriculum whose live
+///    `profile_programs` doc names a `program_id` (a calendar program,
+///    after this action's own patches) is rejected as invalid (AD-43 /
+///    AD-45, DNI-476), before anything is written.
 /// 2. An action with any entity over the AD-54 owner budget
 ///    ([GovernedBatch.maxDocs] docs) is not batched: the whole action, in
 ///    order, goes to the [OversizedGovernedWritePort] (the
@@ -79,6 +82,7 @@ import 'package:learning_tracker/features/learning/domain/commands/governed_pend
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_dispatcher.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_intents.dart';
 
 /// The actor reported for a "changed since" field whose latest change-log
 /// entry cannot be read (e.g. offline, not cached).
@@ -324,6 +328,22 @@ final class DefaultGovernedLearningCommands
     Map<String, _DocView> knownDocs = const {},
   }) async {
     if (!_valid(changes)) return _invalid;
+    final views = <String, _DocView>{...knownDocs};
+    Future<_DocView> view(String collection, String docId) async {
+      final key = _docKey(collection, docId);
+      if (views.containsKey(key)) return views[key];
+      return views[key] = await _reader.currentDoc(_scope, collection, docId);
+    }
+
+    // AD-43 / AD-45 (DNI-476): a live goal on a calendar-program
+    // curriculum is rejected before anything is written, judged on the
+    // program state after this action's own patches (as
+    // `writeWithChangeLog` judges it).
+    try {
+      if (await _goalOnCalendarProgram(changes, view)) return _invalid;
+    } on Object {
+      return _notSaved; // a doc could not be read: write nothing
+    }
     if (changes.any((c) => c.docs.length > GovernedBatch.maxDocs)) {
       return _writeOversized(changes, now, revertsActionId, changedSince);
     }
@@ -334,10 +354,7 @@ final class DefaultGovernedLearningCommands
       for (final change in changes) {
         final plan = _EntityPlan(change);
         for (final doc in change.docs) {
-          final key = _docKey(doc.collection, doc.docId);
-          final current = knownDocs.containsKey(key)
-              ? knownDocs[key]
-              : await _reader.currentDoc(_scope, doc.collection, doc.docId);
+          final current = await view(doc.collection, doc.docId);
           if (doc.mode == DocMode.create && current != null) return _invalid;
           if (doc.mode == DocMode.update && current == null) {
             return const CaptureResult.rejected(
@@ -544,6 +561,49 @@ final class DefaultGovernedLearningCommands
       actionId: receipt.actionId,
       changedSince: changedSince,
     );
+  }
+
+  /// Whether [changes] leave a live `goal` doc on a curriculum whose
+  /// `profile_programs` doc is live and names a `program_id` (a calendar
+  /// program, AD-43 / AD-45), reading each doc through [view].
+  static Future<bool> _goalOnCalendarProgram(
+    List<GovernedEntityChange> changes,
+    Future<_DocView> Function(String collection, String docId) view,
+  ) async {
+    final curricula = <String>{};
+    for (final change in changes) {
+      if (change.entity != GovernedEntity.goal) continue;
+      for (final doc in change.docs) {
+        final state = {
+          ...?await view(doc.collection, doc.docId),
+          ...doc.fields,
+        };
+        final curriculumId =
+            state[GovernedKeys.curriculumId] ??
+            parseGoalDocId(doc.docId)?.curriculumId;
+        if (state[GovernedKeys.endedAt] == null && curriculumId is String) {
+          curricula.add(curriculumId);
+        }
+      }
+    }
+    const programs = GovernedEntity.mainTrackProgram;
+    for (final curriculumId in curricula) {
+      final state = {...?await view(programs.collection, curriculumId)};
+      for (final change in changes) {
+        if (change.entity != programs) continue;
+        for (final doc in change.docs) {
+          if (doc.docId == curriculumId) state.addAll(doc.fields);
+        }
+      }
+      final programId = state[MainTrackProgram.kProgramId];
+      final names = switch (programId) {
+        final String id => id.isNotEmpty,
+        num() => true,
+        _ => false,
+      };
+      if (state[GovernedKeys.endedAt] == null && names) return true;
+    }
+    return false;
   }
 
   /// Whether [v] is an AD-52 storage value: null, bool, num, String, a UTC
