@@ -336,6 +336,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     newId: newUlid,
     corpusOf: subTrackCorpusOf,
     analytics: ref.watch(learningAnalyticsProvider),
+    ledger: ref.watch(subTrackWriteLedgerProvider(scope)),
   );
   final commands = DefaultLearningCommands(
     scope: scope,
@@ -384,3 +385,12 @@ final ownerGovernedWriterProvider = Provider<OwnerGovernedWriter>(
     () => ref.read(learningCommandsProvider.future),
   ),
 );
+
+/// Keeps queued sub-track writes across command-provider rebuilds for the
+/// same learner session, so pending failures and acknowledgements survive.
+final subTrackWriteLedgerProvider =
+    Provider.family<SubTrackWriteLedger, LearnerScope>((ref, scope) {
+      final ledger = SubTrackWriteLedger();
+      ref.onDispose(ledger.dispose);
+      return ledger;
+    });
