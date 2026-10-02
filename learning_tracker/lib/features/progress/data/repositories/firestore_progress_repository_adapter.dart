@@ -11,11 +11,9 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_scope.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -215,27 +213,6 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
     return _ref.read(firestoreCurriculumScopeRepositoryProvider.future);
   }
 
-  // ── Learning ledger (achievement-shaped — throws on not-ready) ─────────
-
-  /// Resolves `firestoreLearningLedgerRepositoryProvider`, returning `null`
-  /// when no profile is active yet. Used by [_resolveLedger] below.
-  Future<FirestoreLearningLedgerRepository?> _resolveLedgerOrNull() {
-    return _ref.read(firestoreLearningLedgerRepositoryProvider.future);
-  }
-
-  /// Like [_resolveLedgerOrNull], but throws — see
-  /// [ProgressRepositoryNotReadyException] for why every achievement-shaped
-  /// read here throws.
-  Future<FirestoreLearningLedgerRepository> _resolveLedger() async {
-    final repo = await _resolveLedgerOrNull();
-    if (repo == null) {
-      throw const ProgressRepositoryNotReadyException(
-        'firestoreLearningLedgerRepositoryProvider',
-      );
-    }
-    return repo;
-  }
-
   @override
   Future<Map<String, int>> getTrackBreakdown(String curriculumId) async {
     final repo = await _resolve();
@@ -278,35 +255,6 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
     final result = await repo.getCompletionsByTier(
       tier: CompletionTierFilter.lifetime,
     );
-    if (result.isEmpty) await _assertHydrated();
-    return result;
-  }
-
-  /// The complete lifetime learning record, across every curriculum — the
-  /// "track everything I have learnt over my lifetime" feature itself.
-  /// Delegates to [FirestoreLearningLedgerRepository.getLifetimeLedger].
-  ///
-  /// Achievement-shaped read: throws [ProgressRepositoryNotReadyException]
-  /// when no profile is active yet (D-E) — a fabricated empty list here would
-  /// be indistinguishable from "nothing ever learned".
-  Future<List<LearningLedgerEntry>> getAllLedgerEntries() async {
-    final repo = await _resolveLedger();
-    final result = await repo.getLifetimeLedger();
-    if (result.isEmpty) await _assertHydrated();
-    return result;
-  }
-
-  /// Lifetime learning record for one curriculum. Delegates to
-  /// [FirestoreLearningLedgerRepository.getLedgerForCurriculum].
-  ///
-  /// Achievement-shaped read — throws [ProgressRepositoryNotReadyException]
-  /// when no profile is active yet (D-E).
-  Future<List<LearningLedgerEntry>> getLedgerEntriesByCurriculum(
-    String curriculumId,
-  ) async {
-    final repo = await _resolveLedger();
-    final id = _curriculumFor(curriculumId);
-    final result = await repo.getLedgerForCurriculum(id);
     if (result.isEmpty) await _assertHydrated();
     return result;
   }

@@ -19,16 +19,12 @@ export 'package:learning_tracker/features/gamification/domain/models/streak_reco
 // ── Domain services ─────────────────────────────────────────────────────
 export 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 export 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
-export 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 // ── Presentation providers ──────────────────────────────────────────────
-// AUD-gamification-11 (SM-7): rewardMilestoneServiceProvider /
-// streakStateProvider / streakServiceProvider — the sanctioned DI seams for
-// RewardMilestoneService / StreakStateService / StreakService. External
-// callers (e.g. features/dashboard/) must read these through this barrel
+// AUD-gamification-11 (SM-7): rewardMilestoneServiceProvider — the
+// sanctioned DI seam for RewardMilestoneService. External
+// callers (e.g. features/dashboard/) must read it through this barrel
 // rather than deep-importing gamification_service_providers.dart (Rule 2).
 export 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 // ── Presentation widgets ────────────────────────────────────────────────
 export 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
 export 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
-// ── Streak read path ────────────────────────────────────────────────────
-export 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';

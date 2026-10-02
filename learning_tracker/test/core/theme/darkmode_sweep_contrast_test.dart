@@ -131,8 +131,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/widgets/glowing_cta_button.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -845,9 +843,6 @@ void main() {
             overrides: [
               activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
               useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
-              curriculumLedgerProvider.overrideWith(
-                (ref, id) async => const <LearningLedgerEntry>[],
-              ),
               curriculumContentProvider.overrideWith(
                 (ref, curriculumId) async => const <ContentItem>[],
               ),
@@ -880,9 +875,6 @@ void main() {
           overrides: [
             activeProfileIdProvider.overrideWith(() => _FakeProfileId()),
             useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
-            curriculumLedgerProvider.overrideWith(
-              (ref, id) async => const <LearningLedgerEntry>[],
-            ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) async => const <ContentItem>[],
             ),

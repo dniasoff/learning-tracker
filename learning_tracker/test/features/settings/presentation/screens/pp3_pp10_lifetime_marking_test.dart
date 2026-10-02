@@ -36,8 +36,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -63,9 +61,6 @@ Widget _buildScreen({required String curriculumId}) {
     overrides: [
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
       // Return an empty ledger so the screen renders without real DB data.
-      curriculumLedgerProvider.overrideWith(
-        (ref, id) async => const <LearningLedgerEntry>[],
-      ),
       // Avoid touching SharedPreferences.
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
     ],

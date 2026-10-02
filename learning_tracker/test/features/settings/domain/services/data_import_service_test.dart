@@ -230,7 +230,6 @@ void main() {
       final preview = service.validateAndPreview(await service.exportData());
       expect(preview.totalRecords, 0);
       expect(preview.userProfileCount, 0);
-      expect(preview.ledgerCount, 0);
     },
   );
 }

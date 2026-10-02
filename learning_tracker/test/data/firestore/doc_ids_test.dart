@@ -73,8 +73,6 @@ class _CurrentFirestoreWriter {
           DocIds.completionDocIdForProfile(id, data),
           data,
         );
-      case #pushStreak:
-        return _write('streak_events', DocIds.streakEventDocId(data), data);
       case #pushSettings:
         return _write('settings', DocIds.settingsDocId(data), data);
       case #pushTrack:
@@ -85,13 +83,6 @@ class _CurrentFirestoreWriter {
         );
       case #pushBookmark:
         return _write('bookmarks', DocIds.bookmarkDocId(data), data);
-      case #pushLedgerEntry:
-      case #pushLedgerEntriesBatch:
-        return _write(
-          'learning_ledger',
-          DocIds.learningLedgerDocId(data),
-          data,
-        );
       case #pushProfileProgram:
         return _write(
           'profile_programs',
@@ -219,17 +210,6 @@ void main() {
       },
     );
 
-    test('streak_events: ULID-present payload is byte-for-byte', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{
-        'ulid': 'ULID_STREAK_1',
-        'streak_count': 7,
-      };
-      await _gw(fs).pushStreak(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'streak_events');
-      expect(DocIds.streakEventDocId(data), equals(live));
-    });
-
     test('settings: curriculum_id payload is byte-for-byte', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
       final data = <String, dynamic>{
@@ -270,25 +250,6 @@ void main() {
       await _gw(fs).pushBookmark(profileId: _profileId, data: data);
       final live = await _liveDocId(fs, 'bookmarks');
       expect(DocIds.bookmarkDocId(data), equals(live));
-    });
-
-    test('learning_ledger: pushLedgerEntry is byte-for-byte', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{'ulid': 'LEDGER_ULID_1', 'amount': 10};
-      await _gw(fs).pushLedgerEntry(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'learning_ledger');
-      expect(DocIds.learningLedgerDocId(data), equals(live));
-    });
-
-    test('learning_ledger: pushLedgerEntriesBatch derives the SAME formula as '
-        'the single-entry path', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final entry = <String, dynamic>{'ulid': 'LEDGER_ULID_BATCH', 'amount': 3};
-      await _gw(
-        fs,
-      ).pushLedgerEntriesBatch(profileId: _profileId, entries: [entry]);
-      final live = await _liveDocId(fs, 'learning_ledger');
-      expect(DocIds.learningLedgerDocId(entry), equals(live));
     });
 
     test('profile_programs: byte-for-byte', () async {

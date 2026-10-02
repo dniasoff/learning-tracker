@@ -50,7 +50,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -61,9 +60,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
-import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -204,12 +201,6 @@ void main() {
         contentSearchProvider.overrideWith((ref, args) => Future.value([])),
         completionRepositoryProvider.overrideWith(
           (ref) => FirestoreCompletionRepositoryAdapter(ref: ref),
-        ),
-        learningLedgerRepositoryProvider.overrideWith(
-          (ref) => FirestoreLearningLedgerRepositoryAdapter(
-            ref: ref,
-            activeProfileMode: ProfileMode.adult,
-          ),
         ),
         beforeTrackingRecorderProvider.overrideWith(
           (ref) => BeforeTrackingRecorder(

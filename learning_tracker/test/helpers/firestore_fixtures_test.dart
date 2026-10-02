@@ -61,7 +61,7 @@ void main() {
     });
   });
 
-  test('seeds track, completion, and learning-ledger documents', () async {
+  test('seeds track and completion documents', () async {
     await seedTrack(
       firestore,
       uid: _uid,
@@ -79,19 +79,6 @@ void main() {
       completedAt: _time,
       points: 7,
     );
-    const ledgerUlid = 'FIXTURELEDGER000000000001';
-    await seedLedgerEntry(
-      firestore,
-      uid: _uid,
-      profileId: _profileId,
-      ulid: ledgerUlid,
-      curriculumId: CurriculumId.bavli,
-      unitIdentifier: 'daf-2a',
-      completedAt: _time,
-      markedBy: _profileId,
-      completionNumber: 2,
-    );
-
     final profilePath = firestore
         .collection('users')
         .doc(_uid)
@@ -115,15 +102,6 @@ void main() {
     expect(completion.data(), containsPair('curriculum_id', 'bavli'));
     expect(completion.data(), containsPair('sefaria_ref', 'Daf 2a'));
     expect(completion.data()!['completed_at'], isA<Timestamp>());
-
-    final ledger = await profilePath
-        .collection('learning_ledger')
-        .doc(ledgerUlid)
-        .get();
-    expect(ledger.data(), containsPair('ulid', ledgerUlid));
-    expect(ledger.data(), containsPair('curriculum_id', 'bavli'));
-    expect(ledger.data(), containsPair('completion_number', 2));
-    expect(ledger.data()!['completed_at'], isA<Timestamp>());
   });
 
   test('seeds goal and bookmark documents', () async {

@@ -15,7 +15,6 @@ class ImportPreview {
     required this.completionCount,
     required this.goalCount,
     required this.stageCount,
-    required this.streakCount,
     required this.pointConfigCount,
     required this.bookmarkCount,
     required this.learningOrderCount,
@@ -23,20 +22,17 @@ class ImportPreview {
     required this.userProfileCount,
     required this.exportedAt,
     required this.appVersion,
-    required this.ledgerCount,
     required this.totalDocumentCount,
   });
 
   final int completionCount;
   final int goalCount;
   final int stageCount;
-  final int streakCount;
   final int pointConfigCount;
   final int bookmarkCount;
   final int learningOrderCount;
   final int curriculumTrackCount;
   final int userProfileCount;
-  final int ledgerCount;
   final int totalDocumentCount;
   final String exportedAt;
   final String appVersion;
@@ -76,8 +72,9 @@ class DataExportImportService {
   // tutor-owned or other-account collections from entering a user backup.
   static const List<String> _profileCollectionNames = [
     'completions',
-    'streak_events',
-    'learning_ledger',
+    // The retired `streak_events` and `learning_ledger` collections (AD-49,
+    // R5/R6, DNI-479) are neither exported nor restored: the streak and
+    // lifetime knowledge are derived from `learning_events`.
     'points_ledger',
     'reward_redemptions',
     'settings',
@@ -189,12 +186,10 @@ class DataExportImportService {
     var completions = 0;
     var goals = 0;
     var stages = 0;
-    var streaks = 0;
     var pointConfigs = 0;
     var bookmarks = 0;
     var learningOrders = 0;
     var tracks = 0;
-    var ledger = 0;
 
     for (var i = 0; i < profiles.length; i++) {
       final profile = _requireMapValue(profiles[i], 'profiles[$i]');
@@ -220,8 +215,6 @@ class DataExportImportService {
             goals += documents.length;
           case 'stage_definitions':
             stages += documents.length;
-          case 'streak_events':
-            streaks += documents.length;
           case 'point_configs':
             pointConfigs += documents.length;
           case 'bookmarks':
@@ -230,8 +223,6 @@ class DataExportImportService {
             learningOrders += documents.length;
           case 'curriculum_tracks':
             tracks += documents.length;
-          case 'learning_ledger':
-            ledger += documents.length;
         }
         for (var j = 0; j < documents.length; j++) {
           _validateDocumentRecord(
@@ -248,13 +239,11 @@ class DataExportImportService {
       completionCount: completions,
       goalCount: goals,
       stageCount: stages,
-      streakCount: streaks,
       pointConfigCount: pointConfigs,
       bookmarkCount: bookmarks,
       learningOrderCount: learningOrders,
       curriculumTrackCount: tracks,
       userProfileCount: profiles.length,
-      ledgerCount: ledger,
       totalDocumentCount: total,
       exportedAt: data['exportedAt'] as String? ?? 'unknown',
       appVersion: data['appVersion'] as String? ?? 'unknown',
