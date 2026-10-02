@@ -63,10 +63,13 @@ final class GovernedWriteUnit {
 }
 
 final class _Pending {
-  _Pending(this.unit, this.reason);
+  _Pending(this.unit, this.reason, {required this.isUndo});
 
   final GovernedWriteUnit unit;
   PendingFailureReason reason;
+
+  /// Whether the unit is an undo's (`undoAction`, DNI-514 AC-9).
+  final bool isUndo;
 
   /// Whether a retry is awaiting the server; the failure stays tracked but
   /// is withheld until that attempt fails.
@@ -77,6 +80,7 @@ final class _Pending {
     eventIds: const [],
     changeIds: unit.changeIds,
     reason: reason,
+    isUndo: isUndo,
   );
 }
 
@@ -125,7 +129,11 @@ final class GovernedPendingFailures {
     Object error,
   ) {
     final reason = reasonOf(error);
-    _pending[unit.id] = _Pending(unit, reason);
+    _pending[unit.id] = _Pending(
+      unit,
+      reason,
+      isUndo: command == LearningCommandKind.undoAction,
+    );
     _notify();
     _reporter?.writeRejected(
       command: command,

@@ -238,6 +238,7 @@ final class PendingFailure {
     required this.eventIds,
     required this.changeIds,
     required this.reason,
+    this.isUndo = false,
   });
 
   /// The failure id (passed to `LearningCommands.retry`).
@@ -252,13 +253,18 @@ final class PendingFailure {
   /// Why it failed.
   final PendingFailureReason reason;
 
+  /// Whether the failed write is an undo (`undoEvents` / `undoAction`), so
+  /// the notice says the undo couldn't be saved (DNI-514 AC-9, UX-DR-139).
+  final bool isUndo;
+
   @override
   bool operator ==(Object other) =>
       other is PendingFailure &&
       other.id == id &&
       _listEquals(other.eventIds, eventIds) &&
       _listEquals(other.changeIds, changeIds) &&
-      other.reason == reason;
+      other.reason == reason &&
+      other.isUndo == isUndo;
 
   @override
   int get hashCode => Object.hash(
@@ -266,6 +272,7 @@ final class PendingFailure {
     Object.hashAll(eventIds),
     Object.hashAll(changeIds),
     reason,
+    isUndo,
   );
 
   @override
