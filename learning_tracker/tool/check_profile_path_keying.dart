@@ -229,7 +229,7 @@ library;
 
 import 'dart:io';
 
-/// The 18 profile-scoped Firestore collections nested directly under
+/// The 21 profile-scoped Firestore collections nested directly under
 /// `users/{uid}/learner_profiles/{profileId}/` in `firestore.rules` today.
 /// Verified by direct reading of `firestore.rules:211-584` (the
 /// `match /learner_profiles/{profileId} { ... }` block), NOT inherited from
@@ -255,6 +255,10 @@ const _kCollections = <String>{
   'profile_programs',
   'curriculum_scopes',
   'study_day_configs',
+  // DNI-471 (sub-tracks AD-46): feature collections added to firestore.rules.
+  'change_log',
+  'learning_events',
+  'sub_tracks',
 };
 
 /// Baseline of already-known live production keying splits.
