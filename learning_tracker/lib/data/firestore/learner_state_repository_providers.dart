@@ -44,11 +44,11 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/callable_oversized_governed_write_port.dart';
 import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_governed_intent_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_settings_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
-import 'package:learning_tracker/domain/learner_state/c0_stub.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
@@ -182,8 +182,7 @@ final subTrackRepositoryProvider = FutureProvider<SubTrackRepository?>((
   return FirestoreSubTrackRepository(firestore: handles.firestore);
 }, retry: (retryCount, error) => null);
 
-// C0 (DNI-524) contract providers. Each is a stub that resolves to
-// `AsyncError(UnimplementedError)` until its owner story fills it; tests
+// C0 (DNI-524) contract providers, filled by their owner stories; tests
 // override them with the fakes in `test/helpers/learner_state/`. Like the
 // repositories above, each resolves to null while the active account is
 // not ready, and scope is passed per call.
@@ -222,14 +221,17 @@ final learnerSettingsReaderProvider = FutureProvider<LearnerSettingsReader?>((
 }, retry: (retryCount, error) => null);
 
 /// [GovernedIntentRepository] over the active account's Firestore handle,
-/// or null while not ready.
-///
-/// C0 stub, filled by DNI-470 (1.8).
+/// or null while not ready (DNI-470, C0 stub map). Scope is passed per
+/// call.
 final governedIntentRepositoryProvider =
-    FutureProvider<GovernedIntentRepository?>(
-      (ref) => c0Stub('DNI-470', 'governedIntentRepositoryProvider'),
-      retry: (retryCount, error) => null,
-    );
+    FutureProvider<GovernedIntentRepository?>((ref) async {
+      final handles = await _readyHandles(ref);
+      if (handles == null) return null;
+      return FirestoreGovernedIntentRepository(
+        firestore: handles.firestore,
+        settings: FirestoreLearnerSettingsReader(firestore: handles.firestore),
+      );
+    }, retry: (retryCount, error) => null);
 
 /// [LearningWritePort] over the active account's Firestore handle, or null
 /// while not ready. The chunked batch commit lives on
