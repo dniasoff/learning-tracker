@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -57,6 +58,12 @@ final class OngoingSubTrackSaved {
 /// `createSubTrack` / `editSubTrack` only; the engine derives everything
 /// else (activity, capacity, target) from the stored values.
 ///
+/// The form is bound to the learner it was opened for: it shows only while
+/// [ongoingSubTrackWriteScopeProvider] grants that learner (a parent
+/// session), closes itself when the active profile changes or the parent
+/// session ends, and re-checks the grant right before every write, so a
+/// direct push or a profile switch never writes to another learner.
+///
 /// A failed save keeps every entered value and offers a retry
 /// (UX-DR-120). At ≥ 600dp the form is capped at 600px beside a summary of
 /// the learner's sub-tracks (UX-DR-164).
@@ -99,6 +106,13 @@ class _OngoingSubTrackFormScreenState
   bool _saving = false;
   bool _limitBlocked = false;
 
+  /// The learner this form writes for: the first scope the write gate
+  /// granted. Null until then.
+  LearnerScope? _boundScope;
+
+  /// Set once the form is closing because its grant was lost.
+  bool _closing = false;
+
   @override
   void initState() {
     super.initState();
@@ -132,6 +146,44 @@ class _OngoingSubTrackFormScreenState
       node.dispose();
     }
     super.dispose();
+  }
+
+  bool _isBound(LearnerScope? scope) =>
+      scope != null && _boundScope != null && scope == _boundScope;
+
+  /// Whether the parent session still grants the bound learner, read fresh
+  /// (fails closed on any error).
+  Future<bool> _writeStillGranted() async {
+    try {
+      return _isBound(await ref.read(ongoingSubTrackWriteScopeProvider.future));
+    } on Object catch (error, stack) {
+      _log.error(
+        event: 'ongoing_sub_track_write_gate_failed',
+        exception: error,
+        stackTrace: stack,
+      );
+      return false;
+    }
+  }
+
+  /// Leaves the form without saving: its learner or parent session is gone.
+  void _close() {
+    if (_closing) return;
+    _closing = true;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) {
+        if (!mounted) return;
+        final route = ModalRoute.of(context);
+        if (route == null) return;
+        final navigator = Navigator.of(context);
+        if (route.isCurrent) {
+          navigator.pop();
+        } else {
+          // A picker is open above the form: drop the form under it.
+          navigator.removeRoute(route);
+        }
+      })
+      ..scheduleFrame();
   }
 
   OngoingFormValidation _validate(CivilDate today) =>
@@ -249,10 +301,14 @@ class _OngoingSubTrackFormScreenState
       }
     }
     setState(() => _saving = true);
-    CaptureResult result;
+    CaptureResult? result;
     try {
       final commands = await ref.read(learningCommandsProvider.future);
-      if (commands == null) {
+      // Re-gate right before the write: the profile may have switched or
+      // the parent PIN session ended while the form was open.
+      if (!await _writeStillGranted()) {
+        result = null;
+      } else if (commands == null) {
         result = const CaptureResult.onlineRequired();
       } else if (existing == null) {
         result = await commands.createSubTrack(
@@ -271,6 +327,10 @@ class _OngoingSubTrackFormScreenState
     }
     if (!mounted) return;
     setState(() => _saving = false);
+    if (result == null) {
+      _close();
+      return;
+    }
     switch (result) {
       case CaptureSuccess(:final queued, :final changeIds):
         Navigator.of(
@@ -344,6 +404,19 @@ class _OngoingSubTrackFormScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final gate = ref.watch(ongoingSubTrackWriteScopeProvider);
+    final granted = gate.hasError ? null : gate.value;
+    if (_boundScope == null && granted != null && !gate.isLoading) {
+      _boundScope = granted;
+    }
+    // Fail closed: an error, or a settled grant for no learner or another
+    // learner (a direct push without a parent session, a profile switch, a
+    // cleared PIN) closes the form; a reload keeps the bound learner.
+    final revoked =
+        _closing ||
+        gate.hasError ||
+        (gate.hasValue && !gate.isLoading && !_isBound(granted));
+    if (revoked) _close();
     final dataAsync = ref.watch(
       ongoingSubTrackContextProvider(widget.curriculumId),
     );
@@ -365,6 +438,10 @@ class _OngoingSubTrackFormScreenState
         ),
       ),
       body: switch (dataAsync) {
+        _ when revoked => const SizedBox.shrink(),
+        _ when _boundScope == null => const Center(
+          child: CircularProgressIndicator(),
+        ),
         // A reload (new rows, the learner's midnight) keeps the form on
         // screen with the previous read instead of flashing a spinner.
         AsyncValue(value: final read?) when !dataAsync.hasError =>

@@ -20,6 +20,7 @@ import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -200,3 +201,21 @@ final ongoingSubTrackParentSessionProvider = FutureProvider.autoDispose<bool>((
   return ref.watch(parentPinAuthenticatedProfileIdProvider) ==
       profile.profileId;
 }, retry: (retryCount, error) => null);
+
+/// The learner a sub-track form may write for: the active learner's scope
+/// while [ongoingSubTrackParentSessionProvider] holds for that same
+/// profile; null otherwise (no learner, a child profile without a verified
+/// parent PIN, a tutored session, or a profile and scope that disagree
+/// mid-switch). The form binds to the first scope it sees and re-checks
+/// this right before every write.
+final ongoingSubTrackWriteScopeProvider =
+    FutureProvider.autoDispose<LearnerScope?>((ref) async {
+      if (!await ref.watch(ongoingSubTrackParentSessionProvider.future)) {
+        return null;
+      }
+      final scope = await ref.watch(activeLearnerScopeProvider.future);
+      final profile = await ref.watch(activeProfileProvider.future);
+      if (scope == null || profile == null) return null;
+      if (profile.profileId != scope.profileId) return null;
+      return scope;
+    }, retry: (retryCount, error) => null);

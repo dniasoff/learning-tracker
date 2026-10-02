@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/learni
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ongoing_sub_track_hub_seam.dart';
 
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/pump_app.dart';
 
@@ -63,6 +64,9 @@ Future<void> _pump(
   final overrides = <Override>[
     useHebrewTermsProvider.overrideWith(_EnglishTerms.new),
     ongoingSubTrackParentSessionProvider.overrideWith((ref) async => parent),
+    ongoingSubTrackWriteScopeProvider.overrideWith(
+      (ref) async => parent ? c0Scope() : null,
+    ),
     ongoingSubTrackContextProvider(_curriculum).overrideWith(
       (ref) async => OngoingSubTrackContext(
         curriculumId: _curriculum,

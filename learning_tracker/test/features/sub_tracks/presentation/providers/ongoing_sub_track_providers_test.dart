@@ -301,6 +301,74 @@ void main() {
       expect(await session(mode: ProfileMode.adult, tutored: true), isFalse);
     });
   });
+
+  group('ongoingSubTrackWriteScopeProvider', () {
+    LearnerProfileEntity profile(ProfileMode mode, {String? id}) =>
+        LearnerProfileEntity(
+          profileId: id ?? profileUlid,
+          displayName: 'Yehuda',
+          mode: mode,
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+
+    Future<Object?> grant({
+      required ProfileMode mode,
+      String? profileId,
+      String? pinFor,
+      bool scoped = true,
+    }) async {
+      final c = ProviderContainer(
+        overrides: [
+          activeProfileProvider.overrideWith(
+            (ref) async => profile(mode, id: profileId),
+          ),
+          parentPinAuthenticatedProfileIdProvider.overrideWith(
+            () => _Pin(pinFor),
+          ),
+          activeTutoredProfileSelectionProvider.overrideWith(
+            () => _Tutored(false),
+          ),
+          activeLearnerScopeProvider.overrideWith(
+            (ref) async => scoped ? c0Scope() : null,
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      final sub = c.listen(ongoingSubTrackWriteScopeProvider, (_, __) {});
+      addTearDown(sub.close);
+      return c.read(ongoingSubTrackWriteScopeProvider.future);
+    }
+
+    test('an adult learner is granted its own scope', () async {
+      expect(await grant(mode: ProfileMode.adult), c0Scope());
+    });
+
+    test('a child is granted only with its parent PIN session', () async {
+      expect(await grant(mode: ProfileMode.child), isNull);
+      expect(
+        await grant(mode: ProfileMode.child, pinFor: profileUlid),
+        c0Scope(),
+      );
+    });
+
+    test('no learner scope grants nothing', () async {
+      expect(await grant(mode: ProfileMode.adult, scoped: false), isNull);
+    });
+
+    test(
+      'a profile and scope that disagree mid-switch grant nothing',
+      () async {
+        expect(
+          await grant(
+            mode: ProfileMode.adult,
+            profileId: '01ARZ3NDEKTSV4RRFFQ69G5FB2',
+          ),
+          isNull,
+        );
+      },
+    );
+  });
 }
 
 class _Pin extends ParentPinAuthenticatedProfileId {

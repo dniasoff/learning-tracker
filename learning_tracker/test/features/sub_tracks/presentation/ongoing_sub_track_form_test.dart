@@ -4,6 +4,7 @@
 // (AC-6), failure recovery, dark, tablet, large text and RTL (AC-7) and the
 // edge table. Commands are the C0 fakes (DNI-524).
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -11,6 +12,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -20,6 +22,7 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongo
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_route.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_screen.dart';
 
+import '../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../helpers/pump_app.dart';
 
@@ -96,6 +99,24 @@ late FakeLearningCommands _commands;
 /// The device clock: noon UTC on [_today] unless a test moves it.
 late FakeLocalDayClock _clock;
 
+/// The learner the parent session grants a write for; tests switch it.
+LearnerScope? _initialGrant;
+
+class _Grant extends Notifier<LearnerScope?> {
+  @override
+  LearnerScope? build() => _initialGrant;
+
+  void set(LearnerScope? scope) => state = scope;
+}
+
+final _grant = NotifierProvider<_Grant, LearnerScope?>(_Grant.new);
+
+/// Switches the granted learner (a profile switch, or a cleared PIN).
+void _setGrant(WidgetTester tester, LearnerScope? scope) =>
+    ProviderScope.containerOf(
+      tester.element(find.byType(OngoingSubTrackFormScreen)),
+    ).read(_grant.notifier).set(scope);
+
 /// English unit words, so the leaf-unit label is deterministic.
 class _EnglishTerms extends UseHebrewTerms {
   @override
@@ -109,6 +130,9 @@ List<Override> _overrides(List<SubTrack> tracks) => [
   ).overrideWith((ref) async => _context(tracks)),
   learningCommandsProvider.overrideWith((ref) async => _commands),
   localDayClockProvider.overrideWithValue(_clock),
+  ongoingSubTrackWriteScopeProvider.overrideWith(
+    (ref) async => ref.watch(_grant),
+  ),
 ];
 
 Future<void> _open(
@@ -195,6 +219,7 @@ void main() {
   setUp(() {
     _commands = FakeLearningCommands();
     _clock = FakeLocalDayClock(DateTime.utc(2026, 9, 7, 12));
+    _initialGrant = c0Scope();
     _lastResult = null;
     _closed = false;
   });
@@ -343,6 +368,70 @@ void main() {
       await _save(tester);
       expect(_lastDraft().windowStart, '2026-09-20');
       expect(_lastDraft().windowEnd, '2026-09-20');
+    });
+  });
+
+  group('the parent session gate', () {
+    testWidgets('a push without a parent session closes with no form', (
+      tester,
+    ) async {
+      _initialGrant = null;
+      await _open(tester);
+      expect(find.byType(OngoingSubTrackFormScreen), findsNothing);
+      expect(_closed, isTrue);
+      expect(_lastResult, isNull);
+      expect(_commands.calls, isEmpty);
+    });
+
+    testWidgets('a profile switch while open closes without writing', (
+      tester,
+    ) async {
+      await _open(tester);
+      await tester.enterText(_field('ongoingSubTrackName'), 'Rebbe');
+      _setGrant(tester, c0Scope(ownerUid: 'other-owner'));
+      await tester.pumpAndSettle();
+      expect(find.byType(OngoingSubTrackFormScreen), findsNothing);
+      expect(_closed, isTrue);
+      expect(_lastResult, isNull);
+      expect(_commands.calls, isEmpty);
+    });
+
+    testWidgets('a cleared parent PIN while open closes the edit form', (
+      tester,
+    ) async {
+      await _open(tester, existing: _track(1));
+      _setGrant(tester, null);
+      await tester.pumpAndSettle();
+      expect(find.byType(OngoingSubTrackFormScreen), findsNothing);
+      expect(_closed, isTrue);
+      expect(_commands.calls, isEmpty);
+    });
+
+    testWidgets('a switch between tapping Save and the write is refused', (
+      tester,
+    ) async {
+      await _open(tester);
+      await tester.enterText(_field('ongoingSubTrackName'), 'Rebbe');
+      await _reveal(tester, 'ongoingSubTrackSave');
+      // No frame between the switch and the tap: only the save-time
+      // re-check can see it.
+      _setGrant(tester, c0Scope(ownerUid: 'other-owner'));
+      await tester.tap(_field('ongoingSubTrackSave'));
+      await tester.pumpAndSettle();
+      expect(_commands.calls, isEmpty);
+      expect(find.byType(OngoingSubTrackFormScreen), findsNothing);
+      expect(_lastResult, isNull);
+    });
+
+    testWidgets('a re-read of the same learner keeps the form', (tester) async {
+      await _open(tester);
+      await tester.enterText(_field('ongoingSubTrackName'), 'Rebbe');
+      _setGrant(tester, c0Scope());
+      await tester.pumpAndSettle();
+      expect(find.byType(OngoingSubTrackFormScreen), findsOneWidget);
+      expect(_fieldText(tester, 'ongoingSubTrackName'), 'Rebbe');
+      await _save(tester);
+      expect(_lastDraft().name, 'Rebbe');
     });
   });
 
@@ -539,6 +628,10 @@ void main() {
             learningCommandsProvider.overrideWith(
               (ref) async => throw StateError('offline'),
             ),
+            ongoingSubTrackWriteScopeProvider.overrideWith(
+              (ref) async => c0Scope(),
+            ),
+            localDayClockProvider.overrideWithValue(_clock),
           ],
           child: const OngoingSubTrackFormScreen(curriculumId: _curriculum),
         ),
@@ -590,6 +683,10 @@ void main() {
             ongoingSubTrackContextProvider(
               _curriculum,
             ).overrideWith((ref) async => throw StateError('read failed')),
+            ongoingSubTrackWriteScopeProvider.overrideWith(
+              (ref) async => c0Scope(),
+            ),
+            localDayClockProvider.overrideWithValue(_clock),
           ],
           child: const OngoingSubTrackFormScreen(curriculumId: _curriculum),
         ),
