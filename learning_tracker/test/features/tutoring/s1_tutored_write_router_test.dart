@@ -16,8 +16,18 @@ import 'package:learning_tracker/features/tutoring/data/services/tutor_write_ser
 class _FakeInvokerRecord {
   final List<({String fn, Map<String, dynamic> args})> calls = [];
 
-  Future<void> call(String fn, Map<String, dynamic> args) async {
+  /// Records the call and answers with the governed callables'
+  /// `writeWithChangeLog` receipt (one change_log entry, server `at`).
+  Future<Object?> call(String fn, Map<String, dynamic> args) async {
     calls.add((fn: fn, args: Map<String, dynamic>.from(args)));
+    return {
+      'success': true,
+      'action_id': args['actionId'] ?? '01JT7T0SV0AAAAAAAAAAAAAAAA',
+      'change_ids': const ['01JT7T0SV0AAAAAAAAAAAAAAAA'],
+      'at': '2026-10-02T15:20:00.000Z',
+      'replayed': false,
+      'noop': false,
+    };
   }
 
   ({String fn, Map<String, dynamic> args})? get lastCall =>

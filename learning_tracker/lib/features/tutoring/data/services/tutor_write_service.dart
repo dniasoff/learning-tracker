@@ -65,22 +65,23 @@ class TutorLearningWritten extends TutorWriteSuccess {
 }
 
 /// A successful Story 1.10 governed callable (DNI-486): the action id and
-/// the `change_log` entries it wrote (AD-38).
+/// the `change_log` entries it wrote (AD-38). Only built from a validated
+/// answer (see `TutorWriteService._decodeGoverned`).
 class TutorGovernedWritten extends TutorWriteSuccess {
   const TutorGovernedWritten({
-    this.actionId,
+    required this.actionId,
     this.changeIds = const [],
     this.at,
     this.replayed = false,
   });
 
-  /// The governed action id; null when the server did not return one.
-  final String? actionId;
+  /// The governed action id the server confirmed.
+  final String actionId;
 
   /// The action's `change_log` entry ids.
   final List<String> changeIds;
 
-  /// The server-stamped `change_log.at`.
+  /// The server-stamped `change_log.at`; null only for a no-op action.
   final DateTime? at;
 
   /// The callable returned an already-stored action.
@@ -120,10 +121,10 @@ class TutorWriteEditingTurnedOff extends TutorWriteFailure {
     : super(code: 'permission-denied');
 }
 
-/// A Story 1.23 learning callable answered without throwing, but its answer
-/// is not a valid success: not a map, `success` is not true, or the action
-/// id, event ids or server `recorded_at` stamp do not match the request
-/// (DNI-486). Nothing is shown as written and no success analytics are
+/// A Story 1.23 learning or Story 1.10 governed callable answered without
+/// throwing, but its answer is not a valid success: not a map, `success` is
+/// not true, or the action id, event / change ids or server stamp do not
+/// match the request (DNI-486). Nothing is shown as written and no success analytics are
 /// emitted. It is retryable: the retry re-sends the SAME client ULIDs, so an
 /// action that did commit is replayed by the server, never duplicated.
 class TutorWriteInvalidResponse extends TutorWriteFailure {
@@ -312,7 +313,10 @@ class TutorWriteService {
   }
 
   /// A Story 1.10 governed callable: [_invoke], decoded as
-  /// [TutorGovernedWritten]. [actionId] (a client ULID) is sent only when
+  /// [TutorGovernedWritten] only once the answer is a validated success
+  /// (see [_decodeGoverned]); anything else is a [TutorWriteInvalidResponse]
+  /// — retryable, so a caller holding a frozen [actionId] keeps it until a
+  /// validated receipt arrives. [actionId] (a client ULID) is sent only when
   /// given, so a retry replays the stored action instead of writing twice.
   Future<TutorWriteResult> _callGoverned(
     String functionName,
@@ -324,12 +328,56 @@ class TutorWriteService {
       if (actionId != null) 'actionId': actionId,
     });
     if (failure != null) return failure;
-    final map = _asMap(data);
-    return TutorGovernedWritten(
-      actionId: map['action_id'] as String? ?? actionId,
-      changeIds: _stringList(map['change_ids']),
-      at: _instant(map['at']),
-      replayed: map['replayed'] == true,
+    final (written, reason) = _decodeGoverned(data, actionId: actionId);
+    if (written != null) return written;
+    // The reason names only the failed check — never ids or payload.
+    AppLogger.instance.warning(
+      event: 'TutorWriteService.$functionName invalid response',
+      fields: {'reason': reason},
+    );
+    return const TutorWriteInvalidResponse(
+      message: 'The server answer could not be confirmed.',
+    );
+  }
+
+  /// Validates a Story 1.10 governed success answer (the
+  /// `writeWithChangeLog` result): a map with `success == true`, a string
+  /// `action_id` (exactly [actionId] when one was sent), a duplicate-free
+  /// string list `change_ids`, a boolean `replayed`, and — whenever a
+  /// change was logged — a valid ISO-8601 server `at` stamp. An answer with
+  /// no change ids is valid only as the server's explicit `noop: true`.
+  /// Returns the decoded result, or null with the name of the failed check.
+  static (TutorGovernedWritten?, String) _decodeGoverned(
+    Object? data, {
+    required String? actionId,
+  }) {
+    if (data is! Map) return (null, 'not-a-map');
+    if (data['success'] != true) return (null, 'not-success');
+    final action = data['action_id'];
+    if (action is! String || action.isEmpty) return (null, 'action-id');
+    if (actionId != null && action != actionId) return (null, 'action-id');
+    final rawIds = data['change_ids'];
+    if (rawIds is! List || rawIds.any((v) => v is! String)) {
+      return (null, 'change-ids');
+    }
+    final ids = rawIds.cast<String>().toList(growable: false);
+    if (ids.toSet().length != ids.length) return (null, 'change-ids');
+    final replayed = data['replayed'];
+    if (replayed is! bool) return (null, 'replayed');
+    final at = _instant(data['at']);
+    if (ids.isEmpty) {
+      if (data['noop'] != true) return (null, 'empty-without-noop');
+    } else if (at == null) {
+      return (null, 'at');
+    }
+    return (
+      TutorGovernedWritten(
+        actionId: action,
+        changeIds: ids,
+        at: at,
+        replayed: replayed,
+      ),
+      '',
     );
   }
 
@@ -414,16 +462,6 @@ class TutorWriteService {
       '',
     );
   }
-
-  static Map<Object?, Object?> _asMap(Object? data) =>
-      data is Map ? data : const {};
-
-  static List<String> _stringList(Object? raw) => raw is List
-      ? [
-          for (final v in raw)
-            if (v is String) v,
-        ]
-      : const [];
 
   /// An ISO-8601 server stamp, as UTC; null when absent or malformed.
   static DateTime? _instant(Object? raw) =>

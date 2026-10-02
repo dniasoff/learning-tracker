@@ -37,7 +37,9 @@ final class _Server {
       'success': true,
       'action_id': actionId,
       'change_ids': [actionId],
+      'at': DateTime.utc(2026, 10, 1, 9, 0, changeLog.length).toIso8601String(),
       'replayed': false,
+      'noop': false,
     };
   }
 

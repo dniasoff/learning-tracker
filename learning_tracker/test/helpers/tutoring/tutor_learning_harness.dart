@@ -83,8 +83,22 @@ final class RecordingTutorInvoker {
   /// The default success answer for [call] — the `writeWithChangeLog`
   /// result shape. An un-learn answers with one server-minted void per
   /// named leaf event and node target plus the re-issues; nothing written is
-  /// the server's explicit `noop`.
+  /// the server's explicit `noop`. A governed (Story 1.10) call answers with
+  /// one `change_log` entry and its server-stamped `at`.
   Map<String, Object?> successFor(TutorCall call, {bool replayed = false}) {
+    if (!learningCallables.contains(call.fn)) {
+      final actionId = call.args['actionId'] ?? '01JT7T0SV0AAAAAAAAAAAAAAAA';
+      return {
+        'success': true,
+        'action_id': actionId,
+        'event_ids': const <String>[],
+        'change_ids': [actionId],
+        'at': recordedAt.toIso8601String(),
+        'recorded_at': null,
+        'replayed': replayed,
+        'noop': false,
+      };
+    }
     final ids = [...eventIdsOf(call), ...unlearnEventIdsOf(call)];
     return {
       'success': true,
@@ -96,6 +110,15 @@ final class RecordingTutorInvoker {
       'noop': ids.isEmpty && !replayed,
     };
   }
+
+  /// The Story 1.23 learning callables; every other tutor callable is a
+  /// Story 1.10 governed one.
+  static const learningCallables = {
+    'tutorRecordLearning',
+    'tutorVoidLearning',
+    'tutorReplaceLearning',
+    'tutorUnlearn',
+  };
 
   /// The event ids the server answers a `tutorUnlearn` [call] with: a
   /// minted void per named leaf event and node target, then the re-issues.

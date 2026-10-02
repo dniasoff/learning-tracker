@@ -475,6 +475,7 @@ void main() {
         'change-log ids', () async {
       final invoker = _Invoker(
         (_, __) => {
+          'success': true,
           'action_id': _action,
           'change_ids': [_action],
           'at': '2026-10-02T15:20:00.000Z',
@@ -495,6 +496,67 @@ void main() {
       expect(written.actionId, _action);
       expect(written.changeIds, [_action]);
       expect(written.at, DateTime.utc(2026, 10, 2, 15, 20));
+    });
+
+    group('an answer that is not a validated receipt is a retryable '
+        'TutorWriteInvalidResponse', () {
+      Map<String, Object?> receipt() => {
+        'success': true,
+        'action_id': _action,
+        'change_ids': [_action],
+        'at': '2026-10-02T15:20:00.000Z',
+        'replayed': false,
+        'noop': false,
+      };
+      final malformed = <String, Object?>{
+        'null': null,
+        'not a map': const ['ok'],
+        'success false': {...receipt(), 'success': false},
+        'action id missing': {...receipt()}..remove('action_id'),
+        'another action id': {
+          ...receipt(),
+          'action_id': '01JT7T0SV0ZZZZZZZZZZZZZZZZ',
+        },
+        'change ids missing': {...receipt()}..remove('change_ids'),
+        'duplicate change ids': {
+          ...receipt(),
+          'change_ids': [_action, _action],
+        },
+        'at missing while a change was logged': {...receipt()}..remove('at'),
+      };
+      for (final MapEntry(key: name, value: answer) in malformed.entries) {
+        test(name, () async {
+          final result = await _service(_Invoker((_, __) => answer)).upsertGoal(
+            grantId: _grantId,
+            ownerUid: _ownerUid,
+            profileId: _profileId,
+            goalId: 'mishnayos_pace',
+            goalData: const {'description': 'x'},
+            actionId: _action,
+          );
+          expect(result, isA<TutorWriteInvalidResponse>());
+          expect((result as TutorWriteFailure).isRetryable, isTrue);
+        });
+      }
+
+      test('without a client actionId any server action id is accepted, '
+          'but one must be present', () async {
+        Future<TutorWriteResult> delete(Object? answer) =>
+            _service(_Invoker((_, __) => answer)).deleteGoal(
+              grantId: _grantId,
+              ownerUid: _ownerUid,
+              profileId: _profileId,
+              goalId: 'mishnayos_pace',
+            );
+        expect(
+          await delete({...receipt(), 'action_id': _e1}),
+          isA<TutorGovernedWritten>().having((w) => w.actionId, 'id', _e1),
+        );
+        expect(
+          await delete({...receipt()}..remove('action_id')),
+          isA<TutorWriteInvalidResponse>(),
+        );
+      });
     });
 
     test('without an actionId the legacy request shape is unchanged', () async {
