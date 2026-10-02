@@ -79,9 +79,15 @@ class _RecordAll extends ConsumerWidget {
   );
 }
 
-Set<String> _pendingOf(WidgetTester tester) => ProviderScope.containerOf(
-  tester.element(find.byType(SubTrackCaptureSection)),
-).read(pendingCapturesProvider).refsOf(engineCurriculum, schoolId);
+Set<String> _pendingOf(WidgetTester tester) =>
+    ProviderScope.containerOf(
+      tester.element(find.byType(SubTrackCaptureSection)),
+    ).read(
+      activePendingRefsProvider((
+        curriculumId: engineCurriculum,
+        source: schoolId,
+      )),
+    );
 
 String _status(WidgetTester tester) =>
     tester.widget<Text>(find.byKey(Key('subTrackRowStatus-$schoolId'))).data!;

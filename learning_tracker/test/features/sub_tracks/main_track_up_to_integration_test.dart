@@ -100,9 +100,14 @@ Future<(CaptureRig, List<int>)> _pump(
 }
 
 Set<String> _pendingMain(WidgetTester tester) =>
-    ProviderScope.containerOf(tester.element(find.byType(MainTrackUpToActions)))
-        .read(pendingCapturesProvider)
-        .refsOf(engineCurriculum, LearningEvent.sourceMain);
+    ProviderScope.containerOf(
+      tester.element(find.byType(MainTrackUpToActions)),
+    ).read(
+      activePendingRefsProvider((
+        curriculumId: engineCurriculum,
+        source: LearningEvent.sourceMain,
+      )),
+    );
 
 Future<void> _recordThrough12(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('mainTrackUpTo-mishnayos')));

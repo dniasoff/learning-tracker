@@ -216,9 +216,10 @@ final upToSliceProvider = Provider.autoDispose
         );
       }
       final pending = ref.watch(
-        pendingCapturesProvider.select(
-          (p) => p.refsOf(request.curriculumId, request.source),
-        ),
+        activePendingRefsProvider((
+          curriculumId: request.curriculumId,
+          source: request.source,
+        )),
       );
       switch (request) {
         case SubTrackUpToRequest(:final subTrackId):

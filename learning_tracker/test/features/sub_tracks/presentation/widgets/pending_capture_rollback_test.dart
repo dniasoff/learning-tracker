@@ -14,6 +14,7 @@ import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../../helpers/pump_app.dart';
 
+final _scope = c0Scope();
 const _c = 'mishnayos';
 const _a = 'Mishnah Berakhot 1:1';
 const _b = 'Mishnah Berakhot 1:2';
@@ -58,14 +59,16 @@ void main() {
       body: const PendingCaptureRollback(),
     );
     final pending = container.read(pendingCapturesProvider.notifier);
-    final token = pending.add(_c, 'main', [_a, _b]);
+    final token = pending.add(_scope, _c, 'main', [_a, _b]);
     pending.bind(token, [_e1, _e2]);
 
     commands.pendingFailures.add([
       _failure([_e2]),
     ]);
     await tester.pumpAndSettle();
-    expect(container.read(pendingCapturesProvider).refsOf(_c, 'main'), {_a});
+    expect(container.read(pendingCapturesProvider).refsOf(_scope, _c, 'main'), {
+      _a,
+    });
     expect(find.text('Retry'), findsOneWidget);
 
     await tester.tap(find.text('Retry'));
@@ -73,9 +76,9 @@ void main() {
     expect(commands.calls.where((c) => c.name == 'retry').single.args, {
       'pendingFailureId': _e2,
     });
-    final again = pending.add(_c, 'main', [_b]);
+    final again = pending.add(_scope, _c, 'main', [_b]);
     pending.bind(again, [_e2]);
-    expect(container.read(pendingCapturesProvider).refsOf(_c, 'main'), {
+    expect(container.read(pendingCapturesProvider).refsOf(_scope, _c, 'main'), {
       _a,
       _b,
     });
@@ -99,7 +102,7 @@ void main() {
     controller.jumpTo(controller.position.maxScrollExtent);
     await tester.pumpAndSettle();
     final pending = container.read(pendingCapturesProvider.notifier);
-    final token = pending.add(_c, 'main', [_a]);
+    final token = pending.add(_scope, _c, 'main', [_a]);
     pending.bind(token, [_e1]);
 
     commands.pendingFailures.add([

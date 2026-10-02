@@ -58,7 +58,6 @@ class _Rows extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final writable = ref.watch(subTrackWritesAllowedProvider);
-    final pending = ref.watch(pendingCapturesProvider);
     return Column(
       key: const Key('subTrackSection'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -72,7 +71,7 @@ class _Rows extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         for (final item in items) ...[
-          _row(context, ref, item, writable, pending),
+          _row(context, ref, item, writable),
           const SizedBox(height: 12),
         ],
       ],
@@ -84,11 +83,15 @@ class _Rows extends ConsumerWidget {
     WidgetRef ref,
     OnHomeSubTrack item,
     bool writable,
-    PendingCaptures pending,
   ) {
     final position = displayedSubTrackPosition(
       item.state,
-      pending: pending.refsOf(item.curriculumId, item.id),
+      pending: ref.watch(
+        activePendingRefsProvider((
+          curriculumId: item.curriculumId,
+          source: item.id,
+        )),
+      ),
     );
     return SubTrackRow(
       item: item,
