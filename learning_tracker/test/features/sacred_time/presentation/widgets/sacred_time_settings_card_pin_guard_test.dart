@@ -23,6 +23,7 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
@@ -30,6 +31,7 @@ import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_time_location_access_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -52,10 +54,15 @@ class _FakeLocationService extends LocationService {
       const LocationFetchServiceDisabled();
 }
 
-Widget _buildCard({required bool pinGuardRequired, StackRouter? router}) {
+Widget _buildCard({
+  required bool pinGuardRequired,
+  StackRouter? router,
+  List<Override> overrides = const [],
+}) {
   final mockRouter = router ?? _MockStackRouter();
   return pumpApp(
     overrides: [
+      ...overrides,
       activeLearnerSettingsProvider.overrideWithValue(
         const AsyncData(
           LearnerSettings(profileId: profileUlid, timeZone: 'UTC'),
@@ -224,6 +231,48 @@ void main() {
         verify(() => mockRouter.push<Object?>(any())).called(1);
       },
     );
+
+    testWidgets(
+      'DNI-481: Choose city with the correct Parent PIN hands the city '
+      'picker route guard a one-shot pass for the verified profile, so the '
+      'holder is not asked twice',
+      (tester) async {
+        const verifiedId = '01JQ3K5M8N2P4R6T7V9X0Z1AB';
+        final pinService = _MockPinService();
+        when(
+          () => pinService.verifyProfilePin(any(), any()),
+        ).thenAnswer((_) async => true);
+        final access = SacredTimeLocationAccess();
+        final mockRouter = _MockStackRouter();
+        when(
+          () => mockRouter.push<Object?>(any()),
+        ).thenAnswer((_) async => null);
+
+        await tester.pumpWidget(
+          _buildCard(
+            pinGuardRequired: true,
+            router: mockRouter,
+            overrides: [
+              pinServiceProvider.overrideWithValue(pinService),
+              sacredTimeLocationAccessProvider.overrideWithValue(access),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Choose city'));
+        await tester.pumpAndSettle();
+        expect(find.text('Enter Parent PIN'), findsOneWidget);
+        for (final digit in '1234'.split('')) {
+          await tester.tap(find.text(digit).last);
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        verify(() => mockRouter.push<Object?>(any())).called(1);
+        expect(access.consume(verifiedId), isTrue);
+      },
+    );
   });
 
   group('DNI-481 after-lock prompt: the PIN of the TARGET learner', () {
@@ -361,6 +410,100 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Enter Parent PIN'), findsNothing);
       expect(granted, isTrue);
+    });
+
+    testWidgets('guardLearnerLocationPromptAccess: the correct child PIN '
+        'grants the city picker route guard a one-shot pass for the TARGET '
+        '(the holder once the picker opens)', (tester) async {
+      final pinService = _MockPinService();
+      when(() => pinService.hasProfilePin(any())).thenAnswer(
+        (invocation) async => invocation.positionalArguments.first == _child,
+      );
+      when(
+        () => pinService.verifyProfilePin(any(), any()),
+      ).thenAnswer((_) async => true);
+      final access = SacredTimeLocationAccess();
+      bool? granted;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pinServiceProvider.overrideWithValue(pinService),
+            selectedProfileIdProvider.overrideWith(() => _Selected(_adult)),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_account),
+            ),
+            sacredTimeLocationAccessProvider.overrideWithValue(access),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Consumer(
+              builder: (context, ref, _) => TextButton(
+                onPressed: () async =>
+                    granted = await guardLearnerLocationPromptAccess(
+                      context,
+                      ref,
+                      _child,
+                    ),
+                child: const Text('SET LOCATION'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('SET LOCATION'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter Parent PIN'), findsOneWidget);
+      for (final digit in '1234'.split('')) {
+        await tester.tap(find.text(digit).last);
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(granted, isTrue);
+      expect(access.consume(_child), isTrue);
+    });
+
+    testWidgets('guardLearnerLocationPromptAccess: nothing to verify grants '
+        'no pass', (tester) async {
+      final pinService = _MockPinService();
+      when(
+        () => pinService.hasProfilePin(any()),
+      ).thenAnswer((_) async => false);
+      final access = SacredTimeLocationAccess();
+      bool? granted;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pinServiceProvider.overrideWithValue(pinService),
+            selectedProfileIdProvider.overrideWith(() => _Selected(_adult)),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_account),
+            ),
+            sacredTimeLocationAccessProvider.overrideWithValue(access),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Consumer(
+              builder: (context, ref, _) => TextButton(
+                onPressed: () async =>
+                    granted = await guardLearnerLocationPromptAccess(
+                      context,
+                      ref,
+                      _child,
+                    ),
+                child: const Text('SET LOCATION'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('SET LOCATION'));
+      await tester.pumpAndSettle();
+
+      expect(granted, isTrue);
+      expect(access.consume(_child), isFalse);
     });
   });
 }

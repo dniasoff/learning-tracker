@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
+import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
@@ -12,9 +13,11 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_time_location_access_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_entry_dialog.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Riverpod provider that creates and owns the [AppRouter] singleton.
 ///
@@ -115,6 +118,31 @@ final routerProvider = Provider<AppRouter>((ref) {
         if (ref.read(activeTutoredProfileSelectionProvider) != null) {
           ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
         }
+      },
+    ),
+    // DNI-481 AC-3 / AUD-sacred_time-08: the city picker writes the active
+    // learner's lock settings. Keyed on the DEVICE HOLDER (T-37, as the
+    // Settings card's gate): a child holder with a Parent PIN must have just
+    // verified it in-app (a one-shot pass) or verify it now.
+    sacredTimeLocationGuard: SacredTimeLocationGuard(
+      getSelectedProfileId: () => ref.read(selectedProfileIdProvider),
+      getProfileById: (profileId) =>
+          ref.read(profileRepositoryProvider).getProfileById(profileId),
+      hasProfilePin: pinSvc.hasProfilePin,
+      consumeAccess: (profileId) =>
+          ref.read(sacredTimeLocationAccessProvider).consume(profileId),
+      promptForPin: (profileId) async {
+        final context = navigatorKey.currentContext;
+        if (context == null) return false;
+        return showParentPinVerificationDialog(
+          context,
+          profileId: profileId,
+          pinService: pinSvc,
+          analytics: ref.read(analyticsServiceProvider),
+          subtitle: AppLocalizations.of(
+            context,
+          )?.pinDialogSubtitleLocationAccess,
+        );
       },
     ),
   );

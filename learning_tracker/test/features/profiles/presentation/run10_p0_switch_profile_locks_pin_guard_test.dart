@@ -29,6 +29,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
+import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/app/router/router_provider.dart' as rp;
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
@@ -132,6 +133,16 @@ void main() {
           promptForPin: () async => true,
           getScope: () => const PinScope.parent(childId),
           onSessionLocked: () => lockedCount++,
+        ),
+        sacredTimeLocationGuard: SacredTimeLocationGuard(
+          getSelectedProfileId: () => childId,
+          getProfileById: (id) async => [
+            childProfile,
+            adultProfile,
+          ].where((p) => p.profileId == id).firstOrNull,
+          hasProfilePin: (_) async => false,
+          consumeAccess: (_) => false,
+          promptForPin: (_) async => false,
         ),
       );
       // Model the exact precondition of the P0: a parent already elevated

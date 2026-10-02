@@ -68,6 +68,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/app_shell.dart' show AppShellScreen;
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
+import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
@@ -127,6 +128,13 @@ Future<AppRouter> _createAuthenticatedRouter() async {
       pinService: mockPinService,
       promptForPin: () async => false,
       getScope: () => const PinScope.parent('ulid-1'),
+    ),
+    sacredTimeLocationGuard: SacredTimeLocationGuard(
+      getSelectedProfileId: () => 'ulid-1',
+      getProfileById: (profileId) => profileRepository.getProfile(profileId),
+      hasProfilePin: (_) async => false,
+      consumeAccess: (_) => false,
+      promptForPin: (_) async => false,
     ),
   );
 }

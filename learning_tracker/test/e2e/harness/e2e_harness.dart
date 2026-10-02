@@ -95,6 +95,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
+import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart'
@@ -625,6 +626,13 @@ class E2EHarness {
         getSelectedProfileId: () => profileId,
       ),
       pinGuard: _pinGuard,
+      sacredTimeLocationGuard: SacredTimeLocationGuard(
+        getSelectedProfileId: () => profileId,
+        getProfileById: (id) => profileRepository.getProfile(id),
+        hasProfilePin: (_) async => false,
+        consumeAccess: (_) => false,
+        promptForPin: (_) async => false,
+      ),
     );
   }
 

@@ -61,11 +61,17 @@ class AppRouter extends RootStackRouter {
   final ChildModeGuard childModeGuard;
   final PinGuard pinGuard;
 
+  /// Guards the city picker, which writes the active learner's lock
+  /// settings: a child holder with a Parent PIN must have verified it
+  /// (DNI-481 AC-3, AUD-sacred_time-08) — also on a direct deep link.
+  final AutoRouteGuard sacredTimeLocationGuard;
+
   AppRouter({
     required this.authGuard,
     required this.profileGuard,
     required this.childModeGuard,
     required this.pinGuard,
+    required this.sacredTimeLocationGuard,
     super.navigatorKey,
   });
 
@@ -224,7 +230,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/sacred-time/city',
       page: CityPickerRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, sacredTimeLocationGuard],
     ),
     AutoRoute(
       path: '/parent-mode/settings',

@@ -11,6 +11,7 @@ import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_time_location_access_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// AUD-sacred_time-08: whether Sacred Time's settings actions (Detect /
@@ -119,7 +120,14 @@ Future<bool> guardLearnerLocationPromptAccess(
       return false;
     }
   }
-  return context.mounted;
+  if (!context.mounted) return false;
+  // The city picker route guards itself (a deep link): the PINs verified
+  // here pass it once, for the target, who is the holder once the picker
+  // opens.
+  if (challenges.isNotEmpty) {
+    ref.read(sacredTimeLocationAccessProvider).grant(targetProfileId);
+  }
+  return true;
 }
 
 /// Settings card for the Sacred Time feature. Hard-on (no disable toggle).
@@ -386,8 +394,16 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
   }
 
   Future<void> _pickCity() async {
-    // AUD-sacred_time-08: same escalating-action gate as _detect above.
-    if (widget.pinGuardRequired && !await _verifyParentPin()) return;
+    // AUD-sacred_time-08: same escalating-action gate as _detect above. The
+    // route guards itself too (a deep link); a PIN verified here is handed
+    // to it as a one-shot pass so the holder is not asked twice.
+    if (widget.pinGuardRequired) {
+      if (!await _verifyParentPin()) return;
+      final verified = widget.activeProfileId;
+      if (verified != null) {
+        ref.read(sacredTimeLocationAccessProvider).grant(verified);
+      }
+    }
     if (!mounted) return;
     await context.pushRoute(const CityPickerRoute());
   }

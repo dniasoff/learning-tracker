@@ -10,6 +10,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/app_shell.dart'
     show ProfileSwitcherBar;
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
+import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/router/router_provider.dart' as rp;
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -112,6 +113,13 @@ Future<AppRouter> _createAuthenticatedRouter({
       promptForPin: () async => false,
       getScope: () => const PinScope.parent('ulid-1'),
     ),
+    sacredTimeLocationGuard: SacredTimeLocationGuard(
+      getSelectedProfileId: () => 'ulid-1',
+      getProfileById: (profileId) => profileRepository.getProfile(profileId),
+      hasProfilePin: (_) async => false,
+      consumeAccess: (_) => false,
+      promptForPin: (_) async => false,
+    ),
   );
 }
 
@@ -142,6 +150,13 @@ Future<AppRouter> _createUnauthenticatedRouter() async {
       pinService: mockPinService,
       promptForPin: () async => false,
       getScope: () => const PinScope.parent('ulid-1'),
+    ),
+    sacredTimeLocationGuard: SacredTimeLocationGuard(
+      getSelectedProfileId: () => 'ulid-1',
+      getProfileById: (profileId) => profileRepository.getProfile(profileId),
+      hasProfilePin: (_) async => false,
+      consumeAccess: (_) => false,
+      promptForPin: (_) async => false,
     ),
   );
 }
