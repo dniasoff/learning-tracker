@@ -19,7 +19,6 @@ import 'package:flutter_test/flutter_test.dart';
 const _inventory = <(String, String)>[
   // DNI-470 (1.8)
   ('DNI-470', 'LearnerSettingsHistory.reconstruct'),
-  ('DNI-470', 'changeLogRepositoryProvider'),
   ('DNI-470', 'governedIntentRepositoryProvider'),
   ('DNI-470', 'learnerLockSettingsProvider'),
   ('DNI-470', 'oversizedGovernedWritePortProvider'),

@@ -41,11 +41,13 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/c0_stub.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
@@ -183,13 +185,25 @@ final subTrackRepositoryProvider = FutureProvider<SubTrackRepository?>((
 // not ready, and scope is passed per call.
 
 /// [ChangeLogRepository] over the active account's Firestore handle, or
-/// null while not ready.
-///
-/// C0 stub, filled by DNI-470 (1.8).
-final changeLogRepositoryProvider = FutureProvider<ChangeLogRepository?>(
-  (ref) => c0Stub('DNI-470', 'changeLogRepositoryProvider'),
-  retry: (retryCount, error) => null,
-);
+/// null while not ready (DNI-470). Scope is passed per call.
+final changeLogRepositoryProvider = FutureProvider<ChangeLogRepository?>((
+  ref,
+) async {
+  final handles = await _readyHandles(ref);
+  if (handles == null) return null;
+  return FirestoreChangeLogRepository(firestore: handles.firestore);
+}, retry: (retryCount, error) => null);
+
+/// [GovernedDocReader] over the active account's Firestore handle, or null
+/// while not ready (DNI-470): the reads a governed write and its undo make
+/// before they write. Scope is passed per call.
+final governedDocReaderProvider = FutureProvider<GovernedDocReader?>((
+  ref,
+) async {
+  final handles = await _readyHandles(ref);
+  if (handles == null) return null;
+  return FirestoreChangeLogRepository(firestore: handles.firestore);
+}, retry: (retryCount, error) => null);
 
 /// [GovernedIntentRepository] over the active account's Firestore handle,
 /// or null while not ready.
