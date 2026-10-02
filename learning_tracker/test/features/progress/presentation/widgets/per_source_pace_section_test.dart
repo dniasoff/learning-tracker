@@ -311,7 +311,7 @@ void main() {
     expect(
       find.bySemanticsLabel(
         RegExp(
-          r'^Home · Since tracking started · Mishnayos per week: '
+          '^Home · Since tracking started · Mishnayos per week: '
           r'9\.6 / week · Last 28 days: 8 / week$',
         ),
       ),

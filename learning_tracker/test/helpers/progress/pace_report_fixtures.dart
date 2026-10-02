@@ -111,7 +111,7 @@ ReportProjection paceReport({
   final rebbe = paceTotals(rebbeId, paceVelocity(10, 20));
   final s25 = paceTotals(
     school2025,
-    ReportVelocity(
+    const ReportVelocity(
       sinceTracking: ReportVelocityFigure(
         from: '2026-09-01',
         through: '2026-09-20',
