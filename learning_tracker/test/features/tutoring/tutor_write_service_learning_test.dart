@@ -5,7 +5,7 @@
 // with the typed input and the caller's client ULIDs; a failure comes back
 // as the typed failure; a retry re-sends a byte-for-byte identical payload.
 
-@Tags(['tutor_mode', 'dni_486'])
+@Tags(['tutor_mode'])
 library;
 
 import 'dart:convert';

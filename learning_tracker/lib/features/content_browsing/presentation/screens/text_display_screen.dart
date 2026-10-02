@@ -2,11 +2,9 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -34,6 +32,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -748,19 +747,16 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         markRefs.toSet(),
       );
 
-      // H1 fix: route the live completion write through MarkLiveCompletionUseCase
-      // so the domain guard (TutorWriteForbiddenException) is enforced at the
-      // application layer — not just by the UI button being disabled.
-      // AUD-content_browsing-03: inject analytics so tutor_live_mark_blocked
-      // (W7.11) fires when the domain guard rejects a tutor session.
-      // AC-6 (DNI-473): the owner branch writes through
-      // LearningCommands.capture; the tutor branch is unchanged.
+      // H1: the live completion routes through MarkLiveCompletionUseCase by
+      // session role. AC-6 (DNI-473): the owner branch writes through
+      // LearningCommands.capture. DNI-486: the tutor branch is the talmid's
+      // TutorLearningCommands.capture, whose one write is
+      // TutorWriteService.recordLearning (no client Firestore write, and no
+      // result before the callable answers).
       final markLiveUseCase = MarkLiveCompletionUseCase<CaptureResult>(
         session: session,
-        analytics: ref.read(analyticsServiceProvider),
       );
-      final result = await markLiveUseCase.call(() async {
-        final commands = await ref.read(learningCommandsProvider.future);
+      Future<CaptureResult> capture(LearningCommands? commands) {
         if (commands == null) throw const _NoActiveLearnerException();
         _commands = commands;
         return commands.capture(
@@ -770,7 +766,13 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           dateState: DateState.dated,
           stage: task.stageOrder,
         );
-      });
+      }
+
+      final result = await markLiveUseCase.call(
+        () async => capture(await ref.read(learningCommandsProvider.future)),
+        tutorWrite: () async =>
+            capture(await ref.read(tutorLearningCommandsProvider.future)),
+      );
       final commands = _commands!;
 
       final keys = [
@@ -817,33 +819,6 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       if (recorded.isNotEmpty && mounted && nextAfterComplete != null) {
         await context.router.replace(
           TextDisplayRoute(sefariaRef: nextAfterComplete.contentItemSefariaRef),
-        );
-      }
-    } on TutorWriteForbiddenException {
-      // W6.19: Catch the domain-layer guard and surface a friendly dialog
-      // explaining the permission boundary (FR-3 / FR-6.2).
-      if (mounted) {
-        setState(() => _saving = false);
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) {
-            final l10n = AppLocalizations.of(ctx)!;
-            return AlertDialog(
-              icon: Icon(
-                Icons.school_rounded,
-                color: context.colors.goldAmber, // tutor accent
-                size: 32,
-              ),
-              title: Text(l10n.tutorWriteForbiddenTitle),
-              content: Text(l10n.tutorWriteForbiddenMessage),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(l10n.actionOk),
-                ),
-              ],
-            );
-          },
         );
       }
     } on Exception catch (e, st) {
@@ -1076,8 +1051,14 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 AppLocalizations.of(context)?.textReaderNextDailyTask ??
                 'Next daily task';
 
-            // W6.17: Check if we are in a tutor session and disable live mark.
+            // DNI-486: a tutor records the talmid's learning through the
+            // tutor callables (deviation #7); without the parent's
+            // `can_edit_learning` the control stays visible but disabled.
             final isTutor = _isTutorSession(ref);
+            final tutorBlocked =
+                isTutor &&
+                !(ref.watch(activeTutorPermissionsProvider)?.canEditLearning ??
+                    false);
             final l10n = AppLocalizations.of(context)!;
 
             // R2: SafeArea(top:false) so the mark-complete / next-task buttons
@@ -1091,12 +1072,14 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                   Tooltip(
                     // W6.18: Tooltip text — shown only when the button is
                     // disabled for tutor reasons (not for "already done").
-                    message: isTutor ? l10n.tutorCannotMarkLiveCompletion : '',
+                    message: tutorBlocked
+                        ? l10n.tutorCannotMarkLiveCompletion
+                        : '',
                     child: FilledButton(
                       // W6.17: Disable for tutors regardless of isDone state.
                       // H1: session is passed so _handleComplete routes through
                       // MarkLiveCompletionUseCase for domain-layer enforcement.
-                      onPressed: (_saving || isDone || isTutor)
+                      onPressed: (_saving || isDone || tutorBlocked)
                           ? null
                           : () => _handleComplete(
                               task,
@@ -1106,7 +1089,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                       style: FilledButton.styleFrom(
                         // W6.17: When in tutor mode, show a muted amber
                         // colour to visually communicate the disabled state.
-                        backgroundColor: isTutor
+                        backgroundColor: tutorBlocked
                             ? context.colors.goldAmber.withValues(alpha: 0.3)
                             : isDone
                             ? context.colors.brandGoldDeep
@@ -1123,11 +1106,11 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        elevation: isTutor ? 0 : 2,
-                        disabledBackgroundColor: isTutor
+                        elevation: tutorBlocked ? 0 : 2,
+                        disabledBackgroundColor: tutorBlocked
                             ? context.colors.goldAmber.withValues(alpha: 0.2)
                             : null,
-                        disabledForegroundColor: isTutor
+                        disabledForegroundColor: tutorBlocked
                             ? context.colors.goldAmber.withValues(alpha: 0.7)
                             : null,
                       ),
@@ -1146,7 +1129,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                           else
                             Icon(
                               // W6.17: When tutor, show a school/lock icon.
-                              isTutor
+                              tutorBlocked
                                   ? Icons.school_rounded
                                   : isDone
                                   ? Icons.check_circle
@@ -1155,7 +1138,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                             ),
                           const SizedBox(width: 10),
                           Text(
-                            isTutor
+                            tutorBlocked
                                 ? l10n.markCompleteTutorUnavailable
                                 : isDone
                                 ? l10n.markCompleteCompletedStage(

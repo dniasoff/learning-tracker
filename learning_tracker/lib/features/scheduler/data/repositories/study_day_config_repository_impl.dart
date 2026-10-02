@@ -8,10 +8,14 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 
 /// Thrown by [FirestoreStudyDayConfigRepositoryAdapter]'s write methods when
 /// `firestoreStudyDayConfigRepositoryProvider` resolves to `null` — see
@@ -119,11 +123,23 @@ class FirestoreStudyDayConfigRepositoryAdapter {
 
   /// Creates or updates a single day's config. Throws
   /// [StudyDayConfigRepositoryNotReadyException] when not ready.
+  ///
+  /// In a tutored session the write is the governed
+  /// `tutorUpsertStudyDayConfig` callable (Story 1.24, DNI-486), never a
+  /// client write to the talmid's tree.
   Future<void> setDayConfig({
     required CurriculumId curriculumId,
     required int dayOfWeek,
     required DayType dayType,
   }) async {
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      return tutorReplaceStudyDays(
+        _ref,
+        curriculumId: curriculumId,
+        studyDays: {dayOfWeek: dayType},
+        existing: const [],
+      );
+    }
     final repo = await _resolve();
     await repo.setDayConfig(
       curriculumId: curriculumId,
@@ -135,10 +151,21 @@ class FirestoreStudyDayConfigRepositoryAdapter {
   /// Replaces the full set of day configs for [curriculumId] with exactly
   /// [studyDays]. Throws [StudyDayConfigRepositoryNotReadyException] when
   /// not ready.
+  ///
+  /// In a tutored session the replace is governed callables only
+  /// (Story 1.24, DNI-486): see [tutorReplaceStudyDays].
   Future<void> replaceAllForCurriculum({
     required CurriculumId curriculumId,
     required Map<int, DayType> studyDays,
   }) async {
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      return tutorReplaceStudyDays(
+        _ref,
+        curriculumId: curriculumId,
+        studyDays: studyDays,
+        existing: await getConfigsForCurriculum(curriculumId),
+      );
+    }
     final repo = await _resolve();
     await repo.replaceAllForCurriculum(
       curriculumId: curriculumId,
@@ -153,4 +180,39 @@ class FirestoreStudyDayConfigRepositoryAdapter {
     final repo = await _resolve();
     await repo.initializeDefaults(curriculumId);
   }
+}
+
+/// A tutor's study-day write (Story 1.24, DNI-486): upserts [studyDays]
+/// and tombstones every [existing] day absent from it, each through the
+/// governed `tutorUpsertStudyDayConfig` / `tutorDeleteStudyDayConfig`
+/// callables after the tutor preflight. Throws when the preflight refuses
+/// or a callable fails; nothing is written on the client.
+Future<void> tutorReplaceStudyDays(
+  Ref ref, {
+  required CurriculumId curriculumId,
+  required Map<int, DayType> studyDays,
+  required List<StudyDayConfigEntry> existing,
+}) async {
+  final writes = await requireTutorGovernedWrites(ref);
+  final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
+  String docId(int day) => DocIds.studyDayConfigDocId({
+    'curriculum_id': curriculumId.storageKey,
+    'day_of_week': day,
+  });
+  await writes.replaceStudyDays(
+    upserts: [
+      for (final MapEntry(key: day, value: type) in studyDays.entries)
+        (
+          docId: docId(day),
+          data: StudyDayConfigEntry(
+            dayOfWeek: day,
+            dayType: type,
+          ).toFirestore(curriculumId: curriculumId, updatedAt: now),
+        ),
+    ],
+    removedDocIds: [
+      for (final entry in existing)
+        if (!studyDays.containsKey(entry.dayOfWeek)) docId(entry.dayOfWeek),
+    ],
+  );
 }

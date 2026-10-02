@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/study_day_config_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/study_day_write_repository.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// Thrown when `firestoreStudyDayConfigRepositoryProvider` resolves to
 /// `null` — see `ProfileProgramRepositoryNotReadyException`'s doc comment
@@ -38,6 +40,16 @@ class FirestoreStudyDayWriteRepositoryAdapter
     );
     if (repo == null) {
       throw const StudyDayWriteRepositoryNotReadyException();
+    }
+    // Story 1.24 (DNI-486): a tutor's schedule edit is governed callables
+    // only; the talmid's tree is read, never written, from this device.
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      return tutorReplaceStudyDays(
+        _ref,
+        curriculumId: curriculumId,
+        studyDays: studyDays,
+        existing: await repo.getConfigsForCurriculum(curriculumId),
+      );
     }
     await repo.replaceAllForCurriculum(
       curriculumId: curriculumId,

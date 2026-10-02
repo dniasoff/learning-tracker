@@ -33,6 +33,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 
 /// The capture gate every command runs first (AD-36).
 final captureGateProvider = Provider<CaptureGate>(
@@ -119,15 +120,20 @@ Actor learningSessionActor({
 }
 
 /// The commands bound to the active learner's scope and session actor, or
-/// null while no learner is active, the account is not ready, or the
-/// session is a tutored one (tutor writes go through callables, AD-53;
-/// the `tutor` role is never client-written, AD-46).
+/// null while no learner is active or the account is not ready.
+///
+/// In a tutored session they are the talmid's `TutorLearningCommands`
+/// (Story 1.24, DNI-486): every write is a Story 1.23 callable through
+/// `TutorWriteService` (AD-53), never a client Firestore write (the
+/// `tutor` role is never client-written, AD-46).
 ///
 /// The commands live as long as the scope and actor do, so their pending
 /// failures survive settings and corpus changes: those are read on demand
 /// through subscriptions held here.
 final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
-  if (ref.watch(activeTutoredProfileSelectionProvider) != null) return null;
+  if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
+    return ref.watch(tutorLearningCommandsProvider.future);
+  }
   final scope = await ref.watch(activeLearnerScopeProvider.future);
   if (scope == null) return null;
   final uid = await ref.watch(activeAuthUidProvider.future);

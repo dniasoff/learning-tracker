@@ -254,17 +254,12 @@ class FirestoreGoalRepository {
     return entity;
   }
 
-  /// Updates [goal] and writes the result back to the SAME document (its
-  /// `curriculumId`/`createdAt` — and therefore
-  /// [GoalEntity.firestoreId] — are unchanged by an update; see the class
-  /// doc comment). Pass [paceTarget] to change the goal's deadline/pace
-  /// mode, or [clearPaceTarget] == `true` to remove it entirely
-  /// (`goalType` becomes `'none'`). Omitting both leaves the existing
-  /// mode untouched. [clearLearningUnit] == `true` removes the learning
-  /// unit entirely; omitting [paceGranularity]/[rawLearningUnit] leaves the
-  /// existing unit untouched.
-  Future<GoalEntity> updateGoal({
+  /// The goal [updateGoal] writes, computed without writing: the single
+  /// update rule the owner path and the tutor path (Story 1.24, DNI-486:
+  /// `tutorUpsertGoal`) share. [now] stamps `updatedAt`.
+  static GoalEntity resolveGoalUpdate({
     required GoalEntity goal,
+    required DateTime now,
     double? targetPercent,
     PaceTarget? paceTarget,
     bool clearPaceTarget = false,
@@ -272,9 +267,7 @@ class FirestoreGoalRepository {
     PaceGranularity? paceGranularity,
     String? rawLearningUnit,
     bool clearLearningUnit = false,
-  }) async {
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-
+  }) {
     final String resolvedGoalType;
     final DateTime? resolvedTargetDate;
     final int? resolvedPaceValue;
@@ -324,7 +317,39 @@ class FirestoreGoalRepository {
       rawLearningUnit: resolvedRawUnit,
       updatedAt: now,
     );
+    return updated;
+  }
 
+  /// Updates [goal] and writes the result back to the SAME document (its
+  /// `curriculumId`/`createdAt` — and therefore
+  /// [GoalEntity.firestoreId] — are unchanged by an update; see the class
+  /// doc comment). Pass [paceTarget] to change the goal's deadline/pace
+  /// mode, or [clearPaceTarget] == `true` to remove it entirely
+  /// (`goalType` becomes `'none'`). Omitting both leaves the existing
+  /// mode untouched. [clearLearningUnit] == `true` removes the learning
+  /// unit entirely; omitting [paceGranularity]/[rawLearningUnit] leaves the
+  /// existing unit untouched.
+  Future<GoalEntity> updateGoal({
+    required GoalEntity goal,
+    double? targetPercent,
+    PaceTarget? paceTarget,
+    bool clearPaceTarget = false,
+    String? description,
+    PaceGranularity? paceGranularity,
+    String? rawLearningUnit,
+    bool clearLearningUnit = false,
+  }) async {
+    final updated = resolveGoalUpdate(
+      goal: goal,
+      now: DateTimeFactory.nowUtc(), // P5: UTC timestamps
+      targetPercent: targetPercent,
+      paceTarget: paceTarget,
+      clearPaceTarget: clearPaceTarget,
+      description: description,
+      paceGranularity: paceGranularity,
+      rawLearningUnit: rawLearningUnit,
+      clearLearningUnit: clearLearningUnit,
+    );
     await _doc(updated).set(updated.toFirestore(), SetOptions(merge: true));
     return updated;
   }
