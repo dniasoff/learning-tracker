@@ -13,6 +13,9 @@
 /// - A document that does not decode is skipped and reported in
 ///   [HistoryPage.rejected]; the page, its cursor and its watermark still
 ///   advance past it, so one malformed document never blanks a page.
+/// - Context lookups ([learningEventsById], [changeLogEntriesOfActions])
+///   are doc gets and `action_id` equality queries (automatic single-field
+///   indexes); undecodable documents are dropped.
 /// - Reads are one-shot `get()`s: the history is paged on demand, not
 ///   watched (the screen reloads on retry or re-entry).
 /// - The `{uid}` path segment is the caller-supplied
@@ -90,6 +93,28 @@ final class FirestoreChangeHistoryRepository
           if (_tryDecode(snap.id, data, LearningEvent.fromStorage)
               case final event?)
             event,
+    ];
+  }
+
+  @override
+  Future<List<ChangeLogEntry>> changeLogEntriesOfActions(
+    LearnerScope scope,
+    Set<String> actionIds,
+  ) async {
+    final log = _profile(scope).collection(kChangeLogCollection);
+    // One equality query per action: served by the automatic single-field
+    // index on `action_id` (no composite index, AD-54). An action is a
+    // handful of entries (AD-54 caps a governed batch at 10 docs).
+    final snapshots = await Future.wait([
+      for (final id in actionIds)
+        log.where(ChangeLogEntry.kActionId, isEqualTo: id).get(),
+    ]);
+    return [
+      for (final snap in snapshots)
+        for (final doc in snap.docs)
+          if (_tryDecode(doc.id, doc.data(), ChangeLogEntry.fromStorage)
+              case final entry?)
+            entry,
     ];
   }
 

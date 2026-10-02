@@ -185,6 +185,35 @@ void main() {
       });
       expect(found.map((e) => e.id), [historyId(1)]);
     });
+
+    test('changeLogEntriesOfActions returns every stored, decodable entry '
+        'of the named actions only', () async {
+      await _seedEntries(db, [
+        historyEntry(1, minutes: 1, entity: GovernedEntity.mainTrack),
+        historyEntry(
+          2,
+          minutes: 1,
+          entity: GovernedEntity.subTrack,
+          actionOf: 1,
+        ),
+        historyEntry(3, minutes: 2),
+        historyEntry(4, minutes: 3),
+      ]);
+      await db.collection('$_base/change_log').doc(historyId(5)).set({
+        'action_id': historyId(1),
+        'entity': 'nonsense',
+      });
+      final found = await repo.changeLogEntriesOfActions(_scope, {
+        historyId(1),
+        historyId(4),
+        historyId(9),
+      });
+      expect(found.map((e) => e.id).toSet(), {
+        historyId(1),
+        historyId(2),
+        historyId(4),
+      });
+    });
   });
 
   test('AC-2 / AD-54: no index names change_log or learning_events', () {

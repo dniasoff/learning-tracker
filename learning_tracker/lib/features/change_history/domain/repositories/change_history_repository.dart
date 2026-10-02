@@ -98,4 +98,13 @@ abstract interface class ChangeHistoryRepository {
     LearnerScope scope,
     Set<String> ids,
   );
+
+  /// Every `change_log` entry that exists and decodes whose `action_id` is
+  /// one of [actionIds] (the actions an undo's `reverts_action_id` names,
+  /// which may be older than every loaded page). Single-field equality
+  /// queries only (AD-54).
+  Future<List<ChangeLogEntry>> changeLogEntriesOfActions(
+    LearnerScope scope,
+    Set<String> actionIds,
+  );
 }

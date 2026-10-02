@@ -317,6 +317,67 @@ void main() {
     });
   });
 
+  group('AC-4 an undo whose reverted action is off the loaded pages', () {
+    ChangeHistoryRow undoRow({required bool lookedUp}) {
+      final buffer = ChangeHistoryBuffer()
+        ..addChangeLogPage(
+          HistoryPage(
+            items: [
+              historyEntry(
+                500,
+                minutes: 1000,
+                entityId: 'deadline',
+                reverts: 1,
+                before: {'goals/deadline.target_date': '2026-11-03'},
+                after: {'goals/deadline.target_date': '2026-10-01'},
+              ),
+            ],
+            next: const HistoryCursor(1),
+            exhausted: false,
+            watermark: historyAt(900),
+          ),
+        )
+        ..addLearningEventPage(
+          HistoryPage(
+            items: const [],
+            next: null,
+            exhausted: true,
+            watermark: null,
+          ),
+        );
+      if (lookedUp) {
+        buffer.addActionLookups([
+          historyEntry(
+            1,
+            minutes: 1,
+            actor: historyTutor,
+            entityId: 'deadline',
+            before: {'goals/deadline.target_date': '2026-10-01'},
+            after: {'goals/deadline.target_date': '2026-11-03'},
+          ),
+        ]);
+      }
+      return ChangeHistoryRowMapper(
+        settingsHistory: _ny,
+      ).map(buffer.visibleItems(), buffer).single;
+    }
+
+    test('the undo describes the looked-up action it reverted', () {
+      final row = undoRow(lookedUp: true);
+      expect(row.isRevert, isTrue);
+      expect(row.canUndo, isFalse);
+      expect(row.stamp.actor, historyParent, reason: 'who undid it');
+      expect(row.stamp.at, historyAt(1000));
+      expect(_governed(row).primary.newDate, '2026-11-03');
+    });
+
+    test('until the lookup lands it falls back to its own entries', () {
+      final row = undoRow(lookedUp: false);
+      expect(row.isRevert, isTrue);
+      expect(_governed(row).primary.newDate, '2026-10-01');
+    });
+  });
+
   group('AC-5 the bell mirrors the AD-39 allowlist', () {
     test('tutor changes to goal and main-track entities ring; others and '
         'non-tutor changes do not', () {

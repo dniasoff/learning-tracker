@@ -40,6 +40,7 @@ final class ChangeHistoryPager {
   final ChangeHistoryBuffer buffer = ChangeHistoryBuffer();
 
   final Set<String> _lookedUp = {};
+  final Set<String> _actionsLookedUp = {};
 
   /// Reads pages until [isFull] holds for the visible items or both
   /// sources are exhausted, then resolves the targets of visible `void`
@@ -58,7 +59,7 @@ final class ChangeHistoryPager {
       if (next == null || isFull(buffer.visibleItems())) break;
       await _read(next);
     }
-    await _lookUpVoidTargets();
+    await Future.wait([_lookUpVoidTargets(), _lookUpRevertTargets()]);
   }
 
   Future<void> _read(HistorySource source) async {
@@ -100,6 +101,31 @@ final class ChangeHistoryPager {
     try {
       buffer.addLookups(await _repository.learningEventsById(scope, missing));
       _lookedUp.addAll(missing);
+    } on Object {
+      // Retried on the next fill; see the method doc.
+    }
+  }
+
+  /// An undo is newer than the action it reverts, so that action may sit
+  /// on an unread `change_log` page (or be split across one); read its
+  /// entries by `action_id` so the undo row says "Reverted change: <that
+  /// action>" (AC-4). Skipped once `change_log` is read to its end. A
+  /// failed lookup is not a history failure: the row falls back to the
+  /// undo's own entries and the lookup is retried on the next fill.
+  Future<void> _lookUpRevertTargets() async {
+    if (buffer.changeLog.exhausted) return;
+    final missing = <String>{
+      for (final item in buffer.visibleItems())
+        if (item is GovernedActionItem)
+          if (item.revertsActionId case final target?)
+            if (!_actionsLookedUp.contains(target)) target,
+    };
+    if (missing.isEmpty) return;
+    try {
+      buffer.addActionLookups(
+        await _repository.changeLogEntriesOfActions(scope, missing),
+      );
+      _actionsLookedUp.addAll(missing);
     } on Object {
       // Retried on the next fill; see the method doc.
     }
