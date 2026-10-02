@@ -2564,6 +2564,125 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineAccountLabel => 'Offline account';
 
   @override
+  String get ongoingSubTrackFormTitle => 'Ongoing sub-track';
+
+  @override
+  String get ongoingSubTrackEditTitle => 'Edit ongoing sub-track';
+
+  @override
+  String get ongoingSubTrackNameLabel => 'Sub-track name';
+
+  @override
+  String ongoingSubTrackRateLabel(String unit) {
+    return '$unit per week';
+  }
+
+  @override
+  String ongoingSubTrackRateDecrease(String unit) {
+    return 'Fewer $unit per week';
+  }
+
+  @override
+  String ongoingSubTrackRateIncrease(String unit) {
+    return 'More $unit per week';
+  }
+
+  @override
+  String get ongoingSubTrackBeinHazmanimLabel =>
+      'Not learning during bein hazmanim';
+
+  @override
+  String get ongoingSubTrackBeinHazmanimHelper => 'Lowers weeks per year';
+
+  @override
+  String get ongoingSubTrackWeeksLabel => 'Weeks per year';
+
+  @override
+  String get ongoingSubTrackWeeksPrefillHelper =>
+      'Prefilled from bein hazmanim toggle — edit if needed';
+
+  @override
+  String get ongoingSubTrackStartLabel => 'Start date (optional)';
+
+  @override
+  String get ongoingSubTrackEndLabel => 'End date (optional)';
+
+  @override
+  String get ongoingSubTrackClearDate => 'Clear date';
+
+  @override
+  String get ongoingSubTrackShabbosLabel => 'Learns on shabbos / yom tov';
+
+  @override
+  String get ongoingSubTrackShabbosHelper =>
+      'Include this source on the catch-up card after shabbos';
+
+  @override
+  String ongoingSubTrackLimitLine(int count) {
+    return 'You can have up to 5 ongoing sub-tracks. $count in use.';
+  }
+
+  @override
+  String get ongoingSubTrackLimitReached =>
+      'You already have 5 ongoing sub-tracks.';
+
+  @override
+  String get ongoingSubTrackSave => 'Save sub-track';
+
+  @override
+  String get ongoingSubTrackNameRequired => 'Enter a name';
+
+  @override
+  String get ongoingSubTrackPositiveNumber => 'Enter a number above 0';
+
+  @override
+  String get ongoingSubTrackEndBeforeStart =>
+      'The end date can\'t be before the start date';
+
+  @override
+  String get ongoingSubTrackSaveFailed =>
+      'Couldn\'t save the sub-track. Your entries are kept.';
+
+  @override
+  String get ongoingSubTrackSavedOffline =>
+      'Saved. It will sync when you\'re back online.';
+
+  @override
+  String get ongoingSubTrackSyncRejected => 'Your change couldn\'t be saved.';
+
+  @override
+  String ongoingSubTrackStarts(String date) {
+    return 'Starts $date';
+  }
+
+  @override
+  String ongoingSubTrackRateSummary(String rate, String weeks) {
+    return '$rate/wk × $weeks weeks';
+  }
+
+  @override
+  String get ongoingSubTrackChooserTitle => 'Add sub-track';
+
+  @override
+  String get ongoingSubTrackChooserSchoolYear => 'School year';
+
+  @override
+  String get ongoingSubTrackChooserOngoing => 'Ongoing';
+
+  @override
+  String get ongoingSubTrackChooserOngoingHelper =>
+      'A rebbe or chavrusa with no school calendar';
+
+  @override
+  String get ongoingSubTrackHubHeader => 'Sub-tracks';
+
+  @override
+  String get ongoingSubTrackTabletSummaryTitle => 'This learner\'s sub-tracks';
+
+  @override
+  String get ongoingSubTrackTabletSummaryEmpty => 'No sub-tracks yet';
+
+  @override
   String get signUpVerificationEmailSent =>
       'Verification email sent. Verify your email, then sign in.';
 

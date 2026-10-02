@@ -4522,6 +4522,204 @@ abstract class AppLocalizations {
   /// **'Offline account'**
   String get offlineAccountLabel;
 
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing sub-track'**
+  String get ongoingSubTrackFormTitle;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Edit ongoing sub-track'**
+  String get ongoingSubTrackEditTitle;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-track name'**
+  String get ongoingSubTrackNameLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'{unit} per week'**
+  String ongoingSubTrackRateLabel(String unit);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer {unit} per week'**
+  String ongoingSubTrackRateDecrease(String unit);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'More {unit} per week'**
+  String ongoingSubTrackRateIncrease(String unit);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Not learning during bein hazmanim'**
+  String get ongoingSubTrackBeinHazmanimLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Lowers weeks per year'**
+  String get ongoingSubTrackBeinHazmanimHelper;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Weeks per year'**
+  String get ongoingSubTrackWeeksLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Prefilled from bein hazmanim toggle — edit if needed'**
+  String get ongoingSubTrackWeeksPrefillHelper;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Start date (optional)'**
+  String get ongoingSubTrackStartLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'End date (optional)'**
+  String get ongoingSubTrackEndLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Clear date'**
+  String get ongoingSubTrackClearDate;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Learns on shabbos / yom tov'**
+  String get ongoingSubTrackShabbosLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Include this source on the catch-up card after shabbos'**
+  String get ongoingSubTrackShabbosHelper;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'You can have up to 5 ongoing sub-tracks. {count} in use.'**
+  String ongoingSubTrackLimitLine(int count);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'You already have 5 ongoing sub-tracks.'**
+  String get ongoingSubTrackLimitReached;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Save sub-track'**
+  String get ongoingSubTrackSave;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name'**
+  String get ongoingSubTrackNameRequired;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number above 0'**
+  String get ongoingSubTrackPositiveNumber;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'The end date can\'t be before the start date'**
+  String get ongoingSubTrackEndBeforeStart;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the sub-track. Your entries are kept.'**
+  String get ongoingSubTrackSaveFailed;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Saved. It will sync when you\'re back online.'**
+  String get ongoingSubTrackSavedOffline;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Your change couldn\'t be saved.'**
+  String get ongoingSubTrackSyncRejected;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Starts {date}'**
+  String ongoingSubTrackStarts(String date);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}/wk × {weeks} weeks'**
+  String ongoingSubTrackRateSummary(String rate, String weeks);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Add sub-track'**
+  String get ongoingSubTrackChooserTitle;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'School year'**
+  String get ongoingSubTrackChooserSchoolYear;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing'**
+  String get ongoingSubTrackChooserOngoing;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'A rebbe or chavrusa with no school calendar'**
+  String get ongoingSubTrackChooserOngoingHelper;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-tracks'**
+  String get ongoingSubTrackHubHeader;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'This learner\'s sub-tracks'**
+  String get ongoingSubTrackTabletSummaryTitle;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'No sub-tracks yet'**
+  String get ongoingSubTrackTabletSummaryEmpty;
+
   /// No description provided for @signUpVerificationEmailSent.
   ///
   /// In en, this message translates to:

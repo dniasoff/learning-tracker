@@ -2540,6 +2540,122 @@ class AppLocalizationsHe extends AppLocalizations {
   String get offlineAccountLabel => 'חשבון לא מקוון';
 
   @override
+  String get ongoingSubTrackFormTitle => 'תת-מסלול קבוע';
+
+  @override
+  String get ongoingSubTrackEditTitle => 'עריכת תת-מסלול קבוע';
+
+  @override
+  String get ongoingSubTrackNameLabel => 'שם תת-המסלול';
+
+  @override
+  String ongoingSubTrackRateLabel(String unit) {
+    return '$unit בשבוע';
+  }
+
+  @override
+  String ongoingSubTrackRateDecrease(String unit) {
+    return 'פחות $unit בשבוע';
+  }
+
+  @override
+  String ongoingSubTrackRateIncrease(String unit) {
+    return 'יותר $unit בשבוע';
+  }
+
+  @override
+  String get ongoingSubTrackBeinHazmanimLabel => 'לא לומדים בבין הזמנים';
+
+  @override
+  String get ongoingSubTrackBeinHazmanimHelper => 'מוריד את מספר השבועות בשנה';
+
+  @override
+  String get ongoingSubTrackWeeksLabel => 'שבועות בשנה';
+
+  @override
+  String get ongoingSubTrackWeeksPrefillHelper =>
+      'מולא לפי מתג בין הזמנים — אפשר לערוך';
+
+  @override
+  String get ongoingSubTrackStartLabel => 'תאריך התחלה (רשות)';
+
+  @override
+  String get ongoingSubTrackEndLabel => 'תאריך סיום (רשות)';
+
+  @override
+  String get ongoingSubTrackClearDate => 'ניקוי התאריך';
+
+  @override
+  String get ongoingSubTrackShabbosLabel => 'לומדים בשבת / יום טוב';
+
+  @override
+  String get ongoingSubTrackShabbosHelper =>
+      'לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת';
+
+  @override
+  String ongoingSubTrackLimitLine(int count) {
+    return 'אפשר עד 5 תתי-מסלולים קבועים. $count בשימוש.';
+  }
+
+  @override
+  String get ongoingSubTrackLimitReached => 'כבר יש 5 תתי-מסלולים קבועים.';
+
+  @override
+  String get ongoingSubTrackSave => 'שמירת תת-המסלול';
+
+  @override
+  String get ongoingSubTrackNameRequired => 'יש להזין שם';
+
+  @override
+  String get ongoingSubTrackPositiveNumber => 'יש להזין מספר גדול מ-0';
+
+  @override
+  String get ongoingSubTrackEndBeforeStart =>
+      'תאריך הסיום לא יכול להיות לפני תאריך ההתחלה';
+
+  @override
+  String get ongoingSubTrackSaveFailed =>
+      'לא ניתן היה לשמור את תת-המסלול. מה שהוזן נשמר בטופס.';
+
+  @override
+  String get ongoingSubTrackSavedOffline => 'נשמר. יסונכרן כשתחזרו לרשת.';
+
+  @override
+  String get ongoingSubTrackSyncRejected => 'לא ניתן היה לשמור את השינוי.';
+
+  @override
+  String ongoingSubTrackStarts(String date) {
+    return 'מתחיל ב-$date';
+  }
+
+  @override
+  String ongoingSubTrackRateSummary(String rate, String weeks) {
+    return '$rate בשבוע × $weeks שבועות';
+  }
+
+  @override
+  String get ongoingSubTrackChooserTitle => 'הוספת תת-מסלול';
+
+  @override
+  String get ongoingSubTrackChooserSchoolYear => 'שנת לימודים';
+
+  @override
+  String get ongoingSubTrackChooserOngoing => 'קבוע';
+
+  @override
+  String get ongoingSubTrackChooserOngoingHelper =>
+      'רבי או חברותא בלי לוח שנת לימודים';
+
+  @override
+  String get ongoingSubTrackHubHeader => 'תתי-מסלולים';
+
+  @override
+  String get ongoingSubTrackTabletSummaryTitle => 'תתי-המסלולים של הלומד';
+
+  @override
+  String get ongoingSubTrackTabletSummaryEmpty => 'עדיין אין תתי-מסלולים';
+
+  @override
   String get signUpVerificationEmailSent =>
       'אימייל אימות נשלח. אמת את האימייל שלך ולאחר מכן היכנס.';
 
