@@ -70,6 +70,8 @@ class _AddGroundButtonState extends ConsumerState<AddGroundButton> {
 
   @override
   Widget build(BuildContext context) {
+    // The picker has usually closed when a queued assignment is refused.
+    listenForGroundRollbacks(ref, context, widget.subTrackId);
     final parent = ref.watch(parentSessionProvider).value ?? false;
     final scope = ref.watch(activeLearnerScopeProvider).value;
     if (!parent || scope == null) return const SizedBox.shrink();
