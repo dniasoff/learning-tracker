@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -92,8 +93,7 @@ final learningFailureReporterProvider = Provider<LearningFailureReporter>(
 /// The UTC clock the commands read once per command (tests override it;
 /// TQ-6: no wall clock in tests).
 final learningCommandClockProvider = Provider<UtcClock>(
-  (ref) =>
-      () => DateTime.now().toUtc(),
+  (ref) => ref.watch(localDayClockProvider).nowUtc,
 );
 
 /// The session [Actor] of an owner write (AD-46): the live signed-in
