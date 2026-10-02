@@ -61,6 +61,11 @@ class _ContentHierarchyScreenState
   /// back exactly that batch.
   final _ticked = <String>{};
   final _refsByEvent = <String, List<String>>{};
+
+  /// Event ids the server rejected for good and no retry has saved yet. A
+  /// rejection can be reported before the capture call returns, so a
+  /// batch never ticks the leaves of these ids (AD-54 Recovery).
+  final _failedEvents = <String>{};
   bool _capturing = false;
 
   @override
@@ -182,8 +187,14 @@ class _ContentHierarchyScreenState
         }
       },
       child: PendingCaptureFailureListener(
-        onFailure: (failure) => _rollBack(failure.eventIds),
-        onRetried: (failure) => _reapply(failure.eventIds),
+        onFailure: (failure) {
+          _failedEvents.addAll(failure.eventIds);
+          _rollBack(failure.eventIds);
+        },
+        onRetried: (failure) {
+          _failedEvents.removeAll(failure.eventIds);
+          _reapply(failure.eventIds);
+        },
         child: Scaffold(
           appBar: AppBar(
             title: AppBarTitle(
@@ -496,28 +507,33 @@ class _ContentHierarchyScreenState
       );
       if (!mounted) return;
       final batch = <String, List<String>>{};
-      if (result case CaptureSuccess(:final eventIds)) {
-        if (eventIds.length == refs.length && !asNode) {
-          for (var i = 0; i < refs.length; i++) {
-            batch[eventIds[i]] = [refs[i]];
-          }
-        } else {
-          for (final id in eventIds) {
-            batch[id] = refs;
-          }
-        }
+      var savedLeaves = leaves.length;
+      if (result case CaptureSuccess(
+        :final eventIds,
+        :final rejectedEventIds,
+      )) {
+        final saved = recordedBatch(
+          refs: asNode ? null : refs,
+          nodeRefs: refs,
+          eventIds: eventIds,
+          rejectedEventIds: rejectedEventIds,
+          failed: _failedEvents,
+        );
+        batch.addAll(saved.byEvent);
+        savedLeaves = saved.ticked.length;
         setState(() {
-          _refsByEvent.addAll(batch);
-          _ticked.addAll(refs);
+          _refsByEvent.addAll(saved.byEvent);
+          _ticked.addAll(saved.ticked);
         });
       }
       showCaptureOutcome(
         context,
         result: result,
         commands: commands,
+        // Never claim the leaves of a rejected chunk (AD-54).
         message: AppLocalizations.of(
           context,
-        )!.captureRecordedCount(leaves.length),
+        )!.captureRecordedCount(savedLeaves),
         onUndone: () => _rollBack(batch.keys),
       );
     } on Exception {
@@ -735,4 +751,46 @@ class _RootCurriculumChip extends StatelessWidget {
       child: chip,
     );
   }
+}
+
+/// The leaves one Browse capture recorded, keyed by event id, and the
+/// leaves to show ticked now.
+///
+/// [refs] is the per-leaf batch in leaf order, or null for a node capture
+/// (its events each cover all of [nodeRefs]). `LearningCommands.capture`
+/// writes one event per leaf with ascending ids, so the sorted union of
+/// [eventIds] and [rejectedEventIds] lines up with [refs]. Every planned
+/// event is keyed (a retry of a rejected chunk re-ticks its leaves), but
+/// only the leaves of saved or queued events that are not in [failed] are
+/// ticked. A plan that does not line up ticks nothing: the learner state
+/// then shows what was saved.
+@visibleForTesting
+({Map<String, List<String>> byEvent, Set<String> ticked}) recordedBatch({
+  required List<String>? refs,
+  required List<String> nodeRefs,
+  required List<String> eventIds,
+  required List<String> rejectedEventIds,
+  required Set<String> failed,
+}) {
+  final notSaved = {...rejectedEventIds, ...failed};
+  final planned = [...eventIds, ...rejectedEventIds]..sort();
+  if (refs == null) {
+    final saved = eventIds.any((id) => !notSaved.contains(id));
+    return (
+      byEvent: {for (final id in planned) id: nodeRefs},
+      ticked: saved && rejectedEventIds.isEmpty ? nodeRefs.toSet() : const {},
+    );
+  }
+  if (planned.length != refs.length) {
+    return (byEvent: const {}, ticked: const {});
+  }
+  return (
+    byEvent: {
+      for (final (i, id) in planned.indexed) id: [refs[i]],
+    },
+    ticked: {
+      for (final (i, id) in planned.indexed)
+        if (!notSaved.contains(id)) refs[i],
+    },
+  );
 }
