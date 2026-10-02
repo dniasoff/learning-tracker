@@ -47,12 +47,17 @@ final class SubTrackRowsUnreadableException implements Exception {
 final class OngoingSubTrackContext {
   /// Creates the context.
   OngoingSubTrackContext({
+    required this.scope,
     required this.curriculumId,
     required this.today,
     required this.timeZone,
     required List<SubTrack> subTracks,
     required this.calendarProgram,
   }) : subTracks = List.unmodifiable(subTracks);
+
+  /// The learner this read belongs to. A form bound to another learner
+  /// never uses it (a read that lands mid profile switch).
+  final LearnerScope scope;
 
   /// The curriculum's storage key.
   final String curriculumId;
@@ -81,6 +86,7 @@ final class OngoingSubTrackContext {
   OngoingSubTrackContext atDay(CivilDate day) => day == today
       ? this
       : OngoingSubTrackContext(
+          scope: scope,
           curriculumId: curriculumId,
           today: day,
           timeZone: timeZone,
@@ -94,6 +100,23 @@ final class OngoingSubTrackContext {
     for (final s in subTracks)
       if (!s.isEnded) s,
   ];
+
+  /// The sub-track [id] as the ongoing form may edit it, from this read:
+  /// a non-ended ongoing sub-track of [curriculumId]. Null when the read
+  /// has no such row (a stale or hand-made edit route, a school-year row,
+  /// another curriculum's row, or one ended meanwhile), so the form never
+  /// writes an edit the caller merely claimed.
+  SubTrack? editableOngoing(String id) {
+    for (final s in subTracks) {
+      if (s.id != id) continue;
+      final editable =
+          s.curriculumId == curriculumId &&
+          s.type == SubTrackType.ongoing &&
+          !s.isEnded;
+      return editable ? s : null;
+    }
+    return null;
+  }
 
   /// Ongoing sub-tracks counting toward the AD-45 cap, optionally leaving
   /// out the one being edited ([excludingId]).
@@ -158,11 +181,12 @@ final curriculumSubTracksProvider = StreamProvider.autoDispose
 /// learner is active. Recomputes when the intent or the sub-tracks change.
 final ongoingSubTrackContextProvider = FutureProvider.autoDispose
     .family<OngoingSubTrackContext?, String>((ref, curriculumId) async {
+      final scope = await ref.watch(activeLearnerScopeProvider.future);
       final intent = await ref.watch(ongoingSubTrackIntentProvider.future);
       final subTracks = await ref.watch(
         curriculumSubTracksProvider(curriculumId).future,
       );
-      if (intent == null || subTracks == null) return null;
+      if (scope == null || intent == null || subTracks == null) return null;
       final timeZone = intent.settings.timeZone;
       final nowUtc = ref.watch(localDayClockProvider).nowUtc();
       final today = learnerCivilToday(timeZone, nowUtc);
@@ -176,6 +200,7 @@ final ongoingSubTrackContextProvider = FutureProvider.autoDispose
       // The live program only, exactly as `SubTrackCommands` reads it.
       final program = intent.mainTracks[curriculumId]?.program;
       return OngoingSubTrackContext(
+        scope: scope,
         curriculumId: curriculumId,
         today: today,
         timeZone: timeZone,

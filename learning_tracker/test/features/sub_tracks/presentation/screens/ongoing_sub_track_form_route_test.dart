@@ -12,7 +12,10 @@ void main() {
   testWidgets('openOngoingSubTrackForm pushes the form and pops null on back', (
     tester,
   ) async {
-    OngoingSubTrackSaved? result = const OngoingSubTrackSaved(queued: true);
+    OngoingSubTrackSaved? result = OngoingSubTrackSaved(
+      scope: c0Scope(),
+      queued: true,
+    );
     var done = false;
     await tester.pumpWidget(
       pumpApp(
@@ -22,6 +25,7 @@ void main() {
           ),
           ongoingSubTrackContextProvider('mishnayos').overrideWith(
             (ref) async => OngoingSubTrackContext(
+              scope: c0Scope(),
               curriculumId: 'mishnayos',
               today: '2026-09-07',
               timeZone: 'UTC',

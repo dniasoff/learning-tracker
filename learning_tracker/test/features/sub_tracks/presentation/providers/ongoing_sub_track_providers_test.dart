@@ -209,6 +209,7 @@ void main() {
   group('learner civil day helpers', () {
     test('todayAt and atDay re-judge a read on a later instant', () {
       final read = OngoingSubTrackContext(
+        scope: c0Scope(),
         curriculumId: _curriculum,
         today: '2026-09-07',
         timeZone: 'Asia/Jerusalem',

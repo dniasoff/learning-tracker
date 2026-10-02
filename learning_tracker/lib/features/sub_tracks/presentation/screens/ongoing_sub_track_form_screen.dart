@@ -18,7 +18,6 @@ import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
@@ -38,7 +37,15 @@ const kOngoingFormTabletBreakpoint = 600.0;
 /// A successful save, returned when the form closes.
 final class OngoingSubTrackSaved {
   /// Creates the outcome.
-  const OngoingSubTrackSaved({this.queued = false, this.changeIds = const []});
+  const OngoingSubTrackSaved({
+    required this.scope,
+    this.queued = false,
+    this.changeIds = const [],
+  });
+
+  /// The learner the write was made for. A later rejection of a queued
+  /// write is announced only while this learner is still the active one.
+  final LearnerScope scope;
 
   /// Whether the write is queued offline (AD-54); a later permanent
   /// rejection rolls it back (UX-DR-121).
@@ -58,6 +65,13 @@ final class OngoingSubTrackSaved {
 /// `createSubTrack` / `editSubTrack` only; the engine derives everything
 /// else (activity, capacity, target) from the stored values.
 ///
+/// An edit is opened by sub-track id only. The form resolves the row from
+/// the bound learner's current read and edits it only while it is a
+/// non-ended ongoing sub-track of [OngoingSubTrackFormScreen.curriculumId]
+/// (see [OngoingSubTrackContext.editableOngoing]); a stale or hand-made
+/// route for a missing, ended, school-year or other-curriculum row closes
+/// without writing. The same check runs again right before the write.
+///
 /// The form is bound to the learner it was opened for: it shows only while
 /// [ongoingSubTrackWriteScopeProvider] grants that learner (a parent
 /// session), closes itself when the active profile changes or the parent
@@ -71,14 +85,14 @@ class OngoingSubTrackFormScreen extends ConsumerStatefulWidget {
   const OngoingSubTrackFormScreen({
     super.key,
     required this.curriculumId,
-    this.existing,
+    this.subTrackId,
   });
 
   /// The curriculum's storage key.
   final String curriculumId;
 
-  /// The sub-track being edited, or null for a new one.
-  final SubTrack? existing;
+  /// The id of the sub-track being edited, or null for a new one.
+  final String? subTrackId;
 
   @override
   ConsumerState<OngoingSubTrackFormScreen> createState() =>
@@ -113,23 +127,20 @@ class _OngoingSubTrackFormScreenState
   /// Set once the form is closing because its grant was lost.
   bool _closing = false;
 
+  /// The edited sub-track as resolved from the bound learner's read; null
+  /// for a create, and for an edit until the read arrives.
+  SubTrack? _existing;
+
+  bool get _isEdit => widget.subTrackId != null;
+
   @override
   void initState() {
     super.initState();
-    final existing = widget.existing;
-    _name = TextEditingController(text: existing?.name ?? '');
-    _rate = TextEditingController(
-      text: existing == null
-          ? '$kOngoingDefaultRatePerWeek'
-          : formatOngoingNumber(existing.ratePerWeek),
-    );
-    _weeks = existing == null
-        ? const OngoingWeeksPrefill.initial()
-        : OngoingWeeksPrefill.forStored(existing.weeksPerYear);
+    _name = TextEditingController();
+    _rate = TextEditingController(text: '$kOngoingDefaultRatePerWeek');
+    _weeks = const OngoingWeeksPrefill.initial();
     _weeksText = TextEditingController(text: _weeks.weeksText);
-    _start = existing?.windowStart;
-    _end = existing?.windowEnd;
-    _shabbos = existing?.learnsOnShabbos ?? false;
+    _shabbos = false;
     for (final MapEntry(key: field, value: node) in _focus.entries) {
       node.addListener(() {
         if (!node.hasFocus && mounted) setState(() => _touched.add(field));
@@ -147,6 +158,24 @@ class _OngoingSubTrackFormScreenState
     }
     super.dispose();
   }
+
+  /// Fills the fields from [existing], once, when an edit resolves.
+  void _prefill(SubTrack existing) {
+    _existing = existing;
+    _name.text = existing.name;
+    _rate.text = formatOngoingNumber(existing.ratePerWeek);
+    _weeks = OngoingWeeksPrefill.forStored(existing.weeksPerYear);
+    _weeksText.text = _weeks.weeksText;
+    _start = existing.windowStart;
+    _end = existing.windowEnd;
+    _shabbos = existing.learnsOnShabbos;
+  }
+
+  /// The row this edit may write, from [read]: null when [read] is another
+  /// learner's, or the row is missing, ended, not ongoing or of another
+  /// curriculum.
+  SubTrack? _editable(OngoingSubTrackContext read) =>
+      _isBound(read.scope) ? read.editableOngoing(widget.subTrackId!) : null;
 
   bool _isBound(LearnerScope? scope) =>
       scope != null && _boundScope != null && scope == _boundScope;
@@ -287,21 +316,30 @@ class _OngoingSubTrackFormScreenState
     });
     if (!validation.isValid) return;
     final values = validation.values!;
-    final existing = widget.existing;
+    final bound = _boundScope;
+    if (bound == null || !_isBound(data.scope)) {
+      _close();
+      return;
+    }
+    // An edit writes only against the row as the bound learner's current
+    // read holds it; one that is gone, ended or no longer ongoing is not
+    // written (a stale route never edits another row).
+    final existing = _isEdit ? _editable(data) : null;
+    if (_isEdit && existing == null) {
+      _close();
+      return;
+    }
     if (existing == null && !ongoingCreateAllowed(data.ongoingInUse())) {
       setState(() => _limitBlocked = true);
       return;
     }
-    SubTrackEdit? edit;
-    if (existing != null) {
-      edit = values.editFrom(existing);
-      if (edit == null) {
-        Navigator.of(context).pop(const OngoingSubTrackSaved());
-        return;
-      }
+    if (existing != null && values.editFrom(existing) == null) {
+      Navigator.of(context).pop(OngoingSubTrackSaved(scope: bound));
+      return;
     }
     setState(() => _saving = true);
     CaptureResult? result;
+    var unchanged = false;
     try {
       final commands = await ref.read(learningCommandsProvider.future);
       // Re-gate right before the write: the profile may have switched or
@@ -315,7 +353,20 @@ class _OngoingSubTrackFormScreenState
           values.toDraft(widget.curriculumId),
         );
       } else {
-        result = await commands.editSubTrack(existing.id, edit!);
+        // Re-resolve the row from the latest read right before the write:
+        // it may have been ended or changed elsewhere since the tap.
+        final latest = await ref.read(
+          ongoingSubTrackContextProvider(widget.curriculumId).future,
+        );
+        final current = latest == null ? null : _editable(latest);
+        final latestEdit = current == null ? null : values.editFrom(current);
+        if (current == null) {
+          result = null;
+        } else if (latestEdit == null) {
+          unchanged = true;
+        } else {
+          result = await commands.editSubTrack(current.id, latestEdit);
+        }
       }
     } on Object catch (error, stack) {
       _log.error(
@@ -327,15 +378,23 @@ class _OngoingSubTrackFormScreenState
     }
     if (!mounted) return;
     setState(() => _saving = false);
+    if (unchanged) {
+      Navigator.of(context).pop(OngoingSubTrackSaved(scope: bound));
+      return;
+    }
     if (result == null) {
       _close();
       return;
     }
     switch (result) {
       case CaptureSuccess(:final queued, :final changeIds):
-        Navigator.of(
-          context,
-        ).pop(OngoingSubTrackSaved(queued: queued, changeIds: changeIds));
+        Navigator.of(context).pop(
+          OngoingSubTrackSaved(
+            scope: bound,
+            queued: queued,
+            changeIds: changeIds,
+          ),
+        );
       case CaptureRejected(:final violations) when violations.isNotEmpty:
         _showViolations(violations, data);
       default:
@@ -412,15 +471,35 @@ class _OngoingSubTrackFormScreenState
     // Fail closed: an error, or a settled grant for no learner or another
     // learner (a direct push without a parent session, a profile switch, a
     // cleared PIN) closes the form; a reload keeps the bound learner.
-    final revoked =
+    var revoked =
         _closing ||
         gate.hasError ||
         (gate.hasValue && !gate.isLoading && !_isBound(granted));
-    if (revoked) _close();
     final dataAsync = ref.watch(
       ongoingSubTrackContextProvider(widget.curriculumId),
     );
-    final title = widget.existing == null
+    // An edit resolves its row from the bound learner's settled read, and
+    // closes when that read has no editable row of that id (UX: the route
+    // was stale or never valid).
+    final read = dataAsync.hasError ? null : dataAsync.value;
+    var unresolved = false;
+    if (_isEdit && _boundScope != null && read != null) {
+      if (_isBound(read.scope)) {
+        final row = _editable(read);
+        if (row == null) {
+          if (!dataAsync.isLoading) revoked = true;
+          unresolved = true;
+        } else if (_existing == null) {
+          _prefill(row);
+        }
+      } else {
+        unresolved = true; // another learner's read, mid switch
+      }
+    } else if (_isEdit && _existing == null) {
+      unresolved = true;
+    }
+    if (revoked) _close();
+    final title = !_isEdit
         ? l10n.ongoingSubTrackFormTitle
         : l10n.ongoingSubTrackEditTitle;
     return Scaffold(
@@ -439,9 +518,8 @@ class _OngoingSubTrackFormScreenState
       ),
       body: switch (dataAsync) {
         _ when revoked => const SizedBox.shrink(),
-        _ when _boundScope == null => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        _ when _boundScope == null || (unresolved && _existing == null) =>
+          const Center(child: CircularProgressIndicator()),
         // A reload (new rows, the learner's midnight) keeps the form on
         // screen with the previous read instead of flashing a spinner.
         AsyncValue(value: final read?) when !dataAsync.hasError =>
@@ -466,7 +544,7 @@ class _OngoingSubTrackFormScreenState
                   Expanded(
                     child: _SubTrackSummaryPanel(
                       subTracks: data.liveSubTracks,
-                      editingId: widget.existing?.id,
+                      editingId: widget.subTrackId,
                     ),
                   ),
                 ],

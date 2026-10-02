@@ -69,6 +69,7 @@ Future<void> _pump(
     ),
     ongoingSubTrackContextProvider(_curriculum).overrideWith(
       (ref) async => OngoingSubTrackContext(
+        scope: c0Scope(),
         curriculumId: _curriculum,
         today: _today,
         timeZone: 'UTC',

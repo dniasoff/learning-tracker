@@ -75,7 +75,7 @@ class _OngoingSubTrackHubSeamState
       await openOngoingSubTrackForm(
         context,
         curriculumId: widget.curriculumId,
-        existing: track,
+        subTrackId: track.id,
       ),
     );
   }

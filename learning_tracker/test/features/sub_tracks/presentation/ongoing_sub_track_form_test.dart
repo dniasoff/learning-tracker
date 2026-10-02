@@ -53,8 +53,9 @@ SubTrack _track(
   endReason: ended ? SubTrackEndReason.ended : null,
 );
 
-OngoingSubTrackContext _context(List<SubTrack> tracks) =>
+OngoingSubTrackContext _context(List<SubTrack> tracks, {LearnerScope? scope}) =>
     OngoingSubTrackContext(
+      scope: scope ?? c0Scope(),
       curriculumId: _curriculum,
       today: _today,
       timeZone: 'UTC',
@@ -64,9 +65,9 @@ OngoingSubTrackContext _context(List<SubTrack> tracks) =>
 
 /// Opens the form from a button so its pop result is observable.
 class _Host extends StatefulWidget {
-  const _Host({this.existing});
+  const _Host({this.subTrackId});
 
-  final SubTrack? existing;
+  final String? subTrackId;
 
   @override
   State<_Host> createState() => _HostState();
@@ -84,7 +85,7 @@ class _HostState extends State<_Host> {
           _lastResult = await openOngoingSubTrackForm(
             context,
             curriculumId: _curriculum,
-            existing: widget.existing,
+            subTrackId: widget.subTrackId,
           );
           _closed = true;
         },
@@ -111,6 +112,27 @@ class _Grant extends Notifier<LearnerScope?> {
 
 final _grant = NotifierProvider<_Grant, LearnerScope?>(_Grant.new);
 
+/// The sub-track rows the learner's read holds; tests change them live.
+List<SubTrack> _initialRows = const [];
+
+/// Whose read the context is (another learner's read lands mid switch).
+LearnerScope? _readScope;
+
+class _Rows extends Notifier<List<SubTrack>> {
+  @override
+  List<SubTrack> build() => _initialRows;
+
+  void set(List<SubTrack> rows) => state = rows;
+}
+
+final _rows = NotifierProvider<_Rows, List<SubTrack>>(_Rows.new);
+
+/// Replaces the rows of the learner's read while the form is open.
+void _setRows(WidgetTester tester, List<SubTrack> rows) =>
+    ProviderScope.containerOf(
+      tester.element(find.byType(OngoingSubTrackFormScreen)),
+    ).read(_rows.notifier).set(rows);
+
 /// Switches the granted learner (a profile switch, or a cleared PIN).
 void _setGrant(WidgetTester tester, LearnerScope? scope) =>
     ProviderScope.containerOf(
@@ -125,9 +147,10 @@ class _EnglishTerms extends UseHebrewTerms {
 
 List<Override> _overrides(List<SubTrack> tracks) => [
   useHebrewTermsProvider.overrideWith(_EnglishTerms.new),
-  ongoingSubTrackContextProvider(
-    _curriculum,
-  ).overrideWith((ref) async => _context(tracks)),
+  ongoingSubTrackContextProvider(_curriculum).overrideWith((ref) async {
+    _initialRows = tracks;
+    return _context(ref.watch(_rows), scope: _readScope);
+  }),
   learningCommandsProvider.overrideWith((ref) async => _commands),
   localDayClockProvider.overrideWithValue(_clock),
   ongoingSubTrackWriteScopeProvider.overrideWith(
@@ -139,17 +162,23 @@ Future<void> _open(
   WidgetTester tester, {
   List<SubTrack> tracks = const [],
   SubTrack? existing,
+  String? editId,
   Locale locale = const Locale('en'),
   ThemeData? theme,
   Size size = const Size(400, 900),
   double textScale = 1,
+  bool settle = true,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     pumpApp(
-      overrides: _overrides(tracks),
+      overrides: _overrides(
+        existing == null || tracks.any((t) => t.id == existing.id)
+            ? tracks
+            : [...tracks, existing],
+      ),
       locale: locale,
       theme: theme,
       builder: (context, child) => MediaQuery(
@@ -158,11 +187,18 @@ Future<void> _open(
         ).copyWith(textScaler: TextScaler.linear(textScale)),
         child: child!,
       ),
-      child: _Host(existing: existing),
+      child: _Host(subTrackId: editId ?? existing?.id),
     ),
   );
   await tester.tap(find.text('open'));
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    // A spinner never settles: pump past the push transition instead.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
 }
 
 Finder _field(String key) => find.byKey(ValueKey(key));
@@ -220,6 +256,8 @@ void main() {
     _commands = FakeLearningCommands();
     _clock = FakeLocalDayClock(DateTime.utc(2026, 9, 7, 12));
     _initialGrant = c0Scope();
+    _initialRows = const [];
+    _readScope = null;
     _lastResult = null;
     _closed = false;
   });
@@ -432,6 +470,118 @@ void main() {
       expect(_fieldText(tester, 'ongoingSubTrackName'), 'Rebbe');
       await _save(tester);
       expect(_lastDraft().name, 'Rebbe');
+    });
+  });
+
+  group('an edit resolves its row from the bound learner\'s read', () {
+    SubTrack row(
+      int id, {
+      String curriculumId = _curriculum,
+      SubTrackType type = SubTrackType.ongoing,
+      bool ended = false,
+    }) => SubTrack(
+      id: _ulid(id),
+      curriculumId: curriculumId,
+      name: 'Row $id',
+      type: type,
+      academicYear: type == SubTrackType.schoolYear ? 2026 : null,
+      windowStart: '2026-09-01',
+      windowEnd: type == SubTrackType.schoolYear ? '2027-07-31' : null,
+      ratePerWeek: 5,
+      weeksPerYear: 52,
+      learnsOnShabbos: false,
+      ground: const [],
+      lastChangeId: _ulid(id + 500),
+      endedAt: ended ? DateTime.utc(2026, 9, 2) : null,
+      endReason: ended ? SubTrackEndReason.ended : null,
+    );
+
+    Future<void> expectRefused(WidgetTester tester) async {
+      await tester.pumpAndSettle();
+      expect(find.byType(OngoingSubTrackFormScreen), findsNothing);
+      expect(_closed, isTrue);
+      expect(_lastResult, isNull);
+      expect(_commands.calls, isEmpty);
+    }
+
+    testWidgets('an id the read does not hold closes without writing', (
+      tester,
+    ) async {
+      await _open(tester, tracks: [row(1)], editId: _ulid(77));
+      await expectRefused(tester);
+    });
+
+    testWidgets('a school-year row is not edited by the ongoing form', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        tracks: [row(1, type: SubTrackType.schoolYear)],
+        editId: _ulid(1),
+      );
+      await expectRefused(tester);
+    });
+
+    testWidgets('an ended row is not edited', (tester) async {
+      await _open(tester, tracks: [row(1, ended: true)], editId: _ulid(1));
+      await expectRefused(tester);
+    });
+
+    testWidgets('another curriculum\'s row is not edited', (tester) async {
+      await _open(
+        tester,
+        tracks: [row(1, curriculumId: 'shas')],
+        editId: _ulid(1),
+      );
+      await expectRefused(tester);
+    });
+
+    testWidgets('another learner\'s read is never used for the edit', (
+      tester,
+    ) async {
+      _readScope = c0Scope(ownerUid: 'other-owner');
+      await _open(tester, tracks: [row(1)], editId: _ulid(1), settle: false);
+      // Nothing is prefilled from, or written against, that read.
+      expect(find.byType(OngoingSubTrackFormScreen), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(_field('ongoingSubTrackName'), findsNothing);
+      expect(_commands.calls, isEmpty);
+    });
+
+    testWidgets('the fields come from the read, not the caller', (
+      tester,
+    ) async {
+      await _open(tester, tracks: [row(1)], editId: _ulid(1));
+      expect(_fieldText(tester, 'ongoingSubTrackName'), 'Row 1');
+      await tester.enterText(_field('ongoingSubTrackName'), 'Renamed');
+      await _save(tester);
+      final call = _commands.calls.single;
+      expect(call.name, 'editSubTrack');
+      expect(call.args['subTrackId'], _ulid(1));
+    });
+
+    testWidgets('a row ended elsewhere while open closes before any write', (
+      tester,
+    ) async {
+      await _open(tester, tracks: [row(1)], editId: _ulid(1));
+      await tester.enterText(_field('ongoingSubTrackName'), 'Renamed');
+      _setRows(tester, [row(1, ended: true)]);
+      await tester.pumpAndSettle();
+      expect(find.byType(OngoingSubTrackFormScreen), findsNothing);
+      expect(_commands.calls, isEmpty);
+    });
+
+    testWidgets('a row ended between tapping Save and the write is refused', (
+      tester,
+    ) async {
+      await _open(tester, tracks: [row(1)], editId: _ulid(1));
+      await tester.enterText(_field('ongoingSubTrackName'), 'Renamed');
+      await _reveal(tester, 'ongoingSubTrackSave');
+      _setRows(tester, [row(1, ended: true)]);
+      await tester.tap(_field('ongoingSubTrackSave'));
+      await tester.pumpAndSettle();
+      expect(_commands.calls, isEmpty);
+      expect(find.byType(OngoingSubTrackFormScreen), findsNothing);
     });
   });
 
