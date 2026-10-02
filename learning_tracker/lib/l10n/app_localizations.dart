@@ -6603,6 +6603,54 @@ abstract class AppLocalizations {
   /// **'Shabbos'**
   String get dayNameShabbos;
 
+  /// Erev banner line on the Learn tab (DNI-504, A-2): {term} is the lock's Shabbos/Yom Tov label per the Hebrew Terms setting, {time} the lock start (learner-local) from lockWindows. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{term} begins at {time} — record what you can before then.'**
+  String erevBannerBeginsAt(String term, String time);
+
+  /// Learn-tab snackbar when synced learning was recorded during a Shabbos/Yom Tov lock: it is stored but the engine does not count it (DNI-504 AC-9, UX-DR-107). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Some learning was kept, not counted — it was recorded during Shabbos.'**
+  String get erevLockIgnoredSnackbar;
+
+  /// Heading of one locked day's planned section on erev (DNI-504 AC-1); {day} is the weekday name, or the Shabbos term for Shabbos. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Planned for {day}'**
+  String erevPlannedForDay(String day);
+
+  /// Screen-reader label of a planned row's tick control on erev (DNI-504 AC-3, AC-11). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark {item} as learnt'**
+  String erevPlannedTickSemantics(String item);
+
+  /// Button on an erev planned section that opens the Up to… picker for its rows (DNI-504 AC-3). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to…'**
+  String get erevPlannedUpTo;
+
+  /// Subtitle of the erev Up to… picker (DNI-504). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the last one you learnt'**
+  String get erevUpToHint;
+
+  /// Record button of the erev Up to… picker; {count} is the number of included rows (DNI-504). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Record 1} other{Record {count}}}'**
+  String erevUpToRecord(int count);
+
+  /// Title of the erev Up to… picker; {day} is the planned section's day name (DNI-504). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} · up to…'**
+  String erevUpToTitle(String day);
+
   /// No description provided for @statusPendingTapToAccept.
   ///
   /// In en, this message translates to:

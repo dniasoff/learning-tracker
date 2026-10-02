@@ -2063,6 +2063,52 @@
   "invalidPasswordError": "סיסמה שגויה. אנא נסו שוב.",
   "calendarOffsetToday": "היום",
   "dayNameShabbos": "שבת",
+  "erevBannerBeginsAt": "כניסת {term} בשעה {time} — רשמו מה שאפשר לפני כן.",
+  "@erevBannerBeginsAt": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "erevLockIgnoredSnackbar": "חלק מהלימוד נשמר אך לא נספר — הוא נרשם בשבת.",
+  "erevPlannedForDay": "מתוכנן ל{day}",
+  "@erevPlannedForDay": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "erevPlannedTickSemantics": "סמנו את {item} כנלמד",
+  "@erevPlannedTickSemantics": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "erevPlannedUpTo": "עד…",
+  "erevUpToHint": "הקישו על האחרון שלמדתם",
+  "erevUpToRecord": "{count, plural, =1{רשמו 1} other{רשמו {count}}}",
+  "@erevUpToRecord": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "erevUpToTitle": "{day} · עד…",
+  "@erevUpToTitle": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
   "statusPendingTapToAccept": "ממתין — הקישו לאישור",
   "calendarOffsetDay": "יום {offset}",
   "@calendarOffsetDay": {

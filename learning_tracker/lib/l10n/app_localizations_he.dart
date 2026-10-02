@@ -3821,6 +3821,47 @@ class AppLocalizationsHe extends AppLocalizations {
   String get dayNameShabbos => 'שבת';
 
   @override
+  String erevBannerBeginsAt(String term, String time) {
+    return 'כניסת $term בשעה $time — רשמו מה שאפשר לפני כן.';
+  }
+
+  @override
+  String get erevLockIgnoredSnackbar =>
+      'חלק מהלימוד נשמר אך לא נספר — הוא נרשם בשבת.';
+
+  @override
+  String erevPlannedForDay(String day) {
+    return 'מתוכנן ל$day';
+  }
+
+  @override
+  String erevPlannedTickSemantics(String item) {
+    return 'סמנו את $item כנלמד';
+  }
+
+  @override
+  String get erevPlannedUpTo => 'עד…';
+
+  @override
+  String get erevUpToHint => 'הקישו על האחרון שלמדתם';
+
+  @override
+  String erevUpToRecord(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'רשמו $count',
+      one: 'רשמו 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String erevUpToTitle(String day) {
+    return '$day · עד…';
+  }
+
+  @override
   String get statusPendingTapToAccept => 'ממתין — הקישו לאישור';
 
   @override
