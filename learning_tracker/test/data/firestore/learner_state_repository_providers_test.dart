@@ -104,6 +104,60 @@ void main() {
     },
   );
 
+  ProviderContainer failingHandles(
+    Exception error,
+    DeviceRegistryDatabase registry,
+  ) {
+    final container = ProviderContainer(
+      retry: (_, _) => null,
+      overrides: [
+        activeAccountFirebaseProvider.overrideWith((ref) async => throw error),
+        deviceRegistryProvider.overrideWithValue(registry),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(activeAccountIdProvider.notifier).set(_accountId);
+    container.read(activeProfileDocIdProvider.notifier).set(profileUlid);
+    return container;
+  }
+
+  test('an active account id with no authenticated session (signed out / '
+      'restored before sign-in) → every provider resolves null (not ready), '
+      'not a terminal AsyncError (ruling B1)', () async {
+    final container = failingHandles(
+      const AccountNotAuthenticatedException(_accountId),
+      await _registry(boundUid: 'path-uid'),
+    );
+
+    expect(
+      await container.read(learningEventRepositoryProvider.future),
+      isNull,
+    );
+    expect(await container.read(subTrackRepositoryProvider.future), isNull);
+    expect(await container.read(activeLearnerScopeProvider.future), isNull);
+  });
+
+  test('a real infrastructure failure resolving the handle still surfaces '
+      'as an error (only unauthenticated maps to not ready)', () async {
+    final container = failingHandles(
+      const FormatException('firebase init failed'),
+      await _registry(boundUid: 'path-uid'),
+    );
+
+    await expectLater(
+      container.read(learningEventRepositoryProvider.future),
+      throwsFormatException,
+    );
+    await expectLater(
+      container.read(subTrackRepositoryProvider.future),
+      throwsFormatException,
+    );
+    await expectLater(
+      container.read(activeLearnerScopeProvider.future),
+      throwsFormatException,
+    );
+  });
+
   test('active account → repositories over that account\'s Firestore handle; '
       'scope still null until a profile is active', () async {
     final firestore = FakeFirebaseFirestore();
