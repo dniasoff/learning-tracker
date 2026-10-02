@@ -656,6 +656,47 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select a sub-track to see its details';
 
   @override
+  String get subTrackDetailMoveUp => 'Move up';
+
+  @override
+  String get subTrackDetailMoveDown => 'Move down';
+
+  @override
+  String subTrackDetailRemoveFrom(String name) {
+    return 'Remove from $name';
+  }
+
+  @override
+  String subTrackDetailRemoveTitle(String node, String name) {
+    return 'Remove $node from $name?';
+  }
+
+  @override
+  String get subTrackDetailRemoveBody =>
+      'Learning already recorded is kept. Anything not yet learnt goes back to the main track unless another sub-track holds it.';
+
+  @override
+  String get subTrackDetailRemoveConfirm => 'Remove';
+
+  @override
+  String get subTrackDetailReorderFailed =>
+      'Couldn\'t save the new order. It\'s back as it was.';
+
+  @override
+  String get subTrackDetailRemoveFailed =>
+      'Couldn\'t remove it. The ground is back as it was.';
+
+  @override
+  String subTrackDetailDragHandle(String node) {
+    return 'Reorder $node';
+  }
+
+  @override
+  String subTrackDetailEntryActions(String node) {
+    return 'Actions for $node';
+  }
+
+  @override
   String get switchProfile => 'Switch profile';
 
   @override

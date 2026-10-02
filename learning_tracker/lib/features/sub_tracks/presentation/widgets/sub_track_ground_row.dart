@@ -199,6 +199,7 @@ class _TriStateBox extends StatelessWidget {
     final filled = row.state != TriState.empty;
     return Semantics(
       key: ValueKey('subTrackTriState:${row.node.ref}'),
+      container: true,
       label: label,
       excludeSemantics: true,
       child: Container(

@@ -23,6 +23,7 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -67,8 +68,13 @@ final class DetailHarness {
   /// The active learner.
   final LearnerScope scope = c0Scope();
 
-  /// `sub_tracks`.
+  /// `sub_tracks` (seeding, written entries, scripted failures).
   final InMemorySubTrackRepository tracks = InMemorySubTrackRepository();
+
+  /// [tracks] behind a watch that completes `first` / `firstWhere` under
+  /// the widget tester's fake async (see [FakeAsyncSafeSubTrackRepository]).
+  late final FakeAsyncSafeSubTrackRepository repository =
+      FakeAsyncSafeSubTrackRepository(tracks, scope);
 
   /// `learning_events`.
   final InMemoryLearningEventRepository events =
@@ -113,7 +119,7 @@ final class DetailHarness {
       onListen: () {
         subs
           ..add(
-            tracks.watchAll(scope).listen((r) {
+            repository.watchAll(scope).listen((r) {
               if (r is CompleteReadReady<SubTrack>) {
                 latestTracks = r.items;
                 run();
@@ -162,7 +168,7 @@ final class DetailHarness {
     Stream<LearnerState> Function()? engine,
   }) => [
     activeLearnerScopeProvider.overrideWith((ref) async => scope),
-    subTrackRepositoryProvider.overrideWith((ref) async => tracks),
+    subTrackRepositoryProvider.overrideWith((ref) async => repository),
     learningEventRepositoryProvider.overrideWith((ref) async => events),
     corporaProvider.overrideWith(
       (ref) async => <String, Corpus>{engineCurriculum: mishnayosCorpus()},
@@ -299,3 +305,54 @@ LearnerState engineDetailState(
 }) => const LearnerStateEngine().run(
   engineInputs(events: events, subTracks: [track, ...others]),
 );
+
+/// A [SubTrackRepository] over [InMemorySubTrackRepository] whose
+/// [watchAll] is an `async*` stream.
+///
+/// The shared in-memory fake closes its per-listener controller inside
+/// `onCancel` and awaits it; under `testWidgets`' fake async that cancel
+/// never finishes, so `firstWhere` (which awaits the cancel) never
+/// completes and `SubTrackCommands` hangs. Writes and reads delegate.
+final class FakeAsyncSafeSubTrackRepository implements SubTrackRepository {
+  /// Wraps [inner] for [scope].
+  FakeAsyncSafeSubTrackRepository(this.inner, this.scope);
+
+  /// The wrapped fake.
+  final InMemorySubTrackRepository inner;
+
+  /// The only scope the harness uses.
+  final LearnerScope scope;
+
+  final _changes = StreamController<void>.broadcast(sync: true);
+
+  List<RejectedRow> _rejected = const [];
+
+  /// Makes every read report [rows] as undecodable.
+  void seedRejected(List<RejectedRow> rows) {
+    _rejected = List.of(rows);
+    _changes.add(null);
+  }
+
+  CompleteReadReady<SubTrack> get _ready =>
+      CompleteReadReady(inner.tracksOf(scope), rejected: _rejected);
+
+  @override
+  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) async* {
+    yield _ready;
+    await for (final _ in _changes.stream) {
+      yield _ready;
+    }
+  }
+
+  @override
+  Future<void> applyGovernedChange(
+    LearnerScope scope,
+    SubTrackChange change,
+  ) async {
+    try {
+      await inner.applyGovernedChange(scope, change);
+    } finally {
+      _changes.add(null);
+    }
+  }
+}
