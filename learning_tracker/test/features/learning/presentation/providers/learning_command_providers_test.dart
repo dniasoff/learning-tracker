@@ -639,11 +639,7 @@ void main() {
 }
 
 /// A learner whose settings doc cannot be read.
-<<<<<<< HEAD
 
-/// A learner whose settings doc cannot be read.
-=======
->>>>>>> 680bdf8bb (fix(sub-tracks): DNI-499 post-merge drop the duplicated unreadable-settings test helper)
 final class _UnreadableSettings implements LearnerSettingsReader {
   @override
   Stream<LearnerSettings> watch(LearnerScope scope) =>

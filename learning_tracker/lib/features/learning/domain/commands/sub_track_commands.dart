@@ -34,7 +34,9 @@
 ///   later refuses for good becomes a [PendingFailure] ("not saved —
 ///   retry"); [SubTrackCommands.retry] re-sends the identical batch.
 ///   [SubTrackCommands.whenConfirmed] tells a caller holding a queued
-///   result whether the server finally accepted it (DNI-499).
+///   result whether the server finally accepted it (DNI-499). Both live in
+///   a [SubTrackWriteLedger] that outlives one commands instance, so a
+///   rebuild of the commands for the same learner keeps them.
 /// - **Analytics** (AD-47): `subtrack_lifecycle` is emitted once the server
 ///   has accepted the write — at once when it acknowledges within
 ///   [SubTrackCommands.ackTimeout], else when the queued write (or its
@@ -209,9 +211,12 @@ final class SubTrackCommands {
     required String Function() newId,
     Future<Corpus?> Function(String curriculumId)? corpusOf,
     LearningAnalytics? analytics,
+    SubTrackWriteLedger? ledger,
     this.ackTimeout = const Duration(seconds: 3),
     this.readTimeout = const Duration(seconds: 10),
-  }) : _subTracks = subTracks,
+  }) : _ledger = ledger ?? SubTrackWriteLedger(),
+       _ownsLedger = ledger == null,
+       _subTracks = subTracks,
        _intent = intent,
        _today = today,
        _nowUtc = nowUtc,
@@ -241,18 +246,19 @@ final class SubTrackCommands {
   final Future<Corpus?> Function(String curriculumId)? _corpusOf;
   final LearningAnalytics? _analytics;
 
-  final Map<String, (PendingFailure, SubTrackChange, void Function()?)>
-  _pending = {};
+  final SubTrackWriteLedger _ledger;
+  final bool _ownsLedger;
 
   /// Pending-failure ids whose retry is in flight.
   final Set<String> _retrying = {};
 
-  /// Queued writes not yet acknowledged, by change-log entry id: completes
-  /// true on the server ack, false when the server refuses it for good.
-  final Map<String, Completer<bool>> _unconfirmed = {};
-  final _pendingController = StreamController<List<PendingFailure>>.broadcast(
-    sync: true,
-  );
+  Map<String, (PendingFailure, SubTrackChange, void Function()?)>
+  get _pending => _ledger._pending;
+
+  Map<String, Completer<bool>> get _unconfirmed => _ledger._unconfirmed;
+
+  StreamController<List<PendingFailure>> get _pendingController =>
+      _ledger._controller;
 
   /// Creates a sub-track from [draft]. [subTrackId] is the new doc ULID
   /// (minted when omitted); it is the entry's `entity_id`. [addNextYear]
@@ -574,8 +580,9 @@ final class SubTrackCommands {
     }
   }
 
-  /// Closes the pending-failure feed.
-  Future<void> dispose() => _pendingController.close();
+  /// Closes the pending-failure feed, unless the ledger was handed in (its
+  /// owner closes it).
+  Future<void> dispose() => _ownsLedger ? _ledger.dispose() : Future.value();
 
   // ── internals ─────────────────────────────────────────────────────────
 
@@ -878,6 +885,33 @@ final class SubTrackCommands {
     endReason: t.endReason,
     lastChangeId: t.lastChangeId,
   );
+}
+
+/// One learner's queued sub-track writes for the session (AD-54 Recovery):
+/// the writes still waiting for the server's acknowledgement and the ones
+/// it refused for good (pending failures with a retry).
+///
+/// [SubTrackCommands] keeps them here rather than in itself so that a
+/// rebuild of the commands for the same learner (a parent-PIN, profile or
+/// clock change) neither drops a refused write's retry nor loses the
+/// acknowledgement a caller is waiting on: a write queued by the previous
+/// instance still settles here, and the new instance retries it. Like the
+/// event and governed pending failures, it lives in memory for the session
+/// — there is no outbox; the Firestore SDK's offline queue carries the
+/// write itself across restarts.
+final class SubTrackWriteLedger {
+  final Map<String, (PendingFailure, SubTrackChange, void Function()?)>
+  _pending = {};
+
+  /// Queued writes not yet acknowledged, by change-log entry id: completes
+  /// true on the server ack, false when the server refuses it for good.
+  final Map<String, Completer<bool>> _unconfirmed = {};
+  final _controller = StreamController<List<PendingFailure>>.broadcast(
+    sync: true,
+  );
+
+  /// Closes the pending-failure feed.
+  Future<void> dispose() => _controller.close();
 }
 
 /// The "no server ack yet" outcome of [SubTrackCommands._commit].

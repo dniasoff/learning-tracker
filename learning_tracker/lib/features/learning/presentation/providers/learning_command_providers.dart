@@ -329,6 +329,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     newId: newUlid,
     corpusOf: corpusOf,
     analytics: ref.watch(learningAnalyticsProvider),
+    ledger: ref.watch(subTrackWriteLedgerProvider(scope)),
   );
   final governed = DefaultGovernedLearningCommands(
     scope: scope,
@@ -382,6 +383,17 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     ..onDispose(governed.dispose)
     ..onDispose(subTrackCommands.dispose);  return commands;
 }, retry: (retryCount, error) => null);
+
+/// The session's queued sub-track writes of [LearnerScope] (DNI-499): kept
+/// across rebuilds of [learningCommandsProvider] for the same learner, so
+/// a refused End, Delete or Add next year keeps its retry and a queued one
+/// still settles. Lives for the session (AD-54: no outbox).
+final subTrackWriteLedgerProvider =
+    Provider.family<SubTrackWriteLedger, LearnerScope>((ref, scope) {
+      final ledger = SubTrackWriteLedger();
+      ref.onDispose(ledger.dispose);
+      return ledger;
+    });
 
 /// The governed writer the owner repositories (goals, curriculum tracks,
 /// order, programs, study days, stages, scopes) write through (AD-38,

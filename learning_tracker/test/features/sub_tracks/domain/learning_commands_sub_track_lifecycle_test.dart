@@ -382,6 +382,52 @@ void main() {
       },
     );
 
+    test('a rebuild of the commands for the same learner keeps a queued write: '
+        'it still settles, its refusal is a pending failure of the new '
+        'commands, and the new commands retry it', () async {
+      final ledger = SubTrackWriteLedger();
+      SubTrackCommands build() => SubTrackCommands(
+        scope: scope,
+        actor: parentActor,
+        subTracks: repo,
+        intent: intent,
+        today: () => _today,
+        nowUtc: () => _now,
+        newId: _ids(),
+        analytics: analytics,
+        ledger: ledger,
+        ackTimeout: const Duration(milliseconds: 50),
+        readTimeout: const Duration(seconds: 2),
+      );
+      final before = build();
+      repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('permission-denied'));
+      final result = await before.deleteSubTrack(ulidA) as CaptureSuccess;
+      final changeId = result.changeIds.single;
+      final confirmed = before.whenConfirmed(changeId);
+      await before.dispose();
+
+      final after = build();
+      final failures = after.watchPendingFailures();
+      repo.settleHeld();
+      expect(await confirmed, isFalse);
+      expect(after.hasPendingFailure(changeId), isTrue);
+      expect(
+        (await failures.firstWhere((f) => f.isNotEmpty)).single.id,
+        changeId,
+      );
+      expect(await after.whenConfirmed(changeId), isFalse);
+
+      repo.offline = false;
+      expect(await after.retry(changeId), isA<CaptureSuccess>());
+      expect(after.hasPendingFailure(changeId), isFalse);
+      expect(repo.tracksOf(scope).single.endReason, SubTrackEndReason.deleted);
+      expect(analytics.lifecycles, hasLength(1));
+      await after.dispose();
+      await ledger.dispose();
+    });
+
     test('offline: a queued Add next year reports add_next_year only once '
         'acknowledged', () async {
       repo.offline = true;
