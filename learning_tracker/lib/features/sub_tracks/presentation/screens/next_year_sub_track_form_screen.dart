@@ -130,6 +130,13 @@ class _NextYearSubTrackFormScreenState
     LearningCommands? commands;
     try {
       commands = await ref.read(learningCommandsProvider.future);
+      // AD-45 limits are re-checked by the shared command against the
+      // latest complete sub-track read at save time, not the render-time
+      // snapshot, so a year another device took after render is refused.
+      // Two creates made at once while both devices are offline can both
+      // sync; AD-45 has the engine tolerate that excess. Server-side
+      // enforcement for owner batches is DNI-492's follow-up
+      // (learning-tracker-fyh.136; accepted risk fyh.127).
       result = await commands?.createSubTrack(draft, addNextYear: true);
     } on Object {
       result = null;

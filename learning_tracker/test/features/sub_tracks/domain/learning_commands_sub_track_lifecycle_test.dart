@@ -251,6 +251,31 @@ void main() {
       expect(repo.calls, isEmpty);
       expect(repo.entries, isEmpty);
     });
+
+    test('two offline Add next year creates that both synced (AD-45 '
+        'tolerated excess): both rows show, a third is refused, and '
+        'Delete on one resolves it', () async {
+      SubTrack dup(String id) => _school(
+        id: id,
+        academicYear: 2027,
+        windowStart: '2027-09-01',
+        windowEnd: '2028-07-31',
+      );
+      repo.seed(scope, [dup(ulidB), dup(ulidC)]);
+      final groups = groupSubTracksByLifecycle(repo.tracksOf(scope), _today);
+      expect(groups.active.map((t) => t.id).toSet(), {ulidA, ulidB, ulidC});
+      expect(
+        await commands.createSubTrack(
+          nextYearSubTrackDraft(_school()),
+          addNextYear: true,
+        ),
+        isA<CaptureRejected>(),
+      );
+      expect(repo.calls, isEmpty);
+      expect(await commands.deleteSubTrack(ulidC), isA<CaptureSuccess>());
+      final live = groupSubTracksByLifecycle(repo.tracksOf(scope), _today);
+      expect(live.active.map((t) => t.id).toSet(), {ulidA, ulidB});
+    });
   });
 
   group('AC-3 / AC-4 tombstones only the sub-track', () {
