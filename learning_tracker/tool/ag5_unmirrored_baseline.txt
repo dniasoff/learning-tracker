@@ -55,7 +55,6 @@ lib/core/labels/curriculum_label_providers.dart
 lib/core/labels/curriculum_level_name.dart
 lib/core/labels/curriculum_visuals.dart
 lib/core/labels/domain_term_labels.dart
-lib/core/learning/completion_constants.dart
 lib/core/logging/log_events.dart
 lib/core/navigation/guards/child_mode_guard.dart
 lib/core/navigation/guards/pin_guard.dart
@@ -174,12 +173,9 @@ lib/features/gamification/presentation/widgets/track_tag_chip.dart
 lib/features/gamification/streak/streak_log_event.dart
 lib/features/gamification/streak/streak_reducer.dart
 lib/features/gamification/streak/streak_state_service.dart
-lib/features/learning/data/repositories/completion_points_awarder.dart
 lib/features/learning/data/repositories/completion_repository_impl.dart
-lib/features/learning/data/repositories/completion_streak_recorder.dart
 lib/features/learning/data/repositories/track_repository_impl.dart
 lib/features/learning/domain/entities/bookmark.dart
-lib/features/learning/domain/entities/completion_command.dart
 lib/features/learning/domain/entities/completion_request.dart
 lib/features/learning/domain/entities/completion_source.dart
 lib/features/learning/domain/entities/completion_tier_filter.dart
@@ -188,8 +184,6 @@ lib/features/learning/domain/repositories/bookmark_repository.dart
 lib/features/learning/domain/repositories/completion_repository.dart
 lib/features/learning/domain/repositories/learning_ledger_repository.dart
 lib/features/learning/domain/repositories/track_repository.dart
-lib/features/learning/domain/use_cases/manual_completion_use_case.dart
-lib/features/learning/domain/use_cases/mark_completion_use_case.dart
 lib/features/learning/learning.dart
 lib/features/learning/presentation/providers/completion_providers.dart
 lib/features/learning/presentation/providers/completion_writer_providers.dart

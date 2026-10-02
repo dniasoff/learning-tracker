@@ -13,9 +13,10 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -37,10 +38,12 @@ class BulkMarkResult {
 /// already completed. Selecting at a higher level (e.g., seder) automatically
 /// includes all items within.
 ///
-/// Previously-completed content is pre-ticked on open (B7). Unticking a
-/// previously-ticked item calls expungePriorCompletions to tombstone those
-/// completion records (B8). The stage-picker step has been removed — all
-/// stages are recorded automatically by the data layer (B5).
+/// Content already marked "before tracking" is pre-ticked on open (B7).
+/// Unticking a pre-ticked item un-learns it (`LearningCommands.unlearn`,
+/// B8). Confirming records the selection as ONE `before_tracking` capture
+/// (Story 1.11, DNI-473; R10 retired the `2000-01-01` sentinel): a whole
+/// ticked node is one node event with its `level`, a single leaf a leaf
+/// event, none with a `learned_on`.
 class BulkMarkScreen extends ConsumerStatefulWidget {
   final CurriculumId curriculumId;
 
@@ -66,9 +69,13 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   var _phase = _Phase.selection;
   final _selections = <HierarchySelection>{};
 
-  /// Leaf sefariaRefs that were pre-ticked because they already exist in the DB.
-  /// Unticking one of these triggers an expunge call (B8).
-  final _preTickedRefs = <String>{};
+  /// The leaves that are recorded "before tracking" right now, by
+  /// sefariaRef, each with the leaf selection the pre-tick (B7) added for it.
+  ///
+  /// Unticking one of these un-learns it (B8) and drops it from this map, so
+  /// re-ticking it captures it again; confirming never re-captures a leaf
+  /// still in this map.
+  final _preTicked = <String, HierarchySelection>{};
 
   /// Full (scope-applied) content list for this curriculum. Loaded once on
   /// open — used both to map pre-ticked refs to selections and to compute the
@@ -76,7 +83,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   List<ContentItem>? _allItems;
 
   List<ContentItem>? _resolvedItems;
-  BulkPriorCompletionResult? _result;
+  BeforeTrackingResult? _result;
   String? _error;
 
   // Search state
@@ -108,42 +115,28 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       );
       if (mounted) setState(() => _allItems = allItems);
 
-      final completionRepo = ref.read(completionRepositoryProvider);
-      final existingCompletions = await completionRepo
-          .getCompletionsByCurriculum(widget.curriculumId.storageKey);
-
-      if (existingCompletions.isEmpty) return;
-
-      // Only pre-tick items that were marked via the prior-marking flow.
-      // Live-learning completions (normal daily learning) do not pre-tick.
-      // Use isBulkPriorSentinel (moment-based) — a prior completion synced
-      // down from Firestore comes back with a different isUtc flag than
-      // DateTime.utc(2000,1,1), so a plain `==` misses every synced row and
-      // nothing pre-ticks.
-      final completedRefs = existingCompletions
-          .where((c) => isBulkPriorSentinel(c.completedAt))
-          .map((c) => c.sefariaRef)
-          .toSet();
+      // B7 (R10): pre-tick what the learner already marked "before
+      // tracking" — counted before_tracking events, node events expanded.
+      final completedRefs = await ref
+          .read(beforeTrackingRecorderProvider)
+          .recordedRefs(widget.curriculumId);
+      if (completedRefs.isEmpty) return;
 
       // Build pre-ticked leaf-level selections for every already-completed ref.
-      final preTickedSelections = <HierarchySelection>{};
-      for (final item in allItems) {
-        if (!item.isLeaf) continue;
-        if (completedRefs.contains(item.sefariaRef)) {
-          preTickedSelections.add(
-            HierarchySelection(
+      final preTicked = <String, HierarchySelection>{
+        for (final item in allItems)
+          if (item.isLeaf && completedRefs.contains(item.sefariaRef))
+            item.sefariaRef: HierarchySelection(
               level1: item.level1,
               level2: item.level2,
               level3: item.level3,
               level4: item.level4,
             ),
-          );
-          _preTickedRefs.add(item.sefariaRef);
-        }
-      }
+      };
 
-      if (mounted && preTickedSelections.isNotEmpty) {
-        setState(() => _selections.addAll(preTickedSelections));
+      _preTicked.addAll(preTicked);
+      if (mounted && preTicked.isNotEmpty) {
+        setState(() => _selections.addAll(preTicked.values));
       }
     } catch (e, st) {
       // AUD-onboarding-11 (EH-3): non-fatal -- if pre-tick loading fails just
@@ -284,9 +277,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             return true;
           })
           .map((leaf) => leaf.sefariaRef)
-          .where(_preTickedRefs.contains)
+          .where(_preTicked.containsKey)
           .toList();
-    } else if (item.isLeaf && _preTickedRefs.contains(item.sefariaRef)) {
+    } else if (item.isLeaf && _preTicked.containsKey(item.sefariaRef)) {
       // Slow path: item itself is a leaf.
       refs = [item.sefariaRef];
     } else {
@@ -305,30 +298,25 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   }
 
   Future<void> _expungeRefs(List<String> refs) async {
-    final service = ref.read(bulkPriorCompletionServiceProvider);
-
-    // Fix 4: ONE batched call covering every un-ticked ref from this user
-    // action, not one `expungePriorCompletions` call per ref. The service
-    // itself tombstones every matched completion across all the given refs
-    // first, then runs exactly one coverage-check-and-retract pass per
-    // DISTINCT affected unit (see that method's doc comment) — un-ticking an
-    // entire masechta no longer fans out into N concurrent full-curriculum
-    // reads, and there is no concurrent race left on a shared unit's
-    // coverage check for a screen-level fix to worry about.
+    // B8 (AD-31): ONE un-learn covering every un-ticked ref of this user
+    // action. A node event covering part of them is voided and re-issued as
+    // Before-tracking events for the rest by the command itself.
     //
-    // AUD-onboarding-07: still await the write BEFORE signalling the
-    // dependent providers below — completionCommittedProvider watchers are
-    // reactively derived, not directly written here, so signalling first
-    // let a listener refetch before the write landed, showing a stale
-    // (pre-expunge) value with nothing to correct it once the write later
-    // completed.
+    // The refs stop counting as recorded as soon as they are unticked, so a
+    // re-tick before Confirm captures them again instead of being filtered
+    // out as "already recorded" after their events were voided. A failed
+    // un-learn leaves them recorded, so they go back.
+    final unticked = {
+      for (final r in refs)
+        if (_preTicked.remove(r) case final sel?) r: sel,
+    };
     var failed = false;
     try {
-      await service.expungePriorCompletions(
-        sefariaRefs: refs,
-        curriculumId: widget.curriculumId,
-      );
-    } catch (e, st) {
+      final result = await ref
+          .read(beforeTrackingRecorderProvider)
+          .unrecord(curriculumId: widget.curriculumId, sefariaRefs: refs);
+      failed = result is! CaptureSuccess;
+    } on Exception catch (e, st) {
       failed = true;
       AppLogger.instance.error(
         event: 'expunge failed',
@@ -336,6 +324,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         stackTrace: st,
       );
     }
+    if (failed) _preTicked.addAll(unticked);
 
     // AUD-onboarding-01 (SM-4): the await above may outlive this screen
     // (backgrounding, popping mid-expunge) — touching ref/context below
@@ -343,22 +332,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     if (!mounted) return;
 
     if (failed) {
-      // Fix 3b: expungePriorCompletions's D-E throws (missing collaborators,
-      // content item not found, indeterminate coverage) used to be caught
-      // here, logged, and otherwise swallowed — the UI reported success on
-      // every failure. Surface it instead, matching this app's established
-      // save/load-failure pattern (lifetime_marking_screen.dart's
-      // `l10n.lifetimeMarkSaveError` SnackBar): a friendly, localized
-      // message, never the raw exception. expungePriorCompletions is
-      // retry-safe (Fix 3a: an empty match no longer short-circuits the
-      // coverage-check-and-retract step), so no bespoke retry UI is needed
-      // here — un-ticking again converges correctly.
-      // Untested: this screen's own test files (bulk_mark_screen_expunge_
-      // ordering_test.dart, onboarding_bulk_l1_test.dart) cannot currently
-      // even LOAD (pre-existing, unrelated compile break from the
-      // mid-migration Drift/tutoring cluster elsewhere in the repo), so
-      // there is no way to write a runnable test for this SnackBar right
-      // now — tracked separately, pending that suite's rewrite.
+      // A friendly, localized message, never the raw exception; un-ticking
+      // again retries.
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(
         context,
@@ -366,19 +341,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     }
 
     // Signal completion-aware providers to rebuild — mirrors the live mark
-    // path (text_display_screen.dart, Story 26.13/DNI-356) instead of
-    // hand-picking providers to invalidate. The previous hand-picked list
-    // here (dashboardCompletionPercentageProvider, dashboardLastCompletionProvider,
-    // progressOverviewStatsProvider) never fired this shared signal, so
-    // persistently-mounted Dashboard/Progress "Lifetime" tiles
-    // (lifetimeTotalsAcrossAllCurriculaProvider, trackDualProgressMetricsProvider,
-    // journeyViewModelProvider) kept showing stale numbers after an
-    // un-mark — those tiles all watch completionCommittedProvider, and
-    // nothing else was refreshing them once mounted. Signalled even on
-    // failure: step 1/2 (tombstoning) runs before the step that can throw,
-    // so a mid-batch failure can still have left real tombstones behind —
-    // leaving the UI stale on failure is the exact bug class
-    // AUD-onboarding-07 already fixed for the success path.
+    // path (text_display_screen.dart, Story 26.13/DNI-356).
     ref.read(completionCommittedProvider.notifier).increment();
   }
 
@@ -391,8 +354,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   Future<void> _proceedToConfirmation() async {
     if (_selections.isEmpty) return;
 
-    final service = ref.read(bulkPriorCompletionServiceProvider);
-    final resolved = await service.resolveSelections(
+    final recorder = ref.read(beforeTrackingRecorderProvider);
+    final resolved = await recorder.resolveSelections(
       curriculumId: widget.curriculumId,
       selections: _selections.toList(),
     );
@@ -439,52 +402,56 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     setState(() => _phase = _Phase.processing);
 
     try {
-      final service = ref.read(bulkPriorCompletionServiceProvider);
+      // One before_tracking capture for the whole selection (R10), less the
+      // leaves still recorded from before this screen opened.
+      final recorded = _preTicked.values.toSet();
+      final result = await ref
+          .read(beforeTrackingRecorderProvider)
+          .record(
+            curriculumId: widget.curriculumId,
+            selections: _selections
+                .where((sel) => !recorded.contains(sel))
+                .toList(),
+          );
 
-      // B5: Stage-picker removed — pass stage 1 as the baseline; the service
-      // (B6 fix in Agent E's version) automatically unions in all configured
-      // stages so every track stage is satisfied.
-      final result = await service.execute(
-        curriculumId: widget.curriculumId,
-        resolvedItems: _resolvedItems!,
-        stageIds: const [1],
-      );
-
-      // AUD-onboarding-01 (SM-4): execute() commits the bulk-mark write and
-      // may still be in flight when this screen is popped. Touching setState
-      // below unconditionally after that await throws once this State is
-      // disposed.
+      // AUD-onboarding-01 (SM-4): record() may still be in flight when this
+      // screen is popped. Touching setState below unconditionally after
+      // that await throws once this State is disposed.
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
 
-      setState(() {
-        _result = result;
-        _phase = _Phase.done;
-      });
-
-      // Wave 5 Task #17: post-save toast clarifying tier credit — shown
-      // immediately after the bulk-mark commits so users see WHERE the items
-      // will land (Lifetime Knowledge, possibly unlocking siyumim).
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.bulkMarkConfirmationToast(result.itemCount)),
-          ),
-        );
+      switch (result.capture) {
+        case CaptureSuccess():
+          setState(() {
+            _result = result;
+            _phase = _Phase.done;
+          });
+          // Wave 5 Task #17: post-save toast clarifying where the items land.
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.bulkMarkConfirmationToast(result.itemCount)),
+            ),
+          );
+          // Signal all completion-aware providers to rebuild.
+          ref.read(completionCommittedProvider.notifier).increment();
+        case CaptureLocked():
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.captureLockedNotice)));
+          setState(() => _phase = _Phase.confirmation);
+        case _:
+          // Not saved: a batch the server rejected for good is announced
+          // with Retry by the PendingCaptureFailureListener below.
+          setState(() {
+            _error = l10n.errorSaveFailed;
+            _phase = _Phase.confirmation;
+          });
       }
-
-      // Signal all completion-aware providers to rebuild immediately after
-      // bulk mark — same fix and rationale as _expungeRefs above.
-      ref.read(completionCommittedProvider.notifier).increment();
-    } catch (e) {
-      // AUD-onboarding-01 (SM-4): the try block above awaits execute(); if
-      // this screen was popped while that write was in flight and it then
-      // throws, touching setState here unconditionally throws again (on a
-      // disposed State) instead of surfacing the original error.
+    } on Exception {
+      // AUD-onboarding-01 (SM-4): see above — never touch a disposed State.
       if (!mounted) return;
       // AUD-onboarding-05 (EH-5): never surface the raw exception's
-      // toString() in the UI -- it is untranslated and leaks implementation
-      // detail. Show a localized, user-facing message instead.
+      // toString() in the UI -- show a localized message instead.
       final l10n = AppLocalizations.of(context)!;
       setState(() {
         _error = l10n.errorSaveFailed;
@@ -538,12 +505,14 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             ),
         ],
       ),
-      body: switch (_phase) {
-        _Phase.selection => _buildSelection(theme),
-        _Phase.confirmation => _buildConfirmation(theme),
-        _Phase.processing => _buildProcessing(theme),
-        _Phase.done => _buildDone(theme),
-      },
+      body: PendingCaptureFailureListener(
+        child: switch (_phase) {
+          _Phase.selection => _buildSelection(theme),
+          _Phase.confirmation => _buildConfirmation(theme),
+          _Phase.processing => _buildProcessing(theme),
+          _Phase.done => _buildDone(theme),
+        },
+      ),
     );
   }
 
@@ -804,8 +773,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               if (result != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Marked ${result.itemCount} items as completed '
-                  '(${result.completionCount} records)',
+                  AppLocalizations.of(
+                    context,
+                  )!.bulkMarkedComplete(result.itemCount),
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -816,7 +786,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                   result != null
                       ? BulkMarkResult(
                           itemCount: result.itemCount,
-                          completionCount: result.completionCount,
+                          completionCount: result.eventCount,
                         )
                       : null,
                 ),

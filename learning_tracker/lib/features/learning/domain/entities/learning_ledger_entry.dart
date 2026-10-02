@@ -116,8 +116,8 @@ class LearningLedgerEntry {
   /// every other call site (no enum exists for this field either).
   final String trackType;
 
-  /// The real completion moment, or the sentinel `kBulkPriorSentinelDate`
-  /// (`lib/core/learning/completion_constants.dart`) for a non-live source.
+  /// The completion moment (legacy rows may still carry the retired
+  /// `2000-01-01` sentinel of a non-live source; R10, DNI-473).
   /// That policy decision (which `CompletionSource` credits engagement)
   /// belongs to the caller — this Firestore-shaped model just carries
   /// whatever value it is given.

@@ -56,8 +56,6 @@ abstract final class AnalyticsEvent {
   static const tutorGrantRevoked = 'tutor_grant_revoked';
   static const tutorResigned = 'tutor_resigned';
   static const tutorLiveMarkBlocked = 'tutor_live_mark_blocked';
-  static const bulkEngagementSkipped = 'bulk_engagement_skipped';
-  static const lifetimeAchievementSkipped = 'lifetime_achievement_skipped';
 
   // Sub-tracks AD-47 learning events (emitted only through
   // `LearningAnalytics`; enums and counts only).

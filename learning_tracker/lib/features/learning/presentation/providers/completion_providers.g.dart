@@ -8,11 +8,10 @@ part of 'completion_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provides the completion repository — storage-only since the
-/// completion-orchestrator lift (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). See [completionOrchestratorProvider] for where order
-/// validation, points, siyum detection, bookmark advance and streak now
-/// live.
+/// Provides the legacy completion repository — storage and reads only.
+/// Story 1.11 (DNI-473) moved every owner learning write onto
+/// `LearningCommands` (`learning_events`); the R1 story retires this
+/// repository with its readers.
 ///
 /// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
 /// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
@@ -21,11 +20,10 @@ part of 'completion_providers.dart';
 @ProviderFor(completionRepository)
 final completionRepositoryProvider = CompletionRepositoryProvider._();
 
-/// Provides the completion repository — storage-only since the
-/// completion-orchestrator lift (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). See [completionOrchestratorProvider] for where order
-/// validation, points, siyum detection, bookmark advance and streak now
-/// live.
+/// Provides the legacy completion repository — storage and reads only.
+/// Story 1.11 (DNI-473) moved every owner learning write onto
+/// `LearningCommands` (`learning_events`); the R1 story retires this
+/// repository with its readers.
 ///
 /// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
 /// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
@@ -39,11 +37,10 @@ final class CompletionRepositoryProvider
           CompletionRepository
         >
     with $Provider<CompletionRepository> {
-  /// Provides the completion repository — storage-only since the
-  /// completion-orchestrator lift (`docs/firestore-rewrite-map.md`, owner
-  /// decision 1). See [completionOrchestratorProvider] for where order
-  /// validation, points, siyum detection, bookmark advance and streak now
-  /// live.
+  /// Provides the legacy completion repository — storage and reads only.
+  /// Story 1.11 (DNI-473) moved every owner learning write onto
+  /// `LearningCommands` (`learning_events`); the R1 story retires this
+  /// repository with its readers.
   ///
   /// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
   /// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
@@ -85,156 +82,9 @@ final class CompletionRepositoryProvider
 String _$completionRepositoryHash() =>
     r'50a66b9ac044d5347a9d015c7b7c346fff3a641b';
 
-/// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
-///
-/// This provider participates in a completion write that awaits an async
-/// Firestore gap before using the port again. It must survive when the last
-/// listener drops to zero; autoDispose would tear down its [Ref] during that
-/// gap and make the later points lookup fail.
-
-@ProviderFor(completionPointsPort)
-final completionPointsPortProvider = CompletionPointsPortProvider._();
-
-/// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
-///
-/// This provider participates in a completion write that awaits an async
-/// Firestore gap before using the port again. It must survive when the last
-/// listener drops to zero; autoDispose would tear down its [Ref] during that
-/// gap and make the later points lookup fail.
-
-final class CompletionPointsPortProvider
-    extends
-        $FunctionalProvider<
-          CompletionPointsPort,
-          CompletionPointsPort,
-          CompletionPointsPort
-        >
-    with $Provider<CompletionPointsPort> {
-  /// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
-  ///
-  /// This provider participates in a completion write that awaits an async
-  /// Firestore gap before using the port again. It must survive when the last
-  /// listener drops to zero; autoDispose would tear down its [Ref] during that
-  /// gap and make the later points lookup fail.
-  CompletionPointsPortProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'completionPointsPortProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$completionPointsPortHash();
-
-  @$internal
-  @override
-  $ProviderElement<CompletionPointsPort> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  CompletionPointsPort create(Ref ref) {
-    return completionPointsPort(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(CompletionPointsPort value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<CompletionPointsPort>(value),
-    );
-  }
-}
-
-String _$completionPointsPortHash() =>
-    r'bab952a3e0313b372613166e4375f4c3953f70ae';
-
-/// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
-///
-/// The recorder resolves its own repository from `ref`, so this presentation
-/// provider never names a data-access-ring type (AD-23/AD-28).
-///
-/// This provider participates in a completion write that awaits an async
-/// Firestore gap before using the port again. It must survive when the last
-/// listener drops to zero; autoDispose would tear down its [Ref] during that
-/// gap and make the later streak write fail.
-
-@ProviderFor(completionStreakPort)
-final completionStreakPortProvider = CompletionStreakPortProvider._();
-
-/// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
-///
-/// The recorder resolves its own repository from `ref`, so this presentation
-/// provider never names a data-access-ring type (AD-23/AD-28).
-///
-/// This provider participates in a completion write that awaits an async
-/// Firestore gap before using the port again. It must survive when the last
-/// listener drops to zero; autoDispose would tear down its [Ref] during that
-/// gap and make the later streak write fail.
-
-final class CompletionStreakPortProvider
-    extends
-        $FunctionalProvider<
-          CompletionStreakPort,
-          CompletionStreakPort,
-          CompletionStreakPort
-        >
-    with $Provider<CompletionStreakPort> {
-  /// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
-  ///
-  /// The recorder resolves its own repository from `ref`, so this presentation
-  /// provider never names a data-access-ring type (AD-23/AD-28).
-  ///
-  /// This provider participates in a completion write that awaits an async
-  /// Firestore gap before using the port again. It must survive when the last
-  /// listener drops to zero; autoDispose would tear down its [Ref] during that
-  /// gap and make the later streak write fail.
-  CompletionStreakPortProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'completionStreakPortProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$completionStreakPortHash();
-
-  @$internal
-  @override
-  $ProviderElement<CompletionStreakPort> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  CompletionStreakPort create(Ref ref) {
-    return completionStreakPort(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(CompletionStreakPort value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<CompletionStreakPort>(value),
-    );
-  }
-}
-
-String _$completionStreakPortHash() =>
-    r'01dbd72ead497b624ba81ba69a4ecf3a2fbf562c';
-
-/// Provides the [CompletionDetectionService] — the single "is this unit
-/// covered" + siyum-crediting service, shared (Riverpod-cached) between
-/// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
-/// `BulkPriorCompletionService`'s D-M retraction path, rather than each
-/// constructing its own instance.
+/// Provides the [CompletionDetectionService] — the legacy "is this unit
+/// covered" + siyum-crediting service (an R3 reader, retired by its own
+/// story).
 ///
 /// This provider participates in a completion write that awaits an async
 /// Firestore gap before using the service again. It must survive when the last
@@ -245,11 +95,9 @@ String _$completionStreakPortHash() =>
 final completionDetectionServiceProvider =
     CompletionDetectionServiceProvider._();
 
-/// Provides the [CompletionDetectionService] — the single "is this unit
-/// covered" + siyum-crediting service, shared (Riverpod-cached) between
-/// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
-/// `BulkPriorCompletionService`'s D-M retraction path, rather than each
-/// constructing its own instance.
+/// Provides the [CompletionDetectionService] — the legacy "is this unit
+/// covered" + siyum-crediting service (an R3 reader, retired by its own
+/// story).
 ///
 /// This provider participates in a completion write that awaits an async
 /// Firestore gap before using the service again. It must survive when the last
@@ -264,11 +112,9 @@ final class CompletionDetectionServiceProvider
           CompletionDetectionService
         >
     with $Provider<CompletionDetectionService> {
-  /// Provides the [CompletionDetectionService] — the single "is this unit
-  /// covered" + siyum-crediting service, shared (Riverpod-cached) between
-  /// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
-  /// `BulkPriorCompletionService`'s D-M retraction path, rather than each
-  /// constructing its own instance.
+  /// Provides the [CompletionDetectionService] — the legacy "is this unit
+  /// covered" + siyum-crediting service (an R3 reader, retired by its own
+  /// story).
   ///
   /// This provider participates in a completion write that awaits an async
   /// Firestore gap before using the service again. It must survive when the last
@@ -310,219 +156,6 @@ final class CompletionDetectionServiceProvider
 
 String _$completionDetectionServiceHash() =>
     r'29b67f8038110470ee0efef9499c10525d252d23';
-
-/// Provides the [CompletionOrchestrator] — the single place the five
-/// completion side effects live (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
-/// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
-/// through this, not [completionRepositoryProvider] directly.
-///
-/// This provider owns a completion write that awaits an async Firestore gap
-/// before running its remaining side effects. It must survive when the last
-/// listener drops to zero; autoDispose would tear down the dependency chain's
-/// [Ref] during that gap and make the write fail.
-
-@ProviderFor(completionOrchestrator)
-final completionOrchestratorProvider = CompletionOrchestratorProvider._();
-
-/// Provides the [CompletionOrchestrator] — the single place the five
-/// completion side effects live (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
-/// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
-/// through this, not [completionRepositoryProvider] directly.
-///
-/// This provider owns a completion write that awaits an async Firestore gap
-/// before running its remaining side effects. It must survive when the last
-/// listener drops to zero; autoDispose would tear down the dependency chain's
-/// [Ref] during that gap and make the write fail.
-
-final class CompletionOrchestratorProvider
-    extends
-        $FunctionalProvider<
-          CompletionOrchestrator,
-          CompletionOrchestrator,
-          CompletionOrchestrator
-        >
-    with $Provider<CompletionOrchestrator> {
-  /// Provides the [CompletionOrchestrator] — the single place the five
-  /// completion side effects live (`docs/firestore-rewrite-map.md`, owner
-  /// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
-  /// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
-  /// through this, not [completionRepositoryProvider] directly.
-  ///
-  /// This provider owns a completion write that awaits an async Firestore gap
-  /// before running its remaining side effects. It must survive when the last
-  /// listener drops to zero; autoDispose would tear down the dependency chain's
-  /// [Ref] during that gap and make the write fail.
-  CompletionOrchestratorProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'completionOrchestratorProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$completionOrchestratorHash();
-
-  @$internal
-  @override
-  $ProviderElement<CompletionOrchestrator> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  CompletionOrchestrator create(Ref ref) {
-    return completionOrchestrator(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(CompletionOrchestrator value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<CompletionOrchestrator>(value),
-    );
-  }
-}
-
-String _$completionOrchestratorHash() =>
-    r'c86d918e29e5e52c6192e89392c715973d565d5e';
-
-/// Provides the mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the write resumes.
-
-@ProviderFor(markCompletionUseCase)
-final markCompletionUseCaseProvider = MarkCompletionUseCaseProvider._();
-
-/// Provides the mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the write resumes.
-
-final class MarkCompletionUseCaseProvider
-    extends
-        $FunctionalProvider<
-          MarkCompletionUseCase,
-          MarkCompletionUseCase,
-          MarkCompletionUseCase
-        >
-    with $Provider<MarkCompletionUseCase> {
-  /// Provides the mark completion use case.
-  ///
-  /// This use case is reached by a one-shot read and then awaits an async
-  /// Firestore gap. It must survive when the last listener drops to zero;
-  /// autoDispose would tear down the completion chain before the write resumes.
-  MarkCompletionUseCaseProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'markCompletionUseCaseProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$markCompletionUseCaseHash();
-
-  @$internal
-  @override
-  $ProviderElement<MarkCompletionUseCase> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  MarkCompletionUseCase create(Ref ref) {
-    return markCompletionUseCase(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(MarkCompletionUseCase value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<MarkCompletionUseCase>(value),
-    );
-  }
-}
-
-String _$markCompletionUseCaseHash() =>
-    r'59e04d8acd937835b69bee2a6df945a22c99adc9';
-
-/// Provides the bulk mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the bulk write
-/// resumes.
-
-@ProviderFor(bulkMarkCompletionUseCase)
-final bulkMarkCompletionUseCaseProvider = BulkMarkCompletionUseCaseProvider._();
-
-/// Provides the bulk mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the bulk write
-/// resumes.
-
-final class BulkMarkCompletionUseCaseProvider
-    extends
-        $FunctionalProvider<
-          BulkMarkCompletionUseCase,
-          BulkMarkCompletionUseCase,
-          BulkMarkCompletionUseCase
-        >
-    with $Provider<BulkMarkCompletionUseCase> {
-  /// Provides the bulk mark completion use case.
-  ///
-  /// This use case is reached by a one-shot read and then awaits an async
-  /// Firestore gap. It must survive when the last listener drops to zero;
-  /// autoDispose would tear down the completion chain before the bulk write
-  /// resumes.
-  BulkMarkCompletionUseCaseProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'bulkMarkCompletionUseCaseProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$bulkMarkCompletionUseCaseHash();
-
-  @$internal
-  @override
-  $ProviderElement<BulkMarkCompletionUseCase> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  BulkMarkCompletionUseCase create(Ref ref) {
-    return bulkMarkCompletionUseCase(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(BulkMarkCompletionUseCase value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<BulkMarkCompletionUseCase>(value),
-    );
-  }
-}
-
-String _$bulkMarkCompletionUseCaseHash() =>
-    r'2be1d6bc1dc3c2bfdf44c298332a250d3ad831e0';
 
 /// Provides the number of completions for a specific content item,
 /// scoped to the active profile.

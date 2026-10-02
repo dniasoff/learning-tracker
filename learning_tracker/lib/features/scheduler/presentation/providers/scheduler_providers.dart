@@ -504,12 +504,6 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
     final completions = completionsByCurriculum[task.curriculumId] ?? const [];
     return completions.any((c) {
       if (c.sefariaRef != task.contentItemSefariaRef) return false;
-      // Sentinel completions (bulk-prior mark, completedAt = 2000-01-01) are
-      // not genuine study sessions. They must NOT filter today's new-learning
-      // tasks — the user still needs to study these items. (F5)
-      if (c.completedAt.millisecondsSinceEpoch ==
-          SchedulerEngine.kBulkPriorSentinelMs)
-        return false;
       return c.stageOrder == task.stageOrder;
     });
   }

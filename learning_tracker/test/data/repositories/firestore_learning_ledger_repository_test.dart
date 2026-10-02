@@ -315,7 +315,7 @@ void main() {
   });
 
   group('getLedgerForCurriculumIncludingTombstoned — D-M epoch-rule seam', () {
-    // `BulkPriorCompletionService.expungePriorCompletions`'s "epoch rule"
+    // The retired bulk-prior expunge's "epoch rule"
     // (retract at most one ledger entry per unit per genuine coverage-loss
     // event, never cascade down to older historical entries) depends on
     // this method actually returning tombstoned entries. A prior round of

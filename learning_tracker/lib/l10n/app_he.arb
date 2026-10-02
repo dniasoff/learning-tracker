@@ -1444,6 +1444,33 @@
   "searchTitle": "חיפוש",
   "searchHintEnterTerm": "הזינו מונח חיפוש למעלה",
   "loadingText": "טוען טקסט...",
+  "captureBeforeTrackingHint": "נלמד לפני שהתחלתי לעקוב",
+  "captureChangeDate": "שינוי",
+  "captureDateLabel": "תאריך הלימוד",
+  "captureLockedNotice": "לא נרשם — האפליקציה סגורה בשבת וביום טוב.",
+  "captureNotSaved": "לא נשמר — הלימוד לא נרשם.",
+  "captureRecordCount": "רישום {count}",
+  "@captureRecordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "captureRecordedCount": "נרשמו {count}",
+  "@captureRecordedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "captureSourceHome": "בית",
+  "captureSourceQuestion": "איפה למדת את זה?",
+  "captureStateLearnt": "נלמד",
+  "captureStateNotLearnt": "טרם נלמד",
+  "captureStatePartial": "נלמד בחלקו",
+  "captureTickUpToHere": "סימון עד כאן",
   "markedComplete": "סומן כהושלם",
   "couldNotSave": "לא ניתן לשמור: {error}",
   "@couldNotSave": {
@@ -2580,10 +2607,6 @@
         "type": "String"
       }
     }
-  },
-  "siyumimPreviouslyLearnedDate": "נלמד בעבר",
-  "@siyumimPreviouslyLearnedDate": {
-    "description": "Replaces the achievement date on a Siyumim & Milestones row (and the timeline's month-group header) when the milestone's achievedAt is the bulk-mark-prior sentinel date rather than a real completion moment."
   },
   "paceLiveLearningOnlyCaption": "הקצב עוקב אחר לימוד במסלולים בלבד.",
   "@paceLiveLearningOnlyCaption": {

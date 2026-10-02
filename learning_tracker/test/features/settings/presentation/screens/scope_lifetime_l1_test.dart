@@ -30,7 +30,7 @@
 //     • "Select all in this list" button is present.
 //     • Save button is disabled when no selections.
 //     • Clear button is disabled when no selections.
-//     • Bulk-mark path: selecting + confirming calls recordCompletionsBatch
+//     • Save records ONE before_tracking capture (Story 1.11, DNI-473)
 //       with CompletionSource.lifetimeOnly (sentinel date — credits lifetime
 //       without leaking into streak/recent-activity). [Product rule]
 //     • he-RTL smoke: renders under Hebrew locale without crash.
@@ -54,17 +54,24 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_index_corpus.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
@@ -73,6 +80,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/pump_app.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -385,9 +393,12 @@ Widget _buildLifetimeApp({
 
 // ── Widget factory — LifetimeCurriculumMarkingScreen ─────────────────────────
 
+class _NoBookmarks extends Fake implements BookmarkRepository {}
+
 Widget _buildCurriculumMarkingApp({
   ContentRepository? contentRepo,
   LearningLedgerRepository? ledgerRepo,
+  LearningCommands? commands,
   bool useHebrew = false,
   Locale locale = const Locale('en'),
   String curriculumId = 'mishnayos',
@@ -403,6 +414,15 @@ Widget _buildCurriculumMarkingApp({
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
       contentRepositoryProvider.overrideWithValue(repo),
       learningLedgerRepositoryProvider.overrideWithValue(ledger),
+      // Story 1.11 (DNI-473): Save records one before_tracking capture.
+      beforeTrackingRecorderProvider.overrideWithValue(
+        BeforeTrackingRecorder(
+          contentRepository: repo,
+          bookmarkRepository: _NoBookmarks(),
+          commands: () async => commands ?? FakeLearningCommands(),
+          events: () async => const [],
+        ),
+      ),
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
       else
@@ -1418,139 +1438,66 @@ void main() {
     });
   });
 
-  group('LifetimeCurriculumMarkingScreen — bulk-mark completion-credit policy', () {
-    // Product rule: bulk-mark uses sentinel date (DateTime.utc(2000, 1, 1))
-    // so it credits lifetime/siyum WITHOUT leaking into streak/recent-activity.
-    // The repository default source is CompletionSource.lifetimeOnly.
-    //
-    // This test verifies that recordCompletionsBatch is called when the user
-    // confirms selections, and that the call is made via the repository
-    // (which applies the sentinel date internally via CompletionSource.lifetimeOnly).
-    testWidgets(
-      'recordCompletionsBatch called after confirming selections (policy: lifetimeOnly sentinel)',
-      (tester) async {
-        final mockRepo = _MockLearningLedgerRepository();
-        when(
-          () => mockRepo.recordCompletionsBatch(
-            any<List<LedgerEntryDraft>>(),
-            source: any<CompletionSource>(named: 'source'),
-          ),
-        ).thenAnswer((_) async => []);
+  group('LifetimeCurriculumMarkingScreen — Before-tracking capture (R10)', () {
+    // Story 1.11 (DNI-473): lifetime marks are `before_tracking` learning
+    // events (no learned_on, no points, no streak), written as ONE capture
+    // through LearningCommands — never the legacy learning ledger.
+    testWidgets('idle render writes nothing and Save is disabled', (
+      tester,
+    ) async {
+      final commands = FakeLearningCommands();
+      addTearDown(commands.dispose);
+      await _pump(tester, _buildCurriculumMarkingApp(commands: commands));
 
-        await _pump(tester, _buildCurriculumMarkingApp(ledgerRepo: mockRepo));
+      final saveBtn = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Save'),
+      );
+      expect(saveBtn.onPressed, isNull);
+      expect(commands.calls.where((c) => c.name == 'capture'), isEmpty);
 
-        // The HierarchySelectionPanel loads content from the mock repo.
-        // We cannot drill into HierarchySelectionPanel in this L1 test
-        // (it relies on real content rendering with GlobalKey).
-        // Instead verify the scaffolding: Save is disabled when _selections==[].
-        final saveButtons = find.widgetWithText(FilledButton, 'Save');
-        expect(saveButtons, findsOneWidget);
+      await _tearDown(tester);
+    });
 
-        final saveBtn = tester.widget<FilledButton>(saveButtons);
-        // No selections → onPressed is null (disabled).
-        expect(saveBtn.onPressed, isNull);
+    testWidgets('Save drives the real _markSelections call — one '
+        'before_tracking capture of the marked nodes, each with its level, '
+        'and no learned_on', (tester) async {
+      final commands = FakeLearningCommands();
+      addTearDown(commands.dispose);
+      final ledger = _MockLearningLedgerRepository();
+      await _pump(
+        tester,
+        _buildCurriculumMarkingApp(ledgerRepo: ledger, commands: commands),
+      );
 
-        // Verify the mock was NOT called (no spurious calls on idle render).
-        verifyNever(
-          () => mockRepo.recordCompletionsBatch(
-            any<List<LedgerEntryDraft>>(),
-            source: any<CompletionSource>(named: 'source'),
-          ),
-        );
+      await tester.tap(find.text('Select all in this list'));
+      await tester.pump();
+      final saveButtons = find.widgetWithText(FilledButton, 'Save');
+      expect(tester.widget<FilledButton>(saveButtons).onPressed, isNotNull);
 
-        await _tearDown(tester);
-      },
-    );
+      await tester.tap(saveButtons);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-    testWidgets(
-      'Save drives the real _markSelections call — recordCompletionsBatch is '
-      'invoked with no explicit source override (repository default stays '
-      'lifetimeOnly)',
-      (tester) async {
-        // AUD-t-settings-03: the previous version of this test never touched
-        // LifetimeCurriculumMarkingScreen — it built a standalone
-        // _MockLearningLedgerRepository and called
-        // stub.recordCompletionsBatch(const []) directly, so it asserted a
-        // fact about the test's own mock, not about production code (it
-        // would keep passing even if the real call site started passing an
-        // explicit `source: CompletionSource.live` override).
-        //
-        // This version drives the REAL screen: taps "Select all in this
-        // list" to populate _selections from HierarchySelectionPanel's
-        // actual display items (loaded through the mocked content repo —
-        // contrary to this file's older comments elsewhere, the panel CAN
-        // be driven at L1 without GlobalKey drilling; see
-        // lifetime_marking_toggle_level_test.dart's IL-TOGGLE/IL-LEVEL
-        // tests, which tap the same button), then taps Save, and inspects
-        // the captured Invocation from the real
-        // lifetime_marking_screen.dart:592 call site.
-        final mockRepo = _MockLearningLedgerRepository();
-        Invocation? captured;
-        when(
-          () => mockRepo.recordCompletionsBatch(
-            any<List<LedgerEntryDraft>>(),
-            source: any<CompletionSource>(named: 'source'),
-          ),
-        ).thenAnswer((inv) async {
-          captured = inv;
-          return [];
-        });
+      final capture = commands.calls.singleWhere((c) => c.name == 'capture');
+      expect(capture.args['dateState'], DateState.beforeTracking);
+      expect(capture.args['learnedOn'], isNull);
+      expect(capture.args['source'], LearningEvent.sourceMain);
+      final nodes = capture.args['nodes']! as List<NodeEntry>;
+      expect(nodes.map((n) => n.ref), ['Mishnah_Zeraim', 'Mishnah_Moed']);
+      final seder = contentLevelName(
+        CurriculumLabels.labelsEn(CurriculumId.mishnayos),
+        1,
+      );
+      expect(nodes.every((n) => n.level == seder), isTrue);
+      verifyNever(
+        () => ledger.recordCompletionsBatch(
+          any<List<LedgerEntryDraft>>(),
+          source: any<CompletionSource>(named: 'source'),
+        ),
+      );
 
-        await _pump(tester, _buildCurriculumMarkingApp(ledgerRepo: mockRepo));
-
-        await tester.tap(find.text('Select all in this list'));
-        await tester.pump();
-
-        final saveButtons = find.widgetWithText(FilledButton, 'Save');
-        final saveBtn = tester.widget<FilledButton>(saveButtons);
-        expect(
-          saveBtn.onPressed,
-          isNotNull,
-          reason:
-              '"Select all in this list" must populate a real selection so '
-              'Save becomes enabled — otherwise this test cannot reach the '
-              'real _markSelections call site',
-        );
-
-        await tester.tap(saveButtons);
-        await tester.pump();
-
-        verify(
-          () => mockRepo.recordCompletionsBatch(
-            any<List<LedgerEntryDraft>>(),
-            source: any<CompletionSource>(named: 'source'),
-          ),
-        ).called(1);
-
-        expect(
-          captured,
-          isNotNull,
-          reason:
-              'recordCompletionsBatch must have been invoked by the real '
-              'Save flow, not skipped',
-        );
-        // NOTE: Dart resolves the `source` named parameter's default value
-        // (CompletionSource.lifetimeOnly) at the CALL SITE against the
-        // statically-typed LearningLedgerRepository interface, so the
-        // captured Invocation always carries a #source key — even though
-        // _markSelections's own source code omits `source:` entirely. The
-        // only way this test can distinguish "relying on the default" from
-        // "an explicit CompletionSource.live override" is by asserting on
-        // the captured VALUE, not on whether the key is present.
-        expect(
-          captured!.namedArguments[#source],
-          equals(CompletionSource.lifetimeOnly),
-          reason:
-              'Completion-credit policy: the real Save flow '
-              '(lifetime_marking_screen.dart _markSelections) must resolve '
-              'to CompletionSource.lifetimeOnly — an explicit '
-              'CompletionSource.live override would inflate streak/points '
-              'from a lifetime bulk-mark',
-        );
-
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   group('LifetimeCurriculumMarkingScreen — he-RTL smoke', () {

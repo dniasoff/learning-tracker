@@ -9,6 +9,8 @@
 /// [contentIndexCorpus].
 library;
 
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
@@ -20,6 +22,34 @@ String contentLevelName(List<String> levelLabels, int depth) =>
     depth <= levelLabels.length
     ? levelLabels[depth - 1].toLowerCase()
     : 'level$depth';
+
+/// The ContentIndex node depth of [item]: its deepest non-null level.
+int contentDepthOf(ContentItem item) => item.level4 != null
+    ? 4
+    : item.level3 != null
+    ? 3
+    : item.level2 != null
+    ? 2
+    : 1;
+
+/// The [NodeEntry] of a container [item] of [curriculumId], with the level
+/// name the engine's corpus uses (`contentIndexCorpus`).
+NodeEntry nodeEntryOf(CurriculumId curriculumId, ContentItem item) => NodeEntry(
+  level: contentLevelName(
+    CurriculumLabels.labelsEn(curriculumId),
+    contentDepthOf(item),
+  ),
+  ref: item.sefariaRef,
+);
+
+/// The unscoped [Corpus] of [curriculumId] built from its ContentIndex
+/// [items] with the central hierarchy labels (`CurriculumLabels.labelsEn`).
+Corpus corpusOf(CurriculumId curriculumId, List<ContentItem> items) =>
+    contentIndexCorpus(
+      curriculumId: curriculumId.storageKey,
+      items: items,
+      levelLabels: CurriculumLabels.labelsEn(curriculumId),
+    );
 
 /// Builds the unscoped [Corpus] of [curriculumId] from its ContentIndex
 /// [items] (containers and leaves) and hierarchy [levelLabels].

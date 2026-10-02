@@ -5,7 +5,6 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
@@ -17,15 +16,18 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 import 'package:learning_tracker/core/utils/gematriya.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
-import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -649,9 +651,11 @@ DailyTask? _nextDailyTaskAfterRefs(List<DailyTask> tasks, Set<String> refs) {
 }
 
 /// Mark completion section. Resolves the curriculum + stage for this sefariaRef
-/// from today's scheduled tasks, then records the completion directly via
-/// [markCompletionUseCaseProvider] and invalidates dashboard providers so
-/// progress, streak, points, and daily tasks all refresh.
+/// from today's scheduled tasks, then records the task's refs as ONE
+/// `LearningCommands.capture` (Story 1.11, DNI-473: a `main`, `dated` batch
+/// whose `pts_` entries the command attaches, AD-50), offers Undo for exactly
+/// that batch (UX-DR-154) and rolls the optimistic "done" state back when the
+/// server rejects it for good (UX-DR-107/147).
 class _CompletionSection extends ConsumerStatefulWidget {
   const _CompletionSection({required this.sefariaRef});
 
@@ -681,6 +685,47 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
     return coarseUnitLeafRefs(items, widget.sefariaRef);
   }
 
+  /// The optimistic "done" key of each event this section recorded, so a
+  /// permanent rejection or an Undo rolls back exactly those refs.
+  final _keysByEvent = <String, String>{};
+
+  // Read once while mounted: an Undo tapped after this reader has moved on
+  // to the next task (the snackbar outlives the route) still rolls back.
+  late final OptimisticCompletionState _optimistic;
+  late final CompletionCommitted _committed;
+
+  @override
+  void initState() {
+    super.initState();
+    _optimistic = ref.read(optimisticCompletionStateProvider.notifier);
+    _committed = ref.read(completionCommittedProvider.notifier);
+  }
+
+  void _applyOptimistic(Map<String, String> keysByEvent) {
+    _keysByEvent.addAll(keysByEvent);
+    keysByEvent.values.forEach(_optimistic.add);
+    _committed.increment();
+  }
+
+  void _rollBack(Iterable<String> eventIds) {
+    for (final id in eventIds) {
+      final key = _keysByEvent.remove(id);
+      if (key != null) _optimistic.remove(key);
+    }
+    _committed.increment();
+  }
+
+  /// A retried failure was saved: re-apply the refs this section recorded
+  /// under its (unchanged) event ids.
+  void _reapply(PendingFailure failure) => _applyOptimistic({
+    for (final id in failure.eventIds)
+      if (_recordedKeys[id] case final key?) id: key,
+  });
+
+  /// Every key this section recorded, by event id, kept for a successful
+  /// retry after a rollback (a retry re-sends the same event ids).
+  final _recordedKeys = <String, String>{};
+
   Future<void> _handleComplete(
     DailyTask task,
     String trackType, {
@@ -695,9 +740,8 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       // Phase 2a — daf-atomic marking: on a COARSE-paced track (daf/perek/seif)
       // one mark completes the WHOLE coarse unit (e.g. both amudim 2a+2b of a
       // daf), because the daf — not the amud — is the unit the learner marks.
-      // The primary ref is marked first (drives the celebration); siblings are
-      // marked in the same action. Each amud stays an independent completion row
-      // (idempotent), so points/siyum/sync are unchanged — just one tap.
+      // Story 1.11 (DNI-473): the whole unit is ONE capture (one tap, one
+      // batch): one learn event per amud, in task order.
       final markRefs = await _refsToMark(task);
       final nextAfterComplete = _nextDailyTaskAfterRefs(
         tasksBefore,
@@ -707,70 +751,72 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       // H1 fix: route the live completion write through MarkLiveCompletionUseCase
       // so the domain guard (TutorWriteForbiddenException) is enforced at the
       // application layer — not just by the UI button being disabled.
-      // This ensures any future call site (keyboard shortcut, notification action,
-      // etc.) that bypasses the UI still hits the domain boundary.
       // AUD-content_browsing-03: inject analytics so tutor_live_mark_blocked
-      // (W7.11) actually fires when the domain guard rejects a tutor
-      // session — without this, `_analytics` stays null inside the use
-      // case and the dashboard-visibility event silently never fires.
-      final markLiveUseCase = MarkLiveCompletionUseCase<MarkCompletionResult>(
+      // (W7.11) fires when the domain guard rejects a tutor session.
+      // AC-6 (DNI-473): the owner branch writes through
+      // LearningCommands.capture; the tutor branch is unchanged.
+      final markLiveUseCase = MarkLiveCompletionUseCase<CaptureResult>(
         session: session,
         analytics: ref.read(analyticsServiceProvider),
       );
-      final completionUseCase = ref.read(markCompletionUseCaseProvider);
-
-      final results = <MarkCompletionResult>[];
-      for (final markRef in markRefs) {
-        results.add(
-          await markLiveUseCase.call(
-            () => completionUseCase(
-              CompletionRequest(
-                curriculumId: task.curriculumId.storageKey,
-                sefariaRef: markRef,
-                stageId: task.stageOrder,
-                trackType: trackType,
-              ),
-            ),
-          ),
+      final result = await markLiveUseCase.call(() async {
+        final commands = await ref.read(learningCommandsProvider.future);
+        if (commands == null) throw const _NoActiveLearnerException();
+        _commands = commands;
+        return commands.capture(
+          curriculumId: task.curriculumId.storageKey,
+          refs: markRefs,
+          source: LearningEvent.sourceMain,
+          dateState: DateState.dated,
+          stage: task.stageOrder,
         );
-      }
-      // Aggregate milestone unlocks across every amud marked in this action.
-      final newUnlocks = [for (final r in results) ...r.newMilestoneUnlocks];
+      });
+      final commands = _commands!;
 
-      // Signal all completion-aware providers to rebuild (Story 26.13 — DNI-356).
-      // Incrementing completionCommittedProvider replaces 14 direct
-      // ref.invalidate() calls: each consumer now watches this counter and
-      // re-fetches automatically on every new commit.
-      ref.read(completionCommittedProvider.notifier).increment();
+      final keys = [
+        for (final markRef in markRefs)
+          optimisticKey(
+            sefariaRef: markRef,
+            stageId: task.stageOrder,
+            trackType: trackType,
+          ),
+      ];
+      final recorded = result is CaptureSuccess
+          ? {
+              for (
+                var i = 0;
+                i < result.eventIds.length && i < keys.length;
+                i++
+              )
+                result.eventIds[i]: keys[i],
+            }
+          : const <String, String>{};
+      if (recorded.isNotEmpty) {
+        _recordedKeys.addAll(recorded);
+        _applyOptimistic(recorded);
+        // Legacy planner position (R4, retired by DNI-478): the bookmark
+        // still advances so today's list moves on exactly as before.
+        await _advanceBookmark(task, markRefs.last);
+      }
 
       if (mounted) {
         setState(() => _saving = false);
       }
+      if (!mounted) return;
 
-      if (mounted) {
-        final userMode = ref.read(dashboardUserModeProvider).asData?.value;
-        if (userMode == ProfileMode.child && newUnlocks.isNotEmpty) {
-          await AchievementUnlockCelebration.showForUnlockedMilestones(
-            context: context,
-            ref: ref,
-            newUnlocks: newUnlocks,
-          );
-        }
-      }
+      final messenger = ScaffoldMessenger.of(context);
+      showCaptureOutcome(
+        context,
+        result: result,
+        commands: commands,
+        message: AppLocalizations.of(context)!.markedComplete,
+        messenger: messenger,
+        onUndone: () => _rollBack(recorded.keys),
+      );
 
-      if (mounted && nextAfterComplete != null) {
+      if (recorded.isNotEmpty && mounted && nextAfterComplete != null) {
         await context.router.replace(
           TextDisplayRoute(sefariaRef: nextAfterComplete.contentItemSefariaRef),
-        );
-        return;
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.markedComplete),
-            duration: const Duration(seconds: 2),
-          ),
         );
       }
     } on TutorWriteForbiddenException {
@@ -832,6 +878,27 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
     }
   }
 
+  LearningCommands? _commands;
+
+  /// Moves the legacy reading-order bookmark past [completedRef]; a failure
+  /// is logged and never undoes the recorded learning.
+  Future<void> _advanceBookmark(DailyTask task, String completedRef) async {
+    try {
+      await ref
+          .read(bookmarkRepositoryProvider)
+          .advanceBookmark(
+            curriculumId: task.curriculumId,
+            completedSefariaRef: completedRef,
+          );
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event: 'completion_bookmark_advance_failed',
+        exception: e,
+        stackTrace: st,
+      );
+    }
+  }
+
   // W6.15/W6.17 / WS3.3e (DEC-21): Returns true only when the current user
   // is *actively viewing a talmid's profile context* (i.e. has passed the
   // TutorPinEntryGate for a specific child). When true, live-mark actions
@@ -876,7 +943,13 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PendingCaptureFailureListener(
+    onFailure: (failure) => _rollBack(failure.eventIds),
+    onRetried: _reapply,
+    child: _buildSection(context),
+  );
+
+  Widget _buildSection(BuildContext context) {
     final dailyTasksAsync = ref.watch(allDailyTasksProvider);
 
     return dailyTasksAsync.when(
@@ -1138,4 +1211,13 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       },
     );
   }
+}
+
+/// The learning commands are not available (no active learner, or the
+/// account is not ready): nothing was recorded.
+class _NoActiveLearnerException implements Exception {
+  const _NoActiveLearnerException();
+
+  @override
+  String toString() => 'no active learner';
 }
