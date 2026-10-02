@@ -29,7 +29,8 @@ enum StreakAlertOutcome {
   /// No streak to protect, or it is already kept today: no alert.
   notAtRisk,
 
-  /// Today's alert time has passed; nothing is scheduled.
+  /// Today's alert time has passed; nothing is scheduled, and an alert
+  /// still pending from an earlier alert time is cancelled.
   tooLate,
 
   /// Now or the alert time is inside a lock window: no alert.
@@ -118,7 +119,16 @@ class StreakAlertService {
 
     final zone = LearnerZone.of(settingsHistory.at(now).timeZone);
     final fireAt = zone.at(parseCivilDay(today), hour: hour, minute: minute);
-    if (!fireAt.isAfter(now)) return StreakAlertOutcome.tooLate;
+    if (!fireAt.isAfter(now)) {
+      // An alert scheduled under an earlier config (a later alert time, or
+      // an earlier day) may still be pending: the current config schedules
+      // nothing, so it must not fire. One that already fired is left in
+      // the tray.
+      if (await _pendingAlertFromMarker(curriculumId, zone, now)) {
+        await cancel(curriculumId);
+      }
+      return StreakAlertOutcome.tooLate;
+    }
 
     final List<LockWindow> locks;
     try {
@@ -150,6 +160,31 @@ class StreakAlertService {
     );
     return StreakAlertOutcome.scheduled;
   }
+
+  /// Whether [curriculumId]'s marker records an alert whose fire time is
+  /// still ahead of [now]. An unreadable marker counts as pending, so the
+  /// caller cancels it (fail closed).
+  Future<bool> _pendingAlertFromMarker(
+    String curriculumId,
+    LearnerZone zone,
+    DateTime now,
+  ) async {
+    final marker = await _markers.read(_profileId, curriculumId);
+    if (marker == null) return false;
+    final match = _markerPattern.firstMatch(marker);
+    if (match == null) return true;
+    final firedAt = zone.at(
+      parseCivilDay(match.group(1)!),
+      hour: int.parse(match.group(2)!),
+      minute: int.parse(match.group(3)!),
+    );
+    return firedAt.isAfter(now);
+  }
+
+  /// The `<civil day>@<hour>:<minute>` marker written by [evaluate].
+  static final _markerPattern = RegExp(
+    r'^(\d{4}-\d{2}-\d{2})@(\d{1,2}):(\d{1,2})$',
+  );
 
   /// Cancels [curriculumId]'s alert and forgets its marker.
   Future<void> cancel(String curriculumId) async {

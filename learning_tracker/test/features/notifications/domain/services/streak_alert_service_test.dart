@@ -225,6 +225,45 @@ void main() {
       expect(await evaluate(_mishnayos, atRisk), StreakAlertOutcome.tooLate);
       expect(alerts.scheduled, isEmpty);
     });
+
+    test(
+      'moving the alert time into the past cancels the pending alert',
+      () async {
+        expect(
+          await evaluate(_mishnayos, atRisk),
+          StreakAlertOutcome.scheduled,
+        );
+        // 19:30 EDT: the alert time moves from 21:00 to 19:00, already past.
+        now = _edt(25, 19, 30);
+        expect(
+          await evaluate(_mishnayos, atRisk, hour: 19),
+          StreakAlertOutcome.tooLate,
+        );
+        expect(alerts.cancelled, [_mishnayos]);
+        expect(markers.markers, isEmpty);
+        // The stale marker no longer blocks moving the time back to 21:00.
+        expect(
+          await evaluate(_mishnayos, atRisk),
+          StreakAlertOutcome.scheduled,
+        );
+        expect(alerts.scheduled, hasLength(2));
+      },
+    );
+
+    test('an alert that already fired is left in the tray', () async {
+      await evaluate(_mishnayos, atRisk);
+      now = _edt(25, 21, 30); // The 21:00 alert has fired.
+      expect(await evaluate(_mishnayos, atRisk), StreakAlertOutcome.tooLate);
+      expect(alerts.cancelled, isEmpty);
+    });
+
+    test('an unreadable marker is cancelled when too late', () async {
+      markers.markers['$_profileId/$_mishnayos'] = 'garbage';
+      now = _edt(25, 22);
+      expect(await evaluate(_mishnayos, atRisk), StreakAlertOutcome.tooLate);
+      expect(alerts.cancelled, [_mishnayos]);
+      expect(markers.markers, isEmpty);
+    });
   });
 
   group('AC-2: at most once per civil day per curriculum', () {
