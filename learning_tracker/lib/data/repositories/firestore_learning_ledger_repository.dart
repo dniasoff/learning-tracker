@@ -160,8 +160,8 @@ import 'package:learning_tracker/features/learning/domain/entities/learning_ledg
 ///   this repository (out of scope here — building it is stage "C" of the
 ///   migration, see `docs/firestore-rewrite-map.md`).
 /// - **`CompletionSource`-driven sentinel-date selection.** Deciding
-///   whether `completedAt` should be the real time or
-///   `kBulkPriorSentinelDate` is a domain policy question, independent of
+///   whether `completedAt` should be the real time or the (retired, R10)
+///   bulk-prior sentinel was a domain policy question, independent of
 ///   how it is persisted. [recordCompletion]/[recordCompletionsBatch] take
 ///   `completedAt` as an explicit parameter instead — the caller decides.
 class FirestoreLearningLedgerRepository {

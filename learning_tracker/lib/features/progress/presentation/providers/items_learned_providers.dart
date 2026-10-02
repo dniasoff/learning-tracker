@@ -150,8 +150,8 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
   // computeLearnedLeafRefs requires ledger entries newest-first by
   // completedAt (first-write-wins tie-break). The Firestore ledger read is
   // doc-id (ULID) ordered, which is NOT completedAt order — a bulk/lifetime
-  // entry carries the kBulkPriorSentinelDate, so ULID order would let a
-  // sentinel-dated row beat a real one. Re-sort explicitly, exactly as
+  // entry may carry the retired 2000-01-01 sentinel date, so ULID order
+  // would let a sentinel-dated row beat a real one. Re-sort explicitly, exactly as
   // `_computeTrackDualProgressMetric` does for its combined ledger.
   final orderedLedger = [...rawLedger]
     ..sort((a, b) => b.completedAt.compareTo(a.completedAt));

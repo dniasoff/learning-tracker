@@ -5,8 +5,18 @@ library;
 import 'dart:io';
 
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:talker/talker.dart';
 import 'package:test/test.dart';
+
+import '../helpers/learner_state/c0_fixtures.dart';
+import '../helpers/learner_state/engine_fixtures.dart';
+import '../helpers/learner_state/fake_learning_commands.dart';
+import '../helpers/learner_state/in_memory_ports.dart';
 
 void main() {
   group('Story 27.9 — lockout and redaction', tags: ['story_27_9'], () {
@@ -61,16 +71,55 @@ void main() {
     });
   });
 
-  group(
-    'Story 27.9 — atomic completion persistence',
-    tags: ['story_27_9'],
-    skip:
-        'Blocked: the original integration group wires CompletionOrchestrator to Drift completion_events and curriculum_tracks. The Firestore completion writer is not exposed as an equivalent orchestrator harness.',
-    () {
-      test(
-        'placeholder for the pending Firestore atomic-completion seam',
-        () {},
+  // Story 1.11 (DNI-473, R15 port): the atomic unit of a completion is now
+  // one learning-write chunk — the learn event and its pts_ entry commit
+  // together, and a rejected chunk writes neither.
+  group('Story 27.9 — atomic completion persistence', tags: ['story_27_9'], () {
+    late InMemoryLearningWritePort port;
+    late DefaultLearningCommands commands;
+
+    setUp(() {
+      port = InMemoryLearningWritePort();
+      var seq = 71000;
+      commands = DefaultLearningCommands(
+        scope: c0Scope(),
+        actor: const Actor(
+          uid: 'owner-uid',
+          role: ActorRole.parent,
+          displayName: '',
+        ),
+        reads: FakeLearningCommandReads(history: c0SettingsHistory()),
+        writePort: port,
+        gate: const LockWindowCaptureGate(),
+        analytics: RecordingLearningAnalytics(),
+        failureReporter: RecordingLearningFailureReporter(),
+        clock: () => engineAt(600),
+        newUlid: (_) => engineUlid(seq++),
+        ackWait: const Duration(milliseconds: 40),
+        pointsWait: const Duration(milliseconds: 40),
       );
-    },
-  );
+      addTearDown(commands.dispose);
+    });
+
+    Future<void> captureOne() => commands.capture(
+      curriculumId: engineCurriculum,
+      refs: const ['Mishnah Berakhot 1:1'],
+      source: LearningEvent.sourceMain,
+      dateState: DateState.dated,
+    );
+
+    test('the learn event and its pts_ entry are one chunk', () async {
+      await captureOne();
+      final chunk = port.chunks.single;
+      expect(chunk.events.single.ref, 'Mishnah Berakhot 1:1');
+      expect(chunk.awards.single.eventId, chunk.events.single.id);
+    });
+
+    test('a rejected chunk writes neither the event nor its entry', () async {
+      port.failNextWith(const PermanentWriteRejection('permission-denied'));
+      await captureOne();
+      expect(port.chunks, isEmpty);
+      expect(port.attempts.single.awards, hasLength(1));
+    });
+  });
 }

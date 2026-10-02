@@ -3,8 +3,8 @@
   "title": "Sentinel",
   "description": "Action: delete (now before_tracking).",
   "entries": [
-    {"symbol": "kBulkPriorSentinelDate", "kind": "field", "state": "pending", "owner": "DNI-473", "match": "any"},
-    {"symbol": "kBulkPriorSentinelMs", "kind": "field", "state": "pending", "owner": "DNI-473", "match": "any"},
-    {"symbol": "2000-01-01", "kind": "field", "state": "pending", "owner": "DNI-473", "note": "the sentinel date literal"}
+    {"symbol": "kBulkPriorSentinelDate", "kind": "field", "state": "retired", "owner": "DNI-473", "match": "any"},
+    {"symbol": "kBulkPriorSentinelMs", "kind": "field", "state": "retired", "owner": "DNI-473", "match": "any"},
+    {"symbol": "2000-01-01", "kind": "field", "state": "retired", "owner": "DNI-473", "note": "the sentinel date literal"}
   ]
 }

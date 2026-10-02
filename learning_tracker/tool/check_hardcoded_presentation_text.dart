@@ -58,10 +58,6 @@ const _baseline = <String>{
   'lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart:89',
   'lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart:101',
   'lib/features/gamification/presentation/widgets/points_display_widget.dart:98',
-  // Firestore-migration audit-gate reconciliation: unrelated edits earlier
-  // in this file pushed this SAME pre-existing, still-unaddressed AX-2 hit
-  // down by 30 lines, :776 -> :806. No content at this site changed.
-  'lib/features/onboarding/presentation/screens/bulk_mark_screen.dart:806',
   'lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:66',
   // AUD-scheduler-08: pace_indicator.dart (the hardcoded-English site this
   // entry baselined) deleted as dead code — zero production consumers, see

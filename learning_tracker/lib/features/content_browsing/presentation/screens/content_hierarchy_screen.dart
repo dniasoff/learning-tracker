@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
+import 'package:learning_tracker/core/content/content_index_corpus.dart';
 import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
@@ -12,11 +13,19 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/features/content_browsing/domain/services/free_tick_selection.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/widgets/free_tick_capture_sheet.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -44,6 +53,14 @@ class ContentHierarchyScreen extends ConsumerStatefulWidget {
 class _ContentHierarchyScreenState
     extends ConsumerState<ContentHierarchyScreen> {
   List<String> _navigationStack = [];
+
+  /// Story 1.11 (DNI-473): leaves recorded from this screen, shown ticked
+  /// before the learner state catches up (optimistic, UX-DR-147), and the
+  /// leaves each event id recorded, so Undo and a permanent rejection roll
+  /// back exactly that batch.
+  final _ticked = <String>{};
+  final _refsByEvent = <String, List<String>>{};
+  bool _capturing = false;
 
   @override
   void initState() {
@@ -158,198 +175,369 @@ class _ContentHierarchyScreenState
           _navigateUp();
         }
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: AppBarTitle(
-            child: Text(
-              l10n.contentHierarchyBrowseTitle,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontSize: 24,
-                letterSpacing: -0.2,
+      child: PendingCaptureFailureListener(
+        onFailure: (failure) => _rollBack(failure.eventIds),
+        onRetried: (failure) => _reapply(failure.eventIds),
+        child: Scaffold(
+          appBar: AppBar(
+            title: AppBarTitle(
+              child: Text(
+                l10n.contentHierarchyBrowseTitle,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 24,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: _navigationStack.isNotEmpty
-                ? _navigateUp
-                : () => context.router.maybePop(),
-          ),
-          actions: [
-            IconButton(
-              key: const Key('content_hierarchy_search_icon'),
-              icon: const Icon(Icons.search),
-              tooltip: l10n.contentHierarchySearchTooltip,
-              onPressed: () => context.router.push(
-                ContentSearchRoute(curriculumId: widget.curriculumId),
-              ),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: _navigationStack.isNotEmpty
+                  ? _navigateUp
+                  : () => context.router.maybePop(),
             ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // Breadcrumb / curriculum chip
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Row(
-                children: [
-                  // The curriculum root chip. When the user has drilled in
-                  // (navigation stack non-empty) this chip is the only visible
-                  // affordance for the *root* level — the breadcrumb below shows
-                  // only the drill segments. Tapping it must navigate back to the
-                  // curriculum root (clear the stack); previously it was a dead,
-                  // non-interactive Container, so tapping the leftmost ancestor
-                  // crumb did nothing.
-                  _RootCurriculumChip(
-                    curriculum: curriculum,
-                    color: curriculumColor,
-                    onTap: _navigationStack.isNotEmpty ? _navigateToRoot : null,
-                  ),
-                  if (_navigationStack.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Icon(
-                        // R2 finding 4: the root-chip separator must point the
-                        // same way as the inner breadcrumb separators. Reuse the
-                        // shared direction-aware helper so in RTL it flips to
-                        // chevron_left instead of hardcoding chevron_right (which
-                        // disagreed with the inner separators in one RTL trail).
-                        breadcrumbSeparatorIcon(Directionality.of(context)),
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+            actions: [
+              IconButton(
+                key: const Key('content_hierarchy_search_icon'),
+                icon: const Icon(Icons.search),
+                tooltip: l10n.contentHierarchySearchTooltip,
+                onPressed: () => context.router.push(
+                  ContentSearchRoute(curriculumId: widget.curriculumId),
+                ),
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              // Breadcrumb / curriculum chip
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Row(
+                  children: [
+                    // The curriculum root chip. When the user has drilled in
+                    // (navigation stack non-empty) this chip is the only visible
+                    // affordance for the *root* level — the breadcrumb below shows
+                    // only the drill segments. Tapping it must navigate back to the
+                    // curriculum root (clear the stack); previously it was a dead,
+                    // non-interactive Container, so tapping the leftmost ancestor
+                    // crumb did nothing.
+                    _RootCurriculumChip(
+                      curriculum: curriculum,
+                      color: curriculumColor,
+                      onTap: _navigationStack.isNotEmpty
+                          ? _navigateToRoot
+                          : null,
                     ),
-                    Expanded(
-                      child: configAsync.when(
-                        data: (config) {
-                          final terms = domainTermLabels(ref);
-                          final variant = ref.watch(
-                            currentTransliterationVariantProvider,
-                          );
-                          final allCurriculumItems = ref
-                              .watch(curriculumContentProvider(curriculum))
-                              .asData
-                              ?.value;
-                          // Look up each ancestor's container ContentItem so
-                          // the renderer can use its displayNameHe (e.g.
-                          // 'סדר זרעים') instead of falling back to the raw
-                          // English value ('Seder Zeraim').
-                          final hebrewNames = _hebrewNamesForNavStack(
-                            allCurriculumItems,
-                          );
-                          final segments =
-                              CurriculumLabelRenderer.renderBreadcrumb(
-                                curriculumId: curriculum,
-                                rawSegmentValues: _navigationStack,
-                                useHebrew: terms.isHebrew,
-                                transliterationVariant: variant,
-                                hebrewNamesPerSegment: hebrewNames,
-                              );
-                          return BreadcrumbNavigation(
-                            curriculum: curriculum,
-                            levelLabels: config.levelLabels,
-                            navigationStack: segments,
-                            onBreadcrumbTap: _navigateToLevel,
-                          );
-                        },
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
+                    if (_navigationStack.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(
+                          // R2 finding 4: the root-chip separator must point the
+                          // same way as the inner breadcrumb separators. Reuse the
+                          // shared direction-aware helper so in RTL it flips to
+                          // chevron_left instead of hardcoding chevron_right (which
+                          // disagreed with the inner separators in one RTL trail).
+                          breadcrumbSeparatorIcon(Directionality.of(context)),
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
+                      Expanded(
+                        child: configAsync.when(
+                          data: (config) {
+                            final terms = domainTermLabels(ref);
+                            final variant = ref.watch(
+                              currentTransliterationVariantProvider,
+                            );
+                            final allCurriculumItems = ref
+                                .watch(curriculumContentProvider(curriculum))
+                                .asData
+                                ?.value;
+                            // Look up each ancestor's container ContentItem so
+                            // the renderer can use its displayNameHe (e.g.
+                            // 'סדר זרעים') instead of falling back to the raw
+                            // English value ('Seder Zeraim').
+                            final hebrewNames = _hebrewNamesForNavStack(
+                              allCurriculumItems,
+                            );
+                            final segments =
+                                CurriculumLabelRenderer.renderBreadcrumb(
+                                  curriculumId: curriculum,
+                                  rawSegmentValues: _navigationStack,
+                                  useHebrew: terms.isHebrew,
+                                  transliterationVariant: variant,
+                                  hebrewNamesPerSegment: hebrewNames,
+                                );
+                            return BreadcrumbNavigation(
+                              curriculum: curriculum,
+                              levelLabels: config.levelLabels,
+                              navigationStack: segments,
+                              onBreadcrumbTap: _navigateToLevel,
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
 
-            // Content list
-            Expanded(
-              child: itemsAsync.when(
-                data: (items) {
-                  if (items.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.inbox_outlined,
-                            size: 48,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            l10n.contentHierarchyNoContent,
-                            style: TextStyle(
+              // Content list
+              Expanded(
+                child: itemsAsync.when(
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.inbox_outlined,
+                              size: 48,
                               color: Theme.of(
                                 context,
                               ).colorScheme.onSurfaceVariant,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.contentHierarchyNoContent,
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final variant = ref.watch(
+                      currentTransliterationVariantProvider,
+                    );
+                    // Chazara product rule: only show the review badge when at
+                    // least one active track in this profile has chazara enabled.
+                    final anyChazara =
+                        ref
+                            .watch(anyActiveTrackHasChazaraProvider)
+                            .asData
+                            ?.value ??
+                        false;
+                    final groupedItems = groupItemsByNextLevel(
+                      items: items,
+                      currentDepth: _navigationStack.length,
+                      curriculumId: curriculum,
+                      variant: variant,
+                      maxBrowseDepth: CurriculumLabels.maxBrowseDepth(
+                        curriculum,
                       ),
                     );
-                  }
 
-                  final variant = ref.watch(
-                    currentTransliterationVariantProvider,
-                  );
-                  // Chazara product rule: only show the review badge when at
-                  // least one active track in this profile has chazara enabled.
-                  final anyChazara =
-                      ref
-                          .watch(anyActiveTrackHasChazaraProvider)
-                          .asData
-                          ?.value ??
-                      false;
-                  final groupedItems = groupItemsByNextLevel(
-                    items: items,
-                    currentDepth: _navigationStack.length,
-                    curriculumId: curriculum,
-                    variant: variant,
-                    maxBrowseDepth: CurriculumLabels.maxBrowseDepth(curriculum),
-                  );
+                    // Free tick (UX-DR-20): every row carries a tri-state tick
+                    // box; long-press is "Tick up to here". Both wait for the
+                    // curriculum's full item list (loading → no tick).
+                    final allItems = ref
+                        .watch(curriculumContentProvider(curriculum))
+                        .asData
+                        ?.value;
+                    final learnerState = ref
+                        .watch(activeLearnerStateProvider)
+                        .asData
+                        ?.value;
+                    final learnt =
+                        learnerState?[curriculum.storageKey]?.learntLeaves;
+                    bool isLearnt(String leaf) =>
+                        _ticked.contains(leaf) ||
+                        (learnt?.contains(leaf) ?? false);
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: groupedItems.length,
-                    itemBuilder: (context, index) {
-                      final item = groupedItems[index];
-                      return ContentItemTile(
-                        item: item,
-                        curriculum: curriculum,
-                        onTap: () => _handleItemTap(item),
-                        showReviewBadge: anyChazara,
-                      );
-                    },
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error,
-                        size: 48,
-                        color: context.colors.brandCoralDeep,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        AppLocalizations.of(
-                          context,
-                        )!.errorLoadingContent(error.toString()),
-                      ),
-                    ],
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: groupedItems.length,
+                      itemBuilder: (context, index) {
+                        final item = groupedItems[index];
+                        final ready = allItems != null && !_capturing;
+                        return ContentItemTile(
+                          item: item,
+                          curriculum: curriculum,
+                          onTap: () => _handleItemTap(item),
+                          showReviewBadge: anyChazara,
+                          tickState: allItems == null
+                              ? null
+                              : triStateOf(
+                                  leavesUnder(allItems, item),
+                                  isLearnt,
+                                ),
+                          onTick: ready
+                              ? () => _tick(curriculum, allItems, item)
+                              : null,
+                          onLongPress: ready
+                              ? () => _tickUpToHere(curriculum, allItems, item)
+                              : null,
+                        );
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error,
+                          size: 48,
+                          color: context.colors.brandCoralDeep,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          AppLocalizations.of(
+                            context,
+                          )!.errorLoadingContent(error.toString()),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// The ticked row [item]: one capture of its leaves (Before tracking on a
+  /// whole node: one node event with its `level`).
+  Future<void> _tick(
+    CurriculumId curriculum,
+    List<ContentItem> items,
+    ContentItem item,
+  ) => _record(
+    curriculum,
+    leaves: leavesUnder(items, item),
+    node: containerOf(items, item),
+    title: CurriculumLabelRenderer.renderForItem(
+      item,
+      useHebrew: domainTermLabels(ref).isHebrew,
+      transliterationVariant: ref.read(currentTransliterationVariantProvider),
+    ),
+  );
+
+  /// Long-press: "Tick up to here" — the row's leaves and every earlier
+  /// leaf of its masechta, inclusive, in corpus order.
+  Future<void> _tickUpToHere(
+    CurriculumId curriculum,
+    List<ContentItem> items,
+    ContentItem item,
+  ) => _record(
+    curriculum,
+    leaves: leavesUpToHere(
+      items,
+      item,
+      unitDepth: unitDepthOf(curriculum, items),
+    ),
+    title: AppLocalizations.of(context)!.captureTickUpToHere,
+  );
+
+  /// Confirms the source once (Home default), then issues ONE capture for
+  /// the batch. Cancel or an empty batch writes nothing.
+  Future<void> _record(
+    CurriculumId curriculum, {
+    required List<ContentItem> leaves,
+    required String title,
+    ContentItem? node,
+  }) async {
+    if (leaves.isEmpty || _capturing) return;
+    final choice = await showFreeTickCaptureSheet(
+      context,
+      title: title,
+      count: leaves.length,
+      today: ref.read(localDayClockProvider).today(),
+    );
+    if (choice == null || !mounted) return;
+    setState(() => _capturing = true);
+    try {
+      final commands = await ref.read(learningCommandsProvider.future);
+      if (!mounted) return;
+      if (commands == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.captureNotSaved),
+          ),
+        );
+        return;
+      }
+      final refs = [for (final l in leaves) l.sefariaRef];
+      final asNode =
+          node != null && choice.dateState == DateState.beforeTracking;
+      final result = await commands.capture(
+        curriculumId: curriculum.storageKey,
+        refs: asNode ? const [] : refs,
+        nodes: asNode ? [nodeEntryOf(curriculum, node)] : const [],
+        source: choice.source,
+        dateState: choice.dateState,
+        learnedOn: choice.learnedOn,
+      );
+      if (!mounted) return;
+      final batch = <String, List<String>>{};
+      if (result case CaptureSuccess(:final eventIds)) {
+        if (eventIds.length == refs.length && !asNode) {
+          for (var i = 0; i < refs.length; i++) {
+            batch[eventIds[i]] = [refs[i]];
+          }
+        } else {
+          for (final id in eventIds) {
+            batch[id] = refs;
+          }
+        }
+        setState(() {
+          _refsByEvent.addAll(batch);
+          _ticked.addAll(refs);
+        });
+      }
+      showCaptureOutcome(
+        context,
+        result: result,
+        commands: commands,
+        message: AppLocalizations.of(
+          context,
+        )!.captureRecordedCount(leaves.length),
+        onUndone: () => _rollBack(batch.keys),
+      );
+    } on Exception {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.captureNotSaved),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _capturing = false);
+    }
+  }
+
+  /// Un-ticks exactly the leaves the events [eventIds] recorded.
+  void _rollBack(Iterable<String> eventIds) {
+    if (!mounted) return;
+    setState(() {
+      for (final id in eventIds) {
+        final refs = _refsByEvent[id];
+        if (refs != null) _ticked.removeAll(refs);
+      }
+    });
+  }
+
+  /// A retried batch was saved: re-tick its leaves.
+  void _reapply(Iterable<String> eventIds) {
+    if (!mounted) return;
+    setState(() {
+      for (final id in eventIds) {
+        _ticked.addAll(_refsByEvent[id] ?? const []);
+      }
+    });
   }
 
   String? _getNextLevelValue(ContentItem item, int currentDepth) {

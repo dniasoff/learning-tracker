@@ -39,7 +39,6 @@ lib/features/dashboard/domain/models/calendar_position.dart
 lib/features/gamification/domain/models/streak_recovery_info.dart
 lib/features/gamification/gamification.dart
 lib/features/gamification/presentation/widgets/reward_type_segmented.dart
-lib/features/learning/domain/entities/completion_command.dart
 lib/features/learning/domain/entities/completion_tier_filter.dart
 lib/features/learning/domain/repositories/bookmark_repository.dart
 lib/features/learning/domain/repositories/track_repository.dart

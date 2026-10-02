@@ -4,7 +4,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
-import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -54,26 +53,6 @@ LearningLedgerRepository learningLedgerRepository(Ref ref) {
   // presentation from importing. See the adapter's `_activeProfileUlid`.
   return FirestoreLearningLedgerRepositoryAdapter(
     ref: ref,
-    activeProfileMode: profileMode,
-    parentPinSessionMatchesActiveProfile: parentPinSessionMatches,
-  );
-}
-
-/// Provides the manual completion use case.
-@riverpod
-ManualCompletionUseCase manualCompletionUseCase(Ref ref) {
-  final repository = ref.watch(learningLedgerRepositoryProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final profileMode =
-      ref.watch(_activeProfileModeProvider).value ?? ProfileMode.adult;
-  final pinSessionProfileId = ref.watch(
-    parentPinAuthenticatedProfileIdProvider,
-  );
-  final parentPinSessionMatches =
-      pinSessionProfileId != null && pinSessionProfileId == profileId;
-  return ManualCompletionUseCase(
-    repository: repository,
-    activeProfileId: profileId,
     activeProfileMode: profileMode,
     parentPinSessionMatchesActiveProfile: parentPinSessionMatches,
   );

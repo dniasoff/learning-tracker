@@ -1,20 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/data/repositories/completion_points_awarder.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
-import 'package:learning_tracker/features/learning/data/repositories/completion_streak_recorder.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
-import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
-import 'package:learning_tracker/features/learning/domain/use_cases/bulk_mark_completion_use_case.dart';
-import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -56,11 +48,10 @@ final isStageCompletedProvider = FutureProvider.autoDispose
       );
     });
 
-/// Provides the completion repository — storage-only since the
-/// completion-orchestrator lift (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). See [completionOrchestratorProvider] for where order
-/// validation, points, siyum detection, bookmark advance and streak now
-/// live.
+/// Provides the legacy completion repository — storage and reads only.
+/// Story 1.11 (DNI-473) moved every owner learning write onto
+/// `LearningCommands` (`learning_events`); the R1 story retires this
+/// repository with its readers.
 ///
 /// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
 /// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
@@ -70,36 +61,9 @@ CompletionRepository completionRepository(Ref ref) {
   return FirestoreCompletionRepositoryAdapter(ref: ref);
 }
 
-/// Firestore-backed [CompletionPointsPort] — see that class's doc comment.
-///
-/// This provider participates in a completion write that awaits an async
-/// Firestore gap before using the port again. It must survive when the last
-/// listener drops to zero; autoDispose would tear down its [Ref] during that
-/// gap and make the later points lookup fail.
-@Riverpod(keepAlive: true)
-CompletionPointsPort completionPointsPort(Ref ref) {
-  return FirestoreCompletionPointsAwarder(ref: ref);
-}
-
-/// Firestore-backed [CompletionStreakPort] — see that class's doc comment.
-///
-/// The recorder resolves its own repository from `ref`, so this presentation
-/// provider never names a data-access-ring type (AD-23/AD-28).
-///
-/// This provider participates in a completion write that awaits an async
-/// Firestore gap before using the port again. It must survive when the last
-/// listener drops to zero; autoDispose would tear down its [Ref] during that
-/// gap and make the later streak write fail.
-@Riverpod(keepAlive: true)
-CompletionStreakPort completionStreakPort(Ref ref) {
-  return FirestoreCompletionStreakRecorder(ref: ref);
-}
-
-/// Provides the [CompletionDetectionService] — the single "is this unit
-/// covered" + siyum-crediting service, shared (Riverpod-cached) between
-/// [completionOrchestratorProvider] and (via `onboarding_providers.dart`)
-/// `BulkPriorCompletionService`'s D-M retraction path, rather than each
-/// constructing its own instance.
+/// Provides the [CompletionDetectionService] — the legacy "is this unit
+/// covered" + siyum-crediting service (an R3 reader, retired by its own
+/// story).
 ///
 /// This provider participates in a completion write that awaits an async
 /// Firestore gap before using the service again. It must survive when the last
@@ -118,61 +82,6 @@ CompletionDetectionService completionDetectionService(Ref ref) {
     ledgerRepository: ledgerRepository,
     stageRepository: stageRepository,
   );
-}
-
-/// Provides the [CompletionOrchestrator] — the single place the five
-/// completion side effects live (`docs/firestore-rewrite-map.md`, owner
-/// decision 1). [MarkCompletionUseCase], [BulkMarkCompletionUseCase], and
-/// (via `onboarding_providers.dart`) `BulkPriorCompletionService` all go
-/// through this, not [completionRepositoryProvider] directly.
-///
-/// This provider owns a completion write that awaits an async Firestore gap
-/// before running its remaining side effects. It must survive when the last
-/// listener drops to zero; autoDispose would tear down the dependency chain's
-/// [Ref] during that gap and make the write fail.
-@Riverpod(keepAlive: true)
-CompletionOrchestrator completionOrchestrator(Ref ref) {
-  final contentRepository = ref.watch(contentRepositoryProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final bookmarkRepository = ref.watch(bookmarkRepositoryProvider);
-  final completionRepository = ref.watch(completionRepositoryProvider);
-  final learningLedgerRepository = ref.watch(learningLedgerRepositoryProvider);
-  final detectionService = ref.watch(completionDetectionServiceProvider);
-
-  return CompletionOrchestrator(
-    repository: completionRepository,
-    contentRepository: contentRepository,
-    activeProfileId: profileId,
-    learningLedgerRepository: learningLedgerRepository,
-    bookmarkRepository: bookmarkRepository,
-    completionDetectionService: detectionService,
-    pointsPort: ref.watch(completionPointsPortProvider),
-    streakPort: ref.watch(completionStreakPortProvider),
-  );
-}
-
-/// Provides the mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the write resumes.
-@Riverpod(keepAlive: true)
-MarkCompletionUseCase markCompletionUseCase(Ref ref) {
-  final orchestrator = ref.watch(completionOrchestratorProvider);
-  final analytics = ref.watch(analyticsServiceProvider);
-  return MarkCompletionUseCase(orchestrator, analytics: analytics);
-}
-
-/// Provides the bulk mark completion use case.
-///
-/// This use case is reached by a one-shot read and then awaits an async
-/// Firestore gap. It must survive when the last listener drops to zero;
-/// autoDispose would tear down the completion chain before the bulk write
-/// resumes.
-@Riverpod(keepAlive: true)
-BulkMarkCompletionUseCase bulkMarkCompletionUseCase(Ref ref) {
-  final orchestrator = ref.watch(completionOrchestratorProvider);
-  return BulkMarkCompletionUseCase(orchestrator);
 }
 
 /// Resolves a persisted curriculum-id storage key, throwing on an

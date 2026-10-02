@@ -2,8 +2,6 @@ import 'dart:math';
 
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart'
-    as completion_constants;
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
@@ -30,34 +28,6 @@ class SchedulerEngine {
   /// days instead of dumping all of them on day 1. The remainder stays in
   /// the overdue queue and surfaces tomorrow.
   static const int kMaxOverdueChazarahPerDay = 20;
-
-  /// Unix-milliseconds timestamp for the sentinel date used by
-  /// [BulkPriorCompletionService] to mark items that were "learned before this
-  /// app" without a real study date (`DateTime.utc(2000, 1, 1)`).
-  ///
-  /// The engine treats stage-1 completions recorded at this timestamp as if the
-  /// item has not yet been learned — so it surfaces as a new-learning task
-  /// rather than disappearing silently from the schedule.
-  ///
-  /// We compare via [DateTime.millisecondsSinceEpoch] rather than direct
-  /// `==` because Drift may return a local-timezone [DateTime] when the
-  /// underlying column stores an integer epoch, causing UTC-vs-local
-  /// inequality even for the same instant.
-  ///
-  /// Re-exported from `core/learning/completion_constants.dart`, the single
-  /// source of truth for this sentinel (features/ → core/ is a legal import
-  /// direction; see docs/coding-standards.md Rule 1/Rule 2) — kept as a
-  /// static member here so existing `SchedulerEngine.kBulkPriorSentinelMs`
-  /// call sites are unaffected.
-  static const int kBulkPriorSentinelMs =
-      completion_constants.kBulkPriorSentinelMs;
-
-  /// Sentinel [DateTime] instance for callers that need it (e.g. tests).
-  ///
-  /// Re-exported from `core/learning/completion_constants.dart` — see
-  /// [kBulkPriorSentinelMs].
-  static final DateTime kBulkPriorSentinel =
-      completion_constants.kBulkPriorSentinelDate;
 
   const SchedulerEngine({
     required SchedulerContentRepository contentRepository,
@@ -125,19 +95,6 @@ class SchedulerEngine {
 
       if (itemCompletions == null || itemCompletions.isEmpty) {
         // Never started — candidate for new learning
-        newLearningRefs.add(ref);
-        continue;
-      }
-
-      // Items bulk-marked "prior" with the sentinel date (DateTime.utc(2000,1,1))
-      // at stage 1 have not actually been studied in this app. Treat them as
-      // new-learning candidates so deadline and self-paced tracks both surface
-      // them instead of silently dropping them from the schedule.
-      final firstStageCompletedAt = itemCompletions[firstStageOrder];
-      if (firstStageCompletedAt != null &&
-          firstStageCompletedAt.millisecondsSinceEpoch ==
-              kBulkPriorSentinelMs &&
-          itemCompletions.length == 1) {
         newLearningRefs.add(ref);
         continue;
       }
@@ -475,8 +432,6 @@ class SchedulerEngine {
     final firstStageOrder = sortedStages.first.stageOrder;
 
     // Collect refs that have completed the first stage, sorted by completion date (most recent first).
-    // Sentinel-dated completions (bulk-prior mark) are excluded — those items
-    // have not actually been studied and must not enter the rolling window.
     final completedRefs = <MapEntry<String, DateTime>>[];
     for (final ref in orderedRefs) {
       final itemCompletions = completionMap[ref];
@@ -734,23 +689,13 @@ class SchedulerEngine {
     return min(baseRate, remainingNewItems);
   }
 
-  /// Returns `true` when [itemCompletions] contains a **genuine** completion
-  /// at [stageOrder] — i.e. one that is not the bulk-prior sentinel date.
-  ///
-  /// Sentinel completions (`DateTime.utc(2000, 1, 1)`) indicate that the item
-  /// was "marked prior" in bulk before this app was used. They must not be
-  /// counted as real first-stage completions when deciding whether to surface
-  /// new-learning tasks for that item.
-  ///
-  /// Comparison uses [DateTime.millisecondsSinceEpoch] to avoid UTC-vs-local
-  /// inequality introduced by Drift reading integer epoch columns as local time.
+  /// Returns `true` when [itemCompletions] has a completion at [stageOrder]
+  /// (R10, DNI-473: the `2000-01-01` sentinel rows this used to exclude are
+  /// no longer written).
   bool _isGenuinelyCompletedAtStage(
     Map<int, DateTime>? itemCompletions,
     int stageOrder,
   ) {
-    if (itemCompletions == null) return false;
-    final completedAt = itemCompletions[stageOrder];
-    if (completedAt == null) return false;
-    return completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs;
+    return itemCompletions?[stageOrder] != null;
   }
 }

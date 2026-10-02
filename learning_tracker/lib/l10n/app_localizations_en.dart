@@ -2733,6 +2733,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loadingText => 'Loading text...';
 
   @override
+  String get captureBeforeTrackingHint => 'Learnt before I started tracking';
+
+  @override
+  String get captureChangeDate => 'Change';
+
+  @override
+  String get captureDateLabel => 'Date learnt';
+
+  @override
+  String get captureLockedNotice =>
+      'Not recorded — the app is closed for Shabbos and Yom Tov.';
+
+  @override
+  String get captureNotSaved => 'Not saved — your learning was not recorded.';
+
+  @override
+  String captureRecordCount(int count) {
+    return 'Record $count';
+  }
+
+  @override
+  String captureRecordedCount(int count) {
+    return '$count recorded';
+  }
+
+  @override
+  String get captureSourceHome => 'Home';
+
+  @override
+  String get captureSourceQuestion => 'Where did you learn this?';
+
+  @override
+  String get captureStateLearnt => 'Learnt';
+
+  @override
+  String get captureStateNotLearnt => 'Not learnt yet';
+
+  @override
+  String get captureStatePartial => 'Partly learnt';
+
+  @override
+  String get captureTickUpToHere => 'Tick up to here';
+
+  @override
   String get markedComplete => 'Marked complete';
 
   @override
@@ -4470,9 +4514,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String siyumimAggregateSubtitle(int count, String date) {
     return 'All $count complete · $date';
   }
-
-  @override
-  String get siyumimPreviouslyLearnedDate => 'Previously learned';
 
   @override
   String get paceLiveLearningOnlyCaption => 'Pace tracks track learning only.';

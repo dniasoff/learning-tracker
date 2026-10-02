@@ -3,15 +3,15 @@
   "title": "Completion write paths",
   "description": "Action: rewire to LearningCommands (AD-50 pts_ attach, AD-31 unlearn), then delete the old services. mark_live_completion_use_case is rewired, not deleted, so it is not listed.",
   "entries": [
-    {"symbol": "CompletionOrchestrator", "kind": "service", "state": "pending", "owner": "DNI-473"},
-    {"symbol": "CompletionPointsPort", "kind": "type", "state": "pending", "owner": "DNI-473"},
-    {"symbol": "CompletionStreakPort", "kind": "type", "state": "pending", "owner": "DNI-473"},
-    {"symbol": "FirestoreCompletionStreakRecorder", "kind": "service", "state": "pending", "owner": "DNI-473", "note": "completion_streak_recorder"},
-    {"symbol": "FirestoreCompletionPointsAwarder", "kind": "service", "state": "pending", "owner": "DNI-473", "note": "completion_points_awarder"},
-    {"symbol": "BulkMarkCompletionUseCase", "kind": "service", "state": "pending", "owner": "DNI-473"},
-    {"symbol": "ManualCompletionUseCase", "kind": "service", "state": "pending", "owner": "DNI-473"},
-    {"symbol": "BulkPriorCompletionService", "kind": "service", "state": "pending", "owner": "DNI-473"},
-    {"symbol": "BulkPriorCompletionResult", "kind": "type", "state": "pending", "owner": "DNI-473"},
-    {"symbol": "CompletionCommand", "kind": "type", "state": "pending", "owner": "DNI-473"}
+    {"symbol": "CompletionOrchestrator", "kind": "service", "state": "retired", "owner": "DNI-473"},
+    {"symbol": "CompletionPointsPort", "kind": "type", "state": "retired", "owner": "DNI-473"},
+    {"symbol": "CompletionStreakPort", "kind": "type", "state": "retired", "owner": "DNI-473"},
+    {"symbol": "FirestoreCompletionStreakRecorder", "kind": "service", "state": "retired", "owner": "DNI-473", "note": "completion_streak_recorder"},
+    {"symbol": "FirestoreCompletionPointsAwarder", "kind": "service", "state": "retired", "owner": "DNI-473", "note": "completion_points_awarder"},
+    {"symbol": "BulkMarkCompletionUseCase", "kind": "service", "state": "retired", "owner": "DNI-473"},
+    {"symbol": "ManualCompletionUseCase", "kind": "service", "state": "retired", "owner": "DNI-473"},
+    {"symbol": "BulkPriorCompletionService", "kind": "service", "state": "retired", "owner": "DNI-473"},
+    {"symbol": "BulkPriorCompletionResult", "kind": "type", "state": "retired", "owner": "DNI-473"},
+    {"symbol": "CompletionCommand", "kind": "type", "state": "retired", "owner": "DNI-473"}
   ]
 }

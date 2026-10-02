@@ -359,10 +359,10 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
       awardGamificationPoints: request.awardGamificationPoints,
       creditsAchievement: request.creditsAchievement,
     );
-    // No per-item existing-check pass here (unlike markComplete) — every
-    // current call site (BulkPriorCompletionService) always supplies the
-    // fixed kBulkPriorSentinelDate for prior-mark requests, so a retry is a
-    // byte-identical replay and SR-1 accepts it without a pre-check. A
+    // No per-item existing-check pass here (unlike markComplete) — the
+    // retired bulk-prior caller (R10, DNI-473) always supplied a fixed
+    // completedAt, so a retry was a byte-identical replay and SR-1 accepted
+    // it without a pre-check. A
     // hypothetical live-source bulk call that left completedAt null would
     // mint a fresh timestamp per retry and could hit the same replay
     // rejection markComplete's pre-check exists to avoid — flagged in the

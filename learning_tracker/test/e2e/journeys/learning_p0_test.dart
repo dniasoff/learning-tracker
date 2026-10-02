@@ -2,7 +2,7 @@
 ///
 /// Journeys implemented:
 ///   E2E-301  Mark single task complete — adult, fine-paced
-///   E2E-302  Mark task complete — child, unlocks milestone celebration
+///   E2E-302  Mark task complete — child (no tutor block)
 ///   E2E-303  Tutor attempts live mark — forbidden button shown
 ///   E2E-304  Daf-atomic (coarse-paced) completion marks both amudim
 ///   E2E-305  Browse curriculum hierarchy — drill down and back
@@ -17,22 +17,21 @@ import 'package:flutter/material.dart' show Key, MaterialApp;
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
-import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart'
     show PaceGranularity;
@@ -42,6 +41,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 import '../../helpers/firestore_fixtures.dart' show seedGoal, seedTrack;
+import '../../helpers/learner_state/fake_learning_commands.dart';
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
@@ -51,22 +51,31 @@ import '../harness/e2e_harness.dart';
 // shared ../fakes/e2e_fakes.dart module (AUD-t-cross-10). Only the
 // file-specific throwing variant remains here.
 
-/// A [FakeCompletionRepository] whose [markComplete] always throws
-/// [_error], for AUD-content_browsing-09 (EH-4) —
-/// TextDisplayScreen._handleComplete's typed-catch regression test.
-class _ThrowingCompletionRepository extends FakeCompletionRepository {
-  _ThrowingCompletionRepository(this._error);
+/// [LearningCommands] whose `capture` always throws [_error], for
+/// AUD-content_browsing-09 (EH-4) — TextDisplayScreen._handleComplete's
+/// typed-catch regression test. Since Story 1.11 (DNI-473) the reader's
+/// Mark complete writes through `LearningCommands.capture`.
+class _ThrowingCaptureCommands implements LearningCommands {
+  _ThrowingCaptureCommands(this._error);
 
   final Error _error;
 
   @override
-  Future<MarkCompletionResult> markComplete(
-    CompletionRequest request, {
-    bool awardGamificationPoints = true,
-    bool creditsAchievement = true,
-  }) async {
-    throw _error;
-  }
+  Future<CaptureResult> capture({
+    required String curriculumId,
+    List<String> refs = const [],
+    List<NodeEntry> nodes = const [],
+    required String source,
+    required DateState dateState,
+    String? learnedOn,
+    int? stage,
+  }) async => throw _error;
+
+  @override
+  Stream<List<PendingFailure>> watchPendingFailures() => const Stream.empty();
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -279,6 +288,8 @@ void main() {
 
       final task = _finePacedTask();
       final fakeRepo = FakeCompletionRepository();
+      final commands = FakeLearningCommands();
+      addTearDown(commands.dispose);
 
       await h.pumpApp(
         path: '/text/${task.contentItemSefariaRef}',
@@ -289,6 +300,7 @@ void main() {
           allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
           coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
           completionRepositoryProvider.overrideWithValue(fakeRepo),
+          learningCommandsProvider.overrideWith((ref) async => commands),
           // Stub text content — in-memory ContentDatabase has no rows so the
           // real TextCacheRepository would return null → offline message.
           ..._textContentOverrides(task.contentItemSefariaRef),
@@ -296,8 +308,8 @@ void main() {
           adjacentContentRefsProvider(
             task.contentItemSefariaRef,
           ).overrideWith((ref) => Future.value((prev: null, next: null))),
-          // CompletionOrchestrator's post-write bookmark advance
-          // (`_advanceBookmark` → `_getNextItemId`) falls back to
+          // The reader's post-capture (legacy) bookmark advance
+          // (`advanceBookmark` → `_getNextItemId`) falls back to
           // contentRepositoryProvider when there is no custom learning order.
           // The real ContentRepositoryImpl loads bundled Sefaria JSON assets
           // via rootBundle, which never resolves in the widget-test sandbox
@@ -347,24 +359,23 @@ void main() {
         reason: 'completionCommittedProvider must increment after a mark',
       );
 
-      // The fake repo received exactly one mark request.
-      expect(fakeRepo.markedRequests, hasLength(1));
-      expect(
-        fakeRepo.markedRequests.first.sefariaRef,
-        task.contentItemSefariaRef,
-      );
+      // Story 1.11 (DNI-473): exactly one owner capture — a main, dated
+      // batch of this task's ref at its stage — and no legacy write.
+      final capture = commands.calls.singleWhere((c) => c.name == 'capture');
+      expect(capture.args['refs'], [task.contentItemSefariaRef]);
+      expect(capture.args['source'], LearningEvent.sourceMain);
+      expect(capture.args['dateState'], DateState.dated);
+      expect(capture.args['stage'], task.stageOrder);
+      expect(fakeRepo.markedRequests, isEmpty);
     });
   });
 
   // ── E2E-302 ──────────────────────────────────────────────────────────────
 
-  group('E2E-302 — Mark task complete — child, unlocks milestone celebration', () {
-    // The AchievementUnlockCelebration dialog fires when:
-    //   (a) dashboardUserModeProvider returns ProfileMode.child, AND
-    //   (b) MarkCompletionResult.newMilestoneUnlocks is non-empty.
-    //
-    // Condition (a) is satisfied by seeding a child profile in the DB.
-    // Condition (b) requires the fake repo to return a RewardUnlockRecord.
+  group('E2E-302 — Mark task complete — child profile', () {
+    // Story 1.11 (DNI-473) retired the legacy completion writer whose result
+    // carried milestone unlocks; the post-capture achievement latch and its
+    // celebration belong to DNI-480 (AD-50 achievement latch).
 
     testWidgets('child profile sees no tutor block on Mark Complete button', (
       tester,
@@ -407,141 +418,6 @@ void main() {
       h.expectOnScreen('Mark complete');
       h.expectNotOnScreen('Not available (tutor mode)');
     });
-
-    testWidgets(
-      'AchievementUnlockCelebration dialog appears after child marks task '
-      'at milestone threshold',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          displayName: 'Benny',
-          profileMode: 'child',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        final task = _finePacedTask();
-        final now = DateTime.utc(2026, 1, 1);
-        const milestoneTitle = 'Gold Star';
-        final fakeRepo = FakeCompletionRepository(
-          unlocks: [
-            RewardUnlockRecord(
-              milestoneId: 'milestone-1',
-              profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYA',
-              title: milestoneTitle,
-              thresholdPoints: 100,
-              pointsAtUnlock: 100,
-              unlockedAt: now,
-            ),
-          ],
-        );
-
-        await h.pumpApp(
-          path: '/text/${task.contentItemSefariaRef}',
-          extraOverrides: [
-            ..._textDisplayBaseOverrides(),
-            allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
-            coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
-            completionRepositoryProvider.overrideWithValue(fakeRepo),
-            // Stub text content so reader view (with Mark Complete) renders.
-            ..._textContentOverrides(task.contentItemSefariaRef),
-            adjacentContentRefsProvider(
-              task.contentItemSefariaRef,
-            ).overrideWith((ref) => Future.value((prev: null, next: null))),
-            activeTutoredProfileSelectionProvider.overrideWith(
-              () => NullTutoredSelection(),
-            ),
-            // dashboardUserModeProvider reads the profile from the DB asynchronously.
-            // Explicitly override to ProfileMode.child so _handleComplete's
-            // ref.read(dashboardUserModeProvider).asData?.value is resolved
-            // synchronously when the celebration gate runs.
-            dashboardUserModeProvider.overrideWith(
-              (ref) => Future.value(ProfileMode.child),
-            ),
-            // Override selectedProfileProvider so the celebration reads the
-            // child profile without a DB round-trip through profileRepository.
-            selectedProfileProvider.overrideWith(
-              (ref) => Future.value(
-                LearnerProfileEntity(
-                  profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYA',
-                  displayName: 'Benny',
-                  mode: ProfileMode.child,
-                  createdAt: now,
-                  updatedAt: now,
-                ),
-              ),
-            ),
-            // See the E2E-301 "tapping Mark Complete" test for why this is
-            // required: CompletionOrchestrator's post-write bookmark advance
-            // falls back to contentRepositoryProvider, and the real
-            // ContentRepositoryImpl loads bundled Sefaria JSON assets via
-            // rootBundle, which never resolves in the widget-test sandbox —
-            // that stalls _handleComplete well past this test's pump budget,
-            // so the celebration (which only shows after the mark completes)
-            // never appears.
-            contentRepositoryProvider.overrideWithValue(
-              FakeContentRepository([
-                ContentItem(
-                  curriculumId: task.curriculumId.storageKey,
-                  level1: 'Berachot',
-                  displayNameHe: 'משנה ברכות א:א',
-                  displayNameEn: 'Mishnah Berachot 1:1',
-                  sefariaRef: task.contentItemSefariaRef,
-                  sortOrder: 1,
-                  isLeaf: true,
-                ),
-              ]),
-            ),
-          ],
-        );
-
-        await tester.pump(const Duration(milliseconds: 400));
-        await tester.pump(const Duration(milliseconds: 200));
-
-        // Pre-warm dashboardUserModeProvider so its AsyncData is in the
-        // Riverpod cache before _handleComplete reads it synchronously via
-        // ref.read().  Without this, ref.read() on the first access returns
-        // AsyncLoading (provider not yet resolved), causing the celebration
-        // guard (userMode == ProfileMode.child) to be skipped.
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(MaterialApp).first),
-        );
-        container.read(dashboardUserModeProvider);
-        await tester.pump(); // flush microtask → provider is now AsyncData
-
-        // Tap Mark complete.
-        await h.tapText(
-          'Mark complete',
-          settle: const Duration(milliseconds: 500),
-        );
-        // Give the async celebration flow time to complete:
-        //   _refsToMark (DB query) → fakeRepo.markComplete → completionCommitted
-        //   → showForUnlockedMilestones (profile read, dialog show).
-        // Each pump() flushes one microtask batch; extra duration pumps let
-        // WidgetsBinding settle navigator/overlay updates.
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pump();
-
-        // Key assertion: AchievementUnlockCelebration dialog is shown.
-        // The dialog title is "Wow! Amazing!" and the body mentions the
-        // milestone title ('Gold Star') inline inside a longer l10n string
-        // ("You unlocked Gold Star on your … track").  Use textContaining
-        // for the milestone title (substring match) and an exact match for
-        // the stable dialog title.
-        expect(
-          find.textContaining(milestoneTitle),
-          findsWidgets,
-          reason:
-              'AchievementUnlockCelebration dialog must mention '
-              'the milestone title "$milestoneTitle"',
-        );
-        expect(
-          find.text('Wow! Amazing!'),
-          findsWidgets,
-          reason: 'AchievementUnlockCelebration dialog title must be visible',
-        );
-      },
-    );
   });
 
   // ── E2E-303 ──────────────────────────────────────────────────────────────
@@ -640,11 +516,10 @@ void main() {
     //   • Drift DB: goal row with paceGranularity='daf'
     //   • Override coarsePacedTrackIdsProvider with {trackId}
     //   • Fake ContentRepository returns 2 leaf items (daf 2a + 2b)
-    //   • Fake CompletionRepository records every sefariaRef marked
+    //   • Fake LearningCommands records the capture
     //
     // Key assertions:
-    //   • The fake repo receives 2 mark calls — one per amud.
-    //   • Both amud refs appear in markedRequests.
+    //   • One capture carries both amud refs, in daf order.
 
     testWidgets(
       'marking a daf-paced task records completions for both amudim',
@@ -686,6 +561,8 @@ void main() {
 
         final fakeContentRepo = FakeContentRepository([amud2a, amud2b]);
         final fakeCompletionRepo = FakeCompletionRepository();
+        final commands = FakeLearningCommands();
+        addTearDown(commands.dispose);
 
         await h.pumpApp(
           path: '/text/$sefariaRef2a',
@@ -697,6 +574,7 @@ void main() {
               (ref) => Future.value({CurriculumId.bavli}),
             ),
             completionRepositoryProvider.overrideWithValue(fakeCompletionRepo),
+            learningCommandsProvider.overrideWith((ref) async => commands),
             contentRepositoryProvider.overrideWithValue(fakeContentRepo),
             // Stub text content so reader view (with Mark Complete) renders.
             ..._textContentOverrides(sefariaRef2a),
@@ -738,16 +616,14 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 300));
 
-        // Key assertion: BOTH amudim were marked.
-        expect(
-          fakeCompletionRepo.markedRequests.length,
-          2,
-          reason: 'daf-paced mark must record completions for both amudim',
-        );
-        final refs = fakeCompletionRepo.markedRequests
-            .map((r) => r.sefariaRef)
-            .toSet();
-        expect(refs, containsAll([sefariaRef2a, sefariaRef2b]));
+        // Key assertion: BOTH amudim are ONE capture (one tap, one batch),
+        // in daf order (Story 1.11, DNI-473).
+        final capture = commands.calls.singleWhere((c) => c.name == 'capture');
+        expect(capture.args['refs'], [
+          sefariaRef2a,
+          sefariaRef2b,
+        ], reason: 'daf-paced mark must record both amudim in one capture');
+        expect(fakeCompletionRepo.markedRequests, isEmpty);
       },
     );
   });
@@ -898,83 +774,82 @@ void main() {
   // Exception catch (e, st)` so an Error subtype now propagates instead of
   // being silently downgraded.
   group('AUD-content_browsing-09 (EH-4) — _handleComplete typed catch', () {
-    testWidgets(
-      'a StateError thrown by the completion repository propagates as an '
-      'uncaught exception — it is NOT swallowed into the "Could not save" '
-      'snackbar',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(displayName: 'Alice');
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
+    testWidgets('a StateError thrown by the capture propagates as an '
+        'uncaught exception — it is NOT swallowed into the "Could not save" '
+        'snackbar', (tester) async {
+      final identity = E2EIdentity.localBorn(displayName: 'Alice');
+      final h = E2EHarness(tester, identity: identity);
+      addTearDown(h.dispose);
 
-        final task = _finePacedTask();
-        final throwingRepo = _ThrowingCompletionRepository(
-          StateError('boom: markComplete bug'),
-        );
+      final task = _finePacedTask();
+      final throwingCommands = _ThrowingCaptureCommands(
+        StateError('boom: capture bug'),
+      );
 
-        await h.pumpApp(
-          path: '/text/${task.contentItemSefariaRef}',
-          extraOverrides: [
-            ..._textDisplayBaseOverrides(),
-            allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
-            coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
-            completionRepositoryProvider.overrideWithValue(throwingRepo),
-            ..._textContentOverrides(task.contentItemSefariaRef),
-            adjacentContentRefsProvider(
-              task.contentItemSefariaRef,
-            ).overrideWith((ref) => Future.value((prev: null, next: null))),
-          ],
-        );
+      await h.pumpApp(
+        path: '/text/${task.contentItemSefariaRef}',
+        extraOverrides: [
+          ..._textDisplayBaseOverrides(),
+          allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
+          coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
+          learningCommandsProvider.overrideWith(
+            (ref) async => throwingCommands,
+          ),
+          ..._textContentOverrides(task.contentItemSefariaRef),
+          adjacentContentRefsProvider(
+            task.contentItemSefariaRef,
+          ).overrideWith((ref) => Future.value((prev: null, next: null))),
+        ],
+      );
 
-        // Pump until _CompletionSection resolves allDailyTasksProvider and
-        // renders the FilledButton (mirrors the E2E-301 happy-path test
-        // above).
-        await tester.pump(const Duration(milliseconds: 200));
-        await tester.pump(const Duration(milliseconds: 200));
+      // Pump until _CompletionSection resolves allDailyTasksProvider and
+      // renders the FilledButton (mirrors the E2E-301 happy-path test
+      // above).
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 200));
 
-        // _handleComplete's onPressed callback is fire-and-forget (the
-        // button widget does not await it), so an uncaught error inside it
-        // surfaces via the current Zone's handleUncaughtError — NOT via
-        // FlutterError.reportError/tester.takeException(), which only
-        // covers errors reported synchronously during a pump (e.g. widget
-        // build failures). flutter_test's OWN outer test zone treats any
-        // zone-level uncaught error as an immediate test failure, so the
-        // tap is wrapped in a dedicated runZonedGuarded here — mirroring
-        // AUD-core-sync-26's tutored_listener_supervisor_test.dart pattern
-        // — so this (nearer) zone claims the error first and the test can
-        // assert on it instead of being auto-failed by the outer one.
-        Object? capturedError;
-        await runZonedGuarded(
-          () async {
-            await h.tapText(
-              'Mark complete',
-              settle: const Duration(milliseconds: 500),
-            );
-            await tester.pump(const Duration(milliseconds: 300));
-          },
-          (error, stack) {
-            capturedError = error;
-          },
-        );
+      // _handleComplete's onPressed callback is fire-and-forget (the
+      // button widget does not await it), so an uncaught error inside it
+      // surfaces via the current Zone's handleUncaughtError — NOT via
+      // FlutterError.reportError/tester.takeException(), which only
+      // covers errors reported synchronously during a pump (e.g. widget
+      // build failures). flutter_test's OWN outer test zone treats any
+      // zone-level uncaught error as an immediate test failure, so the
+      // tap is wrapped in a dedicated runZonedGuarded here — mirroring
+      // AUD-core-sync-26's tutored_listener_supervisor_test.dart pattern
+      // — so this (nearer) zone claims the error first and the test can
+      // assert on it instead of being auto-failed by the outer one.
+      Object? capturedError;
+      await runZonedGuarded(
+        () async {
+          await h.tapText(
+            'Mark complete',
+            settle: const Duration(milliseconds: 500),
+          );
+          await tester.pump(const Duration(milliseconds: 300));
+        },
+        (error, stack) {
+          capturedError = error;
+        },
+      );
 
-        // RED (pre-fix, bare `catch (e, st)`): the StateError is caught
-        // inside _handleComplete, logged via AppLogger, and rendered as
-        // l10n.couldNotSave(...) — no zone error is ever raised, so
-        // `capturedError` stays null and the "Could not save" snackbar is
-        // on screen instead.
-        // GREEN (post-fix, `on Exception catch (e, st)`): StateError is not
-        // an Exception, escapes the catch clause, and reaches the
-        // surrounding zone's handleUncaughtError — captured above.
-        expect(
-          capturedError,
-          isA<StateError>(),
-          reason:
-              'a StateError from markComplete must propagate to the zone '
-              'uncaught-error handler, not be folded into the "Could not '
-              'save" snackbar',
-        );
-      },
-    );
+      // RED (pre-fix, bare `catch (e, st)`): the StateError is caught
+      // inside _handleComplete, logged via AppLogger, and rendered as
+      // l10n.couldNotSave(...) — no zone error is ever raised, so
+      // `capturedError` stays null and the "Could not save" snackbar is
+      // on screen instead.
+      // GREEN (post-fix, `on Exception catch (e, st)`): StateError is not
+      // an Exception, escapes the catch clause, and reaches the
+      // surrounding zone's handleUncaughtError — captured above.
+      expect(
+        capturedError,
+        isA<StateError>(),
+        reason:
+            'a StateError from capture must propagate to the zone '
+            'uncaught-error handler, not be folded into the "Could not '
+            'save" snackbar',
+      );
+    });
   });
 }
 

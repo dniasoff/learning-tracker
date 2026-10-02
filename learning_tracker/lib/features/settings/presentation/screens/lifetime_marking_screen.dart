@@ -14,10 +14,12 @@ import 'package:learning_tracker/features/content_browsing/domain/strategies/com
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
@@ -559,30 +561,22 @@ class _LifetimeCurriculumMarkingScreenState
     );
   }
 
+  /// Records the marked units as ONE `before_tracking` capture (Story 1.11,
+  /// DNI-473; R10): a whole unit is one node event carrying its `level`, a
+  /// single leaf a leaf event, none with a `learned_on`.
   Future<void> _markSelections(List<ScopeEntry> selections) async {
     if (_saving) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _saving = true);
     try {
-      final repo = ref.read(learningLedgerRepositoryProvider);
-      // D-E: this is ACHIEVEMENT-shaped data (real lifetime-learning marks) —
-      // a missing active profile must fail loudly rather than silently
-      // stamping a placeholder marker onto the ledger.
-      final profileId = ref.read(activeProfileIdProvider);
-      if (profileId == null) {
-        throw const LifetimeMarkingNoActiveProfileException();
-      }
-      final unique = <String>{};
-      final batchItems = <LedgerEntryDraft>[];
+      final scopes = <({int level, String unitId})>[];
       for (final selection in selections) {
-        final key = '${selection.level}:${selection.value}';
-        if (!unique.add(key)) continue;
         // P0 over-credit guard: never persist a blanket mark on a composite
-        // curriculum's SYNTHETIC level1 container (e.g. Tanach→'Torah'). Such a
-        // row credits every leaf beneath the synthetic section (the whole Torah
-        // from a single mark). The real learning belongs in the source
-        // curriculum (Chumash), which propagates up to the composite by
-        // canonical leaf. Drilling in and marking the concrete books still works.
+        // curriculum's SYNTHETIC level1 container (e.g. Tanach→'Torah'). Such
+        // a row credits every leaf beneath the synthetic section (the whole
+        // Torah from a single mark). The real learning belongs in the source
+        // curriculum (Chumash). Drilling in and marking the concrete books
+        // still works.
         if (selection.level == 1 &&
             CompositeCurriculumStrategy.isSyntheticContainerLevel1(
               _curriculum.storageKey,
@@ -590,32 +584,34 @@ class _LifetimeCurriculumMarkingScreenState
             )) {
           continue;
         }
-        batchItems.add(
-          LedgerEntryDraft(
-            curriculumId: _curriculum,
-            entryScope: 'level${selection.level}',
-            unitIdentifier: selection.value,
-            unitDisplayNameHe: selection.value,
-            unitDisplayNameEn: selection.value,
-            trackType: 'personal',
-            markedBy: profileId,
-            isManual: true,
-          ),
-        );
+        scopes.add((level: selection.level, unitId: selection.value));
       }
 
-      await repo.recordCompletionsBatch(batchItems);
+      final result = await ref
+          .read(beforeTrackingRecorderProvider)
+          .recordScopes(curriculumId: _curriculum, scopes: scopes);
 
       _invalidateComputedViews();
       if (!mounted) return;
-      // PP-3 fix: clear the session selection after a successful save so the
-      // user does not see lingering green checkmarks on already-persisted rows
-      // (the persisted state is now reflected by the ledger, not _selections).
-      setState(() => _selections.clear());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.lifetimeMarkSavedCount(batchItems.length))),
-      );
-    } catch (e, stackTrace) {
+      switch (result.capture) {
+        case CaptureSuccess():
+          // PP-3 fix: clear the session selection after a successful save.
+          setState(() => _selections.clear());
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.lifetimeMarkSavedCount(scopes.length))),
+          );
+        case CaptureLocked():
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.captureLockedNotice)));
+        case _:
+          // A batch the server rejected for good is announced with Retry by
+          // the PendingCaptureFailureListener; anything else failed here.
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.lifetimeMarkSaveError)));
+      }
+    } on Exception catch (e, stackTrace) {
       // EH-5/ST-4: never surface the raw exception's toString() in the UI —
       // log it for diagnostics and show only the fixed, localized fallback
       // copy instead.
@@ -657,7 +653,10 @@ class _LifetimeCurriculumMarkingScreenState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      PendingCaptureFailureListener(child: _buildScreen(context));
+
+  Widget _buildScreen(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final ledgerAsync = ref.watch(
       curriculumLedgerProvider(widget.curriculumId),
@@ -1080,23 +1079,4 @@ class _LifetimeCurriculumMarkingScreenState
       ),
     );
   }
-}
-
-/// Thrown by [_LifetimeCurriculumMarkingScreenState._markSelections] when the
-/// save is attempted with no active profile.
-///
-/// D-E: a lifetime mark is ACHIEVEMENT-shaped (a real learning-progress
-/// record) — `markedBy` (AD-24: a learner-profile ULID) has no honest
-/// placeholder value, so a missing active profile must fail loudly rather
-/// than stamping the batch with an empty/fake marker. Mirrors
-/// `ItemsLearnedNoActiveProfileException` (`items_learned_providers.dart`)
-/// and its siblings across this migration.
-class LifetimeMarkingNoActiveProfileException implements Exception {
-  const LifetimeMarkingNoActiveProfileException();
-
-  @override
-  String toString() =>
-      'LifetimeMarkingNoActiveProfileException: lifetime marks were saved '
-      'with no active profile — the learning ledger is scoped to the active '
-      'profile and there is no ULID to stamp `markedBy` with.';
 }

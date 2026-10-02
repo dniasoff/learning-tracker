@@ -1,6 +1,6 @@
 // Tests for HierarchySelection — covers == and hashCode (lines 218-228).
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 
 void main() {
   group('HierarchySelection.== and hashCode', () {

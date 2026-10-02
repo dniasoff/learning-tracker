@@ -11,13 +11,18 @@
 // Design: the use case is session-aware. It receives a [ResolvedSession] that
 // identifies whether the caller is an owner or a tutor. Tutors are always
 // rejected; owners are passed through to the delegate.
+//
+// Story 1.11 (DNI-473, AC-6): the owner delegate is the owner capture,
+// `LearningCommands.capture` (the reader's Mark complete). The tutor branch
+// below is unchanged until the tutor-capture story reroutes it to
+// `TutorWriteService`.
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 
-/// Delegate signature — the actual completion write implementation
-/// (e.g. CompletionWriter.commit, MarkCompletionUseCase.call).
+/// Delegate signature — the actual owner write: `LearningCommands.capture`
+/// (Story 1.11, DNI-473).
 ///
 /// This avoids a hard dependency on the learning feature from the tutoring
 /// feature (cross-feature deep imports are forbidden by coding standards).
@@ -30,9 +35,11 @@ typedef LiveCompletionDelegate<T> = Future<T> Function();
 ///
 /// Usage:
 /// ```dart
-/// final useCase = MarkLiveCompletionUseCase(session: resolvedSession);
+/// final useCase = MarkLiveCompletionUseCase<CaptureResult>(
+///   session: resolvedSession,
+/// );
 /// final result = await useCase.call(
-///   () => completionWriter.commit(command),
+///   () => commands.capture(curriculumId: id, refs: refs, ...),
 /// );
 /// ```
 class MarkLiveCompletionUseCase<T> {
