@@ -14,9 +14,11 @@ library;
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderBase;
 import 'package:learning_tracker/core/content/content_index_corpus.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/calendar_plan.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
@@ -150,7 +152,16 @@ final activeLearnerStateProvider =
     });
 
 /// Re-reads every dependency of the active learner's state after a failure:
-/// the scope, the repositories, the corpora and the composition itself.
+/// the scope, the repositories, the corpora, the calendar inputs and the
+/// composition itself (DNI-474 AC-1: retry re-reads the failed dependency
+/// and can recover).
+///
+/// The kept-alive inputs — the corpora, the content items and hierarchy
+/// configs they are built from, and the content database the calendar
+/// service reads — are re-read only when they failed, so a working corpus
+/// set or open database is never rebuilt. The calendar loader reads its
+/// inputs with `ref.read`, so a failure there is not cleared by
+/// invalidating [learnerStateProvider]; it must be invalidated here.
 void retryLearnerState(WidgetRef ref) {
   ref
     ..invalidate(activeLearnerScopeProvider)
@@ -159,6 +170,24 @@ void retryLearnerState(WidgetRef ref) {
     ..invalidate(changeLogRepositoryProvider)
     ..invalidate(governedIntentRepositoryProvider)
     ..invalidate(learnerStateProvider);
-  // A built corpus set is kept: only a failed build is re-read.
-  if (ref.read(corporaProvider).hasError) ref.invalidate(corporaProvider);
+  for (final curriculum in CurriculumId.all) {
+    _reReadIfFailed(ref, curriculumContentProvider(curriculum));
+    _reReadIfFailed(ref, curriculumHierarchyConfigProvider(curriculum));
+  }
+  _reReadIfFailed(ref, corporaProvider);
+  _reReadIfFailed(ref, contentDbPathProvider);
+  _reReadIfFailed(ref, contentDatabaseProvider);
+  _reReadIfFailed(ref, localCalendarEngineProvider);
+  _reReadIfFailed(ref, calendarProgramServiceProvider);
+}
+
+/// Invalidates [provider] when it was built and holds an error. A provider
+/// never built is left alone (reading it would start it).
+void _reReadIfFailed(
+  WidgetRef ref,
+  ProviderBase<AsyncValue<Object?>> provider,
+) {
+  if (ref.exists(provider) && ref.read(provider).hasError) {
+    ref.invalidate(provider);
+  }
 }
