@@ -16,3 +16,4 @@ export 'learning_event_repository.dart';
 export 'learning_write_port.dart';
 export 'oversized_governed_write_port.dart';
 export 'sub_track_repository.dart';
+export 'tutor_scope_grant_source.dart';
