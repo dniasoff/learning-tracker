@@ -165,8 +165,7 @@ final groundPickerAccessProvider = FutureProvider.autoDispose
         tracks,
         curriculumId: track.curriculumId,
         exceptId: track.id,
-        holds: (t) =>
-            curriculumState?.subTracks[t.id]?.holdsGround ?? !t.isEnded,
+        holds: engineHoldsGround(curriculumState),
       );
       return GroundPickerReady(
         GroundPickerInputs(

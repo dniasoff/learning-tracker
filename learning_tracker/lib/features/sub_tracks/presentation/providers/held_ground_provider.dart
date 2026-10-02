@@ -35,8 +35,7 @@ final mainTrackHeldGroundProvider = FutureProvider.autoDispose
         groundHolders(
           tracks,
           curriculumId: curriculumId,
-          holds: (t) =>
-              curriculumState?.subTracks[t.id]?.holdsGround ?? !t.isEnded,
+          holds: engineHoldsGround(curriculumState),
         ),
         corpus,
       );
