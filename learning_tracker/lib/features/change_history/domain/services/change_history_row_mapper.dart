@@ -278,9 +278,14 @@ final class _Context {
     if (item.isLearn) {
       summary = _learnSummary(item.events, at);
     } else {
+      // Only a `learn` target carries refs and a source. A void whose
+      // target is itself a void cancels nothing (`countEvents`), so it
+      // reads as the generic "removed an earlier record" below, never as
+      // a learn summary of a source-less event.
       final targets = [
         for (final v in item.events)
-          if (buffer.eventById(v.targetId!) case final target?) target,
+          if (buffer.eventById(v.targetId!) case final target?)
+            if (target.isLearn) target,
       ];
       summary = targets.isNotEmpty
           ? _learnSummary(targets, effectiveAt(targets.first), void_: true)
@@ -327,13 +332,14 @@ final class _Context {
     bool void_ = false,
   }) {
     final first = events.first;
+    final source = first.source;
     return LearningSummary(
       kind: void_ ? LearningEventKind.void_ : LearningEventKind.learn,
       refs: [
         for (final e in events)
           if (e.ref case final ref?) ref,
       ],
-      source: _sourceOf(first.source!, at),
+      source: source == null ? null : _sourceOf(source, at),
       dateState: first.dateState,
       learnedOn: first.learnedOn,
     );
