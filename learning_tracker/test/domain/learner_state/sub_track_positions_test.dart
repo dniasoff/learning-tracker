@@ -225,6 +225,35 @@ void main() {
     ]);
   });
 
+  test('DNI-501: recordedAhead holds the remaining-path leaves already '
+      'ticked in this source, not leaves learnt elsewhere', () {
+    final s = _states(
+      [school],
+      [
+        engineLearn(1, 'Mishnah Berakhot 1:1', source: school.id),
+        engineLearn(2, 'Mishnah Berakhot 1:3', source: school.id),
+        engineLearn(3, 'Mishnah Berakhot 1:2', stage: 1),
+        engineLearn(4, 'Mishnah Berakhot 2:1', source: rebbe.id),
+      ],
+    )[school.id]!;
+    expect(s.recordedAhead, {'Mishnah Berakhot 1:3'});
+    expect(s.recordedAhead, isNot(contains(s.position)));
+    expect(() => s.recordedAhead.add('x'), throwsUnsupportedError);
+    final exhausted = _states(
+      [rebbe],
+      [
+        for (final (i, ref) in [
+          'Mishnah Berakhot 2:1',
+          'Mishnah Berakhot 2:2',
+          'Mishnah Peah 1:1',
+          'Mishnah Peah 1:2',
+        ].indexed)
+          engineLearn(i + 10, ref, source: rebbe.id),
+      ],
+    )[rebbe.id]!;
+    expect(exhausted.recordedAhead, isEmpty);
+  });
+
   test('the remaining path is unmodifiable', () {
     final s = _states([school], const [])[school.id]!;
     expect(() => s.remainingPath.add('x'), throwsUnsupportedError);
