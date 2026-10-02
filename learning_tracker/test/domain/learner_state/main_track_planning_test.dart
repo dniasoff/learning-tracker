@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
@@ -234,6 +235,44 @@ void main() {
       expect(state.currentUnit, shabbat);
       expect(state.mainTrackPosition, 'Mishnah Shabbat 1:2');
     });
+  });
+
+  test('live order docs reorder O for position, schedulable and remaining; '
+      'ended docs do not', () {
+    MainTrackOrderEntry order(NodeEntry node, int sort, {bool ended = false}) =>
+        MainTrackOrderEntry(
+          docId: '${engineCurriculum}_${node.level}_${node.ref}',
+          curriculumId: engineCurriculum,
+          level: node.level,
+          ref: node.ref,
+          userSortOrder: sort,
+          lastChangeId: engineUlid(900),
+          endedAt: ended ? engineAt(2) : null,
+        );
+    final intent = MainTrackIntent(
+      curriculumId: engineCurriculum,
+      track: engineIntent().track,
+      order: [order(moed, 0), order(peah, 0), order(berakhot2, 0, ended: true)],
+    );
+    final state = const LearnerStateEngine().run(
+      engineInputs(
+        intents: {engineCurriculum: intent},
+        events: [engineLearn(1, 'Mishnah Shabbat 1:1', minutes: 5, stage: 1)],
+      ),
+    )[engineCurriculum]!;
+    expect(state.schedulableRefs, [
+      'Mishnah Shabbat 1:2',
+      'Mishnah Peah 1:1',
+      'Mishnah Peah 1:2',
+      'Mishnah Berakhot 1:1',
+      'Mishnah Berakhot 1:2',
+      'Mishnah Berakhot 1:3',
+      'Mishnah Berakhot 2:1',
+      'Mishnah Berakhot 2:2',
+    ]);
+    expect(state.mainTrackRemaining, 8);
+    expect(state.currentUnit, shabbat);
+    expect(state.mainTrackPosition, 'Mishnah Shabbat 1:2');
   });
 
   test('every planning output is deterministic for identical inputs', () {
