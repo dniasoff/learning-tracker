@@ -14,8 +14,10 @@ import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_settings_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
@@ -27,6 +29,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_fail
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
@@ -259,6 +262,32 @@ void main() {
       expect(batch.entry.at, engineAt(600));
     });
 
+    test('the gate reads learnerLockSettingsProvider: an unreadable '
+        'learner settings doc fails a capture closed (DNI-470 AC-7)', () async {
+      final container = ProviderContainer.test(
+        overrides: [
+          ...ready(lockSettings: false),
+          learnerSettingsReaderProvider.overrideWith(
+            (ref) async => _UnreadableSettings(),
+          ),
+        ],
+      );
+      final commands = (await settledAsync(
+        container,
+        learningCommandsProvider,
+      )).value!;
+      expect(
+        await commands.capture(
+          curriculumId: engineCurriculum,
+          refs: const ['Mishnah Berakhot 1:1'],
+          source: LearningEvent.sourceMain,
+          dateState: DateState.dated,
+        ),
+        isA<CaptureLocked>(),
+      );
+      expect(port.attempts, isEmpty);
+    });
+
     test('fails closed (locked, nothing written) while the settings '
         'history is unavailable', () async {
       final container = ProviderContainer.test(
@@ -285,4 +314,11 @@ void main() {
       expect(port.attempts, isEmpty);
     });
   });
+}
+
+/// A learner whose settings doc cannot be read.
+final class _UnreadableSettings implements LearnerSettingsReader {
+  @override
+  Stream<LearnerSettings> watch(LearnerScope scope) =>
+      Stream.error(const FormatException('no time_zone'));
 }
