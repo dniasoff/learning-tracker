@@ -750,6 +750,8 @@ void main() {
       expect(rebbe.shortfall, rebbe.shortfallLeaves.length);
       expect(rebbe.windowEnd, isNull);
       expect(rebbe.lastShortfallNode, _perek('Peah', 3));
+      // DNI-502: the forecast keeps the name the warning card shows.
+      expect(rebbe.name, 'Rebbe');
       final school = s.subTracks[_schoolId]!;
       expect(school.windowEnd, '2027-07-31');
       expect(school.shortfallLeaves, isEmpty);

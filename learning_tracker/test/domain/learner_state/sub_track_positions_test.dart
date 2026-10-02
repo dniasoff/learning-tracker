@@ -69,6 +69,10 @@ void main() {
     expect(s.inForecast, isTrue);
   });
 
+  test('DNI-502: the state carries the sub-track name for FR-21 copy', () {
+    expect(_states([rebbe], const [])[rebbe.id]!.name, 'Sub 20');
+  });
+
   test('position is the first leaf not ticked from this source; remaining '
       'runs from it to the end, including leaves learnt elsewhere', () {
     final s = _states(

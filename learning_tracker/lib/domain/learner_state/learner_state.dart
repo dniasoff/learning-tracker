@@ -168,6 +168,8 @@ final class Projection {
     required this.status,
     this.velocityPerDay,
     this.projectedFinish,
+    this.deadline,
+    this.newlyLearntToday = 0,
   });
 
   /// The status.
@@ -179,15 +181,36 @@ final class Projection {
   /// Projected finish day, if known.
   final CivilDate? projectedFinish;
 
+  /// The live deadline's `target_date` the status was judged against;
+  /// null with no live deadline (always so for
+  /// [ProjectionStatus.noDeadline]). The parent on-track card names it
+  /// beside [projectedFinish] (DNI-502, FR-18; additive C0 change).
+  final CivilDate? deadline;
+
+  /// Distinct leaves newly learnt (the AD-35 velocity rule: `dated` and
+  /// `catch_up`, not chazara, not before-tracking) whose `learned_on` is
+  /// the projection day, under 14 days of history too. The child's
+  /// "Today {done} of {target} done" reads it (DNI-502, UX-DR-67;
+  /// additive C0 change).
+  final int newlyLearntToday;
+
   @override
   bool operator ==(Object other) =>
       other is Projection &&
       other.status == status &&
       other.velocityPerDay == velocityPerDay &&
-      other.projectedFinish == projectedFinish;
+      other.projectedFinish == projectedFinish &&
+      other.deadline == deadline &&
+      other.newlyLearntToday == newlyLearntToday;
 
   @override
-  int get hashCode => Object.hash(status, velocityPerDay, projectedFinish);
+  int get hashCode => Object.hash(
+    status,
+    velocityPerDay,
+    projectedFinish,
+    deadline,
+    newlyLearntToday,
+  );
 
   @override
   String toString() => 'Projection(${status.name})';
@@ -212,10 +235,16 @@ final class SubTrackState {
     this.shortfallLeaves = const [],
     this.windowEnd,
     this.lastShortfallNode,
+    this.name,
   });
 
   /// The sub-track ULID.
   final String subTrackId;
+
+  /// The sub-track's current `name`; FR-21 copy names the track
+  /// ("{name} may not reach …", DNI-502; additive C0 change). Null only
+  /// where a state is built without its sub-track.
+  final String? name;
 
   /// Whether it holds its ground off the main track.
   final bool holdsGround;
@@ -303,7 +332,8 @@ final class SubTrackState {
       other.shortfall == shortfall &&
       _sameLeaves(other.shortfallLeaves, shortfallLeaves) &&
       other.windowEnd == windowEnd &&
-      other.lastShortfallNode == lastShortfallNode;
+      other.lastShortfallNode == lastShortfallNode &&
+      other.name == name;
 
   @override
   int get hashCode => Object.hash(
@@ -322,6 +352,7 @@ final class SubTrackState {
     Object.hashAll(shortfallLeaves),
     windowEnd,
     lastShortfallNode,
+    name,
   );
 
   @override

@@ -1,0 +1,111 @@
+/// Fixtures for the Dashboard forecast surfaces (Story 2.11, DNI-502):
+/// fake engine states and the provider overrides that feed them.
+library;
+
+import 'dart:async';
+
+// `Override` is part of Riverpod's public API but is only re-exported from
+// `misc.dart` (same import as `test/helpers/pump_app.dart`).
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
+
+import '../learner_state/c0_fixtures.dart';
+import '../learner_state/fake_learner_state.dart';
+
+/// The Mishnayos curriculum storage key.
+const forecastCurriculum = 'mishnayos';
+
+/// A sub-track ULID for fixtures.
+const schoolSubTrackId = '01J6Q2H4A8M7K3P9R5T6V8WXS1';
+
+/// A second sub-track ULID for fixtures.
+const rebbeSubTrackId = '01J6Q2H4A8M7K3P9R5T6V8WXR2';
+
+/// A Mishnayos curriculum state with [projection], [dailyTarget], a
+/// [streak] and [subTracks].
+FakeCurriculumState forecastCurriculumState({
+  String curriculumId = forecastCurriculum,
+  Projection projection = const Projection(status: ProjectionStatus.tooEarly),
+  int? dailyTarget,
+  CurriculumStreak? streak,
+  Map<String, SubTrackState> subTracks = const {},
+  bool evaluated = true,
+}) => FakeCurriculumState(
+  curriculumId: curriculumId,
+  evaluated: evaluated,
+  projection: projection,
+  dailyTarget: dailyTarget,
+  streak: streak,
+  subTracks: subTracks,
+);
+
+/// A learner state holding [curricula].
+LearnerState forecastState(List<CurriculumState> curricula) =>
+    fakeLearnerState(curricula: {for (final c in curricula) c.curriculumId: c});
+
+/// A sub-track state with an FR-19 [shortfall] over [lastNode].
+SubTrackState shortfallSubTrack({
+  required String id,
+  required String name,
+  required int shortfall,
+  NodeEntry? lastNode,
+  String? windowEnd,
+}) => SubTrackState(
+  subTrackId: id,
+  name: name,
+  holdsGround: true,
+  inForecast: true,
+  onHome: true,
+  capacity: 10,
+  shortfall: shortfall,
+  windowEnd: windowEnd,
+  lastShortfallNode: shortfall > 0 ? lastNode : null,
+);
+
+/// Overrides for the forecast surfaces: the session role ([parent]), the
+/// active scope, the learner state ([state], or each element of [states]
+/// emitted through a broadcast controller) and the curriculum display
+/// labels ([nodeLabels] by ref, else the raw ref, so no content database
+/// is read).
+List<Override> forecastOverrides({
+  bool parent = true,
+  LearnerState? state,
+  Stream<LearnerState>? states,
+  Map<String, String> nodeLabels = const {},
+}) => [
+  parentSessionProvider.overrideWith((ref) async => parent),
+  activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
+  if (state != null || states != null)
+    learnerStateProvider.overrideWith(
+      (ref, _) => states ?? Stream.value(state!),
+    ),
+  renderedDisplayForRefProvider.overrideWith(
+    (ref, sefariaRef) async => nodeLabels[sefariaRef] ?? sefariaRef,
+  ),
+];
+
+/// A controllable stream of learner states for recompute tests: one
+/// subscriber (the engine-backed `learnerStateProvider`), buffered until
+/// it listens, seeded with [initial].
+final class LearnerStateFeed {
+  /// Creates the feed with its first state.
+  LearnerStateFeed(LearnerState initial) {
+    _controller.add(initial);
+  }
+
+  final _controller = StreamController<LearnerState>();
+
+  /// The stream to pass as `states`.
+  Stream<LearnerState> get stream => _controller.stream;
+
+  /// Emits [state] as a recompute.
+  void emit(LearnerState state) => _controller.add(state);
+
+  /// Closes the feed.
+  Future<void> close() => _controller.close();
+}

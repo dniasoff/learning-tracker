@@ -103,5 +103,6 @@ SubTrackState subTrackState(
     remainingPath: List.unmodifiable(remaining),
     recordedAhead: Set.unmodifiable(remaining.where(tickedInSource.contains)),
     windowEnd: s.windowEnd,
+    name: s.name,
   );
 }

@@ -201,6 +201,7 @@ Map<String, SubTrackState> withForecast(
         shortfallLeaves: f.shortfallLeaves,
         windowEnd: s.windowEnd,
         lastShortfallNode: f.lastShortfallNode,
+        name: s.name,
       ),
     },
 };

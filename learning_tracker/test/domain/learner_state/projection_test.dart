@@ -390,4 +390,48 @@ void main() {
       expect(after.status, ProjectionStatus.behindPace);
     });
   });
+
+  group('DNI-502: the deadline and today\'s new leaves', () {
+    const goal = DeadlineGoal(
+      curriculumId: engineCurriculum,
+      targetDate: '2027-02-01',
+    );
+
+    test('carries the live deadline in every status', () {
+      final tooEarly = _run(
+        const [],
+        trackingStartDate: '2026-10-01',
+        deadline: goal,
+      ).projection!;
+      expect(tooEarly.status, ProjectionStatus.tooEarly);
+      expect(tooEarly.deadline, '2027-02-01');
+      final judged = _run(
+        [_learn(1, 'Mishnah Berakhot 1:1', '2026-10-08')],
+        trackingStartDate: '2026-09-01',
+        deadline: goal,
+      ).projection!;
+      expect(judged.status, isNot(ProjectionStatus.tooEarly));
+      expect(judged.deadline, '2027-02-01');
+    });
+
+    test('no deadline: none is carried', () {
+      final p = _run(const [], trackingStartDate: '2026-09-01').projection!;
+      expect(p.status, ProjectionStatus.noDeadline);
+      expect(p.deadline, isNull);
+    });
+
+    test('counts distinct new leaves dated today, under 14 days too', () {
+      final p = _run([
+        _learn(1, 'Mishnah Berakhot 1:1', '2026-10-07'),
+        _learn(2, 'Mishnah Berakhot 1:2', '2026-10-08'),
+        _learn(3, 'Mishnah Berakhot 1:3', '2026-10-08'),
+        // A repeat of an earlier leaf is not new today.
+        _learn(4, 'Mishnah Berakhot 1:1', '2026-10-08'),
+        // Chazara is never new learning.
+        _learn(5, 'Mishnah Berakhot 2:1', '2026-10-08', stage: 2),
+      ], trackingStartDate: '2026-10-07').projection!;
+      expect(p.status, ProjectionStatus.tooEarly);
+      expect(p.newlyLearntToday, 2);
+    });
+  });
 }
