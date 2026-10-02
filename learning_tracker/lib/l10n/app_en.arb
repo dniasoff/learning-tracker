@@ -642,6 +642,10 @@
   "@subTrackDetailEdit": {
     "description": "Sub-track detail: ⋮ action opening the sub-track's metadata form; Edit moved here from the hub row (DNI-497 AC-1, UX-DR-53)."
   },
+  "subTrackDetailHubTitle": "Sub-tracks",
+  "@subTrackDetailHubTitle": {
+    "description": "Manage tracks hub: heading of the interim sub-track rows; a row opens the sub-track detail (DNI-497 AC-1, UX-DR-53). Replaced by the DNI-495 hub section when it lands."
+  },
   "subTrackDetailMoveUp": "Move up",
   "@subTrackDetailMoveUp": {
     "description": "Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging up (DNI-497 AC-5, UX-DR-155)."
