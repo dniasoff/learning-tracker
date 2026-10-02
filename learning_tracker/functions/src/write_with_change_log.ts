@@ -878,6 +878,11 @@ export async function writeWithChangeLog(
   const outcome: Outcome = await db.runTransaction(async (txn): Promise<Outcome> => {
     // ── 1. Authorise (re-read every call, so revocation stops the next one) ──
     const { actor, grantRef } = await resolveActor(txn, auth, req);
+    // An undo is a parent action (AD-38; DNI-514 AC-1): change_log entries
+    // carrying reverts_action_id are never written for a child or a tutor.
+    if (req.revertsActionId && actor.role !== "parent") {
+      reject("permission-denied", "Only a parent may undo a change");
+    }
     const profileSnap = await txn.get(profileRef);
     if (!profileSnap.exists) reject("not-found", "Learner profile not found");
 

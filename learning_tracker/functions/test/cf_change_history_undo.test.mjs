@@ -6,8 +6,10 @@
 // AC-10: an undo racing a tutor write on the same field is decided by
 // server commit order; both immutable actions stay in the history.
 //
-// No callable or rules change: the Story 1.8 / 1.10 contract already
-// carries revertsActionId. See _cf_helpers.mjs for the harness.
+// AC-1: an undo is a parent action, so writeWithChangeLog refuses a
+// revertsActionId from a child (or tutor) actor. Otherwise the Story
+// 1.8 / 1.10 contract already carries revertsActionId. See _cf_helpers.mjs
+// for the harness.
 
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
@@ -100,6 +102,31 @@ describe('AC-8: an oversized undo goes through ownerOversizedGovernedWrite', () 
     );
     assert.deepEqual(await changeLog(), []);
     assert.equal((await order().doc(orderId(0)).get()).get('user_sort_order'), 0);
+  });
+
+  test('a child session cannot send an undo: permission-denied, nothing written', async () => {
+    await expectHttpsError(
+      call(fns.ownerOversizedGovernedWrite,
+        { ...ownerUndo(ulid(2), ulid(1), 'mainTrackOrder', C, restore()), actorRole: 'child' },
+        parentAuth),
+      'permission-denied',
+    );
+    assert.deepEqual(await changeLog(), []);
+    assert.equal((await order().doc(orderId(0)).get()).get('user_sort_order'), 0);
+  });
+
+  test('a child session may still send an oversized change that is not an undo', async () => {
+    const res = await call(fns.ownerOversizedGovernedWrite,
+      {
+        profileId: PROFILE,
+        actorRole: 'child',
+        entries: [{ id: ulid(2), entity: 'mainTrackOrder', entityId: C, docs: restore() }],
+      },
+      parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(2)]);
+    const [entry] = await changeLog();
+    assert.equal(entry.actor.role, 'child');
+    assert.equal(entry.reverts_action_id, undefined);
   });
 
   test('a tutor cannot send an owner undo', async () => {

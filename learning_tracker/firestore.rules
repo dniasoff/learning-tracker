@@ -248,6 +248,13 @@ service cloud.firestore {
           && (isAbsentOrNull(d, 'original_at') || d.original_at is timestamp);
     }
 
+    // An undo is a parent action (sub-tracks AD-38; DNI-514 AC-1): a
+    // change_log entry carrying `reverts_action_id` must name a `parent`
+    // actor. No document-access calls.
+    function isParentOnlyRevert(d) {
+      return isAbsentOrNull(d, 'reverts_action_id') || d.actor.role == 'parent';
+    }
+
     // points_ledger — an EVENT entry (doc id `pts_…` or carrying `event_id`)
     // must sit at exactly `pts_{event_id}` (AD-46 / AD-50). Non-event entries
     // (spends, parent adjustments) keep their ULID ids. No access calls.
@@ -511,7 +518,9 @@ service cloud.firestore {
         match /change_log/{entryId} {
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId)) && request.query.limit <= 500;
-          allow create: if isOwner(uid) && isValidChangeLogEntry(entryId, request.resource.data);
+          allow create: if isOwner(uid)
+              && isValidChangeLogEntry(entryId, request.resource.data)
+              && isParentOnlyRevert(request.resource.data);
           allow update: if isOwner(uid) && isIdenticalReplay();
           allow delete: if false;
         }
