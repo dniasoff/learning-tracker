@@ -53,19 +53,27 @@ const _fallbackCurriculum = 'mishnayos';
 /// A curriculum without a state reads as the empty projection (AC-8).
 final lifetimeReportProvider = Provider.autoDispose
     .family<AsyncValue<LifetimeReportView>, String?>((ref, requested) {
+      // Fail closed: a session still resolving, or re-resolving after a
+      // PIN, profile or tutor change, is not a parent's yet, even while it
+      // retains an earlier `true` (AC-2).
       final access = ref.watch(parentSessionProvider);
-      if (access.isLoading && !access.hasValue) {
-        return const AsyncLoading<LifetimeReportView>();
-      }
+      if (access.isLoading) return const AsyncLoading<LifetimeReportView>();
       if (access.hasError || access.value != true) {
         return AsyncError<LifetimeReportView>(
           const LifetimeReportAccessDenied(),
           StackTrace.current,
         );
       }
+      // The learner identity: while it re-resolves (a profile switch) the
+      // active state still serves the previous learner's scope, so nothing
+      // of it is shown until the new scope settles.
+      if (ref.watch(activeLearnerScopeProvider).isLoading) {
+        return const AsyncLoading<LifetimeReportView>();
+      }
       final state = ref.watch(activeLearnerStateProvider);
       // A retry after an error is loading again, not the old error; a
-      // refresh over a complete state keeps showing that complete state.
+      // refresh over a complete state of this same scope keeps showing
+      // that complete state.
       if (state.isLoading && !state.hasValue) {
         return const AsyncLoading<LifetimeReportView>();
       }

@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
+import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_view.dart';
@@ -55,6 +56,15 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
       final denied = next.hasError || (next.hasValue && next.value != true);
       if (denied) _leave();
     }, fireImmediately: true);
+    // Another learner (a profile switch that keeps a parent session): the
+    // curriculum picked for the previous learner is not carried over.
+    ref.listenManual(activeLearnerScopeProvider, (previous, next) {
+      final before = previous?.value;
+      final after = next.value;
+      if (before != null && after != null && before != after) {
+        setState(() => _curriculumId = widget.curriculumId);
+      }
+    });
   }
 
   /// Back to Lifetime: pop to it when it is below, else replace this
@@ -78,10 +88,14 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
     final l10n = AppLocalizations.of(context)!;
     final colors = context.colors;
     final access = ref.watch(parentSessionProvider);
-    final allowed = access.value == true && !access.hasError;
+    // Fail closed: a session re-resolving after a PIN, profile or tutor
+    // change is not a parent's yet, even with an earlier `true` retained.
+    final allowed =
+        !access.isLoading && !access.hasError && access.value == true;
     final Widget body;
     if (!allowed) {
-      // Loading the session, or leaving: nothing of the report is built.
+      // Loading the session, or leaving: nothing of the report is built,
+      // and the report provider (auto-dispose) is dropped.
       body = access.isLoading && !_leaving
           ? const LoadingIndicator()
           : const SizedBox.shrink();
