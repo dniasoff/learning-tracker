@@ -28,7 +28,13 @@ import { db } from "./shared";
 //      calendar-program goal rejection) before writing anything;
 //   5. runs everything — doc patches, one change_log entry per entity, learning
 //      events — in ONE Firestore transaction;
-//   6. is idempotent on the client action id (the request actionId, else the
+//   6. attaches `points_ledger/pts_{eventId}` to every NEW `source = main`
+//      `dated` or `catch_up` learn event in the same transaction (AD-50):
+//      amount = point_configs[curriculum, stage ?? firstStageOrder] (the
+//      default ladder when no override exists), `created_at` = the event's
+//      `recorded_at`. Never for a void, a before_tracking event, a sub-track
+//      source or a replayed event; no reversal entries are ever written;
+//   7. is idempotent on the client action id (the request actionId, else the
 //      first entry's ULID): every client action — no-ops included — leaves an
 //      immutable receipt at `governed_action_receipts/{actionId}` (Admin-only,
 //      default-denied by the rules) holding the actor, a canonical request
@@ -245,6 +251,33 @@ const EVENT_VOID_FIELDS: Readonly<Record<string, Check>> = {
   target_id: (v) => typeof v === "string" && ULID_RE.test(v),
   reverts_action_id: (v) => typeof v === "string" && ULID_RE.test(v),
 };
+
+// ── AD-50 points attachment ───────────────────────────────────────────────────
+
+/** `points_ledger/pts_{eventId}` — the one event-bound points entry (AD-50 / AD-46). */
+export function pointsDocId(eventId: string): string {
+  return `pts_${eventId}`;
+}
+
+/** True for a learn event that AD-50 pairs with a `pts_` entry. */
+export function earnsPointsEntry(fields: Record<string, unknown>): boolean {
+  return fields.kind === "learn" && fields.source === "main" &&
+    (fields.date_state === "dated" || fields.date_state === "catch_up");
+}
+
+/**
+ * The default per-stage ladder used when a curriculum/stage has no
+ * `point_configs` override — identical to the client app's default stage
+ * ladder (Learn=10, Chazara1=5, Chazara2=3, else 1).
+ */
+export function defaultPointsForStage(stageOrder: number): number {
+  switch (stageOrder) {
+    case 1: return 10;
+    case 2: return 5;
+    case 3: return 3;
+    default: return 1;
+  }
+}
 
 // ── Request / result types ────────────────────────────────────────────────────
 
@@ -820,7 +853,8 @@ export async function writeWithChangeLog(
       events = [...events, ...validateEvents(planned.events)];
     }
     const docCount = entries.reduce((n, e) => n + e.docs.length, 0);
-    if (docCount + entries.length + events.length > MAX_WRITES_PER_CALL) {
+    const pointsCount = events.filter((ev) => earnsPointsEntry(ev.fields)).length;
+    if (docCount + entries.length + events.length + pointsCount > MAX_WRITES_PER_CALL) {
       reject("invalid-argument", "Too many writes for one call");
     }
 
@@ -975,6 +1009,12 @@ export async function writeWithChangeLog(
       replayedEventIds.push(ev.id);
     });
 
+    // AD-50: the amount for each new points-earning event, read in this
+    // transaction (stage ?? the curriculum's first live stage_order, then its
+    // point_configs override or the default ladder).
+    const pointsEvents = newEvents.filter((ev) => earnsPointsEntry(ev.fields));
+    const pointsAmount = await resolvePointsAmounts(txn, profileRef, pointsEvents);
+
     // ── 6. Assign entry ids (first written entry carries the action id) ──────
     planned.forEach((p, i) => {
       if (!p.id) p.id = i === 0 ? actionId : newUlid();
@@ -1020,6 +1060,18 @@ export async function writeWithChangeLog(
         data.original_recorded_at = admin.firestore.Timestamp.fromDate(new Date(ev.fields.original_recorded_at));
       }
       txn.create(profileRef.collection("learning_events").doc(ev.id), data);
+    }
+    for (const ev of pointsEvents) {
+      // The existing points_ledger entry shape plus `event_id`; created_at is
+      // the same commit-time stamp as the event's recorded_at.
+      txn.create(profileRef.collection("points_ledger").doc(pointsDocId(ev.id)), {
+        ulid: pointsDocId(ev.id),
+        entry_kind: "completion",
+        delta: pointsAmount.get(ev.id)!,
+        created_at: serverNow,
+        source: "live",
+        event_id: ev.id,
+      });
     }
     // Security audit only (AD-38 History): who wrote what, when — the change
     // itself lives in change_log, so no before/after values are copied here.
@@ -1070,6 +1122,52 @@ export async function writeWithChangeLog(
     replayed,
     noop,
   };
+}
+
+/**
+ * Resolves the AD-50 amount for each points-earning event:
+ * `point_configs[curriculum, stage ?? firstStageOrder]`, where
+ * firstStageOrder is the lowest live `stage_definitions.stage_order` of the
+ * curriculum (1 when none is configured), falling back to the default ladder
+ * when no override doc exists. Reads only (transaction-safe).
+ */
+async function resolvePointsAmounts(
+  txn: FirebaseFirestore.Transaction,
+  profileRef: FirebaseFirestore.DocumentReference,
+  events: LearningEventIntent[],
+): Promise<Map<string, number>> {
+  const amounts = new Map<string, number>();
+  if (events.length === 0) return amounts;
+  const firstStage = new Map<string, number>();
+  const needFirst = [...new Set(events
+    .filter((ev) => ev.fields.stage === undefined)
+    .map((ev) => String(ev.fields.curriculum_id)))];
+  for (const c of needFirst) {
+    const stages = await txn.get(profileRef.collection("stage_definitions").where("curriculum_id", "==", c));
+    const orders = stages.docs
+      .filter((d) => isLive(d.data()))
+      .map((d) => d.get("stage_order"))
+      .filter((o): o is number => typeof o === "number" && Number.isInteger(o));
+    firstStage.set(c, orders.length ? Math.min(...orders) : 1);
+  }
+  const keyOf = (ev: LearningEventIntent) => {
+    const c = String(ev.fields.curriculum_id);
+    const stage = ev.fields.stage === undefined ? firstStage.get(c)! : (ev.fields.stage as number);
+    return { c, stage, id: `${c}_${stage}` };
+  };
+  const configIds = [...new Set(events.map((ev) => keyOf(ev).id))];
+  const configSnaps = await txn.getAll(
+    ...configIds.map((id) => profileRef.collection("point_configs").doc(id)));
+  const configured = new Map<string, number>();
+  configSnaps.forEach((snap, i) => {
+    const pts = snap.exists ? snap.get("points") : undefined;
+    if (typeof pts === "number" && Number.isInteger(pts) && pts >= 1) configured.set(configIds[i], pts);
+  });
+  for (const ev of events) {
+    const k = keyOf(ev);
+    amounts.set(ev.id, configured.get(k.id) ?? defaultPointsForStage(k.stage));
+  }
+  return amounts;
 }
 
 // ── Named multi-entity action: remove track (AD-38 Track lifecycle) ───────────
