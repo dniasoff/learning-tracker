@@ -232,11 +232,38 @@ class FirestoreGoalRepository {
     PaceGranularity? paceGranularity,
     String? rawLearningUnit,
   }) async {
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
+    final entity = buildNewGoal(
+      curriculumId: curriculumId,
+      now: DateTimeFactory.nowUtc(), // P5: UTC timestamps
+      targetPercent: targetPercent,
+      paceTarget: paceTarget,
+      description: description,
+      dateType: dateType,
+      paceGranularity: paceGranularity,
+      rawLearningUnit: rawLearningUnit,
+    );
+    await _doc(entity).set(entity.toFirestore(), SetOptions(merge: true));
+    return entity;
+  }
+
+  /// The goal [createGoal] writes, computed without writing: the single
+  /// creation rule the owner path and the tutor path (Story 1.24, DNI-486:
+  /// `tutorUpsertGoal`) share. [now] stamps `createdAt` / `updatedAt` (and
+  /// therefore [GoalEntity.firestoreId]).
+  static GoalEntity buildNewGoal({
+    required CurriculumId curriculumId,
+    required DateTime now,
+    required double targetPercent,
+    PaceTarget? paceTarget,
+    String description = '',
+    String dateType = 'gregorian',
+    PaceGranularity? paceGranularity,
+    String? rawLearningUnit,
+  }) {
     final (goalType, targetDate, paceValue, pacePeriod) = _decomposePaceTarget(
       paceTarget,
     );
-    final entity = GoalEntity(
+    return GoalEntity(
       curriculumId: curriculumId,
       targetPercent: targetPercent,
       targetDate: targetDate,
@@ -250,8 +277,6 @@ class FirestoreGoalRepository {
       createdAt: now,
       updatedAt: now,
     );
-    await _doc(entity).set(entity.toFirestore(), SetOptions(merge: true));
-    return entity;
   }
 
   /// The goal [updateGoal] writes, computed without writing: the single
