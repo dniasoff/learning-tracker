@@ -4,6 +4,7 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/tracks/setup/data/repositories/add_track_action_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/add_track_action_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// The governed Add track action writer (DNI-476 AC-5).
 final addTrackActionRepositoryProvider = Provider<AddTrackActionRepository>(
@@ -16,5 +17,7 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
     actionRepository: ref.watch(addTrackActionRepositoryProvider),
     wizardService: ref.watch(learningProcessWizardServiceProvider),
     analytics: ref.watch(analyticsServiceProvider),
+    isTutoredSession: () =>
+        ref.read(activeTutoredProfileSelectionProvider) != null,
   );
 });

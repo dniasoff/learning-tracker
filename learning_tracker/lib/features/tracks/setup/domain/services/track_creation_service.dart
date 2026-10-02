@@ -51,13 +51,18 @@ class TrackCreationService {
     required AddTrackActionRepository actionRepository,
     required LearningProcessWizardService wizardService,
     AnalyticsService? analytics,
+    bool Function() isTutoredSession = _ownerSession,
   }) : _actionRepository = actionRepository,
        _wizardService = wizardService,
-       _analytics = analytics ?? const NullAnalyticsService();
+       _analytics = analytics ?? const NullAnalyticsService(),
+       _isTutoredSession = isTutoredSession;
+
+  static bool _ownerSession() => false;
 
   final AddTrackActionRepository _actionRepository;
   final LearningProcessWizardService _wizardService;
   final AnalyticsService _analytics;
+  final bool Function() _isTutoredSession;
 
   /// Persist all track configuration from the AddTrackFlow result as one
   /// governed action.
@@ -68,6 +73,9 @@ class TrackCreationService {
   /// is rolled back and surfaces as a pending failure), so no analytics
   /// event outlives a track that was never added.
   Future<void> createTrack({required AddTrackResult result}) async {
+    if (_isTutoredSession()) {
+      throw const TutorTrackCreationUnsupportedException();
+    }
     final plan = planFor(result);
     final outcome = await _actionRepository.applyAddTrack(plan);
     if (!outcome.queued) {
@@ -220,4 +228,14 @@ class TrackCreationService {
       trackingStartDate: trackingStartDate,
     );
   }
+}
+
+/// A tutor cannot use the owner-only Add track path until a governed add-track
+/// callable exists. Refusal occurs before any action is prepared or written.
+final class TutorTrackCreationUnsupportedException implements Exception {
+  /// Creates the exception.
+  const TutorTrackCreationUnsupportedException();
+
+  @override
+  String toString() => 'Add track is not available in a tutored session';
 }

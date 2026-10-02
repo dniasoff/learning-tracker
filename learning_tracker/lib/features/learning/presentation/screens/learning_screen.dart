@@ -59,7 +59,6 @@ class LearningScreen extends ConsumerWidget {
       activeTutoredProfileSelectionProvider,
     );
     final isTutoredSession = activeTutoredSelection != null;
-    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
     return Scaffold(
       backgroundColor: context.colors.surfaceF4,
       body: Theme(
@@ -75,11 +74,10 @@ class LearningScreen extends ConsumerWidget {
             ),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
-                // Tutors can add tracks if canEditLearning is permitted (AD-53).
-                final tutorCanAddTrack =
-                    isTutoredSession && (tutorPerms?.canEditLearning ?? false);
-                final canAddTrack =
-                    !isChildMode && (!isTutoredSession || tutorCanAddTrack);
+                // DNI-486: adding a track has no governed tutor path yet
+                // (learning-tracker-fyh.212), so a tutor gets no Add track
+                // here, whatever the grant's canEditLearning (AD-53).
+                final canAddTrack = !isChildMode && !isTutoredSession;
                 return EmptyState(
                   message: l10n.noActiveTracks,
                   subtitle: canAddTrack

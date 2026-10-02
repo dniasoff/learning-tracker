@@ -25,12 +25,14 @@ import 'package:learning_tracker/features/tracks/setup/data/repositories/curricu
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../helpers/firestore_governed_writer.dart';
 import '../../../../helpers/pump_app.dart';
+import '../../../../helpers/tutoring/tutor_learning_harness.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -89,6 +91,7 @@ Widget _buildApp({
   ThemeData? theme,
   Stream<List<CurriculumTrackEntity>>? tracksStream,
   bool useFirestoreTracks = false,
+  bool tutored = false,
 }) {
   return pumpApp(
     locale: locale,
@@ -118,6 +121,10 @@ Widget _buildApp({
         ),
       ..._perTrackOverrides(tracks),
       useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+      if (tutored)
+        activeTutoredProfileSelectionProvider.overrideWith(
+          () => FixedTutoredSelection(tutorSelection()),
+        ),
     ],
     child: StackRouterScope(
       controller: router,
@@ -168,6 +175,56 @@ void main() {
     expect(find.text('No active tracks'), findsOneWidget);
     expect(find.text('Add Track'), findsOneWidget);
     expect(find.text('ADD TRACK'), findsNothing);
+    await _teardown(tester);
+  });
+
+  // DNI-486: adding, archiving and deleting a track have no governed tutor
+  // path (learning-tracker-fyh.212 / fyh.227), so a tutor gets none of them.
+  testWidgets('a tutor gets no Add Track action on the empty state', (
+    tester,
+  ) async {
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        firestore: firestore,
+        tracks: const [],
+        tutored: true,
+      ),
+    );
+    await _settle(tester);
+    expect(find.text('No active tracks'), findsOneWidget);
+    expect(find.text('Add Track'), findsNothing);
+    await _teardown(tester);
+  });
+
+  testWidgets('a tutor gets no Add Track FAB and no archive/delete on '
+      'long-press, but still opens a track', (tester) async {
+    final firestore = createFakeFirestore(authenticatedUid: _uid);
+    final track = _track(curriculumId: CurriculumId.mishnayos);
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        firestore: firestore,
+        tracks: [track],
+        tutored: true,
+      ),
+    );
+    await _settle(tester);
+    expect(find.text('Active Tracks'), findsOneWidget);
+    expect(find.text('ADD TRACK'), findsNothing);
+
+    await tester.longPress(find.byType(LearningTrackCard).first);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(AlertDialog), findsNothing);
+    // Without a long-press handler the gesture lands as a plain tap.
+    clearInteractions(router);
+
+    await tester.tap(find.byType(InkWell).first);
+    await tester.pump();
+    verify(
+      () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+    ).called(1);
     await _teardown(tester);
   });
 
