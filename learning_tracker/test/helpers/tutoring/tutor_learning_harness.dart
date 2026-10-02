@@ -255,6 +255,7 @@ final class ConnectivityFeed {
 /// connectivity probe ([online] or a [connectivity] feed; an
 /// `Exception` makes it error), the talmid's settings history and gate,
 /// a fixed clock at [tutorFixtureNow] and the talmid's profile name.
+/// Pass `withScope: false` when another helper overrides the active scope.
 List<Override> tutoredOverrides({
   TutoredProfileSelection? selection,
   bool online = true,
@@ -264,11 +265,13 @@ List<Override> tutoredOverrides({
   Stream<LearnerSettingsHistory>? lockSettingsStream,
   CaptureGate? gate,
   DateTime? now,
+  bool withScope = true,
 }) => [
   activeTutoredProfileSelectionProvider.overrideWith(
     () => FixedTutoredSelection(selection),
   ),
-  activeLearnerScopeProvider.overrideWith((ref) async => tutorFixtureScope()),
+  if (withScope)
+    activeLearnerScopeProvider.overrideWith((ref) async => tutorFixtureScope()),
   connectivityStreamProvider.overrideWith((ref) {
     if (connectivityError != null) return Stream<bool>.error(connectivityError);
     return connectivity?.stream() ?? Stream.value(online);
