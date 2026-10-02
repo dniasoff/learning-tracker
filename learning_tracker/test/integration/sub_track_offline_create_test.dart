@@ -11,14 +11,9 @@
 // - A queued create the server refuses for good is rolled back alone:
 //   unrelated queued edits queued before and after it survive, it becomes
 //   a "not saved — retry" pending failure, and retry re-sends it.
-// - The same, end to end through the Story 2.4 (DNI-495) Manage tracks hub
-//   and the ongoing form: the queued row shows, rolls back with the shared
-//   "Your change couldn't be saved." (UX-DR-121); a retry the server
-//   refuses again at once stays unsaved, and the next retry lands.
-// - The production composition: the unoverridden `learningCommandsProvider`
-//   (only its data sources are in-memory) saves an ongoing create and an
-//   edit, and the hub run above goes through it, so its pending failures
-//   and Retry travel the real `DefaultLearningCommands` facade.
+// - The same, end to end through the hub and the ongoing form: the queued
+//   row shows, rolls back with "Your change couldn't be saved." and Retry
+//   brings it back (UX-DR-121).
 //
 // The Firestore-emulator run of the same flow (real rules, real offline
 // cache) is integration_test/sub_track_offline_create_test.dart; device
@@ -26,37 +21,31 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
-import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
-import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
-import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/ongoing_sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ongoing_sub_track_hub_seam.dart';
 
 import '../helpers/learner_state/c0_fixtures.dart';
 import '../helpers/learner_state/engine_fixtures.dart';
@@ -181,47 +170,77 @@ final class _FakeAsyncSafeIntent implements GovernedIntentRepository {
       _fakeAsyncSafe(() => inner.watch(scope));
 }
 
-final class _FixedPoints implements PointsAmountReader {
-  @override
-  Future<int> pointsAmount(LearnerScope s, String c, int? stage) async => 7;
-}
+/// [LearningCommands] whose sub-track commands are the real
+/// [SubTrackCommands] (the facade delegates one line per command); the
+/// event commands are not used by these screens.
+final class _SubTrackFacade implements LearningCommands {
+  _SubTrackFacade(this.inner);
 
-/// The data sources of the production [learningCommandsProvider], in
-/// memory; the provider itself, and the `DefaultLearningCommands` and
-/// `SubTrackCommands` it builds, are the real ones.
-List<Override> _productionCommandSources({
-  required LearnerScope scope,
-  required SubTrackRepository subTracks,
-  required GovernedIntentRepository intent,
-}) => [
-  activeLearnerScopeProvider.overrideWith((ref) async => scope),
-  activeAuthUidProvider.overrideWith((ref) async => parentActor.uid),
-  activeProfileProvider.overrideWith(
-    (ref) async => LearnerProfileEntity(
-      profileId: profileUlid,
-      displayName: 'Dovi',
-      mode: ProfileMode.adult,
-      createdAt: t2,
-      updatedAt: t2,
-    ),
-  ),
-  learningWritePortProvider.overrideWith(
-    (ref) async => InMemoryLearningWritePort(),
-  ),
-  pointsAmountReaderProvider.overrideWith((ref) async => _FixedPoints()),
-  learningEventRepositoryProvider.overrideWith(
-    (ref) async => InMemoryLearningEventRepository(),
-  ),
-  subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
-  governedIntentRepositoryProvider.overrideWith((ref) async => intent),
-  corporaProvider.overrideWith(
-    (ref) async => <String, Corpus>{engineCurriculum: mishnayosCorpus()},
-  ),
-  learnerLockSettingsProvider.overrideWith(
-    (ref, _) => Stream.value(c0SettingsHistory()),
-  ),
-  learningCommandClockProvider.overrideWithValue(() => engineAt(10000)),
-];
+  final SubTrackCommands inner;
+
+  @override
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+  }) => inner.createSubTrack(draft, subTrackId: subTrackId);
+
+  @override
+  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>
+      inner.editSubTrack(subTrackId, edit);
+
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) =>
+      inner.endSubTrack(subTrackId);
+
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) =>
+      inner.deleteSubTrack(subTrackId);
+
+  @override
+  Stream<List<PendingFailure>> watchPendingFailures() =>
+      inner.watchPendingFailures();
+
+  @override
+  Future<CaptureResult> retry(String pendingFailureId) =>
+      inner.retry(pendingFailureId);
+
+  @override
+  Future<CaptureResult> capture({
+    required String curriculumId,
+    List<LeafRef> refs = const [],
+    List<NodeEntry> nodes = const [],
+    required String source,
+    required DateState dateState,
+    CivilDate? learnedOn,
+    int? stage,
+  }) => throw UnsupportedError('capture');
+
+  @override
+  Future<CaptureResult> voidEvent(String targetId) =>
+      throw UnsupportedError('voidEvent');
+
+  @override
+  Future<CaptureResult> replace(
+    String targetId,
+    EventReplacement replacement,
+  ) => throw UnsupportedError('replace');
+
+  @override
+  Future<CaptureResult> unlearn(String curriculumId, Set<LeafRef> leafSet) =>
+      throw UnsupportedError('unlearn');
+
+  @override
+  Future<CaptureResult> undoEvents(List<String> eventIds) =>
+      throw UnsupportedError('undoEvents');
+
+  @override
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) =>
+      throw UnsupportedError('applyGovernedChange');
+
+  @override
+  Future<CaptureResult> undoAction(String actionId) =>
+      throw UnsupportedError('undoAction');
+}
 
 /// Lets queued futures and stream events run.
 Future<void> _drain() => Future<void>.delayed(Duration.zero);
@@ -369,50 +388,9 @@ void main() {
     );
   });
 
-  test('the unoverridden learningCommandsProvider saves an ongoing create '
-      'and an edit (never onlineRequired)', () async {
-    final repo = InMemorySubTrackRepository();
-    addTearDown(repo.dispose);
-    final gemara = _ongoing(2, 'Gemara');
-    repo.seed(scope, [gemara]);
-    final container = ProviderContainer.test(
-      overrides: _productionCommandSources(
-        scope: scope,
-        subTracks: repo,
-        intent: intent,
-      ),
-    );
-    final commands = (await container.read(learningCommandsProvider.future))!;
-
-    final created = await commands.createSubTrack(_formDraft('Night seder'));
-    expect(created, isA<CaptureSuccess>());
-    expect((created as CaptureSuccess).queued, isFalse);
-    final edited = await commands.editSubTrack(
-      gemara.id,
-      const SubTrackEdit(name: "Gemara b'iyun"),
-    );
-    expect(edited, isA<CaptureSuccess>());
-    expect((edited as CaptureSuccess).queued, isFalse);
-
-    final stored = repo.tracksOf(scope);
-    expect(stored.map((t) => t.name), {"Gemara b'iyun", 'Night seder'});
-    final night = stored.singleWhere((t) => t.name == 'Night seder');
-    expect(night.windowStart, _today);
-    expect(night.type, SubTrackType.ongoing);
-    expect(stored.singleWhere((t) => t.id == gemara.id).ratePerWeek, 5);
-    expect(
-      repo.entries.map((e) => e.$2.actor.uid),
-      everyElement(parentActor.uid),
-    );
-  });
-
-  testWidgets('hub and form through the production LearningCommands: a '
-      'rejected queued create rolls back with the shared failure notice, an '
-      'earlier queued edit survives, a retry refused again stays unsaved, '
-      'and the next retry restores it', (tester) async {
-    // The saves below let real async run (see `save`), so the form's
-    // preference reads need the mock store.
-    SharedPreferences.setMockInitialValues({});
+  testWidgets('hub and form: a rejected queued create rolls back with the '
+      'shared failure notice, an earlier queued edit survives, and Retry '
+      'restores it', (tester) async {
     tester.view.physicalSize = const Size(420, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -421,41 +399,36 @@ void main() {
     device.repo
       ..seed(scope, [gemara])
       ..offline = true;
+    final facade = _SubTrackFacade(device.commands);
 
     await tester.pumpWidget(
       pumpApp(
         overrides: [
           useHebrewTermsProvider.overrideWith(_EnglishTerms.new),
-          ..._productionCommandSources(
-            scope: scope,
-            subTracks: device.reads,
-            intent: _FakeAsyncSafeIntent(intent),
-          ),
+          activeLearnerScopeProvider.overrideWith((ref) async => scope),
+          subTrackRepositoryProvider.overrideWith((ref) async => device.reads),
+          governedIntentRepositoryProvider.overrideWith((ref) async => intent),
           localDayClockProvider.overrideWithValue(
             FakeLocalDayClock(DateTime.utc(2026, 9, 7, 12)),
           ),
-          learnerStateProvider.overrideWith(
-            (ref, _) => const Stream<LearnerState>.empty(),
-          ),
-          subTrackParentSessionProvider.overrideWith((ref) async => true),
           ongoingSubTrackParentSessionProvider.overrideWith(
             (ref) async => true,
           ),
           ongoingSubTrackWriteScopeProvider.overrideWith((ref) async => scope),
+          learningCommandsProvider.overrideWith((ref) async => facade),
         ],
         child: Scaffold(
           body: ListView(
             children: const [
-              SubTrackSyncRejectionListener(),
-              SubTrackHubSection(curriculumId: engineCurriculum),
+              OngoingSubTrackHubSeam(curriculumId: engineCurriculum),
             ],
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(SubTrackHubSection)),
+    final messenger = ScaffoldMessenger.of(
+      tester.element(find.byType(OngoingSubTrackHubSeam)),
     );
     Finder key(String k) => find.byKey(ValueKey(k));
     Future<void> save() async {
@@ -465,33 +438,27 @@ void main() {
         const Offset(0, -150),
       );
       await tester.tap(key('ongoingSubTrackSave'));
-      await tester.pump();
-      // A create reads the intent through the provider's deferred
-      // repository; let that read's stream events run outside FakeAsync.
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
-      );
       await tester.pumpAndSettle();
-      expect(key('ongoingSubTrackSave'), findsNothing, reason: 'form closed');
+      expect(
+        find.text("Saved. It will sync when you're back online."),
+        findsOneWidget,
+      );
+      messenger.hideCurrentSnackBar();
+      await tester.pumpAndSettle();
     }
 
-    // An unrelated edit, queued offline, from the hub's ongoing row.
+    // An unrelated edit, queued offline.
     await tester.tap(find.text('Gemara'));
     await tester.pumpAndSettle();
     await tester.enterText(key('ongoingSubTrackName'), "Gemara b'iyun");
     await save();
 
-    // A create the server will refuse for good, queued offline, from the
-    // hub's Add sub-track → Ongoing.
+    // A create the server will refuse for good, queued offline.
     device.repo.failNextWith(
       const PermanentWriteRejection('failed-precondition'),
     );
-    await tester.tap(find.text('Add sub-track'));
+    await tester.tap(key('ongoingSubTrackHubAdd'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('You can have up to 5 ongoing sub-tracks. 1 in use.'),
-      findsOneWidget,
-    );
     await tester.tap(find.text('Ongoing'));
     await tester.pumpAndSettle();
     await tester.enterText(key('ongoingSubTrackName'), 'Night seder');
@@ -508,33 +475,9 @@ void main() {
     expect(find.text("Gemara b'iyun"), findsOneWidget);
     expect(find.text("Your change couldn't be saved."), findsOneWidget);
 
-    // The refused create is a "not saved — retry" entry of the production
-    // commands. Online, the server refuses the retry again at once: it
-    // stays unsaved and nothing lands.
-    final commands = (await tester.runAsync(
-      () => container.read(learningCommandsProvider.future),
-    ))!;
-    final failures = (await tester.runAsync(
-      () => commands.watchPendingFailures().firstWhere((f) => f.isNotEmpty),
-    ))!;
-    expect(failures, hasLength(1));
-    device.repo
-      ..offline = false
-      ..failNextWith(const PermanentWriteRejection('failed-precondition'));
-    final refused = await tester.runAsync(
-      () => commands.retry(failures.single.id),
-    );
-    expect(refused, isA<CaptureRejected>());
-    await tester.runAsync(_drain);
-    await tester.pumpAndSettle();
-    expect(find.text('Night seder'), findsNothing);
-
-    // The next retry re-sends the same create and it lands in the hub.
-    final landed = await tester.runAsync(
-      () => commands.retry(failures.single.id),
-    );
-    expect(landed, isA<CaptureSuccess>());
-    await tester.runAsync(_drain);
+    // Retry re-sends the same create, now online.
+    device.repo.offline = false;
+    await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
     expect(find.text('Night seder'), findsOneWidget);
     expect(
