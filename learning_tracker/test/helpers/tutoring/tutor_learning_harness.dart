@@ -80,15 +80,39 @@ final class RecordingTutorInvoker {
     return successFor(call);
   }
 
-  /// The default success answer for [call].
-  Map<String, Object?> successFor(TutorCall call, {bool replayed = false}) => {
-    'success': true,
-    'action_id': call.args['actionId'],
-    'event_ids': eventIdsOf(call),
-    'change_ids': const <String>[],
-    'recorded_at': recordedAt.toIso8601String(),
-    'replayed': replayed,
-  };
+  /// The default success answer for [call] — the `writeWithChangeLog`
+  /// result shape. An un-learn answers with one server-minted void per
+  /// named leaf event and node target plus the re-issues; nothing written is
+  /// the server's explicit `noop`.
+  Map<String, Object?> successFor(TutorCall call, {bool replayed = false}) {
+    final ids = [...eventIdsOf(call), ...unlearnEventIdsOf(call)];
+    return {
+      'success': true,
+      'action_id': call.args['actionId'],
+      'event_ids': ids,
+      'change_ids': const <String>[],
+      'recorded_at': ids.isEmpty ? null : recordedAt.toIso8601String(),
+      'replayed': replayed,
+      'noop': ids.isEmpty && !replayed,
+    };
+  }
+
+  /// The event ids the server answers a `tutorUnlearn` [call] with: a
+  /// minted void per named leaf event and node target, then the re-issues.
+  static List<String> unlearnEventIdsOf(TutorCall call) {
+    if (call.fn != 'tutorUnlearn') return const [];
+    final leaves = (call.args['leafEventIds'] as List?) ?? const [];
+    final nodes = (call.args['nodeReissues'] as List?) ?? const [];
+    var n = 0;
+    String minted() => '01JT7T0SV0${(++n).toString().padLeft(16, '0')}';
+    return [
+      for (final _ in leaves) minted(),
+      for (final _ in nodes) minted(),
+      for (final node in nodes)
+        for (final r in (node as Map)['reissues'] as List)
+          (r as Map)['eventId']! as String,
+    ];
+  }
 
   /// The event ids a call carries (record, void, replace).
   static List<String> eventIdsOf(TutorCall call) => [

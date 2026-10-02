@@ -524,6 +524,42 @@ describe('AC-1 / AC-4 — tutorUnlearn(curriculum, leafSet)', () => {
     assert.equal((await eventsCol().get()).size, before);
   });
 
+  test('DNI-486 AC-7: with leafEventIds only the named (counted) events are voided — a stored lock-window learn of the same ref stays unvoided', async () => {
+    await record([dated(ulid(1), 'Berakhot 3:1')]);
+    // Stored but not counted by the engine (recorded inside the lock window).
+    await record([dated(ulid(2), 'Berakhot 3:1', { learned_on: '2026-09-05' })]);
+
+    const res = await call(fns.tutorUnlearn, routing({
+      actionId: ulid(40), curriculumId: C, leafSet: ['Berakhot 3:1'], leafEventIds: [ulid(1)],
+    }));
+
+    const events = await allEvents();
+    const voidTargets = [...events.values()].filter((e) => e.kind === 'void').map((e) => e.target_id);
+    assert.deepEqual(voidTargets, [ulid(1)]);
+    assert.ok(events.has(ulid(2)), 'the lock-window event stays stored');
+    assert.equal(res.event_ids.length, 1);
+
+    const replay = await call(fns.tutorUnlearn, routing({
+      actionId: ulid(40), curriculumId: C, leafSet: ['Berakhot 3:1'], leafEventIds: [ulid(1)],
+    }));
+    assert.equal(replay.replayed, true);
+    assert.deepEqual(replay.event_ids, res.event_ids);
+  });
+
+  test('leafEventIds that are not main learn events of the curriculum with a ref in leafSet are rejected', async () => {
+    await seedUnlearnFixture();
+    const before = (await eventsCol().get()).size;
+    for (const leafEventIds of [[ulid(5)] /* a void */, [ulid(6)] /* other curriculum */, [ulid(3)] /* ref not in leafSet */, ['x']]) {
+      await expectHttpsError(call(fns.tutorUnlearn, unlearnArgs({
+        leafSet: ['Berakhot 2:1'], nodeReissues: [], leafEventIds,
+      })), 'invalid-argument');
+    }
+    await expectHttpsError(call(fns.tutorUnlearn, unlearnArgs({
+      leafSet: ['Berakhot 2:1'], nodeReissues: [], leafEventIds: [ulid(98)],
+    })), 'not-found');
+    assert.equal((await eventsCol().get()).size, before);
+  });
+
   test('a leaf set with nothing counted is a no-op action', async () => {
     const res = await call(fns.tutorUnlearn, routing({
       actionId: ulid(30), curriculumId: C, leafSet: ['Berakhot 9:9'],

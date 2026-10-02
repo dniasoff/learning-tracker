@@ -207,6 +207,7 @@ void main() {
           );
         }
         return {
+          'success': true,
           'action_id': _e1,
           'event_ids': [_e1, _e2],
           'recorded_at': '2026-10-02T15:20:00.000Z',
@@ -315,6 +316,160 @@ void main() {
     });
   });
 
+  group('a learning answer is a success only once validated', () {
+    Map<String, Object?> ok() => {
+      'success': true,
+      'action_id': _e1,
+      'event_ids': [_e1, _e2],
+      'recorded_at': '2026-10-02T15:20:00.000Z',
+      'replayed': false,
+    };
+
+    final malformed = <String, Object?>{
+      'null': null,
+      'not a map': 'ok',
+      'success false': {...ok(), 'success': false},
+      'success missing': {...ok()}..remove('success'),
+      'another action id': {...ok(), 'action_id': _e2},
+      'action id missing': {...ok()}..remove('action_id'),
+      'event ids missing': {...ok()}..remove('event_ids'),
+      'event ids not the request\'s': {
+        ...ok(),
+        'event_ids': [_e1],
+      },
+      'an extra event id': {
+        ...ok(),
+        'event_ids': [_e1, _e2, _void],
+      },
+      'a non-string event id': {
+        ...ok(),
+        'event_ids': [_e1, 2],
+      },
+      'recorded_at missing': {...ok()}..remove('recorded_at'),
+      'recorded_at malformed': {...ok(), 'recorded_at': 'yesterday'},
+      'replayed missing': {...ok()}..remove('replayed'),
+    };
+
+    for (final MapEntry(key: name, value: answer) in malformed.entries) {
+      test('recordLearning: $name → retryable TutorWriteInvalidResponse, '
+          'no capture analytics', () async {
+        final analytics = RecordingLearningAnalytics();
+        final result = await _record(
+          _service(_Invoker((_, __) => answer), analytics: analytics),
+        );
+        expect(result, isA<TutorWriteInvalidResponse>());
+        expect((result as TutorWriteFailure).isRetryable, isTrue);
+        expect(analytics.captures, isEmpty);
+      });
+    }
+
+    test('a valid answer decodes; the action id is the request\'s', () async {
+      final result = await _record(_service(_Invoker((_, __) => ok())));
+      expect(result, isA<TutorLearningWritten>());
+      expect((result as TutorLearningWritten).actionId, _e1);
+    });
+
+    test('voidLearning must answer with its void id', () async {
+      Future<TutorWriteResult> run(Object? answer) =>
+          _service(_Invoker((_, __) => answer)).voidLearning(
+            grantId: _grantId,
+            ownerUid: _ownerUid,
+            profileId: _profileId,
+            eventId: _void,
+            targetId: _e1,
+          );
+      final good = {
+        ...ok(),
+        'action_id': _void,
+        'event_ids': [_void],
+      };
+      expect(await run(good), isA<TutorLearningWritten>());
+      expect(
+        await run({...good, 'event_ids': <String>[], 'recorded_at': null}),
+        isA<TutorWriteInvalidResponse>(),
+      );
+    });
+
+    group('unlearn', () {
+      Future<TutorWriteResult> run(Object? answer) =>
+          _service(_Invoker((_, __) => answer)).unlearn(
+            grantId: _grantId,
+            ownerUid: _ownerUid,
+            profileId: _profileId,
+            actionId: _action,
+            curriculumId: 'mishnayos',
+            leafSet: const ['Mishnah Berakhot 2:1'],
+            nodeReissues: const [
+              TutorNodeReissue(
+                targetEventId: _e1,
+                reissues: [
+                  (eventId: _e2, ref: 'Mishnah Berakhot 1', level: 'perek'),
+                ],
+              ),
+            ],
+          );
+      const minted = '01JQ3K5M8N2P4R6T7V9X0Z1AC9';
+      Map<String, Object?> answer(List<String> ids, {bool noop = false}) => {
+        'success': true,
+        'action_id': _action,
+        'event_ids': ids,
+        'recorded_at': ids.isEmpty ? null : '2026-10-02T15:20:00.000Z',
+        'replayed': false,
+        'noop': noop,
+      };
+
+      test('server-minted voids plus every re-issue is a success', () async {
+        expect(await run(answer([minted, _e2])), isA<TutorLearningWritten>());
+      });
+
+      test('a re-issue missing, or no void for the node target, is an '
+          'invalid response', () async {
+        expect(
+          await run(answer([minted, '01JQ3K5M8N2P4R6T7V9X0Z1AD0'])),
+          isA<TutorWriteInvalidResponse>(),
+        );
+        expect(await run(answer([_e2])), isA<TutorWriteInvalidResponse>());
+      });
+
+      test(
+        'nothing written is valid only as the server\'s explicit noop',
+        () async {
+          final service = _service(
+            _Invoker((_, __) => answer(const [], noop: true)),
+          );
+          Future<TutorWriteResult> leavesOnly(TutorWriteService s) => s.unlearn(
+            grantId: _grantId,
+            ownerUid: _ownerUid,
+            profileId: _profileId,
+            actionId: _action,
+            curriculumId: 'mishnayos',
+            leafSet: const ['Mishnah Berakhot 2:1'],
+            leafEventIds: const [],
+          );
+          expect(await leavesOnly(service), isA<TutorLearningWritten>());
+          expect(
+            await leavesOnly(_service(_Invoker((_, __) => answer(const [])))),
+            isA<TutorWriteInvalidResponse>(),
+          );
+        },
+      );
+
+      test('leafEventIds are forwarded unchanged', () async {
+        final invoker = _Invoker((_, __) => answer([minted], noop: false));
+        await _service(invoker).unlearn(
+          grantId: _grantId,
+          ownerUid: _ownerUid,
+          profileId: _profileId,
+          actionId: _action,
+          curriculumId: 'mishnayos',
+          leafSet: const ['Mishnah Berakhot 2:1'],
+          leafEventIds: const [_e1],
+        );
+        expect(invoker.calls.single.args['leafEventIds'], [_e1]);
+      });
+    });
+  });
+
   group('main-track governed methods (Story 1.10 callables)', () {
     test('a client actionId is forwarded and the result decodes the '
         'change-log ids', () async {
@@ -355,6 +510,7 @@ void main() {
   });
   group('AC-1: capture analytics after a successful callable only', () {
     Map<String, Object?> written({bool replayed = false}) => {
+      'success': true,
       'action_id': _e1,
       'event_ids': [_e1, _e2],
       'recorded_at': '2026-10-02T15:20:00.000Z',

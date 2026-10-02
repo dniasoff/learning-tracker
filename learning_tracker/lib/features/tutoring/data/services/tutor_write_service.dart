@@ -99,6 +99,7 @@ class TutorWriteFailure extends TutorWriteResult {
   bool get isRetryable => _retryableCodes.contains(code);
 
   static const _retryableCodes = {
+    TutorWriteInvalidResponse.invalidResponseCode,
     'deadline-exceeded',
     'unavailable',
     'aborted',
@@ -117,6 +118,20 @@ class TutorWriteFailure extends TutorWriteResult {
 class TutorWriteEditingTurnedOff extends TutorWriteFailure {
   const TutorWriteEditingTurnedOff({required super.message})
     : super(code: 'permission-denied');
+}
+
+/// A Story 1.23 learning callable answered without throwing, but its answer
+/// is not a valid success: not a map, `success` is not true, or the action
+/// id, event ids or server `recorded_at` stamp do not match the request
+/// (DNI-486). Nothing is shown as written and no success analytics are
+/// emitted. It is retryable: the retry re-sends the SAME client ULIDs, so an
+/// action that did commit is replayed by the server, never duplicated.
+class TutorWriteInvalidResponse extends TutorWriteFailure {
+  const TutorWriteInvalidResponse({required super.message})
+    : super(code: invalidResponseCode);
+
+  /// The [TutorWriteFailure.code] of a malformed or unsuccessful answer.
+  static const invalidResponseCode = 'invalid-response';
 }
 
 /// The server's AD-53 rejection reads "Grant lacks can_edit_learning"
@@ -319,20 +334,84 @@ class TutorWriteService {
   }
 
   /// A Story 1.23 learning callable: [_invoke], decoded as
-  /// [TutorLearningWritten].
+  /// [TutorLearningWritten] only once the answer is a validated success
+  /// (see [_decodeLearning]); anything else is a [TutorWriteInvalidResponse].
   Future<TutorWriteResult> _callLearning(
     String functionName,
     Map<String, dynamic> args, {
     required String actionId,
+    required List<String> expectedEventIds,
+    bool exactEventIds = true,
+    int minEventCount = 0,
   }) async {
     final (data, failure) = await _invoke(functionName, args);
     if (failure != null) return failure;
-    final map = _asMap(data);
-    return TutorLearningWritten(
-      actionId: map['action_id'] as String? ?? actionId,
-      eventIds: _stringList(map['event_ids']),
-      recordedAt: _instant(map['recorded_at']),
-      replayed: map['replayed'] == true,
+    final (written, reason) = _decodeLearning(
+      data,
+      actionId: actionId,
+      expectedEventIds: expectedEventIds,
+      exactEventIds: exactEventIds,
+      minEventCount: minEventCount,
+    );
+    if (written != null) return written;
+    // The reason names only the failed check — never ids, refs or payload.
+    AppLogger.instance.warning(
+      event: 'TutorWriteService.$functionName invalid response',
+      fields: {'reason': reason},
+    );
+    return const TutorWriteInvalidResponse(
+      message: 'The server answer could not be confirmed.',
+    );
+  }
+
+  /// Validates a Story 1.23 success answer (the `writeWithChangeLog` result):
+  /// a map with `success == true`, `action_id == actionId`, a string list
+  /// `event_ids` holding [expectedEventIds] (exactly, when [exactEventIds];
+  /// at least [minEventCount] ids otherwise), a boolean `replayed`, and —
+  /// whenever an event was written — a valid ISO-8601 `recorded_at`. An
+  /// answer with no event ids is valid only as the server's explicit
+  /// `noop: true` of an un-learn with nothing counted. Returns the decoded
+  /// result, or null with the name of the failed check.
+  static (TutorLearningWritten?, String) _decodeLearning(
+    Object? data, {
+    required String actionId,
+    required List<String> expectedEventIds,
+    required bool exactEventIds,
+    required int minEventCount,
+  }) {
+    if (data is! Map) return (null, 'not-a-map');
+    if (data['success'] != true) return (null, 'not-success');
+    if (data['action_id'] != actionId) return (null, 'action-id');
+    final rawIds = data['event_ids'];
+    if (rawIds is! List || rawIds.any((v) => v is! String)) {
+      return (null, 'event-ids');
+    }
+    final ids = rawIds.cast<String>().toList(growable: false);
+    final idSet = ids.toSet();
+    if (idSet.length != ids.length) return (null, 'event-ids');
+    if (exactEventIds
+        ? (idSet.length != expectedEventIds.length ||
+              !idSet.containsAll(expectedEventIds))
+        : !idSet.containsAll(expectedEventIds)) {
+      return (null, 'event-ids');
+    }
+    if (ids.length < minEventCount) return (null, 'event-ids');
+    final replayed = data['replayed'];
+    if (replayed is! bool) return (null, 'replayed');
+    final recordedAt = _instant(data['recorded_at']);
+    if (ids.isEmpty) {
+      if (data['noop'] != true) return (null, 'empty-without-noop');
+    } else if (recordedAt == null) {
+      return (null, 'recorded-at');
+    }
+    return (
+      TutorLearningWritten(
+        actionId: actionId,
+        eventIds: ids,
+        recordedAt: recordedAt,
+        replayed: replayed,
+      ),
+      '',
     );
   }
 
@@ -372,13 +451,18 @@ class TutorWriteService {
   }) async {
     assert(events.isNotEmpty, 'recordLearning needs at least one event');
     final action = actionId ?? events.first.id;
-    final result = await _callLearning('tutorRecordLearning', {
-      'grantId': grantId,
-      'ownerUid': ownerUid,
-      'profileId': profileId,
-      'actionId': action,
-      'events': [for (final e in events) e.toWire()],
-    }, actionId: action);
+    final result = await _callLearning(
+      'tutorRecordLearning',
+      {
+        'grantId': grantId,
+        'ownerUid': ownerUid,
+        'profileId': profileId,
+        'actionId': action,
+        'events': [for (final e in events) e.toWire()],
+      },
+      actionId: action,
+      expectedEventIds: [for (final e in events) e.id],
+    );
     if (result is TutorLearningWritten && !result.replayed) {
       _emitCapture(events);
     }
@@ -413,14 +497,19 @@ class TutorWriteService {
     required String profileId,
     required String eventId,
     required String targetId,
-  }) => _callLearning('tutorVoidLearning', {
-    'grantId': grantId,
-    'ownerUid': ownerUid,
-    'profileId': profileId,
-    'actionId': eventId,
-    'eventId': eventId,
-    'targetId': targetId,
-  }, actionId: eventId);
+  }) => _callLearning(
+    'tutorVoidLearning',
+    {
+      'grantId': grantId,
+      'ownerUid': ownerUid,
+      'profileId': profileId,
+      'actionId': eventId,
+      'eventId': eventId,
+      'targetId': targetId,
+    },
+    actionId: eventId,
+    expectedEventIds: [eventId],
+  );
 
   /// Replaces [targetId]: its void [eventId] plus the corrected learn event
   /// [replacement], in ONE `tutorVoidLearning` transaction (the server
@@ -432,20 +521,31 @@ class TutorWriteService {
     required String eventId,
     required String targetId,
     required TutorLearnEvent replacement,
-  }) => _callLearning('tutorVoidLearning', {
-    'grantId': grantId,
-    'ownerUid': ownerUid,
-    'profileId': profileId,
-    'actionId': eventId,
-    'eventId': eventId,
-    'targetId': targetId,
-    'replacement': replacement.toWire(),
-  }, actionId: eventId);
+  }) => _callLearning(
+    'tutorVoidLearning',
+    {
+      'grantId': grantId,
+      'ownerUid': ownerUid,
+      'profileId': profileId,
+      'actionId': eventId,
+      'eventId': eventId,
+      'targetId': targetId,
+      'replacement': replacement.toWire(),
+    },
+    actionId: eventId,
+    expectedEventIds: [eventId, replacement.id],
+  );
 
   /// Un-learns [leafSet] of [curriculumId] (AD-31) through `tutorUnlearn`,
   /// carrying the client-computed plan's [nodeReissues] (ruling B9).
   /// [actionId] is required: the server mints the void ids, so only the
   /// client action id makes a retry replay instead of re-plan.
+  ///
+  /// [leafEventIds], when given, names the exact leaf learn events to void —
+  /// the ones the engine COUNTS. The server cannot evaluate the AD-36 lock /
+  /// count predicate, so without them it would void every stored learn event
+  /// whose ref is in [leafSet], including a lock-window event that is stored
+  /// but not counted (DNI-486 AC-7). Tutor surfaces always pass them.
   Future<TutorWriteResult> unlearn({
     required String grantId,
     required String ownerUid,
@@ -453,16 +553,32 @@ class TutorWriteService {
     required String actionId,
     required String curriculumId,
     required List<String> leafSet,
+    List<String>? leafEventIds,
     List<TutorNodeReissue> nodeReissues = const [],
-  }) => _callLearning('tutorUnlearn', {
-    'grantId': grantId,
-    'ownerUid': ownerUid,
-    'profileId': profileId,
-    'actionId': actionId,
-    'curriculumId': curriculumId,
-    'leafSet': leafSet,
-    'nodeReissues': [for (final n in nodeReissues) n.toWire()],
-  }, actionId: actionId);
+  }) {
+    final reissueIds = [
+      for (final n in nodeReissues) ...[for (final r in n.reissues) r.eventId],
+    ];
+    return _callLearning(
+      'tutorUnlearn',
+      {
+        'grantId': grantId,
+        'ownerUid': ownerUid,
+        'profileId': profileId,
+        'actionId': actionId,
+        'curriculumId': curriculumId,
+        'leafSet': leafSet,
+        'leafEventIds': ?leafEventIds,
+        'nodeReissues': [for (final n in nodeReissues) n.toWire()],
+      },
+      actionId: actionId,
+      // Void ids are minted on the server: the answer must carry every
+      // re-issue and at least one void per named node target.
+      expectedEventIds: reissueIds,
+      exactEventIds: false,
+      minEventCount: reissueIds.length + nodeReissues.length,
+    );
+  }
 
   // ── Completion reset (canEditLearning, AD-53) ────────────────────────────────────
 

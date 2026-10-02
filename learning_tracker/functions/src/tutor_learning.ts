@@ -61,8 +61,16 @@ import {
 //   tutorVoidLearning   {grantId, ownerUid, profileId, actionId?, eventId,
 //                        targetId, replacement?: {id, fields: <learn fields>}}
 //   tutorUnlearn        {grantId, ownerUid, profileId, actionId (required),
-//                        curriculumId, leafSet: string[], nodeReissues?:
-//                        [{targetEventId, reissues: [{eventId, ref, level}]}]}
+//                        curriculumId, leafSet: string[], leafEventIds?:
+//                        string[], nodeReissues?: [{targetEventId, reissues:
+//                        [{eventId, ref, level}]}]}
+//
+// `leafEventIds` (DNI-486) names the exact leaf learn events the client's
+// engine counts. The server cannot evaluate the AD-36 lock-window / count
+// predicate (it needs the learner's calendar and settings history), so when
+// the client sends the ids the server voids exactly those and never a stored
+// but uncounted (lock-ignored) event that happens to share a ref. Without
+// the field the legacy ref match over `leafSet` applies.
 //
 // Chunking (AD-54): one call is one transaction of at most
 // MAX_WRITES_PER_CALL writes (events + their pts_ entries + the receipt);
@@ -286,7 +294,7 @@ function chunks<T>(xs: T[], size: number): T[][] {
 }
 
 function parseUnlearn(data: Record<string, unknown>): {
-  curriculumId: string; leafSet: string[]; nodeReissues: NodeReissuePlan[];
+  curriculumId: string; leafSet: string[]; leafEventIds: string[] | null; nodeReissues: NodeReissuePlan[];
 } {
   if (!nonEmptyString(data.curriculumId, 200)) bad("curriculumId must be a non-empty string");
   if (!Array.isArray(data.leafSet) || data.leafSet.length === 0) bad("leafSet must be a non-empty array");
@@ -295,6 +303,16 @@ function parseUnlearn(data: Record<string, unknown>): {
   if (!leafSet.every((r) => nonEmptyString(r))) bad("leafSet entries must be refs");
   if (new Set(leafSet).size !== leafSet.length) bad("leafSet entries must be unique");
   const leaves = new Set(leafSet as string[]);
+
+  let leafEventIds: string[] | null = null;
+  if (data.leafEventIds !== undefined && data.leafEventIds !== null) {
+    if (!Array.isArray(data.leafEventIds)) bad("leafEventIds must be an array");
+    const ids = data.leafEventIds as unknown[];
+    if (ids.length > MAX_WRITES_PER_CALL) bad("leafEventIds is too large for one call");
+    if (!ids.every(isUlid)) bad("leafEventIds entries must be ULIDs");
+    if (new Set(ids).size !== ids.length) bad("leafEventIds entries must be unique");
+    leafEventIds = ids as string[];
+  }
 
   const rawReissues = data.nodeReissues ?? [];
   if (!Array.isArray(rawReissues)) bad("nodeReissues must be an array");
@@ -330,7 +348,10 @@ function parseUnlearn(data: Record<string, unknown>): {
     });
     return { targetEventId: n.targetEventId as string, reissues };
   });
-  return { curriculumId: data.curriculumId as string, leafSet: leafSet as string[], nodeReissues };
+  for (const n of nodeReissues) {
+    if (leafEventIds?.includes(n.targetEventId)) bad("a node target may not be in leafEventIds");
+  }
+  return { curriculumId: data.curriculumId as string, leafSet: leafSet as string[], leafEventIds, nodeReissues };
 }
 
 /**
@@ -346,14 +367,33 @@ function parseUnlearn(data: Record<string, unknown>): {
 function unlearnPlan(
   curriculumId: string,
   leafSet: string[],
+  leafEventIds: string[] | null,
   nodeReissues: NodeReissuePlan[],
 ): (ctx: PlanContext) => Promise<GovernedPlan> {
   return async (ctx) => {
     const events = ctx.profileRef.collection("learning_events");
 
-    // (a) counted leaf learn events with ref ∈ leafSet.
+    // (a) counted leaf learn events with ref ∈ leafSet. When the client names
+    // them (leafEventIds — the engine's counted set), exactly those, each
+    // checked against the store; a stored but uncounted (lock-ignored) event
+    // with the same ref is never voided.
     const candidates = new Set<string>();
-    for (const refs of chunks(leafSet, IN_CHUNK)) {
+    if (leafEventIds !== null) {
+      const leaves = new Set(leafSet);
+      const snaps = leafEventIds.length
+        ? await ctx.txn.getAll(...leafEventIds.map((id) => events.doc(id)))
+        : [];
+      for (const snap of snaps) {
+        if (!snap.exists) throw new HttpsError("not-found", "Un-learn leaf event does not exist");
+        const e = snap.data()!;
+        if (e.kind !== "learn") bad("A void must target a learn event");
+        if (e.curriculum_id !== curriculumId || e.source !== MAIN_SOURCE || !leaves.has(e.ref)) {
+          bad("Un-learn leaf event must be a main learn event of this curriculum with a ref in leafSet");
+        }
+        candidates.add(snap.id);
+      }
+    }
+    for (const refs of leafEventIds === null ? chunks(leafSet, IN_CHUNK) : []) {
       const snap = await ctx.txn.get(events.where("ref", "in", refs));
       for (const d of snap.docs) {
         const e = d.data();
@@ -423,7 +463,7 @@ function unlearnPlan(
 
 export const tutorUnlearn = onCall(CALL_OPTS, (request) => runGoverned(LOG_ENTITY, async () => {
   const data = requestObject(request.data);
-  const target = parseTarget(data, ["curriculumId", "leafSet", "nodeReissues"]);
+  const target = parseTarget(data, ["curriculumId", "leafSet", "leafEventIds", "nodeReissues"]);
   // Void ids are minted on the server, so cross-call replay safety needs the
   // client's action id: a retry returns the stored receipt, never re-plans.
   if (!target.actionId) bad("actionId (client ULID) is required for tutorUnlearn");
@@ -434,7 +474,9 @@ export const tutorUnlearn = onCall(CALL_OPTS, (request) => runGoverned(LOG_ENTIT
     grantId: target.grantId as string | null | undefined,
     actionId: target.actionId,
     auditAction: "learning_unlearned",
-    plan: unlearnPlan(plan.curriculumId, plan.leafSet, plan.nodeReissues),
-    planKey: `tutorUnlearn:${JSON.stringify([plan.curriculumId, plan.leafSet, plan.nodeReissues])}`,
+    plan: unlearnPlan(plan.curriculumId, plan.leafSet, plan.leafEventIds, plan.nodeReissues),
+    planKey: `tutorUnlearn:${JSON.stringify(plan.leafEventIds === null
+      ? [plan.curriculumId, plan.leafSet, plan.nodeReissues]
+      : [plan.curriculumId, plan.leafSet, plan.nodeReissues, plan.leafEventIds])}`,
   });
 }));
