@@ -457,7 +457,14 @@ void main() {
     testWidgets('ManageTutorsScreen lays out RTL under the he locale', (
       tester,
     ) async {
-      final identity = E2EIdentity.localBorn(displayName: 'Avi');
+      // DNI-487 / ruling B11: Manage tutors is a parent-mode route
+      // (childModeGuard + pinGuard), so an adult identity is refused. Reach it
+      // the way the app does: a child profile selected and the parent PIN
+      // session primed, then push.
+      final identity = E2EIdentity.localBorn(
+        displayName: 'Avi',
+        profileMode: 'child',
+      );
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
@@ -467,6 +474,7 @@ void main() {
         extraOverrides: _shellTutoringSilences(h),
       );
 
+      h.markPinAuthenticated();
       unawaited(h.router.push(const ManageTutorsRoute()));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 300));

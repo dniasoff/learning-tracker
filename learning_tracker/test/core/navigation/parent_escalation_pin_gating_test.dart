@@ -116,6 +116,10 @@ const _pinGatedEscalationPaths = <String>{
   '/parent-mode/tracks',
   '/settings/lifetime',
   '/settings/lifetime/:curriculumId',
+  // DNI-487 / ruling B11: Manage tutors carries the parent-only "Can edit
+  // learning" toggle and the invite form sets it — both parent-PIN gated.
+  '/tutor/manage-tutors',
+  '/tutor/invite',
 };
 
 /// Deliberately child-facing routes that carry [ChildModeGuard] but NOT

@@ -416,7 +416,12 @@ void main() {
         await h.enterText(find.byType(TextFormField), tutorEmail);
         await h.pump(const Duration(milliseconds: 100));
 
-        // Tap the Send invite button.
+        // Tap the Send invite button. DNI-487 added the "Can edit learning"
+        // checkbox above the retained permission controls, so the button now
+        // sits below the 800x600 fold of the scrollable form — scroll it into
+        // view first, as a user would.
+        await tester.ensureVisible(find.text('Send invite'));
+        await tester.pumpAndSettle();
         await h.tapText('Send invite');
         await tester.pump(const Duration(milliseconds: 500));
         await tester.pumpAndSettle(const Duration(milliseconds: 500));
