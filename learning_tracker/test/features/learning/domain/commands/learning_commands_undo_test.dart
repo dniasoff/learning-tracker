@@ -19,6 +19,7 @@ import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart'
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/governed_action_commands.dart';
@@ -804,6 +805,62 @@ void main() {
       final again = UndoResult.of(await h.commands.undoEvents([engineUlid(2)]));
       expect(again, isA<UndoNothingToUndo>());
       expect(h.written, hasLength(1));
+    });
+  });
+
+  group('DNI-514 AC-9: a rejected undo is a pending failure marked undo', () {
+    test('a governed undo batch the server refuses', () async {
+      final h = GovernedHarness()
+        ..seedDoc('profile_programs', _cid, {'program_id': 'a'});
+      await h.commands.applyGovernedChange(_programChange({'program_id': 'b'}));
+      h.changeLog.fail[engineUlid(101)] = const PermanentWriteRejection(
+        'permission-denied',
+      );
+
+      final result = UndoResult.of(
+        await h.commands.undoAction(engineUlid(100)),
+      );
+
+      expect(result, isA<UndoNotSaved>());
+      final failure = (await h.commands.watchPendingFailures().first).single;
+      expect(failure.isUndo, isTrue);
+      expect(failure.changeIds, [engineUlid(101)]);
+      expect(
+        await h.store.watchIsReverted(h.scope, engineUlid(100)).first,
+        isFalse,
+        reason: 'the rejected undo left nothing behind',
+      );
+    });
+
+    test('a governed change that is not an undo is not marked', () async {
+      final h = GovernedHarness()
+        ..seedDoc('profile_programs', _cid, {'program_id': 'a'});
+      h.changeLog.fail[engineUlid(100)] = const PermanentWriteRejection(
+        'permission-denied',
+      );
+      await h.commands.applyGovernedChange(_programChange({'program_id': 'b'}));
+      final failure = (await h.commands.watchPendingFailures().first).single;
+      expect(failure.isUndo, isFalse);
+    });
+
+    test('an event undo chunk the server refuses stays marked across a '
+        'failed retry', () async {
+      final h = _Events([engineLearn(1, 'Mishnah Berakhot 1:1')]);
+      h.port.failNextWith(const PermanentWriteRejection('permission-denied'));
+
+      final result = UndoResult.of(
+        await h.commands.undoEvents([engineUlid(1)]),
+      );
+
+      expect(result, isA<UndoNotSaved>());
+      final failure = (await h.commands.watchPendingFailures().first).single;
+      expect(failure.isUndo, isTrue);
+
+      h.port.failNextWith(const PermanentWriteRejection('permission-denied'));
+      await h.commands.retry(failure.id);
+      final again = (await h.commands.watchPendingFailures().first).single;
+      expect(again.id, failure.id);
+      expect(again.isUndo, isTrue);
     });
   });
 }

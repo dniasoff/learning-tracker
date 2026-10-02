@@ -264,6 +264,24 @@ void main() {
       expect(retried, [_failure(_ids.first)]);
     });
 
+    testWidgets("an undo's failure says the undo couldn't be saved "
+        '(DNI-514 AC-9)', (tester) async {
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+      commands.pendingFailures.add([
+        PendingFailure(
+          id: _ids.first,
+          eventIds: [_ids.first],
+          changeIds: const [],
+          reason: PendingFailureReason.permissionDenied,
+          isUndo: true,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.text("The undo couldn't be saved"), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+    });
+
     testWidgets('two mounted listeners announce one failure once', (
       tester,
     ) async {

@@ -71,11 +71,14 @@ final class DispatchOutcome {
 enum _ChunkStatus { acked, rejected }
 
 final class _Pending {
-  _Pending(this.command, this.chunk, this.reason);
+  _Pending(this.command, this.chunk, this.reason, {required this.isUndo});
 
   final LearningCommandKind command;
   final LearningWriteChunk chunk;
   final PendingFailureReason reason;
+
+  /// Whether the chunk is an undo's; kept across retries (DNI-514 AC-9).
+  final bool isUndo;
 
   /// Whether a retry of [chunk] is awaiting the server. An in-flight entry
   /// stays tracked (it is the only retry handle for an unsaved chunk) but
@@ -87,6 +90,7 @@ final class _Pending {
     eventIds: [for (final e in chunk.events) e.id],
     changeIds: const [],
     reason: reason,
+    isUndo: isUndo,
   );
 }
 
@@ -242,7 +246,12 @@ final class LearningWriteDispatcher {
       return _ChunkStatus.acked;
     } on PermanentWriteRejection catch (rejection) {
       final reason = pendingFailureReasonOf(rejection.code);
-      _pending[id] = _Pending(command, chunk, reason);
+      _pending[id] = _Pending(
+        command,
+        chunk,
+        reason,
+        isUndo: _pending[id]?.isUndo ?? command == LearningCommandKind.undo,
+      );
       _notify();
       _reporter.writeRejected(
         command: command,
