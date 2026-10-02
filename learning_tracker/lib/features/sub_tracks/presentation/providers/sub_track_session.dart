@@ -93,6 +93,14 @@ abstract interface class SubTrackNavigator {
 /// The production navigator until the sibling destinations land: only the
 /// hub exists, so every other destination reports `canOpen == false` and
 /// its entry point stays disabled (no tap is mis-routed to the hub).
+///
+/// Scope boundary (DNI-500 unblock, 2026-10-02): DNI-500 owns the entry
+/// points and this seam; DNI-497, DNI-498 and DNI-501 own the screens and
+/// replace [subTrackNavigatorProvider] when they land (bead
+/// learning-tracker-fyh.128). AC-7 and the *Add ground* half of AC-3/AC-4
+/// are met at that point. Nothing here reaches a user before then: the
+/// sub-track UI ships only from `integ/sub-tracks`, after the DNI-490
+/// cutover (AD-49 ship hold), and fyh.128 gates that merge.
 final class HubOnlySubTrackNavigator implements SubTrackNavigator {
   /// Creates the navigator.
   const HubOnlySubTrackNavigator();

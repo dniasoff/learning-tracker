@@ -5,6 +5,14 @@
 /// active learner's complete `sub_tracks` read with the engine's
 /// [LearnerState] (AD-35) through [projectHomeSubTracks]. Widgets render it
 /// and never recompute a position, a count or a fill.
+///
+/// Production wiring: [learnerStateProvider] is the C0 (DNI-524) seam that
+/// DNI-474 fills. Until it does, a learner with sub-tracks gets the
+/// section's `InlineAsyncError` (AC-6); the main tasks are unaffected.
+/// DNI-500 adds no parallel data source (story open assumption). The stub
+/// cannot ship: DNI-490 removes every `c0Stub` call before the cutover
+/// release (`tool/retired_symbols/R15.json`). The no-override integration
+/// test follows in bead learning-tracker-fyh.135.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
