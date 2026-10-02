@@ -15,7 +15,6 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/learner_today_card.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/erev_planned_tasks_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/erev_banner.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/also_learning_slot.dart';
@@ -145,6 +144,7 @@ class LearningScreen extends ConsumerWidget {
                     const ErevPlannedSlot(),
                     const AlsoLearningSlot(),
                     const MainTrackUpToActions(),
+                    const SubTrackCaptureSection(),
                     const SizedBox(height: 36),
                     const _BrowseSection(),
                   ],
