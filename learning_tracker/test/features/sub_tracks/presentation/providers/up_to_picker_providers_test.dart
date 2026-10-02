@@ -6,6 +6,7 @@ import 'package:learning_tracker/data/firestore/learner_state_repository_provide
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/up_to_selection_service.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 
@@ -111,9 +112,18 @@ void main() {
     expect(rows.error, isA<SubTrackReadRejectedException>());
   });
 
-  test('the engine stub error is forwarded to the picker (AC-7)', () async {
+  test('an engine state error is forwarded to the picker (AC-7)', () async {
     final repo = InMemorySubTrackRepository()..seed(c0Scope(), [school]);
-    final c = container(repo: repo);
+    final c = ProviderContainer(
+      overrides: [
+        ...learnerStateOverrides(scope: c0Scope()),
+        learnerStateProvider.overrideWith(
+          (ref, _) => Stream<LearnerState>.error(StateError('engine')),
+        ),
+        subTrackRepositoryProvider.overrideWith((ref) async => repo),
+      ],
+    );
+    addTearDown(c.dispose);
     final slice = await settledAsync(
       c,
       upToSliceProvider(
@@ -124,7 +134,7 @@ void main() {
         ),
       ),
     );
-    expect(slice.hasError, isTrue);
+    expect(slice.error, isA<StateError>());
   });
 
   test('sub-track and main-track slices come from the engine state', () async {
