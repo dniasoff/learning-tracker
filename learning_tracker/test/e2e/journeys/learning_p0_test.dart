@@ -228,6 +228,11 @@ void main() {
               curricula: [CurriculumId.mishnayos],
               tasks: [task],
             ),
+            // The main-track Up to… gate (DNI-501) watches the commands; the
+            // real provider resolves the Drift-backed device registry, whose
+            // stream leaves a Duration.zero timer at teardown. This journey
+            // only checks rendering, so the session has no write path.
+            learningCommandsProvider.overrideWith((ref) async => null),
           ],
         );
 
