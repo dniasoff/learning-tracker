@@ -26,6 +26,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 
@@ -154,14 +155,24 @@ List<CurriculumState> _evaluated(LearnerState state) {
 }
 
 /// The active learner's state as an [AsyncValue], mapped by [build]: a
-/// first load is loading, a refresh over a value keeps showing it (no
-/// spinner after a tick, UX-DR-102), an error is forwarded, and no learner
-/// is an empty list.
+/// first load is loading, a refresh of the same learner over a value keeps
+/// showing it (no spinner after a tick, UX-DR-102), an error is forwarded,
+/// and no learner is an empty list.
+///
+/// Fail closed on a learner change: while the learner scope re-resolves (a
+/// profile switch, a PIN or tutor change) the active state still serves the
+/// previous learner, so the value is loading and none of that learner's
+/// figures are shown under the next one.
 AsyncValue<List<T>> _fromActiveState<T>(
   Ref ref,
   List<T> Function(LearnerState state) build,
 ) {
+  // Watched first so the learner-state subscription stays alive through a
+  // scope re-resolve (no dispose and engine re-run on every switch).
   final state = ref.watch(activeLearnerStateProvider);
+  if (ref.watch(activeLearnerScopeProvider).isLoading) {
+    return AsyncLoading<List<T>>();
+  }
   if (state case AsyncError(:final error, :final stackTrace)) {
     return AsyncError<List<T>>(error, stackTrace);
   }
