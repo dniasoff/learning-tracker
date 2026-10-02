@@ -362,14 +362,20 @@ final class MishnaHistoryCorrections
   /// original row — before this future completes, so the caller's
   /// snackbar always follows the rollback. On success the overlay stays
   /// (pending) until the history confirms the correction.
+  ///
+  /// A tutor's correction is online-only and never optimistic (AD-53,
+  /// DNI-486 AC-3): the row changes only once the `tutorVoidLearning`
+  /// callable has succeeded; a rejection leaves it untouched.
   Future<MishnaCorrectionOutcome> correct(
     MishnaHistoryItem item,
     MishnaCorrectionRequest request,
   ) async {
     final id = item.eventId;
-    state = state.copyWith(
+    final tutored = ref.read(activeTutoredProfileSelectionProvider) != null;
+    void overlay() => state = state.copyWith(
       overlays: {...state.overlays, id: optimisticItem(item, request)},
     );
+    if (!tutored) overlay();
     CaptureResult result;
     LearningCommands? commands;
     try {
@@ -396,6 +402,7 @@ final class MishnaHistoryCorrections
       _dropOverlays({id});
       return outcome;
     }
+    if (tutored) overlay();
     if (result.queued && commands != null) {
       _queued[id] = {...result.eventIds};
       _watchFailures(commands);

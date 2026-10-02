@@ -378,19 +378,18 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     }
 
     // Re-anchor: move tracking_start_date to today (UTC midnight). A tutor
-    // cannot write the owner's profile namespace directly; the Firestore
-    // rules allow this mutation only for the owner, so use the existing
-    // owner-scoped callable in a tutored session.
+    // cannot write the owner's profile namespace directly: in a tutored
+    // session the write is the governed `tutorSetProfileProgram` callable
+    // after the tutor preflight (Story 1.24, DNI-486).
     final selection = ref.read(activeTutoredProfileSelectionProvider);
     if (selection != null) {
-      final result = await ref
-          .read(tutorWriteServiceProvider)
-          .setProfileProgram(
-        grantId: selection.grantId,
-        ownerUid: selection.ownerUid,
-        profileId: selection.profileId,
-        programId: curriculum.storageKey,
-        programData: {
+      final writes = await ref.read(tutorGovernedWritesProvider.future);
+      if (writes == null) {
+        throw StateError('Tutored context is not ready for a governed write');
+      }
+      await writes.setProfileProgram(
+        curriculumId: curriculum.storageKey,
+        data: {
           'profile_id': selection.profileId,
           'curriculum_id': curriculum.storageKey,
           'program_id': enrollment.programId,
@@ -398,9 +397,6 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
           'tracking_start_ref': todayRef,
         },
       );
-      if (result is TutorWriteFailure) {
-        throw StateError(result.message);
-      }
     } else {
       await programRepo.setProgram(
         curriculumId: curriculum,

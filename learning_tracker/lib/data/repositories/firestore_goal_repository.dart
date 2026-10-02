@@ -210,15 +210,9 @@ class FirestoreGoalRepository {
     return entity;
   }
 
-  /// Updates [goal]. Pass [paceTarget] to change the goal's mode, or
-  /// [clearPaceTarget] == `true` to make it a `'none'` goal; omitting both
-  /// keeps the mode. [clearLearningUnit] == `true` removes the learning
-  /// unit; omitting [paceGranularity] / [rawLearningUnit] keeps it.
-  ///
-  /// A mode change ends the old kind's doc and sets the new kind's doc in
-  /// one action; otherwise only the changed fields of the same doc are
-  /// written.
-  Future<GoalEntity> updateGoal({
+  /// Resolves an update without writing so owner and tutor paths share the
+  /// same field update rules. Governed writes carry their own timestamp.
+  static GoalEntity resolveGoalUpdate({
     required GoalEntity goal,
     PaceTarget? paceTarget,
     bool clearPaceTarget = false,
@@ -226,7 +220,7 @@ class FirestoreGoalRepository {
     PaceGranularity? paceGranularity,
     String? rawLearningUnit,
     bool clearLearningUnit = false,
-  }) async {
+  }) {
     final String resolvedGoalType;
     final DateTime? resolvedTargetDate;
     final int? resolvedPaceValue;
@@ -265,7 +259,7 @@ class FirestoreGoalRepository {
       resolvedRawUnit = goal.rawLearningUnit;
     }
 
-    final updated = goal.copyWith(
+    return goal.copyWith(
       targetDate: resolvedTargetDate,
       description: description ?? goal.description,
       goalType: resolvedGoalType,
@@ -273,6 +267,34 @@ class FirestoreGoalRepository {
       pacePeriod: resolvedPacePeriod,
       paceGranularity: resolvedGranularity,
       rawLearningUnit: resolvedRawUnit,
+    );
+  }
+
+  /// Updates [goal]. Pass [paceTarget] to change the goal's mode, or
+  /// [clearPaceTarget] == `true` to make it a `'none'` goal; omitting both
+  /// keeps the mode. [clearLearningUnit] == `true` removes the learning
+  /// unit; omitting [paceGranularity] / [rawLearningUnit] keeps it.
+  ///
+  /// A mode change ends the old kind's doc and sets the new kind's doc in
+  /// one action; otherwise only the changed fields of the same doc are
+  /// written.
+  Future<GoalEntity> updateGoal({
+    required GoalEntity goal,
+    PaceTarget? paceTarget,
+    bool clearPaceTarget = false,
+    String? description,
+    PaceGranularity? paceGranularity,
+    String? rawLearningUnit,
+    bool clearLearningUnit = false,
+  }) async {
+    final updated = resolveGoalUpdate(
+      goal: goal,
+      paceTarget: paceTarget,
+      clearPaceTarget: clearPaceTarget,
+      description: description,
+      paceGranularity: paceGranularity,
+      rawLearningUnit: rawLearningUnit,
+      clearLearningUnit: clearLearningUnit,
     );
     await _apply(await planSetGoal(updated));
     return updated;
