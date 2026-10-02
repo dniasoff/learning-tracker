@@ -298,4 +298,8 @@ final class GatedLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> retry(String pendingFailureId) =>
       _held(() => inner.retry(pendingFailureId));
+
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) =>
+      inner.whenSubTrackChangeConfirmed(changeId);
 }

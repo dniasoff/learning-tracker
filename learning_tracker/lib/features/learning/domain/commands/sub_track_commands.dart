@@ -33,6 +33,15 @@
 ///   the command returns `success(queued: true)`. A queued batch the server
 ///   later refuses for good becomes a [PendingFailure] ("not saved —
 ///   retry"); [SubTrackCommands.retry] re-sends the identical batch.
+///   [SubTrackCommands.whenConfirmed] tells a caller holding a queued
+///   result whether the server finally accepted it (DNI-499). Both live in
+///   a [SubTrackWriteLedger] that outlives one commands instance, so a
+///   rebuild of the commands for the same learner keeps them.
+/// - **Analytics** (AD-47): `subtrack_lifecycle` is emitted once the server
+///   has accepted the write — at once when it acknowledges within
+///   [SubTrackCommands.ackTimeout], else when the queued write (or its
+///   retry) is acknowledged. A queued write the server refuses emits
+///   nothing.
 ///
 /// Imports only `lib/domain/learner_state/**`, sibling command files and
 /// `dart:` (C0 AC-1).
@@ -176,9 +185,12 @@ final class SubTrackCommands {
     required String Function() newId,
     Future<Corpus?> Function(String curriculumId)? corpusOf,
     LearningAnalytics? analytics,
+    SubTrackWriteLedger? ledger,
     this.ackTimeout = const Duration(seconds: 3),
     this.readTimeout = const Duration(seconds: 10),
-  }) : _subTracks = subTracks,
+  }) : _ledger = ledger ?? SubTrackWriteLedger(),
+       _ownsLedger = ledger == null,
+       _subTracks = subTracks,
        _intent = intent,
        _today = today,
        _nowUtc = nowUtc,
@@ -208,19 +220,35 @@ final class SubTrackCommands {
   final Future<Corpus?> Function(String curriculumId)? _corpusOf;
   final LearningAnalytics? _analytics;
 
-  final Map<String, (PendingFailure, SubTrackChange)> _pending = {};
+  final SubTrackWriteLedger _ledger;
+  final bool _ownsLedger;
+
+  Map<String, (PendingFailure, SubTrackChange, void Function()?)>
+  get _pending => _ledger._pending;
+
+  Map<String, Completer<bool>> get _unconfirmed => _ledger._unconfirmed;
+
+  StreamController<List<PendingFailure>> get _pendingController =>
+      _ledger._controller;
 
   /// Pending-failure ids whose retry is in flight.
-  final Set<String> _retrying = {};
-  final _pendingController = StreamController<List<PendingFailure>>.broadcast(
-    sync: true,
-  );
+  Set<String> get _retrying => _ledger._retrying;
 
   /// Creates a sub-track from [draft]. [subTrackId] is the new doc ULID
   /// (minted when omitted); it is the entry's `entity_id`.
+  ///
+  /// [nextYearOf] makes the create the *Add next year* rollover of that
+  /// school-year sub-track (Story 2.8): the source is re-read in the same
+  /// complete read as the AD-45 check, and the create is refused
+  /// (`rejected(targetNotFound)`, nothing written) when the source is gone,
+  /// tombstoned (ended or deleted, e.g. on another device after the form
+  /// opened), not a school year, or of another curriculum. The write is
+  /// otherwise identical and is reported as `add_next_year` in
+  /// `subtrack_lifecycle`. The source is never written.
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
+    String? nextYearOf,
   }) async {
     if (actor.role == ActorRole.child) return const CaptureResult.childLimit();
     final id = subTrackId ?? _newId();
@@ -245,6 +273,15 @@ final class SubTrackCommands {
     if (siblings.any((s) => s.id == id)) {
       return const CaptureResult.rejected(CaptureRejection.invalid);
     }
+    if (nextYearOf != null) {
+      final source = _find(siblings, nextYearOf);
+      if (source == null ||
+          source.isEnded ||
+          source.type != SubTrackType.schoolYear ||
+          source.curriculumId != draft.curriculumId) {
+        return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+      }
+    }
     final refused = await _validate(candidate, prior: null, siblings: siblings);
     if (refused != null) return refused;
     if (!_encodes(candidate)) {
@@ -253,16 +290,18 @@ final class SubTrackCommands {
     // Absent optional fields are not written (nor logged as null → null).
     final fields = _fieldsOf(candidate)..removeWhere((_, v) => v == null);
     final entry = _entry(id, entryId, before: const {}, after: fields);
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.create(
-          subTrackId: id,
-          changedFields: fields,
-          entry: entry,
-        ),
+    return _commit(
+      SubTrackChange.create(
+        subTrackId: id,
+        changedFields: fields,
+        entry: entry,
       ),
-      candidate,
-      SubTrackLifecycleAction.create,
+      onConfirmed: _emitter(
+        candidate,
+        nextYearOf != null
+            ? SubTrackLifecycleAction.addNextYear
+            : SubTrackLifecycleAction.create,
+      ),
     );
   }
 
@@ -301,16 +340,13 @@ final class SubTrackCommands {
     }
     final entryId = _newId();
     final entry = _entry(subTrackId, entryId, before: before, after: after);
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.fields(
-          subTrackId: subTrackId,
-          changedFields: after,
-          entry: entry,
-        ),
+    return _commit(
+      SubTrackChange.fields(
+        subTrackId: subTrackId,
+        changedFields: after,
+        entry: entry,
       ),
-      candidate,
-      SubTrackLifecycleAction.edit,
+      onConfirmed: _emitter(candidate, SubTrackLifecycleAction.edit),
     );
   }
 
@@ -326,6 +362,21 @@ final class SubTrackCommands {
   Stream<List<PendingFailure>> watchPendingFailures() async* {
     yield _pendingList();
     yield* _pendingController.stream;
+  }
+
+  /// Whether [pendingFailureId] is one of these commands' pending failures
+  /// (so `LearningCommands.retry` routes it here).
+  bool hasPendingFailure(String pendingFailureId) =>
+      _pending.containsKey(pendingFailureId);
+
+  /// Whether the write of change-log entry [changeId] was accepted by the
+  /// server. Completes true at its acknowledgement (at once when it is not
+  /// waiting for one: acknowledged already, or never queued here) and
+  /// false when the server refused it for good — it is then a pending
+  /// failure, and a [retry] that queues again can be awaited anew.
+  Future<bool> whenConfirmed(String changeId) {
+    if (_pending.containsKey(changeId)) return Future.value(false);
+    return _unconfirmed[changeId]?.future ?? Future.value(true);
   }
 
   /// Re-sends the identical batch of pending failure [pendingFailureId]
@@ -344,7 +395,7 @@ final class SubTrackCommands {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
     try {
-      final result = await _commit(pending.$2);
+      final result = await _commit(pending.$2, onConfirmed: pending.$3);
       if (result is CaptureSuccess &&
           // Records have no identity; compare the failure object.
           identical(_pending[pendingFailureId]?.$1, pending.$1)) {
@@ -357,8 +408,9 @@ final class SubTrackCommands {
     }
   }
 
-  /// Closes the pending-failure feed.
-  Future<void> dispose() => _pendingController.close();
+  /// Closes the pending-failure feed, unless the ledger was handed in (its
+  /// owner closes it).
+  Future<void> dispose() => _ownsLedger ? _ledger.dispose() : Future.value();
 
   // ── internals ─────────────────────────────────────────────────────────
 
@@ -385,39 +437,31 @@ final class SubTrackCommands {
       after: {SubTrack.kEndedAt: endedAt, SubTrack.kEndReason: reason.storage},
       at: endedAt,
     );
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.tombstone(
-          subTrackId: subTrackId,
-          endedAt: endedAt,
-          reason: reason,
-          entry: entry,
-        ),
+    return _commit(
+      SubTrackChange.tombstone(
+        subTrackId: subTrackId,
+        endedAt: endedAt,
+        reason: reason,
+        entry: entry,
       ),
-      current,
-      reason == SubTrackEndReason.ended
-          ? SubTrackLifecycleAction.end
-          : SubTrackLifecycleAction.delete,
+      onConfirmed: _emitter(
+        current,
+        reason == SubTrackEndReason.ended
+            ? SubTrackLifecycleAction.end
+            : SubTrackLifecycleAction.delete,
+      ),
     );
   }
 
-  /// Emits one AD-47 `subtrack_lifecycle` event for a written (or queued)
-  /// command — enums and counts only — and passes [result] through.
-  CaptureResult _emitOnSuccess(
-    CaptureResult result,
-    SubTrack track,
-    SubTrackLifecycleAction action,
-  ) {
-    if (result is CaptureSuccess && result.changeIds.isNotEmpty) {
-      _analytics?.subTrackLifecycle(
+  /// The AD-47 `subtrack_lifecycle` emission — enums and counts only —
+  /// that [_commit] runs once the server has accepted the write.
+  void Function() _emitter(SubTrack track, SubTrackLifecycleAction action) =>
+      () => _analytics?.subTrackLifecycle(
         curriculumId: track.curriculumId,
         type: track.type,
         action: action,
         groundEntries: track.ground.length,
       );
-    }
-    return result;
-  }
 
   /// The complete sub-track read of [scope] (live and ended), or a refusal:
   /// - `onlineRequired` when it is not available within [readTimeout]
@@ -530,9 +574,14 @@ final class SubTrackCommands {
   }
 
   /// Writes [change] and waits up to [ackTimeout] for the server.
-  Future<CaptureResult> _commit(SubTrackChange change) async {
+  /// [onConfirmed] runs once the server accepts the write, however late.
+  Future<CaptureResult> _commit(
+    SubTrackChange change, {
+    void Function()? onConfirmed,
+  }) async {
+    final id = change.entry.id;
     final success = CaptureResult.success(
-      changeIds: [change.entry.id],
+      changeIds: [id],
       actionId: change.entry.actionId,
     );
     final outcome = Completer<Object?>();
@@ -542,18 +591,24 @@ final class SubTrackCommands {
           .then(
             (_) {
               if (!outcome.isCompleted) outcome.complete(null);
+              _unconfirmed.remove(id)?.complete(true);
+              onConfirmed?.call();
             },
             onError: (Object error, StackTrace stack) {
               if (!outcome.isCompleted) {
                 outcome.complete(_Failed(error, stack));
               } else {
-                _recordPending(change, error);
+                _recordPending(change, error, onConfirmed);
+                _unconfirmed.remove(id)?.complete(false);
               }
             },
           ),
     );
     final timer = Timer(ackTimeout, () {
-      if (!outcome.isCompleted) outcome.complete(_queued);
+      if (outcome.isCompleted) return;
+      // Registered with the outcome, before any late ack can run.
+      _unconfirmed[id] = Completer<bool>();
+      outcome.complete(_queued);
     });
     final result = await outcome.future;
     timer.cancel();
@@ -581,7 +636,11 @@ final class SubTrackCommands {
     };
   }
 
-  void _recordPending(SubTrackChange change, Object error) {
+  void _recordPending(
+    SubTrackChange change,
+    Object error,
+    void Function()? onConfirmed,
+  ) {
     final code = error is PermanentWriteRejection ? error.code : '';
     final failure = PendingFailure(
       id: change.entry.id,
@@ -594,12 +653,12 @@ final class SubTrackCommands {
         _ => PendingFailureReason.other,
       },
     );
-    _pending[failure.id] = (failure, change);
+    _pending[failure.id] = (failure, change, onConfirmed);
     _publishPending();
   }
 
   List<PendingFailure> _pendingList() => [
-    for (final (failure, _) in _pending.values) failure,
+    for (final (failure, _, _) in _pending.values) failure,
   ];
 
   void _publishPending() {
@@ -612,17 +671,6 @@ final class SubTrackCommands {
     }
     return null;
   }
-
-  /// The AD-52 intent fields of [track] (every governed field except the
-  /// tombstone keys) — the payload the owner batch and the tutor's
-  /// `tutorUpsertSubTrack` (Story 4.1, DNI-509) both diff and write.
-  static Map<String, Object?> intentFieldsOf(SubTrack track) =>
-      _fieldsOf(track);
-
-  /// [track] with [edit] applied (`ground` replaced whole) — the one edit
-  /// rule the owner and tutor paths share.
-  static SubTrack applyEdit(SubTrack track, SubTrackEdit edit) =>
-      _applyEdit(track, edit);
 
   /// The intent fields of [track] in AD-52 storage form, without the codec's
   /// validation (so malformed intent reaches the AD-45 validator first):
@@ -673,6 +721,36 @@ final class SubTrackCommands {
     endReason: t.endReason,
     lastChangeId: t.lastChangeId,
   );
+}
+
+/// One learner's queued sub-track writes for the session (AD-54 Recovery):
+/// the writes still waiting for the server's acknowledgement and the ones
+/// it refused for good (pending failures with a retry).
+///
+/// [SubTrackCommands] keeps them here rather than in itself so that a
+/// rebuild of the commands for the same learner (a parent-PIN, profile or
+/// clock change) neither drops a refused write's retry nor loses the
+/// acknowledgement a caller is waiting on: a write queued by the previous
+/// instance still settles here, and the new instance retries it. Like the
+/// event and governed pending failures, it lives in memory for the session
+/// — there is no outbox; the Firestore SDK's offline queue carries the
+/// write itself across restarts.
+final class SubTrackWriteLedger {
+  final Map<String, (PendingFailure, SubTrackChange, void Function()?)>
+  _pending = {};
+
+  /// Queued writes not yet acknowledged, by change-log entry id: completes
+  /// true on the server ack, false when the server refuses it for good.
+  final Map<String, Completer<bool>> _unconfirmed = {};
+
+  /// Pending-failure ids whose retry is in flight.
+  final Set<String> _retrying = {};
+  final _controller = StreamController<List<PendingFailure>>.broadcast(
+    sync: true,
+  );
+
+  /// Closes the pending-failure feed.
+  Future<void> dispose() => _controller.close();
 }
 
 /// The "no server ack yet" outcome of [SubTrackCommands._commit].

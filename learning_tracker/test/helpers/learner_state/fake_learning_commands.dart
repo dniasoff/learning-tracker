@@ -245,6 +245,20 @@ final class FakeLearningCommands implements LearningCommands {
     throw error;
   }
 
+  /// Each queued sub-track change's server verdict; unlisted ids are
+  /// accepted. Complete a scripted completer to settle it.
+  final Map<String, Completer<bool>> subTrackConfirmations = {};
+
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) async {
+    calls.add(
+      LearningCommandCall('whenSubTrackChangeConfirmed', {
+        'changeId': changeId,
+      }),
+    );
+    return subTrackConfirmations[changeId]?.future ?? true;
+  }
+
   /// Closes [pendingFailures].
   Future<void> dispose() => pendingFailures.close();
 }

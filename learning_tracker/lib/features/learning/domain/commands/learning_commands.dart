@@ -253,6 +253,10 @@ abstract interface class LearningCommands {
 
   /// Retries the pending failure [pendingFailureId].
   Future<CaptureResult> retry(String pendingFailureId);
+
+  /// Completes true when the queued sub-track change is accepted, false when
+  /// the server refuses it and exposes it as a pending failure.
+  Future<bool> whenSubTrackChangeConfirmed(String changeId);
 }
 
 /// The AD-38 governed half of [LearningCommands], filled by DNI-470 (1.8).
@@ -922,30 +926,39 @@ final class DefaultLearningCommands implements LearningCommands {
   }
 
   @override
-  Future<CaptureResult> retry(String pendingFailureId) =>
-      _gated((stamp, history) async {
-        final outcome = await _dispatcher.retry(pendingFailureId);
-        if (outcome == null) {
-          final governed = await _governed?.retry(pendingFailureId);
-          if (governed != null) return governed;
-          final subTracks = _subTrackCommands;
-          if (subTracks != null) return subTracks.retry(pendingFailureId);
-          final backup = await _backupReplay?.retry(
-            pendingFailureId,
-            afterEvents: _afterWrite,
-          );
-          return backup ??
-              const CaptureResult.rejected(CaptureRejection.targetNotFound);
-        }
-        if (outcome.allRejected) {
-          return const CaptureResult.rejected(CaptureRejection.notSaved);
-        }
-        _afterWrite(outcome);
-        return CaptureResult.success(
-          eventIds: outcome.eventIds,
-          queued: outcome.queued,
-        );
-      });
+  Future<CaptureResult> retry(String pendingFailureId) => _gated((
+    stamp,
+    history,
+  ) async {
+    final subTracks = _subTrackCommands;
+    if (subTracks != null && subTracks.hasPendingFailure(pendingFailureId)) {
+      return subTracks.retry(pendingFailureId);
+    }
+    final outcome = await _dispatcher.retry(pendingFailureId);
+    if (outcome == null) {
+      final governed = await _governed?.retry(pendingFailureId);
+      if (governed != null) return governed;
+      if (subTracks != null) return subTracks.retry(pendingFailureId);
+      final backup = await _backupReplay?.retry(
+        pendingFailureId,
+        afterEvents: _afterWrite,
+      );
+      return backup ??
+          const CaptureResult.rejected(CaptureRejection.targetNotFound);
+    }
+    if (outcome.allRejected) {
+      return const CaptureResult.rejected(CaptureRejection.notSaved);
+    }
+    _afterWrite(outcome);
+    return CaptureResult.success(
+      eventIds: outcome.eventIds,
+      queued: outcome.queued,
+    );
+  });
+
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) =>
+      _subTrackCommands?.whenConfirmed(changeId) ?? Future.value(true);
 
   /// The post-write step of every command that saved (or queued) events,
   /// a first write or a retry: the AD-50 achievement latch over the learn
