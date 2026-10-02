@@ -1,37 +1,29 @@
 import 'dart:async';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 
+import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
-import 'package:learning_tracker/features/sacred_time/domain/services/zmanim_window_service.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/features/sacred_time/domain/services/sacred_lock.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'sacred_windows_provider.g.dart';
 
-/// 6-month rolling list of pre-computed Sacred Time block windows. Recomputed
-/// whenever the user's location or in-Israel flag changes.
-// keepAlive: read by both the lock overlay and CurrentSacredWindow's per-30s timer; dropping it on last-listener-loss would force a recompute on every screen navigation.
-@Riverpod(keepAlive: true)
-List<SacredWindow> sacredWindows(Ref ref) {
-  final location = ref.watch(sacredLocationProvider);
-  final inIsrael = ref.watch(inIsraelProvider);
-  if (location == null) return const [];
-  const service = ZmanimWindowService();
-  return service.computeWindows(
-    latitude: location.latitude,
-    longitude: location.longitude,
-    inIsrael: inIsrael,
-    from: DateTimeFactory.nowLocal(),
-    span: const Duration(days: 180),
-  );
-}
+/// The longest the lock state goes unre-judged; a lock boundary closer
+/// than this is met exactly.
+const Duration sacredWindowRecheck = Duration(minutes: 1);
 
-/// Currently-active window (the one whose [start, end] contains "now"), or
-/// null if not currently in Sacred Time.
+/// The device lock in force now (AD-36), or null when the app is open.
 ///
-/// Recomputed every minute via an internal timer so the lock screen drops
-/// without manual invalidation when tzais passes.
-// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
+/// The union of `lockWindows` over every learner whose lock drives this
+/// device ([accountLockHistoriesProvider]), judged by [sacredWindowAt] —
+/// the overlay, notification suppression and the Mishna history all read
+/// this one value. A learner whose settings are loading or unreadable is
+/// judged fail-closed. Re-judged at the next lock boundary (exactly) and
+/// at least every [sacredWindowRecheck], so the overlay appears at the
+/// lock's start and lifts just after its end without any other input
+/// changing.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock appears and lifts on time, not just on the next rebuild.
 @Riverpod(keepAlive: true)
 class CurrentSacredWindow extends _$CurrentSacredWindow {
   Timer? _timer;
@@ -42,31 +34,26 @@ class CurrentSacredWindow extends _$CurrentSacredWindow {
       _timer?.cancel();
       _timer = null;
     });
-
-    _scheduleNextTick();
-
-    final windows = ref.watch(sacredWindowsProvider);
-    return _findActive(windows);
+    final histories = ref.watch(accountLockHistoriesProvider);
+    final clock = ref.watch(localDayClockProvider);
+    _schedule(histories, clock.nowUtc());
+    return sacredWindowAt(histories, clock.nowUtc());
   }
 
-  void _scheduleNextTick() {
+  void _schedule(List<LearnerSettingsHistory> histories, DateTime now) {
     _timer?.cancel();
-    // 30-second resolution is plenty for a 15-min-cushioned boundary.
-    _timer = Timer(const Duration(seconds: 30), () {
-      final windows = ref.read(sacredWindowsProvider);
-      final next = _findActive(windows);
-      if (next != state) state = next;
-      _scheduleNextTick();
-    });
+    final next = nextLockChange(histories, now);
+    var wait = next == null ? sacredWindowRecheck : next.difference(now);
+    if (wait > sacredWindowRecheck) wait = sacredWindowRecheck;
+    if (wait < Duration.zero) wait = Duration.zero;
+    _timer = Timer(wait, _tick);
   }
 
-  static SacredWindow? _findActive(List<SacredWindow> windows) {
-    final nowUtc = DateTimeFactory.nowUtc();
-    for (final w in windows) {
-      if (!nowUtc.isBefore(w.startUtc) && !nowUtc.isAfter(w.endUtc)) {
-        return w;
-      }
-    }
-    return null;
+  void _tick() {
+    final histories = ref.read(accountLockHistoriesProvider);
+    final now = ref.read(localDayClockProvider).nowUtc();
+    final next = sacredWindowAt(histories, now);
+    if (next != state) state = next;
+    _schedule(histories, now);
   }
 }

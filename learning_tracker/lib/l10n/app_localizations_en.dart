@@ -2934,6 +2934,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not detect location. Try again, or choose a city instead.';
 
   @override
+  String get sacredTimeLocationPromptAction => 'Set location';
+
+  @override
+  String sacredTimeLocationPromptMessage(String term) {
+    return 'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
+  }
+
+  @override
   String get sacredTimeSettingsNotSaved =>
       'Couldn\'t save this learner\'s Sacred Time settings. Try again.';
 

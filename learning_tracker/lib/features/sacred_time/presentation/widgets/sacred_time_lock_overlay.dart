@@ -9,13 +9,22 @@ import 'package:learning_tracker/features/sacred_time/domain/models/sacred_windo
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Top-level wrapper that overlays a full-screen "Sacred Time" lock when
-/// [currentSacredWindowProvider] returns non-null. Mounted at the
-/// `MaterialApp.router` builder slot so every route is covered (onboarding,
-/// settings, dashboard, etc.).
+/// The full-screen Sacred Time lock (AD-36, DNI-481 AC-1).
 ///
-/// The overlay shows only a greeting message — no zmanim. It dismisses itself
-/// silently when the window ends (provider re-evaluates every 30s).
+/// Mounted in the `MaterialApp.router` builder slot, so it wraps the WHOLE
+/// router output — every tab, pushed route and dialog. While
+/// [currentSacredWindowProvider] reports a lock (the union of `lockWindows`
+/// over every learner whose lock drives the device) it shows the opaque
+/// existing surface — background, white icon and greeting, no zmanim — and
+/// the app behind it is offstage: not painted, not hit-testable, excluded
+/// from semantics, its tickers paused. The greeting is a live region, so a
+/// screen reader announces it. System back is swallowed by
+/// `SacredTimeBackButtonDispatcher` (the router's back dispatcher).
+///
+/// The child keeps its place in the tree through lock and unlock (only its
+/// [Offstage] / [TickerMode] flags flip), so navigation state survives a
+/// lock. The overlay lifts by itself when the lock ends: the provider
+/// re-judges at the lock's boundaries.
 class SacredTimeLockOverlay extends ConsumerWidget {
   const SacredTimeLockOverlay({required this.child, super.key});
 
@@ -24,20 +33,26 @@ class SacredTimeLockOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeWindow = ref.watch(currentSacredWindowProvider);
-    if (activeWindow == null) {
-      return Stack(children: [child]);
-    }
+    final locked = activeWindow != null;
     // Resolve the variant-aware Shabbos term once here (this is the Consumer
     // layer) and hand the composed greeting/subtitle down to the plain
     // _LockScreen widget. Keeps the Hebrew-terms toggle + Ashkenazi/Sephardi
     // nusach honoured rather than baking "Shabbos" into the ARB.
-    final terms = domainTermLabels(ref);
-    final variant = ref.watch(currentTransliterationVariantProvider);
-    final shabbos = terms.shabbos(variant: variant);
+    final shabbos = locked
+        ? domainTermLabels(
+            ref,
+          ).shabbos(variant: ref.watch(currentTransliterationVariantProvider))
+        : null;
     return Stack(
+      fit: StackFit.expand,
       children: [
-        child,
-        _LockScreen(window: activeWindow, shabbos: shabbos),
+        // Same position and type locked or not: the app's element subtree
+        // (router, navigation stack) is kept, only hidden.
+        Offstage(
+          offstage: locked,
+          child: TickerMode(enabled: !locked, child: child),
+        ),
+        if (locked) _LockScreen(window: activeWindow, shabbos: shabbos!),
       ],
     );
   }
@@ -70,34 +85,42 @@ class _LockScreen extends StatelessWidget {
               // the icon + large display text exceed the viewport height (small
               // screens at large text scales) instead of overflowing.
               child: ScrollableFillBody(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      spec.icon,
-                      size: 96,
-                      color: Colors.white.withValues(alpha: 0.92),
-                    ),
-                    const SizedBox(height: 28),
-                    Text(
-                      greeting,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
+                // A live region: the greeting is announced when the lock
+                // starts (UX-DR-159).
+                child: Semantics(
+                  container: true,
+                  liveRegion: true,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        spec.icon,
+                        size: 96,
+                        color: Colors.white.withValues(alpha: 0.92),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      subtitle,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.78),
-                        height: 1.4,
+                      const SizedBox(height: 28),
+                      Text(
+                        greeting,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                            ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 14),
+                      Text(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.78),
+                              height: 1.4,
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

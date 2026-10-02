@@ -43,6 +43,27 @@ final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
   return pinService.hasProfilePin(selectedId);
 });
 
+/// Whether the holder of the device may change Sacred Time settings now:
+/// true straight away unless [sacredTimeLocationPinGuardRequiredProvider]
+/// requires the Parent PIN, which [context] (a context under the root
+/// navigator) then asks for. Used by the after-lock location prompt
+/// (DNI-481 AC-2) before it opens the city picker.
+Future<bool> guardSacredTimeSettingsAccess(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final required = await ref.read(
+    sacredTimeLocationPinGuardRequiredProvider.future,
+  );
+  if (!required) return true;
+  if (!context.mounted) return false;
+  return _verifySacredTimeParentPin(
+    context,
+    ref,
+    ref.read(selectedProfileIdProvider),
+  );
+}
+
 /// Settings card for the Sacred Time feature. Hard-on (no disable toggle).
 ///
 /// Shows and edits the ACTIVE LEARNER's lock settings (DNI-481 AC-3, AD-37):

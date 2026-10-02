@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
@@ -10,6 +11,11 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/learner_location_prompt.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_back_button_dispatcher.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Root application widget.
@@ -34,7 +40,12 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     // Keep a single router config instance for the app lifetime.
     // Re-creating appRouter.config() during rebuilds can trigger
     // duplicate GlobalKey / root-router overlay instability.
-    _routerConfig = ref.read(routerProvider).config();
+    // DNI-481: system back is swallowed while a Sacred Time lock is in
+    // force (the lock overlay sits above the router's navigator).
+    _routerConfig = withSacredTimeBackBlock(
+      ref.read(routerProvider).config(),
+      isLocked: () => ref.read(currentSacredWindowProvider) != null,
+    );
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -52,6 +63,17 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     // a BuildContext — also track a runtime device-language change.
     ref.invalidate(currentAppLocaleProvider);
     super.didChangeLocales(locales);
+  }
+
+  /// The after-lock location prompt's action (DNI-481 AC-2): the existing
+  /// city picker for the active learner, behind the Parent PIN when one
+  /// guards the Sacred Time settings.
+  Future<void> _openLearnerLocationPicker() async {
+    final router = ref.read(routerProvider);
+    final navigatorContext = router.navigatorKey.currentContext;
+    if (navigatorContext == null) return;
+    if (!await guardSacredTimeSettingsAccess(navigatorContext, ref)) return;
+    await router.push(const CityPickerRoute());
   }
 
   @override
@@ -93,8 +115,18 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
       // the SAME bar above every PUSHED sub-route, which would otherwise lose
       // it. Mounted here so it wraps the entire router output and survives all
       // route pushes/pops.
-      builder: (context, child) =>
-          PersistentSwitcherScaffold(child: child ?? const SizedBox.shrink()),
+      //
+      // DNI-481 (AD-36): the Sacred Time lock overlay wraps EVERYTHING the
+      // router renders (tabs, pushed routes, dialogs, the switcher bar), and
+      // the after-lock location prompt listens beside it.
+      builder: (context, child) => LearnerLocationPromptListener(
+        onSetLocation: _openLearnerLocationPicker,
+        child: SacredTimeLockOverlay(
+          child: PersistentSwitcherScaffold(
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
+      ),
     );
   }
 }

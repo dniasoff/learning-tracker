@@ -2895,6 +2895,14 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא ניתן לזהות מיקום. נסו שוב, או בחרו עיר במקום.';
 
   @override
+  String get sacredTimeLocationPromptAction => 'הגדרת מיקום';
+
+  @override
+  String sacredTimeLocationPromptMessage(String term) {
+    return 'ללומד זה אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
+  }
+
+  @override
   String get sacredTimeSettingsNotSaved =>
       'לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.';
 

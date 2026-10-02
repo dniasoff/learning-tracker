@@ -5159,6 +5159,18 @@ abstract class AppLocalizations {
   /// **'Could not detect location. Try again, or choose a city instead.'**
   String get sacredTimeLocationDetectErrorGeneric;
 
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner.
+  ///
+  /// In en, this message translates to:
+  /// **'Set location'**
+  String get sacredTimeLocationPromptAction;
+
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for a learner with no location.
+  ///
+  /// In en, this message translates to:
+  /// **'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
+  String sacredTimeLocationPromptMessage(String term);
+
   /// DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved.
   ///
   /// In en, this message translates to:
