@@ -75,6 +75,74 @@ void main() {
     );
   });
 
+  test('rejects a changed field on a document other than entity_id for '
+      'single-doc entities (subTrack, goal, learnerSettings)', () {
+    // Claims sub-track B, but the changed field addresses sub-track C.
+    expect(
+      () => _entry(
+        before: {'sub_tracks/$ulidC.name': null},
+        after: {'sub_tracks/$ulidC.name': 'Shiur'},
+      ).toStorage(),
+      throwsA(isA<StorageFormatException>()),
+    );
+    // Mixed: one key on the entity doc, one on another doc.
+    expect(
+      () => _entry(
+        before: {'sub_tracks/$ulidB.name': null, 'sub_tracks/$ulidC.name': 'x'},
+        after: {'sub_tracks/$ulidB.name': 'a', 'sub_tracks/$ulidC.name': 'y'},
+      ).toStorage(),
+      throwsA(isA<StorageFormatException>()),
+    );
+    expect(
+      () => _entry(
+        entity: GovernedEntity.goal,
+        before: {'goals/other_deadline.target': null},
+        after: {'goals/other_deadline.target': 1},
+      ).toStorage(),
+      throwsA(isA<StorageFormatException>()),
+    );
+    expect(
+      () => ChangeLogEntry(
+        id: ulidA,
+        entity: GovernedEntity.learnerSettings,
+        entityId: profileUlid,
+        actionId: ulidA,
+        before: {'learner_profiles/$ulidC.time_zone': null},
+        after: {'learner_profiles/$ulidC.time_zone': 'Asia/Jerusalem'},
+        at: t0,
+        actor: parentActor,
+      ).toStorage(),
+      throwsA(isA<StorageFormatException>()),
+    );
+    // Decode is strict too: a stored mismatched entry does not decode.
+    final stored = _entry().toStorage()..[ChangeLogEntry.kEntityId] = ulidC;
+    expect(
+      () => ChangeLogEntry.fromStorage(ulidA, stored),
+      throwsA(isA<StorageFormatException>()),
+    );
+  });
+
+  test('mainTrack* entries key by curriculumId and may cover several docs '
+      'of their collection', () {
+    final entry = ChangeLogEntry(
+      id: ulidA,
+      entity: GovernedEntity.mainTrackOrder,
+      entityId: 'mishnayos',
+      actionId: ulidA,
+      before: {
+        'track_learning_order/mishnayos_perek_1.user_sort_order': 1,
+        'track_learning_order/mishnayos_perek_2.user_sort_order': 2,
+      },
+      after: {
+        'track_learning_order/mishnayos_perek_1.user_sort_order': 2,
+        'track_learning_order/mishnayos_perek_2.user_sort_order': 1,
+      },
+      at: t0,
+      actor: parentActor,
+    );
+    expect(ChangeLogEntry.fromStorage(ulidA, entry.toStorage()), entry);
+  });
+
   test('learnerSettings entries use learner_profiles keys', () {
     final entry = ChangeLogEntry(
       id: ulidA,
