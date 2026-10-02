@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
@@ -41,7 +42,7 @@ final class FirestoreAddTrackActionRepository
     required Ref ref,
     DateTime Function()? clock,
   }) : _ref = ref,
-       _clock = clock ?? (() => DateTime.now().toUtc());
+       _clock = clock ?? (() => ref.read(localDayClockProvider).nowUtc());
 
   final Ref _ref;
   final DateTime Function() _clock;
