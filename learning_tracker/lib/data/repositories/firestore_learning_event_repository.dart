@@ -22,6 +22,15 @@
 ///   the write stays queueable offline (AD-38 offline owner create) and the
 ///   AD-46 rules whitelist (create-only plus identical replay, Story 1.9)
 ///   rejects a non-identical write at sync time.
+/// - **Chunked command writes** ([commit], DNI-469, the [LearningWritePort]
+///   of `LearningCommands`): one `WriteBatch` per chunk holding its events
+///   and their `points_ledger/pts_{eventId}` entries (AD-50, AD-54 "each
+///   chunk is self-contained"). Every payload is the prebuilt chunk's —
+///   ids and times fixed before the first attempt — so a retry re-sends an
+///   identical batch, which the AD-46 rules accept as an identical replay.
+///   The SDK owns the offline queue (parent AD-8): the returned future
+///   completes on server acknowledgement, and a terminal server rejection
+///   surfaces as [PermanentWriteRejection].
 /// - The `{uid}` path segment is the caller-supplied [LearnerScope.ownerUid]
 ///   (the persisted path uid, or a grant's owner uid — ruling B10), never
 ///   read from the live Auth user here.
@@ -31,19 +40,21 @@ import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/data/repositories/create_only_guard.dart';
+import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/data/repositories/paged_complete_query.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 
 /// `learning_events` collection name.
 const kLearningEventsCollection = 'learning_events';
 
 /// Profile-scoped `learning_events` repository.
 final class FirestoreLearningEventRepository
-    implements LearningEventRepository {
+    implements LearningEventRepository, LearningWritePort {
   /// Creates the repository over an account-scoped [firestore] handle
   /// (resolved from `activeAccountFirebaseProvider`).
   FirestoreLearningEventRepository({
@@ -110,6 +121,44 @@ final class FirestoreLearningEventRepository
       throw LearningEventConflictException(event.id);
     }
     await doc.set(payload);
+  }
+
+  /// Server error codes a retry can never fix: the write is rejected for
+  /// good and becomes a per-item pending failure (AD-54 Recovery).
+  static const permanentRejectionCodes = {
+    'permission-denied',
+    'invalid-argument',
+    'failed-precondition',
+    'already-exists',
+    'not-found',
+    'out-of-range',
+    'unauthenticated',
+  };
+
+  @override
+  Future<void> commit(LearnerScope scope, LearningWriteChunk chunk) async {
+    // Encode (and validate) every document before any I/O.
+    final events = [
+      for (final e in chunk.events)
+        (collectionFor(scope).doc(e.id), toFirestoreMap(e.toStorage())),
+    ];
+    final ledger = pointsLedgerCollectionFor(_firestore, scope);
+    final awards = [
+      for (final a in chunk.awards)
+        (ledger.doc(a.docId), pointsAwardDocument(a)),
+    ];
+    final batch = _firestore.batch();
+    for (final (doc, data) in [...events, ...awards]) {
+      batch.set(doc, data);
+    }
+    try {
+      await batch.commit();
+    } on FirebaseException catch (e) {
+      if (permanentRejectionCodes.contains(e.code)) {
+        throw PermanentWriteRejection(e.code);
+      }
+      rethrow;
+    }
   }
 
   static bool _decodesTo(LearningEvent event, Map<String, dynamic> data) {

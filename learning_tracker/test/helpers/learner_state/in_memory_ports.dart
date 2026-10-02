@@ -314,7 +314,12 @@ final class InMemoryLearningWritePort implements LearningWritePort {
   /// Every committed chunk with its scope, in order.
   final List<(LearnerScope, LearningWriteChunk)> commits = [];
 
+  /// Every commit attempt (committed, failed or held), in order.
+  final List<LearningWriteChunk> attempts = [];
+
   PermanentWriteRejection? _nextFailure;
+  final List<Completer<void>> _holds = [];
+  int _toHold = 0;
 
   /// The committed chunks, in order.
   List<LearningWriteChunk> get chunks => [for (final (_, c) in commits) c];
@@ -323,12 +328,33 @@ final class InMemoryLearningWritePort implements LearningWritePort {
   void failNextWith(PermanentWriteRejection rejection) =>
       _nextFailure = rejection;
 
+  /// Makes the next [count] commits wait for the server: each stays
+  /// pending (the SDK has queued it offline) until [release] or [reject].
+  /// Added by DNI-469.
+  void holdNext([int count = 1]) => _toHold += count;
+
+  /// The commits currently held.
+  int get heldCount => _holds.length;
+
+  /// Acknowledges the oldest held commit (records it as committed).
+  void release() => _holds.removeAt(0).complete();
+
+  /// Rejects the oldest held commit with [rejection].
+  void reject(Object rejection) => _holds.removeAt(0).completeError(rejection);
+
   @override
   Future<void> commit(LearnerScope scope, LearningWriteChunk chunk) async {
+    attempts.add(chunk);
     final failure = _nextFailure;
     if (failure != null) {
       _nextFailure = null;
       throw failure;
+    }
+    if (_toHold > 0) {
+      _toHold--;
+      final held = Completer<void>();
+      _holds.add(held);
+      await held.future;
     }
     commits.add((scope, chunk));
   }

@@ -468,6 +468,10 @@ void main() {
       AnalyticsEvent.syncPermissionDenied,
       // test/core/sync/merge/drift_merge_store_test.dart
       AnalyticsEvent.syncMergeRowSkipped,
+      // test/features/learning/domain/commands/learning_analytics_test.dart
+      // (exact enum/count-only payload) and learning_commands_test.dart
+      // AC-8 (DNI-469)
+      AnalyticsEvent.capture,
     };
     const allConvenienceMethodEvents = <String>{
       AnalyticsEvent.appLaunch,
@@ -527,6 +531,7 @@ void main() {
       AnalyticsEvent.tutorLiveMarkBlocked,
       AnalyticsEvent.bulkEngagementSkipped,
       AnalyticsEvent.lifetimeAchievementSkipped,
+      AnalyticsEvent.capture,
     };
     expect(
       {

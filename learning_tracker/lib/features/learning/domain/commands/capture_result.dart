@@ -171,6 +171,11 @@ enum CaptureRejection {
 
   /// The command's arguments are invalid.
   invalid,
+
+  /// The server rejected every write of the command for good; each one is
+  /// in `LearningCommands.watchPendingFailures` with a retry (AD-54
+  /// Recovery, parent AD-30). Added by DNI-469.
+  notSaved,
 }
 
 /// A field someone else changed since the caller read it.

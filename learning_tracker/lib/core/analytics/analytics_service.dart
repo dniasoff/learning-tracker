@@ -58,6 +58,13 @@ abstract final class AnalyticsEvent {
   static const tutorLiveMarkBlocked = 'tutor_live_mark_blocked';
   static const bulkEngagementSkipped = 'bulk_engagement_skipped';
   static const lifetimeAchievementSkipped = 'lifetime_achievement_skipped';
+
+  // Sub-tracks AD-47 learning events (emitted only through
+  // `LearningAnalytics`; enums and counts only).
+
+  /// DNI-469: a successful learning capture — `curriculum_id`,
+  /// `source_kind` (`main` | `sub_track`), `date_state` and `count`.
+  static const capture = 'capture';
 }
 
 /// Milestone thresholds for [AnalyticsEvent.streakMilestoneReached].
