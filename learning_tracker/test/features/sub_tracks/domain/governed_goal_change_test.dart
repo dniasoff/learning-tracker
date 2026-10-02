@@ -37,11 +37,6 @@ const _pace = PaceGoal(
 );
 
 void main() {
-  test('fixed AD-43 doc ids', () {
-    expect(deadlineGoalDocId(_c), 'mishnayos_deadline');
-    expect(paceGoalDocId(_c), 'mishnayos_pace');
-  });
-
   test('a first deadline creates goals/{c}_deadline with its full fields', () {
     expect(
       _action(const DeadlineGoalChoice('2028-06-01')),

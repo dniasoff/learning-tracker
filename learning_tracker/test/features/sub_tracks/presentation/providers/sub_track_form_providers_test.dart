@@ -141,10 +141,9 @@ void main() {
           seed: [storedSchoolYear('01JHARN0000000000000000001')],
         );
         addTearDown(h.dispose);
-        h.repo.seedRejected(
-          h.scope,
-          const RejectedRow('01JHARN0000000000000000098', 'bad window_end'),
-        );
+        h.repo.seedRejected(h.scope, const [
+          RejectedRow('01JHARN0000000000000000098', 'bad window_end'),
+        ]);
         final container = ProviderContainer(overrides: h.overrides());
         addTearDown(container.dispose);
         final tracks = container.listen(
