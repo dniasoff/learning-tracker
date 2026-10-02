@@ -2,9 +2,16 @@
 /// main-track position (AD-33). Derived on every run, never persisted.
 ///
 /// DNI-465 owns the derivation. The engine feeds it the learner order `O`
-/// (`orderedLeaves`, DNI-467) and the ground held by `holdsGround`
-/// sub-tracks (DNI-467); with no live order docs `O` is the corpus order,
-/// and with no sub-tracks nothing is held.
+/// (`orderedLeaves`, restricted to the learner's corpus) and the ground of
+/// every `holdsGround` sub-track of the curriculum (`predicates.dart`,
+/// expanded by `expandGround`); with no live order docs `O` is the corpus
+/// order, and with no holding sub-track nothing is held.
+///
+/// FR-12a with returned ground: leaves before `start` (for example the
+/// ground of an ended sub-track) sort after every leaf at or after
+/// `start`, and the position stays in the current unit while it has a
+/// schedulable leaf, so returned earlier ground is reached only after the
+/// current masechta's remaining leaves.
 library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
