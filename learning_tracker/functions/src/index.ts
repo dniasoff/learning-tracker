@@ -41,6 +41,8 @@ export {
   expirePendingInvites,
 } from "./tutor_invites";
 
+export { updateTutorGrantPermissions } from "./tutor_invites";
+
 export {
   tutorResetCompletion,
   tutorUpsertGoal,

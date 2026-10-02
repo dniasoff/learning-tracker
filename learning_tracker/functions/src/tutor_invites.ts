@@ -20,6 +20,65 @@ import { db, CALL_OPTS, encodeEmailForDocId, buildAccessId } from "./shared";
 // Grant doc-id formula: {encodedEmail}__{parentUid}__{childProfileId}
 // The encoded email replaces any non-alphanumeric char with '_'.
 
+// ── Grant permissions (AD-53, Story 1.25 / DNI-487) ──────────────────────────
+//
+// One permission, `can_edit_learning`, authorises every learning and
+// governed-entity tutor write (checked per call by writeWithChangeLog). It is
+// set only by parent action: the pre-checked invite checkbox (inviteTutor) or
+// updateTutorGrantPermissions below. The five legacy per-operation edit keys
+// are never written to a grant again and are stripped from existing grants on
+// the next parent update. A grant without `can_edit_learning` reads as false.
+
+/** The permission keys a grant may carry (AD-53). */
+export const GRANT_PERMISSION_KEYS = [
+  "can_view_progress",
+  "can_view_content",
+  "can_edit_learning",
+  "can_edit_rewards",
+  "can_edit_points",
+] as const;
+
+/** The five retired per-operation edit keys (AD-53). */
+export const LEGACY_EDIT_PERMISSION_KEYS = [
+  "can_edit_goals",
+  "can_edit_stages",
+  "can_edit_study_days",
+  "can_reset_completion",
+  "can_bulk_prior_completion",
+] as const;
+
+const DEFAULT_INVITE_PERMISSIONS: Readonly<Record<string, boolean>> = {
+  can_view_progress: true,
+  can_view_content: true,
+  // Fail closed: only an explicit `true` from the parent's checkbox grants it.
+  can_edit_learning: false,
+  can_edit_rewards: false,
+  can_edit_points: false,
+};
+
+/**
+ * Builds the permissions map persisted on a new grant from the client's
+ * `permissions` payload: only [GRANT_PERMISSION_KEYS] are kept (legacy and
+ * unknown keys are dropped), each must be a boolean, and missing keys take
+ * [DEFAULT_INVITE_PERMISSIONS].
+ */
+export function buildInvitePermissions(raw: unknown): Record<string, boolean> {
+  const out: Record<string, boolean> = { ...DEFAULT_INVITE_PERMISSIONS };
+  if (raw === undefined || raw === null) return out;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new HttpsError("invalid-argument", "permissions must be an object");
+  }
+  const bag = raw as Record<string, unknown>;
+  for (const key of GRANT_PERMISSION_KEYS) {
+    if (!(key in bag)) continue;
+    if (typeof bag[key] !== "boolean") {
+      throw new HttpsError("invalid-argument", `permissions.${key} must be a boolean`);
+    }
+    out[key] = bag[key] as boolean;
+  }
+  return out;
+}
+
 // ── inviteTutor ───────────────────────────────────────────────────────────────
 //
 // Creates a pending grant document for a tutor invite.
@@ -28,8 +87,13 @@ import { db, CALL_OPTS, encodeEmailForDocId, buildAccessId } from "./shared";
 //   {
 //     tutorEmail: string,           // tutor's email address (lower-cased by CF)
 //     childProfileId: string,       // profile ID (string) of the tutored child
-//     permissions: object,          // TutorPermissions serialised map (optional)
+//     permissions: object,          // TutorPermissions serialised map (optional);
+//                                   // permissions.can_edit_learning is the
+//                                   // parent's explicit invite-form choice
 //   }
+//
+// The persisted map holds only GRANT_PERMISSION_KEYS — never a legacy key —
+// and keeps can_edit_learning unchanged through acceptance.
 //
 // Returns: { success: true, grantId: string }
 
@@ -48,6 +112,9 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
   if (typeof childProfileId !== "string" || !childProfileId) {
     throw new HttpsError("invalid-argument", "childProfileId must be a non-empty string");
   }
+
+  // AD-53: validate before any read so a malformed map never touches state.
+  const grantPermissions = buildInvitePermissions(permissions);
 
   // Snapshot human-readable names at invite time so the tutor sees the child's
   // name (and inviting parent) instead of a raw profile id / generic label.
@@ -90,18 +157,6 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
   // Generate a 256-bit random invite token (NFR-3).
   const inviteToken = crypto.randomBytes(32).toString("hex");
 
-  const defaultPermissions = {
-    can_view_progress: true,
-    can_view_content: true,
-    can_bulk_prior_completion: true,
-    can_reset_completion: false,
-    can_edit_goals: false,
-    can_edit_stages: false,
-    can_edit_rewards: false,
-    can_edit_study_days: false,
-    can_edit_points: false,
-  };
-
   const grantData = {
     grant_id: grantId,
     parent_uid: callerUid,
@@ -110,7 +165,7 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
     tutor_uid: null,
     state: "pending",
     invite_token: inviteToken,
-    permissions: permissions ?? defaultPermissions,
+    permissions: grantPermissions,
     child_name: childNameSnapshot,
     parent_name: parentNameSnapshot,
     invited_at: now,
@@ -415,6 +470,79 @@ export const revokeTutorGrant = onCall(CALL_OPTS, async (request) => {
 
   logger.info(`revokeTutorGrant: parent=${callerUid} grantId=${grantId} tutor=${tutorUid}`);
   return { success: true };
+});
+
+// ── updateTutorGrantPermissions (AD-53, Story 1.25 / DNI-487) ────────────────
+//
+// The owning parent turns a tutor's "Can edit learning" permission on or off.
+// The only way, besides the invite checkbox, to set can_edit_learning, and
+// the way existing grants gain it (prd-deviations #7: existing tutors stay
+// read-only until the parent opts them in).
+//
+// Expects: { grantId: string, canEditLearning: boolean }   (B13 payload)
+// Returns: { success: true, grantId: string, canEditLearning: boolean }
+//
+// Fails closed, inside one transaction:
+//   - unauthenticated without request.auth;
+//   - invalid-argument for a missing grantId or a non-boolean canEditLearning;
+//   - permission-denied unless the grant exists, its parent_uid is the caller
+//     and its state is active. A tutor, a non-owner, and a missing (stale),
+//     revoked, pending or expired grant are all rejected the same way, and
+//     nothing is written.
+// On success it sets permissions.can_edit_learning and deletes the five
+// legacy edit keys in the same update; view/rewards/points are untouched.
+// Repeating a call is idempotent; concurrent calls serialise on the grant
+// doc, so the last committed value wins and no legacy key can come back.
+//
+// [ASSUMPTION] (ruling B11): there is no server-verifiable parent-PIN
+// session. The PIN lives only on the device (FR99), so this callable, like
+// inviteTutor and revokeTutorGrant, authorises on the owner uid. Parent-vs-
+// child on the same account is enforced in the UI (childModeGuard + pinGuard
+// on the Manage tutors and Invite routes), per the AD-38 Roles convention.
+// It never reads a client-supplied role.
+
+export const updateTutorGrantPermissions = onCall(CALL_OPTS, async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { grantId, canEditLearning } = request.data ?? {};
+  if (typeof grantId !== "string" || !grantId) {
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  }
+  if (typeof canEditLearning !== "boolean") {
+    throw new HttpsError("invalid-argument", "canEditLearning must be a boolean");
+  }
+
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  await db.runTransaction(async (txn) => {
+    const grantSnap = await txn.get(grantRef);
+    const grant = grantSnap.exists ? grantSnap.data()! : null;
+    // One indistinguishable rejection for every failed precondition, so the
+    // callable cannot be used to probe other parents' grant ids or states.
+    if (!grant || grant.parent_uid !== callerUid || grant.state !== "active") {
+      throw new HttpsError(
+        "permission-denied",
+        "Only the owning parent can change an active grant's permissions",
+      );
+    }
+
+    const update: Record<string, unknown> = {
+      "permissions.can_edit_learning": canEditLearning,
+      updated_at: admin.firestore.Timestamp.now(),
+    };
+    for (const legacy of LEGACY_EDIT_PERMISSION_KEYS) {
+      update[`permissions.${legacy}`] = admin.firestore.FieldValue.delete();
+    }
+    txn.update(grantRef, update);
+  });
+
+  logger.info(
+    `updateTutorGrantPermissions: parent=${callerUid} grantId=${grantId} ` +
+      `can_edit_learning=${canEditLearning}`,
+  );
+  return { success: true, grantId, canEditLearning };
 });
 
 // ── resignTutorGrant ──────────────────────────────────────────────────────────

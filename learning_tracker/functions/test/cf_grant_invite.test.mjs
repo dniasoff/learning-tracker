@@ -143,6 +143,110 @@ describe('inviteTutor', () => {
   });
 });
 
+// ── inviteTutor — AD-53 can_edit_learning (Story 1.25 / DNI-487 AC-1, AC-4) ──
+// The invite form's pre-checked "Can edit learning" box is persisted exactly
+// as chosen, survives acceptance unchanged, and no new grant ever carries one
+// of the five legacy per-operation edit keys.
+describe('inviteTutor — can_edit_learning (DNI-487)', () => {
+  const TUTOR_EMAIL = 'tutor@example.com';
+  const LEGACY_KEYS = [
+    'can_edit_goals',
+    'can_edit_stages',
+    'can_edit_study_days',
+    'can_reset_completion',
+    'can_bulk_prior_completion',
+  ];
+  const args = (permissions) => ({
+    tutorEmail: TUTOR_EMAIL,
+    childProfileId: String(PROFILE),
+    ...(permissions === undefined ? {} : { permissions }),
+  });
+  const grantOf = async (grantId) =>
+    (await db.collection('tutor_grants').doc(grantId).get()).data();
+  const assertNoLegacyKeys = (permissions) => {
+    for (const k of LEGACY_KEYS) {
+      assert.equal(k in permissions, false, `legacy key ${k} must be absent`);
+    }
+  };
+
+  beforeEach(async () => {
+    await clearFirestore();
+  });
+
+  for (const value of [true, false]) {
+    test(`box ${value ? 'checked' : 'unchecked'}: grant persists ` +
+        `can_edit_learning=${value} through acceptance, with no legacy keys`, async () => {
+      // The Dart client's TutorPermissions.toFirestore() shape.
+      const { grantId } = await call(fns.inviteTutor, args({
+        can_view_progress: true,
+        can_view_content: true,
+        can_edit_learning: value,
+        can_edit_rewards: true,
+        can_edit_points: true,
+      }), parentAuth);
+
+      const pending = await grantOf(grantId);
+      assert.equal(pending.state, 'pending');
+      assert.equal(pending.permissions.can_edit_learning, value);
+      assertNoLegacyKeys(pending.permissions);
+      assert.equal(pending.permissions.can_view_progress, true);
+      assert.equal(pending.permissions.can_edit_rewards, true);
+      assert.equal(pending.permissions.can_edit_points, true);
+
+      await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: true });
+      await call(fns.acceptTutorInvite, { grantId }, { uid: TUTOR, token: {} });
+
+      const active = await grantOf(grantId);
+      assert.equal(active.state, 'active');
+      assert.equal(active.permissions.can_edit_learning, value);
+      assertNoLegacyKeys(active.permissions);
+    });
+  }
+
+  test('an old client sending legacy keys: they are stripped, never persisted', async () => {
+    const { grantId } = await call(fns.inviteTutor, args({
+      can_view_progress: true,
+      can_view_content: true,
+      can_edit_learning: true,
+      can_bulk_prior_completion: true,
+      can_reset_completion: true,
+      can_edit_goals: true,
+      can_edit_stages: true,
+      can_edit_study_days: true,
+      some_unknown_flag: true,
+    }), parentAuth);
+    const { permissions } = await grantOf(grantId);
+    assertNoLegacyKeys(permissions);
+    assert.equal('some_unknown_flag' in permissions, false);
+    assert.equal(permissions.can_edit_learning, true);
+  });
+
+  test('no permissions map: can_edit_learning is false (fail closed), no legacy keys', async () => {
+    const { grantId } = await call(fns.inviteTutor, args(undefined), parentAuth);
+    const { permissions } = await grantOf(grantId);
+    assert.equal(permissions.can_edit_learning, false);
+    assertNoLegacyKeys(permissions);
+  });
+
+  test('a permissions map without can_edit_learning: stored as false', async () => {
+    const { grantId } = await call(fns.inviteTutor, args({ can_view_progress: true }), parentAuth);
+    assert.equal((await grantOf(grantId)).permissions.can_edit_learning, false);
+  });
+
+  for (const [label, permissions] of [
+    ['string can_edit_learning', { can_edit_learning: 'true' }],
+    ['numeric can_view_progress', { can_view_progress: 1 }],
+    ['array permissions', [true]],
+    ['string permissions', 'all'],
+  ]) {
+    test(`malformed permissions (${label}) → invalid-argument, no grant written`, async () => {
+      await expectHttpsError(call(fns.inviteTutor, args(permissions), parentAuth), 'invalid-argument');
+      const snap = await db.collection('tutor_grants').get();
+      assert.equal(snap.size, 0);
+    });
+  }
+});
+
 // ── acceptTutorInvite ─────────────────────────────────────────────────────────
 // Caller is the tutor. Validates grantId, state=pending, not expired,
 // caller email === grant.tutor_email AND caller emailVerified === true
