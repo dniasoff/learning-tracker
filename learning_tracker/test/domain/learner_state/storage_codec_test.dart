@@ -135,6 +135,49 @@ void main() {
     );
   });
 
+  group('freezeStorageValue', () {
+    test('deep-copies maps and lists into unmodifiable snapshots', () {
+      final instant = DateTime.utc(2026, 3, 1);
+      final nested = <String, Object?>{'id': 's1', 'at': instant};
+      final list = <Object?>[nested, 1];
+      final raw = <Object?, Object?>{'k': 'v'};
+      final source = <String, Object?>{'list': list, 'raw': raw, 'n': 2};
+
+      final frozen = freezeStorageMap(source);
+      nested['id'] = 'tampered';
+      list.add('extra');
+      raw['k'] = 'changed';
+      source['n'] = 3;
+
+      expect(frozen, {
+        'list': [
+          {'id': 's1', 'at': instant},
+          1,
+        ],
+        'raw': {'k': 'v'},
+        'n': 2,
+      });
+      expect(() => frozen['n'] = 4, throwsUnsupportedError);
+      final frozenList = frozen['list']! as List<Object?>;
+      expect(() => frozenList.add(0), throwsUnsupportedError);
+      expect(
+        () => (frozenList.first! as Map<String, Object?>)['id'] = 'x',
+        throwsUnsupportedError,
+      );
+      expect(
+        () => (frozen['raw']! as Map<Object?, Object?>)['k'] = 'x',
+        throwsUnsupportedError,
+      );
+    });
+
+    test('keeps primitives and instants as is', () {
+      final instant = DateTime.utc(2026);
+      expect(freezeStorageValue(null), isNull);
+      expect(freezeStorageValue('s'), 's');
+      expect(identical(freezeStorageValue(instant), instant), isTrue);
+    });
+  });
+
   test('StorageFormatException carries type/field/reason, no data', () {
     const e = StorageFormatException('T', 'f', 'why');
     expect(e.toString(), 'StorageFormatException(T.f): why');

@@ -26,11 +26,16 @@ const Set<GovernedEntity> intentHistoryEntities = {
 final class GovernedDocMerge {
   /// Creates a merge; [fields] are storage form, excluding
   /// `last_change_id`.
-  const GovernedDocMerge({
+  ///
+  /// [fields] is deep-copied into an unmodifiable snapshot, so mutating the
+  /// caller's map (or a nested list or map in it) after construction cannot
+  /// make a validated [GovernedBatch] write something other than its
+  /// `entry.after`.
+  GovernedDocMerge({
     required this.collection,
     required this.docId,
-    required this.fields,
-  });
+    required Map<String, Object?> fields,
+  }) : fields = freezeStorageMap(fields);
 
   /// The profile-scoped collection.
   final String collection;
@@ -38,7 +43,8 @@ final class GovernedDocMerge {
   /// The document id.
   final String docId;
 
-  /// Changed fields, storage form (null clears a field).
+  /// Changed fields, storage form (null clears a field); deeply
+  /// unmodifiable.
   final Map<String, Object?> fields;
 
   /// The `set(merge: true)` payload: [fields] plus

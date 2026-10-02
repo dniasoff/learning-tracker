@@ -23,12 +23,12 @@ void main() {
     actor: parentActor,
   );
 
-  const orderA = GovernedDocMerge(
+  final orderA = GovernedDocMerge(
     collection: 'track_learning_order',
     docId: 'mishnayos_masechta_a',
     fields: {'user_sort_order': 2},
   );
-  const orderB = GovernedDocMerge(
+  final orderB = GovernedDocMerge(
     collection: 'track_learning_order',
     docId: 'mishnayos_masechta_b',
     fields: {'user_sort_order': 1, 'ended_at': null},
@@ -61,28 +61,24 @@ void main() {
     test('accepts merges that match entry.after exactly', () {
       final batch = GovernedBatch(
         entry: entry(matchingAfter),
-        merges: const [orderA, orderB],
+        merges: [orderA, orderB],
       );
-      expect(batch.merges, const [orderA, orderB]);
+      expect(batch.merges, [orderA, orderB]);
       expect(
         batch,
-        GovernedBatch(
-          entry: entry(matchingAfter),
-          merges: const [orderA, orderB],
-        ),
+        GovernedBatch(entry: entry(matchingAfter), merges: [orderA, orderB]),
       );
     });
 
     test('rejects a missing or extra entry.after key', () {
       expect(
-        () =>
-            GovernedBatch(entry: entry(matchingAfter), merges: const [orderA]),
+        () => GovernedBatch(entry: entry(matchingAfter), merges: [orderA]),
         throwsArgumentError,
       );
       expect(
         () => GovernedBatch(
           entry: entry({...matchingAfter, 'track_learning_order/x.y': 1}),
-          merges: const [orderA, orderB],
+          merges: [orderA, orderB],
         ),
         throwsArgumentError,
       );
@@ -95,7 +91,7 @@ void main() {
             ...matchingAfter,
             'track_learning_order/mishnayos_masechta_a.user_sort_order': 3,
           }),
-          merges: const [orderA, orderB],
+          merges: [orderA, orderB],
         ),
         throwsArgumentError,
       );
@@ -131,11 +127,11 @@ void main() {
       expect(
         () => GovernedBatch(
           entry: entry(matchingAfter),
-          merges: const [orderA, orderA, orderB],
+          merges: [orderA, orderA, orderB],
         ),
         throwsArgumentError,
       );
-      const sneaky = GovernedDocMerge(
+      final sneaky = GovernedDocMerge(
         collection: 'track_learning_order',
         docId: 'mishnayos_masechta_a',
         fields: {'last_change_id': ulidD},
@@ -145,14 +141,96 @@ void main() {
           entry: entry({
             'track_learning_order/mishnayos_masechta_a.last_change_id': ulidD,
           }),
-          merges: const [sneaky],
+          merges: [sneaky],
         ),
         throwsArgumentError,
       );
     });
 
+    test('snapshots merge fields: mutating the source map after '
+        'construction does not change the validated batch', () {
+      final ended = DateTime.utc(2026, 3, 1);
+      final source = <String, Object?>{
+        'user_sort_order': 2,
+        'stages': <Object?>[
+          <String, Object?>{'id': 's1', 'ended_at': ended},
+        ],
+      };
+      final merge = GovernedDocMerge(
+        collection: 'track_learning_order',
+        docId: 'mishnayos_masechta_a',
+        fields: source,
+      );
+      final after = <String, Object?>{
+        'track_learning_order/mishnayos_masechta_a.user_sort_order': 2,
+        'track_learning_order/mishnayos_masechta_a.stages': [
+          {'id': 's1', 'ended_at': ended},
+        ],
+      };
+      final batch = GovernedBatch(entry: entry(after), merges: [merge]);
+
+      // Mutate the caller's maps and lists, top level and nested, after
+      // the merge and the batch were built.
+      source['user_sort_order'] = 99;
+      source['sneaky'] = 'x';
+      final stages = source['stages']! as List<Object?>;
+      (stages.single! as Map<String, Object?>)['id'] = 'tampered';
+      stages.add('extra');
+      after['track_learning_order/mishnayos_masechta_a.user_sort_order'] = 7;
+
+      final patch = batch.merges.single.toMergePatch(batch.entry.id);
+      expect(patch, {
+        'user_sort_order': 2,
+        'stages': [
+          {'id': 's1', 'ended_at': ended},
+        ],
+        'last_change_id': ulidD,
+      });
+      // The applied write still matches the audit entry exactly.
+      batch.merges.single.fields.forEach((field, value) {
+        final key = 'track_learning_order/mishnayos_masechta_a.$field';
+        expect(batch.entry.after[key], value);
+      });
+      expect(batch.entry.after, hasLength(2));
+    });
+
+    test('merge fields and entry.after are deeply unmodifiable', () {
+      final merge = GovernedDocMerge(
+        collection: 'track_learning_order',
+        docId: 'mishnayos_masechta_a',
+        fields: {
+          'user_sort_order': 2,
+          'stages': <Object?>[
+            <String, Object?>{'id': 's1'},
+          ],
+        },
+      );
+      final batch = GovernedBatch(
+        entry: entry({
+          'track_learning_order/mishnayos_masechta_a.user_sort_order': 2,
+          'track_learning_order/mishnayos_masechta_a.stages': [
+            {'id': 's1'},
+          ],
+        }),
+        merges: [merge],
+      );
+      final fields = batch.merges.single.fields;
+      expect(() => fields['user_sort_order'] = 3, throwsUnsupportedError);
+      final stages = fields['stages']! as List<Object?>;
+      expect(() => stages.add('x'), throwsUnsupportedError);
+      expect(
+        () => (stages.single! as Map<String, Object?>)['id'] = 'x',
+        throwsUnsupportedError,
+      );
+      final afterStages =
+          batch.entry.after['track_learning_order/mishnayos_masechta_a.stages']!
+              as List<Object?>;
+      expect(() => afterStages.add('x'), throwsUnsupportedError);
+      expect(() => batch.merges.add(merge), throwsUnsupportedError);
+    });
+
     test('rejects a subTrack entry', () {
-      const merge = GovernedDocMerge(
+      final merge = GovernedDocMerge(
         collection: 'sub_tracks',
         docId: ulidB,
         fields: {'rate_per_week': 5},
@@ -164,7 +242,7 @@ void main() {
             entity: GovernedEntity.subTrack,
             entityId: ulidB,
           ),
-          merges: const [merge],
+          merges: [merge],
         ),
         throwsArgumentError,
       );

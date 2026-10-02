@@ -218,6 +218,31 @@ Map<String, Object?> asStorageMap(String type, String field, Object? raw) {
   return out;
 }
 
+/// A deep, unmodifiable snapshot of a storage value: every nested map and
+/// list is copied and frozen, so a value type that validated the snapshot
+/// at construction cannot be changed afterwards through the caller's
+/// references. Primitives and [DateTime]s are immutable and kept as is.
+Object? freezeStorageValue(Object? value) {
+  if (value is Map<String, Object?>) return freezeStorageMap(value);
+  if (value is Map<Object?, Object?>) {
+    return Map<Object?, Object?>.unmodifiable({
+      for (final entry in value.entries)
+        entry.key: freezeStorageValue(entry.value),
+    });
+  }
+  if (value is List<Object?>) {
+    return List<Object?>.unmodifiable(value.map(freezeStorageValue));
+  }
+  return value;
+}
+
+/// [freezeStorageValue] for a string-keyed storage map.
+Map<String, Object?> freezeStorageMap(Map<String, Object?> map) =>
+    Map<String, Object?>.unmodifiable({
+      for (final entry in map.entries)
+        entry.key: freezeStorageValue(entry.value),
+    });
+
 /// Deep structural equality for storage values (maps, lists, primitives,
 /// [DateTime]s) — used by the value types' `==`.
 bool storageValueEquals(Object? a, Object? b) {

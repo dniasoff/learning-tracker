@@ -38,6 +38,23 @@ void main() {
     });
   });
 
+  test('snapshots changed fields: later source-map mutation cannot '
+      'desync the merge patch from entry.after', () {
+    final source = <String, Object?>{'rate_per_week': 9};
+    final change = SubTrackChange.fields(
+      subTrackId: ulidB,
+      changedFields: source,
+      entry: _entry({'sub_tracks/$ulidB.rate_per_week': 9}),
+    );
+    source['rate_per_week'] = 1;
+    source['name'] = 'x';
+    expect(change.toMergePatch(), {
+      'rate_per_week': 9,
+      'last_change_id': ulidA,
+    });
+    expect(change.entry.after, {'sub_tracks/$ulidB.rate_per_week': 9});
+  });
+
   test('tombstone sets ended_at and end_reason together', () {
     final change = SubTrackChange.tombstone(
       subTrackId: ulidB,
