@@ -2816,6 +2816,94 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportLineInProgress => 'In progress';
 
   @override
+  String reportOnTrackCalendarBehind(String count, String unit) {
+    return '$count $unit behind the calendar';
+  }
+
+  @override
+  String reportOnTrackDailyTarget(String count, String unit) {
+    return 'Daily target: $count $unit/day';
+  }
+
+  @override
+  String reportOnTrackFinish(String date) {
+    return 'Projected finish: $date';
+  }
+
+  @override
+  String get reportOnTrackFinishTooEarly =>
+      'Projected finish: too early to tell';
+
+  @override
+  String get reportOnTrackFinishUnknown =>
+      'Projected finish: not enough recent learning to project';
+
+  @override
+  String reportOnTrackShortfall(
+    String name,
+    String node,
+    String month,
+    String count,
+    String unit,
+  ) {
+    return '$name may not reach $node before $month. About $count $unit will return to home learning.';
+  }
+
+  @override
+  String reportOnTrackShortfallNoEnd(
+    String name,
+    String node,
+    String count,
+    String unit,
+  ) {
+    return '$name may not reach $node by the deadline. About $count $unit will return to home learning.';
+  }
+
+  @override
+  String get reportOnTrackStatusBehind => 'Behind pace';
+
+  @override
+  String get reportOnTrackStatusOnTrack => 'On track';
+
+  @override
+  String reportOnTrackStatusSemantics(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get reportOnTrackTitle => 'Goal status';
+
+  @override
+  String reportPaceEstimate(String rate) {
+    return '$rate / week estimate';
+  }
+
+  @override
+  String get reportPaceFootnote =>
+      'Before-tracking learning isn\'t counted in pace.';
+
+  @override
+  String reportPaceRate(String rate) {
+    return '$rate / week';
+  }
+
+  @override
+  String reportPaceSinceStart(String unit) {
+    return 'Since tracking started · $unit per week';
+  }
+
+  @override
+  String get reportPaceTitle => 'Per-source pace';
+
+  @override
+  String get reportPaceTooEarly => 'Too early to tell';
+
+  @override
+  String reportPaceTrailing(String days, String rate) {
+    return 'Last $days days: $rate / week';
+  }
+
+  @override
   String get reportSchoolYears => 'School years';
 
   @override

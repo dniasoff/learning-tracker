@@ -4973,6 +4973,125 @@ abstract class AppLocalizations {
   /// **'In progress'**
   String get reportLineInProgress;
 
+  /// No description provided for @reportOnTrackCalendarBehind.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {unit} behind the calendar'**
+  String reportOnTrackCalendarBehind(String count, String unit);
+
+  /// No description provided for @reportOnTrackDailyTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily target: {count} {unit}/day'**
+  String reportOnTrackDailyTarget(String count, String unit);
+
+  /// No description provided for @reportOnTrackFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected finish: {date}'**
+  String reportOnTrackFinish(String date);
+
+  /// No description provided for @reportOnTrackFinishTooEarly.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected finish: too early to tell'**
+  String get reportOnTrackFinishTooEarly;
+
+  /// No description provided for @reportOnTrackFinishUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected finish: not enough recent learning to project'**
+  String get reportOnTrackFinishUnknown;
+
+  /// No description provided for @reportOnTrackShortfall.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} may not reach {node} before {month}. About {count} {unit} will return to home learning.'**
+  String reportOnTrackShortfall(
+    String name,
+    String node,
+    String month,
+    String count,
+    String unit,
+  );
+
+  /// No description provided for @reportOnTrackShortfallNoEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} may not reach {node} by the deadline. About {count} {unit} will return to home learning.'**
+  String reportOnTrackShortfallNoEnd(
+    String name,
+    String node,
+    String count,
+    String unit,
+  );
+
+  /// No description provided for @reportOnTrackStatusBehind.
+  ///
+  /// In en, this message translates to:
+  /// **'Behind pace'**
+  String get reportOnTrackStatusBehind;
+
+  /// No description provided for @reportOnTrackStatusOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'On track'**
+  String get reportOnTrackStatusOnTrack;
+
+  /// No description provided for @reportOnTrackStatusSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {status}'**
+  String reportOnTrackStatusSemantics(String status);
+
+  /// No description provided for @reportOnTrackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal status'**
+  String get reportOnTrackTitle;
+
+  /// No description provided for @reportPaceEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate} / week estimate'**
+  String reportPaceEstimate(String rate);
+
+  /// No description provided for @reportPaceFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Before-tracking learning isn\'t counted in pace.'**
+  String get reportPaceFootnote;
+
+  /// No description provided for @reportPaceRate.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate} / week'**
+  String reportPaceRate(String rate);
+
+  /// No description provided for @reportPaceSinceStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Since tracking started · {unit} per week'**
+  String reportPaceSinceStart(String unit);
+
+  /// No description provided for @reportPaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-source pace'**
+  String get reportPaceTitle;
+
+  /// No description provided for @reportPaceTooEarly.
+  ///
+  /// In en, this message translates to:
+  /// **'Too early to tell'**
+  String get reportPaceTooEarly;
+
+  /// No description provided for @reportPaceTrailing.
+  ///
+  /// In en, this message translates to:
+  /// **'Last {days} days: {rate} / week'**
+  String reportPaceTrailing(String days, String rate);
+
   /// No description provided for @reportSchoolYears.
   ///
   /// In en, this message translates to:

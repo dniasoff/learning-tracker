@@ -1765,6 +1765,124 @@
   },
   "reportLineEnded": "Ended",
   "reportLineInProgress": "In progress",
+  "reportOnTrackCalendarBehind": "{count} {unit} behind the calendar",
+  "@reportOnTrackCalendarBehind": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackDailyTarget": "Daily target: {count} {unit}/day",
+  "@reportOnTrackDailyTarget": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackFinish": "Projected finish: {date}",
+  "@reportOnTrackFinish": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackFinishTooEarly": "Projected finish: too early to tell",
+  "reportOnTrackFinishUnknown": "Projected finish: not enough recent learning to project",
+  "reportOnTrackShortfall": "{name} may not reach {node} before {month}. About {count} {unit} will return to home learning.",
+  "@reportOnTrackShortfall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "node": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackShortfallNoEnd": "{name} may not reach {node} by the deadline. About {count} {unit} will return to home learning.",
+  "@reportOnTrackShortfallNoEnd": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "node": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackStatusBehind": "Behind pace",
+  "reportOnTrackStatusOnTrack": "On track",
+  "reportOnTrackStatusSemantics": "Status: {status}",
+  "@reportOnTrackStatusSemantics": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackTitle": "Goal status",
+  "reportPaceEstimate": "{rate} / week estimate",
+  "@reportPaceEstimate": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPaceFootnote": "Before-tracking learning isn't counted in pace.",
+  "reportPaceRate": "{rate} / week",
+  "@reportPaceRate": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPaceSinceStart": "Since tracking started · {unit} per week",
+  "@reportPaceSinceStart": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPaceTitle": "Per-source pace",
+  "reportPaceTooEarly": "Too early to tell",
+  "reportPaceTrailing": "Last {days} days: {rate} / week",
+  "@reportPaceTrailing": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
   "reportSchoolYears": "School years",
   "reportSourceBeforeTracking": "Before tracking",
   "reportSourceCounts": "{events} learning events · {distinct} {unit}",
