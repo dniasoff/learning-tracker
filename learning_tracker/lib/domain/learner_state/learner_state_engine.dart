@@ -159,6 +159,7 @@ final class LearnerStateEngine {
       );
     }
     final live = _liveDocs(intent);
+    final firstStage = firstStageOrder(live?.stages ?? const [], learns);
     final scoped = scopedLeaves(corpus, live?.scope);
     final scopedSet = scoped.toSet();
     final learnt = LearntRecord(
@@ -171,13 +172,21 @@ final class LearnerStateEngine {
       evaluated: evaluated,
       learnt: learnt,
       mainTrack: evaluated
-          ? _mainTrack(curriculumId, inputs, intent, corpus, learnt, learns)
+          ? _mainTrack(
+              curriculumId,
+              inputs,
+              intent,
+              corpus,
+              learnt,
+              learns,
+              firstStage,
+            )
           : const MainTrackRecord.none(),
       completedUnits: completedUnits(
         corpus: corpus,
         inScope: learnt.inScope,
         countedLearns: learns,
-        firstStage: firstStageOrder(live?.stages ?? const [], learns),
+        firstStage: firstStage,
       ),
     );
   }
@@ -190,6 +199,7 @@ final class LearnerStateEngine {
     Corpus corpus,
     LearntRecord learnt,
     List<LearningEvent> learns,
+    int? firstStage,
   ) {
     final liveOrder = [
       for (final doc in intent.order)
@@ -213,6 +223,7 @@ final class LearnerStateEngine {
       heldGround: _heldGround(curriculumId, inputs, corpus),
       start: program?.endedAt == null ? program?.trackingStartRef : null,
       startAt: trackingStartAt(inputs.intentHistory, curriculumId),
+      firstStage: firstStage,
     );
   }
 
