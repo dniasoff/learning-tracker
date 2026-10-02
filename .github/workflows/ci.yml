@@ -86,6 +86,12 @@ jobs:
         working-directory: learning_tracker
         run: dart run tool/check_dependency_direction.dart
 
+      # AD-35 "Reads" (DNI-474): only lib/data/repositories/ queries
+      # learning_events; every other surface reads LearnerState.
+      - name: Learning-event read-boundary gate (AD-35 Reads)
+        working-directory: learning_tracker
+        run: dart run tool/check_learning_event_read_boundary.dart
+
   # ── 3. audit ───────────────────────────────────────────────────────────────
   # Runs `make audit` when the target exists; skips gracefully if not yet landed.
   # `make audit` (learning_tracker/Makefile, the authoritative audit target)
