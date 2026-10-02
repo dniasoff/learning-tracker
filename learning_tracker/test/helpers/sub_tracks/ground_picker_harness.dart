@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
@@ -25,6 +24,7 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/content_browsing/content_browsing.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -225,8 +225,8 @@ final class GroundPickerWorld {
     learningCommandsProvider.overrideWith(
       (ref) async => commandsOverride?.call() ?? commands,
     ),
-    contentIndexProvider.overrideWith(
-      (ref) async => ContentIndex.fromCurricula(labelItems ?? const {}),
+    curriculumContentProvider.overrideWith(
+      (ref, curriculum) async => labelItems?[curriculum] ?? const [],
     ),
     effectiveUseHebrewTermsProvider.overrideWithValue(false),
     currentTransliterationVariantProvider.overrideWithValue(
