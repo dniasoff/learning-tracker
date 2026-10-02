@@ -26,7 +26,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 
@@ -238,13 +237,10 @@ final learnerTodayProvider =
     );
 
 /// Re-reads the forecast inputs after a load error (the `InlineAsyncError`
-/// retry, UX-DR-112): the learner scope and its complete learner-state
-/// reads.
-void retryLearnerForecast(WidgetRef ref) {
-  ref
-    ..invalidate(activeLearnerScopeProvider)
-    ..invalidate(learnerStateProvider);
-}
+/// retry, UX-DR-112): [retryLearnerState] (DNI-474), which re-reads the
+/// learner scope, the repositories, any failed corpus or calendar input and
+/// the engine composition, so a calendar or content failure recovers too.
+void retryLearnerForecast(WidgetRef ref) => retryLearnerState(ref);
 
 /// Resolves *View {name} →* for one Dashboard shortfall warning
 /// (UX-DR-68): the tap action that opens that sub-track's detail, or null

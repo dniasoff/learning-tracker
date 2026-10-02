@@ -109,8 +109,9 @@ void main() {
     await tester.pumpWidget(
       pumpApp(
         theme: AppTheme.lightTheme(),
-        // No learner-state override: the C0 stub fails the read.
-        overrides: forecastOverrides(),
+        overrides: forecastOverrides(
+          states: Stream<LearnerState>.error(StateError('read failed')),
+        ),
         child: const Scaffold(body: LearnerTodaySection()),
       ),
     );
