@@ -61,11 +61,10 @@ import 'package:learning_tracker/features/content_browsing/domain/entities/text_
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
-import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
-import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -76,6 +75,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/learner_state/fake_learning_commands.dart';
 import '../../helpers/pump_app.dart';
 
 /// WCAG relative luminance (sRGB), per w3.org/TR/WCAG21/#dfn-relative-luminance.
@@ -204,15 +204,14 @@ TextContent _readerContent() => TextContent.single(
   englishText: 'From when may one recite',
 );
 
-/// Orchestrator whose `markComplete` always throws — drives
-/// `_CompletionSectionState._handleComplete`'s `catch (Exception e, st)`
-/// branch (the real production path that shows the "could not save"
-/// SnackBar) without needing a real completion write to succeed. Mocks
-/// `CompletionOrchestrator` (not `CompletionRepository`) because
-/// `MarkCompletionUseCase` goes through the orchestrator now — see
-/// `docs/firestore-rewrite-map.md`, owner decision 1.
-class _ThrowingCompletionOrchestrator extends Mock
-    implements CompletionOrchestrator {}
+/// Commands whose next `capture` is not saved — drives
+/// `_CompletionSectionState._handleComplete` to the real "not saved"
+/// SnackBar (warning fill) without a real write. Since Story 1.11
+/// (DNI-473) the reader's Mark complete writes through
+/// `LearningCommands.capture`.
+FakeLearningCommands _notSavedCommands() =>
+    FakeLearningCommands()
+      ..nextResult = const CaptureResult.rejected(CaptureRejection.invalid);
 
 class _FakeFontSizeNotifier extends FontSizeNotifier {
   @override
@@ -263,15 +262,6 @@ Widget _pumpTextDisplayScreen({
   required ThemeData theme,
   required StackRouter router,
 }) {
-  final orchestrator = _ThrowingCompletionOrchestrator();
-  when(
-    () => orchestrator.markComplete(
-      any(),
-      awardGamificationPoints: any(named: 'awardGamificationPoints'),
-      creditsAchievement: any(named: 'creditsAchievement'),
-    ),
-  ).thenThrow(Exception('simulated write failure'));
-
   final overrides = <Override>[
     textContentProvider(
       _kRef,
@@ -298,9 +288,7 @@ Widget _pumpTextDisplayScreen({
       _FakeActiveTutoredProfileSelection.new,
     ),
     useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
-    markCompletionUseCaseProvider.overrideWithValue(
-      MarkCompletionUseCase(orchestrator),
-    ),
+    learningCommandsProvider.overrideWith((ref) async => _notSavedCommands()),
   ];
 
   return pumpApp(
@@ -321,14 +309,6 @@ void main() {
   setUpAll(() {
     SharedPreferences.setMockInitialValues({});
     registerFallbackValue(_FakePageRouteInfo());
-    registerFallbackValue(
-      const CompletionRequest(
-        curriculumId: 'mishnayos',
-        sefariaRef: _kRef,
-        stageId: 1,
-        trackType: 'personal',
-      ),
-    );
   });
 
   group(

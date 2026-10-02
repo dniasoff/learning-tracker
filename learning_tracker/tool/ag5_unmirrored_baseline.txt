@@ -174,9 +174,7 @@ lib/features/gamification/presentation/widgets/track_tag_chip.dart
 lib/features/gamification/streak/streak_log_event.dart
 lib/features/gamification/streak/streak_reducer.dart
 lib/features/gamification/streak/streak_state_service.dart
-lib/features/learning/data/repositories/completion_points_awarder.dart
 lib/features/learning/data/repositories/completion_repository_impl.dart
-lib/features/learning/data/repositories/completion_streak_recorder.dart
 lib/features/learning/data/repositories/track_repository_impl.dart
 lib/features/learning/domain/entities/bookmark.dart
 lib/features/learning/domain/entities/completion_request.dart
@@ -187,7 +185,6 @@ lib/features/learning/domain/repositories/bookmark_repository.dart
 lib/features/learning/domain/repositories/completion_repository.dart
 lib/features/learning/domain/repositories/learning_ledger_repository.dart
 lib/features/learning/domain/repositories/track_repository.dart
-lib/features/learning/domain/use_cases/mark_completion_use_case.dart
 lib/features/learning/learning.dart
 lib/features/learning/presentation/providers/completion_providers.dart
 lib/features/learning/presentation/providers/completion_writer_providers.dart

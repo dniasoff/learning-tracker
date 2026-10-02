@@ -25,9 +25,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///   [onUndone]; an undo that does not save shows the "not saved" notice.
 /// * A [CaptureLocked] result shows the lock notice: nothing was written
 ///   (the full-screen lock overlay normally covers the app first).
-/// * Any other result shows the "not saved" notice. A permanently rejected
-///   write is also reported through [PendingCaptureFailureListener], which
-///   owns the Retry action.
+/// * A batch the server rejected for good ([CaptureRejection.notSaved]) shows
+///   nothing here: it is a pending failure, which the screen's
+///   [PendingCaptureFailureListener] announces once with Retry.
+/// * Any other result shows the "not saved" notice.
 ///
 /// [messenger] defaults to the one above [context]; pass it explicitly when
 /// the caller navigates away right after (the root messenger outlives the
@@ -71,6 +72,10 @@ List<String> showCaptureOutcome(
       return eventIds;
     case CaptureLocked():
       target.showSnackBar(SnackBar(content: Text(l10n.captureLockedNotice)));
+      return const [];
+    case CaptureRejected(reason: CaptureRejection.notSaved):
+      // The rejected batch is now a pending failure: the screen's
+      // [PendingCaptureFailureListener] announces it once, with Retry.
       return const [];
     case CaptureChildLimit() || CaptureOnlineRequired() || CaptureRejected():
       target.showSnackBar(
