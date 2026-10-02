@@ -286,12 +286,19 @@ class NotificationGateway {
   }
 
   /// Schedule a rolling 14-day batch of reminders for [profileId].
+  ///
+  /// Any earlier schedule is cancelled first: the batch (offsets 10–23) AND
+  /// the legacy REPEATING daily reminder (offset 0, scheduled by
+  /// [scheduleDailyReminderForProfile] on builds before DNI-367). A repeating
+  /// reminder is never lock-filtered, so one left behind on an upgraded
+  /// device would keep firing inside every Sacred Time lock (DNI-481 AC-5).
   Future<void> scheduleBatchRemindersForProfile({
     required String profileId,
     required List<tz.TZDateTime> fireTimes,
     required String title,
     required String body,
   }) async {
+    await cancelDailyReminderForProfile(profileId);
     await cancelBatchRemindersForProfile(profileId);
 
     const androidDetails = AndroidNotificationDetails(

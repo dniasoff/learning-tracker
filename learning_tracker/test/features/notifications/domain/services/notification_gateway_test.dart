@@ -34,9 +34,11 @@
 @Tags(['notifications', 'unit'])
 library;
 
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -671,6 +673,49 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('scheduleBatchRemindersForProfile', () {
+    test(
+      'DNI-481 AC-5: cancels the legacy repeating daily reminder '
+      '(offset 0) so an upgraded device cannot fire it inside a lock',
+      () async {
+        // An upgraded device still carries a pre-DNI-367 REPEATING reminder
+        // under the profile's offset-0 id. Every fire time of the replacement
+        // batch is inside a lock, so nothing may be scheduled AND the legacy
+        // repeating id must be cancelled — otherwise it fires unfiltered.
+        final scheduler = NotificationScheduler(
+          service: gw,
+          isLockedAt: (_) => true,
+        );
+        await scheduler.scheduleReminderForProfile(
+          profileId: _profile1,
+          time: const TimeOfDay(hour: 19, minute: 0),
+          title: 'T',
+          body: 'B',
+        );
+
+        verify(
+          () => plugin.cancel(id: dailyReminderIdForProfile(_profile1)),
+        ).called(1);
+        verifyNever(
+          () => plugin.zonedSchedule(
+            id: any<int>(named: 'id'),
+            scheduledDate: any<tz.TZDateTime>(named: 'scheduledDate'),
+            notificationDetails: any<NotificationDetails>(
+              named: 'notificationDetails',
+            ),
+            androidScheduleMode: any<AndroidScheduleMode>(
+              named: 'androidScheduleMode',
+            ),
+            title: any<String>(named: 'title'),
+            body: any<String>(named: 'body'),
+            payload: any<String>(named: 'payload'),
+            matchDateTimeComponents: any<DateTimeComponents>(
+              named: 'matchDateTimeComponents',
+            ),
+          ),
+        );
+      },
+    );
+
     test('cancels profile batch range before scheduling', () async {
       final times = _futureTimes(3);
       // Profile 1's base is derived from its ULID hash.
