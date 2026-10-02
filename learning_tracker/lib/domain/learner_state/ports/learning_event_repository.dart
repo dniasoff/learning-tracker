@@ -27,5 +27,26 @@ abstract interface class LearningEventRepository {
   /// retry with the same value sends an identical payload — never a fresh
   /// time or a server timestamp (AD-46, parent AD-5). Throws
   /// `StorageFormatException` before any I/O if [event] is invalid.
+  ///
+  /// Append-only: an identical replay of an event that already exists is a
+  /// no-op, and a NON-identical write at an existing event id throws
+  /// [LearningEventConflictException] without touching the stored event.
   Future<void> create(LearnerScope scope, LearningEvent event);
+}
+
+/// A create at an event id that already holds a DIFFERENT event — a replay
+/// whose payload was rebuilt instead of reused, or an id collision. The
+/// stored event is left unchanged (AD-31 append-only, AD-46 create-only
+/// plus identical replay).
+final class LearningEventConflictException implements Exception {
+  /// Creates the exception for [eventId].
+  const LearningEventConflictException(this.eventId);
+
+  /// The contested `learning_events/{ulid}` id.
+  final String eventId;
+
+  @override
+  String toString() =>
+      'LearningEventConflictException: learning_events/$eventId already '
+      'holds a different event';
 }

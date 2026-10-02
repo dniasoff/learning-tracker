@@ -40,7 +40,59 @@ _MockSnapshot _snapshot(List<String> ids) {
 
 String _decode(String id, Map<String, Object?> data) => data['v']! as String;
 
+String _id(int i) => 'd${i.toString().padLeft(4, '0')}';
+
+/// A collection whose every page listener is scripted by the test: each
+/// `snapshots()` call is recorded with its `startAfterDocument` cursor, so
+/// a test can deliver exactly the (possibly transient) page contents a real
+/// listener would — e.g. a page that shrinks before its limit window
+/// refills.
+final class _ScriptedCollection {
+  _ScriptedCollection() {
+    final ordered = _queryAfter(null);
+    when(() => root.orderBy(FieldPath.documentId)).thenReturn(ordered);
+  }
+
+  final root = _MockQuery();
+  final opens =
+      <
+        ({
+          String? after,
+          StreamController<QuerySnapshot<Map<String, dynamic>>> c,
+        })
+      >[];
+
+  _MockQuery _queryAfter(String? after) {
+    final q = _MockQuery();
+    when(() => q.limit(any())).thenReturn(q);
+    when(() => q.startAfterDocument(any())).thenAnswer(
+      (inv) => _queryAfter(
+        (inv.positionalArguments.first as DocumentSnapshot<Object?>).id,
+      ),
+    );
+    when(q.snapshots).thenAnswer((_) {
+      final c = StreamController<QuerySnapshot<Map<String, dynamic>>>();
+      addTearDown(c.close);
+      opens.add((after: after, c: c));
+      return c.stream;
+    });
+    return q;
+  }
+
+  /// The most recently opened listener starting after [after].
+  StreamController<QuerySnapshot<Map<String, dynamic>>> latest(String? after) =>
+      opens.lastWhere((o) => o.after == after).c;
+
+  /// Delivers [ids] to the newest listener after [after].
+  Future<void> deliver(String? after, Iterable<String> ids) async {
+    latest(after).add(_snapshot(ids.toList()));
+    await pumpEventQueue();
+  }
+}
+
 void main() {
+  setUpAll(() => registerFallbackValue(_MockDoc()));
+
   group('AD-9 listener recovery', () {
     test('a stream-level error is forwarded, the page resubscribes, and the '
         'complete list is published after recovery', () async {
@@ -118,6 +170,141 @@ void main() {
         CompleteReadReady<String>(['a']),
       ]);
     });
+  });
+
+  group('an established page that shrinks never drops later pages', () {
+    // Each scenario: 1 loading, then complete lists only. The transient
+    // short page (a delete delivered before the limit window refills)
+    // must not be read as end-of-collection.
+    Future<
+      (
+        _ScriptedCollection,
+        List<CompleteRead<String>>,
+        StreamSubscription<CompleteRead<String>>,
+      )
+    >
+    open() async {
+      final collection = _ScriptedCollection();
+      final events = <CompleteRead<String>>[];
+      final sub = watchCompletePaged<String>(
+        collection: collection.root,
+        decode: (id, data) => id,
+        backoffBase: Duration.zero,
+        backoffCap: Duration.zero,
+        random: math.Random(1),
+      ).listen(events.add);
+      addTearDown(sub.cancel);
+      await pumpEventQueue();
+      return (collection, events, sub);
+    }
+
+    List<String> range(int from, int to, {Set<int> except = const {}}) => [
+      for (var i = from; i < to; i++)
+        if (!except.contains(i)) _id(i),
+    ];
+
+    test('501 rows: a delete in page 0 keeps the 501st row', () async {
+      final (c, events, _) = await open();
+      await c.deliver(null, range(0, 500));
+      await c.deliver(_id(499), [_id(500)]);
+      expect((events.last as CompleteReadReady<String>).items, range(0, 501));
+
+      // Transient: page 0 shrinks to 499 before it refills.
+      await c.deliver(null, range(0, 500, except: {10}));
+      expect(
+        (events.last as CompleteReadReady<String>).items,
+        range(0, 501, except: {10}),
+      );
+
+      // Refill: page 0 is full again with the 501st row; page 1 is
+      // re-cursored after it and comes back empty.
+      await c.deliver(null, range(0, 501, except: {10}));
+      expect(c.opens.last.after, _id(500));
+      await c.deliver(_id(500), const []);
+
+      final readies = events.whereType<CompleteReadReady<String>>().toList();
+      expect(events.first, isA<CompleteReadLoading<String>>());
+      expect(events.whereType<CompleteReadLoading<String>>(), hasLength(1));
+      expect(readies.map((r) => r.items), [
+        range(0, 501),
+        range(0, 501, except: {10}),
+      ]);
+    });
+
+    test('1000 rows: a delete in page 0 keeps every page-1 row', () async {
+      final (c, events, _) = await open();
+      await c.deliver(null, range(0, 500));
+      await c.deliver(_id(499), range(500, 1000));
+      await c.deliver(_id(999), const []);
+      expect((events.last as CompleteReadReady<String>).items, range(0, 1000));
+
+      await c.deliver(null, range(0, 500, except: {10}));
+      expect(
+        (events.last as CompleteReadReady<String>).items,
+        range(0, 1000, except: {10}),
+      );
+      for (final ready in events.whereType<CompleteReadReady<String>>()) {
+        expect(ready.items.length, greaterThanOrEqualTo(999));
+      }
+    });
+
+    test('1000 rows: deleting page 0\'s LAST row re-pages the successor '
+        'from the new cursor and publishes only the rebuilt chain', () async {
+      final (c, events, _) = await open();
+      await c.deliver(null, range(0, 500));
+      await c.deliver(_id(499), range(500, 1000));
+      await c.deliver(_id(999), const []);
+      final before = events.length;
+
+      // Page 0 shrinks and its end cursor moves from d0499 to d0498.
+      await c.deliver(null, range(0, 499));
+      expect(c.opens.last.after, _id(498));
+      expect(events.length, before, reason: 'no partial publication');
+
+      await c.deliver(_id(498), range(500, 1000));
+      expect(c.opens.last.after, _id(999));
+      expect(events.length, before, reason: 'tail not proven yet');
+      await c.deliver(_id(999), const []);
+
+      expect(
+        (events.last as CompleteReadReady<String>).items,
+        range(0, 1000, except: {499}),
+      );
+    });
+  });
+
+  group('deletes against a live collection (limit windows refill)', () {
+    for (final count in [501, 1000]) {
+      test('$count rows: deleting from page 0 publishes the full '
+          'remainder', () async {
+        final firestore = FakeFirebaseFirestore();
+        for (var i = 0; i < count; i++) {
+          await firestore.collection('c').doc(_id(i)).set({'v': _id(i)});
+        }
+        final events = <CompleteRead<String>>[];
+        final sub = watchCompletePaged<String>(
+          collection: firestore.collection('c'),
+          decode: (id, data) => id,
+        ).listen(events.add);
+        addTearDown(sub.cancel);
+        await pumpEventQueue(times: 50);
+        expect((events.last as CompleteReadReady<String>).items, [
+          for (var i = 0; i < count; i++) _id(i),
+        ]);
+
+        // Not the page-0 boundary row: fake_cloud_firestore (unlike real
+        // Firestore) rejects a cursor snapshot whose doc was deleted. The
+        // boundary case is covered by the scripted tests above.
+        await firestore.collection('c').doc(_id(10)).delete();
+        await firestore.collection('c').doc(_id(250)).delete();
+        await pumpEventQueue(times: 50);
+
+        expect((events.last as CompleteReadReady<String>).items, [
+          for (var i = 0; i < count; i++)
+            if (i != 10 && i != 250) _id(i),
+        ]);
+      });
+    }
   });
 
   group('paging', () {
