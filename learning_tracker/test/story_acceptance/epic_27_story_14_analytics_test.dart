@@ -135,11 +135,18 @@ void main() {
   group('27.14 — streak_milestone_reached', () {
     test('logStreakMilestoneReached fires with milestone param', () async {
       final analytics = FakeAnalyticsService();
-      await analytics.logStreakMilestoneReached(milestone: 7);
+      await analytics.logStreakMilestoneReached(
+        curriculumId: 'bavli',
+        milestone: 7,
+      );
       expect(analytics.countOf(AnalyticsEvent.streakMilestoneReached), 1);
       expect(
         analytics.lastParamsOf(AnalyticsEvent.streakMilestoneReached),
         containsPair('milestone', 7),
+      );
+      expect(
+        analytics.lastParamsOf(AnalyticsEvent.streakMilestoneReached),
+        containsPair('curriculum_id', 'bavli'),
       );
     });
 
