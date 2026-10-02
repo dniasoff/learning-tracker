@@ -203,6 +203,10 @@ enum MishnaCorrectionOutcome {
 
   /// The command refused or failed; the original row is restored.
   rolledBack,
+
+  /// A tutor correction the server stamped inside the learner's lock: it is
+  /// stored but not counted (AD-36, DNI-486 AC-7), so the row is unchanged.
+  keptNotCounted,
 }
 
 /// The optimistic look of [item] once [request] is applied: a removal, or
@@ -393,12 +397,15 @@ final class MishnaHistoryCorrections
     }
     final outcome = switch (result) {
       CaptureSuccess(queued: true) => MishnaCorrectionOutcome.queued,
+      CaptureSuccess(keptNotCounted: [_, ...]) =>
+        MishnaCorrectionOutcome.keptNotCounted,
       CaptureSuccess() => MishnaCorrectionOutcome.applied,
       CaptureChildLimit() => MishnaCorrectionOutcome.childLimit,
       _ => MishnaCorrectionOutcome.rolledBack,
     };
     if (!ref.mounted) return outcome;
-    if (result is! CaptureSuccess) {
+    if (result is! CaptureSuccess ||
+        outcome == MishnaCorrectionOutcome.keptNotCounted) {
       _dropOverlays({id});
       return outcome;
     }

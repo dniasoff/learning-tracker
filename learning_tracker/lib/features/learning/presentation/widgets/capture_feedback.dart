@@ -23,6 +23,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///   action. Undo voids exactly those events through
 ///   [LearningCommands.undoEvents] — never an earlier one — and then calls
 ///   [onUndone]; an undo that does not save shows the "not saved" notice.
+/// * A [CaptureSuccess] with [CaptureSuccess.keptNotCounted] events (a tutor
+///   capture the server stamped inside the learner's lock, DNI-486 AC-7)
+///   shows "Kept, not counted — Shabbos / Yom Tov had started"; Undo covers
+///   only the counted events.
 /// * A [CaptureLocked] result shows the lock notice: nothing was written
 ///   (the full-screen lock overlay normally covers the app first).
 /// * A batch the server rejected for good ([CaptureRejection.notSaved]) shows
@@ -45,6 +49,34 @@ List<String> showCaptureOutcome(
   final target = messenger ?? ScaffoldMessenger.of(context);
   final warningFill = context.colors.warningSnackbarFill;
   switch (result) {
+    case CaptureSuccess(keptNotCounted: [_, ...]):
+      // AD-36 / DNI-486 AC-7: a tutor capture stamped inside the learner's
+      // lock is stored but not counted. It is not rolled back and no Undo
+      // is offered for it; only the counted events can be undone.
+      final counted = result.countedEventIds;
+      target.showSnackBar(
+        SnackBar(
+          content: Text(l10n.tutorCaptureKeptNotCounted),
+          duration: const Duration(seconds: 6),
+          persist: false,
+          action: counted.isEmpty
+              ? null
+              : SnackBarAction(
+                  label: l10n.undoLabel,
+                  onPressed: () => unawaited(
+                    _undo(
+                      commands,
+                      counted,
+                      target,
+                      l10n,
+                      warningFill,
+                      onUndone,
+                    ),
+                  ),
+                ),
+        ),
+      );
+      return counted;
     case CaptureSuccess(:final eventIds):
       target.showSnackBar(
         SnackBar(

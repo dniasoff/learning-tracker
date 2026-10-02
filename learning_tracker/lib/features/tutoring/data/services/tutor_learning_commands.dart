@@ -136,6 +136,7 @@ final class TutorLearningCommands implements LearningCommands {
     CaptureResult Function(TutorWriteFailure failure)? rejection,
     List<String> Function(List<(_PlannedCall, TutorLearningWritten)> written)?
     eventIdsOf,
+    LearnerSettingsHistory? history,
   }) async {
     final written = <(_PlannedCall, TutorLearningWritten)>[];
     for (var i = 0; i < calls.length; i++) {
@@ -159,7 +160,20 @@ final class TutorLearningCommands implements LearningCommands {
     final ids =
         eventIdsOf?.call(written) ??
         [for (final (_, w) in written) ...w.eventIds];
-    return CaptureResult.success(eventIds: ids);
+    return CaptureResult.success(
+      eventIds: ids,
+      keptNotCounted: history == null
+          ? const []
+          : [
+              // AD-36 / AC-7: a call that started before the learner's lock
+              // may be stamped inside it. The server keeps its events; they
+              // are not counted.
+              for (final (c, w) in written)
+                if (w.recordedAt case final at?
+                    when _checks.stampedInLock(history, at))
+                  ...c.eventIds,
+            ],
+    );
   }
 
   static CaptureResult _rejectionOf(TutorWriteFailure failure) =>
@@ -254,15 +268,23 @@ final class TutorLearningCommands implements LearningCommands {
           stage: stage,
         ),
     ];
-    return _dispatch([
-      for (var start = 0; start < events.length; start += tutorCaptureChunkSize)
-        _recordCall(
-          events.sublist(
-            start,
-            (start + tutorCaptureChunkSize).clamp(0, events.length),
+    return _dispatch(
+      [
+        for (
+          var start = 0;
+          start < events.length;
+          start += tutorCaptureChunkSize
+        )
+          _recordCall(
+            events.sublist(
+              start,
+              (start + tutorCaptureChunkSize).clamp(0, events.length),
+            ),
           ),
-        ),
-    ], eventIdsOf: (written) => [for (final (c, _) in written) ...c.eventIds]);
+      ],
+      eventIdsOf: (written) => [for (final (c, _) in written) ...c.eventIds],
+      history: history,
+    );
   });
 
   _PlannedCall _recordCall(List<TutorLearnEvent> chunk) => _PlannedCall(
@@ -380,6 +402,7 @@ final class TutorLearningCommands implements LearningCommands {
       ],
       rejection: _correctionRejection,
       eventIdsOf: (_) => ids,
+      history: history,
     );
   });
 
@@ -427,7 +450,7 @@ final class TutorLearningCommands implements LearningCommands {
               // The node plan rides with the first chunk only.
               nodeReissues: c == 0 ? reissues : const [],
             ),
-        ]);
+        ], history: history);
       });
 
   _PlannedCall _unlearnCall({
@@ -481,9 +504,11 @@ final class TutorLearningCommands implements LearningCommands {
     }
     if (toVoid.isEmpty) return const CaptureResult.success();
     final ids = _ids(now, toVoid.length);
-    return _dispatch([
-      for (var i = 0; i < toVoid.length; i++) _voidCall(ids[i], toVoid[i]),
-    ], rejection: _correctionRejection);
+    return _dispatch(
+      [for (var i = 0; i < toVoid.length; i++) _voidCall(ids[i], toVoid[i])],
+      rejection: _correctionRejection,
+      history: history,
+    );
   });
 
   /// Tutor governed edits use the typed governed service methods.
@@ -514,13 +539,13 @@ final class TutorLearningCommands implements LearningCommands {
     if (entry == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
-    return _preflight((_, _) async {
+    return _preflight((_, history) async {
       final current = _pending.remove(pendingFailureId);
       if (current == null) return const CaptureResult.success();
       _emit();
       // A retry that fails again is parked again, so the feed re-announces
       // it with Retry.
-      return _dispatch(current.$2);
+      return _dispatch(current.$2, history: history);
     });
   }
 }

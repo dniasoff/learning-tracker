@@ -97,4 +97,17 @@ final class TutorWritePreflight {
       GateOpen() => TutorPreflightPassed(now, history),
     };
   }
+
+  /// Re-runs the gate on a callable's server-stamped [recordedAt] under the
+  /// target learner's [history] (AD-36: "Tutor callables return the
+  /// server-stamped recorded_at. The client re-runs CaptureGate on it"):
+  /// true when the stamp fell inside the learner's lock, so the stored
+  /// event is kept but not counted (deviation #2).
+  bool stampedInLock(LearnerSettingsHistory history, DateTime recordedAt) {
+    try {
+      return _gate.check(history, recordedAt.toUtc()) is GateLocked;
+    } on Object {
+      return true; // fail closed: never count an event that cannot be judged
+    }
+  }
 }
