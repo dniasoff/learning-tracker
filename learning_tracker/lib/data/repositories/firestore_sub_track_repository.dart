@@ -10,6 +10,13 @@
 ///   the two land atomically (and queue together offline). Removal is a
 ///   tombstone (`ended_at` + `end_reason`); this class never calls
 ///   `delete()`.
+/// - **Create** (Story 2.1): a [SubTrackChange.create] admits a target the
+///   client cannot find, with the empty row as its baseline; it is the
+///   same queueable doc + entry batch (ruling B6), never a create claim.
+/// - **Permanent rejection**: a commit refused with `permission-denied`,
+///   `invalid-argument` or `failed-precondition` throws
+///   [PermanentWriteRejection] so the command layer can surface the AD-54
+///   per-item retry entry.
 /// - **Existing, valid target** (review R3). Before the batch, the target
 ///   `sub_tracks/{id}` row is read (cache, then server). A row the client
 ///   cannot find throws [SubTrackNotFoundException] — a merge on an unknown
@@ -54,6 +61,7 @@ import 'package:learning_tracker/data/repositories/paged_complete_query.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -147,8 +155,14 @@ final class FirestoreSubTrackRepository implements SubTrackRepository {
     }
     final trackDoc = collectionFor(scope).doc(change.subTrackId);
     final current = await _targetRead(trackDoc);
-    if (current == null) throw SubTrackNotFoundException(change.subTrackId);
-    final stored = fromFirestoreMap(current);
+    if (current == null && !change.isCreate) {
+      throw SubTrackNotFoundException(change.subTrackId);
+    }
+    // A create's baseline is the empty row: an existing target makes its
+    // all-null `before` untruthful and fails below.
+    final stored = current == null
+        ? const <String, Object?>{}
+        : fromFirestoreMap(current);
     _requireTruthfulBaseline(change, stored);
     // Validate the full merged row; throws StorageFormatException.
     SubTrack.fromStorage(change.subTrackId, {
@@ -158,8 +172,22 @@ final class FirestoreSubTrackRepository implements SubTrackRepository {
     final batch = _firestore.batch()
       ..set(trackDoc, patch, SetOptions(merge: true))
       ..set(entryDoc, entryPayload);
-    await batch.commit();
+    try {
+      await batch.commit();
+    } on FirebaseException catch (e) {
+      if (_permanentCodes.contains(e.code))
+        throw PermanentWriteRejection(e.code);
+      rethrow;
+    }
   }
+
+  /// Server codes that a retry of the same batch can never pass (AD-54
+  /// "not saved — retry" entry).
+  static const _permanentCodes = {
+    'permission-denied',
+    'invalid-argument',
+    'failed-precondition',
+  };
 
   /// Every `entry.before` field must equal the stored value (absent ⇒
   /// `null`). [SubTrackChange] already guarantees `before` covers exactly

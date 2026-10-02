@@ -122,6 +122,52 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
   /// Every change-log entry actually written (replays excluded), in order.
   final List<(LearnerScope, ChangeLogEntry)> entries = [];
 
+  /// Every call, in order (replays and refused changes included).
+  final List<(LearnerScope, SubTrackChange)> calls = [];
+
+  /// Offline mode (Story 2.1 AC-6): a change is applied locally at once —
+  /// visible to [watchAll], like Firestore's latency compensation — but its
+  /// future completes only when [settleHeld] runs (the server ack).
+  bool offline = false;
+
+  final List<_HeldSubTrackWrite> _held = [];
+
+  PermanentWriteRejection? _nextFailure;
+
+  /// The next applied change is refused by the "server" with [rejection]
+  /// (one-shot): online it throws at once; offline it fails at
+  /// [settleHeld], reverting the local change like Firestore does.
+  void failNextWith(PermanentWriteRejection rejection) =>
+      _nextFailure = rejection;
+
+  /// How many offline writes await their server acknowledgement.
+  int get heldCount => _held.length;
+
+  /// Acknowledges every held offline write (reconnect). A held write that
+  /// was scripted to fail is reverted and its future throws.
+  void settleHeld() {
+    final held = [..._held];
+    _held.clear();
+    for (final h in held) {
+      final failure = h.failure;
+      if (failure == null) {
+        h.done.complete();
+        continue;
+      }
+      final rows = _tracks[h.scope]!;
+      final before = h.before;
+      if (before == null) {
+        rows.remove(h.change.subTrackId);
+      } else {
+        rows[h.change.subTrackId] = before;
+      }
+      _log[h.scope]!.remove(h.change.entry.id);
+      entries.removeWhere((e) => e.$2.id == h.change.entry.id);
+      _changes.notify(h.scope);
+      h.done.completeError(failure);
+    }
+  }
+
   /// Stores [tracks] for [scope].
   void seed(LearnerScope scope, Iterable<SubTrack> tracks) {
     final rows = _tracks.putIfAbsent(scope, () => {});
@@ -151,16 +197,22 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
     LearnerScope scope,
     SubTrackChange change,
   ) async {
+    calls.add((scope, change));
     final log = _log.putIfAbsent(scope, () => {});
     final existing = log[change.entry.id];
     if (existing != null) {
       if (existing == change.entry) return;
       throw ChangeLogConflictException(change.entry.id);
     }
+    final failure = _nextFailure;
+    _nextFailure = null;
+    if (failure != null && !offline) throw failure;
     final rows = _tracks.putIfAbsent(scope, () => {});
     final current = rows[change.subTrackId];
-    if (current == null) throw SubTrackNotFoundException(change.subTrackId);
-    final stored = current.toStorage();
+    if (current == null && !change.isCreate) {
+      throw SubTrackNotFoundException(change.subTrackId);
+    }
+    final stored = current?.toStorage() ?? const <String, Object?>{};
     for (final MapEntry(:key, :value) in change.entry.before.entries) {
       final field = ChangedFieldKey.tryParse(key)!.field;
       if (!storageValueEquals(stored[field], value)) {
@@ -174,10 +226,26 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
     log[change.entry.id] = change.entry;
     entries.add((scope, change.entry));
     _changes.notify(scope);
+    if (offline) {
+      final held = _HeldSubTrackWrite(scope, change, current, failure);
+      _held.add(held);
+      return held.done.future;
+    }
   }
 
   /// Closes the change notifier.
   Future<void> dispose() => _changes.close();
+}
+
+/// One offline sub-track write awaiting its server acknowledgement.
+final class _HeldSubTrackWrite {
+  _HeldSubTrackWrite(this.scope, this.change, this.before, this.failure);
+
+  final LearnerScope scope;
+  final SubTrackChange change;
+  final SubTrack? before;
+  final PermanentWriteRejection? failure;
+  final Completer<void> done = Completer<void>();
 }
 
 /// In-memory [ChangeLogRepository]. [commitGoverned] merges each

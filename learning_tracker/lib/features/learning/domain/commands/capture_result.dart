@@ -6,6 +6,7 @@ library;
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 
 /// What a command did.
 sealed class CaptureResult {
@@ -29,9 +30,12 @@ sealed class CaptureResult {
   /// Refused: the command needs a connection.
   const factory CaptureResult.onlineRequired() = CaptureOnlineRequired;
 
-  /// Refused for [reason].
-  const factory CaptureResult.rejected(CaptureRejection reason) =
-      CaptureRejected;
+  /// Refused for [reason]; a sub-track command names its AD-45
+  /// [violations].
+  const factory CaptureResult.rejected(
+    CaptureRejection reason, {
+    List<SubTrackViolation> violations,
+  }) = CaptureRejected;
 }
 
 /// The command was applied.
@@ -135,21 +139,30 @@ final class CaptureOnlineRequired extends CaptureResult {
 
 /// Refused for [reason].
 final class CaptureRejected extends CaptureResult {
-  /// Creates the refusal.
-  const CaptureRejected(this.reason);
+  /// Creates the refusal. [violations] names each AD-45 rule a sub-track
+  /// command broke (Story 2.1); it is empty for every other refusal.
+  const CaptureRejected(this.reason, {this.violations = const []});
 
   /// Why.
   final CaptureRejection reason;
 
+  /// The typed sub-track validation failures, each naming the violated
+  /// limit (with [reason] [CaptureRejection.invalid]).
+  final List<SubTrackViolation> violations;
+
   @override
   bool operator ==(Object other) =>
-      other is CaptureRejected && other.reason == reason;
+      other is CaptureRejected &&
+      other.reason == reason &&
+      _listEquals(other.violations, violations);
 
   @override
-  int get hashCode => reason.hashCode;
+  int get hashCode => Object.hash(reason, Object.hashAll(violations));
 
   @override
-  String toString() => 'CaptureResult.rejected(${reason.name})';
+  String toString() => violations.isEmpty
+      ? 'CaptureResult.rejected(${reason.name})'
+      : 'CaptureResult.rejected(${reason.name}, $violations)';
 }
 
 /// Why a command was rejected.

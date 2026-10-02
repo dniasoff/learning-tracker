@@ -12,6 +12,7 @@ import 'package:learning_tracker/data/repositories/learner_state_firestore_value
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -523,4 +524,145 @@ void main() {
       expect(firestore.ops, isEmpty);
     });
   });
+
+  group('Story 2.1 (DNI-492): owner create and permanent rejection', () {
+    Map<String, Object?> createFields() => {
+      for (final MapEntry(:key, :value) in _storedSubTrack(7).entries)
+        if (key != 'last_change_id' && value != null) key: value,
+    };
+
+    ChangeLogEntry createEntry(String id) => ChangeLogEntry(
+      id: ulidD,
+      entity: GovernedEntity.subTrack,
+      entityId: id,
+      actionId: ulidD,
+      before: {for (final k in createFields().keys) 'sub_tracks/$id.$k': null},
+      after: {
+        for (final MapEntry(:key, :value) in createFields().entries)
+          'sub_tracks/$id.$key': value,
+      },
+      at: t0,
+      actor: parentActor,
+    );
+
+    SubTrackChange create(String id) => SubTrackChange.create(
+      subTrackId: id,
+      changedFields: createFields(),
+      entry: createEntry(id),
+    );
+
+    test('a create is exactly one 2-write batch: the new doc merged with '
+        'last_change_id, and an entry whose before is null per field '
+        '(ruling B6: no create claim)', () async {
+      final firestore = _SpyFirestore();
+      final repo = FirestoreSubTrackRepository(firestore: firestore);
+      await repo.applyGovernedChange(scope, create(ulidB));
+
+      const profile = 'users/$_owner/learner_profiles/$profileUlid';
+      expect(firestore.ops, [
+        'set $profile/sub_tracks/$ulidB merge=true',
+        'set $profile/change_log/$ulidD merge=false',
+        'commit',
+      ]);
+      final data = (await repo.collectionFor(scope).doc(ulidB).get()).data()!;
+      expect(data['last_change_id'], ulidD);
+      expect(
+        SubTrack.fromStorage(ulidB, fromFirestoreMap(data)).name,
+        'Shiur 7',
+      );
+      final entry = (await firestore.doc('$profile/change_log/$ulidD').get())
+          .data()!;
+      expect((entry['before'] as Map).values, everyElement(isNull));
+    });
+
+    test('a create whose target already exists fails the null baseline and '
+        'writes nothing', () async {
+      final firestore = _SpyFirestore();
+      final repo = FirestoreSubTrackRepository(firestore: firestore);
+      await repo.collectionFor(scope).doc(ulidB).set(_storedSubTrack(0));
+      await expectLater(
+        repo.applyGovernedChange(scope, create(ulidB)),
+        throwsA(isA<ChangeBaselineMismatchException>()),
+      );
+      expect(firestore.ops, isEmpty);
+    });
+
+    test('a create with a non-null before or a tombstone is invalid', () {
+      expect(
+        () => SubTrackChange.create(
+          subTrackId: ulidB,
+          changedFields: const {'rate_per_week': 9},
+          entry: _entry(ulidB, {'sub_tracks/$ulidB.rate_per_week': 9}),
+        ),
+        throwsA(isA<StorageFormatException>()),
+      );
+    });
+
+    for (final code in [
+      'permission-denied',
+      'invalid-argument',
+      'failed-precondition',
+    ]) {
+      test(
+        'a commit refused with $code throws PermanentWriteRejection',
+        () async {
+          final repo = FirestoreSubTrackRepository(
+            firestore: _RejectingFirestore(code),
+          );
+          await expectLater(
+            repo.applyGovernedChange(scope, create(ulidB)),
+            throwsA(
+              isA<PermanentWriteRejection>().having(
+                (e) => e.code,
+                'code',
+                code,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    test('a transient commit failure is rethrown unchanged', () async {
+      final repo = FirestoreSubTrackRepository(
+        firestore: _RejectingFirestore('unavailable'),
+      );
+      await expectLater(
+        repo.applyGovernedChange(scope, create(ulidB)),
+        throwsA(isA<FirebaseException>()),
+      );
+    });
+  });
+}
+
+/// A Firestore whose batch commits fail with [code].
+final class _RejectingFirestore extends FakeFirebaseFirestore {
+  _RejectingFirestore(this.code);
+
+  final String code;
+
+  @override
+  WriteBatch batch() => _RejectingBatch(super.batch(), code);
+}
+
+final class _RejectingBatch implements WriteBatch {
+  _RejectingBatch(this._inner, this._code);
+
+  final WriteBatch _inner;
+  final String _code;
+
+  @override
+  Future<void> commit() async =>
+      throw FirebaseException(plugin: 'cloud_firestore', code: _code);
+
+  @override
+  void delete(DocumentReference<Object?> document) => _inner.delete(document);
+
+  @override
+  void set<T>(DocumentReference<T> document, T data, [SetOptions? options]) =>
+      _inner.set(document, data, options);
+
+  @override
+  void update<T>(DocumentReference<T> document, T data) =>
+      _inner.update(document, data);
 }

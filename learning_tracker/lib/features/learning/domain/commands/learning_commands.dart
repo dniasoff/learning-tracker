@@ -13,6 +13,10 @@ import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
+
+export 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart'
+    show SubTrackDraft, SubTrackEdit;
 
 /// The replacement fields of `LearningCommands.replace`; null keeps the
 /// target's value.
@@ -91,6 +95,27 @@ abstract interface class LearningCommands {
 
   /// Undoes the governed action [actionId].
   Future<CaptureResult> undoAction(String actionId);
+
+  /// Creates a sub-track (Story 2.1, AD-33/AD-38/AD-45): one queueable
+  /// batch of the new `sub_tracks/{ulid}` doc and its change-log entry,
+  /// every `before` null. [subTrackId] is the new doc ULID (minted when
+  /// omitted). Rejected with the violated AD-45 rules before any write.
+  /// Implemented by `SubTrackCommands.createSubTrack`.
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+  });
+
+  /// Edits any field of sub-track [subTrackId] except `curriculum_id`;
+  /// `ground` is replaced whole. Writes and logs only changed fields.
+  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit);
+
+  /// Ends sub-track [subTrackId]: `ended_at` + `end_reason = ended`.
+  Future<CaptureResult> endSubTrack(String subTrackId);
+
+  /// Deletes sub-track [subTrackId] as a tombstone: `ended_at` +
+  /// `end_reason = deleted`. No client `delete` is ever issued.
+  Future<CaptureResult> deleteSubTrack(String subTrackId);
 
   /// Queued writes the server rejected, live.
   Stream<List<PendingFailure>> watchPendingFailures();
