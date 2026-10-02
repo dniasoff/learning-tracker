@@ -317,7 +317,11 @@ class AppRouter extends RootStackRouter {
 
     // Sub-tracks (Epic 2). Story 2.6 (DNI-497): the sub-track detail, opened
     // from a Manage tracks hub row. Any role may open it (the child and tutor
-    // read-only), so no parent-session guard.
+    // read-only), so no parent-session guard. Registered without a
+    // SUB_TRACKS compile-time flag: orchestrator ruling B2 / AD-49 makes the
+    // cutover a ship hold (sub-track work lives on integ/sub-tracks and
+    // reaches dev only after DNI-490 ships) and rules "No feature flag is
+    // needed"; the resolver's flag proposal was not adopted.
     AutoRoute(
       path: '/settings/tracks/sub-tracks/:subTrackId',
       page: SubTrackDetailRoute.page,

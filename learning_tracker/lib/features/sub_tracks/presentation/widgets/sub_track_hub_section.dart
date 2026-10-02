@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,15 +5,12 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_route.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_start_status.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_type_chooser.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -32,15 +27,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///   (UX-DR-117).
 /// - A load error shows the shared [AppErrorView] with retry (UX-DR-118),
 ///   inside the group, so the main-track list keeps working.
-/// - Tapping a school-year row opens its edit form, an ongoing row the
-///   ongoing edit form (Story 2.5 / DNI-496 AC-6; Story 2.6 later routes
-///   rows to the detail screen).
-/// - *Add sub-track* → *Ongoing* opens the ongoing form (DNI-496 AC-1). The
-///   chooser shows the curriculum's AD-45 ongoing usage and disables
-///   Ongoing at five (AC-5); until that count has loaded, Ongoing stays
-///   disabled (fail closed).
-/// - An ongoing row that has not started yet reads "Starts {date}"
-///   (DNI-496 AC-4, UX-DR-89), judged on the learner's civil today.
+/// - Tapping a row opens the sub-track detail (Story 2.6 / DNI-497 AC-1,
+///   UX-DR-53): pushed on a phone; inside the >=840dp split the row is
+///   selected and the detail pane updates in place. Metadata *Edit* is in
+///   the detail's ⋮.
 class SubTrackHubSection extends ConsumerWidget {
   const SubTrackHubSection({required this.curriculumId, super.key});
 
@@ -89,14 +79,11 @@ class SubTrackHubSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colors = context.colors;
+    final selected = ref.watch(subTrackHubSelectionProvider);
     final dailyTarget = ref
         .watch(activeLearnerStateProvider)
         .value?[curriculumId]
         ?.dailyTarget;
-    // The ongoing usage and the learner's civil today (AD-41), as the
-    // ongoing form reads them (DNI-496).
-    final ongoing = ref.watch(ongoingSubTrackContextProvider(curriculumId));
-    final ongoingRead = ongoing.hasError ? null : ongoing.value;
 
     return Padding(
       padding: const EdgeInsetsDirectional.only(start: 4, bottom: 16),
@@ -124,22 +111,8 @@ class SubTrackHubSection extends ConsumerWidget {
                 padding: const EdgeInsetsDirectional.only(bottom: 8),
                 child: SubTrackHubRow(
                   track: s,
-                  today: ongoingRead?.today,
-                  onTap: switch (s.type) {
-                    SubTrackType.schoolYear => () => context.router.push(
-                      SchoolYearSubTrackFormRoute(
-                        curriculumId: curriculumId,
-                        subTrackId: s.id,
-                      ),
-                    ),
-                    SubTrackType.ongoing => () => unawaited(
-                      openOngoingSubTrackForm(
-                        context,
-                        curriculumId: curriculumId,
-                        subTrackId: s.id,
-                      ),
-                    ),
-                  },
+                  selected: s.id == selected,
+                  onTap: () => openSubTrackDetail(context, ref, s.id),
                 ),
               ),
             if (dailyTarget != null)
@@ -164,15 +137,6 @@ class SubTrackHubSection extends ConsumerWidget {
               onSchoolYear: () => context.router.push(
                 SchoolYearSubTrackFormRoute(curriculumId: curriculumId),
               ),
-              onOngoing: ongoingRead == null
-                  ? null
-                  : () => unawaited(
-                      openOngoingSubTrackForm(
-                        context,
-                        curriculumId: curriculumId,
-                      ),
-                    ),
-              ongoingInUse: ongoingRead?.ongoingInUse(),
             ),
             icon: const Icon(Icons.add),
             label: Text(l10n.subTrackHubAdd),
@@ -189,26 +153,27 @@ class SubTrackHubSection extends ConsumerWidget {
 }
 
 /// One sub-track row: a flat card with a 1px outline at elevation 0
-/// (UX-DR-15, UX-DR-150), its name and a type/window/rate subtitle. An
-/// ongoing row that starts after [today] reads "Starts {date}" instead
-/// (DNI-496 AC-4, UX-DR-89).
+/// (UX-DR-15, UX-DR-150), its name and a type/window/rate subtitle.
+///
+/// [selected] marks the sub-track whose detail the >=840dp split shows
+/// (UX-DR-163, UX-DR-164); the chevron follows the text direction, so it
+/// mirrors in RTL (UX-DR-161).
 class SubTrackHubRow extends StatelessWidget {
   const SubTrackHubRow({
     required this.track,
     this.onTap,
-    this.today,
+    this.selected = false,
     super.key,
   });
 
   /// The sub-track.
   final SubTrack track;
 
-  /// The learner's civil today, or null while it is unknown (no "Starts"
-  /// status then).
-  final CivilDate? today;
-
-  /// Opens the sub-track; null when its form is not available yet.
+  /// Opens the sub-track's detail; null renders the row inert.
   final VoidCallback? onTap;
+
+  /// Whether this row is the hub's selected sub-track.
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -228,10 +193,7 @@ class SubTrackHubRow extends StatelessWidget {
         rate,
       );
     } else {
-      final day = today;
-      subtitle =
-          (day == null ? null : subTrackStartsLabel(context, track, day)) ??
-          l10n.subTrackRowOngoingSubtitle(rate);
+      subtitle = l10n.subTrackRowOngoingSubtitle(rate);
     }
     return Card(
       elevation: 0,
@@ -243,7 +205,10 @@ class SubTrackHubRow extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
+        key: ValueKey('subTrackHubRow:${track.id}'),
         minTileHeight: 56,
+        selected: selected,
+        selectedTileColor: colors.brandBlue.withValues(alpha: 0.12),
         onTap: onTap,
         leading: Icon(
           track.type == SubTrackType.schoolYear
