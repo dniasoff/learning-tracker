@@ -384,7 +384,7 @@ void main() {
   });
 
   // Unique case from chart_data_service_sentinel_test.dart. The old
-  // kBulkPriorSentinelMs timestamp filter was replaced by the
+  // bulk-prior sentinel timestamp filter (retired, R10) was replaced by the
   // prior_completion_imports LEFT JOIN mechanism (Layer 3): a row stamped
   // with the old sentinel timestamp but NOT present in
   // prior_completion_imports must be treated as live, not excluded.
