@@ -40,7 +40,11 @@ import { db, CALL_OPTS } from "./shared";
 //     }>
 //   }
 //
-// Returns: { success: true, written: number }
+// Returns: { success: true, written: number, replayed: number }
+//   Create-only: a completionId that already exists rejects the request with
+//   `already-exists` (nothing written), unless it is an identical replay of
+//   this tutor's own earlier write under the same grant, which is skipped and
+//   counted in `replayed`.
 // Throws: HttpsError on any validation failure.
 
 const MAX_BULK_COMPLETIONS = 500;
@@ -107,6 +111,65 @@ function assertBulkPriorPayload(completions: CompletionPayload[]): void {
   }
 }
 
+/**
+ * Completion ids become Firestore doc ids under the owner's profile, so they
+ * must be a single safe path segment (ULID-like: letters, digits, `_`, `-`)
+ * and unique within one request (DNI-487 review).
+ */
+const COMPLETION_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+
+function assertCompletionIds(completions: CompletionPayload[]): void {
+  const seen = new Set<string>();
+  for (const completion of completions) {
+    if (!COMPLETION_ID_RE.test(completion.completionId)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "completionId must be 1-128 characters of [A-Za-z0-9_-]"
+      );
+    }
+    if (seen.has(completion.completionId)) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Duplicate completionId in request: ${completion.completionId}`
+      );
+    }
+    seen.add(completion.completionId);
+  }
+}
+
+/** The payload-derived fields a stored completion must match to be a replay. */
+function completionContent(
+  completion: CompletionPayload,
+  callerUid: string,
+  grantId: string
+): Record<string, unknown> {
+  return {
+    completion_id: completion.completionId,
+    curriculum_id: completion.curriculumId,
+    sefaria_ref: completion.sefariaRef,
+    stage_id: completion.stageId,
+    track_type: completion.trackType,
+    completed_at_ms: new Date(completion.completedAt).getTime(),
+    points: completion.points,
+    created_by_tutor_uid: callerUid,
+    grant_id: grantId,
+  };
+}
+
+function isIdenticalReplay(
+  existing: admin.firestore.DocumentData,
+  expected: Record<string, unknown>
+): boolean {
+  const completedAt = existing.completed_at;
+  const storedMs =
+    completedAt instanceof admin.firestore.Timestamp
+      ? completedAt.toMillis()
+      : undefined;
+  return Object.entries(expected).every(([key, value]) =>
+    key === "completed_at_ms" ? storedMs === value : existing[key] === value
+  );
+}
+
 export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
   // ── 1. Authentication check ────────────────────────────────────────────
   const callerUid = request.auth?.uid;
@@ -150,7 +213,7 @@ export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
   const writtenAt = admin.firestore.Timestamp.now();
 
   // Firestore allows 500 writes per transaction — the input cap matches.
-  const grant = await db.runTransaction(async (txn) => {
+  const result = await db.runTransaction(async (txn) => {
     const grantSnap = await txn.get(grantRef);
 
     if (!grantSnap.exists) {
@@ -206,18 +269,46 @@ export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
     }
 
     // Payload checks run after the grant checks (unchanged order).
-    assertBulkPriorPayload(completions as CompletionPayload[]);
+    const items = completions as CompletionPayload[];
+    assertBulkPriorPayload(items);
+    assertCompletionIds(items);
+
+    // Create-only (DNI-487 review): read every target inside the transaction
+    // first. A tutor may never overwrite an existing completion — owner- or
+    // tutor-written — through this proxy (it records no change-log entry).
+    // The one tolerated collision is an identical replay of this tutor's own
+    // earlier write under the same grant (a client retry), which is skipped.
+    // Anything else rejects the whole request with nothing written.
+    const completionRefs = items.map((completion) =>
+      profilePath.collection("completions").doc(completion.completionId)
+    );
+    const existingSnaps = await txn.getAll(...completionRefs);
+    const toWrite: Array<{
+      ref: admin.firestore.DocumentReference;
+      completion: CompletionPayload;
+    }> = [];
+    items.forEach((completion, i) => {
+      const snap = existingSnaps[i];
+      if (!snap.exists) {
+        toWrite.push({ ref: completionRefs[i], completion });
+        return;
+      }
+      const expected = completionContent(completion, callerUid, grantId);
+      if (!isIdenticalReplay(snap.data()!, expected)) {
+        throw new HttpsError(
+          "already-exists",
+          `Completion ${completion.completionId} already exists; ` +
+            "tutors cannot overwrite an existing completion"
+        );
+      }
+    });
 
     // Write completions as the owner (Admin SDK). Each completion document
     // lands in the owner's profile subcollection, indistinguishable from an
     // owner-written completion; the tutor_uid is kept as
     // `created_by_tutor_uid` for audit purposes.
-    for (const completion of completions as CompletionPayload[]) {
-      const completionRef = profilePath
-        .collection("completions")
-        .doc(completion.completionId);
-
-      txn.set(completionRef, {
+    for (const { ref: completionRef, completion } of toWrite) {
+      txn.create(completionRef, {
         completion_id: completion.completionId,
         curriculum_id: completion.curriculumId,
         sefaria_ref: completion.sefariaRef,
@@ -232,29 +323,36 @@ export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
       });
     }
 
-    return g;
+    return { g, written: toWrite.length };
   });
+  const grant = result.g;
+  const written = result.written;
+  const replayed = completions.length - written;
 
   // ── 4. Write audit log entry ───────────────────────────────────────────
-  const auditRef = db
-    .collection("tutor_grants")
-    .doc(grantId)
-    .collection("audit_log")
-    .doc(); // auto-id
+  // A pure replay wrote nothing, so it records nothing either (idempotent).
+  if (written > 0) {
+    const auditRef = db
+      .collection("tutor_grants")
+      .doc(grantId)
+      .collection("audit_log")
+      .doc(); // auto-id
 
-  await auditRef.set({
-    tutor_uid: callerUid,
-    tutor_name_snapshot: grant.tutor_name_snapshot ?? "",
-    action: "completion_bulk_prior",
-    target: `profile/${profileId}/completions`,
-    after_value: JSON.stringify({ count: completions.length }),
-    timestamp: writtenAt.toDate().toISOString(),
-  });
+    await auditRef.set({
+      tutor_uid: callerUid,
+      tutor_name_snapshot: grant.tutor_name_snapshot ?? "",
+      action: "completion_bulk_prior",
+      target: `profile/${profileId}/completions`,
+      after_value: JSON.stringify({ count: written, replayed }),
+      timestamp: writtenAt.toDate().toISOString(),
+    });
+  }
 
   logger.info(
     `tutorBulkPriorCompletions: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} count=${completions.length}`
+      `ownerUid=${ownerUid} profileId=${profileId} written=${written} ` +
+      `replayed=${replayed}`
   );
 
-  return { success: true, written: completions.length };
+  return { success: true, written, replayed };
 });

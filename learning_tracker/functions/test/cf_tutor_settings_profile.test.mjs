@@ -735,4 +735,102 @@ describe('tutorBulkPriorCompletions', () => {
       .get();
     assert.equal(audit.size, 1, 'exactly one audit-log entry');
   });
+
+  // ── Create-only (DNI-487 review): no overwrite of an existing completion ──
+  const completionDoc = (id = 'c1') =>
+    profileRef().collection('completions').doc(id);
+
+  test('existing owner completion with the same id → already-exists, untouched, no audit', async () => {
+    await seedActiveGrant({ can_edit_learning: true });
+    const ownerDoc = {
+      completion_id: 'c1',
+      curriculum_id: 'talmud_bavli',
+      sefaria_ref: 'Berakhot.2a',
+      stage_id: 1,
+      track_type: 'standard',
+      completed_at: admin.firestore.Timestamp.fromDate(new Date(PAST_DATE)),
+      points: 99,
+    };
+    await completionDoc().set(ownerDoc);
+
+    await expectHttpsError(
+      call(fns.tutorBulkPriorCompletions, goodArgs),
+      'already-exists',
+    );
+
+    const after = (await completionDoc().get()).data();
+    assert.equal(after.points, 99, 'owner completion must not be overwritten');
+    assert.equal(after.created_by_tutor_uid, undefined);
+    const audit = await db.collection('tutor_grants').doc(GRANT).collection('audit_log').get();
+    assert.equal(audit.size, 0);
+  });
+
+  test('collision rejects the whole batch: new items in the same request are not written', async () => {
+    await seedActiveGrant({ can_edit_learning: true });
+    await completionDoc().set({ completion_id: 'c1', points: 5 });
+
+    await expectHttpsError(
+      call(fns.tutorBulkPriorCompletions, {
+        ...goodArgs,
+        completions: [{ ...goodCompletion, completionId: 'c2' }, goodCompletion],
+      }),
+      'already-exists',
+    );
+    assert.equal((await completionDoc('c2').get()).exists, false);
+  });
+
+  test('identical replay of the tutor\'s own write → success, nothing rewritten, no second audit', async () => {
+    await seedActiveGrant({ can_edit_learning: true });
+    await call(fns.tutorBulkPriorCompletions, goodArgs);
+    const first = (await completionDoc().get()).data();
+
+    const res = await call(fns.tutorBulkPriorCompletions, goodArgs);
+
+    assert.equal(res.success, true);
+    assert.equal(res.written, 0);
+    assert.equal(res.replayed, 1);
+    const second = (await completionDoc().get()).data();
+    assert.ok(second.written_at.isEqual(first.written_at), 'replay must not rewrite');
+    const audit = await db.collection('tutor_grants').doc(GRANT).collection('audit_log').get();
+    assert.equal(audit.size, 1, 'replay records no second audit entry');
+  });
+
+  test('retry with a changed payload under the same id → already-exists, original kept', async () => {
+    await seedActiveGrant({ can_edit_learning: true });
+    await call(fns.tutorBulkPriorCompletions, goodArgs);
+
+    await expectHttpsError(
+      call(fns.tutorBulkPriorCompletions, {
+        ...goodArgs,
+        completions: [{ ...goodCompletion, points: 50 }],
+      }),
+      'already-exists',
+    );
+    assert.equal((await completionDoc().get()).data().points, 10);
+  });
+
+  test('duplicate completionId within one request → invalid-argument, nothing written', async () => {
+    await seedActiveGrant({ can_edit_learning: true });
+    await expectHttpsError(
+      call(fns.tutorBulkPriorCompletions, {
+        ...goodArgs,
+        completions: [goodCompletion, { ...goodCompletion, points: 50 }],
+      }),
+      'invalid-argument',
+    );
+    assert.equal((await completionDoc().get()).exists, false);
+  });
+
+  test('completionId that is not a single safe path segment → invalid-argument', async () => {
+    await seedActiveGrant({ can_edit_learning: true });
+    for (const completionId of ['a/b', '..', '__x__.', 'x'.repeat(129)]) {
+      await expectHttpsError(
+        call(fns.tutorBulkPriorCompletions, {
+          ...goodArgs,
+          completions: [{ ...goodCompletion, completionId }],
+        }),
+        'invalid-argument',
+      );
+    }
+  });
 });
