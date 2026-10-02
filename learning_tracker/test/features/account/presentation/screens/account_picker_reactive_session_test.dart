@@ -101,6 +101,12 @@ void main() {
       when(
         () => auth.onAuthStateChanged(),
       ).thenAnswer((_) => sessionController.stream);
+      // DNI-520: the badge reads the account's OWN named-app session, and is
+      // re-evaluated whenever the live auth-state stream emits.
+      AppUser? namedSession;
+      when(
+        () => auth.restoreSession('acc-reactive-target'),
+      ).thenAnswer((_) async => namedSession);
       when(
         () => router.push(any<PageRouteInfo>()),
       ).thenAnswer((_) async => null);
@@ -168,6 +174,7 @@ void main() {
 
       // First live-session event: matches this tile's account → valid
       // session.
+      namedSession = _user(_targetUid);
       sessionController.add(_user(_targetUid));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
@@ -184,6 +191,7 @@ void main() {
       // taps, dismisses, or otherwise triggers a rebuild of THIS tile; the
       // only thing that happens is the live session stream emitting a new
       // value.
+      namedSession = _user(_otherUid);
       sessionController.add(_user(_otherUid));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));

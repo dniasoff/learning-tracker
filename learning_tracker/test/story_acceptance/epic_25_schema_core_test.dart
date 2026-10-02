@@ -76,15 +76,25 @@ void main() {
           // behavioural coverage for AuthRepositoryImpl already lives in
           // auth_repository_impl_test.dart (see path above).
           final repo = _MockAuthRepository();
+          const anyUser = AppUser(
+            uid: 'u',
+            email: null,
+            displayName: null,
+            emailVerified: false,
+            providers: [],
+          );
 
           when(() => repo.currentUser).thenReturn(null);
           when(
             () => repo.onAuthStateChanged(),
           ).thenAnswer((_) => Stream.value(null));
+          // DNI-520: sign-in targets an account's named app explicitly.
           when(
-            () => repo.signInWithEmail(any(), any()),
-          ).thenAnswer((_) async {});
-          when(() => repo.signInWithGoogle()).thenAnswer((_) async {});
+            () => repo.signInToAccountWithEmail(any(), any(), any()),
+          ).thenAnswer((_) async => anyUser);
+          when(
+            () => repo.signInToAccountWithGoogle(any(), any()),
+          ).thenAnswer((_) async => anyUser);
           when(() => repo.signOut()).thenAnswer((_) async {});
         },
       );

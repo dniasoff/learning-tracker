@@ -35,6 +35,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
+/// DNI-520: the named-app magic-link sign-in the service is handed
+/// ([MagicLinkSignIn]); the account-free [AuthRepository] no longer signs in.
+abstract class _LinkSignIn {
+  Future<AppUser?> signIn(
+    String email,
+    String emailLink, {
+    String? displayName,
+  });
+}
+
+class _MockLinkSignIn extends Mock implements _LinkSignIn {}
+
+/// Reassigned per test in [setUp].
+_MockLinkSignIn linkSignIn = _MockLinkSignIn();
+
 /// Fake AppLinksPlatform implementation that lets tests control both the
 /// initial link and warm links without touching any real platform channel.
 ///
@@ -126,6 +141,8 @@ MagicLinkService _buildService(
 }) {
   return MagicLinkService(
     authRepository: auth,
+    signInWithEmailLink: (email, link, {displayName}) =>
+        linkSignIn.signIn(email, link, displayName: displayName),
     onSignedIn: onSignedIn ?? (_) async {},
     // Pass null so the constructor uses the singleton AppLinks() whose
     // underlying platform is already swapped out by _FakeAppLinksPlatform.
@@ -146,6 +163,7 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     mockAuth = MockAuthRepository();
+    linkSignIn = _MockLinkSignIn();
     fakePlatform = _FakeAppLinksPlatform();
     // Replace the AppLinks platform instance with our fake so AppLinks()
     // delegates all calls to the fake without touching any method channel.
@@ -183,7 +201,7 @@ void main() {
         () => mockAuth.isSignInWithEmailLink(uri.toString()),
       ).thenReturn(true);
       when(
-        () => mockAuth.signInWithEmailLink('user@example.com', uri.toString()),
+        () => linkSignIn.signIn('user@example.com', uri.toString()),
       ).thenAnswer((_) async => _fakeUser);
 
       final signedInUsers = <AppUser>[];
@@ -254,7 +272,7 @@ void main() {
         () => mockAuth.isSignInWithEmailLink(uri.toString()),
       ).thenReturn(true);
       when(
-        () => mockAuth.signInWithEmailLink('user@example.com', uri.toString()),
+        () => linkSignIn.signIn('user@example.com', uri.toString()),
       ).thenAnswer((_) async => _fakeUser);
 
       final signedInUsers = <AppUser>[];
@@ -284,11 +302,12 @@ void main() {
         () => mockAuth.isSignInWithEmailLink(uri.toString()),
       ).thenReturn(true);
       when(
-        () => mockAuth.signInWithEmailLink('user@example.com', uri.toString()),
+        () => linkSignIn.signIn(
+          'user@example.com',
+          uri.toString(),
+          displayName: 'New Name',
+        ),
       ).thenAnswer((_) async => _fakeUser);
-      when(
-        () => mockAuth.updateDisplayName('New Name'),
-      ).thenAnswer((_) async {});
 
       final service = _buildService(mockAuth);
       await service.initialize();
@@ -296,7 +315,16 @@ void main() {
       fakePlatform.emit(uri);
       await pumpEventQueue();
 
-      verify(() => mockAuth.updateDisplayName('New Name')).called(1);
+      // DNI-520: the pending name is applied BY the named-app sign-in, not
+      // by a later call on the (account-free) repository.
+      verify(
+        () => linkSignIn.signIn(
+          'user@example.com',
+          uri.toString(),
+          displayName: 'New Name',
+        ),
+      ).called(1);
+      verifyNever(() => mockAuth.updateDisplayName(any<String>()));
 
       await service.dispose();
     });
@@ -314,12 +342,12 @@ void main() {
           () => mockAuth.isSignInWithEmailLink(uri.toString()),
         ).thenReturn(true);
         when(
-          () =>
-              mockAuth.signInWithEmailLink('user@example.com', uri.toString()),
+          () => linkSignIn.signIn(
+            'user@example.com',
+            uri.toString(),
+            displayName: 'My Name',
+          ),
         ).thenAnswer((_) async => _fakeUser);
-        when(
-          () => mockAuth.updateDisplayName(any<String>()),
-        ).thenAnswer((_) async {});
 
         final service = _buildService(mockAuth);
         await service.initialize();
@@ -344,7 +372,7 @@ void main() {
         () => mockAuth.isSignInWithEmailLink(uri.toString()),
       ).thenReturn(true);
       when(
-        () => mockAuth.signInWithEmailLink('user@example.com', uri.toString()),
+        () => linkSignIn.signIn('user@example.com', uri.toString()),
       ).thenThrow(Exception('Firebase error'));
 
       final service = _buildService(mockAuth);
@@ -370,8 +398,7 @@ void main() {
           () => mockAuth.isSignInWithEmailLink(uri.toString()),
         ).thenReturn(true);
         when(
-          () =>
-              mockAuth.signInWithEmailLink('user@example.com', uri.toString()),
+          () => linkSignIn.signIn('user@example.com', uri.toString()),
         ).thenAnswer((_) async => null);
 
         var callbackCount = 0;
@@ -408,7 +435,11 @@ void main() {
 
       expect(callbackCount, 0);
       verifyNever(
-        () => mockAuth.signInWithEmailLink(any<String>(), any<String>()),
+        () => linkSignIn.signIn(
+          any<String>(),
+          any<String>(),
+          displayName: any(named: 'displayName'),
+        ),
       );
 
       await service.dispose();
@@ -574,10 +605,7 @@ void main() {
           () => mockAuth.isSignInWithEmailLink(plain.toString()),
         ).thenReturn(true);
         when(
-          () => mockAuth.signInWithEmailLink(
-            'user@example.com',
-            plain.toString(),
-          ),
+          () => linkSignIn.signIn('user@example.com', plain.toString()),
         ).thenAnswer((_) async => _fakeUser);
 
         final service = _buildService(mockAuth);
@@ -586,10 +614,7 @@ void main() {
         await pumpEventQueue();
 
         verify(
-          () => mockAuth.signInWithEmailLink(
-            'user@example.com',
-            plain.toString(),
-          ),
+          () => linkSignIn.signIn('user@example.com', plain.toString()),
         ).called(1);
 
         await service.dispose();
@@ -610,10 +635,7 @@ void main() {
           () => mockAuth.isSignInWithEmailLink(inner.toString()),
         ).thenReturn(true);
         when(
-          () => mockAuth.signInWithEmailLink(
-            'user@example.com',
-            inner.toString(),
-          ),
+          () => linkSignIn.signIn('user@example.com', inner.toString()),
         ).thenAnswer((_) async => _fakeUser);
 
         final service = _buildService(mockAuth);
@@ -622,10 +644,7 @@ void main() {
         await pumpEventQueue();
 
         verify(
-          () => mockAuth.signInWithEmailLink(
-            'user@example.com',
-            inner.toString(),
-          ),
+          () => linkSignIn.signIn('user@example.com', inner.toString()),
         ).called(1);
 
         await service.dispose();
@@ -644,8 +663,7 @@ void main() {
         () => mockAuth.isSignInWithEmailLink(inner.toString()),
       ).thenReturn(true);
       when(
-        () =>
-            mockAuth.signInWithEmailLink('user@example.com', inner.toString()),
+        () => linkSignIn.signIn('user@example.com', inner.toString()),
       ).thenAnswer((_) async => _fakeUser);
 
       final service = _buildService(mockAuth);
@@ -654,8 +672,7 @@ void main() {
       await pumpEventQueue();
 
       verify(
-        () =>
-            mockAuth.signInWithEmailLink('user@example.com', inner.toString()),
+        () => linkSignIn.signIn('user@example.com', inner.toString()),
       ).called(1);
 
       await service.dispose();
@@ -677,10 +694,7 @@ void main() {
           () => mockAuth.isSignInWithEmailLink(inner.toString()),
         ).thenReturn(true);
         when(
-          () => mockAuth.signInWithEmailLink(
-            'user@example.com',
-            inner.toString(),
-          ),
+          () => linkSignIn.signIn('user@example.com', inner.toString()),
         ).thenAnswer((_) async => _fakeUser);
 
         final signedIn = <AppUser>[];

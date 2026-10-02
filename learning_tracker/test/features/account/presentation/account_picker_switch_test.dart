@@ -26,6 +26,7 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/account_auth_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
@@ -78,6 +79,9 @@ void main() {
     ).thenAnswer((_) => Stream.value(auth.currentUser));
     when(() => router.push(any())).thenAnswer((_) async => null);
     when(() => router.replaceAll(any())).thenAnswer((_) async {});
+    // DNI-520: every account has its OWN named-app session. Default: none.
+    when(() => auth.restoreSession(any())).thenAnswer((_) async => null);
+    when(() => auth.forAccount(any())).thenReturn(auth);
 
     // One saved LOCAL account in the device registry…
     await registry.addAccount(
@@ -137,12 +141,14 @@ void main() {
   testWidgets(
     'tapping a saved account switches to AppShell without signing out (DEC-34)',
     (tester) async {
-      // Local-born accounts no longer exist (91798ab8); every account is
-      // cloud-born now, so the no-reauth "instant switch" path requires the
-      // live Firebase session to already match this account's uid.
+      // DNI-520 AC-2: a local account gets an anonymous session on its OWN
+      // named app (createAnonymousAccount) before it is activated.
       when(
         () => auth.currentUser,
       ).thenReturn(_user('fb-uid-local', 'local@test.local'));
+      when(
+        () => auth.ensureAnonymousSession('acc-local'),
+      ).thenAnswer((_) async => _user('fb-uid-local', 'local@test.local'));
       when(
         () => auth.reloadCurrentUser(),
       ).thenAnswer((_) async => auth.currentUser);
@@ -159,8 +165,10 @@ void main() {
 
       // THE invariant: switching never signs out.
       verifyNever(() => auth.signOut());
-      // Valid-session accounts never touch Firebase — no re-auth on switch.
-      verifyNever(() => auth.signInWithGoogle());
+      // AC-2: the local account's named app got its anonymous session; no
+      // credential sign-in happened.
+      verify(() => auth.ensureAnonymousSession('acc-local')).called(1);
+      verifyNever(() => auth.pickGoogleAccount());
 
       // It reloads into the app shell — not the sign-in screen.
       final replaced = verify(() => router.replaceAll(captureAny())).captured;
@@ -184,11 +192,10 @@ void main() {
 
   // ── Cloud→cloud switch: auto re-authenticate Firebase ─────────────────────
   //
-  // The device has ONE Firebase currentUser slot. Switching to cloud account A
-  // while Firebase is still signed in as account B leaves A's Firestore
-  // reads/writes permission-denied. Tapping a cloud account whose firebaseUid
-  // != the live uid must re-authenticate (signInWithGoogle → native picker) to
-  // THAT account's identity, verify the uid matches, then activate.
+  // DNI-520: every account keeps its own named-app session. Tapping a cloud
+  // account whose OWN session is missing/stale must sign THAT named app in
+  // again (Google picker → signInToAccountWithGoogle), verify the uid
+  // matches, then activate.
   group('cloud-account switch re-authenticates Firebase', () {
     const targetUid = 'fb-uid-cloud-A';
     const targetEmail = 'cloud-a@test.cloud';
@@ -205,7 +212,13 @@ void main() {
       ).thenAnswer((_) async => auth.currentUser);
       // Default: no silent session available → the switch falls through to the
       // interactive picker. Individual silent-path tests override this.
-      when(() => auth.reauthWithGoogleSilently()).thenAnswer((_) async => null);
+      when(
+        () => auth.pickGoogleAccountSilently(),
+      ).thenAnswer((_) async => null);
+      when(() => auth.pickGoogleAccount()).thenAnswer(
+        (_) async =>
+            const GoogleAccountPick(idToken: 'tok', email: targetEmail),
+      );
 
       await registry.addAccount(
         DeviceAccountsCompanion.insert(
@@ -239,11 +252,14 @@ void main() {
         final online = _MockInternetConnectionChecker();
         when(() => online.hasConnection).thenAnswer((_) async => true);
 
-        // After signInWithGoogle, the live session becomes the TARGET account.
-        when(() => auth.signInWithGoogle()).thenAnswer((_) async {
+        // The target account's named app signs in as the TARGET identity.
+        when(
+          () => auth.signInToAccountWithGoogle('acc-cloud-a', 'tok'),
+        ).thenAnswer((_) async {
           when(
             () => auth.currentUser,
           ).thenReturn(_user(targetUid, targetEmail));
+          return _user(targetUid, targetEmail);
         });
 
         await tester.pumpWidget(buildApp(connectivity: online));
@@ -254,8 +270,10 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
-        // Re-auth was triggered to align the live identity.
-        verify(() => auth.signInWithGoogle()).called(1);
+        // Re-auth ran on the TARGET account's own named app.
+        verify(
+          () => auth.signInToAccountWithGoogle('acc-cloud-a', 'tok'),
+        ).called(1);
         // Live uid now equals the target account's firebaseUid (matched).
         expect(auth.currentUser?.uid, targetUid);
 
@@ -277,12 +295,10 @@ void main() {
       final online = _MockInternetConnectionChecker();
       when(() => online.hasConnection).thenAnswer((_) async => true);
 
-      // User picked the WRONG Google account — live uid != target uid.
-      when(() => auth.signInWithGoogle()).thenAnswer((_) async {
-        when(
-          () => auth.currentUser,
-        ).thenReturn(_user('fb-uid-WRONG', 'wrong@test.cloud'));
-      });
+      // uid churn: the named app signs in as a different uid.
+      when(
+        () => auth.signInToAccountWithGoogle('acc-cloud-a', 'tok'),
+      ).thenAnswer((_) async => _user('fb-uid-WRONG', targetEmail));
 
       await tester.pumpWidget(buildApp(connectivity: online));
       await tester.pump();
@@ -292,10 +308,35 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      verify(() => auth.signInWithGoogle()).called(1);
-      // Wrong identity → the mis-picked session is signed out and the switch
-      // is aborted: NO navigation to AppShell.
+      verify(
+        () => auth.signInToAccountWithGoogle('acc-cloud-a', 'tok'),
+      ).called(1);
+      // Wrong identity → that account's named app is signed out and the
+      // switch is aborted: NO navigation to AppShell.
+      verify(() => auth.forAccount('acc-cloud-a')).called(1);
       verify(() => auth.signOut()).called(1);
+      verifyNever(() => router.replaceAll(any()));
+    });
+
+    testWidgets('a Google account with another email is rejected BEFORE any '
+        'Firebase sign-in', (tester) async {
+      await seedCloudAccount();
+      final online = _MockInternetConnectionChecker();
+      when(() => online.hasConnection).thenAnswer((_) async => true);
+      when(() => auth.pickGoogleAccount()).thenAnswer(
+        (_) async =>
+            const GoogleAccountPick(idToken: 'tok', email: 'wrong@test.cloud'),
+      );
+
+      await tester.pumpWidget(buildApp(connectivity: online));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.tap(find.text('Cloud A'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      verifyNever(() => auth.signInToAccountWithGoogle(any(), any()));
       verifyNever(() => router.replaceAll(any()));
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -310,8 +351,14 @@ void main() {
         final online = _MockInternetConnectionChecker();
         when(() => online.hasConnection).thenAnswer((_) async => true);
 
-        // Silent re-auth resolves the TARGET account's identity (no UI).
-        when(() => auth.reauthWithGoogleSilently()).thenAnswer((_) async {
+        // Silent pick returns the TARGET account's cached Google session.
+        when(() => auth.pickGoogleAccountSilently()).thenAnswer(
+          (_) async =>
+              const GoogleAccountPick(idToken: 'silent', email: targetEmail),
+        );
+        when(
+          () => auth.signInToAccountWithGoogle('acc-cloud-a', 'silent'),
+        ).thenAnswer((_) async {
           when(
             () => auth.currentUser,
           ).thenReturn(_user(targetUid, targetEmail));
@@ -327,9 +374,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Silent path was attempted and succeeded for the target uid.
-        verify(() => auth.reauthWithGoogleSilently()).called(1);
+        verify(() => auth.pickGoogleAccountSilently()).called(1);
         // The interactive picker was NEVER shown.
-        verifyNever(() => auth.signInWithGoogle());
+        verifyNever(() => auth.pickGoogleAccount());
 
         // Switch landed on the app shell.
         final replaced = verify(() => router.replaceAll(captureAny())).captured;
@@ -351,14 +398,12 @@ void main() {
 
         // No cached silent session.
         when(
-          () => auth.reauthWithGoogleSilently(),
+          () => auth.pickGoogleAccountSilently(),
         ).thenAnswer((_) async => null);
         // Interactive picker then resolves the target identity.
-        when(() => auth.signInWithGoogle()).thenAnswer((_) async {
-          when(
-            () => auth.currentUser,
-          ).thenReturn(_user(targetUid, targetEmail));
-        });
+        when(
+          () => auth.signInToAccountWithGoogle('acc-cloud-a', 'tok'),
+        ).thenAnswer((_) async => _user(targetUid, targetEmail));
 
         await tester.pumpWidget(buildApp(connectivity: online));
         await tester.pump();
@@ -368,9 +413,9 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
-        verify(() => auth.reauthWithGoogleSilently()).called(1);
+        verify(() => auth.pickGoogleAccountSilently()).called(1);
         // Fell back to the interactive picker.
-        verify(() => auth.signInWithGoogle()).called(1);
+        verify(() => auth.pickGoogleAccount()).called(1);
         final replaced = verify(() => router.replaceAll(captureAny())).captured;
         final routes = (replaced.last as List).cast<PageRouteInfo>();
         expect(routes.any((r) => r is AppShellRoute), isTrue);
@@ -388,15 +433,16 @@ void main() {
         when(() => online.hasConnection).thenAnswer((_) async => true);
 
         // Silent resolves a DIFFERENT cached account — must not activate it.
-        when(
-          () => auth.reauthWithGoogleSilently(),
-        ).thenAnswer((_) async => _user('fb-uid-OTHER', 'other@test.cloud'));
+        when(() => auth.pickGoogleAccountSilently()).thenAnswer(
+          (_) async => const GoogleAccountPick(
+            idToken: 'other',
+            email: 'other@test.cloud',
+          ),
+        );
         // Interactive picker then resolves the correct target identity.
-        when(() => auth.signInWithGoogle()).thenAnswer((_) async {
-          when(
-            () => auth.currentUser,
-          ).thenReturn(_user(targetUid, targetEmail));
-        });
+        when(
+          () => auth.signInToAccountWithGoogle('acc-cloud-a', 'tok'),
+        ).thenAnswer((_) async => _user(targetUid, targetEmail));
 
         await tester.pumpWidget(buildApp(connectivity: online));
         await tester.pump();
@@ -406,9 +452,10 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
-        verify(() => auth.reauthWithGoogleSilently()).called(1);
-        // Wrong silent uid → did NOT short-circuit; the picker was shown.
-        verify(() => auth.signInWithGoogle()).called(1);
+        verify(() => auth.pickGoogleAccountSilently()).called(1);
+        // Wrong silent account → never signed in; the picker was shown.
+        verifyNever(() => auth.signInToAccountWithGoogle(any(), 'other'));
+        verify(() => auth.pickGoogleAccount()).called(1);
         final replaced = verify(() => router.replaceAll(captureAny())).captured;
         final routes = (replaced.last as List).cast<PageRouteInfo>();
         expect(routes.any((r) => r is AppShellRoute), isTrue);
@@ -426,7 +473,7 @@ void main() {
       when(() => online.hasConnection).thenAnswer((_) async => true);
 
       // User cancels the native account picker.
-      when(() => auth.signInWithGoogle()).thenThrow(
+      when(() => auth.pickGoogleAccount()).thenThrow(
         const GoogleSignInException(code: GoogleSignInExceptionCode.canceled),
       );
 
@@ -438,7 +485,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      verify(() => auth.signInWithGoogle()).called(1);
+      verify(() => auth.pickGoogleAccount()).called(1);
       // Cancellation must not activate the target's local session or navigate
       // into the shell with a phantom/partial auth state.
       verifyNever(() => router.replaceAll(any()));
@@ -459,14 +506,18 @@ void main() {
         final online = _MockInternetConnectionChecker();
         when(() => online.hasConnection).thenAnswer((_) async => true);
         when(
-          () => auth.signInWithEmail(targetEmail, 'correct-password'),
+          () => auth.signInToAccountWithEmail(
+            'acc-cloud-a',
+            targetEmail,
+            'correct-password',
+          ),
         ).thenAnswer((_) async {
-          when(() => auth.currentUser).thenReturn(
-            _user(
-              targetUid,
-              targetEmail,
-            ).copyWith(providers: const ['password']),
-          );
+          final user = _user(
+            targetUid,
+            targetEmail,
+          ).copyWith(providers: const ['password']);
+          when(() => auth.currentUser).thenReturn(user);
+          return user;
         });
 
         await tester.pumpWidget(buildApp(connectivity: online));
@@ -480,9 +531,13 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         verify(
-          () => auth.signInWithEmail(targetEmail, 'correct-password'),
+          () => auth.signInToAccountWithEmail(
+            'acc-cloud-a',
+            targetEmail,
+            'correct-password',
+          ),
         ).called(1);
-        verifyNever(() => auth.signInWithGoogle());
+        verifyNever(() => auth.pickGoogleAccount());
         final replaced = verify(() => router.replaceAll(captureAny())).captured;
         final routes = (replaced.last as List).cast<PageRouteInfo>();
         expect(routes.any((r) => r is AppShellRoute), isTrue);
@@ -505,13 +560,18 @@ void main() {
     const cloudEmail = 'instant@test.cloud';
 
     Future<void> seedInstantCloudAccount() async {
-      // Live Firebase session IS this account's uid — hasValidSession = true.
+      // This account's OWN named-app session is valid (DNI-520).
       when(() => auth.currentUser).thenReturn(_user(cloudUid, cloudEmail));
+      when(
+        () => auth.restoreSession('acc-cloud-instant'),
+      ).thenAnswer((_) async => _user(cloudUid, cloudEmail));
       when(() => auth.signOut()).thenAnswer((_) async {});
       when(
         () => auth.reloadCurrentUser(),
       ).thenAnswer((_) async => auth.currentUser);
-      when(() => auth.reauthWithGoogleSilently()).thenAnswer((_) async => null);
+      when(
+        () => auth.pickGoogleAccountSilently(),
+      ).thenAnswer((_) async => null);
 
       await registry.addAccount(
         DeviceAccountsCompanion.insert(
@@ -548,8 +608,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       // Instant switch: NO re-auth was triggered.
-      verifyNever(() => auth.signInWithGoogle());
-      verifyNever(() => auth.reauthWithGoogleSilently());
+      verifyNever(() => auth.pickGoogleAccount());
+      verifyNever(() => auth.pickGoogleAccountSilently());
+      verifyNever(() => auth.signInToAccountWithGoogle(any(), any()));
       // Sign-out must never happen on an account switch.
       verifyNever(() => auth.signOut());
 
@@ -572,6 +633,59 @@ void main() {
         isFalse,
         reason: 'instant cloud switch must NOT route to sign-in',
       );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    // DNI-520 AC-6: switching back and forth between a cloud account and an
+    // anonymous (local) account keeps each account on its OWN named app —
+    // the anonymous account's session never replaces the cloud one, so
+    // returning to the cloud account is still an instant switch.
+    testWidgets('cloud → anonymous → cloud: each account keeps its own '
+        'named-app session; no sign-out, no re-auth', (tester) async {
+      await seedInstantCloudAccount();
+      when(() => auth.ensureAnonymousSession('acc-local')).thenAnswer(
+        (_) async => const AppUser(
+          uid: 'fb-uid-local',
+          email: null,
+          displayName: null,
+          emailVerified: false,
+          providers: [],
+        ),
+      );
+
+      await tester.pumpWidget(buildApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      for (final tile in ['Instant Cloud', 'Local User', 'Instant Cloud']) {
+        await tester.tap(find.text(tile));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      // The anonymous account got its named-app session exactly once (AC-2).
+      verify(() => auth.ensureAnonymousSession('acc-local')).called(1);
+      // The cloud account's own session was consulted, never replaced.
+      verify(
+        () => auth.restoreSession('acc-cloud-instant'),
+      ).called(greaterThanOrEqualTo(1));
+      verifyNever(() => auth.ensureAnonymousSession('acc-cloud-instant'));
+      verifyNever(() => auth.pickGoogleAccount());
+      verifyNever(() => auth.pickGoogleAccountSilently());
+      verifyNever(() => auth.signInToAccountWithGoogle(any(), any()));
+      verifyNever(() => auth.signOut());
+
+      // All three switches landed on the app shell.
+      final replaced = verify(() => router.replaceAll(captureAny())).captured;
+      expect(replaced, hasLength(3));
+      for (final call in replaced) {
+        expect(
+          (call as List).cast<PageRouteInfo>().any((r) => r is AppShellRoute),
+          isTrue,
+        );
+      }
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

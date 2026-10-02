@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -180,7 +181,7 @@ void main() {
       );
     });
 
-    testWidgets('Google sign-in button triggers signInWithGoogle', (
+    testWidgets('Google sign-in button signs the named app in once', (
       tester,
     ) async {
       const mockUser = AppUser(
@@ -190,9 +191,20 @@ void main() {
         emailVerified: true,
         providers: ['google.com'],
       );
+      // DNI-520: the picker returns a token; the ONE Firebase sign-in is on
+      // the target account's named app.
+      when(() => mockAuthRepo.pickGoogleAccount()).thenAnswer(
+        (_) async => const GoogleAccountPick(
+          idToken: 'fake-google-id-token',
+          email: 'test@example.com',
+        ),
+      );
       when(
-        () => mockAuthRepo.signInWithGoogleAndGetIdToken(),
-      ).thenAnswer((_) async => 'fake-google-id-token');
+        () => mockAuthRepo.signInToAccountWithGoogle(
+          any(),
+          'fake-google-id-token',
+        ),
+      ).thenAnswer((_) async => mockUser);
       when(() => mockAuthRepo.currentUser).thenReturn(mockUser);
 
       // Suppress provider exceptions from auth state notifier
@@ -218,8 +230,14 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 2));
 
-      // Verify the sign-in was at least attempted
-      verify(() => mockAuthRepo.signInWithGoogleAndGetIdToken()).called(1);
+      // The picker ran once and the named app was signed in exactly once.
+      verify(() => mockAuthRepo.pickGoogleAccount()).called(1);
+      verify(
+        () => mockAuthRepo.signInToAccountWithGoogle(
+          any(),
+          'fake-google-id-token',
+        ),
+      ).called(1);
     });
   });
 

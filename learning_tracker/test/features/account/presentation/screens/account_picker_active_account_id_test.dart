@@ -72,6 +72,16 @@ void main() {
     ).thenAnswer((_) => Stream.value(auth.currentUser));
     when(() => router.push(any())).thenAnswer((_) async => null);
     when(() => router.replaceAll(any())).thenAnswer((_) async {});
+    // DNI-520 AC-2: the local account's named app gets an anonymous session.
+    when(() => auth.ensureAnonymousSession('acc-local')).thenAnswer(
+      (_) async => const AppUser(
+        uid: 'fb-uid-local',
+        email: null,
+        displayName: null,
+        emailVerified: false,
+        providers: [],
+      ),
+    );
 
     // One saved LOCAL account in the device registry…
     await registry.addAccount(
@@ -163,7 +173,13 @@ void main() {
       when(
         () => auth.reloadCurrentUser(),
       ).thenAnswer((_) async => auth.currentUser);
-      when(() => auth.reauthWithGoogleSilently()).thenAnswer((_) async => null);
+      when(
+        () => auth.pickGoogleAccountSilently(),
+      ).thenAnswer((_) async => null);
+      // DNI-520: this account's OWN named-app session is valid.
+      when(
+        () => auth.restoreSession(any()),
+      ).thenAnswer((_) async => _user(cloudUid, cloudEmail));
 
       await registry.addAccount(
         DeviceAccountsCompanion.insert(

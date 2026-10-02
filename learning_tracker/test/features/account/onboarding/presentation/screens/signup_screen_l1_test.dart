@@ -9,7 +9,7 @@
 //   • Prefilled name / email from route args
 //   • Password visibility toggle
 //   • Submit → loading spinner shown, fields disabled
-//   • Cloud signup path — happy path: calls signUp + sendEmailVerification
+//   • Cloud signup path — happy path: calls createAccountWithEmail + sendEmailVerification
 //     + signOut; shows snackbar; navigates to SignInRoute
 //   • Cloud signup path — generic error: shows snackbar error
 //   • Cloud signup path — [email-already-in-use] Firebase code: mapped message
@@ -26,6 +26,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -38,6 +39,14 @@ import '../../../../../mocks/mock_repositories.dart';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
+
+const _signedUpUser = AppUser(
+  uid: 'new-uid',
+  email: 'test@example.com',
+  displayName: 'Test User',
+  emailVerified: false,
+  providers: ['password'],
+);
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
@@ -66,6 +75,9 @@ Widget _buildApp({
   when(() => r.replaceAll(any())).thenAnswer((_) async => []);
   when(() => r.canPop()).thenReturn(false);
   when(() => auth.currentUser).thenReturn(null);
+  // DNI-520: sign-up binds a fresh account id's named app.
+  when(() => auth.forAccount(any())).thenReturn(auth);
+  when(() => auth.discardAccountSession(any())).thenAnswer((_) async {});
 
   return ProviderScope(
     retry: (_, __) => null,
@@ -561,9 +573,9 @@ void main() {
       when(() => auth.currentUser).thenReturn(null);
 
       // Block the signUp call so the loading state persists
-      final completer = Completer<void>();
+      final completer = Completer<AppUser>();
       when(
-        () => auth.signUp(any(), any(), any()),
+        () => auth.createAccountWithEmail(any(), any(), any(), any()),
       ).thenAnswer((_) => completer.future);
 
       await tester.pumpWidget(_buildApp(online: true, authRepo: auth));
@@ -583,7 +595,7 @@ void main() {
       // Button text is gone
       expect(find.text('Sign Up'), findsNothing);
 
-      completer.complete();
+      completer.complete(_signedUpUser);
       await tester.pump(const Duration(seconds: 1));
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -595,9 +607,9 @@ void main() {
     final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
 
-    final completer = Completer<void>();
+    final completer = Completer<AppUser>();
     when(
-      () => auth.signUp(any(), any(), any()),
+      () => auth.createAccountWithEmail(any(), any(), any(), any()),
     ).thenAnswer((_) => completer.future);
 
     await tester.pumpWidget(_buildApp(online: true, authRepo: auth));
@@ -622,7 +634,7 @@ void main() {
       );
     }
 
-    completer.complete();
+    completer.complete(_signedUpUser);
     await tester.pump(const Duration(seconds: 1));
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -632,11 +644,13 @@ void main() {
   // ── Cloud signup — happy path ──────────────────────────────────────────────
 
   testWidgets(
-    'cloud signup happy path: calls signUp + sendEmailVerification + signOut',
+    'cloud signup happy path: calls createAccountWithEmail + sendEmailVerification + signOut',
     (tester) async {
       final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
-      when(() => auth.signUp(any(), any(), any())).thenAnswer((_) async {});
+      when(
+        () => auth.createAccountWithEmail(any(), any(), any(), any()),
+      ).thenAnswer((_) async => _signedUpUser);
       when(() => auth.sendEmailVerification()).thenAnswer((_) async {});
       when(() => auth.signOut()).thenAnswer((_) async {});
 
@@ -663,11 +677,22 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      verify(
-        () => auth.signUp('test@example.com', 'password123', 'Test User'),
-      ).called(1);
+      // DNI-520 AC-1: sign-up runs on a fresh account id's OWN named app —
+      // verification and sign-out are on that app, which is then torn down.
+      final accountId =
+          verify(
+                () => auth.createAccountWithEmail(
+                  captureAny(),
+                  'test@example.com',
+                  'password123',
+                  'Test User',
+                ),
+              ).captured.single
+              as String;
+      verify(() => auth.forAccount(accountId)).called(1);
       verify(() => auth.sendEmailVerification()).called(1);
       verify(() => auth.signOut()).called(1);
+      verify(() => auth.discardAccountSession(accountId)).called(1);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
@@ -679,7 +704,9 @@ void main() {
   ) async {
     final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
-    when(() => auth.signUp(any(), any(), any())).thenAnswer((_) async {});
+    when(
+      () => auth.createAccountWithEmail(any(), any(), any(), any()),
+    ).thenAnswer((_) async => _signedUpUser);
     when(() => auth.sendEmailVerification()).thenAnswer((_) async {});
     when(() => auth.signOut()).thenAnswer((_) async {});
 
@@ -721,7 +748,9 @@ void main() {
     (tester) async {
       final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
-      when(() => auth.signUp(any(), any(), any())).thenAnswer((_) async {});
+      when(
+        () => auth.createAccountWithEmail(any(), any(), any(), any()),
+      ).thenAnswer((_) async => _signedUpUser);
       when(() => auth.sendEmailVerification()).thenAnswer((_) async {});
       when(() => auth.signOut()).thenAnswer((_) async {});
 
@@ -763,7 +792,9 @@ void main() {
     (tester) async {
       final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
-      when(() => auth.signUp(any(), any(), any())).thenThrow(
+      when(
+        () => auth.createAccountWithEmail(any(), any(), any(), any()),
+      ).thenThrow(
         Exception(
           '[email-already-in-use] The email address is already in use.',
         ),
@@ -794,7 +825,9 @@ void main() {
   ) async {
     final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
-    when(() => auth.signUp(any(), any(), any())).thenThrow(
+    when(
+      () => auth.createAccountWithEmail(any(), any(), any(), any()),
+    ).thenThrow(
       Exception('[weak-password] Password should be at least 6 characters.'),
     );
 
@@ -822,7 +855,9 @@ void main() {
   ) async {
     final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
-    when(() => auth.signUp(any(), any(), any())).thenThrow(
+    when(
+      () => auth.createAccountWithEmail(any(), any(), any(), any()),
+    ).thenThrow(
       Exception('[invalid-email] The email address is badly formatted.'),
     );
 
@@ -858,7 +893,9 @@ void main() {
     (tester) async {
       final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
-      when(() => auth.signUp(any(), any(), any())).thenThrow(
+      when(
+        () => auth.createAccountWithEmail(any(), any(), any(), any()),
+      ).thenThrow(
         Exception('[account-exists-with-different-credential] collision'),
       );
 
@@ -888,7 +925,7 @@ void main() {
     final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
     when(
-      () => auth.signUp(any(), any(), any()),
+      () => auth.createAccountWithEmail(any(), any(), any(), any()),
     ).thenThrow(Exception('something unexpected'));
 
     await tester.pumpWidget(_buildApp(online: true, authRepo: auth));
@@ -924,9 +961,9 @@ void main() {
     when(() => auth.currentUser).thenReturn(null);
 
     // Block signUp to hold loading state
-    final completer = Completer<void>();
+    final completer = Completer<AppUser>();
     when(
-      () => auth.signUp(any(), any(), any()),
+      () => auth.createAccountWithEmail(any(), any(), any(), any()),
     ).thenAnswer((_) => completer.future);
 
     await tester.pumpWidget(_buildApp(online: true, authRepo: auth));
@@ -951,7 +988,7 @@ void main() {
       reason: 'Google button must be disabled while loading',
     );
 
-    completer.complete();
+    completer.complete(_signedUpUser);
     await tester.pump(const Duration(seconds: 1));
 
     await tester.pumpWidget(const SizedBox.shrink());

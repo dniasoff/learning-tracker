@@ -239,6 +239,25 @@ Future<_Fixture> _buildFixture() async {
   when(
     () => auth.onAuthStateChanged(),
   ).thenAnswer((_) => Stream.value(auth.currentUser));
+  // DNI-520: each account's OWN named-app session. This suite models it as
+  // "the stubbed live user" (a tile is valid when that user's uid matches).
+  when(
+    () => auth.restoreSession(any()),
+  ).thenAnswer((_) async => auth.currentUser);
+  // AC-2: a local account's named app gets an anonymous session whose uid is
+  // the account's (already bound) path uid.
+  when(() => auth.ensureAnonymousSession(any())).thenAnswer((inv) async {
+    final row = await registry.findById(
+      inv.positionalArguments.first as String,
+    );
+    return AppUser(
+      uid: row?.firebaseUid ?? 'anon-uid',
+      email: null,
+      displayName: null,
+      emailVerified: false,
+      providers: const [],
+    );
+  });
   when(() => router.push(any<PageRouteInfo>())).thenAnswer((_) async => null);
   when(
     () => router.replaceAll(any<List<PageRouteInfo>>()),
