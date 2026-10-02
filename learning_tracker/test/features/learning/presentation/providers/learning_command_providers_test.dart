@@ -22,6 +22,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_settings_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
@@ -162,6 +163,21 @@ void main() {
     });
   });
 
+  group('learnerToday', () {
+    test('is the civil date in the learner zone once the settings history '
+        'is known, else the UTC date (never the device offset)', () {
+      final lateUtc = DateTime.utc(2026, 9, 1, 23, 30);
+      final history = LearnerSettingsHistory.constant(
+        const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'Asia/Jerusalem',
+        ),
+      );
+      expect(learnerToday(lateUtc, history), '2026-09-02');
+      expect(learnerToday(lateUtc, null), '2026-09-01');
+    });
+  });
+
   group('learningCommandsProvider', () {
     late InMemoryLearningWritePort port;
     late InMemoryChangeLogRepository changeLog;
@@ -186,6 +202,8 @@ void main() {
       learningEventRepositoryProvider.overrideWith(
         (ref) async => InMemoryLearningEventRepository(),
       ),
+      subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
+      governedIntentRepositoryProvider.overrideWith((ref) async => intent),
       activeProfileProvider.overrideWith(
         (ref) async => _profile(ProfileMode.adult),
       ),
@@ -212,6 +230,10 @@ void main() {
             goals: const {},
           ),
         );
+      addTearDown(() async {
+        await subTracks.dispose();
+        await intent.dispose();
+      });
     });
 
     test('null while no learner is active', () async {
