@@ -1,7 +1,8 @@
 /// DNI-470 AC-3: the `ownerOversizedGovernedWrite` adapter encodes the
-/// complete ordered action on the callable's wire shape and maps "no
-/// connection" to OnlineRequiredException. The callable itself is
-/// verified by Story 1.10 (DNI-472), not here.
+/// complete ordered action on the callable's wire shape, maps "no
+/// connection" to OnlineRequiredException, only terminal contract errors to
+/// PermanentWriteRejection, and every other code to an unknown outcome. The
+/// callable itself is verified by Story 1.10 (DNI-472), not here.
 library;
 
 import 'package:cloud_functions/cloud_functions.dart';
@@ -114,32 +115,53 @@ void main() {
     expect(receipt.noop, isFalse);
   });
 
-  test('no connection is OnlineRequiredException; any other callable error '
-      'is a PermanentWriteRejection with its code', () async {
-    for (final code in CallableOversizedGovernedWritePort.offlineCodes) {
-      final port = CallableOversizedGovernedWritePort.withInvoker(
+  CallableOversizedGovernedWritePort failingWith(String code) =>
+      CallableOversizedGovernedWritePort.withInvoker(
         (_) async => throw FirebaseFunctionsException(message: 'x', code: code),
       );
+
+  test('no connection is OnlineRequiredException', () async {
+    expect(CallableOversizedGovernedWritePort.offlineCodes, {'unavailable'});
+    await expectLater(
+      failingWith('unavailable').write(c0Scope(), _request),
+      throwsA(isA<OnlineRequiredException>()),
+    );
+  });
+
+  test('only a terminal contract error is a PermanentWriteRejection with '
+      'its code', () async {
+    for (final code in CallableOversizedGovernedWritePort.terminalCodes) {
       await expectLater(
-        port.write(c0Scope(), _request),
-        throwsA(isA<OnlineRequiredException>()),
+        failingWith(code).write(c0Scope(), _request),
+        throwsA(
+          isA<PermanentWriteRejection>().having((r) => r.code, 'code', code),
+        ),
       );
     }
-    final port = CallableOversizedGovernedWritePort.withInvoker(
-      (_) async => throw FirebaseFunctionsException(
-        message: 'x',
-        code: 'permission-denied',
-      ),
-    );
-    await expectLater(
-      port.write(c0Scope(), _request),
-      throwsA(
-        isA<PermanentWriteRejection>().having(
-          (r) => r.code,
-          'code',
-          'permission-denied',
+  });
+
+  test('an error that may follow a commit leaves the outcome unknown '
+      '(retryable with the same request)', () async {
+    for (final code in [
+      'deadline-exceeded',
+      'internal',
+      'aborted',
+      'unknown',
+      'cancelled',
+      'resource-exhausted',
+      'data-loss',
+    ]) {
+      await expectLater(
+        failingWith(code).write(c0Scope(), _request),
+        throwsA(
+          isA<GovernedWriteOutcomeUnknown>().having(
+            (r) => r.code,
+            'code',
+            code,
+          ),
         ),
-      ),
-    );
+        reason: code,
+      );
+    }
   });
 }

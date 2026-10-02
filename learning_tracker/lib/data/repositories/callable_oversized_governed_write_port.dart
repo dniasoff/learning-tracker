@@ -13,10 +13,16 @@
 /// one as `null`. `ownerUid` is never sent: the callable is owner-only and
 /// writes under the caller's own uid.
 ///
-/// Errors: `unavailable` / `deadline-exceeded` (no connection) become
-/// [OnlineRequiredException]; every other callable error becomes a
-/// [PermanentWriteRejection] carrying its code. The callable is idempotent
-/// on the client `actionId`, so a retry of the same request is safe.
+/// Errors: `unavailable` (no connection, nothing sent) becomes
+/// [OnlineRequiredException]. Only the callable's terminal contract errors
+/// ([terminalCodes]: the `writeWithChangeLog` rejections for auth, grant,
+/// payload, precondition and idempotency-alias failures) become a
+/// [PermanentWriteRejection] carrying the code. Every other code, such as
+/// `deadline-exceeded`, `internal`, `aborted`, `unknown`, `cancelled` or
+/// `resource-exhausted`, leaves the outcome unknown (the server may have
+/// committed), so it becomes [GovernedWriteOutcomeUnknown]. The callable is
+/// idempotent on the client `actionId`, so re-sending the identical request
+/// is safe.
 library;
 
 import 'package:cloud_functions/cloud_functions.dart';
@@ -53,8 +59,22 @@ final class CallableOversizedGovernedWritePort
 
   final GovernedCallableInvoker _invoke;
 
-  /// Callable codes meaning "no connection": the write is online-only.
-  static const offlineCodes = {'unavailable', 'deadline-exceeded'};
+  /// Callable codes meaning "no connection, nothing sent": the write is
+  /// online-only.
+  static const offlineCodes = {'unavailable'};
+
+  /// The callable's terminal contract errors: re-sending the same request
+  /// fails the same way.
+  static const terminalCodes = {
+    'invalid-argument',
+    'failed-precondition',
+    'permission-denied',
+    'unauthenticated',
+    'not-found',
+    'already-exists',
+    'out-of-range',
+    'unimplemented',
+  };
 
   /// The wire payload of [request] for [scope].
   static Map<String, Object?> encode(
@@ -104,7 +124,8 @@ final class CallableOversizedGovernedWritePort
       result = await _invoke(encode(scope, request));
     } on FirebaseFunctionsException catch (e) {
       if (offlineCodes.contains(e.code)) throw const OnlineRequiredException();
-      throw PermanentWriteRejection(e.code);
+      if (terminalCodes.contains(e.code)) throw PermanentWriteRejection(e.code);
+      throw GovernedWriteOutcomeUnknown(e.code);
     }
     final at = result['at'];
     return GovernedWriteReceipt(
