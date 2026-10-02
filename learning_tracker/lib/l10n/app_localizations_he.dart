@@ -2916,6 +2916,92 @@ class AppLocalizationsHe extends AppLocalizations {
   String get reportLineInProgress => 'בתהליך';
 
   @override
+  String reportOnTrackCalendarBehind(String count, String unit) {
+    return '$count $unit מאחורי לוח הלימוד';
+  }
+
+  @override
+  String reportOnTrackDailyTarget(String count, String unit) {
+    return 'יעד יומי: $count $unit ליום';
+  }
+
+  @override
+  String reportOnTrackFinish(String date) {
+    return 'סיום צפוי: $date';
+  }
+
+  @override
+  String get reportOnTrackFinishTooEarly => 'סיום צפוי: מוקדם מדי לדעת';
+
+  @override
+  String get reportOnTrackFinishUnknown =>
+      'סיום צפוי: אין די לימוד לאחרונה כדי להעריך';
+
+  @override
+  String reportOnTrackShortfall(
+    String name,
+    String node,
+    String month,
+    String count,
+    String unit,
+  ) {
+    return 'ייתכן ש־$name לא יגיע ל־$node עד $month. כ־$count $unit יחזרו ללימוד בבית.';
+  }
+
+  @override
+  String reportOnTrackShortfallNoEnd(
+    String name,
+    String node,
+    String count,
+    String unit,
+  ) {
+    return 'ייתכן ש־$name לא יגיע ל־$node עד מועד היעד. כ־$count $unit יחזרו ללימוד בבית.';
+  }
+
+  @override
+  String get reportOnTrackStatusBehind => 'מאחורי הקצב';
+
+  @override
+  String get reportOnTrackStatusOnTrack => 'בקצב הנכון';
+
+  @override
+  String reportOnTrackStatusSemantics(String status) {
+    return 'מצב: $status';
+  }
+
+  @override
+  String get reportOnTrackTitle => 'מצב היעד';
+
+  @override
+  String reportPaceEstimate(String rate) {
+    return 'הערכה: $rate / שבוע';
+  }
+
+  @override
+  String get reportPaceFootnote => 'לימוד מלפני המעקב אינו נספר בקצב.';
+
+  @override
+  String reportPaceRate(String rate) {
+    return '$rate / שבוע';
+  }
+
+  @override
+  String reportPaceSinceStart(String unit) {
+    return 'מאז תחילת המעקב · $unit לשבוע';
+  }
+
+  @override
+  String get reportPaceTitle => 'קצב לפי מקור';
+
+  @override
+  String get reportPaceTooEarly => 'מוקדם מדי לדעת';
+
+  @override
+  String reportPaceTrailing(String days, String rate) {
+    return '$days הימים האחרונים: $rate / שבוע';
+  }
+
+  @override
   String get reportSchoolYears => 'שנות לימודים';
 
   @override
