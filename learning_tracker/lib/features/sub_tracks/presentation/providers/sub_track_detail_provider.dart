@@ -226,6 +226,7 @@ final subTrackDetailProvider = Provider.autoDispose
           track: track,
           state: engine,
           role: ref.watch(subTrackDetailRoleProvider),
+          noDeadline: curriculum.dailyTarget == null,
           ground: SubTrackGroundProjection.project(
             track: track,
             ground:

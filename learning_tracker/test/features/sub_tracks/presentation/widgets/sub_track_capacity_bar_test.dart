@@ -17,11 +17,13 @@ SubTrackDetail _detail({
   int? capacity,
   int shortfall = 0,
   int remaining = 0,
+  bool noDeadline = false,
 }) {
   final track = detailSubTrack(10, 'School', const [berakhot]);
   return SubTrackDetail(
     track: track,
     role: role,
+    noDeadline: noDeadline,
     state: SubTrackState(
       subTrackId: track.id,
       holdsGround: true,
@@ -128,7 +130,7 @@ void main() {
     var opened = 0;
     await _pump(
       tester,
-      _detail(role: SubTrackDetailRole.parent, remaining: 5),
+      _detail(role: SubTrackDetailRole.parent, remaining: 5, noDeadline: true),
       onSetDeadline: () => opened++,
     );
     expect(find.byKey(const ValueKey('subTrackCapacityBar')), findsNothing);
@@ -141,7 +143,19 @@ void main() {
     await tester.tap(find.text('Set a deadline'));
     expect(opened, 1);
 
-    await _pump(tester, _detail(role: SubTrackDetailRole.child, remaining: 5));
+    await _pump(
+      tester,
+      _detail(role: SubTrackDetailRole.child, remaining: 5, noDeadline: true),
+    );
+    expect(find.byKey(const ValueKey('subTrackNoDeadlineNote')), findsNothing);
+    expect(find.byKey(const ValueKey('subTrackCapacityBar')), findsNothing);
+  });
+
+  testWidgets('a capacity the engine left null for another reason (the '
+      'sub-track no longer holds ground) shows neither bar nor note', (
+    tester,
+  ) async {
+    await _pump(tester, _detail(role: SubTrackDetailRole.parent));
     expect(find.byKey(const ValueKey('subTrackNoDeadlineNote')), findsNothing);
     expect(find.byKey(const ValueKey('subTrackCapacityBar')), findsNothing);
   });

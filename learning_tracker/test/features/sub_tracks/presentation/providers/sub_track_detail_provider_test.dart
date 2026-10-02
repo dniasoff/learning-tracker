@@ -49,7 +49,7 @@ void main() {
           engineLearn(3, 'Mishnah Berakhot 1:2'),
         ],
       )
-      ..capacities[school.id] = (capacity: 9, shortfall: 0);
+      ..deadline = '2026-12-31';
 
     final detail = (await settle(container(), school.id)).requireValue;
     final engine = h.curriculum.subTracks[school.id]!;
@@ -58,8 +58,10 @@ void main() {
     expect(detail.upNext, 'Mishnah Berakhot 1:2');
     expect(detail.ticked, 1, reason: 'distinct leaves ticked here');
     expect(detail.remainingPath, engine.remainingPath.length);
-    expect(detail.capacity, 9);
-    expect(detail.hasDeadline, isTrue);
+    expect(detail.capacity, engine.capacity);
+    expect(detail.shortfall, engine.shortfall);
+    expect(detail.hasCapacity, isTrue);
+    expect(detail.noDeadline, isFalse);
     expect(detail.ground.entries.map((r) => r.node), [berakhot1, peah]);
     expect(detail.ground.entries.first.learnt, 2, reason: 'all sources');
   });

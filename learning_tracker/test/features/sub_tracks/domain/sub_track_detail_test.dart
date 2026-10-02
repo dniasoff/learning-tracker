@@ -14,11 +14,13 @@ SubTrackDetail _detail({
   SubTrackDetailRole role = SubTrackDetailRole.parent,
   SubTrack? track,
   int? capacity,
+  bool noDeadline = true,
 }) {
   final t = track ?? detailSubTrack(10, 'School', const [peah]);
   return SubTrackDetail(
     track: t,
     role: role,
+    noDeadline: noDeadline,
     state: SubTrackState(
       subTrackId: t.id,
       holdsGround: true,
@@ -44,17 +46,18 @@ SubTrackDetail _detail({
 
 void main() {
   test('reads the engine values unchanged', () {
-    final d = _detail(capacity: 9);
+    final d = _detail(capacity: 9, noDeadline: false);
     expect(d.upNext, 'Mishnah Peah 1:2');
     expect(d.ticked, 1);
     expect(d.remainingPath, 1);
     expect(d.capacity, 9);
     expect(d.shortfall, 4);
-    expect(d.hasDeadline, isTrue);
+    expect(d.hasCapacity, isTrue);
+    expect(d.noDeadline, isFalse);
   });
 
-  test('no engine capacity means no deadline (AD-44)', () {
-    expect(_detail().hasDeadline, isFalse);
+  test('no engine capacity: nothing to draw', () {
+    expect(_detail().hasCapacity, isFalse);
   });
 
   test('only the parent edits, and never an ended sub-track', () {
