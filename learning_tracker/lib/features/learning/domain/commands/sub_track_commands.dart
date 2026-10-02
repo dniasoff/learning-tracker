@@ -50,6 +50,9 @@ import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
+import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart'
+    show OnlineRequiredException;
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_latest_write.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -167,6 +170,12 @@ final class SubTrackEdit {
   /// entered and the result is written as the whole new `ground` list with
   /// one change-log entry. Every node must belong to the sub-track's own
   /// curriculum. Exclusive with [ground]; a replay appends nothing.
+  ///
+  /// Online, when the repository implements [SubTrackLatestWrite], the new
+  /// list is derived from the row the server holds at commit time inside
+  /// one transaction, so two devices appending at once both keep their
+  /// nodes. Offline it is derived from the cached row and queued (AD-38
+  /// per-field LWW applies to that queued batch).
   final List<NodeEntry>? appendGround;
 }
 
@@ -288,7 +297,10 @@ final class SubTrackCommands {
     if (current == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
-    final (appended, refusedAppend) = await _appendedGround(current, edit);
+    final (appended, corpus, refusedAppend) = await _appendedGround(
+      current,
+      edit,
+    );
     if (refusedAppend != null) return refusedAppend;
     final candidate = _applyEdit(current, edit, ground: appended);
     final old = _fieldsOf(current);
@@ -309,6 +321,18 @@ final class SubTrackCommands {
     if (!_encodes(candidate)) {
       return const CaptureResult.rejected(CaptureRejection.invalid);
     }
+    if (_subTracks case final SubTrackLatestWrite writer
+        when appended != null && corpus != null) {
+      final atomic = await _appendToLatest(
+        writer,
+        subTrackId,
+        edit,
+        corpus: corpus,
+        siblings: siblings,
+      );
+      // Null: the server is unreachable; queue the batch below instead.
+      if (atomic != null) return atomic;
+    }
     final entryId = _newId();
     final entry = _entry(subTrackId, entryId, before: before, after: after);
     return _emitOnSuccess(
@@ -325,20 +349,21 @@ final class SubTrackCommands {
   }
 
   /// The whole new `ground` of an [SubTrackEdit.appendGround] edit of
-  /// [current] (its latest stored value, read by this command) — null
-  /// when [edit] does not append — or the result refusing it: a picked node
-  /// outside the sub-track's curriculum (`crossCurriculumGround`), an ended
-  /// sub-track, a missing corpus, or `ground` given as well.
-  Future<(List<NodeEntry>?, CaptureResult?)> _appendedGround(
+  /// [current] (its latest stored value, read by this command) and the
+  /// corpus it was derived with — nulls when [edit] does not append — or
+  /// the result refusing it: a picked node outside the sub-track's
+  /// curriculum (`crossCurriculumGround`), an ended sub-track, a missing
+  /// corpus, or `ground` given as well.
+  Future<(List<NodeEntry>?, Corpus?, CaptureResult?)> _appendedGround(
     SubTrack current,
     SubTrackEdit edit,
   ) async {
     const invalid = CaptureResult.rejected(CaptureRejection.invalid);
     final picked = edit.appendGround;
-    if (picked == null) return (null, null);
-    if (edit.ground != null || current.isEnded) return (null, invalid);
+    if (picked == null) return (null, null, null);
+    if (edit.ground != null || current.isEnded) return (null, null, invalid);
     final corpus = await _corpusOf?.call(current.curriculumId);
-    if (corpus == null) return (null, invalid);
+    if (corpus == null) return (null, null, invalid);
     final foreign = [
       for (final node in picked)
         if (corpus.curriculumId != current.curriculumId ||
@@ -351,15 +376,117 @@ final class SubTrackCommands {
     if (foreign.isNotEmpty) {
       return (
         null,
+        null,
         CaptureResult.rejected(CaptureRejection.invalid, violations: foreign),
       );
     }
-    final added = groundToAppend(
-      current: current.ground,
-      selected: picked,
-      corpus: corpus,
+    return (_appendTo(current.ground, picked, corpus), corpus, null);
+  }
+
+  static List<NodeEntry> _appendTo(
+    List<NodeEntry> ground,
+    List<NodeEntry> picked,
+    Corpus corpus,
+  ) => [
+    ...ground,
+    ...groundToAppend(current: ground, selected: picked, corpus: corpus),
+  ];
+
+  /// Commits an append [edit] of [subTrackId] through [writer]: the new
+  /// whole `ground` is re-derived from the row the server holds at commit
+  /// time (re-run by the transaction if another write lands first) and
+  /// written with one change-log entry whose `before` is that row. The
+  /// picks were already checked against [corpus] on the cached row.
+  ///
+  /// Returns null when the server cannot be reached (nothing written; the
+  /// caller queues the ordinary batch), else the command result. A latest
+  /// row that already covers every pick writes nothing (success).
+  Future<CaptureResult?> _appendToLatest(
+    SubTrackLatestWrite writer,
+    String subTrackId,
+    SubTrackEdit edit, {
+    required Corpus corpus,
+    required List<SubTrack> siblings,
+  }) async {
+    final entryId = _newId();
+    final today = _today();
+    SubTrack? written;
+    SubTrackChange? build(SubTrack latest) {
+      written = null;
+      if (latest.isEnded) {
+        throw const _Refused(CaptureResult.rejected(CaptureRejection.invalid));
+      }
+      final candidate = _applyEdit(
+        latest,
+        edit,
+        ground: _appendTo(latest.ground, edit.appendGround!, corpus),
+      );
+      final old = _fieldsOf(latest);
+      final now = _fieldsOf(candidate);
+      final changed = [
+        for (final key in now.keys)
+          if (!storageValueEquals(old[key], now[key])) key,
+      ];
+      if (changed.isEmpty) return null;
+      final violations = [
+        ...subTrackIntentViolations(candidate, corpus: corpus),
+        ...subTrackLimitViolations(
+          candidate: candidate,
+          prior: latest,
+          siblings: [for (final s in siblings) s.id == latest.id ? latest : s],
+          today: today,
+          calendarProgramId: null,
+        ),
+      ];
+      if (violations.isNotEmpty) {
+        throw _Refused(
+          CaptureResult.rejected(
+            CaptureRejection.invalid,
+            violations: violations,
+          ),
+        );
+      }
+      if (!_encodes(candidate)) {
+        throw const _Refused(CaptureResult.rejected(CaptureRejection.invalid));
+      }
+      final after = {for (final k in changed) k: now[k]};
+      written = candidate;
+      return SubTrackChange.fields(
+        subTrackId: subTrackId,
+        changedFields: after,
+        entry: _entry(
+          subTrackId,
+          entryId,
+          before: {for (final k in changed) k: old[k]},
+          after: after,
+        ),
+      );
+    }
+
+    final SubTrackChange? change;
+    try {
+      change = await writer.applyGovernedChangeToLatest(
+        scope,
+        subTrackId,
+        build,
+      );
+    } on _Refused catch (refused) {
+      return refused.result;
+    } on OnlineRequiredException {
+      return null;
+    } on Object catch (error, stack) {
+      return _refusalOf(error, stack);
+    }
+    final track = written;
+    if (change == null || track == null) return const CaptureResult.success();
+    return _emitOnSuccess(
+      CaptureResult.success(
+        changeIds: [change.entry.id],
+        actionId: change.entry.actionId,
+      ),
+      track,
+      SubTrackLifecycleAction.edit,
     );
-    return (<NodeEntry>[...current.ground, ...added], null);
   }
 
   /// Ends sub-track [subTrackId] (`end_reason = ended`).
@@ -563,21 +690,26 @@ final class SubTrackCommands {
       );
     }
     if (result is! _Failed) return success;
-    return switch (result.error) {
-      SubTrackNotFoundException() => const CaptureResult.rejected(
-        CaptureRejection.targetNotFound,
-      ),
-      // Refused before it was queued: the caller sees it at once, so no
-      // pending "not saved — retry" entry is recorded.
-      PermanentWriteRejection() ||
-      ChangeLogConflictException() ||
-      ChangeBaselineMismatchException() ||
-      StorageFormatException() => const CaptureResult.rejected(
-        CaptureRejection.invalid,
-      ),
-      _ => Error.throwWithStackTrace(result.error, result.stack),
-    };
+    return _refusalOf(result.error, result.stack);
   }
+
+  /// The result of a write that failed before it counted as queued; an
+  /// unexpected error is rethrown.
+  static CaptureResult _refusalOf(Object error, StackTrace stack) =>
+      switch (error) {
+        SubTrackNotFoundException() => const CaptureResult.rejected(
+          CaptureRejection.targetNotFound,
+        ),
+        // Refused before it was queued: the caller sees it at once, so no
+        // pending "not saved — retry" entry is recorded.
+        PermanentWriteRejection() ||
+        ChangeLogConflictException() ||
+        ChangeBaselineMismatchException() ||
+        StorageFormatException() => const CaptureResult.rejected(
+          CaptureRejection.invalid,
+        ),
+        _ => Error.throwWithStackTrace(error, stack),
+      };
 
   void _recordPending(SubTrackChange change, Object error) {
     final code = error is PermanentWriteRejection ? error.code : '';
@@ -680,3 +812,11 @@ final class _Failed {
 }
 
 const _queued = _Queued();
+
+/// A latest-row append the validation refused inside the transaction;
+/// thrown out of the build so nothing is written.
+final class _Refused implements Exception {
+  const _Refused(this.result);
+
+  final CaptureResult result;
+}
