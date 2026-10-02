@@ -2,7 +2,7 @@
 // floors are declared, resolved and locked.
 //
 // Reads the project manifests (pubspec.yaml, pubspec.lock,
-// .flutter-version, the iOS/macOS Xcode projects) — never a lib/ file — and
+// .flutter-version, the iOS Xcode project, a macOS one if present) — never a lib/ file — and
 // asks pub itself, via a lockfile-enforced dry-run resolve, whether the
 // committed lockfile satisfies the declared constraints. Nothing on disk is
 // modified, so it is safe in the parallel test lane.
@@ -33,6 +33,15 @@ List<int> _parseVersion(String v) => v
     .split('.')
     .map(int.parse)
     .toList(growable: false);
+
+/// Xcode deployment targets are `major.minor` (sometimes `major.minor.patch`).
+List<int> _parsePlatformVersion(String v) {
+  final parts = v.split('.').map(int.parse).toList();
+  while (parts.length < 3) {
+    parts.add(0);
+  }
+  return parts;
+}
 
 int _compare(List<int> a, List<int> b) {
   for (var i = 0; i < 3; i++) {
@@ -121,6 +130,55 @@ void main() {
       });
     });
 
+    test(
+      'pubspec.lock SDK minimums do not exceed the declared Dart and '
+      'Flutter floors (a toolchain at the floor can resolve the lockfile)',
+      () {
+        final pubspec = read('pubspec.yaml');
+        final lock = read('pubspec.lock');
+        final sdks = lock.substring(lock.indexOf('\nsdks:'));
+
+        List<int> lockedMin(String sdk) {
+          final m = RegExp(
+            '^  $sdk: ">=([0-9]+\\.[0-9]+\\.[0-9]+)',
+            multiLine: true,
+          ).firstMatch(sdks);
+          expect(m, isNotNull, reason: 'pubspec.lock has no $sdk SDK minimum');
+          return _parseVersion(m!.group(1)!);
+        }
+
+        final dartFloor = _parseVersion(
+          RegExp(
+            r'^  sdk: \^([0-9.]+)$',
+            multiLine: true,
+          ).firstMatch(pubspec)!.group(1)!,
+        );
+        final flutterFloor = _parseVersion(
+          RegExp(
+            r'''^  flutter: ["']>=([0-9.]+)["']$''',
+            multiLine: true,
+          ).firstMatch(pubspec)!.group(1)!,
+        );
+
+        final dartMin = lockedMin('dart');
+        expect(
+          _compare(dartMin, dartFloor) <= 0,
+          isTrue,
+          reason:
+              'pubspec.lock requires Dart >=${dartMin.join('.')} but the '
+              'declared floor is ^${dartFloor.join('.')}',
+        );
+        final flutterMin = lockedMin('flutter');
+        expect(
+          _compare(flutterMin, flutterFloor) <= 0,
+          isTrue,
+          reason:
+              'pubspec.lock requires Flutter >=${flutterMin.join('.')} but the '
+              'declared floor is ${flutterFloor.join('.')}',
+        );
+      },
+    );
+
     test('pub resolves the declared constraints against the committed '
         'lockfile without changing it', () async {
       final result = await Process.run('dart', [
@@ -150,30 +208,68 @@ void main() {
       );
     });
 
-    test('every iOS build configuration targets iOS 13.0', () {
+    test('every iOS build configuration targets at least iOS 13.0', () {
       final targets = RegExp(
         'IPHONEOS_DEPLOYMENT_TARGET = ([0-9.]+);',
-      ).allMatches(read('ios/Runner.xcodeproj/project.pbxproj'));
-      expect(targets, isNotEmpty);
-      expect(targets.map((m) => m.group(1)).toSet(), {'13.0'});
-    });
-
-    test('a macOS host exists and every build configuration meets the '
-        'macOS 10.15 floor share_plus 13 requires', () {
-      final targets = RegExp(
-        'MACOSX_DEPLOYMENT_TARGET = ([0-9.]+);',
-      ).allMatches(read('macos/Runner.xcodeproj/project.pbxproj')).toList();
+      ).allMatches(read('ios/Runner.xcodeproj/project.pbxproj')).toList();
       expect(targets, isNotEmpty);
       for (final m in targets) {
-        final parts = m.group(1)!.split('.').map(int.parse).toList();
-        while (parts.length < 3) {
-          parts.add(0);
-        }
         expect(
-          _compare(parts, [10, 15, 0]) >= 0,
+          _compare(_parsePlatformVersion(m.group(1)!), [13, 0, 0]) >= 0,
+          isTrue,
+          reason: 'IPHONEOS_DEPLOYMENT_TARGET ${m.group(1)} is below 13.0',
+        );
+      }
+    });
+
+    // Orchestrator ruling B14: the app ships on Android and iOS only, so no
+    // macOS host is scaffolded by this story. The 10.15 floor share_plus 13
+    // requires is enforced by config: the moment a macOS host is added, every
+    // build configuration (and the Podfile platform, if present) must meet
+    // it. With no host there is nothing to raise.
+    test('macOS 10.15 floor (share_plus 13) holds wherever a macOS host '
+        'exists', () {
+      if (!Directory('$packageDir/macos').existsSync()) {
+        markTestSkipped(
+          'No macOS host; the 10.15 floor is enforced when one is added '
+          '(ruling B14).',
+        );
+        return;
+      }
+      final pbxproj = File(
+        '$packageDir/macos/Runner.xcodeproj/project.pbxproj',
+      );
+      expect(
+        pbxproj.existsSync(),
+        isTrue,
+        reason: 'macos/ has no Xcode project',
+      );
+      final targets = RegExp(
+        'MACOSX_DEPLOYMENT_TARGET = ([0-9.]+);',
+      ).allMatches(pbxproj.readAsStringSync()).toList();
+      expect(targets, isNotEmpty);
+      for (final m in targets) {
+        expect(
+          _compare(_parsePlatformVersion(m.group(1)!), [10, 15, 0]) >= 0,
           isTrue,
           reason: 'MACOSX_DEPLOYMENT_TARGET ${m.group(1)} is below 10.15',
         );
+      }
+      final podfile = File('$packageDir/macos/Podfile');
+      if (podfile.existsSync()) {
+        final platform = RegExp(
+          r"""^\s*platform\s*:osx\s*,\s*['"]([0-9.]+)['"]""",
+          multiLine: true,
+        ).firstMatch(podfile.readAsStringSync());
+        if (platform != null) {
+          expect(
+            _compare(_parsePlatformVersion(platform.group(1)!), [10, 15, 0]) >=
+                0,
+            isTrue,
+            reason:
+                'macos/Podfile platform ${platform.group(1)} is below 10.15',
+          );
+        }
       }
     });
   });
