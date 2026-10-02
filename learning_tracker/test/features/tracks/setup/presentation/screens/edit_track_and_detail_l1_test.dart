@@ -1104,6 +1104,45 @@ void main() {
     );
 
     testWidgets(
+      'DNI-486: a tutor WITH editing access sees the chazara stages but '
+      'cannot change them (no governed tutor path yet)',
+      (tester) async {
+        _setTallViewport(tester);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await _seedGoal(db);
+        await _seedChazaraStages(db);
+
+        await tester.pumpWidget(
+          _buildEditApp(
+            track: _track(),
+            db: db,
+            mockService: mockService,
+            hasChazara: true,
+            tutorPerms: const TutorPermissions(canEditLearning: true),
+          ),
+        );
+        await _pump(tester);
+
+        expect(find.text('Review (Chazara)'), findsOneWidget);
+        final change = find.ancestor(
+          of: find.text('Change'),
+          matching: find.byType(OutlinedButton),
+        );
+        expect(tester.widget<OutlinedButton>(change).onPressed, isNull);
+        expect(
+          find.ancestor(
+            of: change,
+            matching: find.byKey(const Key('tutorDisabledControl')),
+          ),
+          findsOneWidget,
+        );
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
       'product rule: tutor canMarkLiveCompletion is always false (TutorPermissions.defaults)',
       (tester) async {
         // Product rule: canMarkLiveCompletion must always be false for tutors.
