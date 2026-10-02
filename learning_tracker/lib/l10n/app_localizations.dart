@@ -5392,6 +5392,120 @@ abstract class AppLocalizations {
   /// **'Undo'**
   String get undoLabel;
 
+  /// Learn tab section header above the sub-track rows (DNI-500 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Also learning · {count, plural, =1{1 sub-track} other{{count} sub-tracks}}'**
+  String subTrackHomeSectionTitle(int count);
+
+  /// Sub-track row position line (DNI-500 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {position}'**
+  String subTrackHomeNext(String position);
+
+  /// Sub-track row text when the track has no ground (DNI-500 AC-3). [ASSUMPTION copy] DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'No ground yet'**
+  String get subTrackHomeNoGround;
+
+  /// Sub-track row text when every leaf of its ground is ticked (DNI-500 AC-4). [ASSUMPTION copy] DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'All ground recorded'**
+  String get subTrackHomeAllRecorded;
+
+  /// Sub-track row text button opening the Up to picker (DNI-500 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Up to…'**
+  String get subTrackHomeUpTo;
+
+  /// Sub-track row filled pill recording one leaf (DNI-500 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'+1'**
+  String get subTrackHomePlusOne;
+
+  /// Parent action on a groundless or fully recorded sub-track row (DNI-500 AC-3, AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Add ground'**
+  String get subTrackHomeAddGround;
+
+  /// Screen-reader label of a sub-track row (DNI-500 AC-10).
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, next {position}'**
+  String subTrackHomeRowSemantics(String name, String position);
+
+  /// Screen-reader label of a groundless sub-track row (DNI-500 AC-3). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, no ground yet'**
+  String subTrackHomeRowNoGroundSemantics(String name);
+
+  /// Screen-reader label of a fully recorded sub-track row (DNI-500 AC-4). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, all ground recorded'**
+  String subTrackHomeRowAllRecordedSemantics(String name);
+
+  /// Screen-reader label of the +1 pill; curriculum is the CurriculumId storage key (DNI-500 AC-10).
+  ///
+  /// In en, this message translates to:
+  /// **'{curriculum, select, mishnayos{Record one mishna for {name}} other{Record one for {name}}}'**
+  String subTrackHomePlusOneSemantics(String curriculum, String name);
+
+  /// Screen-reader label of the Up to button (DNI-500 AC-10).
+  ///
+  /// In en, this message translates to:
+  /// **'Record up to, {name}'**
+  String subTrackHomeUpToSemantics(String name);
+
+  /// Snackbar after a sub-track +1; its action is undoLabel (DNI-500 AC-2).
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded 1'**
+  String get subTrackHomeRecorded;
+
+  /// Snackbar when a synced sub-track capture is found lock-stamped (DNI-500 AC-5).
+  ///
+  /// In en, this message translates to:
+  /// **'Kept, not counted — recorded during Shabbos'**
+  String get subTrackHomeKeptNotCounted;
+
+  /// Snackbar when a sub-track +1 is refused (DNI-500 AC-2). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t record that. Please try again.'**
+  String get subTrackHomeCaptureFailed;
+
+  /// The single note on read-only tutor sub-track surfaces (DNI-500 AC-9). [ASSUMPTION copy] DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing sub-tracks from a tutor device is coming soon'**
+  String get subTrackTutorReadOnlyNote;
+
+  /// Dashboard section header above the sub-track summary cards (DNI-500 AC-8).
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-tracks ({count})'**
+  String subTrackDashboardTitle(int count);
+
+  /// Parent-only Dashboard action opening the hub (DNI-500 AC-8).
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get subTrackDashboardManage;
+
+  /// Dashboard sub-track card ticked count (DNI-500 AC-8).
+  ///
+  /// In en, this message translates to:
+  /// **'{count} ticked'**
+  String subTrackDashboardTicked(int count);
+
   /// No description provided for @searchTitle.
   ///
   /// In en, this message translates to:

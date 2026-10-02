@@ -1612,6 +1612,133 @@
   "tasksNoTasksRemainingTitle": "אין משימות נותרות להיום.",
   "tasksNoOverdueTasksSubtitle": "אין משימות באיחור.",
   "undoLabel": "בטל",
+  "subTrackHomeSectionTitle": "לומדים גם · {count, plural, =1{תת-מסלול אחד} two{שני תתי-מסלולים} other{{count} תתי-מסלולים}}",
+  "@subTrackHomeSectionTitle": {
+    "description": "Learn tab section header above the sub-track rows (DNI-500 AC-1).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackHomeNext": "הבא: {position}",
+  "@subTrackHomeNext": {
+    "description": "Sub-track row position line (DNI-500 AC-1).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeNoGround": "עוד לא נקבע חומר",
+  "@subTrackHomeNoGround": {
+    "description": "Sub-track row text when the track has no ground (DNI-500 AC-3). [ASSUMPTION copy] DRAFT copy, pending zc4."
+  },
+  "subTrackHomeAllRecorded": "כל החומר נרשם",
+  "@subTrackHomeAllRecorded": {
+    "description": "Sub-track row text when every leaf of its ground is ticked (DNI-500 AC-4). [ASSUMPTION copy] DRAFT copy, pending zc4."
+  },
+  "subTrackHomeUpTo": "עד…",
+  "@subTrackHomeUpTo": {
+    "description": "Sub-track row text button opening the Up to picker (DNI-500 AC-1)."
+  },
+  "subTrackHomePlusOne": "+1",
+  "@subTrackHomePlusOne": {
+    "description": "Sub-track row filled pill recording one leaf (DNI-500 AC-1)."
+  },
+  "subTrackHomeAddGround": "הוספת חומר",
+  "@subTrackHomeAddGround": {
+    "description": "Parent action on a groundless or fully recorded sub-track row (DNI-500 AC-3, AC-4)."
+  },
+  "subTrackHomeRowSemantics": "{name}, הבא {position}",
+  "@subTrackHomeRowSemantics": {
+    "description": "Screen-reader label of a sub-track row (DNI-500 AC-10).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeRowNoGroundSemantics": "{name}, עוד לא נקבע חומר",
+  "@subTrackHomeRowNoGroundSemantics": {
+    "description": "Screen-reader label of a groundless sub-track row (DNI-500 AC-3). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeRowAllRecordedSemantics": "{name}, כל החומר נרשם",
+  "@subTrackHomeRowAllRecordedSemantics": {
+    "description": "Screen-reader label of a fully recorded sub-track row (DNI-500 AC-4). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomePlusOneSemantics": "{curriculum, select, mishnayos{לרשום משנה אחת ב{name}} other{לרשום אחת ב{name}}}",
+  "@subTrackHomePlusOneSemantics": {
+    "description": "Screen-reader label of the +1 pill; curriculum is the CurriculumId storage key (DNI-500 AC-10).",
+    "placeholders": {
+      "curriculum": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeUpToSemantics": "לרשום עד, {name}",
+  "@subTrackHomeUpToSemantics": {
+    "description": "Screen-reader label of the Up to button (DNI-500 AC-10).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeRecorded": "נרשם 1",
+  "@subTrackHomeRecorded": {
+    "description": "Snackbar after a sub-track +1; its action is undoLabel (DNI-500 AC-2)."
+  },
+  "subTrackHomeKeptNotCounted": "נשמר, לא נספר — נרשם בשבת",
+  "@subTrackHomeKeptNotCounted": {
+    "description": "Snackbar when a synced sub-track capture is found lock-stamped (DNI-500 AC-5)."
+  },
+  "subTrackHomeCaptureFailed": "לא הצלחנו לרשום. נסו שוב.",
+  "@subTrackHomeCaptureFailed": {
+    "description": "Snackbar when a sub-track +1 is refused (DNI-500 AC-2). DRAFT copy, pending zc4."
+  },
+  "subTrackTutorReadOnlyNote": "עריכת תתי-מסלולים ממכשיר מורה תתאפשר בקרוב",
+  "@subTrackTutorReadOnlyNote": {
+    "description": "The single note on read-only tutor sub-track surfaces (DNI-500 AC-9). [ASSUMPTION copy] DRAFT copy, pending zc4."
+  },
+  "subTrackDashboardTitle": "תתי-מסלולים ({count})",
+  "@subTrackDashboardTitle": {
+    "description": "Dashboard section header above the sub-track summary cards (DNI-500 AC-8).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDashboardManage": "ניהול",
+  "@subTrackDashboardManage": {
+    "description": "Parent-only Dashboard action opening the hub (DNI-500 AC-8)."
+  },
+  "subTrackDashboardTicked": "{count} סומנו",
+  "@subTrackDashboardTicked": {
+    "description": "Dashboard sub-track card ticked count (DNI-500 AC-8).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "searchTitle": "חיפוש",
   "searchHintEnterTerm": "הזינו מונח חיפוש למעלה",
   "loadingText": "טוען טקסט...",
