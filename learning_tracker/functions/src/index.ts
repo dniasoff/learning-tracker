@@ -52,6 +52,7 @@ export {
   tutorUpsertStageDefinition,
   tutorUpsertStudyDayConfig,
   tutorDeleteStudyDayConfig,
+  tutorReplaceStudyDays,
   tutorUpdateGamificationSettings,
   tutorSetProfileProgram,
   tutorUpsertCurriculumScope,

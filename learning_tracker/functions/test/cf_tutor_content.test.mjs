@@ -2,6 +2,7 @@
 //   tutorUpsertStageDefinition, tutorUpsertStudyDayConfig, tutorDeleteStudyDayConfig,
 //   tutorSetProfileProgram, tutorUpsertCurriculumScope — rerouted through
 //   writeWithChangeLog (sub-tracks AD-38 / AD-53, Story 1.10 / DNI-472, AC-3/AC-6);
+//   tutorReplaceStudyDays — a whole study-day schedule as one action (Story 1.24 / DNI-486);
 // The shared rejection matrix lives in _governed_contract.mjs.
 // See _cf_helpers.mjs for the harness.
 
@@ -174,3 +175,86 @@ describe('tutor main-track configuration callables — AC-3 behaviour', () => {
   });
 });
 
+describe('tutorReplaceStudyDays — one action for the whole schedule (DNI-486)', () => {
+  beforeEach(async () => {
+    await clearFirestore();
+    await seedProfile();
+    await seedLearningGrant();
+  });
+
+  const day = (d, type = 'study') => ({ curriculum_id: C, day_of_week: d, day_type: type });
+
+  test('upserts and tombstones land as ONE change_log entry under ONE action_id', async () => {
+    await col('study_day_configs').doc(`${C}_7`).set(day(7));
+    const res = await call(fns.tutorReplaceStudyDays, {
+      ...base,
+      curriculumId: C,
+      upserts: [
+        { configId: `${C}_1`, configData: day(1) },
+        { configId: `${C}_2`, configData: day(2, 'rest') },
+      ],
+      removedConfigIds: [`${C}_7`],
+      actionId: ulid(1),
+    });
+    assert.equal(res.action_id, ulid(1));
+    const entries = await changeLog();
+    assert.equal(entries.length, 1, 'one entity, one entry');
+    const [entry] = entries;
+    assert.equal(entry.entity, 'mainTrackStudyDays');
+    assert.equal(entry.entity_id, C);
+    assert.equal(entry.action_id, ulid(1));
+    const docsTouched = new Set(Object.keys(entry.after).map((k) => k.split('.')[0]));
+    assert.deepEqual([...docsTouched].sort(), [
+      `study_day_configs/${C}_1`, `study_day_configs/${C}_2`, `study_day_configs/${C}_7`,
+    ]);
+    assert.ok((await col('study_day_configs').doc(`${C}_7`).get()).get('ended_at'));
+    assert.equal((await col('study_day_configs').doc(`${C}_2`).get()).get('day_type'), 'rest');
+  });
+
+  test('a doc of another curriculum fails the whole replace: nothing is written', async () => {
+    await expectHttpsError(
+      call(fns.tutorReplaceStudyDays, {
+        ...base,
+        curriculumId: C,
+        upserts: [
+          { configId: `${C}_1`, configData: day(1) },
+          { configId: 'mishnayos_2', configData: { ...day(2), curriculum_id: 'mishnayos' } },
+        ],
+        actionId: ulid(1),
+      }),
+      'invalid-argument',
+    );
+    assert.deepEqual(await changeLog(), []);
+    assert.equal((await col('study_day_configs').doc(`${C}_1`).get()).exists, false);
+  });
+
+  test('a config named twice, or an empty replace, is rejected', async () => {
+    await expectHttpsError(
+      call(fns.tutorReplaceStudyDays, {
+        ...base,
+        curriculumId: C,
+        upserts: [{ configId: `${C}_1`, configData: day(1) }],
+        removedConfigIds: [`${C}_1`],
+      }),
+      'invalid-argument',
+    );
+    await expectHttpsError(
+      call(fns.tutorReplaceStudyDays, { ...base, curriculumId: C, upserts: [] }),
+      'invalid-argument',
+    );
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('a retry with the same actionId replays the stored action', async () => {
+    const args = {
+      ...base,
+      curriculumId: C,
+      upserts: [{ configId: `${C}_1`, configData: day(1) }],
+      actionId: ulid(1),
+    };
+    await call(fns.tutorReplaceStudyDays, args);
+    const again = await call(fns.tutorReplaceStudyDays, args);
+    assert.equal(again.replayed, true);
+    assert.equal((await changeLog()).length, 1);
+  });
+});

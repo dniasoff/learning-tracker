@@ -178,10 +178,9 @@ class FirestoreStudyDayConfigRepositoryAdapter {
 }
 
 /// A tutor's study-day write (Story 1.24, DNI-486): upserts [studyDays]
-/// and tombstones every [existing] day absent from it, each through the
-/// governed `tutorUpsertStudyDayConfig` / `tutorDeleteStudyDayConfig`
-/// callables after the tutor preflight. Throws when the preflight refuses
-/// or a callable fails; nothing is written on the client.
+/// and tombstones every [existing] day absent from it as ONE governed
+/// `tutorReplaceStudyDays` action after the tutor preflight. Throws when
+/// the preflight refuses or the callable fails; then nothing was written.
 Future<void> tutorReplaceStudyDays(
   Ref ref, {
   required CurriculumId curriculumId,
@@ -195,6 +194,7 @@ Future<void> tutorReplaceStudyDays(
     'day_of_week': day,
   });
   await writes.replaceStudyDays(
+    curriculumId: curriculumId.storageKey,
     upserts: [
       for (final MapEntry(key: day, value: type) in studyDays.entries)
         (
