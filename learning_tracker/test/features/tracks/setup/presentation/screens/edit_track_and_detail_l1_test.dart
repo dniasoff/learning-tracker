@@ -70,7 +70,10 @@ import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
+import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -215,12 +218,15 @@ Widget _buildEditApp({
   List<DailyTask> dailyTasks = const [],
   TutorPermissions? tutorPerms,
   Locale locale = const Locale('en'),
+  String? learnerName,
 }) {
   final curriculum = CurriculumId.values
       .where((c) => c == track.curriculumId)
       .firstOrNull;
   return ProviderScope(
     overrides: [
+      if (learnerName != null)
+        tutorLearnerNameProvider.overrideWithValue(learnerName),
       firestoreGoalRepositoryProvider.overrideWith(
         (ref) => Future.value(
           FirestoreGoalRepository(
@@ -880,6 +886,57 @@ void main() {
       // completion, not stuck), and the screen must remain (no crash /
       // unexpected pop).
       expect(find.text('Apply changes?'), findsNothing);
+      expect(find.byType(EditTrackScreen), findsOneWidget);
+
+      await _tearDown(tester);
+    });
+  });
+
+  group('EditTrackScreen — editing turned off (DNI-487 AC-6)', () {
+    testWidgets('a governed save the callable refuses because the parent '
+        'turned editing off names it instead of the generic save error', (
+      tester,
+    ) async {
+      await _seedGoal(db);
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      when(
+        () => mockService.editTrack(
+          goal: any(named: 'goal'),
+          curriculum: any(named: 'curriculum'),
+          label: any(named: 'label'),
+          studyDays: any(named: 'studyDays'),
+          chazarahWizard: any(named: 'chazarahWizard'),
+          paceTarget: any(named: 'paceTarget'),
+          paceGranularity: any(named: 'paceGranularity'),
+          clearPaceTarget: any(named: 'clearPaceTarget'),
+        ),
+      ).thenThrow(
+        const TutorGovernedWriteException(
+          failure: TutorWriteEditingTurnedOff(
+            message: 'Grant lacks can_edit_learning',
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildEditApp(
+          track: _track(),
+          db: db,
+          mockService: mockService,
+          learnerName: 'Dina',
+        ),
+      );
+      await _pump(tester);
+
+      await tester.tap(find.text('Save Changes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text("Dina's parent has turned off editing"), findsOneWidget);
+      expect(find.text(l10n.errorSaveTrackFailed), findsNothing);
       expect(find.byType(EditTrackScreen), findsOneWidget);
 
       await _tearDown(tester);

@@ -288,6 +288,70 @@ void main() {
     });
   });
 
+  group('DNI-487 AC-6: the parent turned editing off mid-session', () {
+    FirebaseFunctionsException turnedOff() => FirebaseFunctionsException(
+      code: 'permission-denied',
+      message: 'Grant lacks can_edit_learning',
+    );
+
+    test('a capture the callable refuses for the grant is reported as '
+        'editing turned off, and nothing stays pending', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+      h.invoker.respond = (_) => throw turnedOff();
+
+      final result = await h.commands.capture(
+        curriculumId: _curriculum,
+        refs: const ['Mishnah Berakhot 2:1'],
+        source: LearningEvent.sourceMain,
+        dateState: DateState.dated,
+      );
+
+      expect(
+        result,
+        const CaptureResult.rejected(CaptureRejection.editingTurnedOff),
+      );
+      expect(h.invoker.calls, hasLength(1));
+      expect(await h.commands.watchPendingFailures().first, isEmpty);
+    });
+
+    test('a correction the callable refuses for the grant is reported as '
+        'editing turned off', () async {
+      final h = TutorHarness(
+        events: [engineLearn(1, 'Mishnah Berakhot 2:1', minutes: 5)],
+      );
+      addTearDown(h.dispose);
+      h.invoker.respond = (_) => throw turnedOff();
+
+      expect(
+        await h.commands.voidEvent(engineUlid(1)),
+        const CaptureResult.rejected(CaptureRejection.editingTurnedOff),
+      );
+    });
+
+    test('any other permission-denied stays a plain rejection', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+      h.invoker.respond = (_) => throw FirebaseFunctionsException(
+        code: 'permission-denied',
+        message: 'Grant is not active',
+      );
+
+      final result = await h.commands.capture(
+        curriculumId: _curriculum,
+        refs: const ['Mishnah Berakhot 2:1'],
+        source: LearningEvent.sourceMain,
+        dateState: DateState.dated,
+      );
+
+      expect(result, isA<CaptureRejected>());
+      expect(
+        result,
+        isNot(const CaptureResult.rejected(CaptureRejection.editingTurnedOff)),
+      );
+    });
+  });
+
   group('AC-4/AC-5/AC-6 preflight: nothing is invoked', () {
     Future<CaptureResult> capture(TutorHarness h) => h.commands.capture(
       curriculumId: _curriculum,
@@ -299,7 +363,12 @@ void main() {
     test('without can_edit_learning', () async {
       final h = TutorHarness(canEditLearning: false);
       addTearDown(h.dispose);
-      expect(await capture(h), isA<CaptureRejected>());
+      // The control was enabled when tapped, so the parent turned editing
+      // off since (DNI-487 AC-6): the surface names that, not a bad input.
+      expect(
+        await capture(h),
+        const CaptureResult.rejected(CaptureRejection.editingTurnedOff),
+      );
       expect(h.invoker.calls, isEmpty);
     });
 

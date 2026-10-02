@@ -207,6 +207,11 @@ enum MishnaCorrectionOutcome {
   /// A tutor correction the server stamped inside the learner's lock: it is
   /// stored but not counted (AD-36, DNI-486 AC-7), so the row is unchanged.
   keptNotCounted,
+
+  /// A tutor correction refused because the parent turned off "Can edit
+  /// learning" (AD-53; DNI-487 AC-6): nothing was written, the row is
+  /// unchanged, and the screen says so instead of the rollback notice.
+  editingTurnedOff,
 }
 
 /// The optimistic look of [item] once [request] is applied: a removal, or
@@ -401,6 +406,8 @@ final class MishnaHistoryCorrections
         MishnaCorrectionOutcome.keptNotCounted,
       CaptureSuccess() => MishnaCorrectionOutcome.applied,
       CaptureChildLimit() => MishnaCorrectionOutcome.childLimit,
+      CaptureRejected(reason: CaptureRejection.editingTurnedOff) =>
+        MishnaCorrectionOutcome.editingTurnedOff,
       _ => MishnaCorrectionOutcome.rolledBack,
     };
     if (!ref.mounted) return outcome;

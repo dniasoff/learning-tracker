@@ -818,6 +818,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         message: AppLocalizations.of(context)!.markedComplete,
         messenger: messenger,
         onUndone: () => _rollBack(recorded.keys),
+        learnerName: ref.read(tutorLearnerNameProvider),
       );
 
       if (recorded.isNotEmpty && mounted && nextAfterComplete != null) {

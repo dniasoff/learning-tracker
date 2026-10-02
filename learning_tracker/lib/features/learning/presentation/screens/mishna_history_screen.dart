@@ -664,6 +664,10 @@ Future<void> openMishnaCorrections(
     MishnaCorrectionOutcome.rolledBack =>
       l10n.mishnaHistoryCorrectionRolledBack,
     MishnaCorrectionOutcome.keptNotCounted => l10n.tutorCaptureKeptNotCounted,
+    MishnaCorrectionOutcome.editingTurnedOff => tutorEditingTurnedOffText(
+      l10n,
+      learnerName: ref.read(tutorLearnerNameProvider),
+    ),
   };
   if (message != null) {
     messenger.showSnackBar(SnackBar(content: Text(message)));

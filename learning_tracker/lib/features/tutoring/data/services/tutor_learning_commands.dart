@@ -97,6 +97,11 @@ final class TutorLearningCommands implements LearningCommands {
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
+  /// The parent turned off "Can edit learning" (AD-53; DNI-487 AC-6).
+  static const _editingTurnedOff = CaptureResult.rejected(
+    CaptureRejection.editingTurnedOff,
+  );
+
   final Map<String, (PendingFailure, List<_PlannedCall>)> _pending = {};
   final StreamController<List<PendingFailure>> _changes =
       StreamController<List<PendingFailure>>.broadcast();
@@ -117,7 +122,8 @@ final class TutorLearningCommands implements LearningCommands {
       nowUtc,
       history,
     ),
-    TutorPreflightNoEditAccess() => _invalid,
+    // The control was enabled when tapped: the grant changed since.
+    TutorPreflightNoEditAccess() => _editingTurnedOff,
     TutorPreflightOffline() => const CaptureResult.onlineRequired(),
     TutorPreflightLocked(:final window) => CaptureResult.locked(window),
   };
@@ -181,8 +187,9 @@ final class TutorLearningCommands implements LearningCommands {
   }
 
   static CaptureResult _rejectionOf(TutorWriteFailure failure) =>
-      switch (failure.code) {
-        'not-found' => const CaptureResult.rejected(
+      switch (failure) {
+        TutorWriteEditingTurnedOff() => _editingTurnedOff,
+        TutorWriteFailure(code: 'not-found') => const CaptureResult.rejected(
           CaptureRejection.targetNotFound,
         ),
         _ => _invalid,
@@ -346,11 +353,12 @@ final class TutorLearningCommands implements LearningCommands {
   /// A correction the server refused: the AD-31 void-target rule, a
   /// missing target, or anything else (the row stays as it was).
   static CaptureResult _correctionRejection(TutorWriteFailure failure) =>
-      switch (failure.code) {
-        'not-found' => const CaptureResult.rejected(
+      switch (failure) {
+        TutorWriteEditingTurnedOff() => _editingTurnedOff,
+        TutorWriteFailure(code: 'not-found') => const CaptureResult.rejected(
           CaptureRejection.targetNotFound,
         ),
-        'invalid-argument' || 'failed-precondition' =>
+        TutorWriteFailure(code: 'invalid-argument' || 'failed-precondition') =>
           const CaptureResult.rejected(CaptureRejection.voidTargetNotLearn),
         _ => _invalid,
       };

@@ -518,6 +518,7 @@ class _ContentHierarchyScreenState
           context,
         )!.captureRecordedCount(leaves.length),
         onUndone: () => _rollBack(batch.keys),
+        learnerName: ref.read(tutorLearnerNameProvider),
       );
     } on Exception {
       if (mounted) {

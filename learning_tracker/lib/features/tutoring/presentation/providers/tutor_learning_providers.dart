@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/learner_state/presentation/providers/l
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_learning_commands.dart';
@@ -188,3 +189,17 @@ final tutorWriteAvailabilityProvider =
       }
       return TutorWriteAvailability.available;
     });
+
+/// The display name of the learner whose screens are showing (the talmid
+/// in a tutored session), trimmed; null while unknown or blank. It names
+/// the learner in the tutor write copy ("{learner}'s parent hasn't given
+/// you editing access", "{learner}'s parent has turned off editing").
+final tutorLearnerNameProvider = Provider.autoDispose<String?>((ref) {
+  final name = ref
+      .watch(activeProfileProvider)
+      .asData
+      ?.value
+      ?.displayName
+      .trim();
+  return name == null || name.isEmpty ? null : name;
+});

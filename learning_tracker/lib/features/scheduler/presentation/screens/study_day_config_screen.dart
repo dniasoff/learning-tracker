@@ -286,10 +286,16 @@ class StudyDayConfigScreen extends ConsumerWidget {
           stackTrace: st,
         );
         if (context.mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                AppLocalizations.of(context)!.schedulerStudyDayToggleSaveError,
+                tutorSaveErrorText(
+                  l10n,
+                  e,
+                  fallback: l10n.schedulerStudyDayToggleSaveError,
+                  learnerName: ref.read(tutorLearnerNameProvider),
+                ),
               ),
             ),
           );

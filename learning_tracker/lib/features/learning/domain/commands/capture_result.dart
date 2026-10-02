@@ -196,6 +196,12 @@ enum CaptureRejection {
   /// in `LearningCommands.watchPendingFailures` with a retry (AD-54
   /// Recovery, parent AD-30). Added by DNI-469.
   notSaved,
+
+  /// A tutor's write was refused because the learner's parent turned off
+  /// "Can edit learning" for the grant (AD-53 per-call check). Nothing was
+  /// written and nothing is pending; the surface says "{learner}'s parent
+  /// has turned off editing". Added by DNI-486 for DNI-487 AC-6.
+  editingTurnedOff,
 }
 
 /// A field someone else changed since the caller read it.

@@ -8,7 +8,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_write_availability.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -59,12 +58,7 @@ class TutorWriteNote extends ConsumerWidget {
     final text = tutorWriteNoteText(
       AppLocalizations.of(context)!,
       ref.watch(tutorWriteAvailabilityProvider),
-      learnerName: ref
-          .watch(activeProfileProvider)
-          .asData
-          ?.value
-          ?.displayName
-          .trim(),
+      learnerName: ref.watch(tutorLearnerNameProvider),
     );
     if (text == null) return const SizedBox.shrink();
     return Padding(
