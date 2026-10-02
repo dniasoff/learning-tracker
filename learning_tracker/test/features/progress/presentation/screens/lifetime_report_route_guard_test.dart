@@ -128,6 +128,7 @@ class _Harness {
         currentSacredWindowProvider.overrideWithValue(null),
         activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
         learnerStateProvider.overrideWith((ref, _) {
+          stateReads++;
           return Stream.value(reportState(reports ?? [fullReport()]));
         }),
         lifetimeReportProvider.overrideWith((ref, _) {
