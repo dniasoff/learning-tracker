@@ -8,13 +8,14 @@
 /// `LearningCommands`. With no `onHome` sub-track it is absent; its
 /// loading and error stay local (the main tasks are unaffected). On a
 /// tutor device every sub-track write control is disabled (Story 2.9
-/// AC-9: tutor sub-track writes stay read-only).
+/// AC-9: tutor sub-track writes stay read-only). A rejected write is
+/// rolled back and announced by the Learn tab's `PendingCaptureRollback`,
+/// which does not depend on these rows.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/on_home_sub_tracks.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/up_to_selection_service.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
@@ -58,29 +59,23 @@ class _Rows extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final writable = ref.watch(subTrackWritesAllowedProvider);
     final pending = ref.watch(pendingCapturesProvider);
-    return PendingCaptureFailureListener(
-      onFailure: (failure) =>
-          ref.read(pendingCapturesProvider.notifier).rollBack(failure.eventIds),
-      onRetried: (failure) =>
-          ref.read(pendingCapturesProvider.notifier).retried(failure.eventIds),
-      child: Column(
-        key: const Key('subTrackSection'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 36),
-          Text(
-            l10n.subTrackRowsTitle(items.length),
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
+    return Column(
+      key: const Key('subTrackSection'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 36),
+        Text(
+          l10n.subTrackRowsTitle(items.length),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        for (final item in items) ...[
+          _row(context, ref, item, writable, pending),
           const SizedBox(height: 12),
-          for (final item in items) ...[
-            _row(context, ref, item, writable, pending),
-            const SizedBox(height: 12),
-          ],
         ],
-      ),
+      ],
     );
   }
 

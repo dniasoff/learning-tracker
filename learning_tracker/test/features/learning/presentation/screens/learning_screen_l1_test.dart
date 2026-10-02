@@ -15,6 +15,8 @@
 //       this at model level (no live-mark gating in LearningScreen itself; the
 //       affordance lives in TextDisplayScreen which reads the same provider).
 //   9.  Data state — streak card, 'Daily Tasks' header, and Browse section rendered.
+//   9b. DNI-501: the Up to… / +1 rollback listener is mounted with no
+//       sub-track rows.
 //  10.  Daily tasks loading — inner CircularProgressIndicator shown.
 //  11.  Daily tasks error — AppErrorView shown inside tasks section.
 //  12.  Daily tasks empty — 'All caught up' info card rendered.
@@ -59,6 +61,7 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/pending_capture_rollback.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -515,6 +518,24 @@ void main() {
     expect(find.text('CURRENT ACHIEVEMENT'), findsOneWidget);
     // Daily tasks section header
     expect(find.text('Daily Tasks'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('data state: the Up to… / +1 rollback listener is mounted '
+      'with no sub-track rows (DNI-501)', (tester) async {
+    await tester.pumpWidget(
+      _buildScreen(curricula: [CurriculumId.mishnayos], tasks: const []),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byKey(const Key('subTrackSection')), findsNothing);
+    expect(
+      find.byType(PendingCaptureRollback, skipOffstage: false),
+      findsOneWidget,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);

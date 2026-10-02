@@ -15,8 +15,13 @@ export 'presentation/providers/sub_track_capture_providers.dart'
         subTrackSourceChoicesProvider,
         subTrackWritesAllowedProvider;
 export 'presentation/providers/up_to_picker_providers.dart'
-    show MainTrackUpToRequest, SubTrackUpToRequest, UpToRequest, onHomeSubTracksProvider;
+    show
+        MainTrackUpToRequest,
+        SubTrackUpToRequest,
+        UpToRequest,
+        onHomeSubTracksProvider;
 export 'presentation/widgets/also_learning_section.dart';
+export 'presentation/widgets/pending_capture_rollback.dart';
 export 'presentation/widgets/sub_track_capture_section.dart';
 export 'presentation/widgets/sub_track_home_row.dart';
 export 'presentation/widgets/sub_track_read_only.dart';
