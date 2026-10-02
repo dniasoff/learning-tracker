@@ -634,8 +634,6 @@ void main() {
 }
 
 /// A learner whose settings doc cannot be read.
-
-/// A learner whose settings doc cannot be read.
 final class _UnreadableSettings implements LearnerSettingsReader {
   @override
   Stream<LearnerSettings> watch(LearnerScope scope) =>
