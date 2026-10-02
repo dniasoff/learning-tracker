@@ -7,6 +7,10 @@
 # in Cloud Functions too; they are baselined because the checker treats every
 # deployed functions/src/** touch as INT-B. See firestore.rules and
 # functions/src/tutor_writes.ts for the shared profile path construction.
+# track_learning_order joined with Story 1.10 (DNI-472): the shared
+# functions/src/write_with_change_log.ts helper addresses it under
+# learner_profiles/{profileId ULID}, the same tree the Firestore repository
+# reads — not a genuine split.
 # A new collection NOT listed here fails `make audit`/`make ci`.
 # Widening this file requires the same team sign-off any other ratchet
 # widening requires — a new entry here means a NEW collection became
@@ -21,3 +25,4 @@ learning_order
 profile_programs
 stage_definitions
 study_day_configs
+track_learning_order

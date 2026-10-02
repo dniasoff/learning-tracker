@@ -372,7 +372,7 @@ So that the engine every learner's numbers come from can never quietly depend on
 **Given** `pubspec.yaml` today (`sdk: ^3.10.8`, `firebase_core ^4.4.0`, `cloud_firestore ^6.1.2`, `firebase_auth ^6.1.4`, `cloud_functions ^6.2.0`, `firebase_analytics ^12.3.0`)
 **When** the bump lands
 **Then** `environment.sdk` is `^3.12.0`, the Flutter floor is 3.41.6, and `firebase_core ^4.15.0`, `cloud_firestore ^6.10.0`, `firebase_auth ^6.7.0`, `cloud_functions ^6.5.0`, `firebase_analytics ^12.6.0` change in the same commit
-**And** `firebase_messaging ^16.7.0` and `pdf ^3.13.1` are added, and `kosher_dart ^2.0.20`, `flutter_local_notifications ^22.3.1`, `share_plus ^13.3.0` are set; iOS/macOS deployment targets are raised to 13.0/10.15 as `share_plus` 13 requires.
+**And** `firebase_messaging ^16.7.0` and `pdf ^3.13.1` are added, and `kosher_dart ^2.0.20`, `flutter_local_notifications ^22.3.1`, `share_plus ^13.3.0` are set; iOS/macOS deployment targets are raised to 13.0/10.15 as `share_plus` 13 requires. *(Ruling B14: the macOS 10.15 floor applies if/when a macOS host exists; none is scaffolded, and `check_story_1_1_stack_test.dart` enforces the floor once one is added.)*
 
 **Given** the bumped stack
 **When** `flutter analyze`, the full `flutter test` suite, `make test-rules` and `make test-functions` run

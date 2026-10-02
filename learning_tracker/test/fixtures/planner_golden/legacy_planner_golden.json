@@ -1,0 +1,1903 @@
+{
+  "_header": {
+    "fixture_version": 1,
+    "story": "DNI-522 (G0) — freeze legacy planner golden-parity fixture",
+    "consumer": "DNI-477 (1.15 Planner onto LearnerState) AC-2 golden parity",
+    "captured_at_sha": "ddb9eb971da145ba46a4800735f7c6670d2eb6db",
+    "regenerate": "cd learning_tracker && UPDATE_GOLDENS=1 flutter test test/features/scheduler/domain/services/legacy_planner_golden_parity_test.dart — refused (fails closed) unless lib, assets, pubspec.yaml, pubspec.lock are identical to captured_at_sha.",
+    "regenerate_after_cutover": "legacy golden is captured at SHA ddb9eb971da145ba46a4800735f7c6670d2eb6db or earlier; if the fixture is missing, regenerate from that SHA (git worktree add ../lt-golden ddb9eb971, copy this test in, run with UPDATE_GOLDENS=1), never from post-cutover code.",
+    "entry_points": {
+      "projection_tasks": "buildProjectionTasks (daily_task_projection_service.dart)",
+      "chazara_tasks": "buildFreshPlan, overdueChazara/scheduledChazara priorities only",
+      "daily_tasks": "allDailyTasksProvider composition: projection + chazara, completion filter, priority sort; no skips, no snapshot cache"
+    },
+    "divergence_policy": "projection_tasks must match exactly in every scenario. chazara_tasks and daily_tasks must match exactly in every scenario except chazara_due, whose chazara_tasks (and hence daily_tasks) may be marked an intentional divergence only where reviewsDue(today) semantics differ; document it in DNI-477.",
+    "conventions": {
+      "dates": "Dates are civil YYYY-MM-DD. The legacy planner is fed each civil date as an instant at 12:00Z.",
+      "learnt": "learnt rows are first-stage (learn, stage_order 1) completions with a real learned_on date; no before_tracking / bulk-prior sentinel rows.",
+      "track": "tracking_start_date is the track activatedAt; no reorder (lastReorderAt null), no custom learning order, no program enrollment, no sub-tracks.",
+      "track_label": "track_label comes from the production seam (curriculumLabelTextFromRef, as injected by allDailyTasksProvider) with display toggles pinned to useHebrewTerms=false, transliteration=ashkenazi. shared_inputs.track_label_by_display_setting freezes the seam under every toggle combination."
+    }
+  },
+  "shared_inputs": {
+    "curriculum": "mishnayos",
+    "calendar_program": false,
+    "scope_masechtos": [
+      "Mishnah Orlah",
+      "Mishnah Bikkurim"
+    ],
+    "corpus": [
+      {
+        "ref": "Mishnah Orlah 1:1",
+        "sort_order": 661,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "1"
+      },
+      {
+        "ref": "Mishnah Orlah 1:2",
+        "sort_order": 662,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "2"
+      },
+      {
+        "ref": "Mishnah Orlah 1:3",
+        "sort_order": 663,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "3"
+      },
+      {
+        "ref": "Mishnah Orlah 1:4",
+        "sort_order": 664,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "4"
+      },
+      {
+        "ref": "Mishnah Orlah 1:5",
+        "sort_order": 665,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "5"
+      },
+      {
+        "ref": "Mishnah Orlah 1:6",
+        "sort_order": 666,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "6"
+      },
+      {
+        "ref": "Mishnah Orlah 1:7",
+        "sort_order": 667,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "7"
+      },
+      {
+        "ref": "Mishnah Orlah 1:8",
+        "sort_order": 668,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "8"
+      },
+      {
+        "ref": "Mishnah Orlah 1:9",
+        "sort_order": 669,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "1",
+        "level4": "9"
+      },
+      {
+        "ref": "Mishnah Orlah 2:1",
+        "sort_order": 671,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "1"
+      },
+      {
+        "ref": "Mishnah Orlah 2:2",
+        "sort_order": 672,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "2"
+      },
+      {
+        "ref": "Mishnah Orlah 2:3",
+        "sort_order": 673,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "3"
+      },
+      {
+        "ref": "Mishnah Orlah 2:4",
+        "sort_order": 674,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "4"
+      },
+      {
+        "ref": "Mishnah Orlah 2:5",
+        "sort_order": 675,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "5"
+      },
+      {
+        "ref": "Mishnah Orlah 2:6",
+        "sort_order": 676,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "6"
+      },
+      {
+        "ref": "Mishnah Orlah 2:7",
+        "sort_order": 677,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "7"
+      },
+      {
+        "ref": "Mishnah Orlah 2:8",
+        "sort_order": 678,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "8"
+      },
+      {
+        "ref": "Mishnah Orlah 2:9",
+        "sort_order": 679,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "9"
+      },
+      {
+        "ref": "Mishnah Orlah 2:10",
+        "sort_order": 680,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "10"
+      },
+      {
+        "ref": "Mishnah Orlah 2:11",
+        "sort_order": 681,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "11"
+      },
+      {
+        "ref": "Mishnah Orlah 2:12",
+        "sort_order": 682,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "12"
+      },
+      {
+        "ref": "Mishnah Orlah 2:13",
+        "sort_order": 683,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "13"
+      },
+      {
+        "ref": "Mishnah Orlah 2:14",
+        "sort_order": 684,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "14"
+      },
+      {
+        "ref": "Mishnah Orlah 2:15",
+        "sort_order": 685,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "15"
+      },
+      {
+        "ref": "Mishnah Orlah 2:16",
+        "sort_order": 686,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "16"
+      },
+      {
+        "ref": "Mishnah Orlah 2:17",
+        "sort_order": 687,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "2",
+        "level4": "17"
+      },
+      {
+        "ref": "Mishnah Orlah 3:1",
+        "sort_order": 689,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "1"
+      },
+      {
+        "ref": "Mishnah Orlah 3:2",
+        "sort_order": 690,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "2"
+      },
+      {
+        "ref": "Mishnah Orlah 3:3",
+        "sort_order": 691,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "3"
+      },
+      {
+        "ref": "Mishnah Orlah 3:4",
+        "sort_order": 692,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "4"
+      },
+      {
+        "ref": "Mishnah Orlah 3:5",
+        "sort_order": 693,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "5"
+      },
+      {
+        "ref": "Mishnah Orlah 3:6",
+        "sort_order": 694,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "6"
+      },
+      {
+        "ref": "Mishnah Orlah 3:7",
+        "sort_order": 695,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "7"
+      },
+      {
+        "ref": "Mishnah Orlah 3:8",
+        "sort_order": 696,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "8"
+      },
+      {
+        "ref": "Mishnah Orlah 3:9",
+        "sort_order": 697,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Orlah",
+        "level3": "3",
+        "level4": "9"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:1",
+        "sort_order": 700,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "1"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:2",
+        "sort_order": 701,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "2"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:3",
+        "sort_order": 702,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "3"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:4",
+        "sort_order": 703,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "4"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:5",
+        "sort_order": 704,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "5"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:6",
+        "sort_order": 705,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "6"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:7",
+        "sort_order": 706,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "7"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:8",
+        "sort_order": 707,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "8"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:9",
+        "sort_order": 708,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "9"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:10",
+        "sort_order": 709,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "10"
+      },
+      {
+        "ref": "Mishnah Bikkurim 1:11",
+        "sort_order": 710,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "1",
+        "level4": "11"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:1",
+        "sort_order": 712,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "1"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:2",
+        "sort_order": 713,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "2"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:3",
+        "sort_order": 714,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "3"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:4",
+        "sort_order": 715,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "4"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:5",
+        "sort_order": 716,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "5"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:6",
+        "sort_order": 717,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "6"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:7",
+        "sort_order": 718,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "7"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:8",
+        "sort_order": 719,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "8"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:9",
+        "sort_order": 720,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "9"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:10",
+        "sort_order": 721,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "10"
+      },
+      {
+        "ref": "Mishnah Bikkurim 2:11",
+        "sort_order": 722,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "2",
+        "level4": "11"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:1",
+        "sort_order": 724,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "1"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:2",
+        "sort_order": 725,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "2"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:3",
+        "sort_order": 726,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "3"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:4",
+        "sort_order": 727,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "4"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:5",
+        "sort_order": 728,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "5"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:6",
+        "sort_order": 729,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "6"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:7",
+        "sort_order": 730,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "7"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:8",
+        "sort_order": 731,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "8"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:9",
+        "sort_order": 732,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "9"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:10",
+        "sort_order": 733,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "10"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:11",
+        "sort_order": 734,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "11"
+      },
+      {
+        "ref": "Mishnah Bikkurim 3:12",
+        "sort_order": 735,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "3",
+        "level4": "12"
+      },
+      {
+        "ref": "Mishnah Bikkurim 4:1",
+        "sort_order": 737,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "4",
+        "level4": "1"
+      },
+      {
+        "ref": "Mishnah Bikkurim 4:2",
+        "sort_order": 738,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "4",
+        "level4": "2"
+      },
+      {
+        "ref": "Mishnah Bikkurim 4:3",
+        "sort_order": 739,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "4",
+        "level4": "3"
+      },
+      {
+        "ref": "Mishnah Bikkurim 4:4",
+        "sort_order": 740,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "4",
+        "level4": "4"
+      },
+      {
+        "ref": "Mishnah Bikkurim 4:5",
+        "sort_order": 741,
+        "level1": "Seder Zeraim",
+        "level2": "Mishnah Bikkurim",
+        "level3": "4",
+        "level4": "5"
+      }
+    ],
+    "stages": [
+      {
+        "stage_order": 1,
+        "stage_name": "לימוד",
+        "schedule_type": "delay",
+        "delay_days": 0
+      },
+      {
+        "stage_order": 2,
+        "stage_name": "חזרה א׳",
+        "schedule_type": "delay",
+        "delay_days": 1
+      },
+      {
+        "stage_order": 3,
+        "stage_name": "חזרה ב׳",
+        "schedule_type": "delay",
+        "delay_days": 7
+      }
+    ],
+    "study_weekdays": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "track_label_by_display_setting": {
+      "en_ashkenazi": "Mishnayos",
+      "en_sephardi": "Mishnayot",
+      "he": "משניות"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "mid_masechta_pace",
+      "description": "Pace goal 3/day, tracking since 3 days ago. The child caught up on the first 6 mishnayos today; the rest of the 2 missed days is behind pace and today's 3 are due — all inside Orlah.",
+      "covers": [
+        "mid_masechta",
+        "pace_goal"
+      ],
+      "today": "2026-06-15",
+      "tracking_start_date": "2026-06-12",
+      "goal": {
+        "type": "pace",
+        "pace_value": 3,
+        "pace_period": "per_day"
+      },
+      "learnt": [
+        {
+          "ref": "Mishnah Orlah 1:1",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:2",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:3",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:4",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:5",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:6",
+          "learned_on": "2026-06-15"
+        }
+      ],
+      "expected": {
+        "projection_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:7",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:8",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:9",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:1",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:2",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:3",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ],
+        "chazara_tasks": [],
+        "daily_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:7",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:8",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:9",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:1",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:2",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:3",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "masechta_boundary_pace",
+      "description": "FR-12a transition day. Pace goal 3/day, tracking since 11 days ago, all 33 scheduled mishnayos learnt. Today's batch finishes Orlah (3:8, 3:9) and begins Bikkurim (1:1).",
+      "covers": [
+        "masechta_finish_next_begins",
+        "pace_goal"
+      ],
+      "today": "2026-06-15",
+      "tracking_start_date": "2026-06-04",
+      "goal": {
+        "type": "pace",
+        "pace_value": 3,
+        "pace_period": "per_day"
+      },
+      "learnt": [
+        {
+          "ref": "Mishnah Orlah 1:1",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:2",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:3",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:4",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:5",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:6",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:7",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:8",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:9",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:1",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:2",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:3",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:4",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:5",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:6",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:7",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:8",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:9",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:10",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:11",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:12",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:13",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:14",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:15",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:16",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:17",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 3:1",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 3:2",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 3:3",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 3:4",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 3:5",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 3:6",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 3:7",
+          "learned_on": "2026-06-15"
+        }
+      ],
+      "expected": {
+        "projection_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 3:8",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 3:9",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Bikkurim 1:1",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ],
+        "chazara_tasks": [],
+        "daily_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 3:8",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 3:9",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Bikkurim 1:1",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "deadline_mid_masechta",
+      "description": "Deadline goal 2026-06-24 (10 study days incl. today) over the 74-leaf scope, tracking since 2 days ago, 10 mishnayos learnt. The legacy planner derives 56/week (8 per study day) from the deadline; 6 are behind pace and today's 8 are due, inside Orlah.",
+      "covers": [
+        "deadline_goal",
+        "mid_masechta"
+      ],
+      "today": "2026-06-15",
+      "tracking_start_date": "2026-06-13",
+      "goal": {
+        "type": "deadline",
+        "target_date": "2026-06-24"
+      },
+      "learnt": [
+        {
+          "ref": "Mishnah Orlah 1:1",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:2",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:3",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:4",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:5",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:6",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:7",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:8",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 1:9",
+          "learned_on": "2026-06-15"
+        },
+        {
+          "ref": "Mishnah Orlah 2:1",
+          "learned_on": "2026-06-15"
+        }
+      ],
+      "expected": {
+        "projection_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:2",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:3",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:4",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:5",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:6",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:7",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:8",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:9",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:10",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:11",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:12",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:13",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:14",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:15",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ],
+        "chazara_tasks": [],
+        "daily_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:2",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:3",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:4",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:5",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:6",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:7",
+            "stage_order": 1,
+            "priority": "overdueProgram",
+            "is_overdue": true,
+            "reason": "Behind pace",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:8",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:9",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:10",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:11",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:12",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:13",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:14",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:15",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "chazara_due",
+      "description": "Pace goal 2/day, tracking since 5 days ago, learnt on pace (2 per day, 06-10 .. 06-14). Today's 2 are due; chazara A is overdue for everything learnt before yesterday and due today for yesterday's 2.",
+      "covers": [
+        "chazara_due",
+        "pace_goal",
+        "mid_masechta"
+      ],
+      "today": "2026-06-15",
+      "tracking_start_date": "2026-06-10",
+      "goal": {
+        "type": "pace",
+        "pace_value": 2,
+        "pace_period": "per_day"
+      },
+      "learnt": [
+        {
+          "ref": "Mishnah Orlah 1:1",
+          "learned_on": "2026-06-10"
+        },
+        {
+          "ref": "Mishnah Orlah 1:2",
+          "learned_on": "2026-06-10"
+        },
+        {
+          "ref": "Mishnah Orlah 1:3",
+          "learned_on": "2026-06-11"
+        },
+        {
+          "ref": "Mishnah Orlah 1:4",
+          "learned_on": "2026-06-11"
+        },
+        {
+          "ref": "Mishnah Orlah 1:5",
+          "learned_on": "2026-06-12"
+        },
+        {
+          "ref": "Mishnah Orlah 1:6",
+          "learned_on": "2026-06-12"
+        },
+        {
+          "ref": "Mishnah Orlah 1:7",
+          "learned_on": "2026-06-13"
+        },
+        {
+          "ref": "Mishnah Orlah 1:8",
+          "learned_on": "2026-06-13"
+        },
+        {
+          "ref": "Mishnah Orlah 1:9",
+          "learned_on": "2026-06-14"
+        },
+        {
+          "ref": "Mishnah Orlah 2:1",
+          "learned_on": "2026-06-14"
+        }
+      ],
+      "expected": {
+        "projection_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:2",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:3",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ],
+        "chazara_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:1",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 4 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:2",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 4 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:3",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 3 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:4",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 3 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:5",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 2 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:6",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 2 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:7",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 1 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:8",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 1 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:9",
+            "stage_order": 2,
+            "priority": "scheduledChazara",
+            "is_overdue": false,
+            "reason": "חזרה א׳ due today",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:1",
+            "stage_order": 2,
+            "priority": "scheduledChazara",
+            "is_overdue": false,
+            "reason": "חזרה א׳ due today",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ],
+        "daily_tasks": [
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:1",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 4 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:2",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 4 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:3",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 3 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:4",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 3 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:5",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 2 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:6",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 2 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:7",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 1 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:8",
+            "stage_order": 2,
+            "priority": "overdueChazara",
+            "is_overdue": true,
+            "reason": "חזרה א׳ overdue by 1 day(s)",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 1:9",
+            "stage_order": 2,
+            "priority": "scheduledChazara",
+            "is_overdue": false,
+            "reason": "חזרה א׳ due today",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:1",
+            "stage_order": 2,
+            "priority": "scheduledChazara",
+            "is_overdue": false,
+            "reason": "חזרה א׳ due today",
+            "stage_name": "חזרה א׳",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 3,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:2",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          },
+          {
+            "curriculum_id": "mishnayos",
+            "ref": "Mishnah Orlah 2:3",
+            "stage_order": 1,
+            "priority": "newLearning",
+            "is_overdue": false,
+            "reason": "Due today",
+            "stage_name": "לימוד",
+            "track_label": "Mishnayos",
+            "estimated_effort_minutes": 5,
+            "unit_display_he": null,
+            "unit_display_en": null
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -75,6 +75,17 @@ jobs:
         working-directory: learning_tracker
         run: dart analyze --fatal-infos
 
+      # ── AD-23/AD-28 dependency direction + AD-35 pure-domain gate ──
+      # Hard gate (no baseline): lib/features/** never imports the
+      # data-access ring directly, and lib/domain/** (generated files
+      # included) never imports cloud_firestore, firebase_*, flutter/,
+      # flutter_riverpod, riverpod* or learning_tracker/data/**. Runs after
+      # codegen so generated domain output is scanned too. A nonzero exit
+      # fails this job.
+      - name: Dependency-direction and pure-domain gate (AD-23/AD-35)
+        working-directory: learning_tracker
+        run: dart run tool/check_dependency_direction.dart
+
   # ── 3. audit ───────────────────────────────────────────────────────────────
   # Runs `make audit` when the target exists; skips gracefully if not yet landed.
   # `make audit` (learning_tracker/Makefile, the authoritative audit target)
