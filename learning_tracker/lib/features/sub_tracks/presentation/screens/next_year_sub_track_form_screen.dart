@@ -4,7 +4,11 @@
 /// end months stay editable. *Save sub-track* creates a NEW sub-track
 /// through `LearningCommands.createSubTrack` (a new ULID; the source is
 /// never edited). A refusal (e.g. another device took the year first,
-/// AD-45) keeps the input and says why.
+/// AD-45) keeps the input and says why. A save the server has not
+/// acknowledged yet (`success(queued: true)`, AD-54) closes the form with
+/// the "saved on this device" snackbar and stays pending in
+/// `subTrackLifecycleSyncProvider` until the server accepts it (then the
+/// saved confirmation shows) or refuses it ("not saved", with Retry).
 ///
 /// INTERIM (DNI-499 seam): Story 2.4 / DNI-495 owns the full school-year
 /// form, which is not on `integ/sub-tracks` yet. [subTrackNextYearFormProvider]
@@ -21,9 +25,10 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Opens the *Add next year* form for [source]; completes with true when a
@@ -122,8 +127,16 @@ class _NextYearSubTrackFormScreenState
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     CaptureResult? result;
+    LearningCommands? commands;
     try {
-      final commands = await ref.read(learningCommandsProvider.future);
+      commands = await ref.read(learningCommandsProvider.future);
+      // AD-45 limits are re-checked by the shared command against the
+      // latest complete sub-track read at save time, not the render-time
+      // snapshot, so a year another device took after render is refused.
+      // Two creates made at once while both devices are offline can both
+      // sync; AD-45 has the engine tolerate that excess. Server-side
+      // enforcement for owner batches is DNI-492's follow-up
+      // (learning-tracker-fyh.136; accepted risk fyh.127).
       result = await commands?.createSubTrack(draft, addNextYear: true);
     } on Object {
       result = null;
@@ -131,6 +144,27 @@ class _NextYearSubTrackFormScreenState
     if (!mounted) return;
     setState(() => _saving = false);
     final yearLabel = subTrackAcademicYearLabel(_year);
+    if (result is CaptureSuccess &&
+        result.queued &&
+        result.changeIds.isNotEmpty &&
+        commands != null) {
+      ref
+          .read(subTrackLifecycleSyncProvider.notifier)
+          .track(
+            SubTrackLifecycleSync(
+              changeId: result.changeIds.first,
+              write: SubTrackLifecycleWrite.addNextYear,
+              name: draft.name,
+              yearLabel: yearLabel,
+            ),
+            commands,
+          );
+      navigator.pop(true);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.subTrackLifecycleQueued)),
+      );
+      return;
+    }
     if (result is CaptureSuccess) {
       navigator.pop(true);
       messenger.showSnackBar(
