@@ -41,8 +41,12 @@
 ///
 /// `UPDATE_GOLDENS=1 flutter test <this file>` rewrites the fixture. The
 /// fixture pins the LEGACY planner: regenerate it only from code at or
-/// before [_kCaptureSha]. After the cutover, never regenerate from
-/// post-cutover code — instead:
+/// before [_kCaptureSha]. Update mode enforces this and fails closed
+/// ([_regenerationRejection]): it refuses to write unless the planner's
+/// production inputs (`lib/`, `assets/`, `pubspec.yaml`, `pubspec.lock`) are
+/// identical to [_kCaptureSha] — committed, uncommitted and untracked
+/// changes all count — so post-cutover code can never replace the baseline.
+/// After the cutover, regenerate only from a worktree at the capture SHA:
 ///
 /// ```sh
 /// git worktree add ../lt-golden ddb9eb971
@@ -50,6 +54,15 @@
 /// cd ../lt-golden/learning_tracker && flutter pub get &&
 ///   UPDATE_GOLDENS=1 flutter test test/features/scheduler/domain/services/legacy_planner_golden_parity_test.dart
 /// ```
+///
+/// ## Track label
+///
+/// `track_label` is produced through the production label seam
+/// (`curriculumLabelTextFromRef`, the same callback `allDailyTasksProvider`
+/// injects), with the display toggles pinned to [_kPlannerLabelSetting]
+/// (English labels, Ashkenazi transliteration) so the capture is
+/// deterministic. `shared_inputs.track_label_by_display_setting` also
+/// freezes what that seam yields under every toggle combination.
 library;
 
 import 'dart:convert';
@@ -57,9 +70,12 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
@@ -121,6 +137,100 @@ final _kStudyWeekdays = <int>[1, 2, 3, 4, 5, 6, 7];
 
 /// First stage order — learnt-set rows are first-stage (learn) completions.
 const _kLearnStageOrder = 1;
+
+// ─── Track label (production seam, pinned display toggles) ─────────────────
+
+typedef _LabelSetting = ({bool useHebrewTerms, TransliterationVariant variant});
+
+/// Display toggles the planner capture runs under: English labels, Ashkenazi
+/// transliteration (the app defaults for a non-Hebrew device).
+const _LabelSetting _kPlannerLabelSetting = (
+  useHebrewTerms: false,
+  variant: TransliterationVariant.ashkenazi,
+);
+
+/// Every toggle combination whose label the fixture freezes.
+const _kLabelSettings = <String, _LabelSetting>{
+  'en_ashkenazi': _kPlannerLabelSetting,
+  'en_sephardi': (
+    useHebrewTerms: false,
+    variant: TransliterationVariant.sephardi,
+  ),
+  'he': (useHebrewTerms: true, variant: TransliterationVariant.ashkenazi),
+};
+
+/// The production track-label seam: exactly what `allDailyTasksProvider`
+/// injects as `trackLabelFor`, evaluated inside a provider so it reads the
+/// (overridden) toggle providers through a real [Ref].
+final _trackLabelProvider = Provider.family<String, CurriculumId>(
+  (ref, curriculum) => curriculumLabelTextFromRef(ref, curriculum: curriculum),
+);
+
+ProviderContainer _labelContainer(_LabelSetting setting) => ProviderContainer(
+  overrides: [
+    effectiveUseHebrewTermsProvider.overrideWithValue(setting.useHebrewTerms),
+    currentTransliterationVariantProvider.overrideWithValue(setting.variant),
+  ],
+);
+
+// ─── Regeneration guard ─────────────────────────────────────────────────────
+
+/// Paths (relative to the package root) whose content determines the legacy
+/// planner's output. Tests and docs are deliberately excluded: this file
+/// itself must be copyable into a worktree at the capture SHA.
+const _kPlannerInputPaths = ['lib', 'assets', 'pubspec.yaml', 'pubspec.lock'];
+
+/// Fails closed: returns `null` only when the planner inputs under
+/// [workingDirectory] are identical to [captureSha] (no committed,
+/// uncommitted or untracked difference); otherwise a reason why
+/// regeneration must be refused.
+Future<String?> _regenerationRejection({
+  required String captureSha,
+  required String workingDirectory,
+}) async {
+  Future<ProcessResult> git(List<String> args) =>
+      Process.run('git', args, workingDirectory: workingDirectory);
+  const refuse = 'Refusing to regenerate the legacy planner golden fixture';
+  try {
+    final diff = await git([
+      'diff',
+      '--quiet',
+      captureSha,
+      '--',
+      ..._kPlannerInputPaths,
+    ]);
+    if (diff.exitCode == 1) {
+      return '$refuse: planner inputs (${_kPlannerInputPaths.join(', ')}) '
+          'differ from capture SHA $captureSha — this is post-cutover (or '
+          'otherwise changed) code. Regenerate only from a worktree at '
+          '$captureSha.';
+    }
+    if (diff.exitCode != 0) {
+      return '$refuse: cannot compare against capture SHA $captureSha '
+          '(git exit ${diff.exitCode}: ${diff.stderr}).';
+    }
+    final untracked = await git([
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '--',
+      ..._kPlannerInputPaths,
+    ]);
+    if (untracked.exitCode != 0) {
+      return '$refuse: cannot list untracked files '
+          '(git exit ${untracked.exitCode}: ${untracked.stderr}).';
+    }
+    final extra = (untracked.stdout as String).trim();
+    if (extra.isNotEmpty) {
+      return '$refuse: untracked planner inputs not present at capture SHA '
+          '$captureSha:\n$extra';
+    }
+    return null;
+  } on Object catch (e) {
+    return '$refuse: cannot verify the checkout against capture SHA '
+        '$captureSha ($e).';
+  }
+}
 
 // ─── Scenarios ──────────────────────────────────────────────────────────────
 
@@ -466,6 +576,7 @@ Future<_LegacyPlan> _runLegacyPlanner(
   _Scenario scenario,
   List<ContentItem> corpus,
   FirestoreStudyDayReaderAdapter studyDayReader,
+  String Function(CurriculumId) trackLabelFor,
 ) async {
   final now = _instant(scenario.today);
   final completionRepo = _Completions([
@@ -497,7 +608,6 @@ Future<_LegacyPlan> _runLegacyPlanner(
   final programs = _NoPrograms();
   final stageRepository = _StageDefinitions();
   final calendarService = CalendarProgramService(_NoCalendar());
-  String trackLabelFor(CurriculumId curriculum) => curriculum.storageKey;
   Future<List<ContentItem>> getScopedContent(CurriculumId _) async => corpus;
 
   // ── Step 1 of allDailyTasksProvider: the pure projection. ───────────────
@@ -585,7 +695,9 @@ Map<String, Object?> _headerJson() => {
   'regenerate':
       'cd learning_tracker && UPDATE_GOLDENS=1 flutter test '
       'test/features/scheduler/domain/services/'
-      'legacy_planner_golden_parity_test.dart',
+      'legacy_planner_golden_parity_test.dart — refused (fails closed) '
+      'unless ${_kPlannerInputPaths.join(', ')} are identical to '
+      'captured_at_sha.',
   'regenerate_after_cutover':
       'legacy golden is captured at SHA $_kCaptureSha or earlier; if the '
       'fixture is missing, regenerate from that SHA (git worktree add '
@@ -620,12 +732,20 @@ Map<String, Object?> _headerJson() => {
         '(lastReorderAt null), no custom learning order, no program '
         'enrollment, no sub-tracks.',
     'track_label':
-        'track_label is the curriculum storage key (the test injects '
-        'trackLabelFor = storageKey instead of the localized label).',
+        'track_label comes from the production seam '
+        '(curriculumLabelTextFromRef, as injected by allDailyTasksProvider) '
+        'with display toggles pinned to useHebrewTerms='
+        '${_kPlannerLabelSetting.useHebrewTerms}, transliteration='
+        '${_kPlannerLabelSetting.variant.name}. '
+        'shared_inputs.track_label_by_display_setting freezes the seam '
+        'under every toggle combination.',
   },
 };
 
-Map<String, Object?> _sharedInputsJson(List<ContentItem> corpus) => {
+Map<String, Object?> _sharedInputsJson(
+  List<ContentItem> corpus,
+  Map<String, String> trackLabels,
+) => {
   'curriculum': _kCurriculum.storageKey,
   'calendar_program': false,
   'scope_masechtos': _kScopedMasechtos,
@@ -650,6 +770,7 @@ Map<String, Object?> _sharedInputsJson(List<ContentItem> corpus) => {
       },
   ],
   'study_weekdays': _kStudyWeekdays,
+  'track_label_by_display_setting': trackLabels,
 };
 
 Map<String, Object?> _scenarioJson(
@@ -684,28 +805,130 @@ void main() {
   late ProviderContainer container;
   late FirestoreStudyDayReaderAdapter studyDayReader;
   final plans = <String, _LegacyPlan>{};
+  final trackLabels = <String, String>{};
 
   setUpAll(() async {
     corpus = await _loadScopedCorpus();
-    container = ProviderContainer();
+    for (final MapEntry(key: name, value: setting) in _kLabelSettings.entries) {
+      final labels = _labelContainer(setting);
+      trackLabels[name] = labels.read(_trackLabelProvider(_kCurriculum));
+      labels.dispose();
+    }
+    container = _labelContainer(_kPlannerLabelSetting);
     studyDayReader = container.read(_studyDaysProvider);
+    String trackLabelFor(CurriculumId curriculum) =>
+        container.read(_trackLabelProvider(curriculum));
     for (final scenario in _scenarios) {
       plans[scenario.id] = await _runLegacyPlanner(
         scenario,
         corpus,
         studyDayReader,
+        trackLabelFor,
       );
     }
   });
 
   tearDownAll(() => container.dispose());
 
+  group('regeneration guard (fails closed off the capture SHA)', () {
+    late Directory repo;
+    late String captureSha;
+
+    Future<ProcessResult> git(List<String> args) async {
+      final result = await Process.run('git', [
+        '-c',
+        'user.name=golden-guard-test',
+        '-c',
+        'user.email=golden-guard-test@example.invalid',
+        '-c',
+        'commit.gpgsign=false',
+        '-c',
+        'core.hooksPath=/dev/null',
+        ...args,
+      ], workingDirectory: repo.path);
+      expect(
+        result.exitCode,
+        0,
+        reason:
+            'git ${args.join(' ')}: '
+            '${result.stderr}',
+      );
+      return result;
+    }
+
+    File planner() => File('${repo.path}/lib/planner.dart');
+
+    Future<String?> guard([String? sha]) => _regenerationRejection(
+      captureSha: sha ?? captureSha,
+      workingDirectory: repo.path,
+    );
+
+    setUp(() async {
+      repo = await Directory.systemTemp.createTemp('legacy_golden_guard_');
+      await git(['init', '-q']);
+      await planner().create(recursive: true);
+      await planner().writeAsString('// legacy planner\n');
+      await File('${repo.path}/pubspec.yaml').writeAsString('name: x\n');
+      await git(['add', '-A']);
+      await git(['commit', '-q', '-m', 'capture']);
+      captureSha = ((await git(['rev-parse', 'HEAD'])).stdout as String).trim();
+    });
+
+    tearDown(() => repo.delete(recursive: true));
+
+    test('allows regeneration at the capture SHA', () async {
+      expect(await guard(), isNull);
+    });
+
+    test('allows regeneration when only tests/docs differ', () async {
+      await File('${repo.path}/test/x_test.dart').create(recursive: true);
+      await git(['add', '-A']);
+      await git(['commit', '-q', '-m', 'test only']);
+      expect(await guard(), isNull);
+    });
+
+    test('rejects regeneration from post-cutover (committed) code', () async {
+      await planner().writeAsString('// planner on LearnerState\n');
+      await git(['commit', '-q', '-am', 'cutover']);
+      expect(await guard(), contains('differ from capture SHA'));
+    });
+
+    test('rejects an uncommitted planner change', () async {
+      await planner().writeAsString('// work in progress\n');
+      expect(await guard(), contains('differ from capture SHA'));
+    });
+
+    test('rejects an untracked planner input', () async {
+      await File('${repo.path}/lib/new_planner.dart').writeAsString('//\n');
+      expect(await guard(), contains('untracked planner inputs'));
+    });
+
+    test('rejects an unknown capture SHA', () async {
+      expect(
+        await guard('0123456789abcdef0123456789abcdef01234567'),
+        contains('cannot compare against capture SHA'),
+      );
+    });
+
+    test('rejects a checkout that is not a git repository', () async {
+      final bare = await Directory.systemTemp.createTemp('legacy_golden_nogit');
+      addTearDown(() => bare.delete(recursive: true));
+      expect(
+        await _regenerationRejection(
+          captureSha: captureSha,
+          workingDirectory: bare.path,
+        ),
+        isNotNull,
+      );
+    });
+  });
+
   String masechtaOf(String ref) =>
       corpus.firstWhere((c) => c.sefariaRef == ref).level2!;
 
   Map<String, Object?> buildDocument() => {
     '_header': _headerJson(),
-    'shared_inputs': _sharedInputsJson(corpus),
+    'shared_inputs': _sharedInputsJson(corpus, trackLabels),
     'scenarios': [
       for (final s in _scenarios) _scenarioJson(s, corpus, plans[s.id]!),
     ],
@@ -713,6 +936,11 @@ void main() {
 
   if (Platform.environment['UPDATE_GOLDENS'] == '1') {
     test('regenerates the legacy planner golden fixture', () async {
+      final rejection = await _regenerationRejection(
+        captureSha: _kCaptureSha,
+        workingDirectory: Directory.current.path,
+      );
+      if (rejection != null) fail(rejection);
       final file = File(_kFixturePath);
       await file.parent.create(recursive: true);
       await file.writeAsString(
@@ -744,7 +972,10 @@ void main() {
 
     test('shared inputs (scoped corpus, default stages, study days) '
         'are unchanged', () {
-      expect(fixture['shared_inputs'], _normalize(_sharedInputsJson(corpus)));
+      expect(
+        fixture['shared_inputs'],
+        _normalize(_sharedInputsJson(corpus, trackLabels)),
+      );
     });
 
     test('covers every scenario kind the story requires', () {
@@ -796,6 +1027,24 @@ void main() {
         });
       });
     }
+
+    test('track_label is the production label seam under the pinned '
+        'display toggles', () {
+      expect(trackLabels.keys, _kLabelSettings.keys);
+      // The seam really is toggle-dependent: every setting yields a
+      // distinct user-facing label.
+      expect(trackLabels.values.toSet(), hasLength(_kLabelSettings.length));
+      final allTasks = [
+        for (final plan in plans.values) ...[
+          ...plan.projection,
+          ...plan.chazara,
+        ],
+      ];
+      expect(allTasks, isNotEmpty);
+      expect(allTasks.map((t) => t.trackLabel).toSet(), {
+        trackLabels['en_ashkenazi'],
+      });
+    });
 
     test('chazara_due has both overdue and due-today chazara', () {
       final chazara = plans['chazara_due']!.chazara;

@@ -4,7 +4,7 @@
     "story": "DNI-522 (G0) — freeze legacy planner golden-parity fixture",
     "consumer": "DNI-477 (1.15 Planner onto LearnerState) AC-2 golden parity",
     "captured_at_sha": "ddb9eb971da145ba46a4800735f7c6670d2eb6db",
-    "regenerate": "cd learning_tracker && UPDATE_GOLDENS=1 flutter test test/features/scheduler/domain/services/legacy_planner_golden_parity_test.dart",
+    "regenerate": "cd learning_tracker && UPDATE_GOLDENS=1 flutter test test/features/scheduler/domain/services/legacy_planner_golden_parity_test.dart — refused (fails closed) unless lib, assets, pubspec.yaml, pubspec.lock are identical to captured_at_sha.",
     "regenerate_after_cutover": "legacy golden is captured at SHA ddb9eb971da145ba46a4800735f7c6670d2eb6db or earlier; if the fixture is missing, regenerate from that SHA (git worktree add ../lt-golden ddb9eb971, copy this test in, run with UPDATE_GOLDENS=1), never from post-cutover code.",
     "entry_points": {
       "projection_tasks": "buildProjectionTasks (daily_task_projection_service.dart)",
@@ -16,7 +16,7 @@
       "dates": "Dates are civil YYYY-MM-DD. The legacy planner is fed each civil date as an instant at 12:00Z.",
       "learnt": "learnt rows are first-stage (learn, stage_order 1) completions with a real learned_on date; no before_tracking / bulk-prior sentinel rows.",
       "track": "tracking_start_date is the track activatedAt; no reorder (lastReorderAt null), no custom learning order, no program enrollment, no sub-tracks.",
-      "track_label": "track_label is the curriculum storage key (the test injects trackLabelFor = storageKey instead of the localized label)."
+      "track_label": "track_label comes from the production seam (curriculumLabelTextFromRef, as injected by allDailyTasksProvider) with display toggles pinned to useHebrewTerms=false, transliteration=ashkenazi. shared_inputs.track_label_by_display_setting freezes the seam under every toggle combination."
     }
   },
   "shared_inputs": {
@@ -648,7 +648,12 @@
       5,
       6,
       7
-    ]
+    ],
+    "track_label_by_display_setting": {
+      "en_ashkenazi": "Mishnayos",
+      "en_sephardi": "Mishnayot",
+      "he": "משניות"
+    }
   },
   "scenarios": [
     {
@@ -701,7 +706,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -714,7 +719,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -727,7 +732,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -740,7 +745,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -753,7 +758,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -766,7 +771,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -782,7 +787,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -795,7 +800,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -808,7 +813,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -821,7 +826,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -834,7 +839,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -847,7 +852,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1013,7 +1018,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1026,7 +1031,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1039,7 +1044,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1055,7 +1060,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1068,7 +1073,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1081,7 +1086,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1154,7 +1159,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1167,7 +1172,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1180,7 +1185,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1193,7 +1198,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1206,7 +1211,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1219,7 +1224,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1232,7 +1237,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1245,7 +1250,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1258,7 +1263,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1271,7 +1276,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1284,7 +1289,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1297,7 +1302,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1310,7 +1315,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1323,7 +1328,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1339,7 +1344,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1352,7 +1357,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1365,7 +1370,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1378,7 +1383,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1391,7 +1396,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1404,7 +1409,7 @@
             "is_overdue": true,
             "reason": "Behind pace",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1417,7 +1422,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1430,7 +1435,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1443,7 +1448,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1456,7 +1461,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1469,7 +1474,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1482,7 +1487,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1495,7 +1500,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1508,7 +1513,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1583,7 +1588,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1596,7 +1601,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1611,7 +1616,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 4 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1624,7 +1629,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 4 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1637,7 +1642,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 3 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1650,7 +1655,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 3 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1663,7 +1668,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 2 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1676,7 +1681,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 2 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1689,7 +1694,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 1 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1702,7 +1707,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 1 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1715,7 +1720,7 @@
             "is_overdue": false,
             "reason": "חזרה א׳ due today",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1728,7 +1733,7 @@
             "is_overdue": false,
             "reason": "חזרה א׳ due today",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1743,7 +1748,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 4 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1756,7 +1761,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 4 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1769,7 +1774,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 3 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1782,7 +1787,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 3 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1795,7 +1800,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 2 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1808,7 +1813,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 2 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1821,7 +1826,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 1 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1834,7 +1839,7 @@
             "is_overdue": true,
             "reason": "חזרה א׳ overdue by 1 day(s)",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1847,7 +1852,7 @@
             "is_overdue": false,
             "reason": "חזרה א׳ due today",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1860,7 +1865,7 @@
             "is_overdue": false,
             "reason": "חזרה א׳ due today",
             "stage_name": "חזרה א׳",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 3,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1873,7 +1878,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
@@ -1886,7 +1891,7 @@
             "is_overdue": false,
             "reason": "Due today",
             "stage_name": "לימוד",
-            "track_label": "mishnayos",
+            "track_label": "Mishnayos",
             "estimated_effort_minutes": 5,
             "unit_display_he": null,
             "unit_display_en": null
