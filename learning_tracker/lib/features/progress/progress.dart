@@ -25,6 +25,13 @@ export 'domain/models/journey_view_model.dart' show MilestoneLevel;
 export 'presentation/providers/journey_providers.dart'
     show availableSiyumTiersProvider;
 
+// Parent on-track summary — the Dashboard consumer of the shared learner
+// state, painted with the lifetime report's own on-track block (Story 5.3,
+// DNI-518, AC-11). Consumed by:
+//   - lib/features/dashboard/presentation/widgets/dashboard_body.dart
+export 'presentation/widgets/parent_on_track_summary.dart'
+    show ParentOnTrackSummary;
+
 // Tier counter row — header widget shared between Progress hub and the
 // Dashboard body. Consumed by:
 //   - lib/features/dashboard/presentation/widgets/dashboard_body.dart

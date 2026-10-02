@@ -417,6 +417,12 @@ class DashboardBody extends ConsumerWidget {
         // Child mode renders the fourth ⭐ points counter (see Task #14 brief).
         ProgressTierCounterRow(showPoints: userMode == ProfileMode.child),
         const SizedBox(height: 22),
+        // Story 5.3 (DNI-518, AC-11): the parent on-track summary, the same
+        // engine status, projected finish and daily target as the lifetime
+        // report. Parent session only; paints nothing otherwise.
+        ParentOnTrackSummary(
+          curricula: [for (final t in activeTracks) t.curriculumId],
+        ),
         if (userMode == ProfileMode.child) ...[
           if (pointsAsync.hasError)
             InlineAsyncError(
