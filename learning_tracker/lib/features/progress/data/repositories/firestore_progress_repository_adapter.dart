@@ -1,8 +1,5 @@
 /// Firestore-backed [ProgressRepository] adapter — follows the reference
-/// pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`).
-/// Read that class's doc comment first (the numbered "pattern to copy"
-/// list); this file only calls out what is DIFFERENT for progress.
+/// Uses the shared provider re-resolution pattern.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -133,7 +130,7 @@ class FirestoreProgressRepositoryAdapter implements ProgressRepository {
   /// Re-reads `firestoreCompletionRepositoryProvider`, resolving to `null`
   /// exactly when it does (no active account, or no active learner
   /// profile). Re-resolved on every call rather than cached — see
-  /// `FirestoreBookmarkRepositoryAdapter`'s class doc comment (point 3) for
+  /// the adapter's class doc comment (point 3) for
   /// why.
   /// Like [_resolveOrNull], but throws — see
   /// [ProgressRepositoryNotReadyException] for why every read here throws.

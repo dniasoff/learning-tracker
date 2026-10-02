@@ -15,12 +15,9 @@ import 'package:learning_tracker/data/repositories/firestore_curriculum_track_re
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 /// Thrown by [FirestoreCurriculumTrackRepositoryAdapter]'s write methods when
-/// `firestoreCurriculumTrackRepositoryProvider` resolves to `null` — see
-/// `BookmarkRepositoryNotReadyException`'s doc comment
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// for the read-vs-write split this mirrors: reads reuse a natural "nothing
-/// yet" value (`null`/`[]`/`0`/`false`), writes have no such value and throw
-/// instead.
+/// `firestoreCurriculumTrackRepositoryProvider` resolves to `null`. Read
+/// methods reuse a natural "nothing yet" value (`null`/`[]`/`0`/`false`);
+/// writes have no such value and throw instead.
 class CurriculumTrackRepositoryNotReadyException implements Exception {
   const CurriculumTrackRepositoryNotReadyException();
 
@@ -34,11 +31,8 @@ class CurriculumTrackRepositoryNotReadyException implements Exception {
 
 /// Firestore-backed adapter over [FirestoreCurriculumTrackRepository],
 /// exposing curriculum-track lifecycle operations (activate/retire/
-/// archive/query) to `lib/features/tracks/**`. Follows the pattern
-/// `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// establishes — read that class's doc comment first; this one only calls
-/// out what is DIFFERENT here.
+/// archive/query) to `lib/features/tracks/**` using the shared provider
+/// re-resolution pattern.
 ///
 /// ## No domain interface to `implements` — genuinely new surface
 ///
@@ -74,7 +68,7 @@ class CurriculumTrackRepositoryNotReadyException implements Exception {
 ///   natural "nothing happened" value for a lifecycle transition or a state
 ///   mutation to reuse, so these throw
 ///   [CurriculumTrackRepositoryNotReadyException] instead, exactly the write
-///   side of [BookmarkRepositoryNotReadyException]'s reasoning.
+///   side of the equivalent not-ready exception's reasoning.
 /// - [watchTrack] / [watchAllTracks] / [watchActiveTracks] /
 ///   [watchActiveCurriculumIds] — the underlying provider is itself a
 ///   `FutureProvider` (account/profile resolution is async), so each stream
@@ -121,7 +115,7 @@ class FirestoreCurriculumTrackRepositoryAdapter {
 
   /// Re-reads `firestoreCurriculumTrackRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner
-  /// profile). See `FirestoreBookmarkRepositoryAdapter._resolveOrNull`'s doc
+  /// profile). See this adapter's `_resolveOrNull`'s doc
   /// comment for why this re-reads on every call rather than caching.
   Future<FirestoreCurriculumTrackRepository?> _resolveOrNull() {
     return _ref.read(firestoreCurriculumTrackRepositoryProvider.future);

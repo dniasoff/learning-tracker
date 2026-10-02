@@ -20,7 +20,6 @@ import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
-import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart'
     show ScopeEntry;
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';

@@ -62,12 +62,6 @@ void main() {
     });
   });
 
-  group('NaturalKey.forBookmark', () {
-    test('equals the raw curriculumId (single-column shape)', () {
-      expect(NaturalKey.forBookmark(curriculumId: 'bavli').value, 'bavli');
-    });
-  });
-
   group('NaturalKey.forTrackConfig', () {
     test('equals the raw curriculumId (single-column shape)', () {
       expect(NaturalKey.forTrackConfig(curriculumId: 'bavli').value, 'bavli');

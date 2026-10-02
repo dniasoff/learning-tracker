@@ -41,7 +41,6 @@ Map<String, dynamic> exportPayloadMap({
   List<Map<String, dynamic>> completionEvents = const [],
   List<Map<String, dynamic>> dailyPlans = const [],
   List<Map<String, dynamic>> learningLedger = const [],
-  List<Map<String, dynamic>> bookmarks = const [],
   List<Map<String, dynamic>> learningOrder = const [],
   List<Map<String, dynamic>> trackLearningOrder = const [],
   List<Map<String, dynamic>> goals = const [],
@@ -63,7 +62,6 @@ Map<String, dynamic> exportPayloadMap({
   'completionEvents': completionEvents,
   'dailyPlans': dailyPlans,
   'learningLedger': learningLedger,
-  'bookmarks': bookmarks,
   'learningOrder': learningOrder,
   'trackLearningOrder': trackLearningOrder,
   'goals': goals,
@@ -248,23 +246,6 @@ Map<String, dynamic> goalMap({
   'pacePeriod': pacePeriod,
   'paceGranularity': paceGranularity,
   'createdAt': createdAt,
-  'updatedAt': updatedAt,
-};
-
-/// Returns a `bookmarks` row.
-Map<String, dynamic> bookmarkMap({
-  int id = 1,
-  int profileId = 1,
-  String curriculumId = 'bavli',
-  int trackId = 1,
-  String sefariaRef = 'Berakhot.2a',
-  String updatedAt = '2026-05-01T00:00:00.000Z',
-}) => {
-  'id': id,
-  'profileId': profileId,
-  'curriculumId': curriculumId,
-  'trackId': trackId,
-  'sefariaRef': sefariaRef,
   'updatedAt': updatedAt,
 };
 

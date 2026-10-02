@@ -14,8 +14,7 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/m
 
 /// Thrown by [FirestoreTrackLearningOrderRepositoryAdapter]'s write methods
 /// when `firestoreTrackLearningOrderRepositoryProvider` resolves to `null` —
-/// see `BookmarkRepositoryNotReadyException`'s doc comment
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
+/// see not-ready exception's doc comment
 /// for the read-vs-write split this mirrors: reads reuse a natural "nothing
 /// yet" value (`[]`), writes have no such value and throw instead.
 class TrackLearningOrderRepositoryNotReadyException implements Exception {
@@ -30,10 +29,7 @@ class TrackLearningOrderRepositoryNotReadyException implements Exception {
 }
 
 /// Firestore-backed [TrackLearningOrderRepository] adapter. Follows the
-/// pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// establishes — read that class's doc comment first; this one only calls
-/// out what is DIFFERENT here.
+/// Uses the shared provider re-resolution pattern.
 ///
 /// ## AD-25: keyed by [CurriculumId] directly, no Drift bridge needed
 ///
@@ -66,7 +62,7 @@ class FirestoreTrackLearningOrderRepositoryAdapter
 
   /// Re-reads `firestoreTrackLearningOrderRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner
-  /// profile). See `FirestoreBookmarkRepositoryAdapter._resolveOrNull`'s doc
+  /// profile). See this adapter's `_resolveOrNull`'s doc
   /// comment for why this re-reads on every call rather than caching.
   Future<FirestoreTrackLearningOrderRepository?> _resolveOrNull() {
     return _ref.read(firestoreTrackLearningOrderRepositoryProvider.future);

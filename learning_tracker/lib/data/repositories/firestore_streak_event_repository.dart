@@ -35,7 +35,7 @@ import 'package:learning_tracker/features/gamification/streak/streak_event_entry
 /// the `StreakEvents` Drift table) is untouched.
 ///
 /// **No interface, no `implements`** — same reasoning as
-/// `FirestoreBookmarkRepository`'s doc comment.
+/// `Firestore repository`'s doc comment.
 ///
 /// ## Why this collection exists
 ///

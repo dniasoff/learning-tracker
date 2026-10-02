@@ -72,7 +72,7 @@ class TextDisplayScreen extends ConsumerStatefulWidget {
 //     NEW `TextDisplayScreen` instance) opens exactly where it should.
 //
 //  2. Adjacency is now read SYNCHRONOUSLY off [ContentIndex.adjacent] (an
-//     O(1) lookup already used elsewhere, e.g. `BookmarkRepositoryImpl`)
+//     O(1) lookup already used elsewhere, e.g. the related adapter)
 //     instead of the async `adjacentContentRefsProvider`. Measured (widget
 //     test, real navigation vs. real setState): even with local state, an
 //     async family provider re-keyed per ref still shows one real

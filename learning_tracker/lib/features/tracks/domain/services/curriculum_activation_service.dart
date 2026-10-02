@@ -2,7 +2,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/study_day_config_repository_impl.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
-import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 
 /// Service for managing curriculum activation/deactivation.
 ///

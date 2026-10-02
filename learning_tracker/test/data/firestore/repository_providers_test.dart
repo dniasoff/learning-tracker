@@ -10,9 +10,8 @@
 /// account" here overrides [activeAccountFirebaseProvider] directly with a
 /// synthetic [AccountFirebaseHandles] built over a fresh
 /// `FakeFirebaseFirestore` — the same "construct the handle bundle
-/// directly, mock only what nothing under test calls" approach
-/// `test/data/repositories/firestore_bookmark_repository_test.dart` uses
-/// for the repository classes themselves.
+/// directly, mock only what nothing under test calls" approach used for
+/// repository tests.
 ///
 /// [FirestoreGoalRepository] is used as the representative profile-scoped
 /// repository for the full null-branch matrix (no account/no profile,
@@ -37,15 +36,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
-import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
@@ -61,7 +56,6 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/firestore_fixtures.dart';
-import '../../mocks/mock_repositories.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -418,211 +412,6 @@ void main() {
         );
       },
     );
-  });
-
-  group('firestoreBookmarkRepositoryProvider (family, parameterized on '
-      'BookmarkRepositoryDeps)', () {
-    test('resolves to null when no account/profile is active, regardless '
-        'of the supplied deps', () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final contentRepository = MockContentRepository();
-
-      final repo = await container.read(
-        firestoreBookmarkRepositoryProvider((
-          contentRepository: contentRepository,
-          contentIndex: null,
-        )).future,
-      );
-
-      expect(repo, isNull);
-    });
-
-    test(
-      'resolves a repository scoped to the active account + profile '
-      'that uses the exact ContentRepository instance it was given',
-      () async {
-        final firestore = FakeFirebaseFirestore();
-        final contentRepository = MockContentRepository();
-        when(
-          () => contentRepository.getContentForCurriculum(CurriculumId.chumash),
-        ).thenAnswer(
-          (_) async => [
-            ContentItem(
-              curriculumId: CurriculumId.chumash.storageKey,
-              level1: 'L1',
-              displayNameHe: 'עברית',
-              displayNameEn: 'English',
-              sefariaRef: 'Genesis 1:1',
-              sortOrder: 1,
-              isLeaf: true,
-            ),
-          ],
-        );
-
-        final container = ProviderContainer(
-          overrides: [
-            activeAccountFirebaseProvider.overrideWith(
-              (ref) async => _handles(firestore),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-        container.read(activeProfileDocIdProvider.notifier).set(_profileId);
-
-        final repo = await container.read(
-          firestoreBookmarkRepositoryProvider((
-            contentRepository: contentRepository,
-            contentIndex: null,
-          )).future,
-        );
-
-        expect(repo, isA<FirestoreBookmarkRepository>());
-        final bookmark = await repo!.initializeBookmark(
-          curriculumId: CurriculumId.chumash,
-        );
-
-        expect(bookmark.sefariaRef, 'Genesis 1:1');
-        verify(
-          () => contentRepository.getContentForCurriculum(CurriculumId.chumash),
-        ).called(1);
-      },
-    );
-
-    test(
-      'threads the supplied ContentIndex through so initializeBookmark '
-      'takes the O(1) fast path — the ContentRepository is never called',
-      () async {
-        final firestore = FakeFirebaseFirestore();
-        final contentRepository = MockContentRepository();
-        final contentIndex = ContentIndex.fromCurricula({
-          CurriculumId.chumash: [
-            ContentItem(
-              curriculumId: CurriculumId.chumash.storageKey,
-              level1: 'L1',
-              displayNameHe: 'עברית',
-              displayNameEn: 'English',
-              sefariaRef: 'Genesis 1:1',
-              sortOrder: 1,
-              isLeaf: true,
-            ),
-          ],
-        });
-
-        final container = ProviderContainer(
-          overrides: [
-            activeAccountFirebaseProvider.overrideWith(
-              (ref) async => _handles(firestore),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-        container.read(activeProfileDocIdProvider.notifier).set(_profileId);
-
-        final repo = await container.read(
-          firestoreBookmarkRepositoryProvider((
-            contentRepository: contentRepository,
-            contentIndex: contentIndex,
-          )).future,
-        );
-
-        expect(repo, isA<FirestoreBookmarkRepository>());
-        final bookmark = await repo!.initializeBookmark(
-          curriculumId: CurriculumId.chumash,
-        );
-
-        expect(bookmark.sefariaRef, 'Genesis 1:1');
-        verifyNever(
-          () => contentRepository.getContentForCurriculum(CurriculumId.chumash),
-        );
-      },
-    );
-
-    test('honours a custom learning order written directly for the active '
-        'profile — proves the provider really injected a learning-order '
-        'repository, not just a ContentRepository fallback', () async {
-      final firestore = FakeFirebaseFirestore();
-      final contentRepository = MockContentRepository();
-      when(
-        () => contentRepository.getContentForCurriculum(CurriculumId.chumash),
-      ).thenAnswer(
-        (_) async => [
-          ContentItem(
-            curriculumId: CurriculumId.chumash.storageKey,
-            level1: 'L1',
-            displayNameHe: 'עברית ראשון',
-            displayNameEn: 'Natural First',
-            sefariaRef: 'Genesis 1:1',
-            sortOrder: 1,
-            isLeaf: true,
-          ),
-          ContentItem(
-            curriculumId: CurriculumId.chumash.storageKey,
-            level1: 'L1',
-            displayNameHe: 'עברית שני',
-            displayNameEn: 'Custom First',
-            sefariaRef: 'Genesis 2:1',
-            sortOrder: 2,
-            isLeaf: true,
-          ),
-        ],
-      );
-
-      // Write a live main-track order doc directly (AD-52 shape: level,
-      // ref, user_sort_order, governed last_change_id), so this is a
-      // regression guard on the PROVIDER's wiring, not on the writer.
-      final level = FirestoreTrackLearningOrderRepository.levelName(
-        CurriculumId.chumash,
-        1,
-      );
-      await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_profileId)
-          .collection('track_learning_order')
-          .doc(
-            DocIds.trackLearningOrderDocId({
-              'curriculum_id': CurriculumId.chumash.storageKey,
-              'level': level,
-              'ref': 'Genesis 2:1',
-            }),
-          )
-          .set({
-            'curriculum_id': CurriculumId.chumash.storageKey,
-            'level': level,
-            'ref': 'Genesis 2:1',
-            'user_sort_order': 0,
-            'last_change_id': '01ARZ3NDEKTSV4RRFFQ69G5FC0',
-          });
-
-      final container = ProviderContainer(
-        overrides: [
-          activeAccountFirebaseProvider.overrideWith(
-            (ref) async => _handles(firestore),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.read(activeProfileDocIdProvider.notifier).set(_profileId);
-
-      final repo = await container.read(
-        firestoreBookmarkRepositoryProvider((
-          contentRepository: contentRepository,
-          contentIndex: null,
-        )).future,
-      );
-
-      expect(repo, isA<FirestoreBookmarkRepository>());
-      final bookmark = await repo!.initializeBookmark(
-        curriculumId: CurriculumId.chumash,
-      );
-
-      // The custom order names "Genesis 2:1" first, NOT the natural-order
-      // first item ("Genesis 1:1") — proves the injected main-track order
-      // reader's custom order (orderedLeaves) won.
-      expect(bookmark.sefariaRef, 'Genesis 2:1');
-    });
   });
 
   group('every other profile-scoped repository provider', () {

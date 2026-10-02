@@ -17,7 +17,6 @@ class ImportPreview {
     required this.stageCount,
     required this.streakCount,
     required this.pointConfigCount,
-    required this.bookmarkCount,
     required this.learningOrderCount,
     required this.curriculumTrackCount,
     required this.userProfileCount,
@@ -32,7 +31,6 @@ class ImportPreview {
   final int stageCount;
   final int streakCount;
   final int pointConfigCount;
-  final int bookmarkCount;
   final int learningOrderCount;
   final int curriculumTrackCount;
   final int userProfileCount;
@@ -84,7 +82,6 @@ class DataExportImportService {
     'stage_definitions',
     'point_configs',
     'curriculum_tracks',
-    'bookmarks',
     // The retired `learning_order` collection (AD-49, R13) is merged into
     // `track_learning_order` (DNI-476): neither exported nor restored.
     'track_learning_order',
@@ -191,7 +188,6 @@ class DataExportImportService {
     var stages = 0;
     var streaks = 0;
     var pointConfigs = 0;
-    var bookmarks = 0;
     var learningOrders = 0;
     var tracks = 0;
     var ledger = 0;
@@ -224,8 +220,6 @@ class DataExportImportService {
             streaks += documents.length;
           case 'point_configs':
             pointConfigs += documents.length;
-          case 'bookmarks':
-            bookmarks += documents.length;
           case 'track_learning_order':
             learningOrders += documents.length;
           case 'curriculum_tracks':
@@ -250,7 +244,6 @@ class DataExportImportService {
       stageCount: stages,
       streakCount: streaks,
       pointConfigCount: pointConfigs,
-      bookmarkCount: bookmarks,
       learningOrderCount: learningOrders,
       curriculumTrackCount: tracks,
       userProfileCount: profiles.length,

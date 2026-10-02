@@ -54,7 +54,7 @@ abstract class LearnerProfileEntity with _$LearnerProfileEntity {
   const factory LearnerProfileEntity({
     /// The learner-profile ULID doc-id (AD-24). Not written into the
     /// document body — the path already carries it, matching
-    /// `GoalEntity`/`BookmarkEntity`'s doc-id-omission convention.
+    /// `GoalEntity`/`persisted entity`'s doc-id-omission convention.
     required String profileId,
     required String displayName,
     required ProfileMode mode,

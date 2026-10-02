@@ -16,7 +16,7 @@
 ///   `user_sort_order`, merged against the content tree for display
 ///   (masechtos grouped by the saved seder priority,
 ///   [MasechtaOrderingPolicy]).
-/// * [orderedLeafRefs] is the scheduler / bookmark read: the curriculum's
+/// * [orderedLeafRefs] is the planner's current-position read: the curriculum's
 ///   leaves in [orderedLeaves] order (AD-33, the only order function), or
 ///   an empty list when no live order doc exists (natural order).
 ///

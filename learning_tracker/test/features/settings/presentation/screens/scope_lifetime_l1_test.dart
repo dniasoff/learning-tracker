@@ -68,7 +68,6 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
@@ -399,8 +398,6 @@ Widget _buildLifetimeApp({
 
 // ── Widget factory — LifetimeCurriculumMarkingScreen ─────────────────────────
 
-class _NoBookmarks extends Fake implements BookmarkRepository {}
-
 Widget _buildCurriculumMarkingApp({
   ContentRepository? contentRepo,
   LearningLedgerRepository? ledgerRepo,
@@ -429,7 +426,6 @@ Widget _buildCurriculumMarkingApp({
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
           contentRepository: repo,
-          bookmarkRepository: _NoBookmarks(),
           commands: () async => commands ?? FakeLearningCommands(),
           events: () async => const [],
         ),

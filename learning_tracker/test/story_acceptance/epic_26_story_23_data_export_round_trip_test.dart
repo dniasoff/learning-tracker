@@ -71,7 +71,6 @@ void main() {
           'stage_definitions',
           'point_configs',
           'curriculum_tracks',
-          'bookmarks',
           'track_learning_order',
           'preferences',
           'goals',
@@ -180,12 +179,6 @@ void main() {
           uid: testUid,
           profileId: testProfileId,
           ulid: '01ARZ3NDEKTSV4RRFFQ69G5BB0',
-        );
-        await seedBookmark(
-          source,
-          uid: testUid,
-          profileId: secondTestProfileId,
-          curriculumId: CurriculumId.bavli,
         );
         await seedStageDefinitions(
           source,

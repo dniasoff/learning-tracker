@@ -6,11 +6,8 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 
 /// Thrown by [FirestoreGoalRepositoryAdapter]'s write methods when
-/// `firestoreGoalRepositoryProvider` resolves to `null` — see
-/// `BookmarkRepositoryNotReadyException`'s doc comment
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// for the read-vs-write split this mirrors: reads reuse a natural "nothing
-/// yet" value (`[]`), writes have no such value and throw instead.
+/// `firestoreGoalRepositoryProvider` resolves to `null`. Reads reuse their
+/// natural "nothing yet" value (`[]`); writes have no such value and throw.
 class GoalRepositoryNotReadyException implements Exception {
   const GoalRepositoryNotReadyException();
 
@@ -21,11 +18,8 @@ class GoalRepositoryNotReadyException implements Exception {
       'yet) — cannot complete a goal write until one is active.';
 }
 
-/// Firestore-backed adapter over [FirestoreGoalRepository]. Follows the
-/// pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// establishes — read that class's doc comment first; this one only calls
-/// out what is DIFFERENT here.
+/// Firestore-backed adapter over [FirestoreGoalRepository], using the shared
+/// provider re-resolution pattern.
 ///
 /// ## Now `implements` [GoalRepository] — the id mismatch that used to block
 /// this is gone
@@ -54,9 +48,8 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
   final Ref _ref;
 
   /// Re-reads `firestoreGoalRepositoryProvider`, resolving to `null` exactly
-  /// when it does (no active account, or no active learner profile). See
-  /// `FirestoreBookmarkRepositoryAdapter._resolveOrNull`'s doc comment for
-  /// why this re-reads on every call rather than caching.
+  /// when it does (no active account, or no active learner profile). It
+  /// re-reads on every call so profile switches are picked up automatically.
   Future<FirestoreGoalRepository?> _resolveOrNull() {
     return _ref.read(firestoreGoalRepositoryProvider.future);
   }

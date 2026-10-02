@@ -15,8 +15,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/study_day_conf
 
 /// Thrown by [FirestoreStudyDayConfigRepositoryAdapter]'s write methods when
 /// `firestoreStudyDayConfigRepositoryProvider` resolves to `null` — see
-/// `BookmarkRepositoryNotReadyException`'s doc comment
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
+/// not-ready exception's doc comment
 /// for the read-vs-write split this mirrors: reads reuse a natural "nothing
 /// yet" value (`[]`), writes have no such value and throw instead.
 class StudyDayConfigRepositoryNotReadyException implements Exception {
@@ -31,10 +30,7 @@ class StudyDayConfigRepositoryNotReadyException implements Exception {
 }
 
 /// Firestore-backed adapter over [FirestoreStudyDayConfigRepository].
-/// Follows the pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// establishes — read that class's doc comment first; this one only calls
-/// out what is DIFFERENT here.
+/// Uses the shared provider re-resolution pattern.
 ///
 /// ## No domain interface to `implements` — none ever existed
 ///
@@ -54,7 +50,6 @@ class StudyDayConfigRepositoryNotReadyException implements Exception {
 /// existing interface — the same status
 /// [FirestoreCurriculumTrackRepositoryAdapter]
 /// (`lib/features/tracks/setup/data/repositories/
-/// curriculum_track_repository_impl.dart`) documents for the curriculum-
 /// track lifecycle. Ready for a future task to extract a genuine
 /// `StudyDayConfigRepository` interface and rewire those four call sites —
 /// out of this task's `data/repositories/`-only scope.
@@ -77,7 +72,7 @@ class FirestoreStudyDayConfigRepositoryAdapter {
 
   /// Re-reads `firestoreStudyDayConfigRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner
-  /// profile). See `FirestoreBookmarkRepositoryAdapter._resolveOrNull`'s doc
+  /// profile). See this adapter's `_resolveOrNull`'s doc
   /// comment for why this re-reads on every call rather than caching.
   Future<FirestoreStudyDayConfigRepository?> _resolveOrNull() {
     return _ref.read(firestoreStudyDayConfigRepositoryProvider.future);

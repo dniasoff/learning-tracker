@@ -225,30 +225,6 @@ void main() {
     );
 
     test(
-      'deactivation preserves bookmarks (curriculum-scoped, not track-scoped)',
-      () async {
-        await service.activate(CurriculumId.bavli);
-        await service.activate(CurriculumId.mishnayos);
-        await seedBookmark(
-          firestore,
-          uid: _uid,
-          profileId: _profileId,
-          curriculumId: CurriculumId.bavli,
-          sefariaRef: 'Berakhot.2a',
-        );
-
-        await service.deactivate(CurriculumId.bavli);
-
-        final bookmarks = await _profileCollection(
-          firestore,
-          'bookmarks',
-        ).get();
-        expect(bookmarks.docs, hasLength(1));
-        expect(bookmarks.docs.single.data()['sefaria_ref'], 'Berakhot.2a');
-      },
-    );
-
-    test(
       'cannot deactivate all curricula via toggle (last-one-standing)',
       () async {
         await service.activate(CurriculumId.bavli);

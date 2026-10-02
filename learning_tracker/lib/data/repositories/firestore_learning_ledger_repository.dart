@@ -2,7 +2,7 @@
 /// APPEND-ONLY repositories in the Firestore rewrite
 /// (`docs/firestore-rewrite-map.md`; the other is
 /// `firestore_streak_event_repository.dart`). Copies the shape
-/// `firestore_bookmark_repository.dart` established (resolved-handle
+/// the related adapter established (resolved-handle
 /// constructor, `DocIds`-only doc-ids, entity-owned codec, streams as
 /// ordinary methods, `resilientDocStream`/`resilientQueryStream`) and the
 /// composite-index query handling `firestore_stage_definition_repository.dart`
@@ -38,7 +38,7 @@ import 'package:learning_tracker/features/learning/domain/entities/learning_ledg
 /// (`lib/features/learning/data/repositories/`), which is untouched.
 ///
 /// **No interface, no `implements`** — same reasoning as
-/// `FirestoreBookmarkRepository`'s doc comment: the Drift implementation is
+/// `Firestore repository`'s doc comment: the Drift implementation is
 /// being deleted outright, not kept alongside this one.
 ///
 /// ## Why this collection matters — do not weaken it
@@ -54,7 +54,7 @@ import 'package:learning_tracker/features/learning/domain/entities/learning_ledg
 /// stays reachable — see "The 500-item list cap" below for why that is not
 /// automatic.
 ///
-/// ## What's new here, beyond the Bookmarks/StageDefinitions pattern
+/// ## What's new here, beyond the StageDefinitions pattern
 ///
 /// ### The 500-item `list()` cap (`firestore.rules` SR-4)
 ///
@@ -152,7 +152,7 @@ import 'package:learning_tracker/features/learning/domain/entities/learning_ledg
 /// ## Trimmed from the Drift-era interface — not reimplemented
 ///
 /// `LearningLedgerRepository` (`lib/features/learning/domain/repositories/`)
-/// is not `implements`ed — same reasoning as `FirestoreBookmarkRepository`.
+/// is not `implements`ed — same reasoning as `Firestore repository`.
 /// Specifically NOT ported:
 /// - **The `ChildSelfMarkException` permission check.** It depends on
 ///   `ProfileMode` and an active parent-PIN session — app-session state,

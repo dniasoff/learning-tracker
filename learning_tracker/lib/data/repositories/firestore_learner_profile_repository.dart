@@ -41,11 +41,11 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 /// alone was not enough); `profileRepositoryProvider`
 /// (`profile_providers.dart`) resolves to that adapter. See that class's
 /// doc comment ("Dual-write, not cutover — and why") for why this is not
-/// yet the same full swap `FirestoreBookmarkRepository` made: the existing
+/// yet the same full swap `Firestore repository` made: the existing
 /// Drift-backed `ProfileDao`/`ProfileRepositoryImpl` still owns every read
 /// and every write's local row, unchanged.
 ///
-/// **No interface** — same reasoning as `FirestoreBookmarkRepository`'s doc
+/// **No interface** — same reasoning as `Firestore repository`'s doc
 /// comment.
 ///
 /// ## Scoped to the ACCOUNT, not to one profile — unlike every sibling repo
@@ -71,7 +71,7 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 /// its insert) and this Firestore document; letting each side mint
 /// independently would silently produce two different ids for one profile.
 /// Every other repository in this codebase derives its doc-id from a
-/// natural key already present in the entity (`curriculumId` for bookmarks/
+/// natural key already present in the entity (`curriculumId` for profile programs/
 /// stage-definitions, `curriculumId + createdAt` for goals); a learner
 /// profile has no such natural key — its identity is arbitrary and must be
 /// generated, which is now the caller's job, not this repository's.

@@ -8,7 +8,7 @@ import 'package:learning_tracker/features/learning/domain/entities/mark_completi
 ///
 /// Defines the contract for marking content items as completed,
 /// with stage progression validation, points calculation, and
-/// bookmark advancement.
+/// derived current-position update.
 abstract class CompletionRepository {
   /// Mark a single content item as completed for a specific stage.
   ///
@@ -17,7 +17,6 @@ abstract class CompletionRepository {
   /// - Checks for duplicates (idempotent - returns existing if already complete)
   /// - Calculates and awards points based on curriculum configuration
   ///   (only when [awardGamificationPoints] is true — B1 policy)
-  /// - Advances bookmark to next item in learning order
   /// - Triggers Firestore sync
   ///
   /// All operations are performed in a single database transaction for

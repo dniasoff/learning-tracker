@@ -25,7 +25,6 @@ void main() {
       'stage_definitions',
       'point_configs',
       'curriculum_tracks',
-      'bookmarks',
       'track_learning_order',
       'preferences',
       'goals',

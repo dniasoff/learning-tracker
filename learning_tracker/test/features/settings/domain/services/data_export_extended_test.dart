@@ -36,13 +36,6 @@ void main() {
         ulid: '01ARZ3NDEKTSV4RRFFQ69G5FBB',
         curriculumId: CurriculumId.bavli,
       );
-      await seedBookmark(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        curriculumId: CurriculumId.bavli,
-      );
-
       final profile = profileFrom(
         await exportedMap(backupService(firestore)),
         testProfileId,
@@ -52,7 +45,6 @@ void main() {
       expect(collections['stage_definitions'], hasLength(3));
       expect(collections['completions'], hasLength(1));
       expect(collections['learning_ledger'], hasLength(1));
-      expect(collections['bookmarks'], hasLength(1));
     },
   );
 

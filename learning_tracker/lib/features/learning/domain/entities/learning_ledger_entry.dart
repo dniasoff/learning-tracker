@@ -213,7 +213,7 @@ class LedgerEntryDraft {
 /// **`completed_at` is a raw [DateTime], NOT
 /// `FirestoreCodec.encodeDateTime`'s ISO-8601 `String`.** This is the one
 /// deliberate divergence from the `StageDefinitionFirestoreCodec`/
-/// `BookmarkEntity.toFirestore` pattern (both of which DO use
+/// `persisted entity.toFirestore` pattern (both of which DO use
 /// `FirestoreCodec.encodeDateTime` for their own date field) — and it
 /// matters: `firestore.rules`' `learning_ledger` create rule (SR-3)
 /// requires `completed_at is timestamp`, and a plain Dart `String` value
@@ -224,7 +224,7 @@ class LedgerEntryDraft {
 /// into a real `Timestamp` on write — see `mock_document_reference.dart`'s
 /// `timestampFromDateTime` transform — which is also standard `cloud_firestore`
 /// SDK behavior; a `String` gets no such conversion and stays a `string`).
-/// `bookmarks`/`stage_definitions` have no such `is timestamp` guard on
+/// `stage_definitions` have no such `is timestamp` guard on
 /// their date field, so the String form is harmless there — it is NOT
 /// harmless here. See [FirestoreLearningLedgerRepository]'s class doc
 /// comment for the matching read-side handling this requires (the SDK

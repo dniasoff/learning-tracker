@@ -83,8 +83,6 @@ class _CurrentFirestoreWriter {
           DocIds.curriculumTrackDocId(data),
           data,
         );
-      case #pushBookmark:
-        return _write('bookmarks', DocIds.bookmarkDocId(data), data);
       case #pushLedgerEntry:
       case #pushLedgerEntriesBatch:
         return _write(
@@ -261,14 +259,6 @@ void main() {
 
     // NOTE: learning_order is intentionally covered by the re-key group
     // below because the current repository uses the percent-encoded form.
-
-    test('bookmarks: byte-for-byte', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{'curriculum_id': 'mishnayos'};
-      await _gw(fs).pushBookmark(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'bookmarks');
-      expect(DocIds.bookmarkDocId(data), equals(live));
-    });
 
     test('learning_ledger: pushLedgerEntry is byte-for-byte', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);

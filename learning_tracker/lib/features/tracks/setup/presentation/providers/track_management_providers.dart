@@ -3,7 +3,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart'
     show goalRepositoryProvider;
-import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';

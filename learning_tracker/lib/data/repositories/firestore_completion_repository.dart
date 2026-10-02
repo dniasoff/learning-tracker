@@ -43,7 +43,7 @@ import 'package:learning_tracker/features/learning/domain/entities/learning_ledg
 /// (`lib/core/database/daos/completion_dao.dart`) still serve the app.
 ///
 /// **No interface, no `implements`** — same reasoning as
-/// `FirestoreBookmarkRepository`'s doc comment: the Drift implementation is
+/// `Firestore repository`'s doc comment: the Drift implementation is
 /// being deleted outright, not kept alongside this one.
 ///
 /// ## `source` replaces the entire prior-import tier apparatus
@@ -494,7 +494,7 @@ class FirestoreCompletionRepository {
   ///
   /// ## What the race actually costs, stated honestly
   ///
-  /// `isNew` gates points, streak, siyum detection and bookmark advance (see
+  /// `isNew` gates points, streak and siyum detection (see
   /// `MarkCompletionResult`'s doc comment). Without the transaction, two devices
   /// marking the SAME section for the SAME child at the SAME moment can both
   /// observe "absent" and both report `isNew: true`, double-crediting those four
@@ -534,7 +534,7 @@ class FirestoreCompletionRepository {
     //
     // Consequence, stated rather than hidden: `isNew` may be reported `true`
     // for a completion that already existed, which can double-credit points /
-    // streak / siyum / bookmark-advance once. That is the accepted trade — a
+    // streak / siyum once. That is the accepted trade — a
     // child on a bus must be able to record learning, and a rare over-credit
     // is a far smaller harm than a silently discarded completion.
     var exists = false;

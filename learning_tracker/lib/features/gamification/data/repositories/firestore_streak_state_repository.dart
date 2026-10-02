@@ -5,8 +5,7 @@
 /// not an interface — see the class doc comment's "Why no interface"
 /// section).
 ///
-/// Follows the reference pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
+/// Uses the shared provider re-resolution pattern.
 /// as closely as a repository with no existing abstract interface can:
 /// takes a [Ref], re-resolves the Firestore provider inside every method,
 /// keeps construction synchronous. Read that class's doc comment first;
@@ -31,7 +30,7 @@ import 'package:learning_tracker/features/gamification/streak/streak_reducer.dar
 ///
 /// `StreakService`/`StreakStateService` are concrete classes today, not
 /// implementations of an abstract repository interface — there was nothing
-/// to `implements` here, unlike [BookmarkRepository] or [ProgressRepository].
+/// to `implements` here, unlike repository contract or [ProgressRepository].
 /// This class's public methods are shaped to match [StreakStateService]'s
 /// own surface (`getStreak`/`watchStreak`/`getRecoveryInfo`/
 /// `getStreakCalendar`) so a future caller can swap one for the other
@@ -105,7 +104,7 @@ class FirestoreStreakStateRepository {
   /// Re-reads `firestoreStreakEventRepositoryProvider`, resolving to `null`
   /// exactly when it does (no active account, or no active learner
   /// profile). Re-resolved on every call rather than cached — see
-  /// `FirestoreBookmarkRepositoryAdapter`'s class doc comment (point 3).
+  /// the adapter's class doc comment (point 3).
   /// Like [_resolveOrNull], but throws instead of returning `null`.
   ///
   /// Every read on this class routes through this, per owner ruling D-E: a read

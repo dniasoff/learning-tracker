@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/learning/domain/repositories/completio
 /// **Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
 /// owner decision 1, 2026-08-03).** This class used to own all five
 /// completion side effects (order validation, points, siyum detection,
-/// bookmark advance, streak) directly. They now live in
+/// progress follow-ups, streak) directly. They now live in
 /// `CompletionOrchestrator`
 /// (`lib/features/learning/domain/services/completion_orchestrator.dart`),
 /// which sits above this repository (and above
@@ -46,13 +46,11 @@ import 'package:learning_tracker/features/learning/domain/repositories/completio
 /// Thrown by [FirestoreCompletionRepositoryAdapter]'s write methods
 /// (`markComplete`, `bulkMarkComplete`) when
 /// `firestoreCompletionRepositoryProvider` resolves to `null` — i.e. no
-/// account is active yet, or no learner profile is active yet. Same shape
-/// and reasoning as [BookmarkRepositoryNotReadyException]
-/// (`bookmark_repository_impl.dart`): the three read methods
+/// account is active yet, or no learner profile is active yet. The three
+/// read methods
 /// (`getCompletionsByCurriculum`, `getCompletionsForContentItem`,
 /// `isStageCompleted`) reuse their already-empty-shaped "nothing yet" return
-/// value (`[]` / `false`) instead of throwing — see that exception's doc
-/// comment for the read-vs-write split this class copies exactly.
+/// value (`[]` / `false`) instead of throwing.
 class CompletionRepositoryNotReadyException implements Exception {
   const CompletionRepositoryNotReadyException();
 
@@ -98,24 +96,17 @@ class CompletionRepositoryDelegatedProfileUnsupportedException
       'completion reads are not supported.';
 }
 
-/// Firestore-backed [CompletionRepository] adapter — the third application
-/// of the pattern [FirestoreBookmarkRepositoryAdapter]
-/// (`bookmark_repository_impl.dart`) establishes and
-/// `FirestoreProfileRepositoryAdapter`
-/// (`lib/features/profiles/data/repositories/profile_repository_impl.dart`)
-/// applies second. Read those two class doc comments first; this one only
-/// calls out what is DIFFERENT — and there is a lot, because
+/// Firestore-backed [CompletionRepository] adapter. It uses a [Ref] to
+/// resolve the active Firestore repository on every call. This adapter has
+/// additional completion-specific behavior because
 /// [CompletionRepository] is the largest and most business-logic-heavy
 /// surface in the app.
 ///
-/// ## Construction: a [Ref], re-resolved every call — same as bookmarks
+/// ## Construction: a [Ref], re-resolved every call
 ///
-/// See [FirestoreBookmarkRepositoryAdapter]'s doc comment, points 2–3.
-/// [firestoreCompletionRepositoryProvider] is the same nullable-async,
-/// non-family shape as `firestoreBookmarkRepositoryProvider` minus the
-/// `ContentRepository` family parameter (this repository needs no local
-/// content-order collaborator), so [_resolve] / [_resolveOrNull] mirror that
-/// adapter's helpers exactly.
+/// [firestoreCompletionRepositoryProvider] is a nullable async provider.
+/// This repository needs no local content-order collaborator or family
+/// parameter, so [_resolve] and [_resolveOrNull] resolve it directly.
 ///
 /// ## `source` is a pure function of the two existing boolean gates — no
 /// per-call-site guessing needed
@@ -155,9 +146,8 @@ class CompletionRepositoryDelegatedProfileUnsupportedException
 /// per `docs/firestore-rewrite-map.md`: a lifetime-only import writes ONLY a
 /// `learning_ledger` entry, never a `completions` document. This adapter
 /// does not catch that error; it propagates unchanged out of `markComplete`/
-/// `bulkMarkComplete`, matching point 5 of
-/// [FirestoreBookmarkRepositoryAdapter]'s doc comment ("a genuine resolution
-/// failure is never swallowed"). Since no current call site reaches
+/// `bulkMarkComplete`; a genuine resolution failure is never swallowed.
+/// Since no current call site reaches
 /// `(false, false)`, this is a defensive path, not a live one today — but it
 /// is a REAL behavior difference from [CompletionRepositoryImpl], which
 /// happily writes a `priorMarkOnly` Drift row for `lifetimeOnly`. Writing
@@ -171,7 +161,7 @@ class CompletionRepositoryDelegatedProfileUnsupportedException
 /// `FirestoreCompletionRepository`
 /// (`lib/data/repositories/firestore_completion_repository.dart`) is a thin
 /// CRUD/read layer with no stage-progression validation, no points
-/// calculation, no siyum/achievement detection, no bookmark advancement, and
+/// calculation, no siyum/achievement detection, and
 /// no streak-event teeing — and neither does this adapter. That used to be
 /// a documented gap relative to [CompletionRepositoryImpl] (which did all
 /// five inline); it no longer is, because [CompletionRepositoryImpl] does
@@ -300,7 +290,7 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
 
       // B8: a bulk-imported row hit by real learning is UPGRADED in place, not
       // duplicated. `isNew` stays FALSE — the completion already existed, so
-      // points, streak, siyum detection and bookmark advance must not fire a
+      // points, streak, siyum detection must not fire a
       // second time. This replaces the Drift writer's `_upgradePriorMarkRow`,
       // which deleted a `prior_completion_imports` row; provenance now lives on
       // the document itself, so an upgraded row is invisible to expunge purely
@@ -340,7 +330,7 @@ class FirestoreCompletionRepositoryAdapter implements CompletionRepository {
       points: request.points,
     );
     // Transactional create-if-absent rather than exists-then-write. `isNew`
-    // gates points, streak, siyum detection AND bookmark advance (see
+    // gates points, streak, siyum detection (see
     // MarkCompletionResult's doc comment), so losing this race would
     // double-credit all four.
     final created = await repo.recordCompletionIfAbsent(entity);

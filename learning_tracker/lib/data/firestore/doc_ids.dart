@@ -228,7 +228,7 @@ final class DocIds {
   /// sync engine's Firestore path for this table; `FirestoreGatewayImpl`
   /// never defines a `pushCurriculumScope` method at all, so there is no
   /// "byte-for-byte against the live gateway" golden target the way
-  /// [completionDocId]/[bookmarkDocId]/etc. have (`doc_ids_test.dart`'s
+  /// [completionDocId]/etc. have (`doc_ids_test.dart`'s
   /// primary group). This is a genuinely NEW formula, promoted here from
   /// `FirestoreCurriculumScopeRepository` (Epic B, `lib/data/repositories/
   /// firestore_curriculum_scope_repository.dart`) rather than reverse-
@@ -240,7 +240,7 @@ final class DocIds {
   ///
   /// One document per selected scope VALUE — `firestore.rules`' `match
   /// /curriculum_scopes/{scopeId}` names the id generically (not
-  /// `{curriculumId}`, unlike `bookmarks`/`profile_programs`), matching the
+  /// `{curriculumId}`, unlike `profile_programs`), matching the
   /// Drift `CurriculumScopes` table's one-row-per-selected-value shape.
   /// `scope_level`/`scope_value` are therefore part of the natural key
   /// alongside `curriculum_id` — a curriculum can have several scope rows
@@ -288,16 +288,6 @@ final class DocIds {
       encodeKeyComponent(ref),
     ].join('_');
   }
-
-  // ── bookmarks ────────────────────────────────────────────────────────
-
-  /// `bookmarks/{curriculum_id}` doc-id formula.
-  ///
-  /// Mirrors `FirestoreGatewayImpl.pushBookmark`
-  /// (`firestore_gateway_impl.dart:394-401`). One bookmark per curriculum,
-  /// so the curriculum id alone is the natural key.
-  static String bookmarkDocId(Map<String, dynamic> data) =>
-      data['curriculum_id']?.toString() ?? '';
 
   // ── learning_ledger ──────────────────────────────────────────────────
 

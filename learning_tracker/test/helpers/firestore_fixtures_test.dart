@@ -125,7 +125,7 @@ void main() {
     expect(ledger.data()!['completed_at'], isA<Timestamp>());
   });
 
-  test('seeds goal and bookmark documents', () async {
+  test('seeds goal documents', () async {
     final goalId = await seedGoal(
       firestore,
       uid: _uid,
@@ -133,14 +133,6 @@ void main() {
       curriculumId: CurriculumId.mishnayos,
       description: 'Finish the tractate',
       createdAt: _time,
-    );
-    await seedBookmark(
-      firestore,
-      uid: _uid,
-      profileId: _profileId,
-      curriculumId: CurriculumId.mishnayos,
-      sefariaRef: 'Mishnah 3',
-      updatedAt: _time,
     );
 
     final profilePath = firestore
@@ -154,15 +146,6 @@ void main() {
     expect(goal.data(), isNot(contains('updated_at')));
     expect(goal.data(), containsPair('description', 'Finish the tractate'));
 
-    final bookmark = await profilePath
-        .collection('bookmarks')
-        .doc(CurriculumId.mishnayos.storageKey)
-        .get();
-    expect(bookmark.data(), {
-      'curriculum_id': 'mishnayos',
-      'sefaria_ref': 'Mishnah 3',
-      'updated_at': _time.toIso8601String(),
-    });
   });
 
   test('seeds the three default stage definitions as one batch', () async {

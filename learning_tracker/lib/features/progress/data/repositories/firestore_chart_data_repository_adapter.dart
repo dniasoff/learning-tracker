@@ -27,8 +27,7 @@ abstract class ChartDataRepository {
 
 /// Firestore-backed [ChartDataRepository] — the read seam [ChartDataService]
 /// uses for every chart on the Progress / Recent Activity screens. Follows
-/// the `FirestoreBookmarkRepositoryAdapter` pattern
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
+/// the the adapter pattern
 /// — read that class's doc comment first; this one only calls out what is
 /// DIFFERENT here.
 ///

@@ -14,7 +14,6 @@ import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
 import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_redemption.dart';
-import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
@@ -266,30 +265,6 @@ Future<String> seedGoal(
       .doc(docId)
       .set(goal.toFirestore());
   return docId;
-}
-
-/// Seeds one curriculum bookmark at the canonical curriculum-id doc-id.
-Future<void> seedBookmark(
-  FakeFirebaseFirestore firestore, {
-  required String uid,
-  required String profileId,
-  required CurriculumId curriculumId,
-  String sefariaRef = 'Mishnah 1',
-  DateTime? updatedAt,
-}) async {
-  final bookmark = BookmarkEntity(
-    curriculumId: curriculumId,
-    sefariaRef: sefariaRef,
-    updatedAt: _fixtureTime(updatedAt),
-  );
-  await firestore
-      .collection('users')
-      .doc(uid)
-      .collection('learner_profiles')
-      .doc(profileId)
-      .collection('bookmarks')
-      .doc(DocIds.bookmarkDocId({'curriculum_id': curriculumId.storageKey}))
-      .set(bookmark.toFirestore());
 }
 
 /// Seeds the supplied stage definitions, or the repository's three defaults

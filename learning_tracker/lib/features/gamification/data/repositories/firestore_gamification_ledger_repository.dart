@@ -6,8 +6,7 @@
 /// learning_ledger_repository_impl.dart` already implements the same
 /// underlying collection for the `learning` feature's own needs.
 ///
-/// Follows the reference pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
+/// Uses the shared provider re-resolution pattern.
 /// as closely as a repository with no existing abstract interface can — see
 /// `FirestoreStreakStateRepository`'s doc comment (same directory) for the
 /// same "no interface to implement" situation and how this file mirrors the
@@ -90,7 +89,7 @@ class FirestoreGamificationLedgerRepository {
   /// Re-reads `firestoreLearningLedgerRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner
   /// profile). Re-resolved on every call rather than cached — see
-  /// `FirestoreBookmarkRepositoryAdapter`'s class doc comment (point 3).
+  /// the adapter's class doc comment (point 3).
   /// Like [_resolveOrNull], but throws — see
   /// [GamificationLedgerNotReadyException].
   Future<FirestoreLearningLedgerRepository> _resolve() async {
