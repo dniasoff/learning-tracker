@@ -13,7 +13,8 @@
 //   a "not saved — retry" pending failure, and retry re-sends it.
 // - The same, end to end through the hub and the ongoing form: the queued
 //   row shows, rolls back with "Your change couldn't be saved." and Retry
-//   brings it back (UX-DR-121).
+//   brings it back (UX-DR-121); a Retry the server refuses again at once
+//   shows the notice and its Retry again, and the next Retry lands.
 // - The production composition: the unoverridden `learningCommandsProvider`
 //   (only its data sources are in-memory) saves an ongoing create and an
 //   edit, and the hub run above goes through it, so its pending failures
@@ -405,7 +406,8 @@ void main() {
 
   testWidgets('hub and form through the production LearningCommands: a '
       'rejected queued create rolls back with the shared failure notice, an '
-      'earlier queued edit survives, and Retry restores it', (tester) async {
+      'earlier queued edit survives, a Retry refused again keeps its notice, '
+      'and Retry restores it', (tester) async {
     // The saves below let real async run (see `save`), so the form's
     // preference reads need the mock store.
     SharedPreferences.setMockInitialValues({});
@@ -499,11 +501,24 @@ void main() {
     expect(find.text("Gemara b'iyun"), findsOneWidget);
     expect(find.text("Your change couldn't be saved."), findsOneWidget);
 
-    // Retry re-sends the same create, now online.
-    device.repo.offline = false;
+    // Online, the server refuses the retry again at once: the change is
+    // still unsaved, so the notice and its Retry come back (AC-7).
+    device.repo
+      ..offline = false
+      ..failNextWith(const PermanentWriteRejection('failed-precondition'));
     await tester.tap(find.text('Retry'));
+    await tester.runAsync(_drain);
+    await tester.pumpAndSettle();
+    expect(find.text('Night seder'), findsNothing);
+    expect(find.text("Your change couldn't be saved."), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+
+    // The next Retry re-sends the same create and it lands.
+    await tester.tap(find.text('Retry'));
+    await tester.runAsync(_drain);
     await tester.pumpAndSettle();
     expect(find.text('Night seder'), findsOneWidget);
+    expect(find.text("Your change couldn't be saved."), findsNothing);
     expect(
       device.repo.tracksOf(scope).map((t) => t.name),
       containsAll(["Gemara b'iyun", 'Night seder']),

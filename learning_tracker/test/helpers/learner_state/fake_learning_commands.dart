@@ -228,9 +228,17 @@ final class FakeLearningCommands implements LearningCommands {
     return pendingFailures.stream;
   }
 
+  /// When set, the next [retry] is recorded and then throws it (one-shot).
+  Exception? retryError;
+
   @override
-  Future<CaptureResult> retry(String pendingFailureId) async =>
-      _record('retry', {'pendingFailureId': pendingFailureId});
+  Future<CaptureResult> retry(String pendingFailureId) async {
+    final result = _record('retry', {'pendingFailureId': pendingFailureId});
+    final error = retryError;
+    if (error == null) return result;
+    retryError = null;
+    throw error;
+  }
 
   /// Closes [pendingFailures].
   Future<void> dispose() => pendingFailures.close();

@@ -367,6 +367,84 @@ void main() {
     },
   );
 
+  group('a refused Retry keeps the recovery path (AC-7)', () {
+    const changeId = '01JQUEUED00000000000000011';
+    final notice = find.text("Your change couldn't be saved.");
+    int retries() => _commands.calls.where((c) => c.name == 'retry').length;
+
+    Future<void> announceRejection(WidgetTester tester) async {
+      await _pump(tester);
+      await queueCreate(tester, changeId);
+      _commands.pendingFailures.add([rejected('pf-11', changeId)]);
+      await tester.pumpAndSettle();
+      expect(notice, findsOneWidget);
+    }
+
+    void hideNotice(WidgetTester tester) => ScaffoldMessenger.of(
+      tester.element(find.byType(OngoingSubTrackHubSeam)),
+    ).hideCurrentSnackBar();
+
+    testWidgets('a retry refused again at once shows the notice again; the '
+        'next Retry saves it', (tester) async {
+      await announceRejection(tester);
+      // The server refuses the retry again, and the commands do not (yet)
+      // re-publish the failure.
+      _commands.nextResult = const CaptureResult.rejected(
+        CaptureRejection.notSaved,
+      );
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(notice, findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(retries(), 2);
+      expect(notice, findsNothing, reason: 'saved');
+    });
+
+    testWidgets('a refusal both answered and re-published is announced '
+        'once', (tester) async {
+      await announceRejection(tester);
+      _commands.nextResult = const CaptureResult.rejected(
+        CaptureRejection.notSaved,
+      );
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      _commands.pendingFailures.add([rejected('pf-11', changeId)]);
+      await tester.pumpAndSettle();
+      expect(notice, findsOneWidget);
+      hideNotice(tester);
+      await tester.pumpAndSettle();
+      expect(notice, findsNothing, reason: 'no second notice queued');
+    });
+
+    testWidgets('a retry that throws still offers Retry', (tester) async {
+      await announceRejection(tester);
+      _commands.retryError = Exception('transport');
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(notice, findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('a queued retry the server refuses later is announced', (
+      tester,
+    ) async {
+      await announceRejection(tester);
+      _commands.nextResult = const CaptureResult.success(
+        changeIds: [changeId],
+        queued: true,
+      );
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(notice, findsNothing);
+      _commands.pendingFailures.add([rejected('pf-11', changeId)]);
+      await tester.pumpAndSettle();
+      expect(notice, findsOneWidget);
+    });
+  });
+
   testWidgets('an unrelated pending failure is not announced', (tester) async {
     _commands.nextResult = const CaptureResult.success(
       changeIds: ['01JQUEUED00000000000000001'],

@@ -199,24 +199,68 @@ class _OngoingSubTrackHubSeamState
     for (final failure in all) {
       if (!failure.changeIds.any(_awaitingSync.contains)) continue;
       _awaitingSync.removeAll(failure.changeIds);
-      final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: _SyncRejectedNotice(
-            scope: scope,
-            text: l10n.ongoingSubTrackSyncRejected,
-          ),
-          action: SnackBarAction(
-            label: l10n.actionRetry,
-            onPressed: () {
-              // Retry only for the learner and commands it was raised for.
-              if (!mounted || !_boundTo(scope, commands)) return;
-              _awaitingSync.addAll(failure.changeIds);
-              unawaited(commands.retry(failure.id));
-            },
-          ),
+      _showRejected(scope, commands, failure);
+    }
+  }
+
+  /// "Your change couldn't be saved." with a Retry of [failure].
+  void _showRejected(
+    LearnerScope scope,
+    LearningCommands commands,
+    PendingFailure failure,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: _SyncRejectedNotice(
+          scope: scope,
+          text: l10n.ongoingSubTrackSyncRejected,
         ),
+        action: SnackBarAction(
+          label: l10n.actionRetry,
+          onPressed: () => unawaited(_retry(scope, commands, failure)),
+        ),
+      ),
+    );
+  }
+
+  /// Retries [failure] and keeps the user's recovery path (AC-7): a retry
+  /// refused at once shows the notice again, whether the commands
+  /// re-publish the failure (the watch shows it) or only answer it (shown
+  /// here); a queued retry stays watched for a later refusal. Whichever
+  /// path sees it first takes the change ids, so it is announced once.
+  Future<void> _retry(
+    LearnerScope scope,
+    LearningCommands commands,
+    PendingFailure failure,
+  ) async {
+    // Retry only for the learner and commands it was raised for.
+    if (!mounted || !_boundTo(scope, commands)) return;
+    _awaitingSync.addAll(failure.changeIds);
+    CaptureResult result;
+    try {
+      result = await commands.retry(failure.id);
+    } on Object catch (error, stack) {
+      _log.error(
+        event: 'ongoing_sub_track_retry_failed',
+        exception: error,
+        stackTrace: stack,
       );
+      result = const CaptureResult.rejected(CaptureRejection.notSaved);
+    }
+    if (!mounted || !_boundTo(scope, commands)) return;
+    switch (result) {
+      case CaptureSuccess(queued: true):
+        // Still awaiting the server: the watch announces a later refusal.
+        return;
+      case CaptureSuccess():
+      case CaptureRejected(reason: CaptureRejection.targetNotFound):
+        // Saved, or nothing left to retry (settled elsewhere).
+        _awaitingSync.removeAll(failure.changeIds);
+      default:
+        if (!failure.changeIds.any(_awaitingSync.contains)) return;
+        _awaitingSync.removeAll(failure.changeIds);
+        _showRejected(scope, commands, failure);
     }
   }
 
