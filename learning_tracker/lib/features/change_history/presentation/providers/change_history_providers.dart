@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
@@ -53,20 +54,66 @@ final changeHistoryClockProvider = Provider<DateTime Function()>(
   (ref) => DateTime.now,
 );
 
+/// How far ahead [changeHistoryLockedProvider] looks for the learner's
+/// next lock. Every week has a Shabbos lock, so one is always found.
+const Duration kChangeHistoryLockLookahead = Duration(days: 8);
+
+/// The longest [changeHistoryLockedProvider] waits before judging the
+/// lock again, even when the next boundary is further off: a device clock
+/// that is changed or a device that slept still locks within this delay.
+const Duration kChangeHistoryLockRecheck = Duration(minutes: 1);
+
 /// Whether the history must be unreadable now (AD-36, E-4): the device's
 /// sacred-time window, or the learner's own lock judged by [lockWindows]
 /// with the learner's settings history. Loading or failing while the
 /// learner's settings are unknown (fail closed).
+///
+/// Judged again when the learner's lock begins or ends (and at least every
+/// [kChangeHistoryLockRecheck]), so an open history becomes unreadable at
+/// the lock boundary without leaving the screen.
 final changeHistoryLockedProvider = Provider.autoDispose
     .family<AsyncValue<bool>, LearnerScope>((ref, scope) {
       if (ref.watch(currentSacredWindowProvider) != null) {
         return const AsyncData(true);
       }
       final now = ref.watch(changeHistoryClockProvider)().toUtc();
-      return ref
-          .watch(learnerLockSettingsProvider(scope))
-          .whenData((h) => insideLock(lockWindows(h, now, now), now));
+      final settings = ref.watch(learnerLockSettingsProvider(scope));
+      if (settings case AsyncData(value: final history)) {
+        final windows = lockWindows(
+          history,
+          now,
+          now.add(kChangeHistoryLockLookahead),
+        );
+        final current = lockAt(windows, now);
+        final boundary = current != null
+            // Bounds are inside the lock: it is over one tick after its end.
+            ? current.endUtc.add(civilTick)
+            : _nextLockStart(windows, now);
+        var delay = kChangeHistoryLockRecheck;
+        if (boundary != null) {
+          final untilBoundary = boundary.difference(now);
+          if (untilBoundary < delay) {
+            delay = untilBoundary.isNegative ? Duration.zero : untilBoundary;
+          }
+        }
+        final timer = Timer(delay, ref.invalidateSelf);
+        ref.onDispose(timer.cancel);
+        return AsyncData(current != null);
+      }
+      // Settings still loading or failed (a reload may keep the last
+      // history): judged as before, with no boundary timer.
+      return settings.whenData(
+        (h) => insideLock(lockWindows(h, now, now), now),
+      );
     });
+
+/// The start of the first of [windows] after [now], or null.
+DateTime? _nextLockStart(List<LockWindow> windows, DateTime now) {
+  for (final w in windows) {
+    if (w.startUtc.isAfter(now)) return w.startUtc;
+  }
+  return null;
+}
 
 /// The display label of a content ref (falls back to the ref itself).
 final changeHistoryRefLabelProvider = FutureProvider.autoDispose

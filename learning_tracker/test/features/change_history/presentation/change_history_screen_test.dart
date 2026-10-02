@@ -14,14 +14,18 @@ import 'package:intl/intl.dart' show DateFormat;
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/change_history/domain/repositories/change_history_repository.dart';
+import 'package:learning_tracker/features/change_history/presentation/providers/change_history_providers.dart';
 import 'package:learning_tracker/features/change_history/presentation/widgets/change_history_row_tile.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 
 import '../../../helpers/change_history_fixtures.dart';
 import '../../../helpers/fake_change_history_repository.dart';
+import '../../../helpers/learner_state/lock_fixtures.dart';
 import 'change_history_harness.dart';
 
 /// Minutes from 2026-09-01T00:00Z to [t].
@@ -498,6 +502,49 @@ void main() {
       expect(repo.actionLookups, isEmpty);
     });
 
+    testWidgets("an open history becomes unreadable when the learner's lock "
+        'begins, and readable again when it ends', (tester) async {
+      final settings = constantHistory(newYorkNoLocation);
+      // The Shabbos lock of 2026-09-05 in New York.
+      final lock = lockWindows(
+        settings,
+        DateTime.utc(2026, 9, 4),
+        DateTime.utc(2026, 9, 6),
+      ).single;
+      var now = lock.startUtc.subtract(const Duration(minutes: 5));
+      final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+      await pumpChangeHistory(
+        tester,
+        changeHistoryOverrides(
+          repository: repo,
+          settings: settings,
+          clock: () => now,
+        ),
+      );
+      expect(find.byType(ChangeHistoryRowTile), findsOneWidget);
+
+      // The lock begins with the screen still open: no rebuild of the route.
+      now = lock.startUtc;
+      await tester.pump(const Duration(minutes: 5));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('changeHistoryLocked')), findsOneWidget);
+      expect(find.byType(ChangeHistoryRowTile), findsNothing);
+      expect(find.textContaining('Changed the deadline'), findsNothing);
+
+      // Inside the lock it stays unreadable at every recheck.
+      now = lock.startUtc.add(const Duration(hours: 1));
+      await tester.pump(kChangeHistoryLockRecheck);
+      await tester.pump();
+      expect(find.byType(ChangeHistoryRowTile), findsNothing);
+
+      // One tick after the lock's last instant the history reads again.
+      now = lock.endUtc.add(civilTick);
+      await tester.pump(kChangeHistoryLockRecheck);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('changeHistoryLocked')), findsNothing);
+      expect(find.byType(ChangeHistoryRowTile), findsOneWidget);
+    });
+
     testWidgets("while the learner's lock is unknown nothing is read", (
       tester,
     ) async {
@@ -550,6 +597,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Changed what the main track covers'), findsOneWidget);
       expect(find.textContaining('Changed the deadline'), findsNothing);
+
+      // The lock's boundary timer lives with the container: end it here,
+      // before the framework checks for pending timers.
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
     });
   });
 

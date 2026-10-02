@@ -43,6 +43,7 @@ List<Override> changeHistoryOverrides({
   ChangeHistoryUndoHandler? undo,
   Future<LearnerScope?> Function(Ref ref)? scopeOf,
   DateTime? now,
+  DateTime Function()? clock,
   bool settingsPending = false,
 }) => [
   changeHistoryAccessProvider.overrideWithValue(access),
@@ -62,7 +63,9 @@ List<Override> changeHistoryOverrides({
   changeHistoryRefLabelProvider.overrideWith((ref, sefariaRef) async {
     return sefariaRef.replaceFirst('Mishnah ', '');
   }),
-  changeHistoryClockProvider.overrideWithValue(() => now ?? historyNow),
+  changeHistoryClockProvider.overrideWithValue(
+    clock ?? () => now ?? historyNow,
+  ),
   currentSacredWindowProvider.overrideWithValue(lock),
   changeHistoryUndoHandlerProvider.overrideWithValue(undo),
 ];
