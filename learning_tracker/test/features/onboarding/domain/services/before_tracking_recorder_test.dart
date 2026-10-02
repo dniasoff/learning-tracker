@@ -281,12 +281,15 @@ void main() {
       );
     });
 
-    test('unrecord is one unlearn of exactly the un-ticked leaves', () async {
+    test(
+      'bulk-prior unselect routes exactly the selected leaves to unlearn',
+      () async {
       final result = await recorder().unrecord(
         curriculumId: _m,
         sefariaRefs: const ['Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:2'],
       );
       expect(result, isA<CaptureSuccess>());
+      expect(commands.calls, hasLength(1));
       final call = commands.calls.single;
       expect(call.name, 'unlearn');
       expect(call.args['curriculumId'], 'mishnayos');
@@ -294,7 +297,8 @@ void main() {
         'Mishnah Berakhot 1:1',
         'Mishnah Berakhot 1:2',
       });
-    });
+      },
+    );
 
     test('recordedRefs is the counted before_tracking leaves, node events '
         'expanded, voided and dated events excluded', () async {
