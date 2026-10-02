@@ -143,6 +143,29 @@ void main() {
       expect(state[engineCurriculum]!.streak!.best, 2);
     });
 
+    // Ported from the retired Story 26.27 (DNI-370) integration test: a
+    // bulk "learnt before tracking" mark suppresses the streak at every
+    // stage, not just stage 1.
+    test('before_tracking at every stage never builds a streak', () {
+      final events = [
+        for (var stage = 1; stage <= 3; stage++)
+          for (final d in [24, 25, 26])
+            LearningEvent.learn(
+              id: engineUlid(++_next),
+              curriculumId: engineCurriculum,
+              ref: 'Mishnah Berakhot 1:1',
+              source: LearningEvent.sourceMain,
+              dateState: DateState.beforeTracking,
+              learnedOn: null,
+              stage: stage,
+              recordedAt: _morning(d),
+              actor: parentActor,
+            ),
+      ];
+      final streak = run(events)[engineCurriculum]!.streak;
+      expect(streak, const CurriculumStreak(current: 0, best: 0));
+    });
+
     test('only before_tracking learning is a zero streak', () {
       final state = run([_learn(26, dateState: DateState.beforeTracking)]);
       expect(
