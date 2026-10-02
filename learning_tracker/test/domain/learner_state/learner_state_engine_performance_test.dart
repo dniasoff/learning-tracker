@@ -7,6 +7,11 @@
 //
 // Budgets are provisional on CI hardware (ruling B12); the named-device
 // run is part of the release verification sweep.
+//
+// Tagged `perf` (ruling B12): excluded from the blocking main lane
+// (Makefile `test:`) and run by `make test-perf` in the non-blocking CI
+// `perf` job, so runner speed variance never fails a merge.
+@Tags(['perf'])
 library;
 
 import 'dart:math';
