@@ -123,7 +123,15 @@ void main() {
     expect(value, isA<AsyncError<List<CurriculumForecast>>>());
   });
 
-  test('the detail opener is unbound until DNI-497 lands', () {
-    expect(_container().read(subTrackDetailOpenerProvider), isNull);
+  test('the detail opener is bound in production (AC-5)', () {
+    expect(_container().read(subTrackDetailOpenerProvider), openSubTrackDetail);
+  });
+
+  test('the detail path is the DNI-497 route with an encoded id', () {
+    expect(
+      subTrackDetailPath('01J6Q2H4A8M7K3P9R5T6V8WXZ1'),
+      '/settings/tracks/sub-tracks/01J6Q2H4A8M7K3P9R5T6V8WXZ1',
+    );
+    expect(subTrackDetailPath('a/b'), '/settings/tracks/sub-tracks/a%2Fb');
   });
 }

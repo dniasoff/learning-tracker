@@ -3,6 +3,7 @@
 // card, with the exact FR-21 copy; *View {name} →* opens that sub-track's
 // detail; the card is gone on the recompute after the shortfall reaches 0;
 // overlapping ground shows the engine's de-duplicated amounts.
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -163,13 +164,37 @@ void main() {
     expect(opened, [schoolSubTrackId, rebbeSubTrackId]);
   });
 
-  testWidgets('without the detail route the action is disabled, never '
-      'routed elsewhere', (tester) async {
-    await _pump(tester, state: _state({schoolSubTrackId: _school(40)}));
-    final button = tester.widget<TextButton>(
-      find.byKey(const Key('shortfallCardView')),
-    );
-    expect(button.onPressed, isNull);
+  group('production wiring (no opener override)', () {
+    testWidgets('View {name} pushes the sub-track detail route', (
+      tester,
+    ) async {
+      final router = _DashboardRouter(withDetailRoute: true);
+      await _pumpRouted(tester, router);
+      final button = tester.widget<TextButton>(
+        find.byKey(const Key('shortfallCardView')),
+      );
+      expect(button.onPressed, isNotNull);
+
+      await tester.tap(find.text('View School'));
+      await tester.pumpAndSettle();
+      expect(find.text('detail:$schoolSubTrackId'), findsOneWidget);
+      expect(
+        router.currentPath,
+        '/settings/tracks/sub-tracks/$schoolSubTrackId',
+      );
+    });
+
+    testWidgets('before the detail route is registered (DNI-497) View '
+        'opens the Manage tracks hub', (tester) async {
+      final router = _DashboardRouter(withDetailRoute: false);
+      await _pumpRouted(tester, router);
+
+      await tester.tap(find.text('View School'));
+      await tester.pumpAndSettle();
+      expect(find.text('manage tracks'), findsOneWidget);
+      expect(router.currentPath, manageTracksPath);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   testWidgets('the card disappears on the recompute after the shortfall '
@@ -232,4 +257,56 @@ void main() {
       expect(_message(tester, s.subTrackId), contains('About ${s.shortfall} '));
     }
   });
+}
+
+/// A real router shaped like the app's for this tap: the Dashboard, the
+/// Manage tracks hub at its production path and, when [withDetailRoute],
+/// the DNI-497 sub-track detail path. The opener is the production one.
+class _DashboardRouter extends RootStackRouter {
+  _DashboardRouter({required this.withDetailRoute});
+
+  final bool withDetailRoute;
+
+  @override
+  List<AutoRoute> get routes => [
+    NamedRouteDef(
+      name: 'TestDashboardRoute',
+      path: '/',
+      initial: true,
+      builder: (context, data) => Scaffold(
+        body: SingleChildScrollView(
+          child: ParentForecastSection(
+            belowCard: (f) => ShortfallWarningList(forecast: f),
+          ),
+        ),
+      ),
+    ),
+    NamedRouteDef(
+      name: 'TestManageTracksRoute',
+      path: manageTracksPath,
+      builder: (context, data) => const Text('manage tracks'),
+    ),
+    if (withDetailRoute)
+      NamedRouteDef(
+        name: 'TestSubTrackDetailRoute',
+        path: '/settings/tracks/sub-tracks/:subTrackId',
+        builder: (context, data) =>
+            Text('detail:${data.inheritedPathParams.getString('subTrackId')}'),
+      ),
+  ];
+}
+
+Future<void> _pumpRouted(WidgetTester tester, _DashboardRouter router) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pumpWidget(
+    pumpApp(
+      theme: AppTheme.lightTheme(),
+      routerConfig: router.config(),
+      overrides: forecastOverrides(
+        state: _state({schoolSubTrackId: _school(40)}),
+        nodeLabels: const {'Mishnah Berakhot 3': 'Berachos perek 3'},
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
