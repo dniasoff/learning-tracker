@@ -436,6 +436,72 @@
   "@subTrackDetailNoDeadlineLink": {
     "description": "Sub-track detail: link from the no-deadline note to the curriculum's goal setup; Story 2.4 (DNI-495) wording (DNI-497 AC-2). DRAFT copy, pending zc4."
   },
+  "subTrackDetailGroundTitle": "Ground (in order)",
+  "@subTrackDetailGroundTitle": {
+    "description": "Sub-track detail: section header over the ordered ground list (DNI-497 AC-1)."
+  },
+  "subTrackDetailGroundEmpty": "No ground yet",
+  "@subTrackDetailGroundEmpty": {
+    "description": "Sub-track detail: groundless state of the ground list (DNI-497 AC-4, UX-DR-122; EXPERIENCE.md [ASSUMPTION copy]). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailLearntOf": "{learnt} of {total} learnt",
+  "@subTrackDetailLearntOf": {
+    "description": "Sub-track detail: ground row count, all-source learning (DNI-497 AC-3, UX-DR-73).",
+    "placeholders": {
+      "learnt": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailLearntAtHome": "learnt at home",
+  "@subTrackDetailLearntAtHome": {
+    "description": "Sub-track detail: ground learnt on the main track, not in this sub-track (DNI-497 AC-3, UX-DR-91)."
+  },
+  "subTrackDetailLearntAt": "learnt at {source}",
+  "@subTrackDetailLearntAt": {
+    "description": "Sub-track detail: ground learnt in another sub-track, named by the parent (DNI-497 AC-3, UX-DR-91).",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailInUse": "{name} · In use",
+  "@subTrackDetailInUse": {
+    "description": "Sub-track detail: ground also held by another non-ended sub-track (DNI-497 AC-3, UX-DR-92).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailTriComplete": "complete",
+  "@subTrackDetailTriComplete": {
+    "description": "Sub-track detail: screen-reader state of a fully learnt ground row (DNI-497 AC-8, UX-DR-157)."
+  },
+  "subTrackDetailTriPartial": "partially learnt, {learnt} of {total}",
+  "@subTrackDetailTriPartial": {
+    "description": "Sub-track detail: screen-reader state of a partly learnt ground row (DNI-497 AC-8, UX-DR-157).",
+    "placeholders": {
+      "learnt": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailTriEmpty": "not learnt",
+  "@subTrackDetailTriEmpty": {
+    "description": "Sub-track detail: screen-reader state of an unlearnt ground row (DNI-497 AC-8, UX-DR-157)."
+  },
+  "subTrackDetailOpenHistory": "Open history",
+  "@subTrackDetailOpenHistory": {
+    "description": "Sub-track detail: screen-reader hint on a leaf label, which opens its Mishna history (DNI-497 AC-3)."
+  },
   "switchProfile": "Switch profile",
   "switchProfileSubtitle": "Change to a different profile or your account",
   "manageProfiles": "Manage Profiles",

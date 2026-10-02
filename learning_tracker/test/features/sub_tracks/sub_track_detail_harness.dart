@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/learner_state/presentation/providers/l
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_ground_projection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
 
 import '../../helpers/learner_state/c0_fixtures.dart';
@@ -169,6 +170,7 @@ final class DetailHarness {
     subTrackDetailRoleProvider.overrideWithValue(role),
     if (commands != null)
       learningCommandsProvider.overrideWith((ref) async => commands),
+    ...rawLabelOverrides(),
   ];
 
   /// Closes the repositories.
@@ -247,3 +249,41 @@ final class _CapacityCurriculumState implements CurriculumState {
   Set<CurriculumValidationError> get validationErrors =>
       _inner.validationErrors;
 }
+
+/// Runs the real engine over [track], [others] and [events] and builds the
+/// detail the provider would publish (no providers involved).
+SubTrackDetail engineDetail(
+  SubTrack track, {
+  List<SubTrack> others = const [],
+  List<LearningEvent> events = const [],
+  SubTrackDetailRole role = SubTrackDetailRole.parent,
+}) {
+  final all = [track, ...others];
+  final state = const LearnerStateEngine().run(
+    engineInputs(events: events, subTracks: all),
+  );
+  final c = state[engineCurriculum]!;
+  return SubTrackDetail(
+    track: track,
+    role: role,
+    state: c.subTracks[track.id]!,
+    ground: SubTrackGroundProjection.project(
+      track: track,
+      ground: track.ground,
+      corpus: mishnayosCorpus(),
+      learntLeaves: c.learntLeaves,
+      countedLearns: [
+        for (final e in events)
+          if (state.countedEventIds.contains(e.id)) e,
+      ],
+      subTracks: all,
+      holdsGround: (id) => c.subTracks[id]?.holdsGround ?? false,
+    ),
+  );
+}
+
+/// Label overrides: every ref renders as itself (no ContentIndex in tests).
+List<Override> rawLabelOverrides() => [
+  subTrackRefLabelProvider.overrideWith((ref, sefariaRef) => sefariaRef),
+  subTrackNodeNameProvider.overrideWith((ref, sefariaRef) => sefariaRef),
+];

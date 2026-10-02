@@ -584,6 +584,44 @@ class AppLocalizationsHe extends AppLocalizations {
   String get subTrackDetailNoDeadlineLink => 'הגדרת תאריך יעד';
 
   @override
+  String get subTrackDetailGroundTitle => 'חומר (לפי הסדר)';
+
+  @override
+  String get subTrackDetailGroundEmpty => 'אין עדיין חומר';
+
+  @override
+  String subTrackDetailLearntOf(int learnt, int total) {
+    return '$learnt מתוך $total נלמדו';
+  }
+
+  @override
+  String get subTrackDetailLearntAtHome => 'נלמד בבית';
+
+  @override
+  String subTrackDetailLearntAt(String source) {
+    return 'נלמד ב$source';
+  }
+
+  @override
+  String subTrackDetailInUse(String name) {
+    return '$name · בשימוש';
+  }
+
+  @override
+  String get subTrackDetailTriComplete => 'הושלם';
+
+  @override
+  String subTrackDetailTriPartial(int learnt, int total) {
+    return 'נלמד חלקית, $learnt מתוך $total';
+  }
+
+  @override
+  String get subTrackDetailTriEmpty => 'לא נלמד';
+
+  @override
+  String get subTrackDetailOpenHistory => 'פתיחת היסטוריה';
+
+  @override
   String get switchProfile => 'החלף פרופיל';
 
   @override
