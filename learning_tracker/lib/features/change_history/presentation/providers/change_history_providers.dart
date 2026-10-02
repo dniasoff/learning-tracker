@@ -214,7 +214,10 @@ class ChangeHistoryController extends Notifier<ChangeHistoryState> {
     }
     final run = _run();
     _filling = run;
-    return run.whenComplete(() => _filling = null);
+    return run.whenComplete(() {
+      // A rebuild may have started a newer run meanwhile; keep it.
+      if (identical(_filling, run)) _filling = null;
+    });
   }
 
   Future<void> _run() async {
