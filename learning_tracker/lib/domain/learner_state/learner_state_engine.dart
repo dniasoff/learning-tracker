@@ -24,8 +24,10 @@ import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 /// One calendar program assignment: [node] is assigned on [date].
@@ -110,15 +112,20 @@ final class LearnerStateEngine {
       inputs.events,
       isLockIgnored: _lockIgnoreHook(inputs),
     );
+    final learnsByCurriculum = <String, List<LearningEvent>>{};
+    for (final e in counted.learns) {
+      (learnsByCurriculum[e.curriculumId!] ??= []).add(e);
+    }
     final curricula = <String>{
       ...inputs.corpora.keys,
       ...inputs.mainTrackIntent.keys,
-      for (final e in counted.learns) e.curriculumId!,
+      ...learnsByCurriculum.keys,
     }.toList()..sort();
     return LearnerState(
       nowUtc: inputs.nowUtc,
       curricula: {
-        for (final c in curricula) c: _curriculum(c, inputs, counted),
+        for (final c in curricula)
+          c: _curriculum(c, inputs, learnsByCurriculum[c] ?? const []),
       },
       countedEventIds: counted.countedIds,
       lockIgnoredEventIds: counted.lockIgnoredIds,
@@ -129,18 +136,40 @@ final class LearnerStateEngine {
   /// lock-window rule over `inputs.settingsHistory`.
   LockIgnoreHook _lockIgnoreHook(LearnerStateInputs inputs) => noLockIgnored;
 
+  /// One curriculum. [learns] are its counted `learn` events, in event
+  /// order.
   DerivedCurriculumState _curriculum(
     String curriculumId,
     LearnerStateInputs inputs,
-    CountedEvents counted,
+    List<LearningEvent> learns,
   ) {
     final corpus = inputs.corpora[curriculumId];
     final intent = inputs.mainTrackIntent[curriculumId];
     final evaluated = corpus != null && intent != null && intent.isEvaluated;
+    if (corpus == null) {
+      return DerivedCurriculumState(
+        curriculumId: curriculumId,
+        evaluated: false,
+        learnt: LearntRecord.none(),
+      );
+    }
+    final live = _liveDocs(intent);
+    final scoped = scopedLeaves(corpus, live?.scope);
+    final scopedSet = scoped.toSet();
+    final learnt = LearntRecord(
+      corpus: corpus,
+      scopedLeaves: scoped,
+      learntLeaves: learntLeaves(learns, corpus, scopedSet.contains),
+    );
     return DerivedCurriculumState(
       curriculumId: curriculumId,
       evaluated: evaluated,
-      learnt: LearntRecord.none(),
+      learnt: learnt,
     );
   }
+
+  /// [intent] while its track is not ended, else null: while the track has
+  /// `ended_at`, its other governed docs read as ended too (AD-38).
+  MainTrackIntent? _liveDocs(MainTrackIntent? intent) =>
+      intent != null && intent.track.endedAt == null ? intent : null;
 }
