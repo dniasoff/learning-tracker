@@ -195,11 +195,13 @@ final class EngineBackedCommands implements LearningCommands {
 
 /// Overrides wiring [engine] and [commands] for the active learner, with
 /// School and Rebbe stored as live sub-tracks and the viewer as [role].
+/// [states] replaces the engine's state stream (e.g. an error).
 List<Override> subTrackEngineOverrides({
   required SubTrackTestEngine engine,
   required LearningCommands commands,
   SubTrackViewerRole role = SubTrackViewerRole.child,
   LearnerScope? scope,
+  Stream<LearnerState> Function()? states,
 }) {
   final activeScope = scope ?? c0Scope();
   final repo = InMemorySubTrackRepository()
@@ -214,7 +216,9 @@ List<Override> subTrackEngineOverrides({
   return [
     activeLearnerScopeProvider.overrideWith((ref) async => activeScope),
     subTrackRepositoryProvider.overrideWith((ref) async => repo),
-    learnerStateProvider.overrideWith((ref, _) => engine.watch()),
+    learnerStateProvider.overrideWith(
+      (ref, _) => states?.call() ?? engine.watch(),
+    ),
     learningCommandsProvider.overrideWith((ref) async => commands),
     subTrackViewerRoleProvider.overrideWithValue(role),
     ...positionLabelOverrides(),

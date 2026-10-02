@@ -147,7 +147,7 @@ class SubTrackHomeRow extends ConsumerWidget {
               // stack above the actions instead of being squeezed.
               final stacked =
                   MediaQuery.textScalerOf(context).scale(1) > 1.3 ||
-                  constraints.maxWidth < 340;
+                  constraints.maxWidth < 280;
               if (stacked) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,7 +281,10 @@ class _PlusOneButton extends StatelessWidget {
       ),
       child: Semantics(
         label: semanticsLabel,
-        child: ExcludeSemantics(child: Text(label)),
+        // "+1" is a number: keep it LTR so an RTL row never shows "1+".
+        child: ExcludeSemantics(
+          child: Text(label, textDirection: TextDirection.ltr),
+        ),
       ),
     );
     return onPressed == null ? SubTrackDisabledAction(child: button) : button;
