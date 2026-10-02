@@ -400,9 +400,14 @@ final class PlannedTasksForDateFamily extends $Family
   String toString() => r'plannedTasksForDateProvider';
 }
 
-/// All daily tasks across active curricula: today's [plannedTasksForDate]
-/// (the device's local date), with read-time skip handling — skipped-today
-/// refs removed, refs skipped yesterday boosted — sorted by priority.
+/// All daily tasks across active curricula: today's [plannedTasksForDate],
+/// with read-time skip handling — skipped-today refs removed, refs skipped
+/// yesterday boosted — sorted by priority.
+///
+/// "Today" is the learner's civil date the live `LearnerState` was derived
+/// for (`LearnerState.today`: AD-41, the learner's configured `time_zone`
+/// per the settings history), never the device date, so the plan, its
+/// reviews and its study-day decision are the engine's day.
 ///
 /// The planner's list already excludes what is learnt or reviewed (AD-49:
 /// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
@@ -411,9 +416,14 @@ final class PlannedTasksForDateFamily extends $Family
 @ProviderFor(allDailyTasks)
 final allDailyTasksProvider = AllDailyTasksProvider._();
 
-/// All daily tasks across active curricula: today's [plannedTasksForDate]
-/// (the device's local date), with read-time skip handling — skipped-today
-/// refs removed, refs skipped yesterday boosted — sorted by priority.
+/// All daily tasks across active curricula: today's [plannedTasksForDate],
+/// with read-time skip handling — skipped-today refs removed, refs skipped
+/// yesterday boosted — sorted by priority.
+///
+/// "Today" is the learner's civil date the live `LearnerState` was derived
+/// for (`LearnerState.today`: AD-41, the learner's configured `time_zone`
+/// per the settings history), never the device date, so the plan, its
+/// reviews and its study-day decision are the engine's day.
 ///
 /// The planner's list already excludes what is learnt or reviewed (AD-49:
 /// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
@@ -427,9 +437,14 @@ final class AllDailyTasksProvider
           FutureOr<List<DailyTask>>
         >
     with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
-  /// All daily tasks across active curricula: today's [plannedTasksForDate]
-  /// (the device's local date), with read-time skip handling — skipped-today
-  /// refs removed, refs skipped yesterday boosted — sorted by priority.
+  /// All daily tasks across active curricula: today's [plannedTasksForDate],
+  /// with read-time skip handling — skipped-today refs removed, refs skipped
+  /// yesterday boosted — sorted by priority.
+  ///
+  /// "Today" is the learner's civil date the live `LearnerState` was derived
+  /// for (`LearnerState.today`: AD-41, the learner's configured `time_zone`
+  /// per the settings history), never the device date, so the plan, its
+  /// reviews and its study-day decision are the engine's day.
   ///
   /// The planner's list already excludes what is learnt or reviewed (AD-49:
   /// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
@@ -460,7 +475,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'd04155164655423f386d33470f815a5743f88643';
+String _$allDailyTasksHash() => r'ebadb03c54d3af4e5d2883af861e1dc7325a6aea';
 
 /// Overdue task count for a single curriculum.
 ///
