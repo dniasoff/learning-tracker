@@ -560,7 +560,11 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
   // (e.g. container teardown during navigation/tests) while the above await
   // was in flight — guard before touching ref again.
   if (!ref.mounted) return;
-  final scheduler = ref.read(notificationSchedulerProvider);
+  // Reconcile on any account lock change so inactive profiles' scheduled
+  // reminders are filtered against the newest lock windows.
+  ref.watch(deviceLockPredicateProvider);
+  final scheduler = ref.watch(notificationSchedulerProvider);
+  ref.watch(isSacredTimeActiveProvider);
   final ownDeviceProfileId = ref.watch(selectedProfileIdProvider);
 
   // L2: per-profile reminders get the SAME per-fire Sacred-Time suppression
