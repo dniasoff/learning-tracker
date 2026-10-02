@@ -2996,6 +2996,120 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allDoneForToday => 'All done for today!';
 
   @override
+  String groundHeldTagSemantics(String names) {
+    return 'Held by $names. Not on the home schedule.';
+  }
+
+  @override
+  String get groundPickerAddGround => 'Add ground';
+
+  @override
+  String groundPickerAlreadyIn(String name) {
+    return 'Already in $name';
+  }
+
+  @override
+  String get groundPickerAvailableOnly => 'Available only';
+
+  @override
+  String get groundPickerChazara => 'Chazara';
+
+  @override
+  String get groundPickerClose => 'Close';
+
+  @override
+  String groundPickerCollapse(String node) {
+    return 'Collapse $node';
+  }
+
+  @override
+  String groundPickerConfirm(int count, String unit, String name) {
+    return 'Add $count $unit to $name';
+  }
+
+  @override
+  String groundPickerConfirmEmpty(String name) {
+    return 'Add to $name';
+  }
+
+  @override
+  String groundPickerExpand(String node) {
+    return 'Expand $node';
+  }
+
+  @override
+  String get groundPickerFilterEmpty =>
+      'Everything here is already assigned or learnt.';
+
+  @override
+  String groundPickerInUse(String name) {
+    return '$name · In use';
+  }
+
+  @override
+  String get groundPickerLegendComplete => 'Complete';
+
+  @override
+  String get groundPickerLegendEmpty => 'Empty';
+
+  @override
+  String get groundPickerLegendPartial => 'Partial';
+
+  @override
+  String get groundPickerLoadError => 'Couldn\'t load the curriculum.';
+
+  @override
+  String groundPickerNoMatches(String query) {
+    return 'Nothing matches “$query”.';
+  }
+
+  @override
+  String get groundPickerNotSelected => 'Not selected';
+
+  @override
+  String get groundPickerPartlySelected => 'Partly selected';
+
+  @override
+  String get groundPickerProgressComplete => 'Complete';
+
+  @override
+  String get groundPickerProgressEmpty => 'Empty';
+
+  @override
+  String get groundPickerProgressPartial => 'Partial';
+
+  @override
+  String get groundPickerRejected =>
+      'Couldn\'t add the ground. Nothing was changed.';
+
+  @override
+  String get groundPickerReset => 'Reset changes';
+
+  @override
+  String groundPickerScheduleNote(String name) {
+    return 'They\'ll leave the home schedule while $name holds them.';
+  }
+
+  @override
+  String get groundPickerSearchHint => 'Search';
+
+  @override
+  String get groundPickerSelected => 'Selected';
+
+  @override
+  String groundPickerTitle(String name) {
+    return 'Add ground to $name';
+  }
+
+  @override
+  String get groundPickerUnavailable => 'Ground can\'t be added here.';
+
+  @override
+  String groundPickerUnitCount(int count, String unit) {
+    return '$count $unit';
+  }
+
+  @override
   String get mishnaHistoryActionChangeDate => 'Change date';
 
   @override
