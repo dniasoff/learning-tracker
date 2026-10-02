@@ -12,6 +12,8 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
@@ -51,17 +53,32 @@ final _items = [
   _c('Mishnah Berakhot 1:2', 4, ['Zeraim', 'Berakhot', '1', '2'], leaf: true),
 ];
 
+/// 460 leaves of one chapter: a free tick of the chapter is two chunks
+/// (450 + 10 writes, AD-54) from a sub-track source.
+final _long = [for (var i = 1; i <= 460; i++) 'Mishnah Long 1:$i'];
+
+final _longItems = [
+  _c('Long', 0, ['Seder', 'Long']),
+  _c('Long 1', 1, ['Seder', 'Long', '1']),
+  for (final (i, ref) in _long.indexed)
+    _c(ref, i + 2, ['Seder', 'Long', '1', '${i + 1}'], leaf: true),
+];
+
 class _Content extends Fake implements ContentRepository {
+  _Content(this.items);
+
+  final List<ContentItem> items;
+
   @override
   Future<List<ContentItem>> getContentForCurriculum(CurriculumId id) async =>
-      id == _m ? _items : const [];
+      id == _m ? items : const [];
 
   @override
   Future<CurriculumHierarchyConfig> getHierarchyConfig(CurriculumId id) async =>
       CurriculumHierarchyConfig(
         curriculumId: id.storageKey,
         levelLabels: CurriculumLabels.labelsEn(_m),
-        totalItems: _items.length,
+        totalItems: items.length,
       );
 
   @override
@@ -80,13 +97,31 @@ final _tuesday = engineAt(600);
 final _school = fixtureSubTrack(schoolId, 'School');
 final _rebbe = fixtureSubTrack(rebbeId, 'Rebbe');
 
-Future<CaptureRig> _pump(WidgetTester tester, {bool tutor = false}) async {
+Future<CaptureRig> _pump(
+  WidgetTester tester, {
+  bool tutor = false,
+  bool long = false,
+}) async {
   SharedPreferences.setMockInitialValues(<String, Object>{});
-  final rig = CaptureRig(now: _tuesday, subTracks: [_school, _rebbe]);
+  final rig = long
+      ? CaptureRig(
+          now: _tuesday,
+          corpus: longCorpus(_long),
+          subTracks: [
+            fixtureSubTrack(
+              schoolId,
+              'School',
+              ground: const [NodeEntry(level: 'masechta', ref: 'Mishnah Long')],
+            ),
+            _rebbe,
+          ],
+        )
+      : CaptureRig(now: _tuesday, subTracks: [_school, _rebbe]);
   addTearDown(rig.dispose);
-  final content = _Content();
+  final items = long ? _longItems : _items;
+  final content = _Content(items);
   final tree = ContentTree.fromCurricula({
-    for (final c in CurriculumId.values) c: c == _m ? _items : const [],
+    for (final c in CurriculumId.values) c: c == _m ? items : const [],
   });
   await tester.pumpWidget(
     pumpApp(
@@ -115,10 +150,10 @@ Future<CaptureRig> _pump(WidgetTester tester, {bool tutor = false}) async {
         anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
         localDayClockProvider.overrideWithValue(FakeLocalDayClock(_tuesday)),
       ],
-      child: const ContentHierarchyScreen(
+      child: ContentHierarchyScreen(
         curriculumId: 'mishnayos',
-        level1: 'Zeraim',
-        level2: 'Berakhot',
+        level1: long ? 'Seder' : 'Zeraim',
+        level2: long ? 'Long' : 'Berakhot',
       ),
     ),
   );
@@ -234,5 +269,99 @@ void main() {
       tutor.read(subTrackSourceChoicesProvider(engineCurriculum)),
       isEmpty,
     );
+  });
+
+  testWidgets('a two-chunk free tick whose first chunk is rejected ticks '
+      'only the saved leaves, claims only them, and a Retry ticks the '
+      'rest', (tester) async {
+    final rig = await _pump(tester, long: true);
+    bool? chapterTick() => tester.widget<Checkbox>(find.byType(Checkbox)).value;
+    expect(chapterTick(), isFalse);
+
+    rig.port.failNextWith(const PermanentWriteRejection('permission-denied'));
+    await tester.tap(find.byType(Checkbox));
+    await _settle(tester);
+    await tester.tap(find.byKey(Key('freeTickSource-$schoolId')));
+    await _settle(tester);
+    await tester.tap(find.text('Record 460'));
+    await _settle(tester);
+
+    expect(rig.port.attempts, hasLength(2));
+    expect([for (final e in rig.written) e.ref], _long.sublist(450));
+    expect(
+      chapterTick(),
+      isNull,
+      reason: 'the rejected chunk is not shown as learnt (partial)',
+    );
+    expect(find.text('460 recorded'), findsNothing);
+    expect(find.text('Retry'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await _settle(tester);
+    expect(rig.written, hasLength(460));
+    expect(chapterTick(), isTrue);
+  });
+
+  group('recordedBatch', () {
+    final refs = ['a', 'b', 'c'];
+
+    test('keys every planned event to its leaf, ticks only saved ones', () {
+      final r = recordedBatch(
+        refs: refs,
+        nodeRefs: refs,
+        eventIds: ['E3'],
+        rejectedEventIds: ['E1', 'E2'],
+        failed: const {},
+      );
+      expect(r.byEvent, {
+        'E1': ['a'],
+        'E2': ['b'],
+        'E3': ['c'],
+      });
+      expect(r.ticked, {'c'});
+    });
+
+    test('a failure reported before the result is never ticked', () {
+      final r = recordedBatch(
+        refs: refs,
+        nodeRefs: refs,
+        eventIds: ['E1', 'E2', 'E3'],
+        rejectedEventIds: const [],
+        failed: {'E2'},
+      );
+      expect(r.ticked, {'a', 'c'});
+    });
+
+    test('a plan that does not line up ticks nothing', () {
+      final r = recordedBatch(
+        refs: refs,
+        nodeRefs: refs,
+        eventIds: ['E1'],
+        rejectedEventIds: const [],
+        failed: const {},
+      );
+      expect(r.byEvent, isEmpty);
+      expect(r.ticked, isEmpty);
+    });
+
+    test('a node event covers every leaf; a failed one ticks none', () {
+      final saved = recordedBatch(
+        refs: null,
+        nodeRefs: refs,
+        eventIds: ['N1'],
+        rejectedEventIds: const [],
+        failed: const {},
+      );
+      expect(saved.byEvent, {'N1': refs});
+      expect(saved.ticked, refs.toSet());
+      final failed = recordedBatch(
+        refs: null,
+        nodeRefs: refs,
+        eventIds: ['N1'],
+        rejectedEventIds: const [],
+        failed: {'N1'},
+      );
+      expect(failed.ticked, isEmpty);
+    });
   });
 }
