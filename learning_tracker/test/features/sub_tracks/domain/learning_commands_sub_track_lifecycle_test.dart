@@ -13,8 +13,10 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
 
@@ -307,6 +309,70 @@ void main() {
       expect(repo.entries, hasLength(1));
     });
 
+    test('offline: a queued end reports no analytics until the server '
+        'accepts it, and whenConfirmed completes true', () async {
+      repo.offline = true;
+      final result = await commands.endSubTrack(ulidA) as CaptureSuccess;
+      expect(result.queued, isTrue);
+      expect(analytics.lifecycles, isEmpty, reason: 'queued is not accepted');
+      final confirmed = commands.whenConfirmed(result.changeIds.single);
+      repo.settleHeld();
+      expect(await confirmed, isTrue);
+      expect(analytics.lifecycles, hasLength(1));
+      expect(analytics.lifecycles.single.action, SubTrackLifecycleAction.end);
+      // Settled: a later ask answers at once.
+      expect(await commands.whenConfirmed(result.changeIds.single), isTrue);
+    });
+
+    test(
+      'offline: a queued delete the server refuses completes false, '
+      'reports nothing, and its retry is accepted and reported once',
+      () async {
+        repo
+          ..offline = true
+          ..failNextWith(const PermanentWriteRejection('permission-denied'));
+        final result = await commands.deleteSubTrack(ulidA) as CaptureSuccess;
+        final changeId = result.changeIds.single;
+        final confirmed = commands.whenConfirmed(changeId);
+        repo.settleHeld();
+        expect(await confirmed, isFalse);
+        expect(repo.tracksOf(scope).single.endedAt, isNull, reason: 'reverted');
+        expect(analytics.lifecycles, isEmpty);
+        expect(commands.hasPendingFailure(changeId), isTrue);
+        expect(await commands.whenConfirmed(changeId), isFalse);
+
+        repo.offline = false;
+        expect(await commands.retry(changeId), isA<CaptureSuccess>());
+        expect(commands.hasPendingFailure(changeId), isFalse);
+        expect(await commands.whenConfirmed(changeId), isTrue);
+        expect(
+          repo.tracksOf(scope).single.endReason,
+          SubTrackEndReason.deleted,
+        );
+        expect(analytics.lifecycles, hasLength(1));
+        expect(
+          analytics.lifecycles.single.action,
+          SubTrackLifecycleAction.delete,
+        );
+      },
+    );
+
+    test('offline: a queued Add next year reports add_next_year only once '
+        'acknowledged', () async {
+      repo.offline = true;
+      final result =
+          await commands.createSubTrack(_nextYear, addNextYear: true)
+              as CaptureSuccess;
+      expect(result.queued, isTrue);
+      expect(analytics.lifecycles, isEmpty);
+      repo.settleHeld();
+      expect(await commands.whenConfirmed(result.changeIds.single), isTrue);
+      expect(
+        analytics.lifecycles.single.action,
+        SubTrackLifecycleAction.addNextYear,
+      );
+    });
+
     test(
       'an already-ended source: a later delete writes nothing new',
       () async {
@@ -324,6 +390,54 @@ void main() {
         expect(repo.calls, isEmpty);
       },
     );
+  });
+
+  group('LearningCommands surfaces a late sub-track rejection (AD-54)', () {
+    late DefaultLearningCommands facade;
+
+    setUp(() {
+      facade = DefaultLearningCommands(
+        scope: scope,
+        actor: parentActor,
+        reads: FakeLearningCommandReads(history: c0SettingsHistory()),
+        writePort: InMemoryLearningWritePort(),
+        gate: const LockWindowCaptureGate(),
+        analytics: analytics,
+        failureReporter: RecordingLearningFailureReporter(),
+        clock: () => _now,
+        newUlid: (_) => ulidD,
+        subTrackCommands: commands,
+      );
+    });
+
+    tearDown(() => facade.dispose());
+
+    test('the refused queued end is a pending failure of the facade, its '
+        'retry routes to the sub-track commands, and whenConfirmed tracks '
+        'it', () async {
+      final failures = <List<PendingFailure>>[];
+      final sub = facade.watchPendingFailures().listen(failures.add);
+      repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('failed-precondition'));
+      final result = await facade.endSubTrack(ulidA) as CaptureSuccess;
+      expect(result.queued, isTrue);
+      final changeId = result.changeIds.single;
+      final confirmed = facade.whenSubTrackChangeConfirmed(changeId);
+      repo.settleHeld();
+      expect(await confirmed, isFalse);
+      await Future<void>.delayed(Duration.zero);
+      expect([for (final f in failures.last) f.id], [changeId]);
+
+      repo.offline = false;
+      expect(await facade.retry(changeId), isA<CaptureSuccess>());
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last, isEmpty);
+      expect(await facade.whenSubTrackChangeConfirmed(changeId), isTrue);
+      expect(repo.tracksOf(scope).single.endReason, SubTrackEndReason.ended);
+      expect(analytics.lifecycles, hasLength(1));
+      await sub.cancel();
+    });
   });
 
   group('engine: an explicit end returns ground and keeps every event', () {

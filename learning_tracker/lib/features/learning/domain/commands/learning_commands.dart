@@ -262,6 +262,14 @@ abstract interface class LearningCommands {
 
   /// Retries the pending failure [pendingFailureId].
   Future<CaptureResult> retry(String pendingFailureId);
+
+  /// Whether the sub-track write of change-log entry [changeId] — returned
+  /// by a sub-track command as `success(queued: true)` — was accepted by
+  /// the server: true at its acknowledgement (at once when none is
+  /// awaited), false when the server refused it for good, so it is in
+  /// [watchPendingFailures] with a [retry] (AD-54 Recovery; DNI-499).
+  /// Implemented by `SubTrackCommands.whenConfirmed`.
+  Future<bool> whenSubTrackChangeConfirmed(String changeId);
 }
 
 /// The AD-38 governed half of [LearningCommands], filled by DNI-470 (1.8).
@@ -928,6 +936,11 @@ final class DefaultLearningCommands implements LearningCommands {
 
   /// The event failures, then the governed ones, then the sub-track ones.
   @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) =>
+      _subTrackCommands?.whenConfirmed(changeId) ?? Future.value(true);
+
+  /// The event failures, then the governed ones, then the sub-track ones.
+  @override
   Stream<List<PendingFailure>> watchPendingFailures() {
     var failures = _dispatcher.watchPendingFailures();
     final governed = _governed;
@@ -942,8 +955,12 @@ final class DefaultLearningCommands implements LearningCommands {
   }
 
   @override
-  Future<CaptureResult> retry(String pendingFailureId) =>
+Future<CaptureResult> retry(String pendingFailureId) =>
       _gated((stamp, history) async {
+        final subTracks = _subTrackCommands;
+        if (subTracks != null && subTracks.hasPendingFailure(pendingFailureId)) {
+          return subTracks.retry(pendingFailureId);
+        }
         final outcome = await _dispatcher.retry(pendingFailureId);
         if (outcome == null) {
           final governed =
@@ -953,8 +970,6 @@ final class DefaultLearningCommands implements LearningCommands {
                 afterEvents: _afterWrite,
               );
           if (governed != null) return governed;
-          final subTracks = _subTrackCommands;
-          if (subTracks != null) return subTracks.retry(pendingFailureId);
           return const CaptureResult.rejected(CaptureRejection.targetNotFound);
         }
         if (outcome.allRejected) {
