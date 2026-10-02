@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/learn_sl
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/erev_planned_slot.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -125,6 +126,7 @@ class LearningScreen extends ConsumerWidget {
                     ),
                     const ErevPlannedSlot(),
                     const AlsoLearningSlot(),
+                    const SubTrackCaptureSection(),
                     const SizedBox(height: 36),
                     const _BrowseSection(),
                   ],

@@ -22,6 +22,7 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/up_to_selection.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/up_to_selection_service.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -107,6 +108,29 @@ Future<UpToSelection?> showUpToPicker(
     constraints: BoxConstraints(maxHeight: size.height * 0.85),
     builder: (_) =>
         KeyedSubtree(key: const Key('upToPickerSheet'), child: picker),
+  );
+}
+
+/// Opens the picker for [request] and records what it confirms as ONE
+/// capture ([captureLeaves]): the track's source, `dated`, today; the
+/// main track adds its first stage. Dismissal records nothing (AC-4).
+Future<void> openUpToAndRecord(
+  BuildContext context,
+  WidgetRef ref, {
+  required UpToRequest request,
+}) async {
+  final selection = await showUpToPicker(context, request: request);
+  if (selection == null || selection.count == 0 || !context.mounted) return;
+  await captureLeaves(
+    context,
+    ref,
+    curriculumId: request.curriculumId,
+    source: request.source,
+    refs: selection.includedRefs,
+    stage: switch (request) {
+      MainTrackUpToRequest(:final stage) => stage,
+      SubTrackUpToRequest() => null,
+    },
   );
 }
 

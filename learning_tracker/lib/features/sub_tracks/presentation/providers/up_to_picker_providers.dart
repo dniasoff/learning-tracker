@@ -26,6 +26,7 @@ import 'package:learning_tracker/features/learner_state/presentation/providers/l
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_capture_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/on_home_sub_tracks.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/up_to_selection_service.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
 
 /// What one Up to… picker records.
 sealed class UpToRequest {
@@ -186,7 +187,8 @@ final onHomeSubTracksProvider =
       return AsyncData(onHomeSubTracks(list, value));
     });
 
-/// The rows of the picker for [UpToRequest].
+/// The rows of the picker for [UpToRequest], with this device's pending
+/// captures read as recorded.
 final upToSliceProvider = Provider.autoDispose
     .family<AsyncValue<UpToSlice>, UpToRequest>((ref, request) {
       final state = ref.watch(activeLearnerStateProvider);
@@ -208,7 +210,11 @@ final upToSliceProvider = Provider.autoDispose
           StackTrace.current,
         );
       }
-      const pending = <LeafRef>{};
+      final pending = ref.watch(
+        pendingCapturesProvider.select(
+          (p) => p.refsOf(request.curriculumId, request.source),
+        ),
+      );
       switch (request) {
         case SubTrackUpToRequest(:final subTrackId):
           final sub = curriculum.subTracks[subTrackId];
