@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/write_ack.dart';
+import 'package:learning_tracker/domain/learner_state/default_points.dart';
 import 'package:learning_tracker/features/gamification/domain/models/point_config.dart';
 
 /// Default point ladder applied when a `(curriculumId, stageOrder)` has no
@@ -20,12 +21,7 @@ import 'package:learning_tracker/features/gamification/domain/models/point_confi
 /// document means "no override, use the ladder" — a seeded row would make
 /// this branch permanently dead and silently pin a stale default if the
 /// ladder ever changes.
-int defaultPointsForStage(int stageOrder) => switch (stageOrder) {
-  1 => 10,
-  2 => 5,
-  3 => 3,
-  _ => 1,
-};
+int defaultPointsForStage(int stageOrder) => defaultStagePoints(stageOrder);
 
 /// Inclusive bounds on a stored override's `points` value — mirrored by
 /// `firestore.rules`' `point_configs` block and `completions.points`' own

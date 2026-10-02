@@ -711,9 +711,10 @@ void main() {
         await settledAsync(container, activeLearnerStateProvider),
         const AsyncData<LearnerState?>(null),
       );
+      // Filled by DNI-469: no learner scope → no commands (not ready).
       expect(
         await settledAsync(container, learningCommandsProvider),
-        isAsyncC0Stub('DNI-469', 'learningCommandsProvider'),
+        const AsyncData<LearningCommands?>(null),
       );
       expect(
         await settledAsync(container, changeLogRepositoryProvider),

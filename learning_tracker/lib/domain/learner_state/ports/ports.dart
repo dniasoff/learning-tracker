@@ -12,6 +12,7 @@ export 'change_log_repository.dart';
 export 'complete_read.dart';
 export 'governed_intent_repository.dart';
 export 'learner_scope.dart';
+export 'learning_command_reads.dart';
 export 'learning_event_repository.dart';
 export 'learning_write_port.dart';
 export 'oversized_governed_write_port.dart';

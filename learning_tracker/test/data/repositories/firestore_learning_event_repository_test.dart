@@ -16,6 +16,7 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
 import '../../helpers/learner_state_fixtures.dart';
@@ -422,6 +423,92 @@ void main() {
         throwsA(isA<FirebaseException>()),
       );
       expect((await events(firestore).get()).docs, isEmpty);
+    });
+  });
+
+  group('commit (DNI-469 LearningWritePort)', () {
+    final scope = LearnerScope(ownerUid: _owner, profileId: profileUlid);
+    String profile() => 'users/$_owner/learner_profiles/$profileUlid';
+
+    LearningWriteChunk chunk() {
+      final learn = datedLearn(stage: 1);
+      final voided = LearningEvent.voidOf(
+        id: ulidB,
+        targetId: ulidC,
+        recordedAt: t0,
+        actor: parentActor,
+      );
+      return LearningWriteChunk(
+        events: [learn, voided],
+        awards: [PointsAward(eventId: learn.id, amount: 10, createdAt: t0)],
+      );
+    }
+
+    test('writes the events and their pts_ entries in one batch with the '
+        'prebuilt payloads (no server timestamp)', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repo = FirestoreLearningEventRepository(firestore: firestore);
+      await repo.commit(scope, chunk());
+
+      final learn = await firestore
+          .doc('${profile()}/learning_events/$ulidA')
+          .get();
+      expect(
+        LearningEvent.fromStorage(ulidA, fromFirestoreMap(learn.data()!)),
+        datedLearn(stage: 1),
+      );
+      expect(
+        (await firestore.doc('${profile()}/learning_events/$ulidB').get())
+            .exists,
+        isTrue,
+      );
+      final pts = await firestore
+          .doc('${profile()}/points_ledger/pts_$ulidA')
+          .get();
+      final data = fromFirestoreMap(pts.data()!);
+      expect(data, {
+        'ulid': 'pts_$ulidA',
+        'entry_kind': 'completion',
+        'delta': 10,
+        'created_at': t0,
+        'source': 'live',
+        'event_id': ulidA,
+      });
+    });
+
+    test(
+      'an identical re-commit (retry) leaves the documents unchanged',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        final repo = FirestoreLearningEventRepository(firestore: firestore);
+        final c = chunk();
+        await repo.commit(scope, c);
+        await repo.commit(scope, c);
+        expect(
+          (await firestore.collection('${profile()}/learning_events').get())
+              .docs,
+          hasLength(2),
+        );
+        expect(
+          (await firestore.collection('${profile()}/points_ledger').get()).docs,
+          hasLength(1),
+        );
+      },
+    );
+
+    test('terminal server codes are the permanent-rejection set', () {
+      expect(
+        FirestoreLearningEventRepository.permanentRejectionCodes,
+        containsAll([
+          'permission-denied',
+          'invalid-argument',
+          'failed-precondition',
+        ]),
+      );
+      expect(
+        FirestoreLearningEventRepository.permanentRejectionCodes,
+        isNot(contains('unavailable')),
+      );
     });
   });
 }

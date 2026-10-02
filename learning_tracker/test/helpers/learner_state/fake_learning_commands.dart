@@ -1,5 +1,6 @@
 /// Fakes of the C0 (DNI-524) command seams: [FakeLearningCommands],
-/// [FakeCaptureGate] and [RecordingLearningAnalytics].
+/// [FakeCaptureGate] and [RecordingLearningAnalytics], plus the DNI-469
+/// seams [FakeLearningCommandReads] and [RecordingLearningFailureReporter].
 ///
 /// Each `implements` its interface, so a contract change breaks it at
 /// compile time. The fakes are not the spec (C0 contract-change protocol,
@@ -16,10 +17,13 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 
 /// One recorded [LearningCommands] call: the method [name] and its
 /// arguments by parameter name.
@@ -292,4 +296,85 @@ final class RecordingLearningAnalytics implements LearningAnalytics {
     dateState: dateState,
     count: count,
   ));
+}
+
+/// A [LearningCommandReads] over mutable in-memory values. Every read is
+/// appended to [reads] (`settings`, `events`, `corpus`, `points`).
+final class FakeLearningCommandReads implements LearningCommandReads {
+  /// Creates the reads.
+  FakeLearningCommandReads({
+    required this.history,
+    List<LearningEvent>? log,
+    Map<String, Corpus>? corpora,
+    this.pointsFor,
+  }) : eventLog = log ?? [],
+       corpora = corpora ?? {};
+
+  /// The settings history; null makes [settingsHistory] throw.
+  LearnerSettingsHistory? history;
+
+  /// The event log.
+  final List<LearningEvent> eventLog;
+
+  /// The corpora by curriculum id.
+  final Map<String, Corpus> corpora;
+
+  /// The amount for `(curriculumId, stage)`; defaults to 10 for stage null
+  /// or 1, else 5.
+  int Function(String curriculumId, int? stage)? pointsFor;
+
+  /// Every read, in order.
+  final List<String> reads = [];
+
+  @override
+  Future<LearnerSettingsHistory> settingsHistory(LearnerScope scope) async {
+    reads.add('settings');
+    final h = history;
+    if (h == null) throw StateError('settings unavailable');
+    return h;
+  }
+
+  @override
+  Future<List<LearningEvent>> events(LearnerScope scope) async {
+    reads.add('events');
+    return List.of(eventLog);
+  }
+
+  @override
+  Future<Corpus?> corpus(String curriculumId) async {
+    reads.add('corpus');
+    return corpora[curriculumId];
+  }
+
+  @override
+  Future<int> pointsAmount(
+    LearnerScope scope,
+    String curriculumId,
+    int? stage,
+  ) async {
+    reads.add('points');
+    return pointsFor?.call(curriculumId, stage) ??
+        (stage == null || stage == 1 ? 10 : 5);
+  }
+}
+
+/// One recorded [LearningFailureReporter.writeRejected].
+typedef RecordedRejection = ({
+  LearningCommandKind command,
+  PendingFailureReason reason,
+  int writeCount,
+});
+
+/// A [LearningFailureReporter] that records every report.
+final class RecordingLearningFailureReporter
+    implements LearningFailureReporter {
+  /// Every report, in order.
+  final List<RecordedRejection> reports = [];
+
+  @override
+  void writeRejected({
+    required LearningCommandKind command,
+    required PendingFailureReason reason,
+    required int writeCount,
+  }) => reports.add((command: command, reason: reason, writeCount: writeCount));
 }

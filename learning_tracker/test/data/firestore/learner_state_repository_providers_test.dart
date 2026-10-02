@@ -20,6 +20,7 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -101,6 +102,8 @@ void main() {
         isNull,
       );
       expect(await container.read(subTrackRepositoryProvider.future), isNull);
+      expect(await container.read(learningWritePortProvider.future), isNull);
+      expect(await container.read(pointsAmountReaderProvider.future), isNull);
       expect(await container.read(activeLearnerScopeProvider.future), isNull);
     },
   );
@@ -171,6 +174,15 @@ void main() {
     final subTracks = await container.read(subTrackRepositoryProvider.future);
     expect(events, isA<FirestoreLearningEventRepository>());
     expect(subTracks, isA<FirestoreSubTrackRepository>());
+    // DNI-469: the chunked write port and the AD-50 amount reader.
+    expect(
+      await container.read(learningWritePortProvider.future),
+      isA<FirestoreLearningEventRepository>(),
+    );
+    expect(
+      await container.read(pointsAmountReaderProvider.future),
+      isA<FirestorePointsAmountReader>(),
+    );
     expect(await container.read(activeLearnerScopeProvider.future), isNull);
 
     // The repository writes through the SAME handle.
@@ -349,7 +361,6 @@ void main() {
         'DNI-470',
         'governedIntentRepositoryProvider',
       ),
-      (learningWritePortProvider, 'DNI-469', 'learningWritePortProvider'),
       (
         oversizedGovernedWritePortProvider,
         'DNI-470',

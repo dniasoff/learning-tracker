@@ -15,7 +15,28 @@ import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+
+/// `users/{ownerUid}/learner_profiles/{profileId}/points_ledger` of
+/// [scope] — where the AD-50 `pts_{eventId}` entries land, in the same
+/// batch as their learning events (`FirestoreLearningEventRepository
+/// .commit`, DNI-469).
+CollectionReference<Map<String, dynamic>> pointsLedgerCollectionFor(
+  FirebaseFirestore firestore,
+  LearnerScope scope,
+) => firestore
+    .collection('users')
+    .doc(scope.ownerUid)
+    .collection('learner_profiles')
+    .doc(scope.profileId)
+    .collection('points_ledger');
+
+/// The AD-50 `points_ledger/pts_{eventId}` document of [award]: the
+/// existing entry shape plus `event_id` (`PointsLedgerEntry.forAward`).
+Map<String, dynamic> pointsAwardDocument(PointsAward award) =>
+    PointsLedgerEntry.forAward(award).toFirestore();
 
 /// Firestore-backed points-ledger repository: `users/{uid}/
 /// learner_profiles/{profileId}/points_ledger/{ulid}` — append-only,
