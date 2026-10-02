@@ -8,9 +8,16 @@ part of 'gamification_screen.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// The streak calendar's active days: the last 30 days with counted
+/// learning in the curriculum in view (DNI-479; AD-40 has no profile-wide
+/// streak).
 
 @ProviderFor(streakCalendar)
 final streakCalendarProvider = StreakCalendarProvider._();
+
+/// The streak calendar's active days: the last 30 days with counted
+/// learning in the curriculum in view (DNI-479; AD-40 has no profile-wide
+/// streak).
 
 final class StreakCalendarProvider
     extends
@@ -20,6 +27,9 @@ final class StreakCalendarProvider
           FutureOr<Set<DateTime>>
         >
     with $FutureModifier<Set<DateTime>>, $FutureProvider<Set<DateTime>> {
+  /// The streak calendar's active days: the last 30 days with counted
+  /// learning in the curriculum in view (DNI-479; AD-40 has no profile-wide
+  /// streak).
   StreakCalendarProvider._()
     : super(
         from: null,
@@ -46,4 +56,4 @@ final class StreakCalendarProvider
   }
 }
 
-String _$streakCalendarHash() => r'c815e6d2ad3f4052077ea2e07215b28e39f784e7';
+String _$streakCalendarHash() => r'1459c14a57fec867056b5be29c4598d6da444ea9';
