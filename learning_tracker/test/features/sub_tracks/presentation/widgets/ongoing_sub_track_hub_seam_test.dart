@@ -135,6 +135,27 @@ void main() {
     expect(find.text('Ongoing sub-track'), findsOneWidget);
   });
 
+  testWidgets('AC-5: at five in use the chooser disables Ongoing', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      tracks: [
+        for (var i = 1; i <= 5; i++) _track(i, name: 'Rebbe $i'),
+        _track(9, name: 'Old', ended: true),
+      ],
+    );
+    await tester.tap(_key('ongoingSubTrackHubAdd'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('You can have up to 5 ongoing sub-tracks. 5 in use.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Ongoing'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ongoing sub-track'), findsNothing);
+  });
+
   testWidgets(
     'AC-6: an ongoing row opens its edit form; school-year does not',
     (tester) async {
