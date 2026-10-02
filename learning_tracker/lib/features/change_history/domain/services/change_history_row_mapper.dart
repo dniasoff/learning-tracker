@@ -18,6 +18,13 @@
 /// - **Bell** mirrors the AD-39 push allowlist exactly: a tutor change to
 ///   `goal`, `mainTrack`, `mainTrackOrder`, `mainTrackProgram` or
 ///   `mainTrackStudyDays`. It is display only, never a push trigger.
+/// - **Created** is proved by the entry itself, by the rule the undo
+///   command uses to tombstone a create (`governed_action_commands.dart`):
+///   it wrote a doc's immutable `curriculum_id` (written once, at
+///   creation) and every field it wrote was absent before. An all-null
+///   `before` alone is not proof: an update logs only its changed fields,
+///   so setting a field that was unset (a `window_end` going from null to
+///   a date) is an edit.
 /// - **Source names** are the sub-track name at event time: the `before`
 ///   of the first later rename, else the name set by the last rename up to
 ///   then, else today's name.
@@ -31,6 +38,8 @@ import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart'
+    show GovernedKeys;
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/change_history/domain/models/change_history_row.dart';
 import 'package:learning_tracker/features/change_history/domain/models/history_item.dart';
@@ -45,6 +54,17 @@ const Set<GovernedEntity> parentNotifiedEntities = {
   GovernedEntity.mainTrackProgram,
   GovernedEntity.mainTrackStudyDays,
 };
+
+/// Whether [e] created the doc(s) it describes: outside `learnerSettings`
+/// (whose seed entry is a settings change, never a create), it wrote the
+/// immutable `curriculum_id` and every field it wrote was absent before.
+/// Mirrors the create test of `GovernedActionCommands.undoAction`.
+bool createsGovernedDoc(ChangeLogEntry e) =>
+    e.entity != GovernedEntity.learnerSettings &&
+    e.after.keys.any(
+      (k) => ChangedFieldKey.tryParse(k)?.field == GovernedKeys.curriculumId,
+    ) &&
+    e.before.values.every((v) => v == null);
 
 final _civilDatePattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
 
@@ -245,7 +265,7 @@ final class _Context {
       change = _endReasonsThatRemove.contains(afterOf(SubTrack.kEndReason))
           ? GovernedChangeKind.removed
           : GovernedChangeKind.ended;
-    } else if (e.before.values.every((v) => v == null)) {
+    } else if (createsGovernedDoc(e)) {
       change = GovernedChangeKind.created;
     } else if (e.entity == GovernedEntity.subTrack &&
         fields.length == 1 &&

@@ -109,8 +109,11 @@ void main() {
             1,
             minutes: 0,
             subTrackId: sub1,
-            before: {'name': null, 'ground': null},
+            // A create writes every set field, the immutable
+            // curriculum_id among them (SubTrackCommands.createSubTrack).
+            before: {'curriculum_id': null, 'name': null, 'ground': null},
             after: {
+              'curriculum_id': 'mishnayos',
               'name': 'Rebbe',
               'ground': ['Mishnah Beitzah 4'],
             },
@@ -148,7 +151,72 @@ void main() {
       final created = _governed(rows.last).primary;
       expect(created.change, GovernedChangeKind.created);
       expect(created.subjectName, 'Rebbe');
-      expect(created.fields, ['ground', 'name']);
+      expect(created.fields, ['curriculum_id', 'ground', 'name']);
+    });
+
+    test('setting a field that was unset is an edit, not a create: an '
+        "existing sub-track's window_end going from null to a date", () {
+      final sub = historyId(7001);
+      final part = _governed(
+        _rows(
+          entries: [
+            _subTrackEntry(
+              1,
+              minutes: 0,
+              subTrackId: sub,
+              before: {'window_end': null},
+              after: {'window_end': '2027-06-30'},
+            ),
+          ],
+          names: {sub: 'Rebbe'},
+        ).single,
+      ).primary;
+      expect(part.change, GovernedChangeKind.updated);
+      expect(part.fields, ['window_end']);
+      expect(part.subjectName, 'Rebbe');
+    });
+
+    test('an all-null before on other entities is an edit unless the entry '
+        'wrote curriculum_id', () {
+      ChangeHistoryRow row(GovernedEntity entity, Map<String, Object?> after) =>
+          _rows(
+            entries: [
+              historyEntry(
+                1,
+                minutes: 0,
+                entity: entity,
+                entityId: 'mishnayos',
+                before: {for (final k in after.keys) k: null},
+                after: after,
+              ),
+            ],
+          ).single;
+      expect(
+        _governed(
+          row(GovernedEntity.mainTrack, {
+            'curriculum_tracks/mishnayos.paused': true,
+          }),
+        ).primary.change,
+        GovernedChangeKind.updated,
+      );
+      expect(
+        _governed(
+          row(GovernedEntity.mainTrack, {
+            'curriculum_tracks/mishnayos.curriculum_id': 'mishnayos',
+            'curriculum_tracks/mishnayos.paused': false,
+          }),
+        ).primary.change,
+        GovernedChangeKind.created,
+      );
+      expect(
+        _governed(
+          row(GovernedEntity.learnerSettings, {
+            'learner_profiles/mishnayos.time_zone': 'America/New_York',
+          }),
+        ).primary.change,
+        GovernedChangeKind.updated,
+        reason: 'a learnerSettings seed is a settings change',
+      );
     });
 
     test('learning rows show the source name at event time, the refs of '
