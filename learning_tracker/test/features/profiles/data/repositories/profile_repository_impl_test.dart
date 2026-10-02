@@ -11,10 +11,12 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/creating_device_settings_fakes.dart';
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 
@@ -42,9 +44,14 @@ AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore, String uid) {
   );
 }
 
-ProviderContainer _container(FakeFirebaseFirestore firestore, String uid) {
+ProviderContainer _container(
+  FakeFirebaseFirestore firestore,
+  String uid, {
+  CreatingDeviceSettingsSource? device,
+}) {
   return ProviderContainer(
     overrides: [
+      creatingDeviceSettingsOverride(device),
       activeAccountFirebaseProvider.overrideWith(
         (ref) async => _handles(firestore, uid),
       ),
@@ -242,5 +249,75 @@ void main() {
       final profiles = await profilesFuture.timeout(const Duration(seconds: 1));
       expect(profiles.single.displayName, 'Ready Learner');
     });
+
+    group(
+      'AC-6 (DNI-470): createProfile seeds the creating device settings',
+      () {
+        test('the new profile carries the device zone, location and flag, with '
+            'one learnerSettings seed entry', () async {
+          const uid = 'uid-profile-seed';
+          final firestore = createFakeFirestore(authenticatedUid: uid);
+          final device = FakeCreatingDeviceSettingsSource(
+            const CreatingDeviceSettings(
+              timeZone: 'America/New_York',
+              latitude: 40.7,
+              longitude: -74,
+              inIsrael: false,
+            ),
+          );
+          final container = _container(firestore, uid, device: device);
+          addTearDown(container.dispose);
+
+          final created = await container
+              .read(profileRepositoryProvider)
+              .createProfile(displayName: 'Seeded', mode: ProfileMode.child);
+
+          final profileDoc = firestore
+              .collection('users/$uid/learner_profiles')
+              .doc(created.profileId);
+          final data = (await profileDoc.get()).data()!;
+          expect(data['time_zone'], 'America/New_York');
+          expect(data['latitude'], 40.7);
+          expect(data['longitude'], -74);
+          expect(data['in_israel'], false);
+          final log = (await profileDoc.collection('change_log').get()).docs;
+          expect(log.single.id, data['last_change_id']);
+          expect(log.single.data()['entity'], 'learnerSettings');
+          expect(created.settings?.timeZone, 'America/New_York');
+          expect(device.reads, 1);
+        });
+
+        for (final zone in [null, 'not a zone', 'Mars/Olympus_Mons']) {
+          test('a missing or invalid device zone ($zone) blocks creation and '
+              'writes nothing', () async {
+            const uid = 'uid-profile-no-zone';
+            final firestore = createFakeFirestore(authenticatedUid: uid);
+            final container = _container(
+              firestore,
+              uid,
+              device: FakeCreatingDeviceSettingsSource(
+                CreatingDeviceSettings(timeZone: zone, inIsrael: false),
+              ),
+            );
+            addTearDown(container.dispose);
+
+            await expectLater(
+              container
+                  .read(profileRepositoryProvider)
+                  .createProfile(
+                    displayName: 'No Zone',
+                    mode: ProfileMode.adult,
+                  ),
+              throwsA(isA<LearnerTimeZoneUnavailableException>()),
+            );
+            expect(
+              (await firestore.collection('users/$uid/learner_profiles').get())
+                  .docs,
+              isEmpty,
+            );
+          });
+        }
+      },
+    );
   });
 }

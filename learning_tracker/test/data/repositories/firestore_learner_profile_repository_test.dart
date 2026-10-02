@@ -39,8 +39,15 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
+import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/learner_state_fixtures.dart';
 
 const _uid = 'uid-1';
 
@@ -482,4 +489,219 @@ void main() {
       expect(await repo.hasHydratedCache('ulid-added-elsewhere'), isFalse);
     });
   });
+
+  group('AC-6 (DNI-470): creation seeds the learner settings atomically', () {
+    const seedId = '01ARZ3NDEKTSV4RRFFQ69G5FS1';
+    const jerusalem = LearnerSettings(
+      profileId: profileUlid,
+      timeZone: 'Asia/Jerusalem',
+      latitude: 31.778,
+      longitude: 35.235,
+      inIsrael: true,
+    );
+
+    FirestoreLearnerProfileRepository seededRepo(FirebaseFirestore fs) =>
+        FirestoreLearnerProfileRepository(
+          firestore: fs,
+          uid: _uid,
+          authUid: 'auth-uid',
+          newChangeId: (_) => seedId,
+        );
+
+    String key(String field) => 'learner_profiles/$profileUlid.$field';
+
+    test('one batch: the profile doc with all four settings and '
+        'last_change_id, and an all-null-before seed entry', () async {
+      final spy = _SpyFirestore();
+      final created = await seededRepo(spy).ensureProfile(
+        profileId: profileUlid,
+        displayName: 'Avi',
+        mode: ProfileMode.child,
+        createdAt: _createdAt,
+        seed: jerusalem,
+      );
+
+      const profilePath = 'users/$_uid/learner_profiles/$profileUlid';
+      expect(spy.ops, [
+        'set $profilePath merge=true',
+        'set $profilePath/change_log/$seedId merge=false',
+        'commit',
+      ]);
+      final doc =
+          (await spy
+                  .collection('users/$_uid/learner_profiles')
+                  .doc(profileUlid)
+                  .get())
+              .data()!;
+      expect(doc, containsPair('display_name', 'Avi'));
+      expect(doc, containsPair('latitude', 31.778));
+      expect(doc, containsPair('longitude', 35.235));
+      expect(doc, containsPair('time_zone', 'Asia/Jerusalem'));
+      expect(doc, containsPair('in_israel', true));
+      expect(doc, containsPair('last_change_id', seedId));
+
+      final raw =
+          (await spy
+                  .doc(
+                    'users/$_uid/learner_profiles/$profileUlid/change_log/$seedId',
+                  )
+                  .get())
+              .data()!;
+      final entry = ChangeLogEntry.fromStorage(seedId, fromFirestoreMap(raw));
+      expect(entry.entity, GovernedEntity.learnerSettings);
+      expect(entry.entityId, profileUlid);
+      expect(entry.actionId, seedId);
+      expect(entry.revertsActionId, isNull);
+      expect(
+        entry.actor,
+        const Actor(uid: 'auth-uid', role: ActorRole.parent, displayName: ''),
+      );
+      expect(entry.before, {
+        key('latitude'): null,
+        key('longitude'): null,
+        key('time_zone'): null,
+        key('in_israel'): null,
+      });
+      expect(entry.after, {
+        key('latitude'): 31.778,
+        key('longitude'): 35.235,
+        key('time_zone'): 'Asia/Jerusalem',
+        key('in_israel'): true,
+      });
+      expect(created.settings?.lastChangeId, seedId);
+      expect(
+        (await seededRepo(spy).getProfile(profileUlid))!.settings,
+        created.settings,
+      );
+    });
+
+    test('a device with no location seeds the zone and flag only', () async {
+      final fs = FakeFirebaseFirestore();
+      await seededRepo(fs).ensureProfile(
+        profileId: profileUlid,
+        displayName: 'Avi',
+        mode: ProfileMode.adult,
+        createdAt: _createdAt,
+        seed: const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'UTC',
+          inIsrael: false,
+        ),
+      );
+      final raw =
+          (await fs
+                  .doc(
+                    'users/$_uid/learner_profiles/$profileUlid/change_log/$seedId',
+                  )
+                  .get())
+              .data()!;
+      expect(
+        (raw['after']! as Map).keys,
+        unorderedEquals([key('time_zone'), key('in_israel')]),
+      );
+    });
+
+    test('an invalid IANA zone or a seed for another profile writes '
+        'nothing', () async {
+      final spy = _SpyFirestore();
+      await expectLater(
+        seededRepo(spy).ensureProfile(
+          profileId: profileUlid,
+          displayName: 'Avi',
+          mode: ProfileMode.adult,
+          createdAt: _createdAt,
+          seed: const LearnerSettings(
+            profileId: profileUlid,
+            timeZone: 'not a zone',
+          ),
+        ),
+        throwsA(isA<StorageFormatException>()),
+      );
+      await expectLater(
+        seededRepo(spy).ensureProfile(
+          profileId: profileUlid,
+          displayName: 'Avi',
+          mode: ProfileMode.adult,
+          createdAt: _createdAt,
+          seed: const LearnerSettings(profileId: ulidA, timeZone: 'UTC'),
+        ),
+        throwsArgumentError,
+      );
+      expect(spy.ops, isEmpty);
+    });
+
+    test('the profile codec never emits a settings key', () {
+      final entity = LearnerProfileEntity(
+        profileId: profileUlid,
+        displayName: 'Avi',
+        mode: ProfileMode.adult,
+        createdAt: _createdAt,
+        updatedAt: _createdAt,
+        settings: jerusalem,
+      );
+      expect(
+        entity.toFirestore().keys.toSet(),
+        LearnerProfileEntity.ordinaryKeys,
+      );
+      expect(
+        LearnerProfileEntity.ordinaryKeys.intersection(
+          LearnerSettings.storageKeys,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('a profile doc whose settings do not decode reads with no '
+        'settings rather than failing', () async {
+      await rawProfiles().doc(profileUlid).set({
+        'display_name': 'Avi',
+        'mode': 'adult',
+        'created_at': _createdAt.toIso8601String(),
+        'updated_at': _createdAt.toIso8601String(),
+        'time_zone': 42,
+      });
+      final profile = await buildRepo().getProfile(profileUlid);
+      expect(profile!.displayName, 'Avi');
+      expect(profile.settings, isNull);
+    });
+  });
+}
+
+/// Records every batch operation, delegating to the real fake batch.
+final class _SpyBatch implements WriteBatch {
+  _SpyBatch(this._inner, this.ops);
+
+  final WriteBatch _inner;
+  final List<String> ops;
+
+  @override
+  Future<void> commit() {
+    ops.add('commit');
+    return _inner.commit();
+  }
+
+  @override
+  void delete(DocumentReference<Object?> document) {
+    ops.add('delete ${document.path}');
+    _inner.delete(document);
+  }
+
+  @override
+  void set<T>(DocumentReference<T> document, T data, [SetOptions? options]) {
+    ops.add('set ${document.path} merge=${options?.merge ?? false}');
+    _inner.set(document, data, options);
+  }
+
+  @override
+  void update<T>(DocumentReference<T> document, T data) {
+    ops.add('update ${document.path}');
+    _inner.update(document, data);
+  }
+}
+
+final class _SpyFirestore extends FakeFirebaseFirestore {
+  final List<String> ops = [];
+
+  @override
+  WriteBatch batch() => _SpyBatch(super.batch(), ops);
 }

@@ -324,6 +324,7 @@ final firestoreLearnerProfileRepositoryProvider =
       return FirestoreLearnerProfileRepository(
         firestore: handles.firestore,
         uid: handles.uid,
+        authUid: handles.authUid,
       );
     }, retry: (retryCount, error) => null);
 
