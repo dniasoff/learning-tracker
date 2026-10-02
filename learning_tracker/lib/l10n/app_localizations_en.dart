@@ -3162,6 +3162,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t record that. Please try again.';
 
   @override
+  String subTrackHomeNotSaved(String name) {
+    return 'Not saved: +1 for $name';
+  }
+
+  @override
+  String get subTrackHomeUndoFailed => 'Couldn\'t undo';
+
+  @override
+  String subTrackHomeUndoNotSaved(String name) {
+    return 'Undo not saved: $name';
+  }
+
+  @override
   String get subTrackTutorReadOnlyNote =>
       'Editing sub-tracks from a tutor device is coming soon';
 

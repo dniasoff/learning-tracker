@@ -2242,6 +2242,28 @@
   "@subTrackHomeCaptureFailed": {
     "description": "Snackbar when a sub-track +1 is refused (DNI-500 AC-2). DRAFT copy, pending zc4."
   },
+  "subTrackHomeNotSaved": "Not saved: +1 for {name}",
+  "@subTrackHomeNotSaved": {
+    "description": "Snackbar and inline entry when a queued sub-track +1 is refused by the server for good; its action is retry (DNI-500 AC-5, AD-30 'not saved — retry'). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeUndoFailed": "Couldn't undo",
+  "@subTrackHomeUndoFailed": {
+    "description": "Snackbar when Undo of a sub-track +1 does not go through; the capture stands (DNI-500 AC-2). DRAFT copy, pending zc4."
+  },
+  "subTrackHomeUndoNotSaved": "Undo not saved: {name}",
+  "@subTrackHomeUndoNotSaved": {
+    "description": "Snackbar and inline entry when a queued Undo of a sub-track +1 is refused by the server for good; its action is retry (DNI-500 AC-2, AD-30). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "subTrackTutorReadOnlyNote": "Editing sub-tracks from a tutor device is coming soon",
   "@subTrackTutorReadOnlyNote": {
     "description": "The single note on read-only tutor sub-track surfaces (DNI-500 AC-9). [ASSUMPTION copy] DRAFT copy, pending zc4."

@@ -214,6 +214,14 @@ final class EngineBackedCommands implements LearningCommands {
   }
 
   @override
+  Stream<List<PendingFailure>> watchPendingFailures() =>
+      inner.watchPendingFailures();
+
+  @override
+  Future<CaptureResult> retry(String pendingFailureId) =>
+      inner.retry(pendingFailureId);
+
+  @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnsupportedError('not used by the sub-track rows');
 }

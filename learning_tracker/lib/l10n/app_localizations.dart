@@ -5482,6 +5482,24 @@ abstract class AppLocalizations {
   /// **'Couldn\'t record that. Please try again.'**
   String get subTrackHomeCaptureFailed;
 
+  /// Snackbar and inline entry when a queued sub-track +1 is refused by the server for good; its action is retry (DNI-500 AC-5, AD-30 'not saved — retry'). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Not saved: +1 for {name}'**
+  String subTrackHomeNotSaved(String name);
+
+  /// Snackbar when Undo of a sub-track +1 does not go through; the capture stands (DNI-500 AC-2). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t undo'**
+  String get subTrackHomeUndoFailed;
+
+  /// Snackbar and inline entry when a queued Undo of a sub-track +1 is refused by the server for good; its action is retry (DNI-500 AC-2, AD-30). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo not saved: {name}'**
+  String subTrackHomeUndoNotSaved(String name);
+
   /// The single note on read-only tutor sub-track surfaces (DNI-500 AC-9). [ASSUMPTION copy] DRAFT copy, pending zc4.
   ///
   /// In en, this message translates to:

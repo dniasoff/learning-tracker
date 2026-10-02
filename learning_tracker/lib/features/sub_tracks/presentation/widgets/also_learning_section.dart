@@ -22,6 +22,11 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// `onHome` — nothing invites creating one (FR-4a) — and a load error stays
 /// inside it as an [InlineAsyncError] with retry (AC-6). [topSpacing] is
 /// added above it only when it renders.
+///
+/// A queued *+1* or *Undo* the server later refuses for good replaces any
+/// "Recorded 1 · Undo" snackbar with a "not saved" one, and stays listed in
+/// the section with *Retry* until it is re-sent (AD-30, UX-DR-107/147). An
+/// *Undo* that does not go through says so; a retryable one offers *Retry*.
 class AlsoLearningSection extends ConsumerWidget {
   /// Creates the section.
   const AlsoLearningSection({super.key, this.topSpacing = 0});
@@ -51,6 +56,35 @@ class AlsoLearningSection extends ConsumerWidget {
         );
     });
 
+    // AD-30: a queued write the server refused for good is announced once,
+    // replacing a "Recorded 1 · Undo" snackbar that no longer holds.
+    ref.listen(subTrackCaptureControllerProvider.select((s) => s.notSaved), (
+      previous,
+      next,
+    ) {
+      final seen = {
+        for (final n in previous ?? const <SubTrackNotSaved>[]) n.failureId,
+      };
+      final fresh = next.where((n) => !seen.contains(n.failureId)).toList();
+      if (fresh.isEmpty || !context.mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      final entry = fresh.last;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(_notSavedText(l10n, entry)),
+            action: SnackBarAction(
+              label: l10n.retry,
+              onPressed: () => _retryNotSaved(context, ref, entry),
+            ),
+          ),
+        );
+    });
+    final notSaved = ref.watch(
+      subTrackCaptureControllerProvider.select((s) => s.notSaved),
+    );
+
     final itemsAsync = ref.watch(homeSubTracksProvider);
     if (itemsAsync.hasError) {
       return Padding(
@@ -66,7 +100,13 @@ class AlsoLearningSection extends ConsumerWidget {
       );
     }
     final items = itemsAsync.asData?.value ?? const <SubTrackHomeItem>[];
-    if (items.isEmpty) return const SizedBox.shrink();
+    if (items.isEmpty && notSaved.isEmpty) return const SizedBox.shrink();
+    if (items.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.only(top: topSpacing),
+        child: _NotSavedList(entries: notSaved, onRetry: _retryNotSaved),
+      );
+    }
 
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -95,6 +135,10 @@ class AlsoLearningSection extends ConsumerWidget {
           const SizedBox(height: 12),
           if (role == SubTrackViewerRole.tutor) ...[
             const SubTrackTutorReadOnlyNote(),
+            const SizedBox(height: 12),
+          ],
+          if (notSaved.isNotEmpty) ...[
+            _NotSavedList(entries: notSaved, onRetry: _retryNotSaved),
             const SizedBox(height: 12),
           ],
           for (final item in items) ...[
@@ -153,7 +197,8 @@ class AlsoLearningSection extends ConsumerWidget {
               content: Text(l10n.subTrackHomeRecorded),
               action: SnackBarAction(
                 label: l10n.undoLabel,
-                onPressed: () => controller.undo(eventIds),
+                onPressed: () =>
+                    _undo(messenger, l10n, controller, item, eventIds),
               ),
             ),
           );
@@ -166,5 +211,113 @@ class AlsoLearningSection extends ConsumerWidget {
       case PlusOneLocked() || PlusOneIgnored():
         break;
     }
+  }
+
+  /// Runs *Undo*; a void that does not go through is reported, never shown
+  /// as done, and a retryable one offers *Retry*.
+  static Future<void> _undo(
+    ScaffoldMessengerState messenger,
+    AppLocalizations l10n,
+    SubTrackCaptureController controller,
+    SubTrackHomeItem item,
+    List<String> eventIds,
+  ) async {
+    final outcome = await controller.undo(item, eventIds);
+    switch (outcome) {
+      case UndoOutcome.undone || UndoOutcome.locked:
+        return;
+      case UndoOutcome.refused:
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.subTrackHomeUndoFailed)));
+      case UndoOutcome.failed:
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(l10n.subTrackHomeUndoFailed),
+              action: SnackBarAction(
+                label: l10n.retry,
+                onPressed: () =>
+                    _undo(messenger, l10n, controller, item, eventIds),
+              ),
+            ),
+          );
+    }
+  }
+
+  static Future<void> _retryNotSaved(
+    BuildContext context,
+    WidgetRef ref,
+    SubTrackNotSaved entry,
+  ) async {
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final ok = await ref
+        .read(subTrackCaptureControllerProvider.notifier)
+        .retryNotSaved(entry.failureId);
+    if (ok) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            entry.kind == SubTrackWriteKind.undo
+                ? l10n.subTrackHomeUndoFailed
+                : l10n.subTrackHomeCaptureFailed,
+          ),
+        ),
+      );
+  }
+}
+
+String _notSavedText(
+  AppLocalizations l10n,
+  SubTrackNotSaved entry,
+) => switch (entry.kind) {
+  SubTrackWriteKind.plusOne => l10n.subTrackHomeNotSaved(entry.subTrackName),
+  SubTrackWriteKind.undo => l10n.subTrackHomeUndoNotSaved(entry.subTrackName),
+};
+
+/// The section's "not saved — retry" entries, one per refused write.
+class _NotSavedList extends ConsumerWidget {
+  const _NotSavedList({required this.entries, required this.onRetry});
+
+  final List<SubTrackNotSaved> entries;
+  final Future<void> Function(BuildContext, WidgetRef, SubTrackNotSaved)
+  onRetry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final entry in entries)
+          Row(
+            key: ValueKey('subTrackNotSaved-${entry.failureId}'),
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 20,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _notSavedText(l10n, entry),
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+              TextButton(
+                onPressed: () => onRetry(context, ref, entry),
+                child: Text(l10n.retry),
+              ),
+            ],
+          ),
+      ],
+    );
   }
 }

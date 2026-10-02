@@ -14,13 +14,26 @@
 /// cannot ship: `tool/retired_symbols/R15.json` makes DNI-490 remove every
 /// `c0Stub` call before the cutover release. The no-override integration
 /// test follows in bead learning-tracker-fyh.135.
+///
+/// Queued writes (AD-30, UX-DR-107/147): a *+1* or *Undo* the server has not
+/// yet acknowledged returns `success(queued: true)`. The controller keeps
+/// those event ids and, from the first one, follows
+/// `LearningCommands.watchPendingFailures`. When the server later refuses one
+/// for good it becomes a [SubTrackNotSaved] entry ("not saved — retry"): the
+/// awaiting state for its events is dropped (the engine rolls the optimistic
+/// write back) and [SubTrackCaptureController.retryNotSaved] re-sends it.
+/// *Undo* clears its tracking only after the void is confirmed or queued; a
+/// refused or failed undo leaves the capture tracked and says so.
 library;
+
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_home_projection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_session.dart';
@@ -59,12 +72,105 @@ final class PlusOneIgnored extends PlusOneOutcome {
   const PlusOneIgnored();
 }
 
+/// What an *Undo* did.
+enum UndoOutcome {
+  /// The void was recorded (or queued offline).
+  undone,
+
+  /// The capture gate refused it; the lock overlay covers the app.
+  locked,
+
+  /// The command refused it for good (e.g. a lock-ignored target): the
+  /// capture stands and retrying would not help.
+  refused,
+
+  /// It did not go through (no commands, a throw, offline-only refusal):
+  /// the capture stands and the learner may retry.
+  failed,
+}
+
+/// Which write a [SubTrackNotSaved] entry is about.
+enum SubTrackWriteKind {
+  /// A *+1* capture.
+  plusOne,
+
+  /// The void of a *+1* (its *Undo*).
+  undo,
+}
+
+/// A queued *+1* or *Undo* the server refused for good: "not saved — retry"
+/// (AD-30, UX-DR-107/147).
+final class SubTrackNotSaved {
+  /// Creates the entry.
+  const SubTrackNotSaved({
+    required this.failureId,
+    required this.kind,
+    required this.subTrackId,
+    required this.subTrackName,
+    required this.eventIds,
+  });
+
+  /// The `PendingFailure` id (passed to `LearningCommands.retry`).
+  final String failureId;
+
+  /// Whether the refused write was a *+1* or its *Undo*.
+  final SubTrackWriteKind kind;
+
+  /// The sub-track it was written for.
+  final String subTrackId;
+
+  /// The sub-track's name when it was written.
+  final String subTrackName;
+
+  /// This controller's events in the refused write.
+  final List<String> eventIds;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SubTrackNotSaved &&
+      other.failureId == failureId &&
+      other.kind == kind &&
+      other.subTrackId == subTrackId &&
+      other.subTrackName == subTrackName &&
+      _sameList(other.eventIds, eventIds);
+
+  @override
+  int get hashCode => Object.hash(
+    failureId,
+    kind,
+    subTrackId,
+    subTrackName,
+    Object.hashAll(eventIds),
+  );
+
+  @override
+  String toString() => 'SubTrackNotSaved($failureId, ${kind.name})';
+}
+
+bool _sameList(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+/// A queued write this controller made: what it was and for which track.
+final class _QueuedWrite {
+  const _QueuedWrite(this.kind, this.subTrackId, this.subTrackName);
+
+  final SubTrackWriteKind kind;
+  final String subTrackId;
+  final String subTrackName;
+}
+
 /// The controller's state.
 final class SubTrackCaptureState {
   /// Creates a state.
   const SubTrackCaptureState({
     this.inFlight = const {},
     this.awaitingEngine = const {},
+    this.notSaved = const [],
   });
 
   /// Sub-track ids with a *+1* in flight.
@@ -74,20 +180,104 @@ final class SubTrackCaptureState {
   /// nor lock-ignored yet (AC-5).
   final Set<String> awaitingEngine;
 
+  /// Queued writes of this session the server refused for good, oldest
+  /// first, until retried or resolved elsewhere.
+  final List<SubTrackNotSaved> notSaved;
+
   SubTrackCaptureState _copy({
     Set<String>? inFlight,
     Set<String>? awaitingEngine,
+    List<SubTrackNotSaved>? notSaved,
   }) => SubTrackCaptureState(
     inFlight: inFlight ?? this.inFlight,
     awaitingEngine: awaitingEngine ?? this.awaitingEngine,
+    notSaved: notSaved ?? this.notSaved,
   );
 }
 
 /// Records *+1* and *Undo*, and spots captures the engine later finds
 /// lock-stamped.
 class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
+  /// Queued event ids of this session, until confirmed or voided.
+  final Map<String, _QueuedWrite> _queued = {};
+
+  LearningCommands? _watched;
+  StreamSubscription<List<PendingFailure>>? _failures;
+
   @override
-  SubTrackCaptureState build() => const SubTrackCaptureState();
+  SubTrackCaptureState build() {
+    ref.onDispose(_stopWatching);
+    return const SubTrackCaptureState();
+  }
+
+  void _stopWatching() {
+    unawaited(_failures?.cancel());
+    _failures = null;
+    _watched = null;
+  }
+
+  /// Remembers queued [eventIds] and follows [commands]' pending failures.
+  void _trackQueued(
+    LearningCommands commands,
+    List<String> eventIds,
+    _QueuedWrite write,
+  ) {
+    for (final id in eventIds) {
+      _queued[id] = write;
+    }
+    if (identical(_watched, commands)) return;
+    _stopWatching();
+    _watched = commands;
+    _failures = commands.watchPendingFailures().listen(
+      _onPendingFailures,
+      onError: (Object e, StackTrace st) => AppLogger.instance.error(
+        event: 'sub_track_pending_failures_failed',
+        exception: e,
+        stackTrace: st,
+      ),
+    );
+  }
+
+  /// Turns the server's permanent refusals of this session's queued writes
+  /// into [SubTrackCaptureState.notSaved] entries, and drops entries whose
+  /// failure has been resolved elsewhere.
+  void _onPendingFailures(List<PendingFailure> failures) {
+    final live = {for (final f in failures) f.id};
+    final known = {for (final n in state.notSaved) n.failureId};
+    final added = <SubTrackNotSaved>[];
+    final rolledBack = <String>{};
+    for (final failure in failures) {
+      if (known.contains(failure.id)) continue;
+      final mine = [
+        for (final id in failure.eventIds)
+          if (_queued.containsKey(id)) id,
+      ];
+      if (mine.isEmpty) continue;
+      final write = _queued[mine.first]!;
+      added.add(
+        SubTrackNotSaved(
+          failureId: failure.id,
+          kind: write.kind,
+          subTrackId: write.subTrackId,
+          subTrackName: write.subTrackName,
+          eventIds: mine,
+        ),
+      );
+      if (write.kind == SubTrackWriteKind.plusOne) rolledBack.addAll(mine);
+    }
+    final kept = [
+      for (final n in state.notSaved)
+        if (live.contains(n.failureId)) n,
+    ];
+    if (added.isEmpty && kept.length == state.notSaved.length) return;
+    // A refused capture never reaches the engine: it is not awaited any more.
+    state = state._copy(
+      awaitingEngine: rolledBack.isEmpty
+          ? null
+          : ({...state.awaitingEngine}..removeAll(rolledBack)),
+      notSaved: [...kept, ...added],
+    );
+  }
 
   /// Records [item]'s current position in [item]'s track.
   Future<PlusOneOutcome> plusOne(SubTrackHomeItem item) async {
@@ -109,10 +299,21 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
         dateState: DateState.dated,
       );
       switch (result) {
-        case CaptureSuccess(:final eventIds):
+        case CaptureSuccess(:final eventIds, :final queued):
           state = state._copy(
             awaitingEngine: {...state.awaitingEngine, ...eventIds},
           );
+          if (queued) {
+            _trackQueued(
+              commands,
+              eventIds,
+              _QueuedWrite(
+                SubTrackWriteKind.plusOne,
+                item.subTrackId,
+                item.name,
+              ),
+            );
+          }
           return PlusOneRecorded(eventIds);
         case CaptureLocked():
           return const PlusOneLocked();
@@ -139,18 +340,92 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
     }
   }
 
-  /// Voids the events of a *+1* (the snackbar's *Undo*, UX-DR-154).
-  Future<bool> undo(List<String> eventIds) async {
-    state = state._copy(
-      awaitingEngine: {...state.awaitingEngine}..removeAll(eventIds),
-    );
+  /// Voids the events of [item]'s *+1* (the snackbar's *Undo*,
+  /// UX-DR-154). The capture stays tracked unless the void is confirmed or
+  /// queued, so a refused or failed undo can be reported and retried.
+  Future<UndoOutcome> undo(SubTrackHomeItem item, List<String> eventIds) async {
     try {
       final commands = await ref.read(learningCommandsProvider.future);
-      if (commands == null) return false;
-      return await commands.undoEvents(eventIds) is CaptureSuccess;
+      if (commands == null) return UndoOutcome.failed;
+      final result = await commands.undoEvents(eventIds);
+      switch (result) {
+        case CaptureSuccess(eventIds: final voidIds, :final queued):
+          for (final id in eventIds) {
+            _queued.remove(id);
+          }
+          state = state._copy(
+            awaitingEngine: {...state.awaitingEngine}..removeAll(eventIds),
+            notSaved: [
+              for (final n in state.notSaved)
+                if (!n.eventIds.any(eventIds.contains)) n,
+            ],
+          );
+          if (queued) {
+            _trackQueued(
+              commands,
+              voidIds,
+              _QueuedWrite(SubTrackWriteKind.undo, item.subTrackId, item.name),
+            );
+          }
+          return UndoOutcome.undone;
+        case CaptureLocked():
+          return UndoOutcome.locked;
+        case CaptureRejected():
+          AppLogger.instance.warning(
+            event: 'sub_track_plus_one_undo_refused',
+            fields: {'result': result.toString()},
+          );
+          return UndoOutcome.refused;
+        case CaptureChildLimit() || CaptureOnlineRequired():
+          AppLogger.instance.warning(
+            event: 'sub_track_plus_one_undo_refused',
+            fields: {'result': result.runtimeType.toString()},
+          );
+          return UndoOutcome.failed;
+      }
     } on Object catch (e, st) {
       AppLogger.instance.error(
         event: 'sub_track_plus_one_undo_failed',
+        exception: e,
+        stackTrace: st,
+      );
+      return UndoOutcome.failed;
+    }
+  }
+
+  /// Re-sends the refused write [failureId] (the "not saved" *Retry*). The
+  /// entry goes once the retry is accepted or queued again; a re-sent *+1*
+  /// is awaited from the engine again (same event ids). Returns whether the
+  /// retry went through.
+  Future<bool> retryNotSaved(String failureId) async {
+    final entry = state.notSaved
+        .where((n) => n.failureId == failureId)
+        .firstOrNull;
+    if (entry == null) return false;
+    try {
+      final commands = await ref.read(learningCommandsProvider.future);
+      if (commands == null) return false;
+      final result = await commands.retry(failureId);
+      if (result is! CaptureSuccess) {
+        AppLogger.instance.warning(
+          event: 'sub_track_not_saved_retry_refused',
+          fields: {'result': result.runtimeType.toString()},
+        );
+        return false;
+      }
+      state = state._copy(
+        awaitingEngine: entry.kind == SubTrackWriteKind.plusOne
+            ? {...state.awaitingEngine, ...entry.eventIds}
+            : null,
+        notSaved: [
+          for (final n in state.notSaved)
+            if (n.failureId != failureId) n,
+        ],
+      );
+      return true;
+    } on Object catch (e, st) {
+      AppLogger.instance.error(
+        event: 'sub_track_not_saved_retry_failed',
         exception: e,
         stackTrace: st,
       );

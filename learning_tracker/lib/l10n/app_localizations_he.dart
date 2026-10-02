@@ -3125,6 +3125,19 @@ class AppLocalizationsHe extends AppLocalizations {
   String get subTrackHomeCaptureFailed => 'לא הצלחנו לרשום. נסו שוב.';
 
   @override
+  String subTrackHomeNotSaved(String name) {
+    return 'לא נשמר: +1 עבור $name';
+  }
+
+  @override
+  String get subTrackHomeUndoFailed => 'לא הצלחנו לבטל';
+
+  @override
+  String subTrackHomeUndoNotSaved(String name) {
+    return 'הביטול לא נשמר: $name';
+  }
+
+  @override
   String get subTrackTutorReadOnlyNote =>
       'עריכת תתי-מסלולים ממכשיר מורה תתאפשר בקרוב';
 

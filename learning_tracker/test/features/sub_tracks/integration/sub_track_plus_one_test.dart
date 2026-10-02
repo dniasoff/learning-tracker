@@ -156,6 +156,69 @@ void main() {
     expect(find.text('Recorded 1'), findsOneWidget);
   });
 
+  testWidgets('AC-5 / AD-30: a queued +1 the server later refuses replaces '
+      '"Recorded 1 · Undo" with "not saved", stays listed with Retry, and '
+      'Retry re-sends it', (tester) async {
+    final (_, commands) = await _pump(tester);
+    addTearDown(commands.inner.dispose);
+    const queuedId = '01FAKE0000000000000000QUED';
+    commands.inner.nextResult = const CaptureResult.success(
+      eventIds: [queuedId],
+      queued: true,
+    );
+    await tester.tap(_plusOne(schoolId));
+    await tester.pumpAndSettle();
+    expect(find.text('Recorded 1'), findsOneWidget);
+
+    commands.inner.pendingFailures.add(const [
+      PendingFailure(
+        id: 'f1',
+        eventIds: [queuedId],
+        changeIds: [],
+        reason: PendingFailureReason.permissionDenied,
+      ),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('Recorded 1'), findsNothing);
+    expect(find.text('Undo'), findsNothing);
+    final entry = find.byKey(const Key('subTrackNotSaved-f1'));
+    expect(entry, findsOneWidget);
+    // The snackbar and the section's own entry.
+    expect(find.text('Not saved: +1 for School'), findsNWidgets(2));
+
+    await tester.tap(find.descendant(of: entry, matching: find.text('Retry')));
+    await tester.pumpAndSettle();
+    expect(
+      commands.inner.calls.last,
+      const LearningCommandCall('retry', {'pendingFailureId': 'f1'}),
+    );
+    expect(entry, findsNothing);
+  });
+
+  testWidgets('an Undo that does not go through says so, offers Retry, and '
+      'the capture stands until it does', (tester) async {
+    final (_, commands) = await _pump(tester);
+    await tester.tap(_plusOne(schoolId));
+    await tester.pumpAndSettle();
+    expect(_lineText(tester, schoolId), 'Next: Berachos 1:5');
+
+    commands.inner.nextResult = const CaptureResult.onlineRequired();
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(find.text("Couldn't undo"), findsOneWidget);
+    expect(_lineText(tester, schoolId), 'Next: Berachos 1:5');
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(commands.inner.calls.map((c) => c.name), [
+      'capture',
+      'undoEvents',
+      'undoEvents',
+    ]);
+    expect(_lineText(tester, schoolId), 'Next: Berachos 1:4');
+    expect(find.text("Couldn't undo"), findsNothing);
+  });
+
   testWidgets('AC-5: a write the CaptureGate refuses is not written and '
       'shows nothing (the lock overlay covers the app)', (tester) async {
     final (engine, commands) = await _pump(tester);
