@@ -677,6 +677,29 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
   );
 }
 
+/// Runs the streak-alert effect's alert work one run at a time.
+///
+/// Each run of [streakAlertSyncEffect] awaits its inputs before it touches
+/// the alerts, so without this a superseded run could still be scheduling
+/// after a newer run has cancelled (or the other way round). Every run
+/// queues its alert work here and drops it when the run is stale
+/// (`ref.mounted` is false), so the newest run always acts last.
+class StreakAlertWorkQueue {
+  Future<void> _tail = Future<void>.value();
+
+  /// Runs [work] after every previously queued work has finished.
+  Future<T> run<T>(Future<T> Function() work) {
+    final result = _tail.then((_) => work());
+    _tail = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+}
+
+/// The [StreakAlertWorkQueue] of [streakAlertSyncEffect] (DNI-479).
+final streakAlertWorkQueueProvider = Provider<StreakAlertWorkQueue>(
+  (ref) => StreakAlertWorkQueue(),
+);
+
 /// Watches the streak-alert settings and the active learner's state, and
 /// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
 /// AD-40): one alert per curriculum at risk, at most once per civil day per
@@ -685,7 +708,14 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
 ///
 /// Only the device's own selected profile is evaluated: in a tutored
 /// session the active learner is another profile, whose streak is not
-/// this device's to alert on.
+/// this device's to alert on. While the selected profile is not the active
+/// learner (no scope, logout, a tutored session) its alerts are cancelled,
+/// since its streak is no longer being evaluated; they are re-evaluated
+/// when it is the active learner again.
+///
+/// A run superseded while awaiting its inputs touches no alert: the alert
+/// work is serialized through [streakAlertWorkQueueProvider] and skipped
+/// once the run is stale.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -706,15 +736,26 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
   // No active profile yet (cold start) — nothing to evaluate for.
   if (profileId == null) return;
   final service = ref.watch(streakAlertServiceProvider(profileId));
+  final queue = ref.read(streakAlertWorkQueueProvider);
+
+  // Cancels the profile's alerts unless this run has been superseded.
+  Future<void> cancelUnlessStale() => queue.run(() async {
+    if (ref.mounted) await service.cancelAlert();
+  });
 
   if (!enabled) {
-    await service.cancelAlert();
+    await cancelUnlessStale();
     return;
   }
 
   final scope = await ref.watch(activeLearnerScopeProvider.future);
   if (!ref.mounted) return;
-  if (scope == null || scope.profileId != profileId) return;
+  if (scope == null || scope.profileId != profileId) {
+    // The selected profile is not the active learner: its streak is not
+    // evaluated, so an alert scheduled earlier must not fire stale.
+    await cancelUnlessStale();
+    return;
+  }
   try {
     final state = await ref.watch(learnerStateProvider(scope).future);
     if (!ref.mounted) return;
@@ -722,15 +763,18 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
     if (!ref.mounted) return;
 
     final l10n = lookupAppLocalizations(ref.read(currentAppLocaleProvider));
-    final outcomes = await service.evaluateAll(
-      state: state,
-      settingsHistory: settings,
-      hour: time.hour,
-      minute: time.minute,
-      title: l10n.notificationStreakTitle,
-      localizedBody: l10n.notificationStreakBody,
-    );
-    if (!ref.mounted) return;
+    final outcomes = await queue.run(() async {
+      if (!ref.mounted) return null;
+      return service.evaluateAll(
+        state: state,
+        settingsHistory: settings,
+        hour: time.hour,
+        minute: time.minute,
+        title: l10n.notificationStreakTitle,
+        localizedBody: l10n.notificationStreakBody,
+      );
+    });
+    if (outcomes == null || !ref.mounted) return;
     if (outcomes.values.contains(StreakAlertOutcome.lockSuppressed)) {
       // Story 27.14 (DNI-390): a lock window suppressed an alert.
       unawaited(
@@ -744,7 +788,7 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
   } catch (_) {
     // Fail closed: a learner state or lock-settings history that cannot be
     // read must not leave an alert that might fire inside a lock.
-    await service.cancelAlert();
+    await cancelUnlessStale();
     rethrow;
   }
 }

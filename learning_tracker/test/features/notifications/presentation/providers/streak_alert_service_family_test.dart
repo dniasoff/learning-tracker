@@ -24,12 +24,17 @@
 @Tags(['needs_flutter'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/services/curriculum_streak_alerts.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
@@ -45,7 +50,6 @@ import 'package:timezone/timezone.dart' as tz_lib;
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learner_state.dart';
-import '../../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 
@@ -212,12 +216,16 @@ void main() {
       required _RecordingStreakAlerts alerts,
       String selected = profileUlid,
       bool failLocks = false,
+      Future<LearnerScope?> Function()? readScope,
     }) {
       SharedPreferences.setMockInitialValues({
         NotificationPreferencesRepository.streakAlertEnabledKey(selected): true,
         NotificationPreferencesRepository.streakAlertHourKey(selected): 21,
         NotificationPreferencesRepository.streakAlertMinuteKey(selected): 0,
       });
+      // One marker store per container: it outlives the service instance,
+      // as the device-local store does, without leaking across tests.
+      final markers = _MemoryStreakAlertMarkers();
       final container = ProviderContainer(
         overrides: [
           selectedProfileIdProvider.overrideWithValue(selected),
@@ -225,32 +233,38 @@ void main() {
           streakAlertServiceProvider(selected).overrideWith(
             (ref) => StreakAlertService(
               notifications: alerts,
-              markers: _MemoryStreakAlertMarkers(),
+              markers: markers,
               profileId: selected,
               clock: () => now,
             ),
           ),
-          ...learnerStateOverrides(
-            scope: scope,
-            state: fakeLearnerState(
-              curricula: {
-                for (final c in ['mishnayos', 'bavli'])
-                  c: FakeCurriculumState(
-                    curriculumId: c,
-                    streak: const CurriculumStreak(
-                      current: 2,
-                      best: 2,
-                      lastDay: '2026-03-24',
-                    ),
-                  ),
-              },
-            ),
-            lockSettings: failLocks ? null : constantHistory(lakewood),
+          // The scope is read through [readScope] when given, so a test
+          // can change the active learner and invalidate the scope.
+          activeLearnerScopeProvider.overrideWith(
+            (ref) => readScope?.call() ?? Future.value(scope),
           ),
-          if (failLocks)
-            learnerLockSettingsProvider.overrideWith(
-              (ref, _) => Stream.error(StateError('history unreadable')),
+          learnerStateProvider.overrideWith(
+            (ref, _) => Stream.value(
+              fakeLearnerState(
+                curricula: {
+                  for (final c in ['mishnayos', 'bavli'])
+                    c: FakeCurriculumState(
+                      curriculumId: c,
+                      streak: const CurriculumStreak(
+                        current: 2,
+                        best: 2,
+                        lastDay: '2026-03-24',
+                      ),
+                    ),
+                },
+              ),
             ),
+          ),
+          learnerLockSettingsProvider.overrideWith(
+            (ref, _) => failLocks
+                ? Stream.error(StateError('history unreadable'))
+                : Stream.value(constantHistory(lakewood)),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -270,19 +284,110 @@ void main() {
       expect(alerts.scheduled, ['mishnayos', 'bavli']);
     });
 
-    test(
-      'another profile in view (tutored session) is not evaluated',
-      () async {
+    test('another profile in view (tutored session) is not evaluated, and '
+        "the selected profile's alerts are cancelled", () async {
+      final alerts = _RecordingStreakAlerts();
+      final container = effectContainer(
+        alerts: alerts,
+        selected: activeProfileId,
+      );
+      await container.read(streakAlertSyncEffectProvider.future);
+      expect(alerts.scheduled, isEmpty);
+      expect(alerts.cancelledAll, [activeProfileId]);
+    });
+
+    for (final (name, LearnerScope? next) in [
+      (
+        'a tutored session',
+        LearnerScope(ownerUid: 'owner-uid', profileId: activeProfileId),
+      ),
+      ('no active learner', null),
+    ]) {
+      test('an alert scheduled earlier is cancelled when $name '
+          'replaces the selected profile as the active learner', () async {
         final alerts = _RecordingStreakAlerts();
+        LearnerScope? current = scope;
         final container = effectContainer(
           alerts: alerts,
-          selected: activeProfileId,
+          readScope: () async => current,
         );
+
         await container.read(streakAlertSyncEffectProvider.future);
-        expect(alerts.scheduled, isEmpty);
+        expect(alerts.scheduled, ['mishnayos', 'bavli']);
         expect(alerts.cancelledAll, isEmpty);
+
+        current = next;
+        container.invalidate(activeLearnerScopeProvider);
+        await container.read(streakAlertSyncEffectProvider.future);
+        expect(alerts.cancelledAll, [profileUlid]);
+
+        // Back as the active learner: the cancelled alerts are rescheduled.
+        current = scope;
+        container.invalidate(activeLearnerScopeProvider);
+        await container.read(streakAlertSyncEffectProvider.future);
+        expect(alerts.scheduled, ['mishnayos', 'bavli', 'mishnayos', 'bavli']);
+      });
+    }
+
+    test(
+      'a run superseded while awaiting the scope touches no alert',
+      () async {
+        final alerts = _RecordingStreakAlerts();
+        final release = Completer<LearnerScope?>();
+        var first = true;
+        final container = effectContainer(
+          alerts: alerts,
+          readScope: () {
+            if (!first) return Future.value(null);
+            first = false;
+            return release.future;
+          },
+        );
+        final sub = container.listen(streakAlertSyncEffectProvider, (_, _) {});
+        addTearDown(sub.close);
+
+        // The first run waits on the scope; a newer run (no active learner)
+        // cancels; then the stale run's scope resolves to the profile.
+        await Future<void>.delayed(Duration.zero);
+        container.invalidate(activeLearnerScopeProvider);
+        await container.read(streakAlertSyncEffectProvider.future);
+        expect(alerts.log, ['cancelAll $profileUlid']);
+
+        release.complete(scope);
+        await pumpEventQueue();
+        expect(alerts.log, ['cancelAll $profileUlid']);
       },
     );
+
+    test('a newer run that cancels acts after an evaluation already in '
+        'flight, so no stale alert survives', () async {
+      final gate = Completer<void>();
+      final alerts = _RecordingStreakAlerts(gate: gate.future);
+      LearnerScope? current = scope;
+      final container = effectContainer(
+        alerts: alerts,
+        readScope: () async => current,
+      );
+      final sub = container.listen(streakAlertSyncEffectProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      // The first run is scheduling (held at the gate) when the profile
+      // stops being the active learner.
+      await pumpEventQueue();
+      expect(alerts.log, isEmpty);
+      current = null;
+      container.invalidate(activeLearnerScopeProvider);
+      await pumpEventQueue();
+
+      gate.complete();
+      await container.read(streakAlertSyncEffectProvider.future);
+      await pumpEventQueue();
+      expect(alerts.log, [
+        'schedule mishnayos',
+        'schedule bavli',
+        'cancelAll $profileUlid',
+      ]);
+    });
 
     test('an unreadable lock-settings history fails closed', () async {
       final alerts = _RecordingStreakAlerts();
@@ -298,8 +403,15 @@ void main() {
 }
 
 class _RecordingStreakAlerts implements StreakAlertNotifications {
+  _RecordingStreakAlerts({this.gate});
+
+  /// Holds every schedule until it completes, when given.
+  final Future<void>? gate;
   final scheduled = <String>[];
   final cancelledAll = <String>[];
+
+  /// Every schedule and cancel-all, in order.
+  final log = <String>[];
 
   @override
   Future<void> schedule({
@@ -308,7 +420,11 @@ class _RecordingStreakAlerts implements StreakAlertNotifications {
     required DateTime fireAtUtc,
     required String title,
     required String body,
-  }) async => scheduled.add(curriculumId);
+  }) async {
+    await gate;
+    scheduled.add(curriculumId);
+    log.add('schedule $curriculumId');
+  }
 
   @override
   Future<void> cancel({
@@ -317,11 +433,14 @@ class _RecordingStreakAlerts implements StreakAlertNotifications {
   }) async {}
 
   @override
-  Future<void> cancelAll(String profileId) async => cancelledAll.add(profileId);
+  Future<void> cancelAll(String profileId) async {
+    cancelledAll.add(profileId);
+    log.add('cancelAll $profileId');
+  }
 }
 
 class _MemoryStreakAlertMarkers implements StreakAlertMarkers {
-  static final _markers = <String, String>{};
+  final _markers = <String, String>{};
 
   @override
   Future<String?> read(String profileId, String curriculumId) async =>
