@@ -236,8 +236,20 @@ class _TriStateNode extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final state = triStateFromCounts(level.completedItems, level.totalItems);
+    final tinted = DecoratedBox(
+      decoration: BoxDecoration(
+        color: learntTriStateColor(
+          context,
+          state,
+        ).withValues(alpha: learntTriStateTintAlpha),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(padding: const EdgeInsets.all(6), child: child),
+    );
+    // Hosts without app localizations get the tint alone.
+    if (l10n == null) return tinted;
     return Semantics(
       container: true,
       label: learntTriStateSemantics(
@@ -252,16 +264,7 @@ class _TriStateNode extends ConsumerWidget {
         learnt: level.completedItems,
         total: level.totalItems,
       ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: learntTriStateColor(
-            context,
-            state,
-          ).withValues(alpha: learntTriStateTintAlpha),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(padding: const EdgeInsets.all(6), child: child),
-      ),
+      child: tinted,
     );
   }
 }

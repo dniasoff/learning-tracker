@@ -131,16 +131,20 @@ final class JourneyViewModelProvider
 
 String _$journeyViewModelHash() => r'e592febf83152ee8e90b23821cd0d69328f694d0';
 
-/// Which siyum tiers [curriculum] offers in the granularity selector: the
-/// unit tier, the aggregate tier when the corpus has two siyum levels
-/// (Mishnayos seder over masechta), and the whole curriculum.
+/// Which siyum tiers [curriculum] offers in the granularity selector — a
+/// property of the curriculum's content structure, not of the learner: the
+/// unit tier, the aggregate tier when its level-2 values name units
+/// grouped under more than one level-1 group (Mishnayos sederim), and the
+/// whole curriculum.
 
 @ProviderFor(availableSiyumTiers)
 final availableSiyumTiersProvider = AvailableSiyumTiersFamily._();
 
-/// Which siyum tiers [curriculum] offers in the granularity selector: the
-/// unit tier, the aggregate tier when the corpus has two siyum levels
-/// (Mishnayos seder over masechta), and the whole curriculum.
+/// Which siyum tiers [curriculum] offers in the granularity selector — a
+/// property of the curriculum's content structure, not of the learner: the
+/// unit tier, the aggregate tier when its level-2 values name units
+/// grouped under more than one level-1 group (Mishnayos sederim), and the
+/// whole curriculum.
 
 final class AvailableSiyumTiersProvider
     extends
@@ -152,9 +156,11 @@ final class AvailableSiyumTiersProvider
     with
         $FutureModifier<List<MilestoneLevel>>,
         $FutureProvider<List<MilestoneLevel>> {
-  /// Which siyum tiers [curriculum] offers in the granularity selector: the
-  /// unit tier, the aggregate tier when the corpus has two siyum levels
-  /// (Mishnayos seder over masechta), and the whole curriculum.
+  /// Which siyum tiers [curriculum] offers in the granularity selector — a
+  /// property of the curriculum's content structure, not of the learner: the
+  /// unit tier, the aggregate tier when its level-2 values name units
+  /// grouped under more than one level-1 group (Mishnayos sederim), and the
+  /// whole curriculum.
   AvailableSiyumTiersProvider._({
     required AvailableSiyumTiersFamily super.from,
     required CurriculumId super.argument,
@@ -200,11 +206,13 @@ final class AvailableSiyumTiersProvider
 }
 
 String _$availableSiyumTiersHash() =>
-    r'575a8591063f2c91543696bfd472af21f1ca9860';
+    r'255280235b678e63495be8759c8b5f86bf410d95';
 
-/// Which siyum tiers [curriculum] offers in the granularity selector: the
-/// unit tier, the aggregate tier when the corpus has two siyum levels
-/// (Mishnayos seder over masechta), and the whole curriculum.
+/// Which siyum tiers [curriculum] offers in the granularity selector — a
+/// property of the curriculum's content structure, not of the learner: the
+/// unit tier, the aggregate tier when its level-2 values name units
+/// grouped under more than one level-1 group (Mishnayos sederim), and the
+/// whole curriculum.
 
 final class AvailableSiyumTiersFamily extends $Family
     with
@@ -221,9 +229,11 @@ final class AvailableSiyumTiersFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Which siyum tiers [curriculum] offers in the granularity selector: the
-  /// unit tier, the aggregate tier when the corpus has two siyum levels
-  /// (Mishnayos seder over masechta), and the whole curriculum.
+  /// Which siyum tiers [curriculum] offers in the granularity selector — a
+  /// property of the curriculum's content structure, not of the learner: the
+  /// unit tier, the aggregate tier when its level-2 values name units
+  /// grouped under more than one level-1 group (Mishnayos sederim), and the
+  /// whole curriculum.
 
   AvailableSiyumTiersProvider call(CurriculumId curriculum) =>
       AvailableSiyumTiersProvider._(argument: curriculum, from: this);

@@ -41,6 +41,7 @@ class ChartDataService {
       endDate,
       (from, to) => _sum(days, from, to, (d) => d.events),
       (date, n) => DailyCompletionData(date: date, count: n),
+      step: _step(startDate, endDate),
     );
   }
 
@@ -55,7 +56,7 @@ class ChartDataService {
     final days = _days(state, curriculumId, corpusFor);
     final start = _effectiveStart(days.keys, startDate, endDate);
     final out = <DailyLimudChazaraData>[];
-    _walk(start, endDate, (from, to) {
+    _walk(start, endDate, step: _step(startDate, endDate), (from, to) {
       out.add(
         DailyLimudChazaraData(
           date: from,
@@ -83,7 +84,7 @@ class ChartDataService {
       if (day.isBefore(start)) running += activity.newLeaves;
     }
     final out = <CumulativeProgressPoint>[];
-    _walk(start, endDate, (from, to) {
+    _walk(start, endDate, step: _step(startDate, endDate), (from, to) {
       running += _sum(days, from, to, (d) => d.newLeaves);
       out.add(CumulativeProgressPoint(date: from, total: running));
     });
@@ -135,7 +136,7 @@ class ChartDataService {
     }
     final start = _effectiveStart(byDay.keys, startDate, endDate);
     final out = <DailyPointsData>[];
-    _walk(start, endDate, (from, to) {
+    _walk(start, endDate, step: _step(startDate, endDate), (from, to) {
       var sum = 0;
       byDay.forEach((day, points) {
         if (!day.isBefore(from) && day.isBefore(to)) sum += points;
@@ -174,14 +175,14 @@ class ChartDataService {
     return sum;
   }
 
-  /// Calls [bucket] for each daily (short range) or weekly (long range)
-  /// bucket `[from, toExclusive)` from [start] through [end].
+  /// Calls [bucket] for each [step]-day bucket `[from, toExclusive)` from
+  /// [start] through [end].
   static void _walk(
     DateTime start,
     DateTime end,
-    void Function(DateTime from, DateTime toExclusive) bucket,
-  ) {
-    final step = _calendarDaysBetween(start, end) <= kChartDailyMaxDays ? 1 : 7;
+    void Function(DateTime from, DateTime toExclusive) bucket, {
+    required int step,
+  }) {
     final last = _day(end);
     var current = _day(start);
     while (!current.isAfter(last)) {
@@ -195,12 +196,25 @@ class ChartDataService {
     DateTime start,
     DateTime end,
     int Function(DateTime from, DateTime toExclusive) count,
-    T Function(DateTime date, int count) make,
-  ) {
+    T Function(DateTime date, int count) make, {
+    required int step,
+  }) {
     final out = <T>[];
-    _walk(start, end, (from, to) => out.add(make(from, count(from, to))));
+    _walk(
+      start,
+      end,
+      (from, to) => out.add(make(from, count(from, to))),
+      step: step,
+    );
     return out;
   }
+
+  /// Daily buckets for a requested range up to [kChartDailyMaxDays] days,
+  /// weekly beyond.
+  static int _step(DateTime requestedStart, DateTime requestedEnd) =>
+      _calendarDaysBetween(requestedStart, requestedEnd) <= kChartDailyMaxDays
+      ? 1
+      : 7;
 
   /// A long range starts at its first active day (never before
   /// [requestedStart]); an inactive long range collapses to its end day.

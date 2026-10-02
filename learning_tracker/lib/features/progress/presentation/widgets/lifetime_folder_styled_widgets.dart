@@ -404,7 +404,7 @@ class _LifetimeFolderTreeNodeState
       LifetimeNodeState.none => Colors.white.withValues(alpha: 0.5),
     };
     final triState = triStateOfNode(widget.node.state);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final indent = widget.depth * 20.0;
     final hasChildren = widget.node.children.isNotEmpty;
     final isExpanded = widget.expandedNodes[widget.nodeKey] ?? false;
@@ -414,13 +414,15 @@ class _LifetimeFolderTreeNodeState
       children: [
         Semantics(
           // FR-15 (DNI-474): state as text, never colour alone.
-          label: learntTriStateSemantics(
-            l10n,
-            name: widget.node.hebrewName ?? widget.node.rawValue,
-            state: triState,
-            learnt: widget.node.learntCount,
-            total: widget.node.totalCount,
-          ),
+          label: l10n == null
+              ? null
+              : learntTriStateSemantics(
+                  l10n,
+                  name: widget.node.hebrewName ?? widget.node.rawValue,
+                  state: triState,
+                  learnt: widget.node.learntCount,
+                  total: widget.node.totalCount,
+                ),
           button: hasChildren,
           expanded: hasChildren ? isExpanded : null,
           onTap: hasChildren

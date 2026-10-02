@@ -6,6 +6,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/domain/services/siyum_milestones.dart';
 import 'package:learning_tracker/features/progress/domain/siyum_granularity_filter.dart';
+import 'package:learning_tracker/features/progress/domain/siyum_unit_scope.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -133,19 +134,31 @@ Future<JourneyViewModel> journeyViewModel(Ref ref) async {
   );
 }
 
-/// Which siyum tiers [curriculum] offers in the granularity selector: the
-/// unit tier, the aggregate tier when the corpus has two siyum levels
-/// (Mishnayos seder over masechta), and the whole curriculum.
+/// Which siyum tiers [curriculum] offers in the granularity selector — a
+/// property of the curriculum's content structure, not of the learner: the
+/// unit tier, the aggregate tier when its level-2 values name units
+/// grouped under more than one level-1 group (Mishnayos sederim), and the
+/// whole curriculum.
 @riverpod
 Future<List<MilestoneLevel>> availableSiyumTiers(
   Ref ref,
   CurriculumId curriculum,
 ) async {
-  final corpus = await ref.watch(progressCorpusProvider(curriculum).future);
-  if (corpus == null) {
-    return const [MilestoneLevel.unit, MilestoneLevel.curriculum];
+  final content = await ref.watch(curriculumContentProvider(curriculum).future);
+  final groups = <String, Set<String>>{};
+  for (final item in content) {
+    final unit = item.level2;
+    if (unit != null) groups.putIfAbsent(item.level1, () => {}).add(unit);
   }
-  return siyumTiersOf(corpus);
+  final offersAggregate =
+      hasNamedLevel2Unit(curriculum) &&
+      groups.length > 1 &&
+      groups.values.any((units) => units.isNotEmpty);
+  return [
+    MilestoneLevel.unit,
+    if (offersAggregate) MilestoneLevel.aggregate,
+    MilestoneLevel.curriculum,
+  ];
 }
 
 /// The container items of [content] by `sefariaRef` (unit label lookup).

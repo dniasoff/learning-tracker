@@ -26,13 +26,6 @@ MilestoneLevel milestoneLevelOf(Corpus corpus, String level) {
   return MilestoneLevel.unit;
 }
 
-/// The siyum tiers [corpus] offers (the granularity choices).
-List<MilestoneLevel> siyumTiersOf(Corpus corpus) => [
-  MilestoneLevel.unit,
-  if (corpus.unitLevels.length >= 2) MilestoneLevel.aggregate,
-  MilestoneLevel.curriculum,
-];
-
 /// The label keys of a unit node: its own hierarchy value and its level-1
 /// parent value, read from the ContentIndex container item whose
 /// `sefariaRef` is the node ref.

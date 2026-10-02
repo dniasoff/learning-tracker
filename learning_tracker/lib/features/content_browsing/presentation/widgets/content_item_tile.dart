@@ -82,7 +82,8 @@ class ContentItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    // Nullable: some hosts render the tile without app localizations.
+    final l10n = AppLocalizations.of(context);
 
     // DNI-474 (FR-15): the node's empty / partial / complete state, counts
     // and the leaf's counted learning come from the engine's LearnerState.
@@ -115,7 +116,10 @@ class ContentItemTile extends ConsumerWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             )
-          : (!item.isLeaf && progress != null && progress.total > 0)
+          : (l10n != null &&
+                !item.isLeaf &&
+                progress != null &&
+                progress.total > 0)
           ? Text(
               l10n.learnerProgressCount(progress.learnt, progress.total),
               style: theme.textTheme.bodySmall?.copyWith(
@@ -129,7 +133,7 @@ class ContentItemTile extends ConsumerWidget {
           ? () => _showStageBreakdown(context, ref)
           : null,
     );
-    if (progress == null) return tile;
+    if (progress == null || l10n == null) return tile;
     return Semantics(
       label: learntTriStateSemantics(
         l10n,
