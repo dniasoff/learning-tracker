@@ -11,7 +11,10 @@
 ///   completed the previous step: the next stage is the lowest stage order
 ///   above the previous one, and its schedule is read from that config.
 /// * A step is completed by the first counted main event on the leaf, after
-///   the previous step's event, carrying exactly that stage.
+///   the previous step's event, carrying exactly that stage, even one made
+///   before the step was due. [ReviewSchedule.dueForAttempt] (AD-50
+///   earning) therefore judges an attempt without that completion marker,
+///   so an early attempt never stops a later due one from earning.
 library;
 
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
@@ -31,6 +34,7 @@ final class ReviewStep {
     required this.scheduleType,
     required this.openedOn,
     required this.openedAt,
+    required this.openedBy,
     required this.dueFrom,
     this.daysOfWeek = const {},
     this.windowSize,
@@ -52,6 +56,10 @@ final class ReviewStep {
   /// `effectiveAt` of the event that completed the previous step (rolling
   /// rank).
   final DateTime openedAt;
+
+  /// Id of the event that completed the previous step (with [openedAt], its
+  /// place in engine order).
+  final String openedBy;
 
   /// First civil date the step can be due: for a delay stage,
   /// `openedOn + delay_days` moved to the next active study-days weekday;
@@ -81,6 +89,7 @@ final class ReviewStep {
       other.scheduleType == scheduleType &&
       other.openedOn == openedOn &&
       other.openedAt == openedAt &&
+      other.openedBy == openedBy &&
       other.dueFrom == dueFrom &&
       other.daysOfWeek.length == daysOfWeek.length &&
       other.daysOfWeek.containsAll(daysOfWeek) &&
@@ -94,6 +103,7 @@ final class ReviewStep {
     scheduleType,
     openedOn,
     openedAt,
+    openedBy,
     dueFrom,
     Object.hashAllUnordered(daysOfWeek),
     windowSize,
@@ -111,6 +121,54 @@ final class ReviewSchedule {
 
   /// The steps, in cycle-start order.
   final List<ReviewStep> steps;
+
+  late final Map<ReviewDue, ReviewStep> _byPair = {
+    for (final s in steps) ReviewDue(s.leaf, s.stageOrder): s,
+  };
+
+  /// The step reviewing [leaf] at [stageOrder], or null when no cycle has
+  /// opened it. A leaf has one cycle and a stage appears once in it.
+  ReviewStep? stepFor(LeafRef leaf, int stageOrder) =>
+      _byPair[ReviewDue(leaf, stageOrder)];
+
+  /// Rolling-window rank: most recently opened first, then by leaf.
+  static int _rollingRank(ReviewStep a, ReviewStep b) {
+    final byTime = b.openedAt.compareTo(a.openedAt);
+    return byTime != 0 ? byTime : a.leaf.compareTo(b.leaf);
+  }
+
+  /// Whether [step] (one of [steps]) is due on [date] for an attempt made
+  /// that day (AD-50 earning).
+  ///
+  /// This is [dueOn] with [step] treated as still open on [date] once it
+  /// has opened, whatever its completion marker says: the scheduler closes
+  /// a step on the first event carrying its stage even when that event was
+  /// made before the step was due, and such an early attempt must not stop
+  /// a later due attempt from earning. The other steps' completions still
+  /// decide a rolling window.
+  bool dueForAttempt(ReviewStep step, CivilDate date) {
+    if (step.openedOn.compareTo(date) > 0) return false;
+    switch (step.scheduleType) {
+      case StageScheduleType.delay:
+        return step.dueFrom.compareTo(date) <= 0;
+      case StageScheduleType.weekly:
+        return step.daysOfWeek.contains(weekdayOf(date));
+      case StageScheduleType.rolling:
+        final size = step.windowSize;
+        if (size == null) return false;
+        var ahead = 0;
+        for (final s in steps) {
+          if (identical(s, step) ||
+              s.scheduleType != StageScheduleType.rolling ||
+              s.stageOrder != step.stageOrder ||
+              !s.openOn(date)) {
+            continue;
+          }
+          if (_rollingRank(s, step) < 0) ahead++;
+        }
+        return ahead < size;
+    }
+  }
 
   /// The (leaf, `stage_order`) pairs due on [date], in cycle-start order.
   ///
@@ -131,11 +189,7 @@ final class ReviewSchedule {
     }
     final rollingDue = <ReviewStep>{};
     for (final list in rollingOpen.values) {
-      final ranked = [...list]
-        ..sort((a, b) {
-          final byTime = b.openedAt.compareTo(a.openedAt);
-          return byTime != 0 ? byTime : a.leaf.compareTo(b.leaf);
-        });
+      final ranked = [...list]..sort(_rollingRank);
       for (var i = 0; i < ranked.length; i++) {
         final size = ranked[i].windowSize;
         if (size != null && i < size) rollingDue.add(ranked[i]);
@@ -238,6 +292,7 @@ ReviewSchedule deriveReviewSchedule({
           scheduleType: next.scheduleType,
           openedOn: openedOn,
           openedAt: effectiveAt(prev),
+          openedBy: prev.id,
           dueFrom: next.scheduleType == StageScheduleType.delay
               ? config.studyDays.nextActiveOnOrAfter(
                   shiftCivilDate(openedOn, next.delayDays),

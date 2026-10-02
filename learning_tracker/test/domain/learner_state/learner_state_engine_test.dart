@@ -2,13 +2,18 @@
 // (DNI-465): AC-1, AC-2, AC-4, AC-5 and AC-6 of Story 1.3, plus the
 // story's edge coverage. AC-3 is in expand_ground_test.dart and AC-7 in
 // completed_units_test.dart.
+//
+// DNI-468 (Story 1.6) adds the points groups: AC-1 counted events, AC-2
+// first-learning earning and AC-3 review earning.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/points.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
 import '../../helpers/learner_state/lock_fixtures.dart';
@@ -668,11 +673,523 @@ void main() {
     });
   });
 
+  group('DNI-468 AC-1: countedEventIds', () {
+    // Inside the fixture learner's fail-closed Shabbos lock (see the
+    // DNI-466 group below).
+    const inLock = 6000;
+
+    test('profile-wide learn events not voided and not lock-ignored', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineLearn(2, b12, stage: 1, minutes: 10),
+            engineVoid(3, 2, minutes: 20),
+            engineLearn(4, 'Mishnah Peah 1:1', minutes: inLock),
+            engineLearn(5, 'R 1', curriculumId: 'retired'),
+            engineVoid(6, 1, minutes: inLock),
+          ],
+        ),
+      );
+      // 2 is voided, 4 is lock-ignored, the lock-ignored void 6 cancels
+      // nothing, and void events (3, 6) are never counted.
+      expect(state.countedEventIds, {engineUlid(1), engineUlid(5)});
+      expect(state.lockIgnoredEventIds, {engineUlid(4), engineUlid(6)});
+    });
+
+    test('a voided or lock-ignored event never earns', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineVoid(2, 1, minutes: 5),
+            engineLearn(3, b12, stage: 1, minutes: inLock),
+          ],
+        ),
+      );
+      expect(state.countedEventIds, isEmpty);
+      expect(state.earningEventIds, isEmpty);
+    });
+  });
+
+  group('DNI-468 AC-2: first-learning earning', () {
+    const nine = 9 * 60;
+    const six = 18 * 60;
+
+    Set<String> earning(List<LearningEvent> events) =>
+        engine.run(engineInputs(events: events)).earningEventIds;
+
+    test('a sub-track event at 09:00 blocks a main dated event at 18:00', () {
+      expect(
+        earning([
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('a before_tracking node event blocks every leaf under it', () {
+      expect(
+        earning([
+          engineGround(1, berakhot1, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six),
+          engineLearn(3, 'Mishnah Berakhot 1:3', stage: 1, minutes: six),
+          engineLearn(4, 'Mishnah Berakhot 2:1', stage: 1, minutes: six),
+        ]),
+        {engineUlid(4)},
+      );
+    });
+
+    test('a before_tracking leaf event blocks that leaf', () {
+      expect(
+        earning([
+          engineLearn(1, b11, dateState: DateState.beforeTracking),
+          engineLearn(2, b11, stage: 1, minutes: six),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('an eligible main first event earns and its repeats do not', () {
+      expect(
+        earning([
+          engineLearn(1, b11, stage: 1, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six),
+          engineLearn(3, b11, source: subTrack, minutes: six + 1),
+          engineLearn(4, b12, minutes: nine),
+          engineLearn(5, 'Mishnah Peah 1:1', dateState: DateState.catchUp),
+        ]),
+        // A free tick (no stage) and a catch_up event are main events too.
+        {engineUlid(1), engineUlid(4), engineUlid(5)},
+      );
+    });
+
+    test('equal effective instants are ordered by event id', () {
+      expect(
+        earning([
+          engineLearn(1, b11, stage: 1, minutes: nine),
+          engineLearn(2, b11, source: subTrack, minutes: nine),
+        ]),
+        {engineUlid(1)},
+      );
+      expect(
+        earning([
+          engineLearn(2, b11, stage: 1, minutes: nine),
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('a replacement or import is ordered by original_recorded_at', () {
+      // Recorded at 18:00 as a copy of an 08:00 event: it is earlier than
+      // the 09:00 sub-track tick.
+      expect(
+        earning([
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six, originalMinutes: 480),
+        ]),
+        {engineUlid(2)},
+      );
+      // A copy of a 10:00 event stays behind the 09:00 tick.
+      expect(
+        earning([
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six, originalMinutes: 600),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('voiding the first event lets the next counted event decide', () {
+      expect(
+        earning([
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+          engineVoid(2, 1, minutes: nine + 1),
+          engineLearn(3, b11, stage: 1, minutes: six),
+        ]),
+        {engineUlid(3)},
+      );
+    });
+
+    test('earning is profile-wide across curricula', () {
+      final otherCorpus = InMemoryCorpus('other', const [
+        CorpusNode(NodeEntry(level: 'sefer', ref: 'O'), [
+          CorpusNode(NodeEntry(level: 'chapter', ref: 'O 1')),
+        ]),
+      ]);
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineLearn(2, 'O 1', curriculumId: 'other'),
+            engineLearn(3, 'Unknown 1', curriculumId: 'nocorpus'),
+          ],
+          corpora: {engineCurriculum: mishnayosCorpus(), 'other': otherCorpus},
+        ),
+      );
+      // A curriculum without a corpus resolves no leaf, so nothing earns.
+      expect(state.earningEventIds, {engineUlid(1), engineUlid(2)});
+    });
+  });
+
+  group('DNI-468 AC-3: review earning', () {
+    // September 2026: the 1st is a Tuesday. The fixture learner's Shabbos
+    // lock runs Fri 4th 12:00Z → Sun 6th 01:00Z, so these days avoid it.
+    int on(int day, {int hour = 10}) => (day - 1) * 1440 + hour * 60;
+    String sep(int day) => '2026-09-${day.toString().padLeft(2, '0')}';
+
+    MainTrackConfigDoc stageDoc(int order, {int delay = 0}) =>
+        MainTrackConfigDoc(
+          collection: MainTrackConfigDoc.stages,
+          docId: '${engineCurriculum}_$order',
+          curriculumId: engineCurriculum,
+          fields: {
+            'stage_order': order,
+            'schedule_type': 'delay',
+            'delay_days': delay,
+          },
+        );
+
+    // Stage 1 learns; stage 2 is due a day later; stage 3 a week after.
+    final threeStages = [
+      stageDoc(1),
+      stageDoc(2, delay: 1),
+      stageDoc(3, delay: 7),
+    ];
+
+    LearningEvent review(
+      int id,
+      int stage,
+      int day, {
+      int hour = 10,
+      String ref = b11,
+      DateState dateState = DateState.dated,
+      String? learnedOn,
+    }) => engineLearn(
+      id,
+      ref,
+      stage: stage,
+      minutes: on(day, hour: hour),
+      learnedOn: learnedOn ?? sep(day),
+      dateState: dateState,
+    );
+
+    /// A stage-2 `delay_days` change from [from] to [to] at [minutes].
+    ChangeLogEntry delayChange(int from, int to, {required int minutes}) =>
+        ChangeLogEntry(
+          id: engineUlid(800),
+          entity: GovernedEntity.mainTrackStages,
+          entityId: engineCurriculum,
+          actionId: engineUlid(801),
+          before: {'stage_definitions/${engineCurriculum}_2.delay_days': from},
+          after: {'stage_definitions/${engineCurriculum}_2.delay_days': to},
+          at: engineAt(minutes),
+          actor: parentActor,
+        );
+
+    Set<String> earning(
+      List<LearningEvent> events, {
+      List<MainTrackConfigDoc>? stages,
+      List<ChangeLogEntry> history = const [],
+      DateTime? endedAt,
+    }) => engine
+        .run(
+          engineInputs(
+            events: events,
+            intents: {
+              engineCurriculum: engineIntent(
+                stages: stages ?? threeStages,
+                endedAt: endedAt,
+              ),
+            },
+            intentHistory: history,
+            nowUtc: engineAt(on(20)),
+          ),
+        )
+        .earningEventIds;
+
+    Set<String> ids(List<int> ns) => {for (final n in ns) engineUlid(n)};
+
+    test('a review earns when due on its civil date, through the steps', () {
+      expect(
+        earning([review(1, 1, 1), review(2, 2, 2), review(3, 3, 9)]),
+        ids([1, 2, 3]),
+      );
+    });
+
+    test('an overdue review is still due and earns', () {
+      expect(earning([review(1, 1, 1), review(2, 2, 3)]), ids([1, 2]));
+    });
+
+    test('a review done before it is due does not earn', () {
+      // Stage 2 is due from the 2nd; doing it on the 1st completes the step
+      // early, and stage 3 (due from the 8th) is not due on the 7th.
+      expect(
+        earning([review(1, 1, 1), review(2, 2, 1, hour: 12), review(3, 3, 7)]),
+        ids([1]),
+      );
+    });
+
+    test('an early attempt the schedule takes as the step completion does '
+        'not use up the pair', () {
+      // Stage 2 is due from the 2nd. The attempt on the 1st is not due but
+      // closes the step in the schedule; the due attempt on the 2nd still
+      // earns.
+      expect(
+        earning([review(1, 1, 1), review(2, 2, 1, hour: 12), review(3, 2, 2)]),
+        ids([1, 3]),
+      );
+    });
+
+    test('an attempt made before the step opened does not earn', () {
+      // Stage 2 has delay 0 and is due the day it opens; the stage-2
+      // attempt at 09:00 comes before the stage-1 learn at 10:00 that
+      // opens the step, so only the one after it earns.
+      expect(
+        earning(
+          [
+            review(1, 2, 1, hour: 9),
+            review(2, 1, 1),
+            review(3, 2, 1, hour: 11),
+          ],
+          stages: [stageDoc(1), stageDoc(2), stageDoc(3, delay: 7)],
+        ),
+        // 1 is the first event on 1:1, so it earns as first learning.
+        ids([1, 3]),
+      );
+    });
+
+    test('only the earliest due event of a (leaf, stage) pair earns', () {
+      expect(
+        earning([
+          review(1, 1, 1),
+          review(2, 2, 2),
+          review(3, 2, 2, hour: 14),
+          review(4, 2, 3),
+        ]),
+        ids([1, 2]),
+      );
+    });
+
+    test('a first-stage repeat and a stage without a cycle do not earn', () {
+      // A sub-track tick learns 1:2 first, so its main stage-1 learn earns
+      // nothing; 1:2 still starts a cycle and its stage-2 review earns. A
+      // stage-2 event on 1:3 with no stage-1 learn opens no step.
+      expect(
+        earning([
+          review(1, 1, 1),
+          review(2, 1, 2),
+          engineLearn(
+            3,
+            b12,
+            source: subTrack,
+            minutes: on(1, hour: 9),
+            learnedOn: sep(1),
+          ),
+          review(4, 1, 1, ref: b12),
+          review(5, 2, 2, ref: b12),
+          review(6, 2, 2, ref: 'Mishnah Berakhot 1:3'),
+        ]),
+        // 6 is the first event on 1:3, so it earns as first learning.
+        ids([1, 5, 6]),
+      );
+    });
+
+    test('an attempt that is not due does not use up the pair', () {
+      // Before 1:2 has a cycle (the sub-track tick comes first and the
+      // main learn later), a stage-2 event is not due; the due one on the
+      // 2nd still earns.
+      expect(
+        earning([
+          engineLearn(
+            1,
+            b12,
+            source: subTrack,
+            minutes: on(1, hour: 8),
+            learnedOn: sep(1),
+          ),
+          review(2, 2, 1, hour: 9, ref: b12),
+          review(3, 1, 1, hour: 10, ref: b12),
+          review(4, 2, 2, ref: b12),
+        ]),
+        ids([4]),
+      );
+    });
+
+    test('a voided or lock-ignored review does not earn or block', () {
+      expect(
+        earning([
+          review(1, 1, 1),
+          review(2, 2, 2),
+          engineVoid(3, 2, minutes: on(2, hour: 11)),
+          review(4, 2, 3),
+        ]),
+        ids([1, 4]),
+      );
+      // Stage 3 is due from the 4th; the Shabbos event on the 5th is
+      // lock-ignored and the one on the 6th earns.
+      expect(
+        earning(
+          [review(1, 1, 1), review(2, 2, 2), review(3, 3, 5), review(4, 3, 6)],
+          stages: [stageDoc(1), stageDoc(2, delay: 1), stageDoc(3, delay: 2)],
+        ),
+        ids([1, 2, 4]),
+      );
+    });
+
+    test('a catch_up review is judged on the civil date of effectiveAt, '
+        'not its learned_on', () {
+      // Stage 2 is due from the 3rd. A catch-up recorded on the 3rd for the
+      // 2nd is judged on the 3rd, so it is due and earns.
+      expect(
+        earning(
+          [
+            review(1, 1, 1),
+            review(2, 2, 3, dateState: DateState.catchUp, learnedOn: sep(2)),
+          ],
+          stages: [stageDoc(1), stageDoc(2, delay: 2)],
+        ),
+        ids([1, 2]),
+      );
+      // Stage 2 is weekly on Wednesdays (the 2nd and the 9th). A catch-up
+      // recorded on Thursday the 3rd for Wednesday the 2nd is judged on the
+      // Thursday, so it is not due; the dated review on the 9th earns.
+      final weekly = MainTrackConfigDoc(
+        collection: MainTrackConfigDoc.stages,
+        docId: '${engineCurriculum}_2',
+        curriculumId: engineCurriculum,
+        fields: {
+          'stage_order': 2,
+          'schedule_type': 'weekly',
+          'days_of_week': [3],
+        },
+      );
+      expect(
+        earning(
+          [
+            review(1, 1, 1),
+            review(2, 2, 3, dateState: DateState.catchUp, learnedOn: sep(2)),
+            review(3, 2, 9),
+          ],
+          stages: [stageDoc(1), weekly],
+        ),
+        ids([1, 3]),
+      );
+    });
+
+    test('earning uses the settings in force then, not today', () {
+      // Today stage 2 is delay 5, but it was delay 1 until the 3rd: the
+      // review on the 2nd was due then and keeps its points.
+      expect(
+        earning(
+          [review(1, 1, 1), review(2, 2, 2)],
+          stages: [stageDoc(1), stageDoc(2, delay: 5), stageDoc(3, delay: 7)],
+          history: [delayChange(1, 5, minutes: on(3, hour: 12))],
+        ),
+        ids([1, 2]),
+      );
+      // Today stage 2 is delay 1, but it was delay 5 until the 3rd: the
+      // review on the 2nd was not due then and does not earn.
+      expect(
+        earning(
+          [review(1, 1, 1), review(2, 2, 2)],
+          history: [delayChange(5, 1, minutes: on(3, hour: 12))],
+        ),
+        ids([1]),
+      );
+    });
+
+    test('ending the main track keeps past review earning', () {
+      final events = [review(1, 1, 1), review(2, 2, 2)];
+      expect(earning(events, endedAt: engineAt(on(10))), earning(events));
+      expect(earning(events, endedAt: engineAt(on(10))), ids([1, 2]));
+    });
+  });
+
+  group('DNI-468 boundaries: engine earning into points', () {
+    const inLock = 6000;
+
+    test('a lock-ignored earliest event neither earns nor blocks', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, source: subTrack, minutes: inLock),
+            engineLearn(2, b11, stage: 1, minutes: 8000),
+            engineLearn(3, b12, stage: 1, minutes: inLock),
+          ],
+        ),
+      );
+      expect(state.lockIgnoredEventIds, {engineUlid(1), engineUlid(3)});
+      expect(state.earningEventIds, {engineUlid(2)});
+    });
+
+    test('voiding an earning event lowers balance and lifetime, but an '
+        'unlocked achievement stays latched', () {
+      final events = [
+        engineLearn(1, b11, stage: 1),
+        engineLearn(2, b12, stage: 1, minutes: 10),
+        // A repeat main tick: writers still attach its pts_ row.
+        engineLearn(3, b11, stage: 1, minutes: 20),
+      ];
+      final rows = [
+        for (final n in [1, 2, 3])
+          PointsLedgerRow(
+            id: 'pts_${engineUlid(n)}',
+            amount: 10,
+            eventId: engineUlid(n),
+            entryKind: 'completion',
+          ),
+        const PointsLedgerRow(
+          id: 'spend',
+          amount: -5,
+          entryKind: 'redemption_debit',
+        ),
+      ];
+      const thresholds = [AchievementThreshold(id: 'twenty', points: 20)];
+
+      final before = pointsTotals(
+        rows,
+        engine.run(engineInputs(events: events)).earningEventIds,
+      );
+      expect(before, const PointsTotals(balance: 15, lifetimeEarned: 20));
+      final unlocked = newlyCrossedAchievements(before, thresholds, const {});
+      expect(unlocked, {'twenty'});
+
+      final after = pointsTotals(
+        rows,
+        engine
+            .run(
+              engineInputs(events: [...events, engineVoid(4, 2, minutes: 30)]),
+            )
+            .earningEventIds,
+      );
+      expect(after, const PointsTotals(balance: 5, lifetimeEarned: 10));
+      expect(newlyCrossedAchievements(after, thresholds, unlocked), isEmpty);
+      expect(unlockedAchievementIds(after, thresholds, unlocked), {'twenty'});
+    });
+
+    test('voiding the first learn lets a later main repeat earn', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineLearn(2, b11, stage: 1, minutes: 20),
+            engineVoid(3, 1, minutes: 30),
+          ],
+        ),
+      );
+      expect(state.earningEventIds, {engineUlid(2)});
+    });
+  });
+
   test('no inputs give no curricula', () {
     final state = engine.run(
       engineInputs(intents: const {}, corpora: const {}),
     );
     expect(state.curricula, isEmpty);
     expect(state.countedEventIds, isEmpty);
+    expect(state.earningEventIds, isEmpty);
   });
 }
