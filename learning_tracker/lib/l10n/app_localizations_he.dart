@@ -1390,6 +1390,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get tutorPermissionDenied => 'אין לך הרשאה לבצע עריכה זו';
 
   @override
+  String tutorEditingTurnedOff(String learner) {
+    return 'ההורה של $learner כיבה את העריכה';
+  }
+
+  @override
   String get addProfile => 'הוספת פרופיל';
 
   @override
@@ -4771,6 +4776,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get inviteTutorErrorGeneric => 'לא הצלחנו לשלוח את ההזמנה. נסו שוב.';
 
   @override
+  String get inviteTutorCanEditLearningLabel => 'יכול לערוך למידה';
+
+  @override
+  String get inviteTutorCanEditLearningExplanation =>
+      'המורה יוכל לשנות מסלולים, את תאריך היעד ורשומות למידה. כל שינוי נרשם.';
+
+  @override
   String get manageGrantsAppBarTitle => 'ההדרכות שלי';
 
   @override
@@ -4865,6 +4877,16 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get manageTutorsViewAuditLog => 'צפייה ביומן הפעולות';
+
+  @override
+  String get manageTutorsCanEditLearningLabel => 'יכול לערוך למידה';
+
+  @override
+  String get manageTutorsCanEditLearningOnlineRequired => 'נדרש חיבור לאינטרנט';
+
+  @override
+  String get manageTutorsCanEditLearningErrorGeneric =>
+      'לא ניתן לשנות את הרשאת העריכה. נסו שוב.';
 
   @override
   String get tutorFallbackParent => 'הורה';

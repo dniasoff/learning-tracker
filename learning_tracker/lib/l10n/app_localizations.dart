@@ -2507,6 +2507,12 @@ abstract class AppLocalizations {
   /// **'You don\'t have permission to make this edit'**
   String get tutorPermissionDenied;
 
+  /// DNI-487 AC-6: shown to a tutor whose write was rejected because the parent turned off the Can edit learning permission. Read access is unchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'{learner}\'s parent has turned off editing'**
+  String tutorEditingTurnedOff(String learner);
+
   /// No description provided for @addProfile.
   ///
   /// In en, this message translates to:
@@ -8114,6 +8120,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send the invitation. Please try again.'**
   String get inviteTutorErrorGeneric;
 
+  /// No description provided for @inviteTutorCanEditLearningLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Can edit learning'**
+  String get inviteTutorCanEditLearningLabel;
+
+  /// No description provided for @inviteTutorCanEditLearningExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'The tutor can change tracks, the deadline and learning records. Every change is recorded.'**
+  String get inviteTutorCanEditLearningExplanation;
+
   /// No description provided for @manageGrantsAppBarTitle.
   ///
   /// In en, this message translates to:
@@ -8269,6 +8287,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View audit log'**
   String get manageTutorsViewAuditLog;
+
+  /// No description provided for @manageTutorsCanEditLearningLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Can edit learning'**
+  String get manageTutorsCanEditLearningLabel;
+
+  /// No description provided for @manageTutorsCanEditLearningOnlineRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Online required'**
+  String get manageTutorsCanEditLearningOnlineRequired;
+
+  /// No description provided for @manageTutorsCanEditLearningErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t change editing permission. Please try again.'**
+  String get manageTutorsCanEditLearningErrorGeneric;
 
   /// No description provided for @tutorFallbackParent.
   ///

@@ -1401,6 +1401,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'You don\'t have permission to make this edit';
 
   @override
+  String tutorEditingTurnedOff(String learner) {
+    return '$learner\'s parent has turned off editing';
+  }
+
+  @override
   String get addProfile => 'Add Profile';
 
   @override
@@ -4820,6 +4825,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t send the invitation. Please try again.';
 
   @override
+  String get inviteTutorCanEditLearningLabel => 'Can edit learning';
+
+  @override
+  String get inviteTutorCanEditLearningExplanation =>
+      'The tutor can change tracks, the deadline and learning records. Every change is recorded.';
+
+  @override
   String get manageGrantsAppBarTitle => 'My Tutoring Grants';
 
   @override
@@ -4916,6 +4928,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get manageTutorsViewAuditLog => 'View audit log';
+
+  @override
+  String get manageTutorsCanEditLearningLabel => 'Can edit learning';
+
+  @override
+  String get manageTutorsCanEditLearningOnlineRequired => 'Online required';
+
+  @override
+  String get manageTutorsCanEditLearningErrorGeneric =>
+      'Couldn\'t change editing permission. Please try again.';
 
   @override
   String get tutorFallbackParent => 'Parent';
