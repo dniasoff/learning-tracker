@@ -874,6 +874,7 @@ void main() {
       final pending = await h.commands.watchPendingFailures().first;
       expect(pending.single.eventIds, hasLength(225));
       expect(h.analytics.captures.single.count, 75);
+      expect(h.analytics.captureSummaries.single['skipped_count'], 225);
     });
 
     test('a transient (SDK-queued) write is not duplicated into an '

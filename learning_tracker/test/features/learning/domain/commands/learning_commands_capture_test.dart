@@ -365,6 +365,24 @@ void main() {
             count: 2,
           ),
         ]);
+        expect(h.analytics.captureSummaries, [
+          {
+            'curriculum_id': engineCurriculum,
+            'source_type': 'main',
+            'gesture': 'plus_one',
+            'event_count': 1,
+            'skipped_count': 0,
+            'taps': 1,
+          },
+          {
+            'curriculum_id': engineCurriculum,
+            'source_type': 'ongoing',
+            'gesture': 'plus_one',
+            'event_count': 2,
+            'skipped_count': 0,
+            'taps': 1,
+          },
+        ]);
       },
     );
 
@@ -515,4 +533,19 @@ void main() {
       expect(h.reads.reads, isNot(contains('events')));
     });
   });
+  test(
+    'successful commands emit a child-safe summary through the C0 seam',
+    () async {
+      final h = _Harness();
+      await h.capture(refs: [_b11], source: engineUlid(7));
+      expect(h.analytics.captureSummaries.single, {
+        'curriculum_id': engineCurriculum,
+        'source_type': 'ongoing',
+        'gesture': 'plus_one',
+        'event_count': 1,
+        'skipped_count': 0,
+        'taps': 1,
+      });
+    },
+  );
 }

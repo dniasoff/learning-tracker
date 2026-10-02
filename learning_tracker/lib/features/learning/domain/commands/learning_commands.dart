@@ -561,6 +561,21 @@ final class DefaultLearningCommands implements LearningCommands {
           dateState: dateState,
           count: result.eventIds.length,
         );
+        // Until the capture UI carries explicit gesture and tap metadata,
+        // report the child-safe defaults used by the analytics contract.
+        _analytics.captureSummary(
+          curriculumId: curriculumId,
+          sourceType: source == LearningEvent.sourceMain
+              ? CaptureSourceType.main
+              : CaptureSourceType.ongoing,
+          dateState: dateState,
+          gesture: CaptureGesture.plusOne,
+          eventCount: result.eventIds.length,
+          skippedCount: leaves.length > result.eventIds.length
+              ? leaves.length - result.eventIds.length
+              : 0,
+          taps: 1,
+        );
       }
       return result;
     });
