@@ -289,7 +289,7 @@
       }
     }
   },
-  "onTrackFinishUnknown": "not yet known",
+  "onTrackFinishUnknown": "not enough recent learning to project",
   "onTrackLoading": "Loading pace status",
   "onTrackOnTrack": "On track",
   "onTrackProjectedFinish": "Projected finish: {finish}",

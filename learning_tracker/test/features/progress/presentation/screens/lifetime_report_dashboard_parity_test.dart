@@ -13,8 +13,8 @@
 // 2. Dashboard half (live): the real parent `DashboardScreen` over the same
 //    state must paint a status, a projected finish and a daily target
 //    (presence first, so an empty Dashboard fails), and each must equal the
-//    report's. Its on-track figures come from `ParentOnTrackSummary`, the
-//    Dashboard consumer of the shared learner state.
+//    report's. Its on-track figures come from the Story 2.11 (DNI-502)
+//    parent on-track card, the Dashboard's one on-track surface.
 // 3. Parent only: the same Dashboard outside a parent session (a child
 //    without the parent PIN, a tutor) paints no on-track figure.
 @Tags(['progress', 'lifetime', 'story_5_3'])
@@ -185,10 +185,10 @@ _Figures _report(WidgetTester tester) {
   );
 }
 
-/// Every string painted on screen.
+/// Every string painted on screen, without inline icon placeholders.
 List<String> _painted(WidgetTester tester) => [
   for (final t in tester.widgetList<RichText>(find.byType(RichText)))
-    t.text.toPlainText(),
+    t.text.toPlainText(includePlaceholders: false).trim(),
 ];
 
 /// Overrides that give both surfaces [state] through the shared provider.

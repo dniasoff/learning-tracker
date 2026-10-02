@@ -12,8 +12,13 @@
 ///   projection (UX-DR-94, UX-DR-111).
 /// * No deadline: "Projected finish: …" only (FR-20, UX-DR-95).
 /// * A zero target with a deadline: the bonus copy (UX-DR-96).
+/// * A calendar program: the status is the engine's calendar shortfall,
+///   with "n {unit} behind the calendar" when positive.
 ///
-/// Status is a text label with an icon, never colour alone (UX-DR-157).
+/// The status, daily target and calendar shortfall are the lifetime
+/// report's [OnTrackView] of the same state (DNI-518 AC-11), so the two
+/// surfaces never disagree. Status is a text label with an icon, never
+/// colour alone (UX-DR-157).
 /// Parent-only: [ParentForecastSection] reads [parentForecastProvider],
 /// which builds nothing outside a parent session (NFR-9, UX-DR-48).
 library;
@@ -28,8 +33,8 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
-import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
+import 'package:learning_tracker/features/progress/progress.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The width from which the card lays its lines out as one status row
@@ -178,42 +183,49 @@ class OnTrackCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final colors = context.colors;
     final projection = forecast.projection;
-    final status = projection.status;
+    final view = forecast.onTrack;
     final deadline = projection.deadline;
     final lineStyle = theme.textTheme.bodyMedium?.copyWith(
       color: colors.brandInk,
       fontWeight: FontWeight.w600,
     );
 
+    // Under 14 days the engine makes no projection: "Too early to tell" is
+    // the neutral status, with or without a deadline (UX-DR-94).
+    final status =
+        view.status ??
+        (view.projectionTooEarly ? PaceReportStatus.tooEarly : null);
     final statusChip = switch (status) {
-      ProjectionStatus.onTrack => _StatusChip(
+      PaceReportStatus.onTrack => _StatusChip(
         key: const Key('onTrackStatus'),
         icon: Icons.check_circle_rounded,
         label: l10n.onTrackOnTrack,
         foreground: colors.statusSuccessSoftText,
         background: colors.statusSuccessSoftBg,
       ),
-      ProjectionStatus.behindPace => _StatusChip(
+      PaceReportStatus.behindPace => _StatusChip(
         key: const Key('onTrackStatus'),
         icon: Icons.warning_amber_rounded,
         label: l10n.onTrackBehindPace,
         foreground: colors.brandWarningDeep,
         background: colors.brandWarningSoft,
       ),
-      ProjectionStatus.tooEarly => _StatusChip(
+      PaceReportStatus.tooEarly => _StatusChip(
         key: const Key('onTrackStatus'),
         icon: Icons.hourglass_empty_rounded,
         label: l10n.onTrackTooEarly,
         foreground: colors.brandInkMuted,
         background: colors.brandCreamSoft,
       ),
-      ProjectionStatus.noDeadline => null,
+      null => null,
     };
 
-    // Too early to tell: no projection at all (UX-DR-94).
+    // The projected finish, as the report shows it: none while the status
+    // already says it is too early (UX-DR-94); "not enough recent learning"
+    // when the engine has no finish date.
+    final finish = projection.projectedFinish;
     String? projectionLine;
-    if (status != ProjectionStatus.tooEarly) {
-      final finish = projection.projectedFinish;
+    if (finish != null || status != PaceReportStatus.tooEarly) {
       final finishText = finish == null
           ? l10n.onTrackFinishUnknown
           : formatForecastDate(context, finish);
@@ -225,10 +237,11 @@ class OnTrackCard extends ConsumerWidget {
             );
     }
 
-    // FR-20: no daily target without a deadline, even if one is derived.
-    final target = forecast.dailyTarget;
+    // FR-20: the mapping shows no daily target without a deadline (or a
+    // calendar program), even if the engine derived one.
+    final target = view.dailyTarget;
     String? targetLine;
-    if (deadline != null && target != null) {
+    if (target != null) {
       targetLine = target == 0
           ? l10n.todayTargetAllCovered
           : l10n.onTrackDailyTarget(
@@ -236,6 +249,15 @@ class OnTrackCard extends ConsumerWidget {
               forecastLeafUnit(ref, l10n, forecast.curriculum, count: target),
             );
     }
+
+    // A calendar program behind its calendar (DNI-518 AC-8).
+    final behind = view.calendarShortfall;
+    final behindLine = behind == null
+        ? null
+        : l10n.reportOnTrackCalendarBehind(
+            formatForecastCount(context, behind),
+            forecastLeafUnit(ref, l10n, forecast.curriculum, count: behind),
+          );
 
     final lines = <Widget>[
       ?statusChip,
@@ -252,6 +274,14 @@ class OnTrackCard extends ConsumerWidget {
           icon: Icons.speed_rounded,
           text: targetLine,
           style: lineStyle,
+        ),
+      if (behindLine != null)
+        _IconLine(
+          key: const Key('onTrackCalendarBehind'),
+          icon: Icons.event_busy_rounded,
+          text: behindLine,
+          style: lineStyle?.copyWith(color: colors.brandWarningDeep),
+          iconColor: colors.brandWarningDeep,
         ),
     ];
 
@@ -355,11 +385,15 @@ class _IconLine extends StatelessWidget {
     required this.icon,
     required this.text,
     required this.style,
+    this.iconColor,
   });
 
   final IconData icon;
   final String text;
   final TextStyle? style;
+
+  /// The icon colour; `brandInkMuted` by default.
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -371,7 +405,11 @@ class _IconLine extends StatelessWidget {
         children: [
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
-            child: Icon(icon, size: 18, color: context.colors.brandInkMuted),
+            child: Icon(
+              icon,
+              size: 18,
+              color: iconColor ?? context.colors.brandInkMuted,
+            ),
           ),
           const TextSpan(text: '  '),
           TextSpan(text: text),

@@ -418,7 +418,10 @@ class DashboardBody extends ConsumerWidget {
         const SizedBox(height: 18),
         // DNI-502: the parent on-track card (FR-18 to FR-20) with one
         // shortfall warning per short sub-track directly under it (FR-21);
-        // it takes no space outside a parent session (NFR-9).
+        // it takes no space outside a parent session (NFR-9). It is the
+        // Dashboard's one on-track surface: its status, daily target and
+        // calendar shortfall use the lifetime report's mapping, so the two
+        // agree for one LearnerState (DNI-518 AC-11).
         ParentForecastSection(
           belowCard: (forecast) => ShortfallWarningList(forecast: forecast),
         ),
@@ -430,12 +433,6 @@ class DashboardBody extends ConsumerWidget {
         // Child mode renders the fourth ⭐ points counter (see Task #14 brief).
         ProgressTierCounterRow(showPoints: userMode == ProfileMode.child),
         const SizedBox(height: 22),
-        // Story 5.3 (DNI-518, AC-11): the parent on-track summary, the same
-        // engine status, projected finish and daily target as the lifetime
-        // report. Parent session only; paints nothing otherwise.
-        ParentOnTrackSummary(
-          curricula: [for (final t in activeTracks) t.curriculumId],
-        ),
         if (userMode == ProfileMode.child) ...[
           if (pointsAsync.hasError)
             InlineAsyncError(

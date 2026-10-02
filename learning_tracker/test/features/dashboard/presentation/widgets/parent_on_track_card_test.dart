@@ -16,7 +16,9 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/learner_today_card.dart';
@@ -35,6 +37,11 @@ import '../../../../helpers/pump_app.dart';
 final _mishnayos = CurriculumLabels.leaf(
   CurriculumId.mishnayos,
 ).inLanguage(useHebrew: false, plural: true);
+
+/// The singular Mishnayos leaf unit in English terms.
+final _mishna = CurriculumLabels.leaf(
+  CurriculumId.mishnayos,
+).inLanguage(useHebrew: false, plural: false);
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -162,10 +169,67 @@ void main() {
         ),
       );
       expect(
-        _text('Projected finish: not yet known · deadline Sep 10, 2029'),
+        _text(
+          'Projected finish: not enough recent learning to project · '
+          'deadline Sep 10, 2029',
+        ),
         findsOneWidget,
       );
     });
+  });
+
+  testWidgets('a calendar program: the status is the engine\'s calendar '
+      'shortfall, as in the lifetime report (DNI-518 AC-8, AC-11)', (
+    tester,
+  ) async {
+    final state = const LearnerStateEngine().run(
+      engineInputs(
+        nowUtc: DateTime.utc(2026, 10, 8, 12),
+        intents: {
+          engineCurriculum: MainTrackIntent(
+            curriculumId: engineCurriculum,
+            track: MainTrack(
+              curriculumId: engineCurriculum,
+              state: MainTrackState.active,
+            ),
+            program: MainTrackProgram(
+              curriculumId: engineCurriculum,
+              programId: 'mishnah_yomit',
+              trackingStartDate: '2026-09-01',
+            ),
+          ),
+        },
+        calendars: {
+          'mishnah_yomit': [
+            const CalendarAssignment('2026-09-02', berakhot1),
+            const CalendarAssignment('2026-09-03', berakhot2),
+          ],
+        },
+        events: [
+          forecastLearn(1, 'Mishnah Berakhot 1:1', '2026-09-15'),
+          forecastLearn(2, 'Mishnah Berakhot 1:2', '2026-09-22'),
+        ],
+      ),
+    );
+    final curriculum = state[engineCurriculum]!;
+    // The fixture really is a calendar program behind its calendar.
+    expect(curriculum.report.calendarProgram, isTrue);
+    final behind = curriculum.shortfall!;
+    expect(behind, greaterThan(0));
+    final target = curriculum.dailyTarget!;
+
+    await _pump(tester, state: state);
+    expect(_text('Behind pace'), findsOneWidget);
+    expect(_text('$behind $_mishnayos behind the calendar'), findsOneWidget);
+    expect(
+      _text(
+        target == 0
+            ? 'All covered'
+            : 'Daily target: $target ${target == 1 ? _mishna : _mishnayos}/day',
+      ),
+      findsOneWidget,
+    );
+    expect(_text('On track'), findsNothing);
   });
 
   group('AC-2: too early to tell (real engine, 13/14-day boundary)', () {
