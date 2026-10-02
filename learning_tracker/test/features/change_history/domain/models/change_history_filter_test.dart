@@ -10,9 +10,9 @@ import 'package:learning_tracker/features/change_history/domain/models/change_hi
 import 'package:learning_tracker/features/change_history/domain/models/history_item.dart';
 import 'package:learning_tracker/features/change_history/domain/services/change_history_pager.dart';
 
-import '../../../helpers/change_history_fixtures.dart';
-import '../../../helpers/fake_history_ports.dart';
-import '../../../helpers/learner_state_fixtures.dart';
+import '../../../../helpers/change_history_fixtures.dart';
+import '../../../../helpers/fake_history_ports.dart';
+import '../../../../helpers/learner_state_fixtures.dart';
 
 final _scope = LearnerScope(ownerUid: 'owner-uid', profileId: profileUlid);
 
