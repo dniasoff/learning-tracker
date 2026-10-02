@@ -3383,6 +3383,138 @@ abstract class AppLocalizations {
   /// **'When you complete a masechta or sefer, it will be recorded here as a permanent milestone.'**
   String get journeyEmptyBody;
 
+  /// Change history undo (DNI-514 AC-3): a field the undo left alone because someone changed it since, and who. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{field} — changed since by {actor}'**
+  String changeHistoryUndoChangedSince(String field, String actor);
+
+  /// Change history undo (DNI-514 AC-3): a field left alone when who changed it since is unknown. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{field} — changed since'**
+  String changeHistoryUndoChangedSinceUnknown(String field);
+
+  /// Change history undo (DNI-514 AC-1): snackbar after an undo is applied (or queued offline, AC-9). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Change undone'**
+  String get changeHistoryUndoDone;
+
+  /// Change history undo: the goal target_date field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline'**
+  String get changeHistoryUndoFieldDeadline;
+
+  /// Change history undo: any other goal field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get changeHistoryUndoFieldGoal;
+
+  /// Change history undo: the sub-track ground field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-track ground'**
+  String get changeHistoryUndoFieldGround;
+
+  /// Change history undo: the sub-track name field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-track name'**
+  String get changeHistoryUndoFieldName;
+
+  /// Change history undo: a main-track order field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning order'**
+  String get changeHistoryUndoFieldOrder;
+
+  /// Change history undo: a main-track program field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Program'**
+  String get changeHistoryUndoFieldProgram;
+
+  /// Change history undo: a main-track scope field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Scope'**
+  String get changeHistoryUndoFieldScope;
+
+  /// Change history undo: a learner settings field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Location and time zone'**
+  String get changeHistoryUndoFieldSettings;
+
+  /// Change history undo: a main-track stages field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Review stages'**
+  String get changeHistoryUndoFieldStages;
+
+  /// Change history undo: a main-track study days field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Study days'**
+  String get changeHistoryUndoFieldStudyDays;
+
+  /// Change history undo: any other sub-track field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-track'**
+  String get changeHistoryUndoFieldSubTrack;
+
+  /// Change history undo: a main-track field. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Track'**
+  String get changeHistoryUndoFieldTrack;
+
+  /// Change history undo (DNI-514 AC-2, AC-7): an undo the app refused (final, already undone, or not offered). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'This change can\'t be undone'**
+  String get changeHistoryUndoNotAllowed;
+
+  /// Change history undo (DNI-514 AC-9, UX-DR-139): an undo the server rejected for good; shown with Retry. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'The undo couldn\'t be saved'**
+  String get changeHistoryUndoNotSaved;
+
+  /// Change history undo (DNI-514 AC-3): no field of the action could be undone; nothing was written. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to undo — changed since'**
+  String get changeHistoryUndoNothingToUndo;
+
+  /// Change history undo (DNI-514 AC-8): an undo over 10 documents needs a connection. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Online required'**
+  String get changeHistoryUndoOnlineRequired;
+
+  /// Change history undo (DNI-514 AC-3): an undo that left some fields alone; fields is the list of changed-since lines. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Undone, except: {fields}'**
+  String changeHistoryUndoPartlyDone(String fields);
+
+  /// Change history row (DNI-514 AC-1): the row of an undo, naming the change it reverted. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverted change: {summary}'**
+  String changeHistoryUndoRevertedChange(String summary);
+
+  /// Change history row tag (DNI-514 AC-1): the original row of an undone action. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Undone'**
+  String get changeHistoryUndoUndoneTag;
+
   /// No description provided for @chartCumulativeProgress.
   ///
   /// In en, this message translates to:

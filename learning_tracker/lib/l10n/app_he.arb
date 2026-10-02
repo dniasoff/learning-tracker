@@ -1007,6 +1007,117 @@
   },
   "journeyEmptyTitle": "עדיין אין סיומים",
   "journeyEmptyBody": "כשתסיימו מסכתא או ספר, הוא יירשם כאן כאבן דרך קבועה.",
+  "changeHistoryUndoChangedSince": "{field} — שונה מאז על ידי {actor}",
+  "@changeHistoryUndoChangedSince": {
+    "description": "Change history undo (DNI-514 AC-3): a field the undo left alone because someone changed it since, and who. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUndoChangedSinceUnknown": "{field} — שונה מאז",
+  "@changeHistoryUndoChangedSinceUnknown": {
+    "description": "Change history undo (DNI-514 AC-3): a field left alone when who changed it since is unknown. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUndoDone": "השינוי בוטל",
+  "@changeHistoryUndoDone": {
+    "description": "Change history undo (DNI-514 AC-1): snackbar after an undo is applied (or queued offline, AC-9). DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldDeadline": "תאריך יעד",
+  "@changeHistoryUndoFieldDeadline": {
+    "description": "Change history undo: the goal target_date field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldGoal": "יעד",
+  "@changeHistoryUndoFieldGoal": {
+    "description": "Change history undo: any other goal field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldGround": "חומר המסלול המשני",
+  "@changeHistoryUndoFieldGround": {
+    "description": "Change history undo: the sub-track ground field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldName": "שם המסלול המשני",
+  "@changeHistoryUndoFieldName": {
+    "description": "Change history undo: the sub-track name field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldOrder": "סדר הלימוד",
+  "@changeHistoryUndoFieldOrder": {
+    "description": "Change history undo: a main-track order field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldProgram": "תוכנית",
+  "@changeHistoryUndoFieldProgram": {
+    "description": "Change history undo: a main-track program field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldScope": "היקף",
+  "@changeHistoryUndoFieldScope": {
+    "description": "Change history undo: a main-track scope field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldSettings": "מיקום ואזור זמן",
+  "@changeHistoryUndoFieldSettings": {
+    "description": "Change history undo: a learner settings field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldStages": "שלבי חזרה",
+  "@changeHistoryUndoFieldStages": {
+    "description": "Change history undo: a main-track stages field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldStudyDays": "ימי לימוד",
+  "@changeHistoryUndoFieldStudyDays": {
+    "description": "Change history undo: a main-track study days field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldSubTrack": "מסלול משני",
+  "@changeHistoryUndoFieldSubTrack": {
+    "description": "Change history undo: any other sub-track field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldTrack": "מסלול",
+  "@changeHistoryUndoFieldTrack": {
+    "description": "Change history undo: a main-track field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoNotAllowed": "אי אפשר לבטל את השינוי הזה",
+  "@changeHistoryUndoNotAllowed": {
+    "description": "Change history undo (DNI-514 AC-2, AC-7): an undo the app refused (final, already undone, or not offered). DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoNotSaved": "לא ניתן היה לשמור את הביטול",
+  "@changeHistoryUndoNotSaved": {
+    "description": "Change history undo (DNI-514 AC-9, UX-DR-139): an undo the server rejected for good; shown with Retry. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoNothingToUndo": "אין מה לבטל — שונה מאז",
+  "@changeHistoryUndoNothingToUndo": {
+    "description": "Change history undo (DNI-514 AC-3): no field of the action could be undone; nothing was written. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoOnlineRequired": "נדרש חיבור לאינטרנט",
+  "@changeHistoryUndoOnlineRequired": {
+    "description": "Change history undo (DNI-514 AC-8): an undo over 10 documents needs a connection. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoPartlyDone": "בוטל, חוץ מ: {fields}",
+  "@changeHistoryUndoPartlyDone": {
+    "description": "Change history undo (DNI-514 AC-3): an undo that left some fields alone; fields is the list of changed-since lines. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUndoRevertedChange": "שינוי שבוטל: {summary}",
+  "@changeHistoryUndoRevertedChange": {
+    "description": "Change history row (DNI-514 AC-1): the row of an undo, naming the change it reverted. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUndoUndoneTag": "בוטל",
+  "@changeHistoryUndoUndoneTag": {
+    "description": "Change history row tag (DNI-514 AC-1): the original row of an undone action. DRAFT copy, pending zc4."
+  },
   "chartCumulativeProgress": "התקדמות מצטברת",
   "chartCumulativeProgressSubtitle": "סה״כ השלמות לאורך זמן",
   "chartPointsEarned": "נקודות שנצברו",
