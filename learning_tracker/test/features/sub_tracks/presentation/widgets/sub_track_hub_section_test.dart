@@ -80,6 +80,30 @@ void main() {
     expect(find.textContaining('Sub-tracks'), findsNothing);
   });
 
+  testWidgets('undecodable sub-track rows show the error state', (
+    tester,
+  ) async {
+    final h = SubTrackHarness(
+      seed: [storedSchoolYear('01JHARN0000000000000000001')],
+    );
+    addTearDown(h.dispose);
+    h.repo.seedRejected(h.scope, const [
+      RejectedRow('01JHARN0000000000000000098', 'bad window_end'),
+    ]);
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: h.overrides(),
+        retry: (_, _) => null,
+        child: const Scaffold(
+          body: SubTrackHubSection(curriculumId: subTrackTestCurriculum),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AppErrorView), findsOneWidget);
+    expect(find.textContaining('Sub-tracks'), findsNothing);
+  });
+
   testWidgets('the listener reports each refused batch once', (tester) async {
     final commands = FakeLearningCommands();
     await tester.pumpWidget(

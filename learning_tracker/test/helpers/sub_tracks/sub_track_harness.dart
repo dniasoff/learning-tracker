@@ -167,6 +167,14 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
       subTracks.deleteSubTrack(subTrackId);
 
   @override
+  Future<CaptureResult> removeTrack(String curriculumId) =>
+      _fake.removeTrack(curriculumId);
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) =>
+      _fake.reAddTrack(curriculumId);
+
+  @override
   Stream<List<PendingFailure>> watchPendingFailures() =>
       subTracks.watchPendingFailures();
 

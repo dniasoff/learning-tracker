@@ -83,4 +83,24 @@ void main() {
     expect(find.byType(AppErrorView), findsOneWidget);
     expect(find.byType(SchoolYearSubTrackForm), findsNothing);
   });
+
+  testWidgets('undecodable sub-track rows block the form (fail closed)', (
+    tester,
+  ) async {
+    h.repo.seedRejected(h.scope, const [
+      RejectedRow('01JHARN0000000000000000098', 'bad window_end'),
+    ]);
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: h.overrides(),
+        retry: (_, _) => null,
+        child: const SchoolYearSubTrackFormScreen(
+          curriculumId: subTrackTestCurriculum,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AppErrorView), findsOneWidget);
+    expect(find.byType(SchoolYearSubTrackForm), findsNothing);
+  });
 }
