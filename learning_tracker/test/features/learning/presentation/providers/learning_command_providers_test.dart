@@ -436,6 +436,36 @@ void main() {
       expect(saved.ratePerWeek, 7);
       expect(subTracks.entries, hasLength(2));
     });
+    test(
+      'createSubTrack through the provider graph reads the governed '
+      'intent and saves the new sub-track (DNI-497 follow-up fyh.169)',
+      () async {
+        final container = ProviderContainer.test(overrides: ready());
+        final commands = (await settledAsync(
+          container,
+          learningCommandsProvider,
+        )).value!;
+        final result = await commands.createSubTrack(
+          const SubTrackDraft(
+            curriculumId: engineCurriculum,
+            name: 'School',
+            type: SubTrackType.ongoing,
+            windowStart: '2026-09-01',
+            ratePerWeek: 3,
+            weeksPerYear: 40,
+            learnsOnShabbos: false,
+            ground: [peah],
+          ),
+          subTrackId: ulidD,
+        );
+        expect(result, isA<CaptureSuccess>());
+        final created = subTracks.tracksOf(c0Scope()).single;
+        expect(created.id, ulidD);
+        expect(created.ground, const [peah]);
+        expect(subTracks.entries.single.$2.actor.role, ActorRole.parent);
+      },
+    );
+
     for (final (label, unavailable) in <(String, Override)>[
       (
         'not ready',
