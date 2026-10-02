@@ -181,7 +181,7 @@ void main() {
         // copyWith has no canMarkLiveCompletion parameter, so it survives copies.
         expect(
           const TutorPermissions()
-              .copyWith(canEditGoals: true)
+              .copyWith(canEditLearning: true)
               .canMarkLiveCompletion,
           isFalse,
         );

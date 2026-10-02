@@ -62,7 +62,7 @@ export async function clearFirestore() {
 
 /**
  * Seed an active tutor grant. [permissions] is the per-action permission bag
- * (e.g. { can_reset_completion: true }); [overrides] tweaks any grant field
+ * (e.g. { can_edit_learning: true }); [overrides] tweaks any grant field
  * (e.g. { state: 'pending' }, { tutor_uid: 'someone-else' }).
  */
 export async function seedActiveGrant(permissions = {}, overrides = {}) {

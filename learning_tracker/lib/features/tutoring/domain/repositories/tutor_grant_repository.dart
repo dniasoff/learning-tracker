@@ -46,6 +46,15 @@ abstract interface class TutorGrantRepository {
   /// Resign from an active grant (tutor resigns).
   Future<TutorGrantResult> resignGrant({required String grantId});
 
+  /// AD-53 (DNI-487): the owning parent turns the active grant's single
+  /// "Can edit learning" permission on or off via the parent-only
+  /// `updateTutorGrantPermissions` callable. Success means the server
+  /// committed [canEditLearning]; no client state is optimistic.
+  Future<TutorGrantResult> updateGrantPermissions({
+    required String grantId,
+    required bool canEditLearning,
+  });
+
   /// List active/pending grants where caller is the tutor.
   Future<List<TutorGrant>> listIncomingGrants();
 
@@ -114,6 +123,10 @@ enum TutorGrantPreconditionCode {
   /// [ResignTutorGrantUseCase]: the grant is not active, so the tutor
   /// cannot resign from it.
   cannotResign,
+
+  /// [UpdateTutorGrantPermissionsUseCase]: the grant is not active, so the
+  /// parent cannot change its permissions (AD-53).
+  cannotUpdatePermissions,
 }
 
 final class TutorGrantPreconditionError extends TutorGrantResult {

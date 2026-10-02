@@ -611,8 +611,7 @@ void main() {
           state: 'active',
           permissions: const TutorPermissions(
             canViewProgress: true,
-            canResetCompletion: true,
-            canEditGoals: false,
+            canEditLearning: false,
           ).toFirestore(),
         ),
       );
@@ -620,8 +619,7 @@ void main() {
       expect(grant.grantState, isA<ActiveGrant>());
       final active = grant.grantState as ActiveGrant;
       expect(active.permissions.canViewProgress, isTrue);
-      expect(active.permissions.canResetCompletion, isTrue);
-      expect(active.permissions.canEditGoals, isFalse);
+      expect(active.permissions.canEditLearning, isFalse);
     });
 
     test(
@@ -891,6 +889,32 @@ void main() {
       expect(capturedParams!['permissions'], isA<Map<String, dynamic>>());
     });
 
+    test('DNI-487 AC-4: permissions payload carries the explicit '
+        'can_edit_learning choice and none of the legacy edit keys', () async {
+      for (final value in [true, false]) {
+        Map<String, dynamic>? capturedParams;
+        final repo = _buildRepo((name, params) async {
+          if (name == 'inviteTutor') {
+            capturedParams = (params as Map).cast<String, dynamic>();
+          }
+          return <String, dynamic>{};
+        });
+
+        await repo.inviteTutor(
+          tutorEmail: 'tutor@example.com',
+          childProfileId: 'profile_1',
+          permissions: TutorPermissions(canEditLearning: value),
+        );
+
+        final perms = (capturedParams!['permissions'] as Map)
+            .cast<String, dynamic>();
+        expect(perms['can_edit_learning'], value);
+        for (final legacy in kLegacyTutorEditPermissionKeys) {
+          expect(perms.containsKey(legacy), isFalse, reason: legacy);
+        }
+      }
+    });
+
     test('omits childName/parentName when null', () async {
       Map<String, dynamic>? capturedParams;
       final repo = _buildRepo((name, params) async {
@@ -1088,6 +1112,56 @@ void main() {
 
   // ── revokeGrant ───────────────────────────────────────────────────────────
 
+  group('updateGrantPermissions (DNI-487)', () {
+    test(
+      'success: calls updateTutorGrantPermissions with the B13 payload',
+      () async {
+        String? calledName;
+        Map<String, dynamic>? captured;
+        final repo = _buildRepo((name, params) async {
+          calledName = name;
+          captured = (params as Map).cast<String, dynamic>();
+          return <String, dynamic>{};
+        });
+
+        final result = await repo.updateGrantPermissions(
+          grantId: 'grant_upd',
+          canEditLearning: true,
+        );
+        expect(result, isA<TutorGrantSuccess>());
+        expect((result as TutorGrantSuccess).grantId, 'grant_upd');
+        expect(calledName, 'updateTutorGrantPermissions');
+        expect(captured, {'grantId': 'grant_upd', 'canEditLearning': true});
+      },
+    );
+
+    test('permission-denied → TutorGrantFailure carrying the code', () async {
+      final repo = _buildRepo(
+        (_, __) async => throw FirebaseFunctionsException(
+          code: 'permission-denied',
+          message: 'Only the owning parent can change',
+        ),
+      );
+      final result = await repo.updateGrantPermissions(
+        grantId: 'g',
+        canEditLearning: false,
+      );
+      expect(result, isA<TutorGrantFailure>());
+      expect((result as TutorGrantFailure).code, 'permission-denied');
+    });
+
+    test('generic error → stable unknown-error failure', () async {
+      final repo = _buildRepo((_, __) async => throw Exception('io'));
+      final result = await repo.updateGrantPermissions(
+        grantId: 'g',
+        canEditLearning: false,
+      );
+      expect(result, isA<TutorGrantFailure>());
+      expect((result as TutorGrantFailure).code, 'unknown-error');
+      expect(result.message, isNot(contains('io')));
+    });
+  });
+
   group('revokeGrant', () {
     test('success: returns TutorGrantSuccess', () async {
       String? calledName;
@@ -1249,12 +1323,8 @@ void main() {
       const original = TutorPermissions(
         canViewProgress: true,
         canViewContent: false,
-        canBulkPriorCompletion: true,
-        canResetCompletion: true,
-        canEditGoals: false,
-        canEditStages: true,
+        canEditLearning: false,
         canEditRewards: false,
-        canEditStudyDays: true,
         canEditPoints: false,
       );
 
@@ -1270,8 +1340,8 @@ void main() {
       // All missing → defaults applied.
       expect(partial.canViewProgress, isTrue);
       expect(partial.canViewContent, isTrue);
-      expect(partial.canBulkPriorCompletion, isTrue);
-      expect(partial.canResetCompletion, isFalse);
+      // AD-53: a grant without can_edit_learning is read-only.
+      expect(partial.canEditLearning, isFalse);
       expect(partial.canMarkLiveCompletion, isFalse);
     });
   });

@@ -16,6 +16,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
+import 'package:learning_tracker/features/tutoring/data/repositories/update_tutor_grant_permissions_request.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_grant_repository.dart';
@@ -168,6 +169,32 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
       );
     } catch (e, st) {
       return _unexpectedFailure('resignGrant', e, st);
+    }
+  }
+
+  @override
+  Future<TutorGrantResult> updateGrantPermissions({
+    required String grantId,
+    required bool canEditLearning,
+  }) async {
+    try {
+      final callable = (await _client()).httpsCallable(
+        kUpdateTutorGrantPermissionsCallable,
+      );
+      await callable.call<Map<String, dynamic>>(
+        UpdateTutorGrantPermissionsRequest(
+          grantId: grantId,
+          canEditLearning: canEditLearning,
+        ).toWire(),
+      );
+      return TutorGrantSuccess(grantId: grantId);
+    } on FirebaseFunctionsException catch (e) {
+      return TutorGrantFailure(
+        message: e.message ?? 'Failed to update grant permissions',
+        code: e.code,
+      );
+    } catch (e, st) {
+      return _unexpectedFailure('updateGrantPermissions', e, st);
     }
   }
 

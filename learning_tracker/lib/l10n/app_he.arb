@@ -777,6 +777,14 @@
   "tutorWriteForbiddenTitle": "פעולה לא מורשית",
   "tutorWriteForbiddenMessage": "מדריכים אינם יכולים לסמן השלמות חיות. פעולה זו מזכה את הרצף והפרסים של הילד, ושמורה להורה או לילד.",
   "tutorPermissionDenied": "אין לך הרשאה לבצע עריכה זו",
+  "tutorEditingTurnedOff": "ההורה של {learner} כיבה את העריכה",
+  "@tutorEditingTurnedOff": {
+    "placeholders": {
+      "learner": {
+        "type": "String"
+      }
+    }
+  },
   "addProfile": "הוספת פרופיל",
   "createProfile": "יצירת פרופיל",
   "enterNameHint": "הזינו שם",
@@ -2850,6 +2858,12 @@
   "inviteTutorErrorLocalOnly": "הזמנת מדריך מצריכה חשבון ענן — שדרגו את החשבון כדי להזמין מדריך.",
   "inviteTutorErrorUnauthenticated": "לא הצלחנו לשלוח את ההזמנה. היכנסו לחשבון ונסו שוב.",
   "inviteTutorErrorGeneric": "לא הצלחנו לשלוח את ההזמנה. נסו שוב.",
+  "inviteTutorCanEditLearningLabel": "יכול לערוך למידה",
+  "inviteTutorCanEditLearningExplanation": "המורה יוכל לשנות מסלולים, את תאריך היעד ורשומות למידה. כל שינוי נרשם.",
+  "inviteTutorCanViewProgressLabel": "יכול לצפות בהתקדמות",
+  "inviteTutorCanViewContentLabel": "יכול לצפות בתוכן הלימוד",
+  "inviteTutorCanEditRewardsLabel": "יכול לערוך פרסים",
+  "inviteTutorCanEditPointsLabel": "יכול לערוך נקודות",
   "manageGrantsAppBarTitle": "ההדרכות שלי",
   "manageGrantsActiveSection": "פעילות ({count})",
   "@manageGrantsActiveSection": {
@@ -2928,6 +2942,9 @@
   "manageTutorsRescind": "ביטול הזמנה",
   "manageTutorsRescindErrorGeneric": "לא ניתן לבטל את ההזמנה. נסו שוב.",
   "manageTutorsViewAuditLog": "צפייה ביומן הפעולות",
+  "manageTutorsCanEditLearningLabel": "יכול לערוך למידה",
+  "manageTutorsCanEditLearningOnlineRequired": "נדרש חיבור לאינטרנט",
+  "manageTutorsCanEditLearningErrorGeneric": "לא ניתן לשנות את הרשאת העריכה. נסו שוב.",
   "tutorFallbackParent": "הורה",
   "auditLogTitle": "יומן פעולות",
   "auditLogClearFilters": "ניקוי סינונים",

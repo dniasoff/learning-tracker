@@ -83,10 +83,10 @@ class StudyDayConfigScreen extends ConsumerWidget {
     final trackHasChazara = trackChazaraAsync.asData?.value ?? false;
 
     // WS3.3d carry-forward: when a tutor has entered a talmid's context, gate
-    // study-day editing behind `canEditStudyDays`. Owners (non-tutored context)
+    // study-day editing behind `canEditLearning` (AD-53). Owners (non-tutored context)
     // always edit. Mirrors the gating in parent_settings_screen.
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-    final canEdit = tutorPerms == null || tutorPerms.canEditStudyDays;
+    final canEdit = tutorPerms == null || tutorPerms.canEditLearning;
 
     // TS-4: read terms + variant so Saturday routes through nusach resolver.
     final terms = domainTermLabels(ref);
@@ -319,7 +319,7 @@ class _DayToggleTile extends StatelessWidget {
   final bool isStudy;
 
   /// When `null`, the tile is read-only — a tutor without the
-  /// `canEditStudyDays` permission cannot change the day type.
+  /// `canEditLearning` (AD-53) permission cannot change the day type.
   final VoidCallback? onToggle;
 
   @override

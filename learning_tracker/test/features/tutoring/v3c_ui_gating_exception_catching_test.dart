@@ -8,7 +8,7 @@
 //            gates the save button on canEditRewards, and shows
 //            tutorPermissionDenied snackbar when !canEdit.
 //   R3 M1/M2 — edit_track_screen gates the save button on
-//               canEditGoals && canEditStages and shows tutorPermissionDenied
+//               canEditLearning (AD-53) and shows tutorPermissionDenied
 //               snackbar when blocked.
 //
 // The add_track_flow_screen / TutorWriteException-catching coverage this
@@ -19,7 +19,7 @@
 // "tutor writes currently have no client path at all"). That commit's own
 // framing was "record it, do not invent a replacement" — there is no
 // successor mechanism to test. edit_track_screen's TutorWriteException
-// catch was removed the same way; its canEditGoals/canEditStages UI-gating
+// catch was removed the same way; its learning-edit UI-gating
 // coverage (still real, still enforced) is unaffected and stays below.
 
 @Tags(['v3c', 'tutor_mode', 'ui_gating'])
@@ -172,7 +172,7 @@ void main() {
 
   // ── R3 M1 + M2: edit_track_screen ────────────────────────────────────────
 
-  group('R3 M1+M2 — edit_track_screen: canEditGoals/canEditStages', () {
+  group('R3 M1+M2 — edit_track_screen: canEditLearning', () {
     test('imports tutoring barrel', () {
       expect(
         editTrackSrc,
@@ -189,42 +189,20 @@ void main() {
         contains('activeTutorPermissionsProvider'),
         reason:
             'edit_track_screen must watch activeTutorPermissionsProvider '
-            'to derive canEditGoals + canEditStages (R3 M1+M2)',
+            'to derive canEditLearning (R3 M1+M2)',
       );
     });
 
-    test('derives canEditGoals from tutorPerms', () {
+    test('derives canSave from the AD-53 canEditLearning permission', () {
       expect(
         editTrackSrc,
-        contains('canEditGoals'),
+        contains('canSave = tutorPerms == null || tutorPerms.canEditLearning'),
         reason:
-            'edit_track_screen must derive canEditGoals to gate the save '
-            'affordance and the goal-write path (R3 M1)',
+            'AD-53 (DNI-487): one permission gates every learning edit, so '
+            'the save affordance follows canEditLearning and is null-safe '
+            'for owners (R3 M1+M2)',
       );
     });
-
-    test('derives canEditStages from tutorPerms', () {
-      expect(
-        editTrackSrc,
-        contains('canEditStages'),
-        reason:
-            'edit_track_screen must derive canEditStages to gate the save '
-            'affordance for stage/track writes (R3 M2)',
-      );
-    });
-
-    test(
-      'derives canSave as conjunction of canEditGoals and canEditStages',
-      () {
-        expect(
-          editTrackSrc,
-          contains('canSave = canEditGoals && canEditStages'),
-          reason:
-              'canSave must be the conjunction of both flags — the save button '
-              'is disabled if either flag is false (R3 M1+M2)',
-        );
-      },
-    );
 
     test('save button onPressed gated on canSave', () {
       expect(
@@ -243,26 +221,6 @@ void main() {
         reason:
             'edit_track_screen must show tutorPermissionDenied snackbar '
             'when save is tapped but !canSave (R3 M1+M2)',
-      );
-    });
-
-    test('canEdit guard pattern is null-safe for goals', () {
-      expect(
-        editTrackSrc,
-        contains('tutorPerms == null || tutorPerms.canEditGoals'),
-        reason:
-            'canEditGoals guard must be null-safe so owners are never blocked '
-            'when no tutored session is active (R3 M1)',
-      );
-    });
-
-    test('canEdit guard pattern is null-safe for stages', () {
-      expect(
-        editTrackSrc,
-        contains('tutorPerms == null || tutorPerms.canEditStages'),
-        reason:
-            'canEditStages guard must be null-safe so owners are never blocked '
-            'when no tutored session is active (R3 M2)',
       );
     });
   });

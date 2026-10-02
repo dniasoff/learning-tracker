@@ -1,10 +1,10 @@
 // WS3.3h — Corrections (G3, DEC-33)
 //
 // Verifies that:
-//   AC1 — canBulkPriorCompletion is true (G3/DEC-33 — tutors have full parent
-//          toolset including bulk-mark).
+//   AC1 — AD-53 (DNI-487) superseded canBulkPriorCompletion: bulk-mark is a
+//          learning edit gated by canEditLearning, which fails closed.
 //   AC2 — parent_settings_screen.dart gates the bulk-mark tile on
-//          canBulkPriorCompletion (canBulkMark local var).
+//          canEditLearning (canBulkMark local var).
 //   AC3 — accept_invite_screen.dart copy has been corrected: no longer says
 //          "Configure curricula, goals, and study days" (too broad).
 //          Now says "tracks, points, and rewards" (actual default editable set).
@@ -45,24 +45,21 @@ void main() {
       acceptInviteArbEn = File('lib/l10n/app_en.arb').readAsStringSync();
     });
 
-    // ── AC1: canBulkPriorCompletion: true (G3/DEC-33) ────────────────────────
+    // ── AC1: AD-53 single learning permission (DNI-487) ──────────────────────
 
-    test(
-      'AC1: TutorPermissions default canBulkPriorCompletion is true (G3)',
-      () {
-        const perms = TutorPermissions();
-        expect(
-          perms.canBulkPriorCompletion,
-          isTrue,
-          reason:
-              'canBulkPriorCompletion must default to true per G3/DEC-33 — '
-              'tutors get full parent toolset including bulk-mark',
-        );
-      },
-    );
+    test('AC1: TutorPermissions default canEditLearning is false (AD-53)', () {
+      const perms = TutorPermissions();
+      expect(
+        perms.canEditLearning,
+        isFalse,
+        reason:
+            'AD-53: learning edits (incl. bulk-mark) need an explicit '
+            'parent opt-in; a grant without the flag is read-only',
+      );
+    });
 
     test('AC1: canMarkLiveCompletion is always false (hard invariant)', () {
-      const perms = TutorPermissions(canBulkPriorCompletion: true);
+      const perms = TutorPermissions(canEditLearning: true);
       expect(
         perms.canMarkLiveCompletion,
         isFalse,
@@ -72,21 +69,18 @@ void main() {
       );
     });
 
-    test(
-      'AC1: TutorPermissions.readOnly() disables canBulkPriorCompletion',
-      () {
-        final perms = TutorPermissions.readOnly();
-        expect(
-          perms.canBulkPriorCompletion,
-          isFalse,
-          reason:
-              'readOnly() factory must disable canBulkPriorCompletion — '
-              'a truly read-only grant can neither edit nor bulk-mark',
-        );
-      },
-    );
+    test('AC1: TutorPermissions.readOnly() disables canEditLearning', () {
+      final perms = TutorPermissions.readOnly();
+      expect(
+        perms.canEditLearning,
+        isFalse,
+        reason:
+            'readOnly() factory must disable canEditLearning — '
+            'a truly read-only grant can neither edit nor bulk-mark',
+      );
+    });
 
-    // ── AC2: bulk-mark tile gated on canBulkPriorCompletion ──────────────────
+    // ── AC2: bulk-mark tile gated on canEditLearning (AD-53) ─────────────────
 
     test('AC2: parent_settings_screen gates bulk-mark tile on canBulkMark', () {
       expect(
@@ -94,23 +88,20 @@ void main() {
         contains('canBulkMark'),
         reason:
             'parent_settings_screen.dart must compute canBulkMark from '
-            'canBulkPriorCompletion to gate the "Add What You Learned" tile '
+            'canEditLearning to gate the "Add What You Learned" tile '
             '(WS3.3h DEC-33)',
       );
     });
 
-    test(
-      'AC2: canBulkMark is derived from canBulkPriorCompletion permission',
-      () {
-        expect(
-          parentSettingsSrc,
-          contains('canBulkPriorCompletion'),
-          reason:
-              'canBulkMark computation must reference canBulkPriorCompletion '
-              'from TutorPermissions',
-        );
-      },
-    );
+    test('AC2: canBulkMark is derived from the canEditLearning permission', () {
+      expect(
+        parentSettingsSrc,
+        contains('final canBulkMark = canEditLearning;'),
+        reason:
+            'canBulkMark computation must reference canEditLearning '
+            'from TutorPermissions',
+      );
+    });
 
     test('AC2: "Add What You Learned" tile is inside canBulkMark guard', () {
       final canBulkMarkIdx = parentSettingsSrc.indexOf('if (canBulkMark)');
@@ -155,7 +146,7 @@ void main() {
           reason:
               'acceptInvitePermissionConfigure (app_en.arb) must say "tracks, '
               'points, and rewards" — the actual default editable set '
-              '(canEditStages + canEditGoals + canEditRewards, parent-'
+              '(canEditLearning + canEditPoints + canEditRewards, parent-'
               'configurable) (WS3.3h DEC-33)',
         );
       },
@@ -167,8 +158,7 @@ void main() {
         contains('Perform bulk-mark corrections'),
         reason:
             'acceptInvitePermissionBulkMark (app_en.arb) must still mention '
-            'bulk-mark corrections (canBulkPriorCompletion: true by default '
-            'per G3/DEC-33)',
+            'bulk-mark corrections (gated by canEditLearning, AD-53)',
       );
     });
 

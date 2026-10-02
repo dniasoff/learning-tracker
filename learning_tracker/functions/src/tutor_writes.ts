@@ -169,7 +169,9 @@ async function verifyTutorGrant(
     if (permissions[permKey] !== true) {
       throw new HttpsError(
         "permission-denied",
-        `Tutor does not have permission '${permKey}' for this grant`,
+        // Same wording as writeWithChangeLog's AD-53 rejection, so the client
+        // maps every "editing turned off" denial identically (DNI-487 AC-6).
+        `Grant lacks ${permKey}`,
       );
     }
   }
@@ -241,7 +243,7 @@ async function writeAuditLog(
 // ── tutorResetCompletion ──────────────────────────────────────────────────────
 //
 // Deletes a completion document from the child's profile as a correction path.
-// Requires canResetCompletion permission.
+// Requires can_edit_learning (AD-53, DNI-487). Retired by Story 1.26 (DNI-488).
 //
 // Expects:
 //   {
@@ -268,17 +270,20 @@ export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
   if (typeof completionId !== "string" || !completionId)
     throw new HttpsError("invalid-argument", "completionId must be a non-empty string");
 
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_reset_completion",
-  );
-
-  const completionRef = profilePath.collection("completions").doc(completionId);
-
-  // Capture before-value for audit log.
-  const beforeSnap = await completionRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await completionRef.delete();
+  // The grant check and the delete run in ONE transaction (AD-53, DNI-487
+  // AC-6): a revocation that commits first aborts the delete (the grant is
+  // re-read on retry and denied), so a revoked tutor can never remove a
+  // completion.
+  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
+    const verified = await verifyTutorGrant(
+      callerUid, grantId, ownerUid, profileId, "can_edit_learning", txn,
+    );
+    const completionRef = verified.profilePath.collection("completions").doc(completionId);
+    // Capture before-value for audit log.
+    const beforeSnap = await txn.get(completionRef);
+    txn.delete(completionRef);
+    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,
@@ -535,18 +540,22 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
   // so only the size cap applies here (null = no key whitelist).
   assertAllowedFields(settingsData, "settingsData", null);
 
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, permKey,
-  );
-
-  const settingsRef = profilePath.collection("preferences").doc("gamification_settings");
-  const beforeSnap = await settingsRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await settingsRef.set(
-    { ...settingsData, synced_at: writtenAt },
-    { merge: true },
-  );
+  // Grant check and write in ONE transaction, so a revocation or permission
+  // change that commits first aborts the write (DNI-487 review).
+  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
+    const verified = await verifyTutorGrant(
+      callerUid, grantId, ownerUid, profileId, permKey, txn,
+    );
+    const settingsRef = verified.profilePath
+      .collection("preferences").doc("gamification_settings");
+    const beforeSnap = await txn.get(settingsRef);
+    txn.set(
+      settingsRef,
+      { ...settingsData, synced_at: verified.writtenAt },
+      { merge: true },
+    );
+    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,
@@ -566,8 +575,8 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
 // ── tutorUpsertBookmark ───────────────────────────────────────────────────────
 //
 // Creates or updates a bookmark document in the child's profile.
-// Requires canEditStages permission (bookmarks are part of the programme
-// enrolment path which is gated by can_edit_stages).
+// Requires can_edit_learning (AD-53, DNI-487): bookmarks are part of the
+// learning position. Retired by Story 1.16 (DNI-478).
 //
 // Expects:
 //   {
@@ -595,18 +604,23 @@ export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "bookmarkData must be an object");
   assertAllowedFields(bookmarkData, "bookmarkData", BOOKMARK_ALLOWED_FIELDS);
 
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
-  );
-
-  const bookmarkRef = profilePath.collection("bookmarks").doc(bookmarkId);
-  const beforeSnap = await bookmarkRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await bookmarkRef.set(
-    { ...bookmarkData, synced_at: writtenAt },
-    { merge: true },
-  );
+  // The grant check, the bookmark read and the write run in ONE transaction
+  // (AD-53, DNI-487 AC-6): a turn-off or revocation that commits first aborts
+  // the write (the grant is re-read on retry and denied), so a tutor whose
+  // editing was turned off can never land a bookmark.
+  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
+    const verified = await verifyTutorGrant(
+      callerUid, grantId, ownerUid, profileId, "can_edit_learning", txn,
+    );
+    const bookmarkRef = verified.profilePath.collection("bookmarks").doc(bookmarkId);
+    const beforeSnap = await txn.get(bookmarkRef);
+    txn.set(
+      bookmarkRef,
+      { ...bookmarkData, synced_at: verified.writtenAt },
+      { merge: true },
+    );
+    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,

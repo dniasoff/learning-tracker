@@ -327,6 +327,9 @@ Future<void> _navigateToSettle(
   WidgetTester tester,
   PageRouteInfo route,
 ) async {
+  // DNI-487 / B11: /tutor/manage-tutors and /tutor/invite are parent-only
+  // (childModeGuard + pinGuard) — prime the parent PIN session first.
+  h.markPinAuthenticated();
   unawaited(h.router.push(route));
   await tester.pumpAndSettle(const Duration(seconds: 1));
 }
@@ -356,10 +359,12 @@ void main() {
       'cloud-born parent: tapping Send invite calls inviteTutorUseCase with '
       'the entered email',
       (tester) async {
+        // DNI-487 / B11: Invite tutor is a parent-mode route (child profile
+        // selected + parent PIN session), like /parent-mode/*.
         final identity = E2EIdentity.cloudBorn(
           email: 'parent1001@example.com',
           displayName: 'Parent1001',
-          profileMode: 'adult',
+          profileMode: 'child',
         );
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
@@ -646,10 +651,12 @@ void main() {
 
     testWidgets('tapping Revoke and confirming dialog calls '
         'RevokeTutorGrantUseCase with the active grant', (tester) async {
+      // DNI-487 / B11: Manage tutors is a parent-mode route — the selected
+      // profile is the child being supervised, with the parent PIN unlocked.
       final identity = E2EIdentity.localBorn(
         email: 'parent1007@example.com',
-        displayName: 'Parent1007',
-        profileMode: 'adult',
+        displayName: 'ChildForRevoke',
+        profileMode: 'child',
       );
       // Use the same stable ULID for the seeded child and the grant row.
       const childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYC';
@@ -682,14 +689,7 @@ void main() {
         ],
       );
 
-      await seedProfile(
-        h.firestore,
-        uid: identity.accountId,
-        profileId: childProfileId,
-        displayName: 'ChildForRevoke',
-        mode: ProfileMode.child,
-      );
-
+      h.markPinAuthenticated();
       await navigateTo(h, const ManageTutorsRoute());
       await tester.pump(const Duration(milliseconds: 300));
 

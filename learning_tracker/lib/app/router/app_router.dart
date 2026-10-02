@@ -280,10 +280,16 @@ class AppRouter extends RootStackRouter {
     ),
 
     // Tutoring routes (W6.11-W6.13)
+    // DNI-487 / ruling B11 (AD-53, AC-2): Manage tutors carries the parent-only
+    // "Can edit learning" toggle, and the callable cannot verify the parent PIN
+    // (FR99: the PIN never leaves the device). The parent-vs-child gate is this
+    // route: child mode is refused and the parent PIN session is required, the
+    // same pattern as /parent-mode/*. Previously only [authGuard], so a
+    // child-role device could deep-link here.
     AutoRoute(
       path: '/tutor/manage-tutors',
       page: ManageTutorsRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
       path: '/tutor/my-grants',
@@ -297,10 +303,12 @@ class AppRouter extends RootStackRouter {
     ),
 
     // Tutoring invite routes (W6.7, W6.9, W6.10)
+    // DNI-487 / ruling B11: the invite form sets can_edit_learning — parent
+    // only (child mode refused, parent PIN session required).
     AutoRoute(
       path: '/tutor/invite',
       page: InviteTutorRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, childModeGuard, pinGuard],
     ),
     // Deep-link entry: /invite?token=<grantId>
     AutoRoute(path: '/invite', page: AcceptInviteRoute.page),

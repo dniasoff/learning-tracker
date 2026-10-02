@@ -23,7 +23,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -62,7 +61,6 @@ import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pi
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../helpers/firestore_fixtures.dart' show seedProfile;
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
@@ -364,6 +362,9 @@ Future<void> _navigateToSettle(
   WidgetTester tester,
   PageRouteInfo route,
 ) async {
+  // DNI-487 / B11: /tutor/manage-tutors and /tutor/invite are parent-only
+  // (childModeGuard + pinGuard) — prime the parent PIN session first.
+  h.markPinAuthenticated();
   unawaited(h.router.push(route));
   await tester.pumpAndSettle(const Duration(seconds: 1));
 }
@@ -533,10 +534,12 @@ void main() {
       'tapping Rescind and confirming dialog calls RescindTutorInviteUseCase '
       'with the pending grant',
       (tester) async {
+        // DNI-487 / B11: Manage tutors is a parent-mode route — the selected
+        // profile is the supervised child, with the parent PIN unlocked.
         final identity = E2EIdentity.localBorn(
           email: 'parent1006@example.com',
-          displayName: 'Parent1006',
-          profileMode: 'adult',
+          displayName: 'ChildForRescind',
+          profileMode: 'child',
         );
         final pendingGrant = _pendingGrant(
           grantId: 'grant-rescind-1006',
@@ -567,17 +570,7 @@ void main() {
           ],
         );
 
-        // Seed the child profile in the account's Firestore profile
-        // collection after pumpApp so the harness account already exists.
-        const childProfileId = 'child-profile-rescind-1006';
-        await seedProfile(
-          h.firestore,
-          uid: identity.accountId,
-          profileId: childProfileId,
-          displayName: 'ChildForRescind',
-          mode: ProfileMode.child,
-        );
-
+        h.markPinAuthenticated();
         await navigateTo(h, const ManageTutorsRoute());
         await tester.pump(const Duration(milliseconds: 300));
 

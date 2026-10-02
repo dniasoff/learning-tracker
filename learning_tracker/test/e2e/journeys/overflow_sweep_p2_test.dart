@@ -89,6 +89,7 @@
 @Tags(['e2e', 'overflow'])
 library;
 
+import 'dart:async' show unawaited;
 import 'dart:developer' show log;
 
 import 'package:flutter/material.dart';
@@ -948,12 +949,22 @@ void main() {
 
   // ── 30: ManageTutorsScreen ─────────────────────────────────────────────────
 
+  // DNI-487 / ruling B11: Manage tutors is a parent-mode route
+  // (childModeGuard + pinGuard), so a plain path sweep from an adult identity
+  // is refused. Reach it the way the app does: a child profile selected and
+  // the parent PIN session primed, then push.
   testWidgets('30 ManageTutorsScreen — no overflow', (tester) async {
-    await _sweepPath(
+    final h = E2EHarness(
       tester,
-      label: 'ManageTutorsScreen',
-      path: '/tutor/manage-tutors',
+      identity: E2EIdentity.localBorn(
+        displayName: 'OvTutors',
+        profileMode: 'child',
+      ),
+    );
+    await h.pumpApp(
+      path: '/dashboard',
       extraOverrides: [
+        ...h.dashboardSilenceOverrides,
         profileListProvider.overrideWith(
           (ref) async => <LearnerProfileEntity>[],
         ),
@@ -963,11 +974,20 @@ void main() {
         _noIncomingGrants(),
         _noPendingInvites(),
         _connectivity(),
-        dashboardStreakProvider.overrideWith(
-          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-        ),
       ],
     );
+    h.markPinAuthenticated();
+    await _sweepPush(
+      tester,
+      label: 'ManageTutorsScreen',
+      h: h,
+      push: (router) async {
+        unawaited(router.push(const ManageTutorsRoute()));
+      },
+    );
+    // Not vacuous: the guarded screen really rendered (empty-profiles view).
+    expect(find.text('Manage Tutors'), findsWidgets);
+    await h.dispose();
   });
 
   // ── 31: ManageGrantsScreen ─────────────────────────────────────────────────

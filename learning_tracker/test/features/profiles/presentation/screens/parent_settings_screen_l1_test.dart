@@ -297,14 +297,34 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('default tutor permissions retain learning edit tiles only', (
+  testWidgets('DNI-487: default tutor permissions (no can_edit_learning) '
+      'hide every learning edit tile', (tester) async {
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        firestore: firestore,
+        tutorPerms: TutorPermissions.defaults(),
+      ),
+    );
+    await _settle(tester);
+    expect(find.text('Manage Tracks'), findsNothing);
+    expect(find.text('Manage Goals'), findsNothing);
+    expect(find.text('Add Lifetime Learning'), findsNothing);
+    // Points and rewards keep their own permissions (default on).
+    expect(find.text('Point Settings'), findsOneWidget);
+    expect(find.text('Reward Configuration'), findsOneWidget);
+    expect(find.text('Manage Tutors'), findsNothing);
+    await _teardown(tester);
+  });
+
+  testWidgets('tutor with canEditLearning retains learning edit tiles only', (
     tester,
   ) async {
     await tester.pumpWidget(
       _buildApp(
         router: router,
         firestore: firestore,
-        tutorPerms: TutorPermissions.defaults(),
+        tutorPerms: const TutorPermissions(canEditLearning: true),
       ),
     );
     await _settle(tester);
@@ -512,7 +532,7 @@ void main() {
         router: router,
         firestore: firestore,
         tutorPerms: const TutorPermissions(
-          canEditStages: true,
+          canEditLearning: true,
           canEditRewards: false,
         ),
       ),

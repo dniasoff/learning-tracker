@@ -118,12 +118,8 @@ void main() {
       const permissive = TutorPermissions(
         canViewProgress: true,
         canViewContent: true,
-        canBulkPriorCompletion: true,
-        canResetCompletion: true,
-        canEditGoals: true,
-        canEditStages: true,
+        canEditLearning: true,
         canEditRewards: true,
-        canEditStudyDays: true,
       );
       expect(permissive.canMarkLiveCompletion, isFalse);
     });

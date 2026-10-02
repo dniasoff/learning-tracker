@@ -64,6 +64,33 @@ class ResignTutorGrantUseCase {
   }
 }
 
+/// AD-53 (DNI-487): the owning parent turns an active grant's single
+/// "Can edit learning" permission on or off. Server-confirmed only — the
+/// caller shows the new value after [TutorGrantSuccess], never before.
+///
+/// No analytics event: the catalog has no approved event for this action.
+class UpdateTutorGrantPermissionsUseCase {
+  const UpdateTutorGrantPermissionsUseCase(this._repository);
+  final TutorGrantRepository _repository;
+
+  Future<TutorGrantResult> call({
+    required TutorGrant grant,
+    required bool canEditLearning,
+  }) {
+    if (grant.grantState is! ActiveGrant) {
+      return Future.value(
+        const TutorGrantPreconditionError(
+          code: TutorGrantPreconditionCode.cannotUpdatePermissions,
+        ),
+      );
+    }
+    return _repository.updateGrantPermissions(
+      grantId: grant.grantId,
+      canEditLearning: canEditLearning,
+    );
+  }
+}
+
 /// List all incoming tutor grants for the authenticated tutor.
 ///
 /// Returns all grants where tutor_uid == caller, regardless of state.

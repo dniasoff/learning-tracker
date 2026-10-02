@@ -18,8 +18,8 @@
 /// ## Harness notes
 ///
 /// • [activeTutorPermissionsProvider] is overridden for E2E-417 to inject
-///   [TutorPermissions.readOnly()] which sets canEditGoals=false,
-///   canEditStages=false. The goal tile in TrackDetailScreen becomes disabled.
+///   [TutorPermissions.readOnly()] which sets canEditLearning=false
+///   (AD-53). The goal tile in TrackDetailScreen becomes disabled.
 ///
 /// • For E2E-721, the add-profile dialog performs an async DB lookup (via
 ///   [profileDao.profileExistsByName]) to validate the name. Since the harness
@@ -132,9 +132,9 @@ void main() {
     // Key assertions (catalog §2 Area 5):
     //   • TrackDetailScreen renders with a Mishnayos track.
     //   • activeTutorPermissionsProvider = TutorPermissions.readOnly()
-    //     → canEditGoals=false → the "Set Goal" / "Edit Goal" tile is disabled.
+    //     → canEditLearning=false → the "Set Goal" / "Edit Goal" tile is disabled.
     //   • The "Edit Track" tile is present but save button fires tutorPermissionDenied
-    //     snackbar (canSave=false: canEditGoals && canEditStages both false).
+    //     snackbar (canSave=false: canEditLearning is false).
     //   • R-TR9: 'Controlled by parent' banner is hardcoded English — document
     //     as a known gap; the he variant is a device-only test.
     //
@@ -221,7 +221,7 @@ void main() {
       // TrackDetailScreen is rendered.
       h.expectOnScreen('Edit Track');
 
-      // The "Set Goal" / "Edit Goal" tile is DISABLED when canEditGoals=false.
+      // The "Set Goal" / "Edit Goal" tile is DISABLED when canEditLearning=false.
       // ListTile.enabled=false removes the onTap handler and dims the widget.
       // We locate the tile by its key (trackDetail.goalTile) and assert it is
       // disabled — a disabled ListTile renders but ignores taps.
@@ -231,13 +231,13 @@ void main() {
         findsOneWidget,
         reason: 'Goal tile must be visible in track detail',
       );
-      // The tile's enabled property is false when canEditGoals=false.
+      // The tile's enabled property is false when canEditLearning=false.
       final listTile = tester.widget<ListTile>(goalTile);
       expect(
         listTile.enabled,
         isFalse,
         reason:
-            'R-TR: goal tile must be disabled when tutor canEditGoals=false',
+            'R-TR: goal tile must be disabled when tutor canEditLearning=false',
       );
 
       // No track-type label must appear (product rule).

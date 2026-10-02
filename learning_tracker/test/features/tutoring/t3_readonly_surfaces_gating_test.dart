@@ -6,7 +6,7 @@
 //   AC2 — settings_screen.dart uses isTutorElevated (parent-equivalent for
 //          learning management) and still hides account-admin surfaces.
 //   AC3 — learning_screen.dart shows Add Track CTA based on tutorPerms
-//          (canEditStages), not unconditionally suppressed.
+//          (canEditLearning), not unconditionally suppressed.
 //   AC4 — dashboard_body.dart no longer forces child-mode for tutored
 //          sessions (isChildMode is NOT ORed with isTutoredSession).
 //   AC5 — text_display_screen.dart gates live completion on
@@ -171,15 +171,15 @@ void main() {
     });
 
     test(
-      'AC2: Manage Tracks shown with canEditStages gate (not unconditionally hidden)',
+      'AC2: Manage Tracks shown with canEditLearning gate (not unconditionally hidden)',
       () {
-        // In the new model, Manage Tracks is shown to tutors when canEditStages.
+        // In the new model, Manage Tracks is shown to tutors when canEditLearning.
         // The old `!isTutoredSession` gate around Manage Tracks is gone.
         expect(
           settingsSrc,
-          contains('canEditStages'),
+          contains('canEditLearning'),
           reason:
-              'Manage Tracks must be gated on tutorPerms.canEditStages '
+              'Manage Tracks must be gated on tutorPerms.canEditLearning '
               '(not hidden for all tutored sessions)',
         );
       },
@@ -304,19 +304,19 @@ void main() {
         contains('activeTutorPermissionsProvider'),
         reason:
             'learning_screen.dart must read activeTutorPermissionsProvider '
-            'so that tutors with canEditStages can see the Add Track CTA',
+            'so that tutors with canEditLearning can see the Add Track CTA',
       );
     });
 
     test(
-      'AC3: learning_screen gates Add Track CTA on canEditStages for tutors',
+      'AC3: learning_screen gates Add Track CTA on canEditLearning for tutors',
       () {
         expect(
           learningSrc,
-          contains('canEditStages'),
+          contains('canEditLearning'),
           reason:
               'learning_screen.dart must gate the Add Track CTA on '
-              'tutorPerms.canEditStages (parent-equivalent for track management)',
+              'tutorPerms.canEditLearning (parent-equivalent for track management)',
         );
       },
     );
@@ -448,12 +448,8 @@ void main() {
       const perms = TutorPermissions(
         canViewProgress: true,
         canViewContent: true,
-        canBulkPriorCompletion: true,
-        canResetCompletion: true,
-        canEditGoals: true,
-        canEditStages: true,
+        canEditLearning: true,
         canEditRewards: true,
-        canEditStudyDays: true,
         canEditPoints: true,
       );
       expect(

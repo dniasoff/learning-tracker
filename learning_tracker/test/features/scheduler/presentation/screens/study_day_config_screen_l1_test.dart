@@ -201,7 +201,7 @@ void main() {
       _app(
         hasChazara: true,
         repository: repository,
-        tutorPermissions: const TutorPermissions(canEditStudyDays: true),
+        tutorPermissions: const TutorPermissions(canEditLearning: true),
       ),
     );
     await tester.pump();

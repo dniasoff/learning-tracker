@@ -75,9 +75,9 @@ class LearningScreen extends ConsumerWidget {
             ),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
-                // Tutors can add tracks if canEditStages is permitted.
+                // Tutors can add tracks if canEditLearning is permitted (AD-53).
                 final tutorCanAddTrack =
-                    isTutoredSession && (tutorPerms?.canEditStages ?? false);
+                    isTutoredSession && (tutorPerms?.canEditLearning ?? false);
                 final canAddTrack =
                     !isChildMode && (!isTutoredSession || tutorCanAddTrack);
                 return EmptyState(

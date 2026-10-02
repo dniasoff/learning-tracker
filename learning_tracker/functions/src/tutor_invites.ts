@@ -20,6 +20,181 @@ import { db, CALL_OPTS, encodeEmailForDocId, buildAccessId } from "./shared";
 // Grant doc-id formula: {encodedEmail}__{parentUid}__{childProfileId}
 // The encoded email replaces any non-alphanumeric char with '_'.
 
+// ── Grant permissions (AD-53, Story 1.25 / DNI-487) ──────────────────────────
+//
+// One permission, `can_edit_learning`, authorises every learning and
+// governed-entity tutor write (checked per call by writeWithChangeLog). It is
+// set only by parent action: the pre-checked invite checkbox (inviteTutor) or
+// updateTutorGrantPermissions below. The five legacy per-operation edit keys
+// are never written to a grant again and are stripped from existing grants on
+// the next parent update. A grant without `can_edit_learning` reads as false.
+
+/** The permission keys a grant may carry (AD-53). */
+export const GRANT_PERMISSION_KEYS = [
+  "can_view_progress",
+  "can_view_content",
+  "can_edit_learning",
+  "can_edit_rewards",
+  "can_edit_points",
+] as const;
+
+/** The five retired per-operation edit keys (AD-53). */
+export const LEGACY_EDIT_PERMISSION_KEYS = [
+  "can_edit_goals",
+  "can_edit_stages",
+  "can_edit_study_days",
+  "can_reset_completion",
+  "can_bulk_prior_completion",
+] as const;
+
+const DEFAULT_INVITE_PERMISSIONS: Readonly<Record<string, boolean>> = {
+  can_view_progress: true,
+  can_view_content: true,
+  // Fail closed: only an explicit `true` from the parent's checkbox grants it.
+  can_edit_learning: false,
+  can_edit_rewards: false,
+  can_edit_points: false,
+};
+
+/**
+ * Builds the permissions map persisted on a new grant from the client's
+ * `permissions` payload: only [GRANT_PERMISSION_KEYS] are kept (legacy and
+ * unknown keys are dropped), each must be a boolean, and missing keys take
+ * [DEFAULT_INVITE_PERMISSIONS].
+ */
+export function buildInvitePermissions(raw: unknown): Record<string, boolean> {
+  const out: Record<string, boolean> = { ...DEFAULT_INVITE_PERMISSIONS };
+  if (raw === undefined || raw === null) return out;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new HttpsError("invalid-argument", "permissions must be an object");
+  }
+  const bag = raw as Record<string, unknown>;
+  for (const key of GRANT_PERMISSION_KEYS) {
+    if (!(key in bag)) continue;
+    if (typeof bag[key] !== "boolean") {
+      throw new HttpsError("invalid-argument", `permissions.${key} must be a boolean`);
+    }
+    out[key] = bag[key] as boolean;
+  }
+  return out;
+}
+
+// ── Stale-transition guards (DNI-487 review) ─────────────────────────────────
+//
+// Grant ids are deterministic per (tutor email, parent, child), so inviteTutor
+// re-uses the same doc for a re-invite after a decline, rescind, expiry or
+// revocation. Every state transition therefore runs as a transactional
+// read-check-write and only applies to the exact grant generation it was
+// decided on: a pending invite is identified by its single-use invite_token,
+// an active grant by its tutor_uid + accepted_at. A transition that observed
+// an older generation is rejected (or, for expiry, skipped) instead of
+// clobbering the newer grant.
+
+function sameTimestamp(a: unknown, b: unknown): boolean {
+  if (a instanceof admin.firestore.Timestamp && b instanceof admin.firestore.Timestamp) {
+    return a.isEqual(b);
+  }
+  return a === undefined && b === undefined;
+}
+
+/** True when [fresh] is still the pending invite [observed] was read as. */
+function isSamePendingInvite(
+  fresh: admin.firestore.DocumentData | undefined,
+  observed: admin.firestore.DocumentData
+): boolean {
+  return (
+    fresh !== undefined &&
+    fresh.state === "pending" &&
+    fresh.invite_token === observed.invite_token
+  );
+}
+
+/** True when [fresh] is still the active grant [observed] was read as. */
+function isSameActiveGrant(
+  fresh: admin.firestore.DocumentData | undefined,
+  observed: admin.firestore.DocumentData
+): boolean {
+  return (
+    fresh !== undefined &&
+    fresh.state === "active" &&
+    fresh.tutor_uid === observed.tutor_uid &&
+    sameTimestamp(fresh.accepted_at, observed.accepted_at)
+  );
+}
+
+/**
+ * Expires the pending invite at [grantRef] only if, inside one transaction,
+ * it is still the invite identified by [observedToken] and its expires_at is
+ * at or before [now]. A re-invite (new token, fresh expiry), an acceptance,
+ * a decline or a rescind that committed after the caller's read makes this a
+ * no-op. Writes the `invite_expired` audit entry in the same transaction.
+ * Returns whether the grant was expired.
+ */
+async function expirePendingInviteIfUnchanged(
+  grantRef: admin.firestore.DocumentReference,
+  observedToken: unknown,
+  now: admin.firestore.Timestamp
+): Promise<boolean> {
+  return db.runTransaction(async (txn) => {
+    const freshSnap = await txn.get(grantRef);
+    const fresh = freshSnap.data();
+    const expiresAt = fresh?.expires_at;
+    if (
+      !freshSnap.exists ||
+      fresh!.state !== "pending" ||
+      fresh!.invite_token !== observedToken ||
+      !isPastExpiry(expiresAt, now)
+    ) {
+      return false;
+    }
+
+    applyInviteExpiry(txn, grantRef, fresh!, now);
+    return true;
+  });
+}
+
+function isPastExpiry(
+  expiresAt: unknown,
+  now: admin.firestore.Timestamp
+): boolean {
+  return (
+    expiresAt instanceof admin.firestore.Timestamp &&
+    expiresAt.toMillis() <= now.toMillis()
+  );
+}
+
+/**
+ * Transition a pending grant the caller has just re-read inside [txn] to
+ * `expired`, with its invite_expired audit entry in the same transaction.
+ */
+function applyInviteExpiry(
+  txn: admin.firestore.Transaction,
+  grantRef: admin.firestore.DocumentReference,
+  fresh: admin.firestore.DocumentData,
+  now: admin.firestore.Timestamp
+): void {
+  txn.update(grantRef, {
+    state: "expired",
+    updated_at: now,
+    invite_token: admin.firestore.FieldValue.delete(),
+  });
+  txn.set(grantRef.collection("audit_log").doc(), {
+    tutor_uid: null,
+    tutor_name_snapshot: fresh.tutor_email ?? "",
+    action: "invite_expired",
+    target: `grant/${grantRef.id}`,
+    after_value: JSON.stringify({ state: "expired" }),
+    timestamp: now.toDate().toISOString(),
+  });
+}
+
+function staleGrantError(grantId: string): HttpsError {
+  return new HttpsError(
+    "failed-precondition",
+    `Grant ${grantId} changed while processing this request; reload and try again`
+  );
+}
+
 // ── inviteTutor ───────────────────────────────────────────────────────────────
 //
 // Creates a pending grant document for a tutor invite.
@@ -28,8 +203,13 @@ import { db, CALL_OPTS, encodeEmailForDocId, buildAccessId } from "./shared";
 //   {
 //     tutorEmail: string,           // tutor's email address (lower-cased by CF)
 //     childProfileId: string,       // profile ID (string) of the tutored child
-//     permissions: object,          // TutorPermissions serialised map (optional)
+//     permissions: object,          // TutorPermissions serialised map (optional);
+//                                   // permissions.can_edit_learning is the
+//                                   // parent's explicit invite-form choice
 //   }
+//
+// The persisted map holds only GRANT_PERMISSION_KEYS — never a legacy key —
+// and keeps can_edit_learning unchanged through acceptance.
 //
 // Returns: { success: true, grantId: string }
 
@@ -49,6 +229,9 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "childProfileId must be a non-empty string");
   }
 
+  // AD-53: validate before any read so a malformed map never touches state.
+  const grantPermissions = buildInvitePermissions(permissions);
+
   // Snapshot human-readable names at invite time so the tutor sees the child's
   // name (and inviting parent) instead of a raw profile id / generic label.
   const sanitizeName = (v: unknown): string | null =>
@@ -67,40 +250,11 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
   const encodedEmail = encodeEmailForDocId(normalEmail);
   const grantId = `${encodedEmail}__${callerUid}__${childProfileId}`;
 
-  // AUD-firebase-02: grantId is deterministic, so a second inviteTutor call
-  // for the same tutor+child pair would otherwise silently overwrite the
-  // SAME doc unconditionally — resetting an already-active grant back to
-  // 'pending' with fresh request-supplied default permissions (while the
-  // existing tutor_active_access index doc is untouched, leaving the tutor
-  // with live read access even though tutor_grants.state now says
-  // 'pending'). Reject re-invites while the grant is active; the caller
-  // should use the permission-editing flow instead.
-  const existingSnap = await db.collection("tutor_grants").doc(grantId).get();
-  if (existingSnap.exists && existingSnap.data()!.state === "active") {
-    throw new HttpsError(
-      "failed-precondition",
-      `A tutor grant for ${normalEmail} on this child is already active. ` +
-        "Use the permission-editing flow to change it instead of re-inviting."
-    );
-  }
-
   const now = admin.firestore.Timestamp.now();
   const expiresAt = new Date(now.toDate().getTime() + 7 * 24 * 60 * 60 * 1000);
 
   // Generate a 256-bit random invite token (NFR-3).
   const inviteToken = crypto.randomBytes(32).toString("hex");
-
-  const defaultPermissions = {
-    can_view_progress: true,
-    can_view_content: true,
-    can_bulk_prior_completion: true,
-    can_reset_completion: false,
-    can_edit_goals: false,
-    can_edit_stages: false,
-    can_edit_rewards: false,
-    can_edit_study_days: false,
-    can_edit_points: false,
-  };
 
   const grantData = {
     grant_id: grantId,
@@ -110,7 +264,7 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
     tutor_uid: null,
     state: "pending",
     invite_token: inviteToken,
-    permissions: permissions ?? defaultPermissions,
+    permissions: grantPermissions,
     child_name: childNameSnapshot,
     parent_name: parentNameSnapshot,
     invited_at: now,
@@ -118,7 +272,30 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
     expires_at: admin.firestore.Timestamp.fromDate(expiresAt),
   };
 
-  await db.collection("tutor_grants").doc(grantId).set(grantData, { merge: false });
+  // AUD-firebase-02: grantId is deterministic, so a second inviteTutor call
+  // for the same tutor+child pair would otherwise silently overwrite the
+  // SAME doc unconditionally — resetting an already-active grant back to
+  // 'pending' with fresh request-supplied permissions (while the existing
+  // tutor_active_access index doc is untouched, leaving the tutor with live
+  // read access even though tutor_grants.state now says 'pending'). Reject
+  // re-invites while the grant is active; the caller should use the
+  // permission-editing flow instead.
+  //
+  // The active-state check and the overwrite run in ONE transaction, so an
+  // acceptance that commits between them aborts this write (re-read on retry
+  // and rejected) instead of reverting the active grant to pending.
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  await db.runTransaction(async (txn) => {
+    const existingSnap = await txn.get(grantRef);
+    if (existingSnap.exists && existingSnap.data()!.state === "active") {
+      throw new HttpsError(
+        "failed-precondition",
+        `A tutor grant for ${normalEmail} on this child is already active. ` +
+          "Use the permission-editing flow to change it instead of re-inviting."
+      );
+    }
+    txn.set(grantRef, grantData, { merge: false });
+  });
 
   logger.info(`inviteTutor: parent=${callerUid} grantId=${grantId} email=${normalEmail}`);
   return { success: true, grantId };
@@ -170,11 +347,14 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
 
   // Check expiry — server-side enforcement.
   if (grant.expires_at && grant.expires_at.toDate() < new Date()) {
-    // Transition to expired while we're here (opportunistic).
-    await grantRef.update({
-      state: "expired",
-      updated_at: admin.firestore.Timestamp.now(),
-    });
+    // Transition to expired while we're here (opportunistic) — but only the
+    // exact invite read above: a re-invite that committed since then keeps
+    // its fresh pending state (DNI-487 review).
+    await expirePendingInviteIfUnchanged(
+      grantRef,
+      grant.invite_token,
+      admin.firestore.Timestamp.now()
+    );
     throw new HttpsError(
       "failed-precondition",
       `Grant ${grantId} has expired`
@@ -197,14 +377,41 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
     );
   }
 
-  const now = admin.firestore.Timestamp.now();
+  let now = admin.firestore.Timestamp.now();
   // Capture tutor display name for audit log snapshot (fixes H3).
   const tutorNameSnapshot = callerRecord.displayName ?? callerEmail;
   const profileId = String(grant.child_profile_id);
   const parentUid = String(grant.parent_uid);
   const accessId = buildAccessId(callerUid, parentUid, profileId);
 
-  await db.runTransaction(async (txn) => {
+  const outcome = await db.runTransaction(async (txn) => {
+    // 0. Re-read the grant inside the transaction (DNI-487): a concurrent
+    //    re-invite or revoke that committed after the pre-checks above must
+    //    not be activated blindly. Require the same pending invite that was
+    //    validated — same state and same single-use token.
+    const freshSnap = await txn.get(grantRef);
+    const fresh = freshSnap.data();
+    if (
+      !freshSnap.exists ||
+      fresh!.state !== "pending" ||
+      fresh!.invite_token !== grant.invite_token
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Grant ${grantId} changed while accepting; reopen the invite`
+      );
+    }
+
+    // Re-check expiry against the time of this attempt (DNI-487 review): the
+    // invite may have expired after the pre-check above (getUser() and any
+    // transaction retry sit in between). Expire this exact invite atomically
+    // instead of activating it.
+    now = admin.firestore.Timestamp.now();
+    if (isPastExpiry(fresh!.expires_at, now)) {
+      applyInviteExpiry(txn, grantRef, fresh!, now);
+      return "expired" as const;
+    }
+
     // 1. Update the grant document.
     txn.update(grantRef, {
       state: "active",
@@ -224,7 +431,15 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
       grant_id: grantId,
       created_at: now,
     });
+    return "accepted" as const;
   });
+
+  if (outcome === "expired") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Grant ${grantId} has expired`
+    );
+  }
 
   // Write audit log entry (outside transaction — audit is best-effort).
   try {
@@ -301,12 +516,22 @@ export const declineTutorInvite = onCall(CALL_OPTS, async (request) => {
     );
   }
 
+  // The identity check above may await an Auth lookup, so re-read inside the
+  // transaction and decline only the invite that was checked: a re-invite,
+  // acceptance, rescind or expiry that committed since is never clobbered
+  // (DNI-487 review).
   const now = admin.firestore.Timestamp.now();
-  await grantRef.update({
-    state: "declined",
-    declined_at: now,
-    updated_at: now,
-    invite_token: admin.firestore.FieldValue.delete(),
+  await db.runTransaction(async (txn) => {
+    const freshSnap = await txn.get(grantRef);
+    if (!isSamePendingInvite(freshSnap.data(), grant)) {
+      throw staleGrantError(grantId);
+    }
+    txn.update(grantRef, {
+      state: "declined",
+      declined_at: now,
+      updated_at: now,
+      invite_token: admin.firestore.FieldValue.delete(),
+    });
   });
 
   logger.info(`declineTutorInvite: tutor=${callerUid} grantId=${grantId}`);
@@ -331,30 +556,35 @@ export const rescindTutorInvite = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   }
 
+  // Check and write in ONE transaction (DNI-487 review): the grant is
+  // re-read on every retry, so a concurrent accept, decline or expiry that
+  // commits first is seen and rejected instead of being overwritten.
   const grantRef = db.collection("tutor_grants").doc(grantId);
-  const grantSnap = await grantRef.get();
-  if (!grantSnap.exists) {
-    throw new HttpsError("not-found", `Grant not found: ${grantId}`);
-  }
-
-  const grant = grantSnap.data()!;
-
-  if (grant.parent_uid !== callerUid) {
-    throw new HttpsError("permission-denied", "Only the parent can rescind an invite");
-  }
-  if (grant.state !== "pending") {
-    throw new HttpsError(
-      "failed-precondition",
-      `Grant ${grantId} is not in pending state (state=${grant.state})`
-    );
-  }
-
   const now = admin.firestore.Timestamp.now();
-  await grantRef.update({
-    state: "rescinded",
-    revoked_at: now,
-    updated_at: now,
-    invite_token: admin.firestore.FieldValue.delete(),
+  await db.runTransaction(async (txn) => {
+    const grantSnap = await txn.get(grantRef);
+    if (!grantSnap.exists) {
+      throw new HttpsError("not-found", `Grant not found: ${grantId}`);
+    }
+
+    const grant = grantSnap.data()!;
+
+    if (grant.parent_uid !== callerUid) {
+      throw new HttpsError("permission-denied", "Only the parent can rescind an invite");
+    }
+    if (grant.state !== "pending") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Grant ${grantId} is not in pending state (state=${grant.state})`
+      );
+    }
+
+    txn.update(grantRef, {
+      state: "rescinded",
+      revoked_at: now,
+      updated_at: now,
+      invite_token: admin.firestore.FieldValue.delete(),
+    });
   });
 
   logger.info(`rescindTutorInvite: parent=${callerUid} grantId=${grantId}`);
@@ -403,6 +633,13 @@ export const revokeTutorGrant = onCall(CALL_OPTS, async (request) => {
   const accessId = buildAccessId(tutorUid, callerUid, profileId);
 
   await db.runTransaction(async (txn) => {
+    // Revoke only the active grant checked above (same tutor + acceptance):
+    // after a resign and re-invite, a stale revoke must not turn the fresh
+    // pending invite into revoked_by_parent (DNI-487 review).
+    const freshSnap = await txn.get(grantRef);
+    if (!isSameActiveGrant(freshSnap.data(), grant)) {
+      throw staleGrantError(grantId);
+    }
     txn.update(grantRef, {
       state: "revoked_by_parent",
       revoked_at: now,
@@ -415,6 +652,79 @@ export const revokeTutorGrant = onCall(CALL_OPTS, async (request) => {
 
   logger.info(`revokeTutorGrant: parent=${callerUid} grantId=${grantId} tutor=${tutorUid}`);
   return { success: true };
+});
+
+// ── updateTutorGrantPermissions (AD-53, Story 1.25 / DNI-487) ────────────────
+//
+// The owning parent turns a tutor's "Can edit learning" permission on or off.
+// The only way, besides the invite checkbox, to set can_edit_learning, and
+// the way existing grants gain it (prd-deviations #7: existing tutors stay
+// read-only until the parent opts them in).
+//
+// Expects: { grantId: string, canEditLearning: boolean }   (B13 payload)
+// Returns: { success: true, grantId: string, canEditLearning: boolean }
+//
+// Fails closed, inside one transaction:
+//   - unauthenticated without request.auth;
+//   - invalid-argument for a missing grantId or a non-boolean canEditLearning;
+//   - permission-denied unless the grant exists, its parent_uid is the caller
+//     and its state is active. A tutor, a non-owner, and a missing (stale),
+//     revoked, pending or expired grant are all rejected the same way, and
+//     nothing is written.
+// On success it sets permissions.can_edit_learning and deletes the five
+// legacy edit keys in the same update; view/rewards/points are untouched.
+// Repeating a call is idempotent; concurrent calls serialise on the grant
+// doc, so the last committed value wins and no legacy key can come back.
+//
+// [ASSUMPTION] (ruling B11): there is no server-verifiable parent-PIN
+// session. The PIN lives only on the device (FR99), so this callable, like
+// inviteTutor and revokeTutorGrant, authorises on the owner uid. Parent-vs-
+// child on the same account is enforced in the UI (childModeGuard + pinGuard
+// on the Manage tutors and Invite routes), per the AD-38 Roles convention.
+// It never reads a client-supplied role.
+
+export const updateTutorGrantPermissions = onCall(CALL_OPTS, async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in");
+  }
+
+  const { grantId, canEditLearning } = request.data ?? {};
+  if (typeof grantId !== "string" || !grantId) {
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  }
+  if (typeof canEditLearning !== "boolean") {
+    throw new HttpsError("invalid-argument", "canEditLearning must be a boolean");
+  }
+
+  const grantRef = db.collection("tutor_grants").doc(grantId);
+  await db.runTransaction(async (txn) => {
+    const grantSnap = await txn.get(grantRef);
+    const grant = grantSnap.exists ? grantSnap.data()! : null;
+    // One indistinguishable rejection for every failed precondition, so the
+    // callable cannot be used to probe other parents' grant ids or states.
+    if (!grant || grant.parent_uid !== callerUid || grant.state !== "active") {
+      throw new HttpsError(
+        "permission-denied",
+        "Only the owning parent can change an active grant's permissions",
+      );
+    }
+
+    const update: Record<string, unknown> = {
+      "permissions.can_edit_learning": canEditLearning,
+      updated_at: admin.firestore.Timestamp.now(),
+    };
+    for (const legacy of LEGACY_EDIT_PERMISSION_KEYS) {
+      update[`permissions.${legacy}`] = admin.firestore.FieldValue.delete();
+    }
+    txn.update(grantRef, update);
+  });
+
+  logger.info(
+    `updateTutorGrantPermissions: parent=${callerUid} grantId=${grantId} ` +
+      `can_edit_learning=${canEditLearning}`,
+  );
+  return { success: true, grantId, canEditLearning };
 });
 
 // ── resignTutorGrant ──────────────────────────────────────────────────────────
@@ -459,6 +769,11 @@ export const resignTutorGrant = onCall(CALL_OPTS, async (request) => {
   const accessId = buildAccessId(callerUid, parentUid, profileId);
 
   await db.runTransaction(async (txn) => {
+    // Same stale-transition guard as revokeTutorGrant (DNI-487 review).
+    const freshSnap = await txn.get(grantRef);
+    if (!isSameActiveGrant(freshSnap.data(), grant)) {
+      throw staleGrantError(grantId);
+    }
     txn.update(grantRef, {
       state: "revoked_by_tutor",
       revoked_at: now,
@@ -581,37 +896,15 @@ export const expirePendingInvites = pubsub
     for (const grantDoc of snapshot.docs) {
       const grantId = grantDoc.id;
       try {
-        const didExpire = await db.runTransaction(async (txn) => {
-          // Re-read INSIDE the transaction: the grant may have been accepted,
-          // declined, or rescinded between the query above and now. Only expire
-          // a grant that is STILL pending — never clobber a newer state.
-          const fresh = await txn.get(grantDoc.ref);
-          if (!fresh.exists || fresh.data()?.state !== "pending") {
-            return false;
-          }
-
-          txn.update(grantDoc.ref, {
-            state: "expired",
-            updated_at: now,
-            invite_token: admin.firestore.FieldValue.delete(),
-          });
-
-          // Write audit log entry.
-          const auditRef = db
-            .collection("tutor_grants")
-            .doc(grantId)
-            .collection("audit_log")
-            .doc();
-          txn.set(auditRef, {
-            tutor_uid: null,
-            tutor_name_snapshot: fresh.data()?.tutor_email ?? "",
-            action: "invite_expired",
-            target: `grant/${grantId}`,
-            after_value: JSON.stringify({ state: "expired" }),
-            timestamp: now.toDate().toISOString(),
-          });
-          return true;
-        });
+        // Re-read INSIDE a transaction and expire only the exact invite the
+        // query returned (same token, still past expiry): a grant accepted,
+        // declined, rescinded or RE-INVITED since the query keeps its newer
+        // state (DNI-487 review).
+        const didExpire = await expirePendingInviteIfUnchanged(
+          grantDoc.ref,
+          grantDoc.data().invite_token,
+          now
+        );
 
         if (didExpire) {
           expiredCount++;

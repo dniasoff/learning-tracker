@@ -35,6 +35,7 @@ export 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_co
 export 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
+export 'package:learning_tracker/features/tutoring/presentation/utils/tutor_write_failure_message.dart';
 
 // ── Presentation screens (W6.4–W6.10) ────────────────────────────────────
 export 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';

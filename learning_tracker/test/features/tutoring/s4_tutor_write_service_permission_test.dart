@@ -20,6 +20,9 @@ library;
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
+import 'package:learning_tracker/features/tutoring/presentation/utils/tutor_write_failure_message.dart';
+import 'package:learning_tracker/l10n/app_localizations_en.dart';
+import 'package:learning_tracker/l10n/app_localizations_he.dart';
 
 // ── Fake invokers ──────────────────────────────────────────────────────────
 
@@ -31,6 +34,15 @@ Future<void> _permissionDeniedInvoker(String _, Map<String, dynamic> __) async {
   throw FirebaseFunctionsException(
     code: 'permission-denied',
     message: 'Tutor does not have permission for this grant',
+  );
+}
+
+/// DNI-487 AC-6: the per-call AD-53 grant check rejects after the parent
+/// turned "Can edit learning" off (writeWithChangeLog's exact wording).
+Future<void> _editingTurnedOffInvoker(String _, Map<String, dynamic> __) async {
+  throw FirebaseFunctionsException(
+    code: 'permission-denied',
+    message: 'Grant lacks can_edit_learning',
   );
 }
 
@@ -243,4 +255,67 @@ void main() {
       });
     },
   );
+
+  // ── DNI-487 AC-6: revocation applies on the next write call ───────────────
+
+  group('DNI-487 AC-6 — parent turned off editing', () {
+    Future<TutorWriteResult> writeAfterRevocation() =>
+        _svc(_editingTurnedOffInvoker).upsertGoal(
+          grantId: _grantId,
+          ownerUid: _ownerUid,
+          profileId: _profileId,
+          goalId: 'goal_1',
+          goalData: {'target': 5},
+        );
+
+    test('the rejection maps to TutorWriteEditingTurnedOff', () async {
+      final result = await writeAfterRevocation();
+      expect(result, isA<TutorWriteEditingTurnedOff>());
+      expect((result as TutorWriteFailure).code, 'permission-denied');
+    });
+
+    test(
+      'the tutor sees "{learner}\'s parent has turned off editing"',
+      () async {
+        final result = await writeAfterRevocation() as TutorWriteFailure;
+        expect(
+          tutorWriteFailureMessage(
+            AppLocalizationsEn(),
+            result,
+            learnerName: 'Moshe',
+          ),
+          "Moshe's parent has turned off editing",
+        );
+        expect(
+          tutorWriteFailureMessage(
+            AppLocalizationsHe(),
+            result,
+            learnerName: 'משה',
+          ),
+          'ההורה של משה כיבה את העריכה',
+        );
+      },
+    );
+
+    test('other permission denials keep the generic copy', () async {
+      final result =
+          await _svc(_permissionDeniedInvoker).upsertGoal(
+                grantId: _grantId,
+                ownerUid: _ownerUid,
+                profileId: _profileId,
+                goalId: 'goal_1',
+                goalData: {'target': 5},
+              )
+              as TutorWriteFailure;
+      expect(result, isNot(isA<TutorWriteEditingTurnedOff>()));
+      expect(
+        tutorWriteFailureMessage(
+          AppLocalizationsEn(),
+          result,
+          learnerName: 'Moshe',
+        ),
+        "You don't have permission to make this edit",
+      );
+    });
+  });
 }

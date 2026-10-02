@@ -71,12 +71,15 @@ void main() {
       // These are the keys the inviteTutor CF reads from permissions.
       expect(map.containsKey('can_view_progress'), isTrue);
       expect(map.containsKey('can_view_content'), isTrue);
-      expect(map.containsKey('can_bulk_prior_completion'), isTrue);
-      expect(map.containsKey('can_reset_completion'), isTrue);
-      expect(map.containsKey('can_edit_goals'), isTrue);
-      expect(map.containsKey('can_edit_stages'), isTrue);
+      expect(map.containsKey('can_edit_learning'), isTrue);
       expect(map.containsKey('can_edit_rewards'), isTrue);
-      expect(map.containsKey('can_edit_study_days'), isTrue);
+      expect(map.containsKey('can_edit_points'), isTrue);
+      // AD-53: the five legacy edit keys are never sent.
+      expect(map.containsKey('can_bulk_prior_completion'), isFalse);
+      expect(map.containsKey('can_reset_completion'), isFalse);
+      expect(map.containsKey('can_edit_goals'), isFalse);
+      expect(map.containsKey('can_edit_stages'), isFalse);
+      expect(map.containsKey('can_edit_study_days'), isFalse);
     });
 
     test('canMarkLiveCompletion is NEVER in the serialised map', () {
@@ -93,7 +96,56 @@ void main() {
       expect(perms.canMarkLiveCompletion, isFalse);
       expect(perms.canViewProgress, isTrue);
       expect(perms.canViewContent, isTrue);
-      expect(perms.canBulkPriorCompletion, isTrue);
+      // AD-53: the single learning-edit permission fails closed.
+      expect(perms.canEditLearning, isFalse);
+      expect(perms.canEditRewards, isTrue);
+      expect(perms.canEditPoints, isTrue);
+    });
+
+    test('DNI-487 AC-1/AC-4: toFirestore writes can_edit_learning and none '
+        'of the five legacy edit keys', () {
+      for (final value in [true, false]) {
+        final map = TutorPermissions(canEditLearning: value).toFirestore();
+        expect(map[kCanEditLearningKey], value);
+        for (final legacy in kLegacyTutorEditPermissionKeys) {
+          expect(map.containsKey(legacy), isFalse, reason: legacy);
+        }
+        // View, rewards and points permissions are preserved.
+        expect(
+          map.keys,
+          containsAll(<String>[
+            'can_view_progress',
+            'can_view_content',
+            'can_edit_rewards',
+            'can_edit_points',
+          ]),
+        );
+      }
+    });
+
+    test('DNI-487: a grant without can_edit_learning reads as false and '
+        'legacy keys are tolerated but ignored', () {
+      final legacyGrant = TutorPermissions.fromFirestore(const {
+        'can_view_progress': true,
+        'can_view_content': true,
+        'can_edit_goals': true,
+        'can_edit_stages': true,
+        'can_edit_study_days': true,
+        'can_reset_completion': true,
+        'can_bulk_prior_completion': true,
+        'can_edit_rewards': false,
+        'can_edit_points': true,
+      });
+      expect(legacyGrant.canEditLearning, isFalse);
+      expect(legacyGrant.canEditRewards, isFalse);
+      expect(legacyGrant.toFirestore().keys, isNot(contains('can_edit_goals')));
+    });
+
+    test('DNI-487: a non-boolean can_edit_learning reads as false', () {
+      final perms = TutorPermissions.fromFirestore(const {
+        'can_edit_learning': 'true',
+      });
+      expect(perms.canEditLearning, isFalse);
     });
   });
 
@@ -169,12 +221,8 @@ void main() {
       const original = TutorPermissions(
         canViewProgress: true,
         canViewContent: true,
-        canBulkPriorCompletion: true,
-        canResetCompletion: true,
-        canEditGoals: true,
-        canEditStages: false,
+        canEditLearning: true,
         canEditRewards: false,
-        canEditStudyDays: false,
       );
       final map = original.toFirestore();
       final restored = TutorPermissions.fromFirestore(map);
