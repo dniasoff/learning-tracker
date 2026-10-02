@@ -165,6 +165,29 @@ CurriculumState _vRun(
   ),
 )[engineCurriculum]!;
 
+/// Every report number of [r], for golden comparison.
+Map<String, Object?> _golden(ReportProjection r) => {
+  'distinct': r.distinctLearnt,
+  'events': r.totalEvents,
+  'sources': {
+    for (final s in r.sources.values) s.source: [s.events, s.distinctLeaves],
+  },
+  'before': r.beforeTracking == null
+      ? null
+      : [r.beforeTracking!.events, r.beforeTracking!.distinctLeaves],
+  'groups': {
+    for (final g in r.groups)
+      g.name: [
+        g.events,
+        g.distinctLeaves,
+        [for (final m in g.members) '${m.label} ${m.status.name}'],
+      ],
+  },
+  'since/wk': r.allSources?.sinceTracking?.leavesPerWeek,
+  '28d/wk': r.allSources?.trailing?.leavesPerWeek,
+  'status': r.projectionStatus,
+};
+
 void main() {
   group('AC-1: the engine builds a pure per-curriculum projection', () {
     test('every curriculum with a corpus has a report', () {
@@ -796,6 +819,302 @@ void main() {
       expect(c.report.projectionStatus, isNull);
       expect(c.report.home.velocity, isNull);
       expect(c.report.sources[school.id]!.velocity, isNull);
+    });
+  });
+
+  group('AC-10: golden numbers', () {
+    test('empty profile', () {
+      expect(_golden(_vRun(const []).report), {
+        'distinct': 0,
+        'events': 0,
+        'sources': {
+          LearningEvent.sourceMain: [0, 0],
+        },
+        'before': null,
+        'groups': <String, Object?>{},
+        'since/wk': 0.0,
+        '28d/wk': 0.0,
+        'status': ProjectionStatus.noDeadline,
+      });
+    });
+
+    test('single source', () {
+      final report = _vRun([
+        _on(1, _b11, _vDay(-30), stage: 1),
+        _on(2, _b12, _vDay(-20), stage: 1),
+        _on(3, _b11, _vDay(-10), stage: 2),
+        _on(4, _b13, _vDay(-1), stage: 1),
+      ]).report;
+      expect(_golden(report), {
+        'distinct': 3,
+        'events': 4,
+        'sources': {
+          LearningEvent.sourceMain: [4, 3],
+        },
+        'before': null,
+        'groups': <String, Object?>{},
+        // 3 × 7 ÷ 38 = 0.55 → 0.6; 2 × 7 ÷ 28 = 0.5.
+        'since/wk': 0.6,
+        '28d/wk': 0.5,
+        'status': ProjectionStatus.noDeadline,
+      });
+    });
+
+    test('multiple sources', () {
+      final school = _sub(10);
+      final rebbe = _sub(20, name: 'Rebbe');
+      final report = _vRun(
+        subTracks: [school, rebbe],
+        [
+          _on(1, _b11, _vDay(-5)),
+          _on(2, _b11, _vDay(-3), source: school.id),
+          _on(3, _b12, _vDay(-3), source: school.id),
+          _on(4, _p11, _vDay(-2), source: rebbe.id),
+        ],
+      ).report;
+      expect(_golden(report), {
+        'distinct': 3,
+        'events': 4,
+        'sources': {
+          LearningEvent.sourceMain: [1, 1],
+          school.id: [2, 2],
+          rebbe.id: [1, 1],
+        },
+        'before': null,
+        'groups': {
+          'Rebbe': [
+            1,
+            1,
+            ['2026-09-01 – active'],
+          ],
+          'School': [
+            2,
+            2,
+            ['2026-09-01 – active'],
+          ],
+        },
+        // 3 × 7 ÷ 38 = 0.55 → 0.6; 3 × 7 ÷ 28 = 0.75 → 0.8.
+        'since/wk': 0.6,
+        '28d/wk': 0.8,
+        'status': ProjectionStatus.noDeadline,
+      });
+      expect(report.home.velocity!.trailing!.leavesPerWeek, 0.3);
+      expect(report.sources[school.id]!.velocity!.trailing!.leavesPerWeek, 0.5);
+    });
+
+    test('a void and a re-copy', () {
+      final report = _vRun([
+        _on(1, _b11, _vDay(-3)),
+        engineVoid(2, 1, minutes: _vRecorded + 1),
+        // Undo of the void: a re-copy keeping the original instant.
+        engineLearn(
+          3,
+          _b11,
+          minutes: _vRecorded + 2,
+          originalMinutes: _vRecorded,
+          learnedOn: _vDay(-3),
+        ),
+        _on(4, _b12, _vDay(-3)),
+        engineVoid(5, 4, minutes: _vRecorded + 3),
+      ]).report;
+      expect(_golden(report), {
+        'distinct': 1,
+        'events': 1,
+        'sources': {
+          LearningEvent.sourceMain: [1, 1],
+        },
+        'before': null,
+        'groups': <String, Object?>{},
+        // 1 × 7 ÷ 38 = 0.18 → 0.2; 1 × 7 ÷ 28 = 0.25 → 0.3.
+        'since/wk': 0.2,
+        '28d/wk': 0.3,
+        'status': ProjectionStatus.noDeadline,
+      });
+      expect(report.home.velocity!.trailing!.leaves, 1);
+    });
+
+    test('a lock-ignored event', () {
+      // Recorded Shabbos 2026-10-03 10:00Z, inside the fail-closed lock.
+      final inLock = DateTime.utc(
+        2026,
+        10,
+        3,
+        10,
+      ).difference(DateTime.utc(2026, 9)).inMinutes;
+      final state = const LearnerStateEngine().run(
+        engineInputs(
+          nowUtc: _vNow,
+          intents: {engineCurriculum: _tracked('2026-09-01')},
+          events: [
+            _on(1, _b11, _vDay(-6)),
+            _on(2, _b12, _vDay(-5), recordedMinutes: inLock),
+          ],
+        ),
+      );
+      expect(state.lockIgnoredEventIds, {engineUlid(2)});
+      expect(_golden(state[engineCurriculum]!.report), {
+        'distinct': 1,
+        'events': 1,
+        'sources': {
+          LearningEvent.sourceMain: [1, 1],
+        },
+        'before': null,
+        'groups': <String, Object?>{},
+        'since/wk': 0.2,
+        '28d/wk': 0.3,
+        'status': ProjectionStatus.noDeadline,
+      });
+    });
+
+    test('a catch-up crossing a week boundary', () {
+      // Learnt Thu 2026-09-10 and Fri 2026-09-11, recorded weeks later on
+      // Thu 2026-10-08: the trailing window starts on 2026-09-11.
+      final report = _vRun([
+        _on(1, _b11, '2026-09-10', dateState: DateState.catchUp),
+        _on(2, _b12, '2026-09-11', dateState: DateState.catchUp),
+      ]).report;
+      expect(report.allSources!.trailing!.from, '2026-09-11');
+      expect(_golden(report), {
+        'distinct': 2,
+        'events': 2,
+        'sources': {
+          LearningEvent.sourceMain: [2, 2],
+        },
+        'before': null,
+        'groups': <String, Object?>{},
+        // 2 × 7 ÷ 38 = 0.37 → 0.4; 1 × 7 ÷ 28 = 0.25 → 0.3.
+        'since/wk': 0.4,
+        '28d/wk': 0.3,
+        'status': ProjectionStatus.noDeadline,
+      });
+    });
+
+    test('a before-tracking node event', () {
+      final report = _vRun([
+        engineGround(1, peah),
+        _on(2, _b11, _vDay(-2)),
+      ]).report;
+      expect(_golden(report), {
+        'distinct': 3,
+        'events': 3,
+        'sources': {
+          LearningEvent.sourceMain: [1, 1],
+        },
+        'before': [2, 2],
+        'groups': <String, Object?>{},
+        'since/wk': 0.2,
+        '28d/wk': 0.3,
+        'status': ProjectionStatus.noDeadline,
+      });
+    });
+
+    test('a renamed track', () {
+      final renamed = _sub(
+        10,
+        name: 'Morning seder',
+        type: SubTrackType.schoolYear,
+        academicYear: 2026,
+        end: '2027-06-30',
+      );
+      final report = _vRun(
+        subTracks: [renamed],
+        [
+          _on(1, _b11, _vDay(-20), source: renamed.id),
+          _on(2, _b12, _vDay(-2), source: renamed.id),
+        ],
+      ).report;
+      expect(_golden(report), {
+        'distinct': 2,
+        'events': 2,
+        'sources': {
+          LearningEvent.sourceMain: [0, 0],
+          renamed.id: [2, 2],
+        },
+        'before': null,
+        'groups': {
+          'Morning seder': [
+            2,
+            2,
+            ['2026–27 active'],
+          ],
+        },
+        'since/wk': 0.4,
+        '28d/wk': 0.5,
+        'status': ProjectionStatus.noDeadline,
+      });
+    });
+
+    test('a deleted track', () {
+      final deleted = _sub(
+        10,
+        name: 'Shiur',
+        endedAt: DateTime.utc(2026, 10, 1, 9),
+        endReason: SubTrackEndReason.deleted,
+      );
+      final report = _vRun(
+        subTracks: [deleted],
+        [
+          _on(1, _b11, _vDay(-10), source: deleted.id),
+          _on(2, _b12, _vDay(-9), source: deleted.id),
+        ],
+      ).report;
+      expect(_golden(report), {
+        'distinct': 2,
+        'events': 2,
+        'sources': {
+          LearningEvent.sourceMain: [0, 0],
+          deleted.id: [2, 2],
+        },
+        'before': null,
+        'groups': {
+          'Shiur': [
+            2,
+            2,
+            ['2026-09-01 – ended'],
+          ],
+        },
+        'since/wk': 0.4,
+        '28d/wk': 0.5,
+        'status': ProjectionStatus.noDeadline,
+      });
+      // Its own span stops on 2026-10-01: 31 days, trailing 28.
+      final v = report.sources[deleted.id]!.velocity!;
+      expect(v.sinceTracking!.days, 31);
+      expect(v.trailing!.through, '2026-10-01');
+      expect(v.trailing!.leavesPerWeek, 0.5);
+    });
+
+    test('a retired curriculum', () {
+      final school = _sub(10);
+      final report = _vRun(
+        state: MainTrackState.retired,
+        subTracks: [school],
+        [
+          _on(1, _b11, _vDay(-10)),
+          _on(2, _b11, _vDay(-9)),
+          _on(3, _b12, _vDay(-9), source: school.id),
+          engineGround(4, berakhot2),
+        ],
+      ).report;
+      expect(_golden(report), {
+        'distinct': 4,
+        'events': 5,
+        'sources': {
+          LearningEvent.sourceMain: [2, 1],
+          school.id: [1, 1],
+        },
+        'before': [2, 2],
+        'groups': {
+          'School': [
+            1,
+            1,
+            ['2026-09-01 – active'],
+          ],
+        },
+        'since/wk': null,
+        '28d/wk': null,
+        'status': null,
+      });
     });
   });
 }
