@@ -26,6 +26,7 @@ import 'package:learning_tracker/features/learner_state/presentation/providers/l
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/held_ground_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -372,6 +373,35 @@ class _ContentHierarchyScreenState
                     bool isLearnt(String leaf) =>
                         _ticked.contains(leaf) ||
                         (learnt?.contains(leaf) ?? false);
+                    // Held ground remains visible with its sub-track holders.
+                    final held =
+                        ref
+                            .watch(
+                              mainTrackHeldGroundProvider(
+                                curriculum.storageKey,
+                              ),
+                            )
+                            .value ??
+                        const <String, List<String>>{};
+                    (List<String>, bool) heldOf(ContentItem item) {
+                      if (held.isEmpty || allItems == null) {
+                        return (const [], false);
+                      }
+                      final names = <String>[];
+                      var whole = true;
+                      final leaves = leavesUnder(allItems, item);
+                      for (final leaf in leaves) {
+                        final holders = held[leaf.sefariaRef];
+                        if (holders == null) {
+                          whole = false;
+                          continue;
+                        }
+                        for (final name in holders) {
+                          if (!names.contains(name)) names.add(name);
+                        }
+                      }
+                      return (names, whole && leaves.isNotEmpty);
+                    }
 
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -384,9 +414,12 @@ class _ContentHierarchyScreenState
                         final tutorBlocked = ref
                             .watch(tutorWriteAvailabilityProvider)
                             .blocksTutor;
+                        final (heldBy, heldWhole) = heldOf(item);
                         return ContentItemTile(
                           item: item,
                           curriculum: curriculum,
+                          heldBy: heldBy,
+                          heldWhole: heldWhole,
                           onTap: () => _handleItemTap(item),
                           showReviewBadge: anyChazara,
                           tickState: allItems == null
