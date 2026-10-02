@@ -82,6 +82,14 @@ final class CurriculumTaskPresentation {
 /// days) and reviews, each in the engine's order.
 typedef CurriculumTasks = ({List<DailyTask> learning, List<DailyTask> reviews});
 
+/// A task's identity in a planned sequence (DNI-504): the curriculum, the
+/// leaf and the stage it is planned at.
+typedef PlannedTaskKey = (CurriculumId curriculum, LeafRef leaf, int stage);
+
+/// The [PlannedTaskKey] of [task].
+PlannedTaskKey plannedTaskKey(DailyTask task) =>
+    (task.curriculumId, task.contentItemSefariaRef, task.stageOrder);
+
 /// Lays out [state]'s tasks for [date] (AD-49 "Planner"). The planner never
 /// computes a quantity:
 ///
@@ -104,12 +112,19 @@ typedef CurriculumTasks = ({List<DailyTask> learning, List<DailyTask> reviews});
 /// [corpus] is the curriculum's unscoped ContentIndex corpus, read only to
 /// tell which unit a leaf is in. A curriculum the engine did not evaluate,
 /// or with no stages, has no tasks.
+///
+/// [laidOut] is what earlier days of a planned sequence already hold
+/// (DNI-504: today, then each erev locked day in order). Those tasks are
+/// not repeated, and the main-track batch continues after them in engine
+/// order ([mainTrackAfter]) instead of restarting at the same position.
+/// The quantity is still the engine's; nothing is counted here.
 CurriculumTasks planCurriculumTasks({
   required CurriculumId curriculum,
   required CurriculumState state,
   required Corpus? corpus,
   required CivilDate date,
   required CurriculumTaskPresentation presentation,
+  Set<PlannedTaskKey> laidOut = const {},
 }) {
   if (!state.evaluated || presentation.stageNames.isEmpty) {
     return (learning: const [], reviews: const []);
@@ -138,9 +153,13 @@ CurriculumTasks planCurriculumTasks({
   );
 
   final learning = <DailyTask>[];
+  final laidOutLearning = {
+    for (final (c, leaf, stage) in laidOut)
+      if (c == curriculum && stage == learnStage) leaf,
+  };
   final labels = presentation.programDayLabels;
   if (labels != null) {
-    final shown = <LeafRef>{};
+    final shown = <LeafRef>{...laidOutLearning};
     for (final leaf in state.programBacklog(date)) {
       if (!shown.add(leaf)) continue;
       learning.add(
@@ -169,7 +188,10 @@ CurriculumTasks planCurriculumTasks({
     final quantity = state.dailyTarget ?? state.paceRate?.ceil() ?? 0;
     final schedulableNow = state.schedulableRefs.toSet();
     for (final leaf in mainTrackBatch(
-      mainTrack: state.mainTrackAtStartOf(date),
+      mainTrack: mainTrackAfter(
+        state.mainTrackAtStartOf(date),
+        laidOutLearning,
+      ),
       corpus: corpus,
       quantity: quantity,
     )) {
@@ -190,6 +212,9 @@ CurriculumTasks planCurriculumTasks({
   final day = parseCivilDay(date);
   for (final review in state.reviewsDue(date)) {
     if (review.completedOn != null) continue;
+    if (laidOut.contains((curriculum, review.leaf, review.stageOrder))) {
+      continue;
+    }
     final stageName = presentation.stageNames[review.stageOrder] ?? '';
     final dueFrom = review.dueFrom;
     final daysLate = dueFrom == null
@@ -214,6 +239,44 @@ CurriculumTasks planCurriculumTasks({
     );
   }
   return (learning: learning, reviews: [...overdueReviews, ...dueReviews]);
+}
+
+/// [mainTrack] with the [laidOut] leaves taken out (DNI-504): what is left
+/// to schedule once earlier days of a planned sequence hold those leaves.
+/// The position moves to the first remaining leaf at or after it in engine
+/// order (wrapping); the current unit is kept only while the position is
+/// unchanged, else it is the new position's unit (the engine's FR-12a rule
+/// in `main_track_position.dart`). Nothing is reordered or counted.
+MainTrackDayStart mainTrackAfter(
+  MainTrackDayStart mainTrack,
+  Set<LeafRef> laidOut,
+) {
+  if (laidOut.isEmpty) return mainTrack;
+  final refs = mainTrack.schedulableRefs;
+  final remaining = [
+    for (final leaf in refs)
+      if (!laidOut.contains(leaf)) leaf,
+  ];
+  if (remaining.length == refs.length) return mainTrack;
+  final position = mainTrack.position;
+  LeafRef? next;
+  if (position != null && !laidOut.contains(position)) {
+    next = position;
+  } else if (remaining.isNotEmpty) {
+    final from = position == null ? -1 : refs.indexOf(position);
+    for (var i = 1; i <= refs.length; i++) {
+      final leaf = refs[(from + i) % refs.length];
+      if (!laidOut.contains(leaf)) {
+        next = leaf;
+        break;
+      }
+    }
+  }
+  return MainTrackDayStart(
+    schedulableRefs: remaining,
+    position: next,
+    currentUnit: next == position ? mainTrack.currentUnit : null,
+  );
 }
 
 /// The main-track leaves of a day's batch, at most [quantity], in engine
@@ -283,6 +346,7 @@ Future<CurriculumTasks> buildPlannedTasks({
   required List<CurriculumTrackEntity> activeTracks,
   required Future<CurriculumTaskPresentation> Function(CurriculumId)
   presentationFor,
+  Set<PlannedTaskKey> laidOut = const {},
 }) async {
   final tracked = {for (final t in activeTracks) t.curriculumId};
   final learning = <DailyTask>[];
@@ -297,11 +361,46 @@ Future<CurriculumTasks> buildPlannedTasks({
       corpus: corpora[curriculum.storageKey],
       date: date,
       presentation: await presentationFor(curriculum),
+      laidOut: laidOut,
     );
     learning.addAll(tasks.learning);
     reviews.addAll(tasks.reviews);
   }
   return (learning: learning, reviews: reviews);
+}
+
+/// The planner's task lists for [dates], in order, laid out in sequence
+/// over the live [state] (DNI-504: today, then each erev locked day). Each
+/// date is [buildPlannedTasks] for it with everything the earlier dates
+/// hold [laidOut]: no task repeats across the dates, and the main-track
+/// batch of a later date continues where the earlier ones stopped. Every
+/// quantity is still the engine's.
+Future<List<List<DailyTask>>> buildPlannedSequence({
+  required LearnerState state,
+  required Map<String, Corpus> corpora,
+  required List<CivilDate> dates,
+  required List<CurriculumId> activeCurricula,
+  required List<CurriculumTrackEntity> activeTracks,
+  required Future<CurriculumTaskPresentation> Function(CurriculumId, CivilDate)
+  presentationFor,
+}) async {
+  final laidOut = <PlannedTaskKey>{};
+  final lists = <List<DailyTask>>[];
+  for (final date in dates) {
+    final tasks = await buildPlannedTasks(
+      state: state,
+      corpora: corpora,
+      date: date,
+      activeCurricula: activeCurricula,
+      activeTracks: activeTracks,
+      presentationFor: (curriculum) => presentationFor(curriculum, date),
+      laidOut: Set.unmodifiable(laidOut),
+    );
+    final list = [...tasks.learning, ...tasks.reviews];
+    laidOut.addAll(list.map(plannedTaskKey));
+    lists.add(list);
+  }
+  return lists;
 }
 
 /// Loads [curriculum]'s [CurriculumTaskPresentation] for [date]: stage
