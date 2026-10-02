@@ -5,6 +5,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
@@ -105,6 +106,7 @@ LearningEvent engineLearn(
   String? level,
   int? stage,
   int? originalMinutes,
+  String learnedOn = '2026-09-01',
 }) => LearningEvent.learn(
   id: engineUlid(id),
   curriculumId: curriculumId,
@@ -112,7 +114,7 @@ LearningEvent engineLearn(
   level: level,
   source: source,
   dateState: dateState,
-  learnedOn: dateState == DateState.beforeTracking ? null : '2026-09-01',
+  learnedOn: dateState == DateState.beforeTracking ? null : learnedOn,
   stage: stage,
   recordedAt: engineAt(minutes),
   originalRecordedAt: originalMinutes == null
@@ -207,6 +209,7 @@ LearnerStateInputs engineInputs({
   Map<String, Corpus>? corpora,
   List<ChangeLogEntry> intentHistory = const [],
   List<SubTrack> subTracks = const [],
+  LearnerSettingsHistory? settingsHistory,
   DateTime? nowUtc,
 }) => LearnerStateInputs(
   events: events,
@@ -214,7 +217,7 @@ LearnerStateInputs engineInputs({
   mainTrackIntent: intents ?? {engineCurriculum: engineIntent()},
   goals: const {},
   intentHistory: intentHistory,
-  settingsHistory: c0SettingsHistory(),
+  settingsHistory: settingsHistory ?? c0SettingsHistory(),
   calendars: const {},
   corpora: corpora ?? {engineCurriculum: mishnayosCorpus()},
   nowUtc: nowUtc ?? engineAt(10000),
