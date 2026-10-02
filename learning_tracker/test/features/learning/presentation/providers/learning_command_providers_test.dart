@@ -168,7 +168,7 @@ void main() {
     late InMemorySubTrackRepository subTracks;
     late InMemoryGovernedIntentRepository intent;
 
-    List<Override> ready({bool lockSettings = true}) => [
+    List<Override> ready({bool lockSettings = true, bool corpora = true}) => [
       learningCommandClockProvider.overrideWithValue(() => engineAt(600)),
       activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
       activeAuthUidProvider.overrideWith((ref) async => 'auth-uid'),
@@ -189,9 +189,10 @@ void main() {
       activeProfileProvider.overrideWith(
         (ref) async => _profile(ProfileMode.adult),
       ),
-      corporaProvider.overrideWith(
-        (ref) async => <String, Corpus>{engineCurriculum: mishnayosCorpus()},
-      ),
+      if (corpora)
+        corporaProvider.overrideWith(
+          (ref) async => <String, Corpus>{engineCurriculum: mishnayosCorpus()},
+        ),
       if (lockSettings)
         learnerLockSettingsProvider.overrideWith(
           (ref, _) => Stream.value(c0SettingsHistory()),
@@ -368,6 +369,48 @@ void main() {
       expect(scope, c0Scope());
       expect(entry.actor.uid, 'auth-uid');
       expect(entry.actor.role, ActorRole.parent);
+    });
+
+    test('a sub-track create and edit save through the production '
+        'corporaProvider while it cannot answer (DNI-496): the corpus '
+        'is treated as absent, not as a failed save', () async {
+      final container = ProviderContainer.test(
+        overrides: ready(corpora: false),
+      );
+      expect(
+        await settledAsync(container, corporaProvider),
+        isA<AsyncError<Map<String, Corpus>>>(),
+      );
+      final commands = (await settledAsync(
+        container,
+        learningCommandsProvider,
+      )).value!;
+
+      final created = await commands.createSubTrack(
+        const SubTrackDraft(
+          curriculumId: engineCurriculum,
+          name: 'Chavrusa',
+          type: SubTrackType.ongoing,
+          windowStart: '2026-09-01',
+          ratePerWeek: 5,
+          weeksPerYear: 52,
+          learnsOnShabbos: false,
+          ground: [],
+        ),
+        subTrackId: ulidD,
+      );
+      expect(created, isA<CaptureSuccess>());
+      expect((created as CaptureSuccess).queued, isFalse);
+
+      final edited = await commands.editSubTrack(
+        ulidD,
+        const SubTrackEdit(ratePerWeek: 7),
+      );
+      expect(edited, isA<CaptureSuccess>());
+      final saved = subTracks.tracksOf(c0Scope()).single;
+      expect(saved.name, 'Chavrusa');
+      expect(saved.ratePerWeek, 7);
+      expect(subTracks.entries, hasLength(2));
     });
   });
   group('ownerGovernedWriterProvider (DNI-476)', () {

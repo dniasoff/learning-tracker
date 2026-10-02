@@ -218,6 +218,17 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   Future<Corpus?> corpusOf(String curriculumId) async =>
       (await corpora.read())[curriculumId];
   final failureReporter = ref.watch(learningFailureReporterProvider);
+  // The sub-track commands treat an unreadable corpus as absent: their
+  // contract skips only the cross-curriculum ground check then, while the
+  // AD-45 limit rules still run. A sub-track save never fails on the
+  // corpus read (until DNI-474 fills corporaProvider, every read fails).
+  Future<Corpus?> subTrackCorpusOf(String curriculumId) async {
+    try {
+      return await corpusOf(curriculumId);
+    } on Object {
+      return null;
+    }
+  }
   final governed = DefaultGovernedLearningCommands(
     scope: scope,
     actor: actor,
@@ -243,7 +254,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     today: () => learnerToday(clock(), settingsNow.read().value),
     nowUtc: clock,
     newId: newUlid,
-    corpusOf: corpusOf,
+    corpusOf: subTrackCorpusOf,
     analytics: ref.watch(learningAnalyticsProvider),
   );
   final commands = DefaultLearningCommands(
