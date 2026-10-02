@@ -560,7 +560,6 @@ void main() {
       await _pumpForm(tester, h, subTrackId: _existingId);
       expect(find.text('No end month'), findsNothing);
     });
-
     testWidgets("another curriculum's row is not found, never edited", (
       tester,
     ) async {

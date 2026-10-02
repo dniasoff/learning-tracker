@@ -2506,6 +2506,7 @@
   "subTrackFormEndMonthLabel": "חודש סיום",
   "subTrackFormEndMonthOpen": "ללא חודש סיום",
 
+
   "subTrackFormRateLabel": "{unit} בשבוע",
   "@subTrackFormRateLabel": {
     "placeholders": {

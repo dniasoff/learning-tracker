@@ -522,6 +522,9 @@ class _SchoolYearSubTrackFormState
       items: [
         if (allowOpen)
           DropdownMenuItem<int?>(child: Text(l10n.subTrackFormEndMonthOpen)),
+          DropdownMenuItem<int?>(
+            child: Text(l10n.subTrackFormEndMonthOpen),
+          ),
         for (var m = 1; m <= 12; m++)
           DropdownMenuItem<int?>(value: m, child: Text(monthName(m))),
       ],
