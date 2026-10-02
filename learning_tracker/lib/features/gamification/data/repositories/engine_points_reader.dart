@@ -96,10 +96,12 @@ Future<FirestorePointsLedgerRepository> _ledger(Ref ref) async {
 /// The active learner's AD-50 filtered totals from inside a provider body:
 /// the provider watches the earning set, so a capture or a void on any
 /// device re-reads the ledger.
+///
+/// The earning set is awaited only when the ledger holds event rows.
 Future<PointsTotals> watchActivePointsTotals(Ref ref) async {
-  final earning = ref.watch(activeEarningEventIdsProvider.future);
+  final earning = ref.watch(activeEarningEventIdsProvider.future)..ignore();
   final repo = await _ledger(ref);
-  return repo.getTotals(earningEventIds: await earning);
+  return repo.resolveTotals(() => earning);
 }
 
 /// The [PointsBalanceReader], [PointsLifetimeEarnedReader] and
@@ -118,8 +120,9 @@ final class EnginePointsReader
   /// The filtered balance and lifetime earned.
   Future<PointsTotals> getTotals() async {
     final repo = await _ledger(_ref);
-    final earning = await _ref.read(activeEarningEventIdsProvider.future);
-    return repo.getTotals(earningEventIds: earning);
+    return repo.resolveTotals(
+      () => _ref.read(activeEarningEventIdsProvider.future),
+    );
   }
 
   @override
@@ -131,11 +134,13 @@ final class EnginePointsReader
   @override
   Future<List<EarnedPoints>> getEarnedPoints() async {
     final repo = await _ledger(_ref);
+    final ledger = await repo.getLedger();
+    if (!ledger.any((e) => e.eventId != null)) return const [];
     final earning = await _ref.read(activeEarningEventIdsProvider.future);
     final curricula = await _ref.read(activeCountedLearnsProvider.future);
     final seen = <String>{};
     return [
-      for (final entry in await repo.getLedger())
+      for (final entry in ledger)
         if (entry.eventId case final eventId?)
           if (earning.contains(eventId) && seen.add(entry.ulid))
             if (CurriculumId.fromStorageKey(curricula[eventId] ?? '')

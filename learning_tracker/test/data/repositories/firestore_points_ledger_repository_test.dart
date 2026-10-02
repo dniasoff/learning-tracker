@@ -540,6 +540,34 @@ void main() {
       expect((await repo.getLedger()).length, before);
     });
 
+    test('resolveTotals reads the earning set only when the ledger holds '
+        'event rows', () async {
+      final repo = buildRepo();
+      await repo.append(
+        entryKind: 'parent_add',
+        delta: 7,
+        createdAt: DateTime.utc(2026, 6, 1),
+      );
+      var resolved = 0;
+      Future<Set<String>> earning() async {
+        resolved++;
+        return const {};
+      }
+
+      expect(
+        await repo.resolveTotals(earning),
+        const PointsTotals(balance: 7, lifetimeEarned: 7),
+      );
+      expect(resolved, 0, reason: 'no event row: the filter is irrelevant');
+
+      await award('evA', 3);
+      expect(
+        await repo.resolveTotals(earning),
+        const PointsTotals(balance: 7, lifetimeEarned: 7),
+      );
+      expect(resolved, 1);
+    });
+
     test(
       'the negative-raw-sum warning is judged on the filtered sum',
       () async {

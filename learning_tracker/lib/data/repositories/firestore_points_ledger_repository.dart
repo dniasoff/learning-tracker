@@ -319,9 +319,29 @@ class FirestorePointsLedgerRepository {
   ///   before the clamp.
   ///
   /// Lifetime earned is the same filtered sum and is not monotonic (AD-50).
-  Future<PointsTotals> getTotals({required Set<String> earningEventIds}) async {
-    final rows = [for (final e in await getLedger()) pointsLedgerRowOf(e)];
-    final totals = pointsTotals(rows, earningEventIds);
+  Future<PointsTotals> getTotals({
+    required Set<String> earningEventIds,
+  }) async => _totalsOf(await getLedger(), earningEventIds);
+
+  /// [getTotals] with the earning set resolved only when the ledger holds an
+  /// event row: a ledger of spends and adjustments alone is summed without
+  /// waiting for the learner state, which it does not depend on.
+  Future<PointsTotals> resolveTotals(
+    Future<Set<String>> Function() earningEventIds,
+  ) async {
+    final entries = await getLedger();
+    final hasEventRows = entries.any((e) => e.eventId != null);
+    return _totalsOf(
+      entries,
+      hasEventRows ? await earningEventIds() : const <String>{},
+    );
+  }
+
+  PointsTotals _totalsOf(
+    List<PointsLedgerEntry> entries,
+    Set<String> earningEventIds,
+  ) {
+    final rows = [for (final e in entries) pointsLedgerRowOf(e)];
     final seen = <String>{};
     var rawSum = 0;
     for (final row in rows) {
@@ -336,7 +356,7 @@ class FirestorePointsLedgerRepository {
         fields: {'profile_id': _profileId, 'raw_sum': rawSum},
       );
     }
-    return totals;
+    return pointsTotals(rows, earningEventIds);
   }
 
   /// The debitable balance of [getTotals]: what redemption affordability

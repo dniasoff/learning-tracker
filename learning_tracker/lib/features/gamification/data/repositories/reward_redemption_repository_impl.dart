@@ -30,17 +30,14 @@ class FirestoreRewardRedemptionRepositoryAdapter {
   /// underlying repository's D-E-honest contract) -- throws only when the
   /// backend itself is not ready.
   ///
-  /// Affordability is the AD-50 filtered balance (DNI-480): the engine's
-  /// earning set of the active learner is read first, so a voided event's
-  /// points cannot be spent.
+  /// Affordability is the AD-50 filtered balance (DNI-480): the active
+  /// learner's earning set is read when the ledger holds event rows, so a
+  /// voided event's points cannot be spent.
   Future<RewardRedemptionEntity?> createRedemption({
     required String rewardTitle,
     required int iconIndex,
     required int pointsCost,
   }) async {
-    final earningEventIds = await _ref.read(
-      activeEarningEventIdsProvider.future,
-    );
     final repo = await _ref.read(
       firestoreRewardRedemptionRepositoryProvider.future,
     );
@@ -51,7 +48,7 @@ class FirestoreRewardRedemptionRepositoryAdapter {
       rewardTitle: rewardTitle,
       iconIndex: iconIndex,
       pointsCost: pointsCost,
-      earningEventIds: earningEventIds,
+      earningEventIds: () => _ref.read(activeEarningEventIdsProvider.future),
     );
   }
 

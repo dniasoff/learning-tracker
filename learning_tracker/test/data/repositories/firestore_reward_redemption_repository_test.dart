@@ -20,6 +20,8 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_rede
 
 import '../../helpers/firestore_fake.dart';
 
+Future<Set<String>> _noEvents() async => const {};
+
 const _uid = 'uid-1';
 const _profileId = 'profile-ulid-1';
 
@@ -63,7 +65,7 @@ void main() {
         rewardTitle: 'Ice cream',
         iconIndex: 2,
         pointsCost: 10,
-        earningEventIds: const {},
+        earningEventIds: _noEvents,
       );
 
       expect(result, isNull);
@@ -98,7 +100,7 @@ void main() {
           rewardTitle: 'Ice cream',
           iconIndex: 0,
           pointsCost: 15,
-          earningEventIds: const {},
+          earningEventIds: () async => const {},
         ),
         isNull,
         reason: 'evA is voided, so its 20 points are not spendable',
@@ -107,7 +109,7 @@ void main() {
         rewardTitle: 'Ice cream',
         iconIndex: 0,
         pointsCost: 15,
-        earningEventIds: const {'evA'},
+        earningEventIds: () async => const {'evA'},
       );
       expect(created, isNotNull);
       expect(await buildLedger().getBalance(earningEventIds: {'evA'}), 5);
@@ -123,7 +125,7 @@ void main() {
         rewardTitle: 'Ice cream',
         iconIndex: 2,
         pointsCost: 15,
-        earningEventIds: const {},
+        earningEventIds: _noEvents,
       );
 
       expect(result, isNotNull);
@@ -151,7 +153,7 @@ void main() {
           rewardTitle: 'Ice cream',
           iconIndex: 0,
           pointsCost: 10,
-          earningEventIds: const {},
+          earningEventIds: _noEvents,
         );
 
         final expectedId = DocIds.rewardRedemptionDocId({'ulid': result!.ulid});
@@ -176,13 +178,13 @@ void main() {
         rewardTitle: 'Pending toy',
         iconIndex: 0,
         pointsCost: 10,
-        earningEventIds: const {},
+        earningEventIds: _noEvents,
       );
       final toFulfil = await repo.createRedemption(
         rewardTitle: 'Fulfilled toy',
         iconIndex: 0,
         pointsCost: 10,
-        earningEventIds: const {},
+        earningEventIds: _noEvents,
       );
       await repo.fulfilRedemption(toFulfil!.ulid);
 
@@ -207,7 +209,7 @@ void main() {
           rewardTitle: 'Toy',
           iconIndex: 0,
           pointsCost: 10,
-          earningEventIds: const {},
+          earningEventIds: _noEvents,
         );
 
         await done;
@@ -225,7 +227,7 @@ void main() {
           rewardTitle: 'Toy',
           iconIndex: 0,
           pointsCost: 30,
-          earningEventIds: const {},
+          earningEventIds: _noEvents,
         );
         final balanceBefore = await buildLedger().getBalance(
           earningEventIds: const {},
@@ -253,7 +255,7 @@ void main() {
           rewardTitle: 'Toy',
           iconIndex: 0,
           pointsCost: 30,
-          earningEventIds: const {},
+          earningEventIds: _noEvents,
         );
         final balanceAfterDebit = await buildLedger().getBalance(
           earningEventIds: const {},

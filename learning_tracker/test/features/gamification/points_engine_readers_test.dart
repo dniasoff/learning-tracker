@@ -216,6 +216,8 @@ void main() {
   });
 
   test('an engine failure is an error, never a fabricated zero', () async {
+    // An event row makes the totals depend on the engine's earning set.
+    await award(engineLearn(1, b11, stage: 1), 10);
     final container = ProviderContainer.test(
       overrides: [
         firestorePointsLedgerRepositoryProvider.overrideWith(
@@ -239,6 +241,8 @@ void main() {
   });
 
   test('no active learner is not ready, never a fabricated zero', () async {
+    // An event row makes the totals depend on the engine's earning set.
+    await award(engineLearn(1, b11, stage: 1), 10);
     final container = ProviderContainer.test(
       overrides: [
         firestorePointsLedgerRepositoryProvider.overrideWith(
