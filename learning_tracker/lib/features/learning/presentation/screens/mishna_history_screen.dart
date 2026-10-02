@@ -7,10 +7,9 @@
 /// explaining that repeats never add goal progress. It displays the engine
 /// output and never recomputes it.
 ///
-/// Reached from any leaf in Browse; the route carries the curriculum
-/// storage key and leaf ref, so the lifetime tree (once DNI-474 makes it
-/// engine-backed; `CurriculumBreakdownList.onLeafTap` is the seam),
-/// sub-track detail and ground rows can reuse it later. During the sacred-time lock of the learner
+/// Reached from any leaf in Browse or the lifetime tree; the route carries
+/// the curriculum storage key and leaf ref, so sub-track detail and ground
+/// rows can reuse it later. During the sacred-time lock of the learner
 /// whose history it shows ([mishnaHistoryLockProvider]: that learner's lock
 /// settings, or the device lock) the screen renders no event content at
 /// all and closes any correction sheet or picker it opened (AD-36: history
