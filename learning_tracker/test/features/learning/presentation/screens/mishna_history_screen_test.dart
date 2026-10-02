@@ -18,6 +18,8 @@ import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/mishna_history_screen.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
@@ -26,6 +28,7 @@ import 'package:learning_tracker/features/sacred_time/domain/models/sacred_windo
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/mishna_history_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
@@ -350,6 +353,250 @@ void main() {
         (tagBox.decoration! as BoxDecoration).color,
         AppPalette.dark.brandCoralSoft,
       );
+    });
+  });
+
+  group('AC-2 remove and correct an event', () {
+    Future<void> openActions(WidgetTester tester, int n) async {
+      await tester.tap(_row(n));
+      await tester.pumpAndSettle();
+    }
+
+    Finder action(String name) => find.byKey(Key('mishnaHistoryAction-$name'));
+
+    testWidgets('a parent row offers remove, place, source and date; Remove '
+        'calls LearningCommands.voidEvent', (tester) async {
+      _seedLearnt(ports);
+      final fake = FakeLearningCommands();
+      await _pump(
+        tester,
+        historyOverrides(ports, state: _learntState(), commands: fake),
+      );
+
+      await openActions(tester, 5);
+      for (final a in MishnaCorrection.values) {
+        expect(action(a.name), findsOneWidget, reason: a.name);
+      }
+      await tester.tap(action('remove'));
+      await tester.pumpAndSettle();
+
+      expect(fake.calls, [
+        LearningCommandCall('voidEvent', {'targetId': eid(5)}),
+      ]);
+    });
+
+    testWidgets('a place correction calls replace with the chosen leaf', (
+      tester,
+    ) async {
+      _seedLearnt(ports);
+      final fake = FakeLearningCommands();
+      await _pump(
+        tester,
+        historyOverrides(ports, state: _learntState(), commands: fake),
+      );
+      await openActions(tester, 5);
+      await tester.tap(action('changePlace'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('mishnaHistoryPlace-$historySibling')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(fake.calls, [
+        LearningCommandCall('replace', {
+          'targetId': eid(5),
+          'replacement': const EventReplacement(ref: historySibling),
+        }),
+      ]);
+    });
+
+    testWidgets('a source correction to Before tracking calls replace', (
+      tester,
+    ) async {
+      _seedLearnt(ports);
+      final fake = FakeLearningCommands();
+      await _pump(
+        tester,
+        historyOverrides(ports, state: _learntState(), commands: fake),
+      );
+      await openActions(tester, 1);
+      await tester.tap(action('changeSource'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('mishnaHistorySource-before')));
+      await tester.pumpAndSettle();
+
+      expect(fake.calls, [
+        LearningCommandCall('replace', {
+          'targetId': eid(1),
+          'replacement': const EventReplacement(
+            source: LearningEvent.sourceMain,
+            dateState: DateState.beforeTracking,
+          ),
+        }),
+      ]);
+    });
+
+    testWidgets('a child may only remove an older dated event, and may '
+        're-date a catch-up event', (tester) async {
+      _seedLearnt(ports);
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: _learntState(),
+          commands: FakeLearningCommands(),
+          viewer: MishnaHistoryViewer.child,
+        ),
+      );
+      await openActions(tester, 5);
+      expect(action('remove'), findsOneWidget);
+      expect(action('changeDate'), findsNothing);
+      expect(action('changePlace'), findsNothing);
+      expect(action('changeSource'), findsNothing);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await openActions(tester, 2);
+      expect(action('remove'), findsOneWidget);
+      expect(action('changeDate'), findsOneWidget);
+    });
+
+    testWidgets('a lock-ignored row has no Undo; a tutor gets no actions', (
+      tester,
+    ) async {
+      _seedLearnt(ports);
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: _learntState(),
+          commands: FakeLearningCommands(),
+        ),
+      );
+      await openActions(tester, 6);
+      expect(action('remove'), findsNothing);
+
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: _learntState(),
+          commands: FakeLearningCommands(),
+          viewer: MishnaHistoryViewer.tutor,
+        ),
+      );
+      await openActions(tester, 5);
+      expect(action('remove'), findsNothing);
+    });
+
+    testWidgets('a rejected correction restores the original row before the '
+        'rollback snackbar shows', (tester) async {
+      _seedLearnt(ports);
+      final gated = GatedLearningCommands(
+        FakeLearningCommands()
+          ..nextResult = const CaptureResult.rejected(
+            CaptureRejection.targetNotFound,
+          ),
+      );
+      await _pump(
+        tester,
+        historyOverrides(ports, state: _learntState(), commands: gated),
+      );
+      await openActions(tester, 1);
+      await tester.tap(action('changeSource'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('mishnaHistorySource-home')));
+      await tester.pump();
+      await tester.pump();
+
+      // In flight: the optimistic row shows Home and Saving….
+      expect(
+        find.descendant(of: _row(1), matching: find.text('Saving…')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: _row(1), matching: find.text('Home')),
+        findsOneWidget,
+      );
+
+      gated.release();
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.descendant(of: _row(1), matching: find.text('Saving…')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: _row(1),
+          matching: find.text('Cheder shiur (ended)'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Learning events: 3'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Couldn't save that change — the entry is back as it was."),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a child re-date refused by the catch-up window shows the '
+        'child-limit snackbar', (tester) async {
+      _seedLearnt(ports);
+      final fake = FakeLearningCommands()
+        ..nextResult = const CaptureResult.childLimit();
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: _learntState(),
+          commands: fake,
+          viewer: MishnaHistoryViewer.child,
+        ),
+      );
+      await openActions(tester, 2);
+      await tester.tap(action('changeDate'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('3'));
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      expect(fake.calls.single.name, 'replace');
+      expect(
+        (fake.calls.single.args['replacement']! as EventReplacement).learnedOn,
+        '2026-09-03',
+      );
+      expect(
+        find.text('Only a parent can change this. You can remove it instead.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a correctable row is announced as a button with a hint', (
+      tester,
+    ) async {
+      _seedLearnt(ports);
+      final handle = tester.ensureSemantics();
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: _learntState(),
+          commands: FakeLearningCommands(),
+        ),
+      );
+      expect(
+        tester.getSemantics(_row(2)),
+        matchesSemantics(
+          label: '#2, Sep 5, 2026, Home, catch-up, chazara',
+          isButton: true,
+          hint: 'Change or remove',
+          hasTapAction: true,
+        ),
+      );
+      handle.dispose();
     });
   });
 

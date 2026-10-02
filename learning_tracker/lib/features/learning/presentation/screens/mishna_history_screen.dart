@@ -22,6 +22,8 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
@@ -101,8 +103,18 @@ class MishnaHistoryScreen extends ConsumerWidget {
             stackTrace: stackTrace,
             onRetry: () => retryMishnaHistory(ref),
           ),
-          data: (data) =>
-              MishnaHistoryBody(history: data, viewer: viewer, onRowTap: null),
+          data: (data) => MishnaHistoryBody(
+            history: data,
+            viewer: viewer,
+            onRowTap: (item, actions) => openMishnaCorrections(
+              context,
+              ref,
+              args: _args,
+              history: data,
+              item: item,
+              actions: actions,
+            ),
+          ),
         ),
       ),
     );
@@ -377,6 +389,7 @@ class MishnaHistoryEventRow extends StatelessWidget {
       container: true,
       button: tappable,
       hint: tappable ? l10n.mishnaHistoryActionsHint : null,
+      onTap: tappable ? () => onTap!(item, actions) : null,
       label: [
         if (ordinal != null) l10n.mishnaHistoryEventNumber(ordinal),
         dateText,
@@ -504,6 +517,213 @@ class _Tag extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Opens the corrections of [item] and runs the chosen one (FR-4).
+///
+/// Every write goes through `LearningCommands` via
+/// [mishnaHistoryCorrectionsProvider]; a refused or failed write has
+/// already restored the original row when the snackbar is shown
+/// (UX-DR-142).
+Future<void> openMishnaCorrections(
+  BuildContext context,
+  WidgetRef ref, {
+  required MishnaHistoryArgs args,
+  required MishnaHistory history,
+  required MishnaHistoryItem item,
+  required Set<MishnaCorrection> actions,
+}) async {
+  final l10n = AppLocalizations.of(context)!;
+  final corrections = ref.read(mishnaHistoryCorrectionsProvider(args).notifier);
+  final choice = await showModalBottomSheet<MishnaCorrection>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            title: Text(
+              l10n.mishnaHistoryActionsTitle,
+              style: Theme.of(sheetContext).textTheme.titleMedium,
+            ),
+          ),
+          for (final action in MishnaCorrection.values)
+            if (actions.contains(action))
+              ListTile(
+                key: Key('mishnaHistoryAction-${action.name}'),
+                leading: Icon(_actionIcon(action)),
+                title: Text(_actionLabel(action, l10n)),
+                onTap: () => Navigator.of(sheetContext).pop(action),
+              ),
+        ],
+      ),
+    ),
+  );
+  if (choice == null || !context.mounted) return;
+  final request = await _requestFor(context, choice, item, history);
+  if (request == null || !context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  final outcome = await corrections.correct(item, request);
+  final message = switch (outcome) {
+    MishnaCorrectionOutcome.applied => null,
+    MishnaCorrectionOutcome.childLimit =>
+      l10n.mishnaHistoryCorrectionChildLimit,
+    MishnaCorrectionOutcome.rolledBack =>
+      l10n.mishnaHistoryCorrectionRolledBack,
+  };
+  if (message != null) {
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+IconData _actionIcon(MishnaCorrection action) => switch (action) {
+  MishnaCorrection.remove => Icons.delete_outline,
+  MishnaCorrection.changePlace => Icons.swap_horiz,
+  MishnaCorrection.changeSource => Icons.alt_route,
+  MishnaCorrection.changeDate => Icons.event_outlined,
+};
+
+String _actionLabel(MishnaCorrection action, AppLocalizations l10n) =>
+    switch (action) {
+      MishnaCorrection.remove => l10n.mishnaHistoryActionRemove,
+      MishnaCorrection.changePlace => l10n.mishnaHistoryActionChangePlace,
+      MishnaCorrection.changeSource => l10n.mishnaHistoryActionChangeSource,
+      MishnaCorrection.changeDate => l10n.mishnaHistoryActionChangeDate,
+    };
+
+/// Asks for the details of [action] and builds its request; null when the
+/// user cancels or the choice changes nothing. Source choices are Home and
+/// Before tracking only in this story (sub-track sources: Story 2.10).
+Future<MishnaCorrectionRequest?> _requestFor(
+  BuildContext context,
+  MishnaCorrection action,
+  MishnaHistoryItem item,
+  MishnaHistory history,
+) async {
+  switch (action) {
+    case MishnaCorrection.remove:
+      return const RemoveEventRequest();
+    case MishnaCorrection.changeDate:
+      final date = await _pickDate(context, item);
+      if (date == null) return null;
+      return ReplaceEventRequest(
+        EventReplacement(
+          learnedOn: date,
+          dateState: item.isBeforeTracking ? DateState.dated : null,
+        ),
+      );
+    case MishnaCorrection.changePlace:
+      final ref = await _pickPlace(context, history.placeChoices);
+      if (ref == null) return null;
+      return ReplaceEventRequest(EventReplacement(ref: ref));
+    case MishnaCorrection.changeSource:
+      final toBeforeTracking = await _pickSource(context, item);
+      if (toBeforeTracking == null) return null;
+      if (toBeforeTracking) {
+        if (item.isBeforeTracking) return null;
+        return const ReplaceEventRequest(
+          EventReplacement(
+            source: LearningEvent.sourceMain,
+            dateState: DateState.beforeTracking,
+          ),
+        );
+      }
+      if (item.isBeforeTracking) {
+        // Home needs the day it was learnt.
+        if (!context.mounted) return null;
+        final date = await _pickDate(context, item);
+        if (date == null) return null;
+        return ReplaceEventRequest(
+          EventReplacement(
+            source: LearningEvent.sourceMain,
+            dateState: DateState.dated,
+            learnedOn: date,
+          ),
+        );
+      }
+      if (item.sourceKind == MishnaHistorySourceKind.home) return null;
+      return const ReplaceEventRequest(
+        EventReplacement(source: LearningEvent.sourceMain),
+      );
+  }
+}
+
+/// A civil date (`YYYY-MM-DD`) picked on or before today.
+Future<String?> _pickDate(BuildContext context, MishnaHistoryItem item) async {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final current = item.learnedOn;
+  var initial = today;
+  if (current != null) {
+    final p = current.split('-').map(int.parse).toList();
+    final d = DateTime(p[0], p[1], p[2]);
+    if (!d.isAfter(today)) initial = d;
+  }
+  final picked = await showDatePicker(
+    context: context,
+    initialDate: initial,
+    firstDate: DateTime(1900),
+    lastDate: today,
+  );
+  if (picked == null) return null;
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${picked.year.toString().padLeft(4, '0')}-${two(picked.month)}-'
+      '${two(picked.day)}';
+}
+
+Future<String?> _pickPlace(BuildContext context, List<String> choices) {
+  final l10n = AppLocalizations.of(context)!;
+  return showDialog<String>(
+    context: context,
+    builder: (dialogContext) => SimpleDialog(
+      title: Text(l10n.mishnaHistoryChoosePlace),
+      children: [
+        for (final ref in choices)
+          SimpleDialogOption(
+            key: Key('mishnaHistoryPlace-$ref'),
+            onPressed: () => Navigator.of(dialogContext).pop(ref),
+            child: CurriculumLabel.local(ref),
+          ),
+      ],
+    ),
+  );
+}
+
+/// True for Before tracking, false for Home, null when cancelled.
+Future<bool?> _pickSource(BuildContext context, MishnaHistoryItem item) {
+  final l10n = AppLocalizations.of(context)!;
+  Widget option(BuildContext dialogContext, bool beforeTracking) {
+    final selected = beforeTracking
+        ? item.isBeforeTracking
+        : !item.isBeforeTracking &&
+              item.sourceKind == MishnaHistorySourceKind.home;
+    return SimpleDialogOption(
+      key: Key('mishnaHistorySource-${beforeTracking ? 'before' : 'home'}'),
+      onPressed: () => Navigator.of(dialogContext).pop(beforeTracking),
+      child: Row(
+        children: [
+          Icon(
+            selected ? Icons.radio_button_checked : Icons.radio_button_off,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            beforeTracking
+                ? l10n.mishnaHistoryBeforeTracking
+                : l10n.mishnaHistorySourceHome,
+          ),
+        ],
+      ),
+    );
+  }
+
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => SimpleDialog(
+      title: Text(l10n.mishnaHistoryChooseSource),
+      children: [option(dialogContext, false), option(dialogContext, true)],
+    ),
+  );
 }
 
 /// The source chip label of [item]: Home, the sub-track's stored name
