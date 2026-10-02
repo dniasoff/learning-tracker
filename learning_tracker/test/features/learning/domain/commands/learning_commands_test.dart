@@ -5,7 +5,9 @@
 // source, a fake failure reporter and fake analytics).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
@@ -100,12 +102,40 @@ final class _LoggedPort implements LearningWritePort {
   }
 }
 
+/// A [GovernedLearningCommands] that records each delegated call.
+final class _LoggedGoverned implements GovernedLearningCommands {
+  _LoggedGoverned(this.log);
+
+  final _Log log;
+
+  @override
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) async {
+    log.add('governed');
+    return const CaptureResult.success();
+  }
+
+  @override
+  Future<CaptureResult> undoAction(String actionId) async {
+    log.add('governed');
+    return const CaptureResult.success();
+  }
+}
+
+final _governedAction = GovernedAction(const [
+  GovernedEntityChange(
+    entity: GovernedEntity.subTrack,
+    entityId: 'sub-track',
+    docs: [],
+  ),
+]);
+
 final class _Harness {
   _Harness({
     DateTime? now,
     ActorRole role = ActorRole.parent,
     List<LearningEvent>? events,
     LearnerSettingsHistory? history,
+    bool governed = false,
   }) : now = now ?? _tuesday {
     fakeReads = FakeLearningCommandReads(
       history: history ?? c0SettingsHistory(),
@@ -127,6 +157,7 @@ final class _Harness {
         return engineUlid(_seq++);
       },
       ackWait: const Duration(milliseconds: 40),
+      governed: governed ? _LoggedGoverned(log) : null,
     );
     addTearDown(commands.dispose);
   }
@@ -198,6 +229,9 @@ void main() {
       'unlearn': (h) => h.commands.unlearn(engineCurriculum, {_b11}),
       'undoEvents': (h) => h.commands.undoEvents([engineUlid(1)]),
       'retry': (h) => h.commands.retry(engineUlid(1)),
+      'applyGovernedChange': (h) =>
+          h.commands.applyGovernedChange(_governedAction),
+      'undoAction': (h) => h.commands.undoAction(engineUlid(1)),
     };
 
     for (final MapEntry(key: name, value: run) in commands.entries) {
@@ -205,6 +239,7 @@ void main() {
         final h = _Harness(
           now: DateTime.utc(2026, 9, 5, 10),
           events: [engineLearn(1, _b11)],
+          governed: true,
         );
         final result = await run(h);
         expect(result, CaptureResult.locked(LockWindow(_lockStart, _lockEnd)));
@@ -829,6 +864,31 @@ void main() {
       throwsA(isA<UnimplementedError>()),
     );
   });
+
+  test('governed commands are delegated only after the gate opens', () async {
+    final h = _Harness(governed: true);
+    expect(
+      await h.commands.applyGovernedChange(_governedAction),
+      const CaptureResult.success(),
+    );
+    expect(h.log, ['settings', 'gate', 'governed']);
+    h.log.clear();
+    await h.commands.undoAction(engineUlid(1));
+    expect(h.log, ['settings', 'gate', 'governed']);
+  });
+
+  test(
+    'an unreadable settings history fails a governed command closed',
+    () async {
+      final h = _Harness(governed: true)..fakeReads.history = null;
+      expect(
+        await h.commands.applyGovernedChange(_governedAction),
+        CaptureResult.locked(LockWindow(h.now, h.now)),
+      );
+      expect(await h.commands.undoAction(engineUlid(1)), isA<CaptureLocked>());
+      expect(h.log, ['settings', 'settings'], reason: 'never delegated');
+    },
+  );
 
   test('node fixtures used above are the corpus nodes', () {
     expect(mishnayosCorpus().nodeForRef(berakhot2.ref), berakhot2);

@@ -479,13 +479,16 @@ final class DefaultLearningCommands implements LearningCommands {
     return _write(LearningCommandKind.undo, units);
   });
 
+  /// Governed writes pass the same [CaptureGate] as events (AD-36): the
+  /// facade gates before delegating, so no [GovernedLearningCommands]
+  /// implementation can write inside a lock.
   @override
   Future<CaptureResult> applyGovernedChange(GovernedAction action) {
     final governed = _governed;
     if (governed == null) {
       throw UnimplementedError('applyGovernedChange (filled by DNI-470)');
     }
-    return governed.applyGovernedChange(action);
+    return _gated((_, _) => governed.applyGovernedChange(action));
   }
 
   @override
@@ -494,7 +497,7 @@ final class DefaultLearningCommands implements LearningCommands {
     if (governed == null) {
       throw UnimplementedError('undoAction (filled by DNI-470)');
     }
-    return governed.undoAction(actionId);
+    return _gated((_, _) => governed.undoAction(actionId));
   }
 
   @override
