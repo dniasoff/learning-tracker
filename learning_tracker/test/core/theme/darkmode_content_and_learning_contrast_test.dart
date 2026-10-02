@@ -364,7 +364,11 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(seconds: 1));
 
-          final button = tester.widget<TextButton>(find.byType(TextButton));
+          // The header's "View all" is the first TextButton; the today
+          // list's main-track Up to… (DNI-501) follows it.
+          final button = tester.widget<TextButton>(
+            find.byType(TextButton).first,
+          );
           final resolved = button.style?.foregroundColor?.resolve(
             <WidgetState>{},
           );
@@ -387,7 +391,11 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(seconds: 1));
 
-          final button = tester.widget<TextButton>(find.byType(TextButton));
+          // The header's "View all" is the first TextButton; the today
+          // list's main-track Up to… (DNI-501) follows it.
+          final button = tester.widget<TextButton>(
+            find.byType(TextButton).first,
+          );
           final resolved = button.style?.foregroundColor?.resolve(
             <WidgetState>{},
           );
