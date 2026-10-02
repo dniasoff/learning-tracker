@@ -6,8 +6,10 @@
 ///
 /// * `capacity(s)` (`sub_track_capacity.dart`) — leaves it will really
 ///   cover before the deadline;
-/// * `path(s)` — its remaining path (DNI-493), learnt leaves included:
-///   chazara on the path uses capacity;
+/// * `path(s)` — its remaining path (DNI-493) restricted to the learner's
+///   scoped corpus (AD-42: the same set drives progress, forecast and
+///   siyum), learnt leaves included: chazara on the path uses capacity,
+///   out-of-scope ground does not;
 /// * `expectedNewGround(s) = max(0, capacity − |path|)` — capacity left
 ///   over for ground not entered yet;
 /// * shortfall candidates — the unlearnt leaves of `path` at indices
@@ -95,9 +97,11 @@ final class DeadlineForecast {
 /// * [subTracks] are every sub-track of the curriculum; only those that
 ///   `holdsGround` on [today] take part.
 /// * [states] are their DNI-493 states (the `remainingPath` is `path`).
-/// * [isLearnt] tells whether a leaf has a counted learn event; a
-///   shortfall leaf must also be in the learner's corpus ([inScope]),
-///   since only those return to the main track.
+/// * [isLearnt] tells whether a leaf has a counted learn event.
+/// * [inScope] is membership of the learner's corpus (AD-42). `path` is
+///   the remaining path filtered to it before capacity is applied, so
+///   out-of-scope ground neither uses capacity nor shifts which in-scope
+///   leaves are reached, expected or short.
 /// * [corpus] resolves ground entries for [SubTrackForecast.lastShortfallNode].
 DeadlineForecast deriveDeadlineForecast({
   required List<SubTrack> subTracks,
@@ -113,10 +117,17 @@ DeadlineForecast deriveDeadlineForecast({
     for (final s in subTracks)
       if (holdsGround(s, today) && states[s.id] != null) s,
   ]..sort((a, b) => a.id.compareTo(b.id));
+  final paths = <String, List<LeafRef>>{
+    for (final s in holders)
+      s.id: [
+        for (final leaf in states[s.id]!.remainingPath)
+          if (inScope(leaf)) leaf,
+      ],
+  };
   final capacity = <String, int>{};
   final reached = <String, Set<LeafRef>>{};
   for (final s in holders) {
-    final path = states[s.id]!.remainingPath;
+    final path = paths[s.id]!;
     final cap = subTrackCapacity(s, today: today, targetDate: targetDate);
     capacity[s.id] = cap;
     reached[s.id] = path.take(cap).toSet();
@@ -127,12 +138,11 @@ DeadlineForecast deriveDeadlineForecast({
   final counted = <LeafRef>{};
   final forecasts = <String, SubTrackForecast>{};
   for (final s in holders) {
-    final path = states[s.id]!.remainingPath;
+    final path = paths[s.id]!;
     final cap = capacity[s.id]!;
     final shortfall = <LeafRef>[
       for (var i = cap; i < path.length; i++)
         if (!isLearnt(path[i]) &&
-            inScope(path[i]) &&
             !reachedByOther(s.id, path[i]) &&
             counted.add(path[i]))
           path[i],
