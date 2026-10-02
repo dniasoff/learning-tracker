@@ -48,44 +48,69 @@ final subTrackViewerRoleProvider = Provider.autoDispose<SubTrackViewerRole>((
       : SubTrackViewerRole.child;
 });
 
+/// A sub-track destination that a sibling story builds.
+enum SubTrackDestination {
+  /// The sub-track detail (DNI-497, Story 2.6; AC-7).
+  detail,
+
+  /// The ground picker (DNI-498, Story 2.7; AC-3, AC-4).
+  groundPicker,
+
+  /// The *Up to…* picker (DNI-501, Story 2.10).
+  upTo,
+}
+
 /// Where the sub-track rows and cards navigate.
 ///
 /// The destinations belong to sibling stories: detail (DNI-497, Story 2.6),
 /// ground picker (DNI-498, Story 2.7) and the *Up to…* picker (DNI-501,
-/// Story 2.10). Each of them overrides its method by replacing
-/// [subTrackNavigatorProvider]'s value; until then every destination falls
-/// back to the track-management hub, where the sub-track group lives
-/// (DNI-495).
+/// Story 2.10). Each of them wires its destination by replacing
+/// [subTrackNavigatorProvider]'s value with a navigator whose [canOpen]
+/// reports it. Until then the entry point is rendered disabled rather than
+/// routed somewhere else: a row or card whose detail does not exist is not
+/// tappable, and *Up to…* / *Add ground* are visible but disabled.
 abstract interface class SubTrackNavigator {
-  /// Opens the sub-track detail (AC-7).
+  /// Whether [destination] exists. Callers render its entry point disabled
+  /// (and never call the matching `open…` method) while this is false.
+  bool canOpen(SubTrackDestination destination);
+
+  /// Opens the sub-track detail (AC-7). Requires
+  /// `canOpen(SubTrackDestination.detail)`.
   void openDetail(BuildContext context, SubTrackHomeItem item);
 
-  /// Opens the ground picker for a parent (AC-3, AC-4).
+  /// Opens the ground picker for a parent (AC-3, AC-4). Requires
+  /// `canOpen(SubTrackDestination.groundPicker)`.
   void openGroundPicker(BuildContext context, SubTrackHomeItem item);
 
-  /// Opens the *Up to…* picker (Story 2.10).
+  /// Opens the *Up to…* picker (Story 2.10). Requires
+  /// `canOpen(SubTrackDestination.upTo)`.
   void openUpTo(BuildContext context, SubTrackHomeItem item);
 
-  /// Opens the hub (*Manage*, AC-8).
+  /// Opens the track-management hub (*Manage*, AC-8). Always available.
   void openHub(BuildContext context);
 }
 
-/// The hub fallback for every destination not built yet.
-final class HubFallbackSubTrackNavigator implements SubTrackNavigator {
+/// The production navigator until the sibling destinations land: only the
+/// hub exists, so every other destination reports `canOpen == false` and
+/// its entry point stays disabled (no tap is mis-routed to the hub).
+final class HubOnlySubTrackNavigator implements SubTrackNavigator {
   /// Creates the navigator.
-  const HubFallbackSubTrackNavigator();
+  const HubOnlySubTrackNavigator();
+
+  @override
+  bool canOpen(SubTrackDestination destination) => false;
 
   @override
   void openDetail(BuildContext context, SubTrackHomeItem item) =>
-      openHub(context);
+      throw UnsupportedError('Sub-track detail is not wired (DNI-497)');
 
   @override
   void openGroundPicker(BuildContext context, SubTrackHomeItem item) =>
-      openHub(context);
+      throw UnsupportedError('Ground picker is not wired (DNI-498)');
 
   @override
   void openUpTo(BuildContext context, SubTrackHomeItem item) =>
-      openHub(context);
+      throw UnsupportedError('Up to… picker is not wired (DNI-501)');
 
   @override
   void openHub(BuildContext context) =>
@@ -94,5 +119,5 @@ final class HubFallbackSubTrackNavigator implements SubTrackNavigator {
 
 /// The active [SubTrackNavigator].
 final subTrackNavigatorProvider = Provider<SubTrackNavigator>(
-  (ref) => const HubFallbackSubTrackNavigator(),
+  (ref) => const HubOnlySubTrackNavigator(),
 );

@@ -53,16 +53,19 @@ class SubTrackHomeRow extends ConsumerWidget {
   /// The viewer.
   final SubTrackViewerRole role;
 
-  /// Body tap: opens the detail.
-  final VoidCallback onOpen;
+  /// Body tap: opens the detail. Null while the detail destination is not
+  /// wired; the body is then not tappable.
+  final VoidCallback? onOpen;
 
   /// *+1* (owner, active row).
   final VoidCallback? onPlusOne;
 
-  /// *Up to…* (owner, active row).
+  /// *Up to…* (owner, active row). Null while its picker is not wired; the
+  /// button is then visible but disabled.
   final VoidCallback? onUpTo;
 
-  /// *Add ground* (parent, groundless or all recorded).
+  /// *Add ground* (parent, groundless or all recorded). Null while the
+  /// ground picker is not wired; the button is then visible but disabled.
   final VoidCallback? onAddGround;
 
   /// A *+1* for this row is in flight: *+1* is held disabled so a rapid

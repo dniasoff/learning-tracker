@@ -103,9 +103,15 @@ class AlsoLearningSection extends ConsumerWidget {
               item: item,
               role: role,
               capturing: inFlight.contains(item.subTrackId),
-              onOpen: () => navigator.openDetail(context, item),
-              onUpTo: () => navigator.openUpTo(context, item),
-              onAddGround: () => navigator.openGroundPicker(context, item),
+              onOpen: navigator.canOpen(SubTrackDestination.detail)
+                  ? () => navigator.openDetail(context, item)
+                  : null,
+              onUpTo: navigator.canOpen(SubTrackDestination.upTo)
+                  ? () => navigator.openUpTo(context, item)
+                  : null,
+              onAddGround: navigator.canOpen(SubTrackDestination.groundPicker)
+                  ? () => navigator.openGroundPicker(context, item)
+                  : null,
               onPlusOne: () => _plusOne(context, ref, item),
             ),
             const SizedBox(height: 12),

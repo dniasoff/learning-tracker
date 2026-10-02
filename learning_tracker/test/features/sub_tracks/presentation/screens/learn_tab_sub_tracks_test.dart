@@ -19,6 +19,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
@@ -50,6 +51,9 @@ class _NoTutor extends ActiveTutoredProfileSelection {
 
 final class _RecordingNavigator implements SubTrackNavigator {
   final List<String> details = [];
+
+  @override
+  bool canOpen(SubTrackDestination destination) => true;
 
   @override
   void openDetail(BuildContext context, SubTrackHomeItem item) =>
@@ -381,6 +385,94 @@ void main() {
     });
   }
 
+  for (final role in [SubTrackViewerRole.child, SubTrackViewerRole.parent]) {
+    testWidgets('production navigator (${role.name}): an unbuilt destination '
+        'leaves its entry point disabled instead of routing elsewhere', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final router = _MockStackRouter();
+      when(() => router.canPop()).thenReturn(false);
+      when(
+        () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+      ).thenAnswer((_) async => null);
+      // School is active; Rebbe has no ground.
+      final engine = SubTrackTestEngine(
+        grounds: {schoolId: schoolLeaves, rebbeId: const []},
+      );
+      addTearDown(engine.dispose);
+      await tester.pumpWidget(
+        _screen(
+          _screenOverrides(
+            // No navigator override: the production HubOnlySubTrackNavigator.
+            subTracks: subTrackEngineOverrides(
+              engine: engine,
+              commands: EngineBackedCommands(engine),
+              role: role,
+              groundOf: const {rebbeId: <NodeEntry>[]},
+            ),
+          ),
+          router: router,
+        ),
+      );
+      await _settle(tester);
+
+      // The row body has no detail to open: not tappable, nothing pushed.
+      final body = tester.widget<InkWell>(
+        find.byKey(const Key('subTrackHomeRow-$schoolId')),
+      );
+      expect(body.onTap, isNull);
+      await tester.tap(find.text('School'));
+      await tester.pump();
+      verifyNever(
+        () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+      );
+
+      // Up to… has no picker yet: visible, disabled; +1 still records.
+      final upTo = find.byKey(const Key('subTrackHomeUpTo-$schoolId'));
+      expect(
+        tester
+            .widget<TextButton>(
+              find.descendant(of: upTo, matching: find.byType(TextButton)),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        find.descendant(of: upTo, matching: find.byType(Opacity)),
+        findsOneWidget,
+        reason: 'rendered as the 40% Disabled action',
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.descendant(
+                of: find.byKey(const Key('subTrackHomePlusOne-$schoolId')),
+                matching: find.byType(FilledButton),
+              ),
+            )
+            .onPressed,
+        isNotNull,
+      );
+
+      // A parent's Add ground has no picker yet: visible, disabled.
+      if (role == SubTrackViewerRole.parent) {
+        expect(
+          tester
+              .widget<OutlinedButton>(
+                find.descendant(
+                  of: find.byKey(const Key('subTrackHomeAddGround-$rebbeId')),
+                  matching: find.byType(OutlinedButton),
+                ),
+              )
+              .onPressed,
+          isNull,
+        );
+      }
+    });
+  }
+
   testWidgets('AC-10: max text scale in Hebrew on a phone stacks each row\'s '
       'text above its actions with nothing clipped', (tester) async {
     tester.view.physicalSize = const Size(360 * 3, 3000 * 3);
@@ -418,7 +510,11 @@ void main() {
       locale: locale,
       debugShowCheckedModeBanner: false,
       theme: _goldenTheme(brightness),
-      overrides: _withSubTracks(role: SubTrackViewerRole.parent),
+      // The designed composition: every destination wired.
+      overrides: _withSubTracks(
+        role: SubTrackViewerRole.parent,
+        navigator: _RecordingNavigator(),
+      ),
       child: const Scaffold(
         body: Padding(
           padding: EdgeInsets.all(16),
@@ -435,7 +531,7 @@ void main() {
       locale: locale,
       debugShowCheckedModeBanner: false,
       theme: _goldenTheme(brightness),
-      overrides: _withSubTracks(),
+      overrides: _withSubTracks(navigator: _RecordingNavigator()),
       child: const Scaffold(
         body: Padding(
           padding: EdgeInsets.all(24),
