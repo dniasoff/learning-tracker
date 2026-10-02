@@ -4,7 +4,9 @@
 /// The engine is an ordered pipeline of pure stage functions, one file per
 /// stage, and [DerivedCurriculumState] is composed of per-stage records:
 ///
-/// 1. counted events (`counted_events.dart`; lock hook filled by DNI-466);
+/// 0. lock filter (`lock_filter.dart`, DNI-466): events inside a lock
+///    window are lock-ignored before anything else is derived;
+/// 1. counted events (`counted_events.dart`);
 /// 2. learnt set and scope (DNI-465);
 /// 3. tri-state and main-track position (DNI-465; order and held ground
 ///    by DNI-467);
@@ -27,6 +29,7 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
+import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_position.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
@@ -113,9 +116,14 @@ final class LearnerStateEngine {
   /// corpus is present) is `evaluated` and gets position and plan; events
   /// of every curriculum still count for the learnt set and siyum (AD-35).
   LearnerState run(LearnerStateInputs inputs) {
+    final locks = engineLockWindows(
+      inputs.settingsHistory,
+      inputs.events,
+      inputs.nowUtc,
+    );
     final counted = countEvents(
       inputs.events,
-      isLockIgnored: _lockIgnoreHook(inputs),
+      isLockIgnored: lockIgnoreHook(locks),
     );
     final learnsByCurriculum = <String, List<LearningEvent>>{};
     for (final e in counted.learns) {
@@ -136,10 +144,6 @@ final class LearnerStateEngine {
       lockIgnoredEventIds: counted.lockIgnoredIds,
     );
   }
-
-  /// The AD-36 lock-ignore rule. DNI-466 (1.4) replaces this with the
-  /// lock-window rule over `inputs.settingsHistory`.
-  LockIgnoreHook _lockIgnoreHook(LearnerStateInputs inputs) => noLockIgnored;
 
   /// One curriculum. [learns] are its counted `learn` events, in event
   /// order.
