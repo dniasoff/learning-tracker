@@ -3,7 +3,15 @@
   "title": "Points and achievement readers",
   "description": "Action: rewire to the AD-50 filtered balance and latch record. Listed are the old-store reader adapters.",
   "entries": [
-    {"symbol": "FirestorePointsBalanceReaderAdapter", "kind": "service", "state": "pending", "owner": "DNI-480"},
-    {"symbol": "FirestorePointsLifetimeEarnedReaderAdapter", "kind": "service", "state": "pending", "owner": "DNI-480"}
+    {"symbol": "FirestorePointsBalanceReaderAdapter", "kind": "service", "state": "retired", "owner": "DNI-480"},
+    {"symbol": "FirestorePointsLifetimeEarnedReaderAdapter", "kind": "service", "state": "retired", "owner": "DNI-480"},
+    {"symbol": "FirestorePointsRepository", "kind": "service", "state": "retired", "owner": "DNI-480", "note": "dead reader over the unfiltered ledger balance; replaced by EnginePointsReader"},
+    {"symbol": "PointsRepositoryNotReadyException", "kind": "type", "state": "retired", "owner": "DNI-480"},
+    {"symbol": "PointsRepositoryUnavailableException", "kind": "type", "state": "retired", "owner": "DNI-480"},
+    {"symbol": "FirestoreCurriculumRewardEligibilityAdapter", "kind": "service", "state": "retired", "owner": "DNI-480", "note": "completion-era eligibility gate; the engine is the only eligibility authority (AD-50)"},
+    {"symbol": "CurriculumRewardEligibility", "kind": "type", "state": "retired", "owner": "DNI-480"},
+    {"symbol": "PointsHistoryEntry", "kind": "type", "state": "retired", "owner": "DNI-480", "note": "completion-based points history"},
+    {"symbol": "curriculumPointsProvider", "kind": "service", "state": "retired", "owner": "DNI-480"},
+    {"symbol": "pointsHistoryProvider", "kind": "service", "state": "retired", "owner": "DNI-480"}
   ]
 }

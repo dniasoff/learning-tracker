@@ -35,8 +35,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 /// [FirestoreDiagnosticLogRepositoryAdapter] needs a real `Ref`, not the
 /// `WidgetRef` this screen's `build` method holds — wrapped in a top-level
 /// provider so `ref.read` below always supplies a real `Ref` regardless of
-/// the caller (see `FirestoreCurriculumRewardEligibilityAdapter`'s wiring
-/// for the same pattern).
+/// the caller (the same pattern as `pointsServiceProvider`'s
+/// `EnginePointsReader`).
 final _diagnosticLogRepositoryProvider =
     Provider<FirestoreDiagnosticLogRepositoryAdapter>(
       (ref) => FirestoreDiagnosticLogRepositoryAdapter(ref: ref),
