@@ -589,8 +589,11 @@ function validateFinalState(
   collection: string,
   docId: string,
   state: Record<string, unknown>,
-  created: boolean,
+  prior: Record<string, unknown> | null,
 ): void {
+  // Checked before the tombstone early return: the lifecycle pair is the one
+  // shape a tombstoned sub-track still has to hold.
+  if (collection === "sub_tracks") validateSubTrackLifecycle(state, prior);
   if (!isLive(state)) return; // a tombstoned doc needs no further shape
   for (const f of REQUIRED_LIVE_FIELDS[collection] ?? []) {
     if (state[f] === undefined || state[f] === null) {
@@ -649,6 +652,30 @@ function validateFinalState(
 function rejectSubTrack(code: "invalid-argument" | "failed-precondition", violations: SubTrackViolation[]): never {
   const codes = subTrackViolationCodes(violations);
   throw new HttpsError(code, `Sub-track rule violated: ${codes.join(", ")}`, { sub_track_violations: codes });
+}
+
+/**
+ * AD-52 sub-track lifecycle: `ended_at` and `end_reason` are a coupled pair.
+ * A live sub-track carries neither; an ended one carries both. Ending writes
+ * both, re-adding clears both, and an ended sub-track's `end_reason` changes
+ * only when `ended_at` does (a repeated end/delete of an ended sub-track is a
+ * no-op upstream, so this only rejects a bare reason rewrite).
+ */
+function validateSubTrackLifecycle(
+  state: Record<string, unknown>,
+  prior: Record<string, unknown> | null,
+): void {
+  const ended = !isLive(state);
+  const hasReason = state.end_reason !== undefined && state.end_reason !== null;
+  if (ended && !hasReason) {
+    reject("invalid-argument", "An ended sub_tracks doc requires end_reason");
+  }
+  if (!ended && hasReason) {
+    reject("invalid-argument", "A live sub_tracks doc cannot carry end_reason");
+  }
+  if (ended && prior !== null && !isLive(prior) && !deepEqual(state.end_reason, prior.end_reason ?? null)) {
+    reject("invalid-argument", "end_reason can change only together with ended_at");
+  }
 }
 
 function hasCalendarProgram(state: Record<string, unknown> | null): boolean {
@@ -955,6 +982,9 @@ export async function writeWithChangeLog(
         const tombstoneOnly = Object.keys(patch).every((f) => f === "ended_at" || f === "end_reason") &&
           patch.ended_at === TOMBSTONE;
         if (cur === null && tombstoneOnly) continue; // nothing to remove
+        // Already ended (end, delete, undo or track removal): a repeated
+        // tombstone is a no-op and never rewrites the stored end_reason.
+        if (cur !== null && !isLive(cur) && tombstoneOnly) continue;
         if (cur === null && patch.ended_at === TOMBSTONE) {
           reject("invalid-argument", "Cannot create a tombstoned doc");
         }
@@ -1000,7 +1030,7 @@ export async function writeWithChangeLog(
         } else if ((e.entity === "goal" || e.entity === "subTrack") && d.docId !== entityId) {
           reject("invalid-argument", "entity_id must be the doc id");
         }
-        validateFinalState(d.collection, d.docId, finalState, cur === null);
+        validateFinalState(d.collection, d.docId, finalState, cur);
         finalStates.set(key, finalState);
         if (e.entity === "goal" && isLive(finalState)) goalCurricula.push(String(finalState.curriculum_id));
         if (Object.keys(data).length > 0) writes.push({ ref: docRef(d.collection, d.docId), data });

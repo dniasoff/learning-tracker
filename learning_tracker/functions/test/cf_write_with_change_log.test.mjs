@@ -1071,4 +1071,62 @@ describe('writeWithChangeLog — sub-track create claim, replay and AD-45 (DNI-4
     assert.deepEqual(res.change_ids, [ulid(1)]);
     assert.equal((await subTracks().doc(ulid(905)).get()).data().end_reason, 'ended');
   });
+
+  // AD-52 lifecycle pair: ended_at and end_reason are written, cleared and
+  // judged together, including on a tombstoned doc.
+  describe('ended_at / end_reason are a coupled pair', () => {
+    const ENDED_AT = new Date('2021-01-01T00:00:00Z');
+    const seedEnded = (reason = 'ended') =>
+      subTracks().doc(ulid(900)).set({ ...track(), ended_at: ENDED_AT, end_reason: reason, last_change_id: ulid(0) });
+    const update = (fields) =>
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(900), fields, 'update'), parentAuth);
+    async function expectRejectedUnchanged(promise, stored) {
+      await expectHttpsError(promise, 'invalid-argument');
+      const doc = (await subTracks().doc(ulid(900)).get()).data();
+      assert.equal(doc.end_reason, stored.end_reason);
+      assert.equal(doc.ended_at === undefined, stored.ended_at === undefined);
+      assert.deepEqual(await changeLog(), []);
+    }
+
+    test('ended_at without end_reason → invalid-argument', async () => {
+      await seedTracks(1);
+      await expectRejectedUnchanged(update({ ended_at: true }), {});
+    });
+
+    test('end_reason on a live sub-track → invalid-argument', async () => {
+      await seedTracks(1);
+      await expectRejectedUnchanged(update({ end_reason: 'deleted' }), {});
+    });
+
+    test('clearing ended_at but leaving end_reason → invalid-argument', async () => {
+      await seedEnded();
+      await expectRejectedUnchanged(update({ ended_at: null }), { end_reason: 'ended', ended_at: ENDED_AT });
+    });
+
+    test('clearing end_reason but leaving ended_at → invalid-argument', async () => {
+      await seedEnded();
+      await expectRejectedUnchanged(update({ end_reason: null }), { end_reason: 'ended', ended_at: ENDED_AT });
+    });
+
+    test('rewriting the end_reason of an ended sub-track → invalid-argument', async () => {
+      await seedEnded();
+      await expectRejectedUnchanged(update({ end_reason: 'deleted' }), { end_reason: 'ended', ended_at: ENDED_AT });
+    });
+
+    test('re-add clears both → accepted, live with no end_reason', async () => {
+      await seedEnded();
+      const res = await update({ ended_at: null, end_reason: null });
+      assert.deepEqual(res.change_ids, [ulid(1)]);
+      const doc = (await subTracks().doc(ulid(900)).get()).data();
+      assert.equal(doc.ended_at, undefined);
+      assert.equal(doc.end_reason, undefined);
+    });
+
+    test('a repeated tombstone of an ended sub-track is a no-op that keeps its reason', async () => {
+      await seedEnded('ended');
+      await update({ ended_at: true, end_reason: 'deleted' });
+      assert.equal((await subTracks().doc(ulid(900)).get()).data().end_reason, 'ended');
+      assert.deepEqual(await changeLog(), []);
+    });
+  });
 });
