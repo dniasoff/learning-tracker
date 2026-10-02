@@ -21,14 +21,7 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_row.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/up_to_picker.dart';
-import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-
-/// Whether the session may write sub-track learning: false on a tutor
-/// device (tutor sub-track writes are read-only until a later epic).
-final subTrackWritesAllowedProvider = Provider.autoDispose<bool>(
-  (ref) => ref.watch(activeTutoredProfileSelectionProvider) == null,
-);
 
 /// The sub-track rows section.
 class SubTrackCaptureSection extends ConsumerWidget {

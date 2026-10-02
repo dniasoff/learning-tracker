@@ -160,7 +160,12 @@ final activeSubTracksProvider = StreamProvider.autoDispose<List<SubTrack>>((
       case CompleteReadReady<SubTrack>(:final items, isClean: true):
         yield items;
       case CompleteReadReady<SubTrack>(:final rejected):
-        throw SubTrackReadRejectedException(rejected);
+        // Emitted, not thrown: once the listener is gone a throw from the
+        // generator would escape to the zone.
+        yield* Stream<List<SubTrack>>.error(
+          SubTrackReadRejectedException(rejected),
+          StackTrace.current,
+        );
     }
   }
 }, retry: (retryCount, error) => null);
