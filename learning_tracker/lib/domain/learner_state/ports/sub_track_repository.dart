@@ -31,6 +31,11 @@ abstract interface class SubTrackRepository {
   /// valid [SubTrack] (cross-field invariants included) throws
   /// [StorageFormatException]. Neither writes anything.
   ///
+  /// The entry's `before` must be the truthful baseline (AD-38: the
+  /// writer's cached value per field, `null` when absent): any field whose
+  /// `before` differs from the stored row throws
+  /// [ChangeBaselineMismatchException] and nothing is written.
+  ///
   /// The change log is append-only (AD-6, AD-38, AD-46): an identical
   /// replay of an entry that already exists is a no-op (the sub-track is
   /// not re-patched), and a NON-identical entry at an existing id throws
@@ -68,6 +73,27 @@ final class SubTrackNotFoundException implements Exception {
   @override
   String toString() =>
       'SubTrackNotFoundException: sub_tracks/$subTrackId does not exist';
+}
+
+/// A governed change whose `entry.before` does not match the stored
+/// `sub_tracks/{id}` row for [field] (absent counts as `null`). Writing it
+/// would record a false audit baseline that a later undo would "restore"
+/// (AD-38). Nothing is written; the caller rebuilds the change from the
+/// current row.
+final class ChangeBaselineMismatchException implements Exception {
+  /// Creates the exception for [subTrackId] and [field].
+  const ChangeBaselineMismatchException(this.subTrackId, this.field);
+
+  /// The target `sub_tracks/{ulid}` id.
+  final String subTrackId;
+
+  /// The storage field whose `before` value is not the stored one.
+  final String field;
+
+  @override
+  String toString() =>
+      'ChangeBaselineMismatchException: change_log before.$field does not '
+      'match sub_tracks/$subTrackId';
 }
 
 /// One governed change to one sub-track, paired with its change-log entry.
