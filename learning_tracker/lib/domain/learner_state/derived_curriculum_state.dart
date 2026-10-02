@@ -7,7 +7,7 @@
 /// | learnt set, scope, tri-state | [LearntRecord] | DNI-465 |
 /// | main-track position | [MainTrackRecord] | DNI-465 (DNI-467 adds order and held ground) |
 /// | completed units | [completedUnits] | DNI-465 |
-/// | plan: calendar, reviews, goal target, pace, projection | [PlanRecord] | DNI-467 (sub-track states: DNI-493/494) |
+/// | plan: calendar, reviews, goal target, pace, projection, sub-track states | [PlanRecord] | DNI-467 (sub-track positions: DNI-493; capacity: DNI-494) |
 /// | streak | [streak] | DNI-466 |
 library;
 

@@ -109,6 +109,8 @@ void main() {
         onHome: true,
       );
       expect(st.groundExhausted, isFalse);
+      expect(st.ticked, 0);
+      expect(st.remainingPath, isEmpty);
       expect(st.expectedNewGround, 0);
       expect(st.shortfall, 0);
       expect(
@@ -120,6 +122,21 @@ void main() {
           onHome: true,
         ),
       );
+      // DNI-493: ticked and remainingPath take part in equality.
+      SubTrackState withPath(List<String> path, {int ticked = 1}) =>
+          SubTrackState(
+            subTrackId: 's',
+            holdsGround: true,
+            inForecast: false,
+            onHome: true,
+            position: path.isEmpty ? null : path.first,
+            ticked: ticked,
+            remainingPath: path,
+          );
+      expect(withPath(['a', 'b']), withPath(['a', 'b']));
+      expect(withPath(['a', 'b']).hashCode, withPath(['a', 'b']).hashCode);
+      expect(withPath(['a', 'b']), isNot(withPath(['a', 'c'])));
+      expect(withPath(['a']), isNot(withPath(['a'], ticked: 2)));
     });
   });
 }

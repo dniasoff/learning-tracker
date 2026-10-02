@@ -202,6 +202,8 @@ final class SubTrackState {
     required this.onHome,
     this.position,
     this.groundExhausted = false,
+    this.ticked = 0,
+    this.remainingPath = const [],
     this.capacity,
     this.expectedNewGround = 0,
     this.shortfall = 0,
@@ -219,11 +221,23 @@ final class SubTrackState {
   /// Whether it shows on the home screen.
   final bool onHome;
 
-  /// The next unlearnt leaf of its ground, if any.
+  /// Its position (AD-33): the first leaf of `expandGround(ground)` with
+  /// no counted `learn` event whose `source` is this sub-track; null when
+  /// every ground leaf is ticked in it, or it has no ground. Events from
+  /// other sources never move it (FR-13).
   final LeafRef? position;
 
-  /// Whether every leaf of its ground is learnt.
+  /// Whether it has ground and every ground leaf is ticked in it (no
+  /// [position]); a groundless sub-track is not exhausted.
   final bool groundExhausted;
+
+  /// The distinct ground leaves with a counted `learn` event from this
+  /// sub-track (DNI-493).
+  final int ticked;
+
+  /// `expandGround(ground)` from [position] to the end, learnt or not;
+  /// empty with no [position] (DNI-493). The AD-44 `path`.
+  final List<LeafRef> remainingPath;
 
   /// Remaining capacity in leaves, if bounded.
   final int? capacity;
@@ -243,6 +257,8 @@ final class SubTrackState {
       other.onHome == onHome &&
       other.position == position &&
       other.groundExhausted == groundExhausted &&
+      other.ticked == ticked &&
+      _sameLeaves(other.remainingPath, remainingPath) &&
       other.capacity == capacity &&
       other.expectedNewGround == expectedNewGround &&
       other.shortfall == shortfall;
@@ -255,6 +271,8 @@ final class SubTrackState {
     onHome,
     position,
     groundExhausted,
+    ticked,
+    Object.hashAll(remainingPath),
     capacity,
     expectedNewGround,
     shortfall,
@@ -310,6 +328,14 @@ final class MainTrackDayStart {
   String toString() =>
       'MainTrackDayStart($position, ${schedulableRefs.length} schedulable)';
 }
+
+bool _sameLeaves(List<LeafRef> a, List<LeafRef> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;}
 
 /// An invalid intent the engine found while deriving one curriculum's plan.
 /// The engine never substitutes a default for it; the affected outputs
