@@ -38,6 +38,7 @@ final class DispatchOutcome {
   /// Creates the outcome.
   const DispatchOutcome({
     required this.eventIds,
+    required this.learnEventIds,
     required this.queued,
     required this.rejectedChunks,
     required this.totalChunks,
@@ -45,6 +46,10 @@ final class DispatchOutcome {
 
   /// Events of chunks not rejected within the window, in write order.
   final List<String> eventIds;
+
+  /// The `learn` events among [eventIds] (what the achievement latch
+  /// checks after the write, DNI-480), in write order.
+  final List<String> learnEventIds;
 
   /// Whether some chunk was not yet acknowledged (queued offline).
   final bool queued;
@@ -154,16 +159,21 @@ final class LearningWriteDispatcher {
       unawaited(all.then<void>((_) {}, onError: (Object _) {}));
     }
     final ids = <String>[];
+    final learns = <String>[];
     var rejected = 0;
     for (var i = 0; i < chunks.length; i++) {
       if (settled[i] == _ChunkStatus.rejected) {
         rejected++;
       } else {
-        ids.addAll(chunks[i].events.map((e) => e.id));
+        for (final e in chunks[i].events) {
+          ids.add(e.id);
+          if (e.isLearn) learns.add(e.id);
+        }
       }
     }
     return DispatchOutcome(
       eventIds: ids,
+      learnEventIds: learns,
       queued: timedOut || settled.length < chunks.length,
       rejectedChunks: rejected,
       totalChunks: chunks.length,
@@ -184,6 +194,10 @@ final class LearningWriteDispatcher {
     if (pending.inFlight) {
       return DispatchOutcome(
         eventIds: [for (final e in pending.chunk.events) e.id],
+        learnEventIds: [
+          for (final e in pending.chunk.events)
+            if (e.isLearn) e.id,
+        ],
         queued: true,
         rejectedChunks: 0,
         totalChunks: 1,

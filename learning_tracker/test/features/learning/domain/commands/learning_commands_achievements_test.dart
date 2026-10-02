@@ -17,6 +17,7 @@ import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart'
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/points.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/commands/achievement_latch.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -254,6 +255,29 @@ void main() {
     h.port.failTotals = true;
     expect(await h.capture([_b12]), isA<CaptureSuccess>());
     expect(await h.unlocked(), isEmpty);
+  });
+
+  test('a rejected write that crosses a threshold latches it when the '
+      'retry saves it', () async {
+    final h = _Harness(firestore);
+    await h.capture([_b11]); // 10 points
+
+    // 20 points, but the server rejects the write: nothing is saved, so
+    // nothing may be latched yet.
+    h.writes.failNextWith(const PermanentWriteRejection('permission-denied'));
+    expect(
+      await h.capture([_b12]),
+      const CaptureResult.rejected(CaptureRejection.notSaved),
+    );
+    expect(await h.unlocked(), isEmpty);
+    expect(h.port.latchCalls, 0);
+
+    // The retry saves the same chunk; its learn event crosses bronze, and
+    // the retry latches it without any further write.
+    final failure = (await h.commands.watchPendingFailures().first).single;
+    final retried = await h.commands.retry(failure.id) as CaptureSuccess;
+    expect(await h.unlocked(), {'bronze'});
+    expect(h.port.totalsRequests.last, retried.eventIds.toSet());
   });
 
   test('no configured thresholds reads nothing else', () async {

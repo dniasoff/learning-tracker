@@ -261,10 +261,6 @@ final class DefaultLearningCommands implements LearningCommands {
   }
 
   /// Chunks and dispatches [units]; the result of a command that wrote.
-  ///
-  /// After a write that recorded learn events, runs the AD-50 achievement
-  /// latch in the background (DNI-480): it never delays or fails the
-  /// command.
   Future<CaptureResult> _write(
     LearningCommandKind kind,
     List<WriteUnit> units,
@@ -274,16 +270,7 @@ final class DefaultLearningCommands implements LearningCommands {
     if (outcome.allRejected) {
       return const CaptureResult.rejected(CaptureRejection.notSaved);
     }
-    final achievements = _achievements;
-    if (achievements != null) {
-      final written = outcome.eventIds.toSet();
-      final learns = {
-        for (final unit in units)
-          for (final e in unit.events)
-            if (e.isLearn && written.contains(e.id)) e.id,
-      };
-      unawaited(achievements.afterWrite(_scope, learns));
-    }
+    _afterWrite(outcome);
     return CaptureResult.success(
       eventIds: outcome.eventIds,
       queued: outcome.queued,
@@ -630,11 +617,23 @@ final class DefaultLearningCommands implements LearningCommands {
         if (outcome.allRejected) {
           return const CaptureResult.rejected(CaptureRejection.notSaved);
         }
+        _afterWrite(outcome);
         return CaptureResult.success(
           eventIds: outcome.eventIds,
           queued: outcome.queued,
         );
       });
+
+  /// The post-write step of every command that saved (or queued) events,
+  /// a first write or a retry: the AD-50 achievement latch over the learn
+  /// events the write recorded (DNI-480). It runs in the background and
+  /// never delays or fails the command; the latch retries its own
+  /// failures.
+  void _afterWrite(DispatchOutcome outcome) {
+    final achievements = _achievements;
+    if (achievements == null) return;
+    unawaited(achievements.afterWrite(_scope, outcome.learnEventIds.toSet()));
+  }
 
   /// Closes the pending-failure stream.
   Future<void> dispose() => _dispatcher.dispose();
