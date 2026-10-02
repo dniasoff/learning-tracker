@@ -10,9 +10,10 @@
 ///   targets it (AD-31 — a void of a void has no target here, so it is
 ///   ignored), and *lock-ignored* when it is neither voided nor counted —
 ///   no second lock-window calculation (AD-36);
-/// - the **Learning events** count is the number of counted events, so
-///   repeats are visible but distinct goal progress stays the engine's
-///   `distinctLearnt` (AD-32, UX-DR-153);
+/// - the **Learning events** count is the number of non-voided events
+///   (FR-30, AC-1) — counted and lock-ignored alike, repeats included —
+///   while distinct goal progress stays the engine's `distinctLearnt`
+///   (AD-32, UX-DR-153);
 /// - **chazara** is derived (every counted event after the first, in
 ///   `effectiveAt` order) and never stored (AD-32).
 library;
@@ -264,7 +265,11 @@ final class MishnaHistory {
       curriculumId: curriculumId,
       leafRef: leafRef,
       learnt: state[curriculumId]?.learntLeaves.contains(leafRef) ?? false,
-      eventCount: counted.length,
+      // FR-30: every non-voided event, lock-ignored ones included; only the
+      // ordinals (and so chazara) are limited to counted events.
+      eventCount: learns
+          .where((e) => statusOf(e) != MishnaHistoryStatus.voided)
+          .length,
       items: [for (final e in newestFirst) itemOf(e)],
       placeChoices: placeChoices,
       unreadableRows: log.rejected.length,
@@ -280,8 +285,8 @@ final class MishnaHistory {
   /// The engine's Learnt state for the leaf.
   final bool learnt;
 
-  /// "Learning events": counted (non-voided, not lock-ignored) events,
-  /// repeats included.
+  /// "Learning events": every non-voided event (FR-30), repeats and
+  /// lock-ignored events included. Not goal progress (AD-32).
   final int eventCount;
 
   /// Every learn row (counted, voided, lock-ignored), newest first by

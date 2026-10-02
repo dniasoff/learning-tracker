@@ -94,7 +94,8 @@ void main() {
   tearDown(() => ports.dispose());
 
   group('AC-1 open history for a learnt mishna', () {
-    testWidgets('header shows the engine Learnt state and counted events; '
+    testWidgets('header shows the engine Learnt state and non-voided events '
+        '(lock-ignored included); '
         'rows newest first with date, Before tracking, source and tags; '
         'footer explains repeats', (tester) async {
       _seedLearnt(ports);
@@ -102,7 +103,7 @@ void main() {
 
       expect(find.text('Mishna history'), findsOneWidget);
       expect(find.text('Learnt'), findsOneWidget);
-      expect(find.text('Learning events: 3'), findsOneWidget);
+      expect(find.text('Learning events: 4'), findsOneWidget);
 
       // Newest first: 6 (lock-ignored), 5, 3 (voided), 2, 1.
       final order = [
@@ -534,7 +535,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Learning events: 3'), findsOneWidget);
+      expect(find.text('Learning events: 4'), findsOneWidget);
       await tester.pumpAndSettle();
       expect(
         find.text("Couldn't save that change — the entry is back as it was."),

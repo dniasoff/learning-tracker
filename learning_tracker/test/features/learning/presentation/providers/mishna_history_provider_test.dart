@@ -247,12 +247,35 @@ void main() {
         final ignored = history.items.firstWhere((i) => i.eventId == eid(2));
         expect(ignored.status, MishnaHistoryStatus.lockIgnored);
         expect(ignored.ordinal, isNull);
-        expect(history.eventCount, 1);
+        expect(ignored.isChazara, isFalse);
         for (final viewer in MishnaHistoryViewer.values) {
           expect(allowedCorrections(ignored, viewer), isEmpty);
         }
       },
     );
+
+    test('a counted event plus a lock-ignored event count 2 (FR-30: every '
+        'non-voided event); only the counted one gets an ordinal', () {
+      final history = _project(
+        [historyLearn(1), historyLearn(2, day: 6), historyVoid(3, eid(4))],
+        counted: {eid(1)},
+        lockIgnored: {eid(2)},
+      );
+      expect(history.eventCount, 2);
+      final byId = {for (final i in history.items) i.eventId: i};
+      expect(byId[eid(1)]!.ordinal, 1);
+      expect(byId[eid(2)]!.status, MishnaHistoryStatus.lockIgnored);
+      expect(byId[eid(2)]!.ordinal, isNull);
+    });
+
+    test('a voided lock-ignored event leaves the count', () {
+      final history = _project(
+        [historyLearn(1), historyLearn(2, day: 6), historyVoid(3, eid(2))],
+        counted: {eid(1)},
+        lockIgnored: {eid(2)},
+      );
+      expect(history.eventCount, 1);
+    });
 
     test('the engine lockIgnoredEventIds wins over a stale counted id', () {
       final history = _project(
