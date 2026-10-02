@@ -178,7 +178,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
     required bool canEditLearning,
   }) async {
     try {
-      final callable = _functions.httpsCallable(
+      final callable = (await _client()).httpsCallable(
         kUpdateTutorGrantPermissionsCallable,
       );
       await callable.call<Map<String, dynamic>>(
