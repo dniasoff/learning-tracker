@@ -19,6 +19,7 @@ library;
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 import 'package:learning_tracker/features/tutoring/presentation/utils/tutor_write_failure_message.dart';
 import 'package:learning_tracker/l10n/app_localizations_en.dart';
@@ -317,5 +318,71 @@ void main() {
         "You don't have permission to make this edit",
       );
     });
+  });
+
+  // ── DNI-486: the Story 1.23 learning commands share the failure mapping ──
+
+  group('DNI-486 — learning commands surface permission failures typed', () {
+    const event = TutorLearnEvent(
+      id: '01JQ3K5M8N2P4R6T7V9X0Z1AB1',
+      curriculumId: 'mishnayos',
+      ref: 'Mishnah Berakhot 2:1',
+      dateState: DateState.dated,
+      learnedOn: '2026-10-01',
+    );
+    const voidId = '01JQ3K5M8N2P4R6T7V9X0Z1AB2';
+
+    Map<String, Future<TutorWriteResult> Function(TutorWriteService)>
+    commands() => {
+      'recordLearning': (s) => s.recordLearning(
+        grantId: _grantId,
+        ownerUid: _ownerUid,
+        profileId: _profileId,
+        events: const [event],
+      ),
+      'voidLearning': (s) => s.voidLearning(
+        grantId: _grantId,
+        ownerUid: _ownerUid,
+        profileId: _profileId,
+        eventId: voidId,
+        targetId: event.id,
+      ),
+      'replaceLearning': (s) => s.replaceLearning(
+        grantId: _grantId,
+        ownerUid: _ownerUid,
+        profileId: _profileId,
+        eventId: voidId,
+        targetId: event.id,
+        replacement: event,
+      ),
+      'unlearn': (s) => s.unlearn(
+        grantId: _grantId,
+        ownerUid: _ownerUid,
+        profileId: _profileId,
+        actionId: voidId,
+        curriculumId: 'mishnayos',
+        leafSet: const ['Mishnah Berakhot 2:1'],
+      ),
+    };
+
+    for (final MapEntry(key: name, value: run) in commands().entries) {
+      test('$name: permission-denied → TutorWriteFailure', () async {
+        final result = await run(_svc(_permissionDeniedInvoker));
+        expect(result, isA<TutorWriteFailure>());
+        expect((result as TutorWriteFailure).code, 'permission-denied');
+        expect(result.isRetryable, isFalse);
+      });
+
+      test('$name: editing turned off → TutorWriteEditingTurnedOff', () async {
+        expect(
+          await run(_svc(_editingTurnedOffInvoker)),
+          isA<TutorWriteEditingTurnedOff>(),
+        );
+      });
+
+      test('$name: success → TutorLearningWritten', () async {
+        expect(await run(_svc(_successInvoker)), isA<TutorLearningWritten>());
+      });
+    }
   });
 }
