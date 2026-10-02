@@ -13,6 +13,7 @@ import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart'
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/points.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
 import '../../helpers/learner_state/lock_fixtures.dart';
@@ -1045,6 +1046,82 @@ void main() {
       final events = [review(1, 1, 1), review(2, 2, 2)];
       expect(earning(events, endedAt: engineAt(on(10))), earning(events));
       expect(earning(events, endedAt: engineAt(on(10))), ids([1, 2]));
+    });
+  });
+
+  group('DNI-468 boundaries: engine earning into points', () {
+    const inLock = 6000;
+
+    test('a lock-ignored earliest event neither earns nor blocks', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, source: subTrack, minutes: inLock),
+            engineLearn(2, b11, stage: 1, minutes: 8000),
+            engineLearn(3, b12, stage: 1, minutes: inLock),
+          ],
+        ),
+      );
+      expect(state.lockIgnoredEventIds, {engineUlid(1), engineUlid(3)});
+      expect(state.earningEventIds, {engineUlid(2)});
+    });
+
+    test('voiding an earning event lowers balance and lifetime, but an '
+        'unlocked achievement stays latched', () {
+      final events = [
+        engineLearn(1, b11, stage: 1),
+        engineLearn(2, b12, stage: 1, minutes: 10),
+        // A repeat main tick: writers still attach its pts_ row.
+        engineLearn(3, b11, stage: 1, minutes: 20),
+      ];
+      final rows = [
+        for (final n in [1, 2, 3])
+          PointsLedgerRow(
+            id: 'pts_${engineUlid(n)}',
+            amount: 10,
+            eventId: engineUlid(n),
+            entryKind: 'completion',
+          ),
+        const PointsLedgerRow(
+          id: 'spend',
+          amount: -5,
+          entryKind: 'redemption_debit',
+        ),
+      ];
+      const thresholds = [AchievementThreshold(id: 'twenty', points: 20)];
+
+      final before = pointsTotals(
+        rows,
+        engine.run(engineInputs(events: events)).earningEventIds,
+      );
+      expect(before, const PointsTotals(balance: 15, lifetimeEarned: 20));
+      final unlocked = newlyCrossedAchievements(before, thresholds, const {});
+      expect(unlocked, {'twenty'});
+
+      final after = pointsTotals(
+        rows,
+        engine
+            .run(
+              engineInputs(events: [...events, engineVoid(4, 2, minutes: 30)]),
+            )
+            .earningEventIds,
+      );
+      expect(after, const PointsTotals(balance: 5, lifetimeEarned: 10));
+      expect(newlyCrossedAchievements(after, thresholds, unlocked), isEmpty);
+      expect(unlockedAchievementIds(after, thresholds, unlocked), {'twenty'});
+    });
+
+    test('voiding the first learn lets a later main repeat earn', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineLearn(2, b11, stage: 1, minutes: 20),
+            engineVoid(3, 1, minutes: 30),
+          ],
+        ),
+      );
+      expect(state.earningEventIds, {engineUlid(2)});
     });
   });
 
