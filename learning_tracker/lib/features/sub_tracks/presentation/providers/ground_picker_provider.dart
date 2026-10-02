@@ -9,16 +9,18 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/content_browsing/content_browsing.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/ground_picker_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ground_selection.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_picker_content.dart';
 
 /// Why the picker cannot be used (AC-7, AC-8): it then shows no editable
 /// control at all, whichever entry point or deep link reached it.
@@ -69,7 +71,7 @@ final class GroundPickerInputs {
     required this.track,
     required this.model,
     required this.curriculum,
-    required this.index,
+    required this.content,
   });
 
   /// The learner.
@@ -84,8 +86,9 @@ final class GroundPickerInputs {
   /// The curriculum, when the app knows it (labels and level names).
   final CurriculumId? curriculum;
 
-  /// ContentIndex lookups for display names.
-  final ContentIndex index;
+  /// The curriculum's own ContentIndex rows and level metadata, for node
+  /// names and level units (AC-2).
+  final GroundPickerContent content;
 }
 
 /// The learner's sub-track read holds rows that failed strict decode
@@ -187,7 +190,10 @@ final groundPickerAccessProvider = FutureProvider.autoDispose
       }
       final state = await ref.watch(learnerStateProvider(scope).future);
       final curriculumState = state[track.curriculumId];
-      final index = await ref.watch(contentIndexProvider.future);
+      final curriculum = CurriculumId.fromStorageKey(track.curriculumId);
+      final items = curriculum == null
+          ? const <ContentItem>[]
+          : await ref.watch(curriculumContentProvider(curriculum).future);
       final holders = groundHolders(
         tracks,
         curriculumId: track.curriculumId,
@@ -198,8 +204,12 @@ final groundPickerAccessProvider = FutureProvider.autoDispose
         GroundPickerInputs(
           scope: scope,
           track: track,
-          curriculum: CurriculumId.fromStorageKey(track.curriculumId),
-          index: index,
+          curriculum: curriculum,
+          content: GroundPickerContent.of(
+            corpus: corpus,
+            items: items,
+            levels: curriculumLevelLabels(curriculum),
+          ),
           model: GroundPickerModel(
             corpus: corpus,
             ownGround: track.ground,

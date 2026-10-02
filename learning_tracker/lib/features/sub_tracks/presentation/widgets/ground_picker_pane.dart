@@ -19,6 +19,7 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart'
     show TriState;
+import 'package:learning_tracker/features/content_browsing/content_browsing.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -80,6 +81,7 @@ class _GroundPickerPaneState extends ConsumerState<GroundPickerPane> {
   void _retry() {
     ref
       ..invalidate(corporaProvider)
+      ..invalidate(curriculumContentProvider)
       ..invalidate(learnerStateProvider)
       ..invalidate(groundPickerSubTracksProvider)
       ..invalidate(groundPickerCalendarProgramProvider)
@@ -187,10 +189,7 @@ class _GroundPickerPaneState extends ConsumerState<GroundPickerPane> {
         : inputs.model.withOwnGround(optimistic);
     final draft = GroundDraft.of(model, ui.picks);
     final labels = GroundPickerLabels(
-      curriculum: inputs.curriculum,
-      curriculumId: inputs.track.curriculumId,
-      index: inputs.index,
-      corpus: model.corpus,
+      content: inputs.content,
       useHebrew: ref.watch(effectiveUseHebrewTermsProvider),
       variant: ref.watch(currentTransliterationVariantProvider),
     );
