@@ -10,13 +10,25 @@
 ///   the two land atomically (and queue together offline). Removal is a
 ///   tombstone (`ended_at` + `end_reason`); this class never calls
 ///   `delete()`.
+/// - **Append-only change log** (AD-6, AD-38, AD-46). `change_log/{entryId}`
+///   is create-only: before the batch, the entry is read through
+///   [readExistingForCreate] (cache, then server). An identical entry means
+///   the change already landed (the batch is atomic), so the call is a
+///   no-op — the sub-track patch is NOT re-applied, which could otherwise
+///   revert a later change. A different (or undecodable) entry throws
+///   [ChangeLogConflictException] and nothing is written: neither the audit
+///   row nor the sub-track. A read failure is rethrown, never treated as
+///   "absent"; only an offline client queues without the remote check
+///   (the AD-46 rules reject a non-identical write at sync time).
 library;
 
 import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:learning_tracker/data/repositories/create_only_guard.dart';
 import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/data/repositories/paged_complete_query.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
@@ -38,9 +50,15 @@ final class FirestoreSubTrackRepository implements SubTrackRepository {
     this.random,
     this.onListenerError,
     this.pageProbe,
-  }) : _firestore = firestore;
+    CreateGuardRead? guardRead,
+  }) : _firestore = firestore,
+       _guardRead = guardRead ?? readExistingForCreate;
 
   final FirebaseFirestore _firestore;
+
+  /// The change-log create-only pre-read (tests inject cache/server
+  /// outcomes).
+  final CreateGuardRead _guardRead;
 
   /// AD-9 resubscribe backoff base.
   final Duration backoffBase;
@@ -88,16 +106,31 @@ final class FirestoreSubTrackRepository implements SubTrackRepository {
     // Both payloads are validated by their domain types before any I/O.
     final entryPayload = toFirestoreMap(change.entry.toStorage());
     final patch = toFirestoreMap(change.toMergePatch());
+    final entryDoc = _profile(
+      scope,
+    ).collection(kChangeLogCollection).doc(change.entry.id);
+    final existing = await _guardRead(entryDoc);
+    if (existing != null) {
+      // Identical replay: the atomic batch already landed. No-op.
+      if (_decodesTo(change.entry, existing)) return;
+      throw ChangeLogConflictException(change.entry.id);
+    }
     final batch = _firestore.batch()
       ..set(
         collectionFor(scope).doc(change.subTrackId),
         patch,
         SetOptions(merge: true),
       )
-      ..set(
-        _profile(scope).collection(kChangeLogCollection).doc(change.entry.id),
-        entryPayload,
-      );
+      ..set(entryDoc, entryPayload);
     await batch.commit();
+  }
+
+  static bool _decodesTo(ChangeLogEntry entry, Map<String, dynamic> data) {
+    try {
+      return ChangeLogEntry.fromStorage(entry.id, fromFirestoreMap(data)) ==
+          entry;
+    } on Object {
+      return false; // an undecodable stored row is never silently replaced
+    }
   }
 }

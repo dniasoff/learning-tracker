@@ -11,6 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
+import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -332,6 +333,57 @@ void main() {
         'learning_events',
       ).get();
       expect(all.docs, isEmpty);
+    });
+  });
+
+  group('create-only guard reads past the cache (review R2)', () {
+    final scope = LearnerScope(ownerUid: _owner, profileId: profileUlid);
+
+    CollectionReference<Map<String, dynamic>> events(
+      FakeFirebaseFirestore firestore,
+    ) => profileCollection(firestore, _owner, profileUlid, 'learning_events');
+
+    test('an event that exists only on the SERVER with a different payload '
+        'is a conflict: nothing is written', () async {
+      final firestore = FakeFirebaseFirestore();
+      final remote = toFirestoreMap(datedLearn(recordedAt: t2).toStorage());
+      final repo = FirestoreLearningEventRepository(
+        firestore: firestore,
+        guardRead: (_) async => remote, // cache missed; server has the row
+      );
+
+      await expectLater(
+        repo.create(scope, datedLearn()),
+        throwsA(isA<LearningEventConflictException>()),
+      );
+      expect((await events(firestore).get()).docs, isEmpty);
+    });
+
+    test('an identical server-only event is an idempotent no-op', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repo = FirestoreLearningEventRepository(
+        firestore: firestore,
+        guardRead: (_) async => toFirestoreMap(datedLearn().toStorage()),
+      );
+      await repo.create(scope, datedLearn());
+      expect((await events(firestore).get()).docs, isEmpty);
+    });
+
+    test('a guard read failure propagates and nothing is written (never an '
+        'upsert over an unseen event)', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repo = FirestoreLearningEventRepository(
+        firestore: firestore,
+        guardRead: (_) async => throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'internal',
+        ),
+      );
+      await expectLater(
+        repo.create(scope, datedLearn()),
+        throwsA(isA<FirebaseException>()),
+      );
+      expect((await events(firestore).get()).docs, isEmpty);
     });
   });
 }

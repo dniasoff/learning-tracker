@@ -11,18 +11,17 @@
 ///   The payload is the event's validated AD-52 map with timestamps
 ///   converted to Firestore `Timestamp`s — never a `FieldValue`, so a
 ///   retry re-sends byte-for-byte the same value (AD-46).
-/// - **Create-only guard.** Before the `set()`, the doc is read from the
-///   LOCAL cache only: an existing identical event makes the call a no-op
-///   (idempotent replay); an existing different (or undecodable) event
+/// - **Create-only guard.** Before the `set()`, the doc is read through
+///   [readExistingForCreate] (local cache, then server; see
+///   `create_only_guard.dart`): an existing identical event makes the call a
+///   no-op (idempotent replay); an existing different (or undecodable) event
 ///   throws [LearningEventConflictException] and nothing is written, so a
-///   conflicting replay can never overwrite an appended event. The cache
-///   holds every pending local write and every event a `watchAll` listener
-///   has seen, which covers the realistic conflict (a retry that rebuilt
-///   its payload). The check is cache-only — never a server round trip and
-///   never a transaction — so the write stays queueable offline (AD-38
-///   offline owner create). An event present only on the server is guarded
-///   by the AD-46 rules whitelist (create-only plus identical replay,
-///   Story 1.9), which rejects the non-identical update server-side.
+///   conflicting replay can never overwrite an appended event. A cache or
+///   server read FAILURE is rethrown, never treated as "absent". Only an
+///   offline client (server `unavailable`) proceeds without a remote check:
+///   the write stays queueable offline (AD-38 offline owner create) and the
+///   AD-46 rules whitelist (create-only plus identical replay, Story 1.9)
+///   rejects a non-identical write at sync time.
 /// - The `{uid}` path segment is the caller-supplied [LearnerScope.ownerUid]
 ///   (the persisted path uid, or a grant's owner uid — ruling B10), never
 ///   read from the live Auth user here.
@@ -31,6 +30,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:learning_tracker/data/repositories/create_only_guard.dart';
 import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/data/repositories/paged_complete_query.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -53,9 +53,14 @@ final class FirestoreLearningEventRepository
     this.random,
     this.onListenerError,
     this.pageProbe,
-  }) : _firestore = firestore;
+    CreateGuardRead? guardRead,
+  }) : _firestore = firestore,
+       _guardRead = guardRead ?? readExistingForCreate;
 
   final FirebaseFirestore _firestore;
+
+  /// The create-only pre-read (tests inject cache/server outcomes).
+  final CreateGuardRead _guardRead;
 
   /// AD-9 resubscribe backoff base.
   final Duration backoffBase;
@@ -99,26 +104,12 @@ final class FirestoreLearningEventRepository
     // lets a null/invalid id reach `.doc()` — which would mint a random id.
     final payload = toFirestoreMap(event.toStorage());
     final doc = collectionFor(scope).doc(event.id);
-    final existing = await _cachedData(doc);
+    final existing = await _guardRead(doc);
     if (existing != null) {
       if (_decodesTo(event, existing)) return; // identical replay: no-op
       throw LearningEventConflictException(event.id);
     }
     await doc.set(payload);
-  }
-
-  /// The doc's data from the local cache, or null when the cache holds no
-  /// such document (a cache miss throws `unavailable`; never goes to the
-  /// server).
-  static Future<Map<String, dynamic>?> _cachedData(
-    DocumentReference<Map<String, dynamic>> doc,
-  ) async {
-    try {
-      final snapshot = await doc.get(const GetOptions(source: Source.cache));
-      return snapshot.exists ? snapshot.data() : null;
-    } on FirebaseException {
-      return null;
-    }
   }
 
   static bool _decodesTo(LearningEvent event, Map<String, dynamic> data) {

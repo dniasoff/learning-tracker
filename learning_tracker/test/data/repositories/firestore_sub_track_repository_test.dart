@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
+import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -271,6 +272,115 @@ void main() {
         track.toStorage().keys.toSet().difference(SubTrack.storageKeys),
         isEmpty,
       );
+    });
+  });
+
+  group('change_log is append-only: create-only plus identical replay '
+      '(AD-6, AD-38, AD-46; review R2)', () {
+    const profile = 'users/$_owner/learner_profiles/$profileUlid';
+
+    SubTrackChange rateChange(int rate) => SubTrackChange.fields(
+      subTrackId: ulidB,
+      changedFields: {'rate_per_week': rate},
+      entry: _entry(ulidB, {'sub_tracks/$ulidB.rate_per_week': rate}),
+    );
+
+    test('an identical replay is a no-op: no second batch, and a LATER '
+        'change to the sub-track is not reverted', () async {
+      final firestore = _SpyFirestore();
+      final repo = FirestoreSubTrackRepository(firestore: firestore);
+      final doc = repo.collectionFor(scope).doc(ulidB);
+      await doc.set(_storedSubTrack(0));
+
+      await repo.applyGovernedChange(scope, rateChange(9));
+      // A later governed change landed (simulated directly).
+      await doc.set({'rate_per_week': 3}, SetOptions(merge: true));
+      firestore.ops.clear();
+
+      await repo.applyGovernedChange(scope, rateChange(9));
+
+      expect(firestore.ops, isEmpty);
+      expect((await doc.get()).data()!['rate_per_week'], 3);
+    });
+
+    test('a NON-identical retry at an existing entry id throws and leaves '
+        'both the audit entry and the sub-track unchanged', () async {
+      final firestore = _SpyFirestore();
+      final repo = FirestoreSubTrackRepository(firestore: firestore);
+      final doc = repo.collectionFor(scope).doc(ulidB);
+      await doc.set(_storedSubTrack(0));
+      await repo.applyGovernedChange(scope, rateChange(9));
+
+      final entryDoc = firestore.doc('$profile/change_log/$ulidD');
+      final entryBefore = (await entryDoc.get()).data();
+      final trackBefore = (await doc.get()).data();
+      firestore.ops.clear();
+
+      await expectLater(
+        repo.applyGovernedChange(scope, rateChange(5)),
+        throwsA(
+          isA<ChangeLogConflictException>().having(
+            (e) => e.entryId,
+            'entryId',
+            ulidD,
+          ),
+        ),
+      );
+
+      expect(firestore.ops, isEmpty);
+      expect((await entryDoc.get()).data(), entryBefore);
+      expect((await doc.get()).data(), trackBefore);
+    });
+
+    test(
+      'an undecodable stored entry is a conflict, never overwritten',
+      () async {
+        final firestore = _SpyFirestore();
+        final repo = FirestoreSubTrackRepository(firestore: firestore);
+        final entryDoc = firestore.doc('$profile/change_log/$ulidD');
+        await entryDoc.set({'entity': 'subTrack', 'junk': true});
+
+        await expectLater(
+          repo.applyGovernedChange(scope, rateChange(9)),
+          throwsA(isA<ChangeLogConflictException>()),
+        );
+        expect(firestore.ops, isEmpty);
+        expect((await entryDoc.get()).data(), {
+          'entity': 'subTrack',
+          'junk': true,
+        });
+      },
+    );
+
+    test('an entry that exists only on the SERVER with different data is a '
+        'conflict: nothing is written', () async {
+      final firestore = _SpyFirestore();
+      final remote = toFirestoreMap(rateChange(5).entry.toStorage());
+      final repo = FirestoreSubTrackRepository(
+        firestore: firestore,
+        guardRead: (_) async => remote,
+      );
+      await expectLater(
+        repo.applyGovernedChange(scope, rateChange(9)),
+        throwsA(isA<ChangeLogConflictException>()),
+      );
+      expect(firestore.ops, isEmpty);
+    });
+
+    test('a guard read failure propagates and nothing is written', () async {
+      final firestore = _SpyFirestore();
+      final repo = FirestoreSubTrackRepository(
+        firestore: firestore,
+        guardRead: (_) async => throw FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'internal',
+        ),
+      );
+      await expectLater(
+        repo.applyGovernedChange(scope, rateChange(9)),
+        throwsA(isA<FirebaseException>()),
+      );
+      expect(firestore.ops, isEmpty);
     });
   });
 }

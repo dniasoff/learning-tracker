@@ -5,7 +5,7 @@
 /// Auth uid; a tutored scope's owner comes from the validated grant.
 library;
 
-import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/drift.dart' show Value, driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -165,8 +165,8 @@ void main() {
     );
   });
 
-  test('reconciliation: an initial bind, then an AD-19 anon-uid remap, each '
-      're-resolve the scope to the newly persisted uid', () async {
+  test('reconciliation: an initial bind re-resolves the scope to the newly '
+      'persisted uid', () async {
     final registry = await _registry();
     final container = _container(FakeFirebaseFirestore(), registry);
     container.read(activeProfileDocIdProvider.notifier).set(profileUlid);
@@ -175,23 +175,67 @@ void main() {
 
     expect(await container.read(activeLearnerScopeProvider.future), isNull);
 
-    final resolver = PathUidResolver(registry);
-    final bind = await resolver.reconcileLiveUid(
-      accountId: _accountId,
-      liveUid: 'anon-uid-1',
-    );
+    final bind = await PathUidResolver(
+      registry,
+    ).reconcileLiveUid(accountId: _accountId, liveUid: 'anon-uid-1');
     expect(bind.kind, PathUidReconcileKind.initialBind);
     await pumpEventQueue();
     expect(
       await container.read(activeLearnerScopeProvider.future),
       LearnerScope(ownerUid: 'anon-uid-1', profileId: profileUlid),
     );
+  });
 
-    final remap = await resolver.reconcileLiveUid(
-      accountId: _accountId,
-      liveUid: 'anon-uid-2',
+  test('an AD-19 anon-uid remap with the old tree not yet re-homed REFUSES '
+      'the scope: no read moves to the empty new namespace, no write splits '
+      'the account, and the old data is untouched (review R2)', () async {
+    final firestore = FakeFirebaseFirestore();
+    final registry = await _registry(boundUid: 'anon-uid-1');
+    final container = _container(firestore, registry);
+    container.read(activeProfileDocIdProvider.notifier).set(profileUlid);
+    final sub = container.listen(activeLearnerScopeProvider, (_, _) {});
+    addTearDown(sub.close);
+
+    // The learner's data lives under the original uid.
+    final oldScope = LearnerScope(
+      ownerUid: 'anon-uid-1',
+      profileId: profileUlid,
     );
+    expect(await container.read(activeLearnerScopeProvider.future), oldScope);
+    final events = (await container.read(
+      learningEventRepositoryProvider.future,
+    ))!;
+    await events.create(oldScope, datedLearn());
+    const oldEvent =
+        'users/anon-uid-1/learner_profiles/$profileUlid/learning_events/$ulidA';
+    final before = (await firestore.doc(oldEvent).get()).data();
+
+    final remap = await PathUidResolver(
+      registry,
+    ).reconcileLiveUid(accountId: _accountId, liveUid: 'anon-uid-2');
     expect(remap.kind, PathUidReconcileKind.remapped);
+    await pumpEventQueue();
+
+    await expectLater(
+      container.read(activeLearnerScopeProvider.future),
+      throwsA(
+        isA<LearnerScopeRehomePendingException>()
+            .having((e) => e.previousUid, 'previousUid', 'anon-uid-1')
+            .having((e) => e.pathUid, 'pathUid', 'anon-uid-2'),
+      ),
+    );
+    expect(
+      (await firestore.collection('users/anon-uid-2/learner_profiles').get())
+          .docs,
+      isEmpty,
+    );
+    expect((await firestore.doc(oldEvent).get()).data(), before);
+
+    // Once the re-home consumer has moved the tree and cleared the
+    // breadcrumb, the scope opens on the new uid.
+    await (registry.update(registry.deviceAccounts)
+          ..where((t) => t.accountId.equals(_accountId)))
+        .write(const DeviceAccountsCompanion(previousFirebaseUid: Value(null)));
     await pumpEventQueue();
     expect(
       await container.read(activeLearnerScopeProvider.future),
