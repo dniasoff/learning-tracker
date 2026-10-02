@@ -1,0 +1,14 @@
+{
+  "group": "R9",
+  "title": "Lock windows and settings",
+  "description": "Action: rewire to lockWindows / learnerLockSettingsProvider; delete the old window service and prefs.",
+  "entries": [
+    {"symbol": "ZmanimWindowService", "kind": "service", "state": "pending", "owner": "DNI-481"},
+    {"symbol": "computeWindows", "kind": "service", "state": "pending", "owner": "DNI-481", "note": "ZmanimWindowService.computeWindows"},
+    {"symbol": "SacredTimePreferences", "kind": "service", "state": "pending", "owner": "DNI-481"},
+    {"symbol": "SacredLocationNotifier", "kind": "service", "state": "pending", "owner": "DNI-481"},
+    {"symbol": "sacredLocationProvider", "kind": "service", "state": "pending", "owner": "DNI-481"},
+    {"symbol": "InIsraelNotifier", "kind": "service", "state": "pending", "owner": "DNI-481"},
+    {"symbol": "inIsraelProvider", "kind": "service", "state": "pending", "owner": "DNI-481"}
+  ]
+}

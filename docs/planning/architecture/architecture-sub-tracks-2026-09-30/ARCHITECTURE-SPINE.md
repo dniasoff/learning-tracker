@@ -95,6 +95,7 @@ These are binding and read-only, inherited from `architecture-learning-tracker-2
   - The ULID is generated client-side before the write and reused on retry.
   - **Effective instant:** `effectiveAt(e) = original_recorded_at ?? recorded_at`. Every rule that reads an event's time uses it: lock (AD-36), `streakDay` and `catchUpWindow` (AD-40), earning order (AD-50), review schedule (AD-35), siyum (Consistency), history order. Raw `recorded_at` is used only by the AD-54 skew rule.
   - **Un-learn:** `unlearn(curriculum, leafSet S)` is the only un-learn command. It voids every counted learn event whose ref is in `S`. For each counted node event `N` covering part of `S`, it voids `N` and writes `before_tracking` events for the maximal ContentIndex nodes covering `expand(N) \ S`, each with `original_recorded_at = effectiveAt(N)`. Chunked per AD-54. Undo of `unlearn` voids the re-issued events and re-copies the voided ones.
+  - Server callables receive a client-computed unlearn plan; the functions runtime holds no ContentIndex (`tutorUnlearn` takes the leaf set plus each partially covered node's re-issue nodes, ruling B9).
 
 ### AD-32 — "Learnt" is stage-agnostic; stage is a main-track review tag
 

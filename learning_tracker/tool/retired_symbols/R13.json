@@ -1,0 +1,11 @@
+{
+  "group": "R13",
+  "title": "Governed writers",
+  "description": "Action: reroute governed writers to LearningCommands / writeWithChangeLog (not retired, so not listed); move learning_order readers and writers to track_learning_order. The rules/deletes.ts remnants of `learning_order` are R14's.",
+  "entries": [
+    {"symbol": "learning_order", "kind": "collection", "state": "pending", "owner": "DNI-476", "paths": {"include": ["lib/**", "functions/src/**"], "exclude": ["functions/src/deletes.ts"]}},
+    {"symbol": "FirestoreLearningOrderRepository", "kind": "service", "state": "pending", "owner": "DNI-476"},
+    {"symbol": "FirestoreLearningOrderRepositoryAdapter", "kind": "service", "state": "pending", "owner": "DNI-476"},
+    {"symbol": "SchedulerFirestoreLearningOrderRepositoryAdapter", "kind": "service", "state": "pending", "owner": "DNI-476"}
+  ]
+}

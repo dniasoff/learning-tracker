@@ -1,0 +1,9 @@
+{
+  "group": "R7",
+  "title": "Points and achievement readers",
+  "description": "Action: rewire to the AD-50 filtered balance and latch record. Listed are the old-store reader adapters.",
+  "entries": [
+    {"symbol": "FirestorePointsBalanceReaderAdapter", "kind": "service", "state": "pending", "owner": "DNI-480"},
+    {"symbol": "FirestorePointsLifetimeEarnedReaderAdapter", "kind": "service", "state": "pending", "owner": "DNI-480"}
+  ]
+}

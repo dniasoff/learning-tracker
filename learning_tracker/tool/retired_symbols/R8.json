@@ -1,0 +1,16 @@
+{
+  "group": "R8",
+  "title": "bookmarks",
+  "description": "Action: delete (position derived, AD-33). The rules/deletes.ts remnants of `bookmarks` are R14's.",
+  "entries": [
+    {"symbol": "bookmarks", "kind": "collection", "state": "pending", "owner": "DNI-478", "paths": {"include": ["lib/**", "functions/src/**"], "exclude": ["functions/src/deletes.ts"]}},
+    {"symbol": "BookmarkEntity", "kind": "type", "state": "pending", "owner": "DNI-478"},
+    {"symbol": "BookmarkRepository", "kind": "type", "state": "pending", "owner": "DNI-478"},
+    {"symbol": "BookmarkRepositoryNotReadyException", "kind": "type", "state": "pending", "owner": "DNI-478"},
+    {"symbol": "FirestoreBookmarkRepository", "kind": "service", "state": "pending", "owner": "DNI-478"},
+    {"symbol": "FirestoreBookmarkRepositoryAdapter", "kind": "service", "state": "pending", "owner": "DNI-478"},
+    {"symbol": "bookmarkRepositoryProvider", "kind": "service", "state": "pending", "owner": "DNI-478"},
+    {"symbol": "tutorUpsertBookmark", "kind": "callable", "state": "pending", "owner": "DNI-478"},
+    {"symbol": "upsertBookmark", "kind": "service", "state": "pending", "owner": "DNI-478", "note": "TutorWriteService bookmark call"}
+  ]
+}

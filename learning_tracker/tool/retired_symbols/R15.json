@@ -1,0 +1,6 @@
+{
+  "group": "R15",
+  "title": "Tests and fixtures",
+  "description": "Action: port to engine/command tests or delete. This gate scans lib/, functions/src/, firestore.rules and firestore.indexes.json only; the test-root sweep is DNI-489's own scanner, so R15 has no entries here.",
+  "entries": []
+}

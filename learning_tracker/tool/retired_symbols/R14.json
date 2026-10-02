@@ -1,0 +1,12 @@
+{
+  "group": "R14",
+  "title": "Rules, indexes, deletion list",
+  "description": "Action: deny writes in the cutover release (allowlisted in allowlist.json by DNI-490), remove in the release after (DNI-491 empties the allowlist). Governed-collection matches are amended per AD-38, never removed.",
+  "entries": [
+    {"symbol": "completions", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"},
+    {"symbol": "learning_ledger", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"},
+    {"symbol": "streak_events", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"},
+    {"symbol": "bookmarks", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"},
+    {"symbol": "learning_order", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"}
+  ]
+}

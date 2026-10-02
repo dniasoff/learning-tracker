@@ -1,0 +1,15 @@
+{
+  "group": "R6",
+  "title": "streak_events, streak_reducer",
+  "description": "Action: rewire to the per-curriculum LearnerState streak (AD-40 surfaces), then delete. The rules/indexes/deletes.ts remnants of `streak_events` are R14's.",
+  "entries": [
+    {"symbol": "streak_events", "kind": "collection", "state": "pending", "owner": "DNI-479", "paths": {"include": ["lib/**", "functions/src/**"], "exclude": ["functions/src/deletes.ts"]}},
+    {"symbol": "StreakEventEntry", "kind": "type", "state": "pending", "owner": "DNI-479"},
+    {"symbol": "StreakEventEntryFirestoreCodec", "kind": "type", "state": "pending", "owner": "DNI-479"},
+    {"symbol": "FirestoreStreakEventRepository", "kind": "service", "state": "pending", "owner": "DNI-479"},
+    {"symbol": "FirestoreStreakStateRepository", "kind": "service", "state": "pending", "owner": "DNI-479"},
+    {"symbol": "StreakStateRepositoryNotReadyException", "kind": "type", "state": "pending", "owner": "DNI-479"},
+    {"symbol": "StreakReducer", "kind": "service", "state": "pending", "owner": "DNI-479", "note": "streak_reducer"},
+    {"symbol": "StreakStateService", "kind": "service", "state": "pending", "owner": "DNI-479"}
+  ]
+}
