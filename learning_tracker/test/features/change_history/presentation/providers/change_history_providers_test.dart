@@ -11,7 +11,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/change_history/data/repositories/change_history_sources.dart';
 import 'package:learning_tracker/features/change_history/presentation/providers/change_history_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -22,6 +26,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 
@@ -54,6 +59,19 @@ class _PinFor extends ParentPinAuthenticatedProfileId {
 }
 
 final _scope = LearnerScope(ownerUid: 'owner-uid', profileId: profileUlid);
+
+/// A sub-track read whose `watchAll` emits what the test adds.
+class _LiveSubTracks implements SubTrackRepository {
+  _LiveSubTracks(this.reads);
+
+  final StreamController<CompleteRead<SubTrack>> reads;
+
+  @override
+  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) => reads.stream;
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   group('changeHistoryAccessProvider (AC-1)', () {
@@ -169,6 +187,38 @@ void main() {
       expect(value.isLoading, isTrue);
       expect(value.hasValue, isFalse);
     });
+  });
+
+  test('sub-track names are the snapshot the history opened with: a '
+      'rename while it is open does not relabel older rows', () async {
+    final reads = StreamController<CompleteRead<SubTrack>>();
+    addTearDown(() => reads.close());
+    final repo = _LiveSubTracks(reads);
+    final container = ProviderContainer(
+      overrides: [subTrackRepositoryProvider.overrideWith((ref) => repo)],
+    );
+    addTearDown(container.dispose);
+    final values = <Map<String, String>>[];
+    container.listen(
+      changeHistorySubTrackNamesProvider(_scope),
+      (_, next) => next.whenData(values.add),
+      fireImmediately: true,
+    );
+    final opened = c0SubTrack();
+    repo.reads.add(CompleteReadReady([opened]));
+    await pumpEventQueue();
+    repo.reads.add(
+      CompleteReadReady([
+        SubTrack.fromStorage(opened.id, {
+          ...opened.toStorage(),
+          SubTrack.kName: 'Renamed while open',
+        }),
+      ]),
+    );
+    await pumpEventQueue();
+    expect(values, [
+      {opened.id: opened.name},
+    ]);
   });
 
   test('the Story 4.6 Undo seam is empty: no Undo is offered', () {
