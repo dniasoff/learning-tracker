@@ -12,6 +12,7 @@
 library;
 
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 /// Where a capture came from.
 enum CaptureSourceKind {
@@ -27,6 +28,28 @@ enum CaptureSourceKind {
   final String storage;
 }
 
+/// The `action` of a `subtrack_lifecycle` event (AD-47). Story 2.1 emits
+/// the four lifecycle commands; later stories add ground add, reorder,
+/// remove and *Add next year*.
+enum SubTrackLifecycleAction {
+  /// A sub-track was created.
+  create('create'),
+
+  /// A sub-track was edited.
+  edit('edit'),
+
+  /// A sub-track was ended.
+  end('end'),
+
+  /// A sub-track was deleted (tombstoned).
+  delete('delete');
+
+  const SubTrackLifecycleAction(this.storage);
+
+  /// The analytics parameter value.
+  final String storage;
+}
+
 /// Reports learning analytics.
 abstract interface class LearningAnalytics {
   /// [count] leaves were captured for [curriculumId].
@@ -35,6 +58,16 @@ abstract interface class LearningAnalytics {
     required CaptureSourceKind sourceKind,
     required DateState dateState,
     required int count,
+  });
+
+  /// A sub-track lifecycle command succeeded (AD-47 `subtrack_lifecycle`):
+  /// enums and counts only — no name, ref, date or profile id.
+  /// [groundEntries] is the number of ground entries after the change.
+  void subTrackLifecycle({
+    required String curriculumId,
+    required SubTrackType type,
+    required SubTrackLifecycleAction action,
+    required int groundEntries,
   });
 }
 
