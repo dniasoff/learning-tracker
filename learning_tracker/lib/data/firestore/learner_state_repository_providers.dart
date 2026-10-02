@@ -212,6 +212,14 @@ final learningWritePortProvider = FutureProvider<LearningWritePort?>((
   return FirestoreLearningEventRepository(firestore: handles.firestore);
 }, retry: (retryCount, error) => null);
 
+/// The live signed-in uid of the active account — the AD-46 `actor.uid`
+/// of an owner write, which the rules require to equal
+/// `request.auth.uid` — or null while not ready (DNI-469).
+final activeAuthUidProvider = FutureProvider<String?>(
+  (ref) async => (await _readyHandles(ref))?.authUid,
+  retry: (retryCount, error) => null,
+);
+
 /// The AD-50 [PointsAmountReader] over the active account's Firestore
 /// handle, or null while not ready (DNI-469).
 final pointsAmountReaderProvider = FutureProvider<PointsAmountReader?>((

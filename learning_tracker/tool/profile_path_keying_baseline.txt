@@ -17,6 +17,12 @@
 # (functions/src/write_with_change_log.ts) and the tutor learning callables
 # (functions/src/tutor_learning.ts) address the same profileRef
 # users/{ownerUid}/learner_profiles/{profileId ULID} — not a genuine split.
+# points_ledger and point_configs joined with Story 1.7 (DNI-469): the
+# owner LearningCommands write port (FirestoreLearningEventRepository
+# .commit) co-writes points_ledger/pts_{eventId} and
+# FirestorePointsAmountReader reads point_configs under
+# users/{uid}/learner_profiles/{profileId ULID}/..., the same profileRef
+# writeWithChangeLog's AD-50 pts_ attach uses — not a genuine split.
 # A new collection NOT listed here fails `make audit`/`make ci`.
 # Widening this file requires the same team sign-off any other ratchet
 # widening requires — a new entry here means a NEW collection became
@@ -30,6 +36,8 @@ goals
 learning_events
 learning_ledger
 learning_order
+point_configs
+points_ledger
 profile_programs
 stage_definitions
 study_day_configs
