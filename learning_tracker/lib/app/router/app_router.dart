@@ -4,11 +4,13 @@ import 'package:learning_tracker/app/router/app_shell.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/own_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
 import 'package:learning_tracker/features/account/presentation/screens/sign_in_screen.dart';
+import 'package:learning_tracker/features/change_history/presentation/screens/change_history_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_search_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
@@ -74,6 +76,9 @@ class AppRouter extends RootStackRouter {
   /// navigation when a router is built without session wiring.
   final ParentSessionGuard parentSessionGuard;
 
+  /// DNI-513: refuses tutored sessions on parent-only views.
+  final OwnSessionGuard ownSessionGuard;
+
   AppRouter({
     required this.authGuard,
     required this.profileGuard,
@@ -81,8 +86,10 @@ class AppRouter extends RootStackRouter {
     required this.pinGuard,
     required this.sacredTimeLocationGuard,
     ParentSessionGuard? parentSessionGuard,
+    OwnSessionGuard? ownSessionGuard,
     super.navigatorKey,
-  }) : parentSessionGuard = parentSessionGuard ?? ParentSessionGuard.denyAll();
+  }) : parentSessionGuard = parentSessionGuard ?? ParentSessionGuard.denyAll(),
+       ownSessionGuard = ownSessionGuard ?? OwnSessionGuard.denyAll();
 
   @override
   RouteType get defaultRouteType => const RouteType.material();
@@ -291,6 +298,14 @@ class AppRouter extends RootStackRouter {
       path: '/parent-mode/tracks',
       page: ParentTrackManagementRoute.page,
       guards: [authGuard, childModeGuard, pinGuard],
+    ),
+    // DNI-513 (Story 4.5): the parent Change history. Parent role only:
+    // a tutored session is refused before any PIN prompt, then the usual
+    // parent-mode child-profile and parent-PIN gates apply (AC-1).
+    AutoRoute(
+      path: '/parent-mode/change-history',
+      page: ChangeHistoryRoute.page,
+      guards: [authGuard, ownSessionGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
       path: '/study-days/:curriculumId',
