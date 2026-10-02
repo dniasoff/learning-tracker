@@ -15,6 +15,7 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
@@ -250,10 +251,34 @@ typedef RecordedCapture = ({
   int count,
 });
 
+/// One recorded [LearningAnalytics.subTrackLifecycle].
+typedef RecordedSubTrackLifecycle = ({
+  String curriculumId,
+  SubTrackType type,
+  SubTrackLifecycleAction action,
+  int groundEntries,
+});
+
 /// A [LearningAnalytics] that records every event.
 final class RecordingLearningAnalytics implements LearningAnalytics {
   /// Every `capture`, in order.
   final List<RecordedCapture> captures = [];
+
+  /// Every `subTrackLifecycle`, in order.
+  final List<RecordedSubTrackLifecycle> lifecycles = [];
+
+  @override
+  void subTrackLifecycle({
+    required String curriculumId,
+    required SubTrackType type,
+    required SubTrackLifecycleAction action,
+    required int groundEntries,
+  }) => lifecycles.add((
+    curriculumId: curriculumId,
+    type: type,
+    action: action,
+    groundEntries: groundEntries,
+  ));
 
   @override
   void capture({

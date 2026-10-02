@@ -54,6 +54,7 @@ import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 
 /// The intent of a new sub-track (AD-52 fields; `rate_per_week` in the
 /// curriculum's leaf units, dates `YYYY-MM-DD` in the learner's time zone).
@@ -174,6 +175,7 @@ final class SubTrackCommands {
     required DateTime Function() nowUtc,
     required String Function() newId,
     Future<Corpus?> Function(String curriculumId)? corpusOf,
+    LearningAnalytics? analytics,
     this.ackTimeout = const Duration(seconds: 3),
     this.readTimeout = const Duration(seconds: 10),
   }) : _subTracks = subTracks,
@@ -181,7 +183,8 @@ final class SubTrackCommands {
        _today = today,
        _nowUtc = nowUtc,
        _newId = newId,
-       _corpusOf = corpusOf;
+       _corpusOf = corpusOf,
+       _analytics = analytics;
 
   /// The learner the commands write for.
   final LearnerScope scope;
@@ -203,6 +206,7 @@ final class SubTrackCommands {
   final DateTime Function() _nowUtc;
   final String Function() _newId;
   final Future<Corpus?> Function(String curriculumId)? _corpusOf;
+  final LearningAnalytics? _analytics;
 
   final Map<String, (PendingFailure, SubTrackChange)> _pending = {};
   final _pendingController = StreamController<List<PendingFailure>>.broadcast(
@@ -245,12 +249,16 @@ final class SubTrackCommands {
     // Absent optional fields are not written (nor logged as null → null).
     final fields = _fieldsOf(candidate)..removeWhere((_, v) => v == null);
     final entry = _entry(id, entryId, before: const {}, after: fields);
-    return _commit(
-      SubTrackChange.create(
-        subTrackId: id,
-        changedFields: fields,
-        entry: entry,
+    return _emitOnSuccess(
+      await _commit(
+        SubTrackChange.create(
+          subTrackId: id,
+          changedFields: fields,
+          entry: entry,
+        ),
       ),
+      candidate,
+      SubTrackLifecycleAction.create,
     );
   }
 
@@ -288,12 +296,16 @@ final class SubTrackCommands {
     }
     final entryId = _newId();
     final entry = _entry(subTrackId, entryId, before: before, after: after);
-    return _commit(
-      SubTrackChange.fields(
-        subTrackId: subTrackId,
-        changedFields: after,
-        entry: entry,
+    return _emitOnSuccess(
+      await _commit(
+        SubTrackChange.fields(
+          subTrackId: subTrackId,
+          changedFields: after,
+          entry: entry,
+        ),
       ),
+      candidate,
+      SubTrackLifecycleAction.edit,
     );
   }
 
@@ -350,14 +362,38 @@ final class SubTrackCommands {
       after: {SubTrack.kEndedAt: endedAt, SubTrack.kEndReason: reason.storage},
       at: endedAt,
     );
-    return _commit(
-      SubTrackChange.tombstone(
-        subTrackId: subTrackId,
-        endedAt: endedAt,
-        reason: reason,
-        entry: entry,
+    return _emitOnSuccess(
+      await _commit(
+        SubTrackChange.tombstone(
+          subTrackId: subTrackId,
+          endedAt: endedAt,
+          reason: reason,
+          entry: entry,
+        ),
       ),
+      current,
+      reason == SubTrackEndReason.ended
+          ? SubTrackLifecycleAction.end
+          : SubTrackLifecycleAction.delete,
     );
+  }
+
+  /// Emits one AD-47 `subtrack_lifecycle` event for a written (or queued)
+  /// command — enums and counts only — and passes [result] through.
+  CaptureResult _emitOnSuccess(
+    CaptureResult result,
+    SubTrack track,
+    SubTrackLifecycleAction action,
+  ) {
+    if (result is CaptureSuccess && result.changeIds.isNotEmpty) {
+      _analytics?.subTrackLifecycle(
+        curriculumId: track.curriculumId,
+        type: track.type,
+        action: action,
+        groundEntries: track.ground.length,
+      );
+    }
+    return result;
   }
 
   /// The complete sub-track read of [scope] (live and ended), or null when

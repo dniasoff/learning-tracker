@@ -16,6 +16,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 
@@ -563,6 +564,69 @@ void main() {
         await noIntent.dispose();
       },
     );
+  });
+
+  group('T5 subtrack_lifecycle analytics (AD-47)', () {
+    test('one enum/count-only event per written command', () async {
+      final analytics = RecordingLearningAnalytics();
+      final tracked = SubTrackCommands(
+        scope: scope,
+        actor: parentActor,
+        subTracks: repo,
+        intent: intent,
+        today: () => _today,
+        nowUtc: () => _now,
+        newId: _ids(),
+        analytics: analytics,
+        ackTimeout: const Duration(milliseconds: 50),
+      );
+      await tracked.createSubTrack(
+        _draft(ground: const [_berakhot, _shabbat]),
+        subTrackId: ulidD,
+      );
+      await tracked.editSubTrack(ulidD, const SubTrackEdit(ratePerWeek: 9));
+      await tracked.editSubTrack(ulidD, const SubTrackEdit(ratePerWeek: 9));
+      await tracked.endSubTrack(ulidD);
+      await tracked.deleteSubTrack(ulidD); // already ended: nothing written
+      expect(analytics.lifecycles, [
+        (
+          curriculumId: 'shas',
+          type: SubTrackType.ongoing,
+          action: SubTrackLifecycleAction.create,
+          groundEntries: 2,
+        ),
+        (
+          curriculumId: 'shas',
+          type: SubTrackType.ongoing,
+          action: SubTrackLifecycleAction.edit,
+          groundEntries: 2,
+        ),
+        (
+          curriculumId: 'shas',
+          type: SubTrackType.ongoing,
+          action: SubTrackLifecycleAction.end,
+          groundEntries: 2,
+        ),
+      ]);
+      await tracked.dispose();
+    });
+
+    test('a rejected command emits nothing', () async {
+      final analytics = RecordingLearningAnalytics();
+      final tracked = SubTrackCommands(
+        scope: scope,
+        actor: parentActor,
+        subTracks: repo,
+        intent: intent,
+        today: () => _today,
+        nowUtc: () => _now,
+        newId: _ids(),
+        analytics: analytics,
+      );
+      await tracked.createSubTrack(_draft(rate: 0));
+      expect(analytics.lifecycles, isEmpty);
+      await tracked.dispose();
+    });
   });
 
   test('LearningCommands declares the four sub-track commands', () async {
