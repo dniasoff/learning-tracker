@@ -97,19 +97,25 @@ void main() {
     expect(documentData(bookmarks.single)['sefaria_ref'], 'Berakhot.1.1');
   });
 
-  test('exports learning order rows', () async {
+  test('exports main-track order rows (track_learning_order; the retired '
+      'learning_order collection is merged into it, DNI-476)', () async {
     final firestore = await profileStore();
-    await profileCollection(firestore, 'learning_order').doc('order-1').set({
+    await profileCollection(
+      firestore,
+      'track_learning_order',
+    ).doc('mishnayos_seder_Zeraim').set({
       'curriculum_id': 'mishnayos',
-      'sefaria_ref': 'Berakhot',
+      'level': 'seder',
+      'ref': 'Zeraim',
+      'user_sort_order': 0,
     });
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
       testProfileId,
     );
-    final rows = collectionDocuments(profile, 'learning_order');
+    final rows = collectionDocuments(profile, 'track_learning_order');
     expect(rows, hasLength(1));
-    expect(documentData(rows.single)['sefaria_ref'], 'Berakhot');
+    expect(documentData(rows.single)['ref'], 'Zeraim');
   });
 
   test('exports streak_events rows', () async {
@@ -190,19 +196,21 @@ void main() {
     expect(restored.docs.single.data()['sefaria_ref'], 'Berakhot.1.1');
   });
 
-  test('importData imports learning order', () async {
+  test('importData imports the main-track order', () async {
     final source = await profileStore();
-    await profileCollection(
-      source,
-      'learning_order',
-    ).doc('order-1').set({'sefaria_ref': 'Berakhot', 'user_sort_order': 0});
+    await profileCollection(source, 'track_learning_order')
+        .doc('mishnayos_seder_Zeraim')
+        .set({'ref': 'Zeraim', 'user_sort_order': 0});
     final target = FakeFirebaseFirestore();
     await backupService(
       target,
     ).importData(await backupService(source).exportData());
-    final restored = await profileCollection(target, 'learning_order').get();
+    final restored = await profileCollection(
+      target,
+      'track_learning_order',
+    ).get();
     expect(restored.docs, hasLength(1));
-    expect(restored.docs.single.data()['sefaria_ref'], 'Berakhot');
+    expect(restored.docs.single.data()['ref'], 'Zeraim');
   });
 
   test('importData imports streak_events', () async {

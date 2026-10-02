@@ -33,6 +33,3 @@ export 'track_order/presentation/providers/track_learning_order_providers.dart';
 export 'track_order/presentation/screens/track_learning_order_screen.dart';
 // ── whole-curriculum ordering ─────────────────────────────────────────────────
 export 'whole_curriculum_order/domain/models/learning_order_item.dart';
-export 'whole_curriculum_order/domain/repositories/learning_order_repository.dart';
-export 'whole_curriculum_order/presentation/providers/learning_order_providers.dart';
-export 'whole_curriculum_order/presentation/screens/learning_order_screen.dart';

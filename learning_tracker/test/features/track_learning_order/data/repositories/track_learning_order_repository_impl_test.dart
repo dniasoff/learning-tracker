@@ -22,6 +22,7 @@ import 'package:learning_tracker/data/repositories/firestore_track_learning_orde
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers for building content items
@@ -131,6 +132,11 @@ void main() {
       firestore: firestore,
       uid: uid,
       profileId: profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: uid,
+        profileId: profileId,
+      ),
     );
   });
 

@@ -92,7 +92,6 @@ import 'package:learning_tracker/data/repositories/firestore_diagnostic_log_repo
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
@@ -353,11 +352,11 @@ typedef BookmarkRepositoryDeps = ({
 /// `data/repositories/bookmark_repository_impl.dart`, see the library doc
 /// comment on reaching this file) already has, or can reach, its feature's
 /// own `contentRepositoryProvider`/`contentIndexProvider` and supplies the
-/// resolved pair here as one record. The [FirestoreLearningOrderRepository]
-/// [FirestoreBookmarkRepository] also requires is NOT part of that record
-/// — unlike the two above, it IS a Firestore repository this file already
-/// knows how to build, so it is constructed inline below from the exact
-/// same `(handles, profileId)` pair every other provider in this file
+/// resolved pair here as one record. The [FirestoreTrackLearningOrderRepository]
+/// [FirestoreBookmarkRepository] also requires (the main-track order, read
+/// only) is NOT part of that record — it IS a Firestore repository this file
+/// already knows how to build, so it is constructed inline below from the
+/// exact same `(handles, profileId)` pair every other provider in this file
 /// resolves through, with no extra `await` and no second provider
 /// dependency.
 final firestoreBookmarkRepositoryProvider =
@@ -379,7 +378,7 @@ final firestoreBookmarkRepositoryProvider =
           profileId: profileId,
           contentRepository: deps.contentRepository,
           contentIndex: deps.contentIndex,
-          learningOrderRepository: FirestoreLearningOrderRepository(
+          learningOrderRepository: FirestoreTrackLearningOrderRepository(
             firestore: handles.firestore,
             uid: ownerUid,
             profileId: profileId,
@@ -456,19 +455,6 @@ final firestoreLearningLedgerRepositoryProvider =
       );
     });
 
-/// `.../learning_order/{orderId}`.
-final firestoreLearningOrderRepositoryProvider =
-    FutureProvider<FirestoreLearningOrderRepository?>((ref) async {
-      final resolved = await _watchActiveAccountAndProfile(ref);
-      if (resolved == null) return null;
-      final (handles, ownerUid, profileId) = resolved;
-      return FirestoreLearningOrderRepository(
-        firestore: handles.firestore,
-        uid: ownerUid,
-        profileId: profileId,
-      );
-    });
-
 /// `.../point_configs/{configId}`.
 final firestorePointConfigRepositoryProvider =
     FutureProvider<FirestorePointConfigRepository?>((ref) async {
@@ -536,15 +522,9 @@ final firestoreStageDefinitionRepositoryProvider =
       );
     });
 
-/// `.../track_learning_order/{orderId}`.
-///
-/// Distinct from [firestoreLearningOrderRepositoryProvider]: that one serves
-/// WHOLE-CURRICULUM ordering, this one serves per-track (sedarim/masechtos)
-/// reordering. They are separate collections precisely because
-/// `DocIds.trackLearningOrderDocId` and `DocIds.learningOrderDocId` compute
-/// the IDENTICAL string for the same `(curriculumId, sefariaRef)` — only the
-/// collection path keeps them apart. Sharing one collection would let a
-/// track-level order silently clobber a curriculum-level one.
+/// `.../track_learning_order/{c}_{level}_{ref}` — the main-track order
+/// (AD-33 `mainTrackOrder`; the retired `learning_order` collection is
+/// merged into it, DNI-476).
 final firestoreTrackLearningOrderRepositoryProvider =
     FutureProvider<FirestoreTrackLearningOrderRepository?>((ref) async {
       final resolved = await _watchActiveAccountAndProfile(ref);
@@ -554,6 +534,7 @@ final firestoreTrackLearningOrderRepositoryProvider =
         firestore: handles.firestore,
         uid: ownerUid,
         profileId: profileId,
+        writer: ref.watch(ownerGovernedWriterProvider),
       );
     });
 

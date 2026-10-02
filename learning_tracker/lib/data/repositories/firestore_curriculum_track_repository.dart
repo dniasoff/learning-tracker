@@ -324,19 +324,6 @@ class FirestoreCurriculumTrackRepository {
     },
   );
 
-  /// Adds the legacy reorder-amnesty stamp to [batch]. Only the
-  /// `track_learning_order` writer still calls it; DNI-476 T3 retires both
-  /// (the AD-35 amnesty instant is the `mainTrackOrder` entry).
-  void addReorderStampToBatch(
-    WriteBatch batch,
-    CurriculumId curriculumId,
-    DateTime timestamp,
-  ) {
-    batch.set(_doc(curriculumId), {
-      'last_reorder_at': FirestoreCodec.encodeDateTime(timestamp),
-    }, SetOptions(merge: true));
-  }
-
   Future<void> _apply(List<GovernedEntityChange> changes) async {
     final writer = _writer;
     if (writer == null) throw const GovernedWriterNotReadyException();

@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -140,14 +141,15 @@ SchedulerEngine schedulerEngine(Ref ref) {
     stageRepository: SchedulerStageRepositoryImpl(
       stageRepository: ref.watch(globalStageRepositoryProvider),
     ),
-    // F2-parallel fix: the custom-order WRITER moved to Firestore
-    // (`learningOrderRepositoryProvider` → `FirestoreLearningOrderRepositoryAdapter`),
-    // so the scheduler's reader must resolve the same document tree instead
-    // of the now-frozen Drift `learning_order` table — see
-    // `SchedulerFirestoreLearningOrderRepositoryAdapter`'s class doc comment
-    // for the full defect and the not-ready-read decision.
-    learningOrderRepository: SchedulerFirestoreLearningOrderRepositoryAdapter(
+    // AD-33 / DNI-476: the main-track order is `orderedLeaves` over the
+    // curriculum's corpus (full, unscoped content tree) and its live
+    // `track_learning_order` docs; the engine filters it to the scoped
+    // leaves it schedules.
+    learningOrderRepository: SchedulerTrackOrderRepositoryAdapter(
       ref: ref,
+      content: (curriculumId) => ref
+          .read(contentRepositoryProvider)
+          .getContentForCurriculum(curriculumId),
     ),
   );
 }

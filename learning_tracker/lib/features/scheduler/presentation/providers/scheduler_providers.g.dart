@@ -211,7 +211,7 @@ final class SchedulerEngineProvider
   }
 }
 
-String _$schedulerEngineHash() => r'a01d11407c6f049b1bd2f9d83c0766efd4099159';
+String _$schedulerEngineHash() => r'beb25b1ead2bf6af9bfb2b127caee049bb9ed9f0';
 
 @ProviderFor(dailyTaskGenerator)
 final dailyTaskGeneratorProvider = DailyTaskGeneratorProvider._();

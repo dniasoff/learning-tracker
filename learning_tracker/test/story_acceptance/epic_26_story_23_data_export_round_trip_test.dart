@@ -72,7 +72,6 @@ void main() {
           'point_configs',
           'curriculum_tracks',
           'bookmarks',
-          'learning_order',
           'track_learning_order',
           'preferences',
           'goals',
@@ -84,6 +83,9 @@ void main() {
         for (final collection in expected) {
           expect(collections, contains(collection));
         }
+        // The retired `learning_order` (AD-49 R13) is merged into
+        // `track_learning_order` (DNI-476).
+        expect(collections, isNot(contains('learning_order')));
         expect(payload, isNot(contains('syncQueue')));
         expect(payload, isNot(contains('outbox')));
       },

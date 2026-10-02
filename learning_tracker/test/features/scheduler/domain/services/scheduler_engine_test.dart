@@ -1,5 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ordered_leaves.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
@@ -393,6 +397,94 @@ void main() {
         expect(newTasks[1].contentItemSefariaRef, 'ref_2');
       },
     );
+
+    group('DNI-476 AC-2: the order build is orderedLeaves', () {
+      // Two masechtos: A = [ref_0, ref_1], B = [ref_2, ref_3, ref_4].
+      final corpus = InMemoryCorpus('mishnayos', const [
+        CorpusNode(NodeEntry(level: 'masechta', ref: 'A'), [
+          CorpusNode(NodeEntry(level: 'perek', ref: 'ref_0')),
+          CorpusNode(NodeEntry(level: 'perek', ref: 'ref_1')),
+        ]),
+        CorpusNode(NodeEntry(level: 'masechta', ref: 'B'), [
+          CorpusNode(NodeEntry(level: 'perek', ref: 'ref_2')),
+          CorpusNode(NodeEntry(level: 'perek', ref: 'ref_3')),
+          CorpusNode(NodeEntry(level: 'perek', ref: 'ref_4')),
+        ]),
+      ]);
+
+      MainTrackOrderEntry orderDoc(String ref, int sort, {DateTime? ended}) =>
+          MainTrackOrderEntry(
+            docId: 'mishnayos_masechta_$ref',
+            curriculumId: 'mishnayos',
+            level: 'masechta',
+            ref: ref,
+            userSortOrder: sort,
+            lastChangeId: '01ARZ3NDEKTSV4RRFFQ69G5FC0',
+            endedAt: ended,
+          );
+
+      /// What the production adapter hands the engine: the orderedLeaves
+      /// refs with their position, or [] with no live doc.
+      List<SchedulerOrderItem> fromOrderedLeaves(List<MainTrackOrderEntry> d) {
+        if (d.every((e) => e.endedAt != null)) return const [];
+        final leaves = orderedLeaves(corpus, d);
+        return [
+          for (var i = 0; i < leaves.length; i++)
+            SchedulerOrderItem(sefariaRef: leaves[i], userSortOrder: i),
+        ];
+      }
+
+      Future<List<String>> newLearning(int perDay) async {
+        final tasks = await engine.generateDailyTasks(
+          ScheduleConfig(
+            curriculumId: curriculum,
+            trackLabel: 'Test Track',
+            currentDate: now,
+            defaultNewItemsPerDay: perDay,
+          ),
+        );
+        return [
+          for (final t in tasks)
+            if (t.priority == DailyTaskPriority.newLearning)
+              t.contentItemSefariaRef,
+        ];
+      }
+
+      test('a masechta moved first carries its whole subtree', () async {
+        contentRepo.items = makeItems(5);
+        stageRepo.stages = threeStages();
+        learningOrderRepo.order = fromOrderedLeaves([
+          orderDoc('B', 0),
+          orderDoc('A', 1),
+        ]);
+        expect(await newLearning(4), ['ref_2', 'ref_3', 'ref_4', 'ref_0']);
+      });
+
+      test(
+        'reset (every doc ended) is the natural ContentIndex order',
+        () async {
+          contentRepo.items = makeItems(5);
+          stageRepo.stages = threeStages();
+          learningOrderRepo.order = fromOrderedLeaves([
+            orderDoc('B', 0, ended: now),
+            orderDoc('A', 1, ended: now),
+          ]);
+          expect(learningOrderRepo.order, isEmpty);
+          expect(await newLearning(3), ['ref_0', 'ref_1', 'ref_2']);
+        },
+      );
+
+      test('scoped content keeps the orderedLeaves order of the leaves in '
+          'scope', () async {
+        contentRepo.items = const [
+          SchedulerContentItem(sefariaRef: 'ref_0', sortOrder: 0),
+          SchedulerContentItem(sefariaRef: 'ref_3', sortOrder: 3),
+        ];
+        stageRepo.stages = threeStages();
+        learningOrderRepo.order = fromOrderedLeaves([orderDoc('B', 0)]);
+        expect(await newLearning(2), ['ref_3', 'ref_0']);
+      });
+    });
 
     test(
       'DailyTask output includes priority ranking: overdue > scheduled > new',

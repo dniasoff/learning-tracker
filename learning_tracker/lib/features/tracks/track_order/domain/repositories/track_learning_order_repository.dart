@@ -24,15 +24,20 @@ abstract class TrackLearningOrderRepository {
     List<ContentItem> allItems,
   );
 
+  /// Saves [items] as the sedarim order: one logged `mainTrackOrder`
+  /// change; over 10 changed docs it is online-only (throws while offline).
   Future<void> saveSedarimOrder(
     CurriculumId curriculumId,
     List<LearningOrderItem> items,
   );
+
+  /// Saves [items] as the masechtos order (see [saveSedarimOrder]).
   Future<void> saveMasechtosOrder(
     CurriculumId curriculumId,
     List<LearningOrderItem> items,
   );
 
-  /// Deletes all custom order rows for the curriculum (resets to canonical).
+  /// Resets the curriculum to canonical order: one logged change setting
+  /// `ended_at` on every live order doc (never a delete, DNI-476).
   Future<void> resetToDefault(CurriculumId curriculumId);
 }

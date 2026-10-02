@@ -170,10 +170,6 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
-import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart'
-    show trackMasechtosOrderProvider, trackSedarimOrderProvider;
-import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart'
-    show LearningOrderItem;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant.dart'
     show TutorGrantDoc, TutorGrantState;
@@ -1406,47 +1402,6 @@ void main() {
           CurriculumSettingsRoute(
             curriculumId: CurriculumId.mishnayos.storageKey,
           ),
-        ),
-      );
-
-      await h.dispose();
-    },
-  );
-
-  // ── 44: LearningOrderScreen ────────────────────────────────────────────────
-
-  testWidgets(
-    '44 LearningOrderScreen — no overflow',
-    skip:
-        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
-    (tester) async {
-      addTearDown(tester.view.reset);
-      tester.view.devicePixelRatio = 1.0;
-      tester.view.physicalSize = const Size(320, 568);
-
-      final h = E2EHarness(
-        tester,
-        identity: E2EIdentity.localBorn(displayName: 'LrnOrd'),
-      );
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ...h.dashboardSilenceOverrides,
-          trackSedarimOrderProvider.overrideWith(
-            (ref, _) async => <LearningOrderItem>[],
-          ),
-          trackMasechtosOrderProvider.overrideWith(
-            (ref, _) async => <LearningOrderItem>[],
-          ),
-        ],
-      );
-
-      await _sweepPush(
-        tester,
-        label: 'LearningOrderScreen',
-        h: h,
-        push: (router) => router.push(
-          LearningOrderRoute(curriculumId: CurriculumId.mishnayos),
         ),
       );
 

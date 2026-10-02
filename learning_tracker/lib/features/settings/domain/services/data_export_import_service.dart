@@ -85,7 +85,8 @@ class DataExportImportService {
     'point_configs',
     'curriculum_tracks',
     'bookmarks',
-    'learning_order',
+    // The retired `learning_order` collection (AD-49, R13) is merged into
+    // `track_learning_order` (DNI-476): neither exported nor restored.
     'track_learning_order',
     'preferences',
     'goals',
@@ -225,7 +226,7 @@ class DataExportImportService {
             pointConfigs += documents.length;
           case 'bookmarks':
             bookmarks += documents.length;
-          case 'learning_order' || 'track_learning_order':
+          case 'track_learning_order':
             learningOrders += documents.length;
           case 'curriculum_tracks':
             tracks += documents.length;

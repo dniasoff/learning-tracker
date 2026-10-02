@@ -23,7 +23,7 @@ import 'package:flutter/material.dart' show Scrollable;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
-    show CurriculumSettingsRoute, LearningOrderRoute;
+    show CurriculumSettingsRoute;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
@@ -33,12 +33,9 @@ import 'package:learning_tracker/features/gamification/domain/models/streak_reco
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart'
-    show allDailyTasksProvider, overdueCountForCurriculumProvider;
+    show allDailyTasksProvider;
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart'
     show CurriculumTrackEntity;
-import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
-import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart'
-    show learningOrderProvider, orderingRestrictedProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
@@ -303,140 +300,6 @@ void main() {
   );
 
   // ── E2E-418 ─────────────────────────────────────────────────────────────────
-
-  group('E2E-418 — Whole-curriculum learning order: LearningOrderScreen', () {
-    // Journey: LearningOrderRoute pushed directly via h.router.push().
-    // LearningOrderScreen watches:
-    //   learningOrderProvider(curriculumId) — FutureProvider backed by content DB
-    //   orderingRestrictedProvider           — FutureProvider; false = drag allowed
-    //
-    // Both are overridden so the screen renders immediately without the
-    // bundled content DB.
-    //
-    // Key assertions:
-    //   • AppBar title contains curriculum name + "Order" (e.g. "Mishnayos Order")
-    //   • Reset icon (Icons.refresh) shown in AppBar when isRestricted=false
-    //   • "No items to order." message shown when learningOrderProvider=[]
-
-    testWidgets(
-      'LearningOrderScreen AppBar title contains "Order" and reset icon is '
-      'present when orderingRestrictedProvider=false',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(displayName: 'Order418');
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
-
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ...h.dashboardSilenceOverrides,
-            effectiveUseHebrewTermsProvider.overrideWithValue(false),
-            useHebrewTermsProvider.overrideWithValue(false),
-            // Override LearningOrderScreen providers.
-            learningOrderProvider.overrideWith(
-              (ref, curriculum) => Future.value([]),
-            ),
-            orderingRestrictedProvider.overrideWith(
-              (ref) => Future.value(false),
-            ),
-            // overdueCountForCurriculumProvider is read on drag (not on load)
-            // but override to be safe.
-            overdueCountForCurriculumProvider.overrideWith(
-              (ref, curriculum) => Future.value(0),
-            ),
-          ],
-        );
-        await tester.pump(const Duration(milliseconds: 300));
-
-        // Push the LearningOrderRoute directly after harness is ready.
-        unawaited(
-          h.router.push(
-            LearningOrderRoute(curriculumId: CurriculumId.mishnayos),
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 600));
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pump(const Duration(milliseconds: 300));
-
-        // Key assertion 1 (E2E-418): AppBar title contains "Order".
-        // LearningOrderScreen title:
-        //   "${curriculumLabelText(ref, curriculum: curriculumId)} Order"
-        // curriculumLabelText with useHebrewTerms=false returns "Mishnayos".
-        expect(
-          find.textContaining('Order'),
-          findsAtLeastNWidgets(1),
-          reason:
-              'LearningOrderScreen AppBar must show curriculum name + "Order"',
-        );
-
-        // Key assertion 2: empty list → "No items to order." message.
-        // When learningOrderProvider returns [] the screen shows the
-        // l10n.noItemsToOrder = "No items to order." message.
-        h.expectOnScreen(
-          'No items to order.',
-          routeName: 'LearningOrderScreen',
-        );
-      },
-    );
-
-    testWidgets('LearningOrderScreen shows "Controlled by parent" banner when '
-        'orderingRestrictedProvider=true and items are non-empty', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(displayName: 'Order418b');
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
-
-      // Provide one item so the isEmpty guard is skipped and the
-      // isRestricted branch renders "Controlled by parent".
-      const stubItem = LearningOrderItem(
-        sefariaRef: 'Berakhot',
-        displayNameHe: 'ברכות',
-        displayNameEn: 'Berakhot',
-        userSortOrder: 0,
-      );
-
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ...h.dashboardSilenceOverrides,
-          effectiveUseHebrewTermsProvider.overrideWithValue(false),
-          useHebrewTermsProvider.overrideWithValue(false),
-          // Non-empty list so isEmpty guard is skipped.
-          learningOrderProvider.overrideWith(
-            (ref, curriculum) => Future.value([stubItem]),
-          ),
-          // Restricted = true → shows "Controlled by parent" banner.
-          orderingRestrictedProvider.overrideWith((ref) => Future.value(true)),
-          overdueCountForCurriculumProvider.overrideWith(
-            (ref, curriculum) => Future.value(0),
-          ),
-        ],
-      );
-      await tester.pump(const Duration(milliseconds: 300));
-
-      unawaited(
-        h.router.push(LearningOrderRoute(curriculumId: CurriculumId.mishnayos)),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // AppBar is rendered.
-      expect(
-        find.textContaining('Order'),
-        findsAtLeastNWidgets(1),
-        reason:
-            'LearningOrderScreen AppBar must show curriculum name + "Order"',
-      );
-
-      // When restricted=true and items are non-empty: the data branch renders
-      // "Controlled by parent" banner before the DraggableOrderItem list.
-      h.expectOnScreen('Controlled by parent');
-    });
-  });
 
   // ── E2E-919 ─────────────────────────────────────────────────────────────────
 

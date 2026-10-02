@@ -1,74 +1,83 @@
-/// Unit tests for [SchedulerFirestoreLearningOrderRepositoryAdapter]
+/// Unit tests for [SchedulerTrackOrderRepositoryAdapter]
 /// (`lib/features/scheduler/data/repositories/
-/// scheduler_learning_order_repository_impl.dart`) — the scheduler-side
-/// Firestore reader wired into `schedulerEngineProvider`
-/// (`scheduler_providers.dart:140`) in place of the Drift-backed
-/// [SchedulerLearningOrderRepositoryImpl].
+/// scheduler_learning_order_repository_impl.dart`) — the scheduler's
+/// main-track order reader wired into `schedulerEngineProvider` (DNI-476
+/// AC-2): the AD-33 `orderedLeaves` of the curriculum's corpus and its
+/// live `track_learning_order` docs; the retired `learning_order`
+/// collection is no longer read.
 ///
-/// Mirrors `study_day_config_repository_impl_test.dart`'s
-/// `FirestoreStudyDayConfigRepositoryAdapter` group structure (the
-/// reference pattern established by `bookmark_repository_impl_test.dart`):
-/// a "not ready" group (no active account/profile) and a "ready" group
-/// (active account/profile, backed by `fake_cloud_firestore`).
-///
-/// The regression this guards against: the custom-order WRITER
-/// (`learningOrderRepositoryProvider` → [FirestoreLearningOrderRepositoryAdapter])
-/// moved to `users/{uid}/learner_profiles/{ULID}/learning_order`, while
-/// this scheduler-side reader used to still read the now-frozen Drift
-/// `learning_order` table — a reorder saved through the reorder screen
-/// would never reach daily-task generation. The "writer/reader agreement"
-/// test below constructs BOTH adapters — the actual production writer
-/// class and the actual production scheduler-reader class — on the SAME
-/// simulated account/profile (built via
-/// `test/helpers/writer_reader_agreement.dart`'s [activateAccountAndProfile],
-/// this file's worked example for Phase 1 step B2), and proves a save
-/// through one is visible to the other via [expectWriterReaderAgree].
+/// The "writer/reader agreement" test saves a reorder through the actual
+/// production writer (the track order screen's
+/// `FirestoreTrackLearningOrderRepositoryAdapter`, a governed write) and
+/// proves the scheduler's reader sees it, both resolved off ONE
+/// [activateAccountAndProfile] rig.
 library;
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
-import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
 import '../../../../helpers/writer_reader_agreement.dart';
 import 'not_ready_expectations.dart';
 
+ContentItem _item(
+  String ref,
+  int sortOrder,
+  List<String> path, {
+  bool isLeaf = false,
+}) => ContentItem(
+  curriculumId: CurriculumId.mishnayos.storageKey,
+  level1: path[0],
+  level2: path.length > 1 ? path[1] : null,
+  level3: path.length > 2 ? path[2] : null,
+  displayNameHe: ref,
+  displayNameEn: ref,
+  sefariaRef: ref,
+  sortOrder: sortOrder,
+  isLeaf: isLeaf,
+);
+
+final _items = [
+  _item('Zeraim', 0, ['Zeraim']),
+  _item('Berakhot', 1, ['Zeraim', 'Berakhot']),
+  _item('Berakhot 1', 2, ['Zeraim', 'Berakhot', '1'], isLeaf: true),
+  _item('Moed', 3, ['Moed']),
+  _item('Shabbat', 4, ['Moed', 'Shabbat']),
+  _item('Shabbat 1', 5, ['Moed', 'Shabbat', '1'], isLeaf: true),
+];
+
 void main() {
-  group('SchedulerFirestoreLearningOrderRepositoryAdapter', () {
-    // Constructing the adapter requires a Ref (Riverpod's Ref is sealed —
-    // it can only come from inside a provider callback), so tests obtain
-    // one the same way production does: read a throwaway Provider that
-    // builds the adapter from the container's ref. Mirrors
-    // FirestoreStudyDayConfigRepositoryAdapter's test helper.
-    SchedulerFirestoreLearningOrderRepositoryAdapter buildReader(
+  group('SchedulerTrackOrderRepositoryAdapter', () {
+    SchedulerTrackOrderRepositoryAdapter buildReader(
       ProviderContainer container,
     ) {
-      final readerProvider =
-          Provider<SchedulerFirestoreLearningOrderRepositoryAdapter>(
-            (ref) => SchedulerFirestoreLearningOrderRepositoryAdapter(ref: ref),
-          );
+      final readerProvider = Provider<SchedulerTrackOrderRepositoryAdapter>(
+        (ref) => SchedulerTrackOrderRepositoryAdapter(
+          ref: ref,
+          content: (_) async => _items,
+        ),
+      );
       return container.read(readerProvider);
     }
 
-    // The actual production WRITER class — what `learningOrderRepositoryProvider`
-    // (`learning_order_providers.dart`) resolves to. Constructed the same
-    // way so the "writer/reader agreement" test exercises both real
-    // production classes, not a hand-rolled stand-in for either side.
-    FirestoreLearningOrderRepositoryAdapter buildWriter(
+    FirestoreTrackLearningOrderRepositoryAdapter buildWriter(
       ProviderContainer container,
     ) {
-      final writerProvider = Provider<FirestoreLearningOrderRepositoryAdapter>(
-        (ref) => FirestoreLearningOrderRepositoryAdapter(ref: ref),
-      );
+      final writerProvider =
+          Provider<FirestoreTrackLearningOrderRepositoryAdapter>(
+            (ref) => FirestoreTrackLearningOrderRepositoryAdapter(ref: ref),
+          );
       return container.read(writerProvider);
     }
 
     group('not ready (no active account/profile)', () {
-      late SchedulerFirestoreLearningOrderRepositoryAdapter notReadyReader;
+      late SchedulerTrackOrderRepositoryAdapter notReadyReader;
 
       setUp(() {
         final container = ProviderContainer();
@@ -77,8 +86,7 @@ void main() {
       });
 
       test('getOrder returns an empty list instead of throwing — daily-task '
-          'generation falls back to natural content order rather than '
-          'crashing while the account/profile race is in flight', () async {
+          'generation falls back to natural content order', () async {
         await expectEmptyListWhenNotReady(
           () => notReadyReader.getOrder(CurriculumId.mishnayos),
           describe: 'SchedulerLearningOrderRepository.getOrder',
@@ -87,15 +95,9 @@ void main() {
     });
 
     group('ready (active account + profile)', () {
-      // Built via activateAccountAndProfile — the ONE seam-touching call
-      // per test (`test/helpers/writer_reader_agreement.dart`), so the
-      // writer and reader below are guaranteed to resolve the same
-      // (uid, profileId, firestore) triple through Riverpod's per-container
-      // memoization rather than two hand-rolled rigs that merely share
-      // literal id strings.
       late FakeFirebaseFirestore firestore;
       late ProviderContainer container;
-      late SchedulerFirestoreLearningOrderRepositoryAdapter reader;
+      late SchedulerTrackOrderRepositoryAdapter reader;
 
       setUp(() {
         final rig = activateAccountAndProfile();
@@ -106,58 +108,56 @@ void main() {
 
       tearDown(() => container.dispose());
 
-      test('getOrder returns [] when no custom order has ever been saved — '
-          'proving this reads getCustomOrderRefs (raw rows), not the '
-          'synthesizing getOrder, which would report a custom order for '
-          'every profile', () async {
-        final order = await reader.getOrder(CurriculumId.mishnayos);
-        expect(order, isEmpty);
+      test('getOrder returns [] when no live order doc exists', () async {
+        expect(await reader.getOrder(CurriculumId.mishnayos), isEmpty);
       });
 
-      // The regression this fix closes: a custom order saved through
-      // `learningOrderRepositoryProvider` (here, the actual
-      // FirestoreLearningOrderRepositoryAdapter writer class) must be
-      // visible to the scheduler's read path (here, the actual
-      // SchedulerFirestoreLearningOrderRepositoryAdapter wired into
-      // schedulerEngineProvider) — writer and reader agreeing on ONE
-      // Firestore document tree. Run through expectWriterReaderAgree
-      // (`test/helpers/writer_reader_agreement.dart`) as the worked example
-      // for an already-migrated collection (Phase 1 step B2).
-      test('writer/reader agreement: an order saved via '
-          'learningOrderRepositoryProvider\'s adapter is visible to the '
-          'scheduler\'s adapter, in the saved order', () async {
+      test('writer/reader agreement: a sedarim reorder saved by the order '
+          "screen's adapter is the scheduler's orderedLeaves order", () async {
         await expectWriterReaderAgree<List<SchedulerOrderItem>>(
           firestore: firestore,
-          collection: 'learning_order',
+          collection: 'track_learning_order',
           writerDescription:
-              'learningOrderRepositoryProvider\'s '
-              'FirestoreLearningOrderRepositoryAdapter.saveOrder',
+              'FirestoreTrackLearningOrderRepositoryAdapter.saveSedarimOrder '
+              '(a governed mainTrackOrder change)',
           readerDescription:
-              'SchedulerFirestoreLearningOrderRepositoryAdapter.getOrder '
-              '(schedulerEngineProvider\'s reader)',
-          write: () async {
-            final writer = buildWriter(container);
-            await writer.saveOrder(CurriculumId.mishnayos, const [
-              LearningOrderItem(
-                sefariaRef: 'Shabbat',
-                displayNameHe: 'שבת',
-                displayNameEn: 'Shabbat',
-                userSortOrder: 0,
-              ),
-              LearningOrderItem(
-                sefariaRef: 'Berakhot',
-                displayNameHe: 'ברכות',
-                displayNameEn: 'Berakhot',
-                userSortOrder: 1,
-              ),
-            ]);
-          },
+              'SchedulerTrackOrderRepositoryAdapter.getOrder '
+              "(schedulerEngineProvider's reader)",
+          write: () => buildWriter(container)
+              .saveSedarimOrder(CurriculumId.mishnayos, const [
+                LearningOrderItem(
+                  sefariaRef: 'Moed',
+                  displayNameHe: 'Moed',
+                  displayNameEn: 'Moed',
+                  userSortOrder: 0,
+                ),
+                LearningOrderItem(
+                  sefariaRef: 'Zeraim',
+                  displayNameHe: 'Zeraim',
+                  displayNameEn: 'Zeraim',
+                  userSortOrder: 1,
+                ),
+              ]),
           read: () => reader.getOrder(CurriculumId.mishnayos),
           matches: equals(const [
-            SchedulerOrderItem(sefariaRef: 'Shabbat', userSortOrder: 0),
-            SchedulerOrderItem(sefariaRef: 'Berakhot', userSortOrder: 1),
+            SchedulerOrderItem(sefariaRef: 'Shabbat 1', userSortOrder: 0),
+            SchedulerOrderItem(sefariaRef: 'Berakhot 1', userSortOrder: 1),
           ]),
         );
+      });
+
+      test('after reset to default the order is natural again', () async {
+        final writer = buildWriter(container);
+        await writer.saveSedarimOrder(CurriculumId.mishnayos, const [
+          LearningOrderItem(
+            sefariaRef: 'Moed',
+            displayNameHe: 'Moed',
+            displayNameEn: 'Moed',
+            userSortOrder: 0,
+          ),
+        ]);
+        await writer.resetToDefault(CurriculumId.mishnayos);
+        expect(await reader.getOrder(CurriculumId.mishnayos), isEmpty);
       });
     });
   });

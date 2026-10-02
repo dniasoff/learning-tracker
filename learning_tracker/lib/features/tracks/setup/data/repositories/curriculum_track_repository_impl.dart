@@ -84,34 +84,11 @@ class CurriculumTrackRepositoryNotReadyException implements Exception {
 ///   repository's stream whenever the account/profile becomes ready or
 ///   changes. A not-ready state produces no fabricated empty emission.
 ///
-/// ## Reorder-amnesty (`last_reorder_at`) — NOT wired here, and cannot be
-/// from this file
+/// ## Reorder amnesty
 ///
-/// `TrackLearningOrderRepositoryImpl` (Drift) co-stamps
-/// `curriculum_tracks.last_reorder_at` in the same transaction as every
-/// order write (`TrackDao.stampReorderAt`) — see
-/// `FirestoreTrackLearningOrderRepository`'s class doc comment
-/// ("Coordination point") and
-/// `lib/features/tracks/track_order/data/repositories/
-/// track_learning_order_repository_impl.dart`'s adapter doc comment for the
-/// other half of this. `last_reorder_at` IS now in `firestore.rules`'
-/// `curriculum_tracks` `.hasOnly()` whitelist (confirmed by reading the
-/// rules file directly), so the FIELD exists — but
-/// [FirestoreCurriculumTrackRepository] (the class this adapter wraps) has
-/// no method that writes it, and adding one is editing
-/// `lib/data/repositories/firestore_curriculum_track_repository.dart`,
-/// which is out of this task's scope. The alternative — writing the field
-/// directly from here via a raw `cloud_firestore` call — is not available
-/// either: `tool/check_firebase_confinement.dart` (`make audit` check
-/// 2/15, hard gate) only allows `FirebaseFirestore`/`cloud_firestore`
-/// symbols inside `lib/core/sync/`, `lib/core/auth/`, `lib/data/firestore/`,
-/// and `lib/data/repositories/` — `lib/features/tracks/**` is not on that
-/// list. So this adapter has no method for stamping the amnesty baseline at
-/// all; a caller that reorders a track's content order through the
-/// Firestore path today has no way to persist "the amnesty baseline moved"
-/// through either adapter in this wave. Needs a `stampReorderAt`-shaped
-/// method added to [FirestoreCurriculumTrackRepository] itself before this
-/// gap can close — flagged in the task report, not solved here.
+/// No method here stamps `last_reorder_at`: since DNI-476 the AD-35
+/// reorder-amnesty instant is the `mainTrackOrder` change-log entry a
+/// reorder writes (`FirestoreTrackLearningOrderRepository`).
 class FirestoreCurriculumTrackRepositoryAdapter {
   FirestoreCurriculumTrackRepositoryAdapter({
     required Ref ref,

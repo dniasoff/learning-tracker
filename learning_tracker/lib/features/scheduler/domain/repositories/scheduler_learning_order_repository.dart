@@ -12,12 +12,14 @@ abstract class SchedulerOrderItem with _$SchedulerOrderItem {
   }) = _SchedulerOrderItem;
 }
 
-/// Abstract repository for learning order consumed by the scheduler.
-///
-/// Decouples the scheduler from the learning_order feature per P6.
+/// The main-track order the scheduler builds its order from (P6 seam).
 abstract class SchedulerLearningOrderRepository {
-  /// Get the custom learning order for a curriculum.
+  /// The curriculum's leaves in the learner's main-track order — the AD-33
+  /// `orderedLeaves` of its corpus and its live `track_learning_order` docs
+  /// (DNI-476) — with `userSortOrder` = position.
   ///
-  /// Returns empty list if no custom order is set (use content sortOrder).
+  /// Returns an empty list when no custom order is set (the engine then
+  /// uses natural content `sortOrder`, which is also what `orderedLeaves`
+  /// yields with no live order doc).
   Future<List<SchedulerOrderItem>> getOrder(CurriculumId curriculumId);
 }

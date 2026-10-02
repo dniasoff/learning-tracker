@@ -26,7 +26,6 @@ void main() {
       'point_configs',
       'curriculum_tracks',
       'bookmarks',
-      'learning_order',
       'track_learning_order',
       'preferences',
       'goals',
