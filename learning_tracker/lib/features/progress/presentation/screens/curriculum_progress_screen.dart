@@ -45,8 +45,9 @@ class CurriculumProgressScreen extends ConsumerWidget {
     // "Track progress" fraction as `completedAllStages / totalItems` — an
     // all-time, multi-stage-gate metric — while the Progress hub's per-track
     // row (`_PerTrackRow` in progress_screen.dart) and Track Detail both label
-    // `TrackDualProgressMetric.currentCyclePercentage` (time-gated, since
-    // `track.activatedAt`) as "Track progress". Tapping a Progress-hub row
+    // `TrackDualProgressMetric.currentCyclePercentage` (the engine's
+    // current-cycle metric; `activated_at` is display-only and never an
+    // anchor, R16 / AD-35) as "Track progress". Tapping a Progress-hub row
     // navigates straight into this screen for the SAME track, so the two
     // screens showed different numbers under the identical label (e.g. 0.1%
     // vs 3%). `currentCyclePercentage` is the deliberate, documented metric for
