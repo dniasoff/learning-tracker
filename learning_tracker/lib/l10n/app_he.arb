@@ -4128,5 +4128,23 @@
   "siyumimPreviouslyLearnedDate": "נלמד בעבר",
   "@siyumimPreviouslyLearnedDate": {
     "description": "Replaces the achievement date on a Siyumim & Milestones row (and the timeline's month-group header) when the milestone's achievedAt is the bulk-mark-prior sentinel date rather than a real completion moment."
-  }
+  },
+  "subTrackLifecycleActiveGroup": "מסלולי משנה",
+  "subTrackLifecycleMoreOptions": "אפשרויות נוספות",
+  "subTrackLifecycleNotFound": "מסלול המשנה הזה כבר לא זמין.",
+  "subTrackLifecycleWindow": "{start} – {end}",
+  "subTrackLifecycleWindowOpen": "החל מ{start}",
+  "subTrackLifecycleNextYearFor": "שנת הלימודים {yearLabel}",
+  "subTrackLifecycleFieldName": "שם",
+  "subTrackLifecycleFieldRate": "יחידות בשבוע",
+  "subTrackLifecycleFieldWeeks": "שבועות בשנה",
+  "subTrackLifecycleFieldShabbos": "לומד בשבת",
+  "subTrackLifecycleFieldStartMonth": "מתחיל",
+  "subTrackLifecycleFieldEndMonth": "מסתיים",
+  "subTrackLifecycleNoEndMonth": "ללא חודש סיום",
+  "subTrackLifecycleSave": "שמירת מסלול המשנה",
+  "subTrackLifecycleNameRequired": "יש להזין שם",
+  "subTrackLifecyclePositiveNumber": "יש להזין מספר גדול מ-0",
+  "subTrackLifecycleWindowReversed": "חודש הסיום לפני חודש ההתחלה",
+  "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב."
 }
