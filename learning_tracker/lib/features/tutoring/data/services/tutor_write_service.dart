@@ -598,6 +598,32 @@ class TutorWriteService {
     'configId': configId,
   }, actionId: actionId);
 
+  /// Replaces [curriculumId]'s study-day schedule as ONE governed action
+  /// through `tutorReplaceStudyDays` (Story 1.24, DNI-486): every upsert in
+  /// [upserts] (config id → storage fields) and every `ended_at` tombstone
+  /// in [removedConfigIds] is one `mainTrackStudyDays` change_log entry
+  /// under the one [actionId], written in one server transaction — all or
+  /// nothing.
+  Future<TutorWriteResult> replaceStudyDays({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String curriculumId,
+    required Map<String, Map<String, dynamic>> upserts,
+    List<String> removedConfigIds = const [],
+    String? actionId,
+  }) => _callGoverned('tutorReplaceStudyDays', {
+    'grantId': grantId,
+    'ownerUid': ownerUid,
+    'profileId': profileId,
+    'curriculumId': curriculumId,
+    'upserts': [
+      for (final MapEntry(key: configId, value: configData) in upserts.entries)
+        {'configId': configId, 'configData': configData},
+    ],
+    'removedConfigIds': removedConfigIds,
+  }, actionId: actionId);
+
   // ── Gamification settings: rewards + points ──────────────────────────────────
 
   /// Merges into preferences/gamification_settings — covers reward catalogue and

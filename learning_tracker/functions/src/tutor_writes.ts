@@ -25,7 +25,7 @@ import {
 // A. GOVERNED callables (sub-tracks AD-38 / AD-53, Story 1.10 / DNI-472) —
 //    tutorUpsertGoal, tutorDeleteGoal, tutorUpsertTrack, tutorDeleteTrack,
 //    tutorUpsertStudyDayConfig, tutorDeleteStudyDayConfig,
-//    tutorUpsertStageDefinition, tutorUpsertCurriculumScope and
+//    tutorReplaceStudyDays (Story 1.24), tutorUpsertStageDefinition, tutorUpsertCurriculumScope and
 //    tutorSetProfileProgram. Each one is a thin adapter: it maps its stable
 //    legacy request ({grantId, ownerUid, profileId, <id>, <data>} plus the
 //    optional client ULID `actionId`) onto storage-shaped patches and writes
@@ -476,6 +476,54 @@ export const tutorUpsertStudyDayConfig = governedUpsert({
 export const tutorDeleteStudyDayConfig = governedTombstone({
   entity: "mainTrackStudyDays", idParam: "configId", auditAction: "study_day_config_deleted",
 });
+
+// tutorReplaceStudyDays — { curriculumId, upserts: [{ configId, configData }],
+// removedConfigIds: string[], actionId? } (mainTrackStudyDays, Story 1.24 /
+// DNI-486). Replaces a curriculum's study-day schedule as ONE action: every
+// upsert and every `ended_at` tombstone is a doc of ONE mainTrackStudyDays
+// change_log entry (entity_id = curriculumId) under ONE action_id, written in
+// one writeWithChangeLog transaction — all or nothing, one push (AD-38,
+// AD-39). writeWithChangeLog owns the grant check, payload validation and
+// the rule that every doc belongs to `curriculumId`.
+
+/** A week holds 7 days; a replace touches each day's doc at most once. */
+const MAX_STUDY_DAY_DOCS = 7;
+
+export const tutorReplaceStudyDays = onCall(CALL_OPTS, (request) => runGoverned("mainTrackStudyDays", async () => {
+  const args = parseLegacyGovernedArgs(request.data, "curriculumId");
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const upserts = data.upserts ?? [];
+  const removed = data.removedConfigIds ?? [];
+  if (!Array.isArray(upserts)) throw new HttpsError("invalid-argument", "upserts must be an array");
+  if (!Array.isArray(removed)) throw new HttpsError("invalid-argument", "removedConfigIds must be an array");
+  const collection = ENTITY_COLLECTION.mainTrackStudyDays;
+  const seen = new Set<string>();
+  const claim = (docId: unknown): string => {
+    if (!isDocIdSafe(docId)) throw new HttpsError("invalid-argument", "configId must be a non-empty string");
+    if (seen.has(docId)) throw new HttpsError("invalid-argument", "Each config may appear once");
+    seen.add(docId);
+    return docId;
+  };
+  const docs = [
+    ...upserts.map((u: unknown) => {
+      const entry = (u ?? {}) as Record<string, unknown>;
+      return { collection, docId: claim(entry.configId), fields: parseLegacyData(entry, "configData") };
+    }),
+    ...removed.map((id: unknown) => ({ collection, docId: claim(id), fields: { ended_at: TOMBSTONE } })),
+  ];
+  if (docs.length === 0) throw new HttpsError("invalid-argument", "Nothing to replace");
+  if (docs.length > MAX_STUDY_DAY_DOCS) {
+    throw new HttpsError("invalid-argument", `At most ${MAX_STUDY_DAY_DOCS} study-day configs`);
+  }
+  return writeWithChangeLog(request.auth, {
+    ownerUid: args.ownerUid,
+    profileId: args.profileId,
+    grantId: args.grantId,
+    actionId: args.actionId,
+    auditAction: "study_days_replaced",
+    entries: [{ entity: "mainTrackStudyDays", entityId: args.targetId, docs }],
+  });
+}));
 
 // tutorSetProfileProgram — { programId: curriculumId, programData } (mainTrackProgram).
 export const tutorSetProfileProgram = governedUpsert({
