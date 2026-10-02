@@ -3,9 +3,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 
-import '../../helpers/learner_state/c0_fixtures.dart';
-import '../../helpers/learner_state/c0_stub_matcher.dart';
-
 void main() {
   final start = DateTime.utc(2026, 9, 4, 16);
   final end = DateTime.utc(2026, 9, 5, 17);
@@ -32,31 +29,5 @@ void main() {
     expect(LockWindow(start, end).hashCode, LockWindow(start, end).hashCode);
     expect(LockWindow(start, end), isNot(UtcInterval(start, end)));
     expect(UtcInterval(start, end), UtcInterval(start, end));
-  });
-
-  group('rule functions are C0 stubs owned by DNI-466', () {
-    final history = c0SettingsHistory();
-    final lock = LockWindow(start, end);
-
-    test('lockWindows', () {
-      expect(
-        () => lockWindows(history, start, end),
-        throwsC0Stub('DNI-466', 'lockWindows'),
-      );
-    });
-
-    test('lockedDays', () {
-      expect(
-        () => lockedDays(lock, history),
-        throwsC0Stub('DNI-466', 'lockedDays'),
-      );
-    });
-
-    test('catchUpWindow', () {
-      expect(
-        () => catchUpWindow(lock, history),
-        throwsC0Stub('DNI-466', 'catchUpWindow'),
-      );
-    });
   });
 }
