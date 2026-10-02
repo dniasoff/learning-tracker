@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 
@@ -137,6 +138,9 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
   }) async {
     final repo = await _resolve();
     final trimmedName = displayName.trim();
+    // AD-37 / DNI-470 AC-6: the creating device's settings are read before
+    // anything is written; a missing or invalid IANA zone blocks creation.
+    final device = await _ref.read(creatingDeviceSettingsSourceProvider).read();
     final existing = await repo.getProfiles();
     if (existing.length >= maxProfilesPerAccount) {
       throw const MaxProfilesExceededException();
@@ -146,12 +150,14 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     )) {
       throw DuplicateProfileNameException(trimmedName);
     }
+    final profileId = DocIds.mintProfileUlid();
     return repo.ensureProfile(
-      profileId: DocIds.mintProfileUlid(),
+      profileId: profileId,
       displayName: trimmedName,
       mode: mode,
       createdAt: DateTimeFactory.nowUtc(),
       avatar: avatar,
+      seed: device.seedFor(profileId),
     );
   }
 
