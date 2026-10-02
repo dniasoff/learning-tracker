@@ -20,8 +20,8 @@ import 'package:learning_tracker/features/sub_tracks/domain/governed_goal_change
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../helpers/pump_app.dart';
-import '../../../helpers/sub_tracks/sub_track_harness.dart';
+import '../../../../helpers/pump_app.dart';
+import '../../../../helpers/sub_tracks/sub_track_harness.dart';
 
 void main() {
   late SubTrackHarness h;
