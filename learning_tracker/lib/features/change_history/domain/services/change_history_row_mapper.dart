@@ -44,6 +44,8 @@ const Set<GovernedEntity> parentNotifiedEntities = {
   GovernedEntity.mainTrackStudyDays,
 };
 
+final _civilDatePattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+
 const _endReasonsThatRemove = {
   'deleted', // SubTrackEndReason.deleted
   'track_deleted', // SubTrackEndReason.trackDeleted
@@ -260,7 +262,10 @@ final class _Context {
       subjectName: e.entity == GovernedEntity.subTrack
           ? (newName is String ? newName : _nameAt(e.entityId, e.at))
           : null,
-      newDate: e.entity == GovernedEntity.goal && targetDate is String
+      newDate:
+          e.entity == GovernedEntity.goal &&
+              targetDate is String &&
+              _civilDatePattern.hasMatch(targetDate)
           ? targetDate
           : null,
     );
