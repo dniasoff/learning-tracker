@@ -476,6 +476,7 @@ void main() {
       );
       expect(find.textContaining('Changed the deadline'), findsNothing);
       expect(find.byType(ChangeHistoryRowTile), findsNothing);
+      expect(repo.reads, isEmpty);
     });
 
     testWidgets("the learner's own lock hides the timeline with no device "
@@ -491,6 +492,26 @@ void main() {
       );
       expect(find.byKey(const ValueKey('changeHistoryLocked')), findsOneWidget);
       expect(find.byType(ChangeHistoryRowTile), findsNothing);
+      // AD-36: the lock is not only hidden, nothing of the history is read.
+      expect(repo.reads, isEmpty);
+      expect(repo.lookups, isEmpty);
+      expect(repo.actionLookups, isEmpty);
+    });
+
+    testWidgets("while the learner's lock is unknown nothing is read", (
+      tester,
+    ) async {
+      final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+      await pumpChangeHistory(
+        tester,
+        changeHistoryOverrides(repository: repo, settingsPending: true),
+        settle: false,
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(ChangeHistoryRowTile), findsNothing);
+      expect(repo.reads, isEmpty);
     });
 
     testWidgets('switching learner clears the previous rows before the new '

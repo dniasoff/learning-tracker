@@ -3,6 +3,8 @@
 /// learner settings and no lock unless asked.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -41,6 +43,7 @@ List<Override> changeHistoryOverrides({
   ChangeHistoryUndoHandler? undo,
   Future<LearnerScope?> Function(Ref ref)? scopeOf,
   DateTime? now,
+  bool settingsPending = false,
 }) => [
   changeHistoryAccessProvider.overrideWithValue(access),
   activeLearnerScopeProvider.overrideWith(
@@ -48,8 +51,10 @@ List<Override> changeHistoryOverrides({
   ),
   changeHistoryRepositoryProvider.overrideWith((ref) async => repository),
   learnerLockSettingsProvider.overrideWith(
-    (ref, scope) =>
-        Stream.value(settings ?? constantHistory(newYorkNoLocation)),
+    (ref, scope) => settingsPending
+        // Never emits: the learner's lock stays unknown.
+        ? Completer<LearnerSettingsHistory>().future.asStream()
+        : Stream.value(settings ?? constantHistory(newYorkNoLocation)),
   ),
   changeHistorySubTrackNamesProvider.overrideWith(
     (ref, scope) => Stream.value(const <String, String>{}),
