@@ -10,11 +10,10 @@
 ///
 /// [ASSUMPTION] Review / chazara tasks keep individual ticks only (story
 /// AC-5). Task generation is untouched: this widget only reads
-/// [allDailyTasksProvider]. It is offered whenever the session can capture
-/// main-track learning, a tutored session included: there the commands
-/// are the talmid's tutor commands, so the run is recorded through
-/// `TutorWriteService` (AD-53). Only tutor sub-track surfaces are
-/// read-only (Story 2.9, AC-11).
+/// [allDailyTasksProvider]. It is offered only while the session has
+/// learning commands ([mainTrackCaptureAllowedProvider]). A tutored session
+/// has none until Story 1.24 (DNI-486) binds the talmid's tutor commands
+/// (callables, AD-53), so a tutor sees no main-track Up to… today.
 library;
 
 import 'package:flutter/material.dart';

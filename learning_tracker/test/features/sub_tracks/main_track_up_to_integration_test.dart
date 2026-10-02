@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/main_track_up_to_action.dart';
@@ -227,15 +228,14 @@ void main() {
     expect(find.text('Berakhot 1:1'), findsOneWidget);
   });
 
-  testWidgets('a tutored session keeps main-track Up to…: the run goes '
-      'through the session\'s learning commands (the tutor callables) as '
-      'main, dated, first-stage events, shown only once they answer', (
-    tester,
-  ) async {
-    // rig.commands stands in for the talmid's tutor commands, which
-    // learningCommandsProvider returns in a tutored session once the tutor
-    // write path (TutorWriteService, Story 1.24) is bound. Tutor sub-track
-    // rows stay read-only (AC-11, covered by the sub-track tests).
+  testWidgets('seam for DNI-486: once a tutored session has learning '
+      'commands, main-track Up to… records main, dated, first-stage events '
+      'through them, shown only once they answer', (tester) async {
+    // NOT today's production wiring (see the next test): the production
+    // learningCommandsProvider binds no commands in a tutored session.
+    // rig.commands stands in for the talmid's tutor commands that Story
+    // 1.24 (DNI-486) binds there. Tutor sub-track rows stay read-only
+    // (AC-11, covered by the sub-track tests).
     final (rig, _) = await _pump(tester, tutored: true);
     expect(find.byKey(const Key('mainTrackUpTo-mishnayos')), findsOneWidget);
 
@@ -266,10 +266,19 @@ void main() {
     });
   });
 
-  testWidgets('absent in a tutored session with no tutor write path bound', (
+  testWidgets('production wiring: absent on a tutor device, whose '
+      'learningCommandsProvider binds no commands until DNI-486', (
     tester,
   ) async {
-    await _pump(tester, tutored: true, withCommands: false);
+    // learningCommandsProvider is NOT overridden here: its real body runs.
+    final (rig, _) = await _pump(tester, tutored: true, withCommands: false);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MainTrackUpToActions)),
+    );
+    expect(await container.read(learningCommandsProvider.future), isNull);
+    expect(container.read(mainTrackCaptureAllowedProvider), isFalse);
+    expect(find.byKey(const Key('mainTrackUpTo')), findsNothing);
     expect(find.byKey(const Key('mainTrackUpTo-mishnayos')), findsNothing);
+    expect(rig.written, isEmpty);
   });
 }

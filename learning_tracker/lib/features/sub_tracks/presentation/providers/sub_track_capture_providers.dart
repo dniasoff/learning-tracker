@@ -39,13 +39,18 @@ final subTrackWritesAllowedProvider = Provider.autoDispose<bool>(
   (ref) => ref.watch(activeTutoredProfileSelectionProvider) == null,
 );
 
-/// Whether the session can capture main-track learning (AC-5): whenever
-/// the active learner has [LearningCommands]. On a tutor device those are
-/// the talmid's tutor commands, every write a callable through
-/// `TutorWriteService` (AD-53, Story 1.24); while a session has no write
-/// path the main-track Up to… is absent rather than dead. A tutored
-/// session alone never hides it: only tutor sub-track surfaces are
-/// read-only.
+/// Whether the session can capture main-track learning (AC-5): exactly
+/// when the active learner has [LearningCommands]; with none the
+/// main-track Up to… is absent rather than dead.
+///
+/// On a tutor device this is false today: the production
+/// `learningCommandsProvider` binds no commands in a tutored session,
+/// because no tutor capture path exists yet (`TutorWriteService` has no
+/// learning methods). Story 1.24 (DNI-486) binds the talmid's tutor
+/// commands there, every write a callable (AD-53); this gate then turns
+/// the action on with no change here. Until then a tutor has no
+/// main-track Up to…, and tutor sub-track surfaces stay read-only either
+/// way (AC-11).
 final mainTrackCaptureAllowedProvider = Provider.autoDispose<bool>(
   (ref) => ref.watch(learningCommandsProvider).asData?.value != null,
 );
@@ -270,8 +275,9 @@ Future<CaptureResult?> captureLeaves(
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
   final warningFill = context.colors.warningSnackbarFill;
-  // A tutor capture is shown only once its callable has answered (AD-53):
-  // no optimistic overlay in a tutored session.
+  // A tutor capture (once DNI-486 binds tutor commands) is shown only
+  // when its callable has answered (AD-53): no optimistic overlay in a
+  // tutored session.
   final optimistic = ref.read(activeTutoredProfileSelectionProvider) == null;
   final pending = ref.read(pendingCapturesProvider.notifier);
   final token = optimistic ? pending.add(curriculumId, source, refs) : -1;
