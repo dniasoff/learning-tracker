@@ -17,14 +17,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_for_scope_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_detail_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The active learner's non-ended sub-tracks in document (creation) order,
 /// from the complete read; loading until it is complete. Ended sub-tracks
 /// are not hub rows (Story 2.8 lists them).
+///
+/// A tutored session reads another owner's learner, so it goes through the
+/// grant-gated read path (DNI-523, ruling B10) FIRST, as the detail does:
+/// until an active grant authorizes the tutor, and as soon as it is revoked
+/// or a read is permission-denied, the rows are a fresh error (or loading)
+/// with no value and the sub-track read is not watched, so its cached rows
+/// are disposed. A failed sub-track read is likewise a fresh error, never
+/// the previous rows.
 final subTrackHubRowsProvider =
     Provider.autoDispose<AsyncValue<List<SubTrack>>>((ref) {
       final scope = ref.watch(activeLearnerScopeProvider);
@@ -34,14 +44,22 @@ final subTrackHubRowsProvider =
       if (!scope.hasValue) return const AsyncLoading();
       final active = scope.requireValue;
       if (active == null) return const AsyncData([]);
-      return ref
-          .watch(subTrackDetailTracksProvider(active))
-          .whenData(
-            (read) => [
-              for (final track in read.items)
-                if (track.endedAt == null) track,
-            ],
-          );
+      if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
+        final gate = ref.watch(learnerStateForScopeProvider(active));
+        if (gate case AsyncError(:final error, :final stackTrace)) {
+          return AsyncError(error, stackTrace);
+        }
+        if (!gate.hasValue) return const AsyncLoading();
+      }
+      final tracks = ref.watch(subTrackDetailTracksProvider(active));
+      if (tracks case AsyncError(:final error, :final stackTrace)) {
+        return AsyncError(error, stackTrace);
+      }
+      if (!tracks.hasValue) return const AsyncLoading();
+      return AsyncData([
+        for (final track in tracks.requireValue.items)
+          if (track.endedAt == null) track,
+      ]);
     });
 
 /// The hub's sub-track rows, or nothing while there are none, they are
