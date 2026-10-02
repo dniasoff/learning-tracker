@@ -85,6 +85,21 @@ class ChangeHistoryDetails extends ConsumerWidget {
         ]),
         section(l10n.changeHistoryDetailsWhen, [
           Text(formats.stamp(row.stamp), style: theme.textTheme.bodyMedium),
+          if (row.notifiesParent) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                ExcludeSemantics(
+                  child: ChangeHistoryBell(label: l10n.changeHistoryNotified),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  l10n.changeHistoryNotified,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ],
         ]),
         section(l10n.changeHistoryDetailsWhat, [
           if (summary is GovernedSummary)

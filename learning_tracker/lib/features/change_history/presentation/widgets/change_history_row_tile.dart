@@ -1,6 +1,7 @@
 /// One Change history entry (DESIGN "Change-history entry"; Story 4.5 /
 /// DNI-513 AC-3 – AC-6): actor avatar, name, role tag and time; the
-/// plain-language sentence; Undone / lock / date tags; and a trailing Undo
+/// plain-language sentence; the AD-39 bell; Undone / lock / date tags; and
+/// a trailing Undo
 /// when the row allows it and Story 4.6 supplies the action.
 library;
 
@@ -70,6 +71,25 @@ class ChangeHistoryTag extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The AD-39 bell: this tutor change notified the parent. Display only;
+/// it mirrors the `onChangeLogCreated` allowlist and never sends a push.
+class ChangeHistoryBell extends StatelessWidget {
+  /// Creates the bell, announced as [label].
+  const ChangeHistoryBell({required this.label, super.key});
+
+  /// The accessible label ("Parent notified").
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Icon(
+    Icons.notifications_active_outlined,
+    key: const ValueKey('changeHistoryBell'),
+    size: 18,
+    color: context.colors.brandBlue,
+    semanticLabel: label,
+  );
 }
 
 /// One history row.
@@ -157,6 +177,10 @@ class ChangeHistoryRowTile extends ConsumerWidget {
                               '· ${formats.time(row.stamp.localTime)}',
                               style: muted,
                             ),
+                            if (row.notifiesParent)
+                              ChangeHistoryBell(
+                                label: l10n.changeHistoryNotified,
+                              ),
                           ],
                         ),
                         const SizedBox(height: 4),
