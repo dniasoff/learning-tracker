@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
@@ -317,6 +318,97 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(_text(bonus), findsOneWidget);
+    });
+  });
+
+  group('AC-7: a lock and the catch-up after it (real engine)', () {
+    // Default settings: UTC with no location, so the Shabbos lock runs
+    // Fri 2026-10-09 12:00Z → Sun 2026-10-11 01:00Z (see projection_test).
+    final learnt = [
+      forecastLearn(1, 'Mishnah Berakhot 1:1', '2026-10-01'),
+      forecastLearn(2, 'Mishnah Berakhot 1:2', '2026-10-05'),
+    ];
+    // Recorded after the lock ends, dated on Shabbos.
+    final afterLock = DateTime.utc(2026, 10, 11, 2, 30);
+    final catchUp = [
+      for (final (i, ref) in [
+        'Mishnah Berakhot 1:3',
+        'Mishnah Berakhot 2:1',
+        'Mishnah Berakhot 2:2',
+      ].indexed)
+        forecastLearn(
+          10 + i,
+          ref,
+          '2026-10-10',
+          recordedAt: afterLock,
+          dateState: DateState.catchUp,
+        ),
+    ];
+    LearnerState at(DateTime nowUtc, {bool withCatchUp = false}) =>
+        engineForecastState(
+          nowUtc: nowUtc,
+          trackingStartDate: '2026-08-01',
+          deadline: '2026-12-31',
+          events: [...learnt, if (withCatchUp) ...catchUp],
+        );
+
+    List<String> cardText(WidgetTester tester) => [
+      for (final t in tester.widgetList<RichText>(
+        find.descendant(
+          of: find.byKey(const Key('onTrackCard-mishnayos')),
+          matching: find.byType(RichText),
+        ),
+      ))
+        t.text.toPlainText(),
+    ];
+
+    testWidgets('frozen through the lock, unchanged by the locked days '
+        'alone, re-evaluated with the catch-up', (tester) async {
+      final feed = LearnerStateFeed(at(DateTime.utc(2026, 10, 9, 11)));
+      addTearDown(feed.close);
+      await tester.pumpWidget(
+        pumpApp(
+          theme: AppTheme.lightTheme(),
+          overrides: forecastOverrides(states: feed.stream),
+          child: const Scaffold(
+            body: SingleChildScrollView(child: ParentForecastSection()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // 2 new leaves / 28 days; 7 left → 2026-10-09 + 98 days.
+      final beforeLock = cardText(tester);
+      expect(_text('Behind pace'), findsOneWidget);
+      expect(
+        _text('Projected finish: Jan 15, 2027 · deadline Dec 31, 2026'),
+        findsOneWidget,
+      );
+
+      // Recomputes during the lock show exactly what was shown at its start.
+      for (final instant in [
+        DateTime.utc(2026, 10, 9, 12),
+        DateTime.utc(2026, 10, 10, 12),
+        DateTime.utc(2026, 10, 11, 1),
+      ]) {
+        feed.emit(at(instant));
+        await tester.pumpAndSettle();
+        expect(cardText(tester), beforeLock);
+      }
+
+      // The overlay lifts with no catch-up: the locked days alone leave
+      // the status as it was.
+      feed.emit(at(DateTime.utc(2026, 10, 11, 2)));
+      await tester.pumpAndSettle();
+      expect(_text('Behind pace'), findsOneWidget);
+
+      // A catch-up for Shabbos re-evaluates it: 5 leaves / 28 days, 4 left.
+      feed.emit(at(DateTime.utc(2026, 10, 11, 3), withCatchUp: true));
+      await tester.pumpAndSettle();
+      expect(_text('On track'), findsOneWidget);
+      expect(
+        _text('Projected finish: Nov 3, 2026 · deadline Dec 31, 2026'),
+        findsOneWidget,
+      );
     });
   });
 
