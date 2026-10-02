@@ -381,10 +381,11 @@ void main() {
         'can_edit_learning, not disabled for every tutor', () {
       expect(
         textDisplaySrc,
-        contains('canEditLearning'),
+        contains('tutorWriteAvailabilityProvider'),
         reason:
             'deviation #7: a tutor with editing access may record learning; '
-            'without it the button stays visible but disabled',
+            'without it (or offline, or with the talmid locked) the button '
+            'stays visible but disabled',
       );
     });
 

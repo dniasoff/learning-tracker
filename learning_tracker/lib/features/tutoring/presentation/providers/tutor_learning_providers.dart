@@ -8,6 +8,8 @@
 /// (Story 1.10 callables). Both run [tutorWritePreflightProvider] first.
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -15,11 +17,13 @@ import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_learning_commands.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_preflight.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_write_availability.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 
@@ -117,3 +121,62 @@ Future<TutorGovernedWrites> requireTutorGovernedWrites(Ref ref) async {
   }
   return writes;
 }
+
+/// How often [tutoredLearnerLockProvider] re-judges the lock against the
+/// clock, so the cover appears when the learner's lock starts and leaves
+/// when it ends. Same resolution as the device lock.
+const tutoredLearnerLockRecheck = Duration(seconds: 30);
+
+/// Whether the TUTORED learner is inside a lock window now (AD-36
+/// multi-learner rule): `AsyncData(false)` outside a tutored session.
+///
+/// It judges the talmid's own settings history with the shared
+/// [captureGateProvider] — the same judgement the tutor preflight applies
+/// to writes — never the tutor device's settings. Loading while the
+/// talmid's settings load; an error when they cannot be read.
+final tutoredLearnerLockProvider = Provider.autoDispose<AsyncValue<bool>>((
+  ref,
+) {
+  if (ref.watch(activeTutoredProfileSelectionProvider) == null) {
+    return const AsyncData(false);
+  }
+  final scope = ref.watch(activeLearnerScopeProvider);
+  if (scope case AsyncError(:final error, :final stackTrace)) {
+    return AsyncError<bool>(error, stackTrace);
+  }
+  if (!scope.hasValue) return const AsyncLoading<bool>();
+  final active = scope.requireValue;
+  if (active == null) return const AsyncLoading<bool>();
+  final settings = ref.watch(learnerLockSettingsProvider(active));
+  if (settings case AsyncError(:final error, :final stackTrace)) {
+    return AsyncError<bool>(error, stackTrace);
+  }
+  if (!settings.hasValue) return const AsyncLoading<bool>();
+  final timer = Timer(tutoredLearnerLockRecheck, ref.invalidateSelf);
+  ref.onDispose(timer.cancel);
+  final now = ref.watch(learningCommandClockProvider)();
+  final decision = ref
+      .watch(captureGateProvider)
+      .check(settings.requireValue, now.toUtc());
+  return AsyncData(decision is GateLocked);
+});
+
+/// The write availability of the active session for every tutor write
+/// control (Story 1.24, DNI-486): the parent's `can_edit_learning` first,
+/// then a positive connectivity probe, then the tutored learner's lock
+/// (loading or unreadable counts as locked: fail closed).
+final tutorWriteAvailabilityProvider =
+    Provider.autoDispose<TutorWriteAvailability>((ref) {
+      final selection = ref.watch(activeTutoredProfileSelectionProvider);
+      if (selection == null) return TutorWriteAvailability.owner;
+      if (!selection.permissions.canEditLearning) {
+        return TutorWriteAvailability.noEditAccess;
+      }
+      if (ref.watch(connectivityStreamProvider).value != true) {
+        return TutorWriteAvailability.offline;
+      }
+      if (ref.watch(tutoredLearnerLockProvider).value != false) {
+        return TutorWriteAvailability.locked;
+      }
+      return TutorWriteAvailability.available;
+    });

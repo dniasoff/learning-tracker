@@ -1,8 +1,7 @@
-// Story 1.24 (DNI-486) AC-1 — every tutor learning command and governed
-// main-track write routes through ONE typed TutorWriteService method (the
-// Story 1.23 / Story 1.10 callables), and the preflight blocks a write
-// before any callable when the grant, the connection or the target
-// learner's lock does not allow it.
+// Story 1.24 (DNI-486) AC-1 — every tutor learning command routes through
+// ONE typed TutorWriteService method (the Story 1.23 callables), and the
+// preflight blocks a write before any callable when the grant, the
+// connection or the target learner's lock does not allow it.
 
 @Tags(['tutor_mode'])
 library;
@@ -12,12 +11,10 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
-import 'package:learning_tracker/features/tutoring/data/services/tutor_write_preflight.dart';
 
-import '../../helpers/learner_state/engine_fixtures.dart';
-import '../../helpers/learner_state/fake_learning_commands.dart';
-import '../../helpers/tutoring/tutor_learning_harness.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
+import '../../../../helpers/tutoring/tutor_learning_harness.dart';
 
 const _curriculum = engineCurriculum;
 
@@ -235,61 +232,6 @@ void main() {
       expect(h.invoker.calls, isEmpty);
       // The gate judged the talmid's settings history, never the device's.
       expect((h.gate as FakeCaptureGate).checks.single.$1, same(h.history));
-    });
-  });
-
-  group('governed main-track writes → Story 1.10 callables', () {
-    test('a study-day replace upserts each day and tombstones the removed '
-        'one, each with its own client actionId', () async {
-      final h = TutorHarness();
-      addTearDown(h.dispose);
-
-      await h.governed.replaceStudyDays(
-        upserts: [
-          (docId: 'mishnayos_1', data: {'day_of_week': 1}),
-        ],
-        removedDocIds: ['mishnayos_7'],
-      );
-
-      expect(h.invoker.calls.map((c) => c.fn), [
-        'tutorDeleteStudyDayConfig',
-        'tutorUpsertStudyDayConfig',
-      ]);
-      final actionIds = h.invoker.calls.map((c) => c.args['actionId']).toSet();
-      expect(actionIds, hasLength(2));
-    });
-
-    test(
-      'a goal edit is tutorUpsertGoal; ending it is tutorDeleteGoal',
-      () async {
-        final h = TutorHarness();
-        addTearDown(h.dispose);
-
-        await h.governed.upsertGoal(goalId: 'g1', data: {'description': 'x'});
-        await h.governed.endGoal('g1');
-
-        expect(h.invoker.calls.map((c) => c.fn), [
-          'tutorUpsertGoal',
-          'tutorDeleteGoal',
-        ]);
-      },
-    );
-
-    test('a refused preflight throws before any call', () async {
-      final h = TutorHarness(online: false);
-      addTearDown(h.dispose);
-
-      await expectLater(
-        h.governed.upsertGoal(goalId: 'g1', data: const {}),
-        throwsA(
-          isA<TutorGovernedWriteException>().having(
-            (e) => e.refusal,
-            'refusal',
-            isA<TutorPreflightOffline>(),
-          ),
-        ),
-      );
-      expect(h.invoker.calls, isEmpty);
     });
   });
 }

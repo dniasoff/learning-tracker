@@ -85,8 +85,9 @@ class StudyDayConfigScreen extends ConsumerWidget {
     // WS3.3d carry-forward: when a tutor has entered a talmid's context, gate
     // study-day editing behind `canEditLearning` (AD-53). Owners (non-tutored context)
     // always edit. Mirrors the gating in parent_settings_screen.
-    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-    final canEdit = tutorPerms == null || tutorPerms.canEditLearning;
+    // DNI-486: and, for a tutor, online with the talmid outside a lock;
+    // otherwise the toggles stay visible but disabled under one note.
+    final canEdit = ref.watch(tutorWriteAvailabilityProvider).allowsWrite;
 
     // TS-4: read terms + variant so Saturday routes through nusach resolver.
     final terms = domainTermLabels(ref);
@@ -171,6 +172,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
+                  const TutorWriteNote(padding: EdgeInsets.only(bottom: 12)),
                   // Day toggle grid
                   ...List.generate(_displayOrder.length, (index) {
                     final dow = _displayOrder[index];
@@ -178,24 +180,27 @@ class StudyDayConfigScreen extends ConsumerWidget {
                         dayTypeMap[dow] ?? DayType.study; // default study
                     final isStudy = currentType == DayType.study;
 
-                    return _DayToggleTile(
-                      // TS-4: use studyDayLabel so Saturday reads
-                      // "Shabbos"/"Shabbat"/"שבת" per nusach + terms.
-                      dayLabel: studyDayLabel(
-                        isoWeekday: dow,
-                        l10n: l10n,
-                        terms: terms,
-                        variant: variant,
+                    return TutorDisabledControl(
+                      blocked: !canEdit,
+                      child: _DayToggleTile(
+                        // TS-4: use studyDayLabel so Saturday reads
+                        // "Shabbos"/"Shabbat"/"שבת" per nusach + terms.
+                        dayLabel: studyDayLabel(
+                          isoWeekday: dow,
+                          l10n: l10n,
+                          terms: terms,
+                          variant: variant,
+                        ),
+                        isStudy: isStudy,
+                        onToggle: canEdit
+                            ? () => _toggleDay(
+                                context,
+                                ref,
+                                dow,
+                                isStudy ? DayType.review : DayType.study,
+                              )
+                            : null,
                       ),
-                      isStudy: isStudy,
-                      onToggle: canEdit
-                          ? () => _toggleDay(
-                              context,
-                              ref,
-                              dow,
-                              isStudy ? DayType.review : DayType.study,
-                            )
-                          : null,
                     );
                   }),
                   const SizedBox(height: 24),

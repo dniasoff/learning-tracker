@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/widgets/tutored_learner_lock_overlay.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Root application widget.
@@ -93,8 +94,16 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
       // the SAME bar above every PUSHED sub-route, which would otherwise lose
       // it. Mounted here so it wraps the entire router output and survives all
       // route pushes/pops.
-      builder: (context, child) =>
-          PersistentSwitcherScaffold(child: child ?? const SizedBox.shrink()),
+      //
+      // Story 1.24 (DNI-486, AC-6; AD-36 multi-learner rule): while a tutor
+      // views a talmid who is inside a lock window, every route of that
+      // tutored context is covered — no data, no controls — and its one
+      // action exits to the tutor's own app.
+      builder: (context, child) => TutoredLearnerLockOverlay(
+        child: PersistentSwitcherScaffold(
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
     );
   }
 }

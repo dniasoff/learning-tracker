@@ -33,6 +33,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/widgets/tutor_write_gate.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -1058,10 +1059,12 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             // tutor callables (deviation #7); without the parent's
             // `can_edit_learning` the control stays visible but disabled.
             final isTutor = _isTutorSession(ref);
+            // AC-4/AC-5/AC-6: without the parent's canEditLearning, offline,
+            // or with the talmid locked, the tutor's button stays visible but
+            // disabled (40%, disabled semantics) with one note saying why.
             final tutorBlocked =
                 isTutor &&
-                !(ref.watch(activeTutorPermissionsProvider)?.canEditLearning ??
-                    false);
+                ref.watch(tutorWriteAvailabilityProvider).blocksTutor;
             final l10n = AppLocalizations.of(context)!;
 
             // R2: SafeArea(top:false) so the mark-complete / next-task buttons
@@ -1072,93 +1075,102 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // W6.17/W6.18: Wrap in Tooltip when disabled due to tutor mode.
-                  Tooltip(
-                    // W6.18: Tooltip text — shown only when the button is
-                    // disabled for tutor reasons (not for "already done").
-                    message: tutorBlocked
-                        ? l10n.tutorCannotMarkLiveCompletion
-                        : '',
-                    child: FilledButton(
-                      // W6.17: Disable for tutors regardless of isDone state.
-                      // H1: session is passed so _handleComplete routes through
-                      // MarkLiveCompletionUseCase for domain-layer enforcement.
-                      onPressed: (_saving || isDone || tutorBlocked)
-                          ? null
-                          : () => _handleComplete(
-                              task,
-                              trackType,
-                              session: _sessionForCurrentUser(ref, isTutor),
-                            ),
-                      style: FilledButton.styleFrom(
-                        // W6.17: When in tutor mode, show a muted amber
-                        // colour to visually communicate the disabled state.
-                        backgroundColor: tutorBlocked
-                            ? context.colors.goldAmber.withValues(alpha: 0.3)
-                            : isDone
-                            ? context.colors.brandGoldDeep
-                            : context.colors.brandBlue,
-                        // AUD-content_browsing-08: theme's onPrimary token
-                        // (matches error_display.dart / app_error_view.dart)
-                        // instead of a raw Colors.white literal — onPrimary
-                        // is white in both the light and dark theme today,
-                        // but repaints if that ever changes.
-                        foregroundColor: Theme.of(
-                          context,
-                        ).colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        elevation: tutorBlocked ? 0 : 2,
-                        disabledBackgroundColor: tutorBlocked
-                            ? context.colors.goldAmber.withValues(alpha: 0.2)
-                            : null,
-                        disabledForegroundColor: tutorBlocked
-                            ? context.colors.goldAmber.withValues(alpha: 0.7)
-                            : null,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_saving)
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: context.colors.brandCreamCard,
+                  TutorDisabledControl(
+                    blocked: tutorBlocked,
+                    child: Tooltip(
+                      // W6.18: Tooltip text — shown only when the button is
+                      // disabled for tutor reasons (not for "already done").
+                      message: tutorBlocked
+                          ? tutorWriteNoteText(
+                                  l10n,
+                                  ref.watch(tutorWriteAvailabilityProvider),
+                                ) ??
+                                ''
+                          : '',
+                      child: FilledButton(
+                        // W6.17: Disable for tutors regardless of isDone state.
+                        // H1: session is passed so _handleComplete routes through
+                        // MarkLiveCompletionUseCase for domain-layer enforcement.
+                        onPressed: (_saving || isDone || tutorBlocked)
+                            ? null
+                            : () => _handleComplete(
+                                task,
+                                trackType,
+                                session: _sessionForCurrentUser(ref, isTutor),
                               ),
-                            )
-                          else
-                            Icon(
-                              // W6.17: When tutor, show a school/lock icon.
-                              tutorBlocked
-                                  ? Icons.school_rounded
-                                  : isDone
-                                  ? Icons.check_circle
-                                  : Icons.check_circle_outline_rounded,
-                              size: 20,
-                            ),
-                          const SizedBox(width: 10),
-                          Text(
-                            tutorBlocked
-                                ? l10n.markCompleteTutorUnavailable
-                                : isDone
-                                ? l10n.markCompleteCompletedStage(
-                                    domainTermLabels(
-                                      ref,
-                                    ).resolveStoredStageName(task.stageName),
-                                  )
-                                : l10n.markComplete,
-                            style: const TextStyle(
-                              fontSize: 31 / 2,
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style: FilledButton.styleFrom(
+                          // W6.17: When in tutor mode, show a muted amber
+                          // colour to visually communicate the disabled state.
+                          backgroundColor: tutorBlocked
+                              ? context.colors.goldAmber.withValues(alpha: 0.3)
+                              : isDone
+                              ? context.colors.brandGoldDeep
+                              : context.colors.brandBlue,
+                          // AUD-content_browsing-08: theme's onPrimary token
+                          // (matches error_display.dart / app_error_view.dart)
+                          // instead of a raw Colors.white literal — onPrimary
+                          // is white in both the light and dark theme today,
+                          // but repaints if that ever changes.
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
                           ),
-                        ],
+                          elevation: tutorBlocked ? 0 : 2,
+                          disabledBackgroundColor: tutorBlocked
+                              ? context.colors.goldAmber.withValues(alpha: 0.2)
+                              : null,
+                          disabledForegroundColor: tutorBlocked
+                              ? context.colors.goldAmber.withValues(alpha: 0.7)
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_saving)
+                              SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: context.colors.brandCreamCard,
+                                ),
+                              )
+                            else
+                              Icon(
+                                // W6.17: When tutor, show a school/lock icon.
+                                tutorBlocked
+                                    ? Icons.school_rounded
+                                    : isDone
+                                    ? Icons.check_circle
+                                    : Icons.check_circle_outline_rounded,
+                                size: 20,
+                              ),
+                            const SizedBox(width: 10),
+                            Text(
+                              tutorBlocked
+                                  ? l10n.markCompleteTutorUnavailable
+                                  : isDone
+                                  ? l10n.markCompleteCompletedStage(
+                                      domainTermLabels(
+                                        ref,
+                                      ).resolveStoredStageName(task.stageName),
+                                    )
+                                  : l10n.markComplete,
+                              style: const TextStyle(
+                                fontSize: 31 / 2,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                  if (isTutor)
+                    const TutorWriteNote(padding: EdgeInsets.only(top: 8)),
                   if (nextTask != null) ...[
                     const SizedBox(height: 10),
                     OutlinedButton.icon(

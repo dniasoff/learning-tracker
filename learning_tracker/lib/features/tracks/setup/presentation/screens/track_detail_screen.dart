@@ -762,9 +762,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             if (curriculum != null) ...[
               Builder(
                 builder: (context) {
-                  final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-                  final canEditGoals =
-                      tutorPerms == null || tutorPerms.canEditLearning;
+                  // DNI-486: permission, connection and the talmid's lock.
+                  final canEditGoals = ref
+                      .watch(tutorWriteAvailabilityProvider)
+                      .allowsWrite;
                   final hasGoal =
                       ref
                           .watch(_trackGoalProvider(track.curriculumId))

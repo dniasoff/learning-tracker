@@ -4,16 +4,28 @@
 /// reads, a scripted gate and a scripted connectivity probe.
 library;
 
+import 'dart:async';
+
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_learning_commands.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_preflight.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 import '../learner_state/c0_fixtures.dart';
 import '../learner_state/fake_learning_commands.dart';
@@ -196,3 +208,87 @@ final class _UlidSequence {
     return '01JT7T0R00000000000000${_n.toString().padLeft(4, '0')}';
   }
 }
+
+/// The talmid's display name in every tutor fixture.
+const tutorFixtureLearnerName = 'Yossi';
+
+/// The talmid's scope (the parent's namespace).
+LearnerScope tutorFixtureScope() =>
+    LearnerScope(ownerUid: tutorFixtureOwnerUid, profileId: profileUlid);
+
+/// An [ActiveTutoredProfileSelection] fixed to one selection (null: the
+/// tutor's own app).
+final class FixedTutoredSelection extends ActiveTutoredProfileSelection {
+  /// Creates the notifier.
+  FixedTutoredSelection(this._initial);
+
+  final TutoredProfileSelection? _initial;
+
+  @override
+  TutoredProfileSelection? build() => _initial;
+}
+
+/// Connectivity the test drives: each [emit] is one probe result.
+final class ConnectivityFeed {
+  final _controller = StreamController<bool>.broadcast();
+  bool? _last;
+
+  /// The stream behind `connectivityStreamProvider`.
+  Stream<bool> stream() async* {
+    final last = _last;
+    if (last != null) yield last;
+    yield* _controller.stream;
+  }
+
+  /// Emits one probe result.
+  void emit(bool online) {
+    _last = online;
+    _controller.add(online);
+  }
+
+  /// Closes the feed.
+  Future<void> close() => _controller.close();
+}
+
+/// Provider overrides for a tutored session over the talmid in
+/// [tutorFixtureScope]: the selection (null: the tutor's own app), the
+/// connectivity probe ([online] or a [connectivity] feed; an
+/// `Exception` makes it error), the talmid's settings history and gate,
+/// a fixed clock at [tutorFixtureNow] and the talmid's profile name.
+List<Override> tutoredOverrides({
+  TutoredProfileSelection? selection,
+  bool online = true,
+  ConnectivityFeed? connectivity,
+  Object? connectivityError,
+  LearnerSettingsHistory? lockSettings,
+  Stream<LearnerSettingsHistory>? lockSettingsStream,
+  CaptureGate? gate,
+  DateTime? now,
+}) => [
+  activeTutoredProfileSelectionProvider.overrideWith(
+    () => FixedTutoredSelection(selection),
+  ),
+  activeLearnerScopeProvider.overrideWith((ref) async => tutorFixtureScope()),
+  connectivityStreamProvider.overrideWith((ref) {
+    if (connectivityError != null) return Stream<bool>.error(connectivityError);
+    return connectivity?.stream() ?? Stream.value(online);
+  }),
+  learnerLockSettingsProvider.overrideWith(
+    (ref, _) =>
+        lockSettingsStream ?? Stream.value(lockSettings ?? c0SettingsHistory()),
+  ),
+  captureGateProvider.overrideWithValue(gate ?? FakeCaptureGate.open()),
+  learningCommandClockProvider.overrideWithValue(() => now ?? tutorFixtureNow),
+  tutorLearnerNameOverride(),
+];
+
+/// The talmid's profile (its name feeds the tutor note).
+Override tutorLearnerNameOverride() => activeProfileProvider.overrideWith(
+  (ref) async => LearnerProfileEntity(
+    profileId: profileUlid,
+    displayName: tutorFixtureLearnerName,
+    mode: ProfileMode.child,
+    createdAt: DateTime.utc(2026),
+    updatedAt: DateTime.utc(2026),
+  ),
+);
