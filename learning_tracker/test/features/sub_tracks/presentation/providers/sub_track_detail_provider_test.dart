@@ -5,13 +5,22 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
 
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/in_memory_ports.dart';
+import '../../../../helpers/learner_state_fixtures.dart';
 import '../../sub_track_detail_harness.dart';
 
 void main() {
@@ -19,8 +28,13 @@ void main() {
   setUp(() => h = DetailHarness());
   tearDown(() => h.dispose());
 
-  ProviderContainer container({Stream<LearnerState>? state}) {
-    final c = ProviderContainer(overrides: h.overrides(state: state));
+  ProviderContainer container({
+    Stream<LearnerState>? state,
+    LearningCommands? commands,
+  }) {
+    final c = ProviderContainer(
+      overrides: h.overrides(state: state, commands: commands),
+    );
     addTearDown(c.dispose);
     return c;
   }
@@ -118,6 +132,119 @@ void main() {
     expect(detail.ground.entries.map((r) => r.node), [peah, berakhot1]);
   });
 
+  group('ground edits (AC-5, AC-6, UX-DR-124)', () {
+    test('groundOver: the pending order wins; a refused order still in the '
+        'store shows the last confirmed one; otherwise the store', () {
+      const refused = SubTrackGroundRollback(
+        rejected: [peah, berakhot1],
+        prior: [berakhot1, peah],
+        removal: false,
+      );
+      expect(
+        const SubTrackGroundEditState(
+          pending: [peah],
+          rollback: refused,
+        ).groundOver(const [berakhot1, peah]),
+        const [peah],
+      );
+      const rolledBack = SubTrackGroundEditState(rollback: refused);
+      expect(rolledBack.groundOver(const [peah, berakhot1]), const [
+        berakhot1,
+        peah,
+      ]);
+      expect(rolledBack.groundOver(const [berakhot2]), const [
+        berakhot2,
+      ], reason: 'the store moved on (reverted or edited elsewhere)');
+      expect(const SubTrackGroundEditState().groundOver(const [peah]), const [
+        peah,
+      ]);
+    });
+
+    test(
+      'a queued edit later refused restores the last confirmed order '
+      'even before the store reverts it, and counts a late rejection',
+      () async {
+        final school = detailSubTrack(10, 'School', const [berakhot1, peah]);
+        h.seed(subTracks: [school]);
+        h.tracks.offline = true; // applied locally, never acknowledged here
+        final intent = InMemoryGovernedIntentRepository()
+          ..emit(
+            h.scope,
+            LearnerIntent(
+              settings: c0Settings,
+              mainTracks: {engineCurriculum: engineIntent()},
+              goals: const <String, CurriculumGoals>{},
+            ),
+          );
+        final failures = StreamController<List<PendingFailure>>.broadcast();
+        var ids = 0;
+        final inner = SubTrackCommands(
+          scope: h.scope,
+          actor: parentActor,
+          subTracks: h.repository,
+          intent: intent,
+          today: () => '2026-09-07',
+          nowUtc: () => engineAt(10000),
+          newId: () => engineUlid(5000 + ++ids),
+          ackTimeout: const Duration(milliseconds: 10),
+        );
+        addTearDown(() async {
+          await failures.close();
+          await inner.dispose();
+          await intent.dispose();
+        });
+        final c = container(commands: _QueuedCommands(inner, failures.stream));
+        final edits = c.listen(
+          subTrackGroundEditorProvider(school.id),
+          (_, _) {},
+        );
+        addTearDown(edits.close);
+        await settle(c, school.id);
+        List<NodeEntry> shown() => [
+          for (final r
+              in c
+                  .read(subTrackDetailProvider(school.id))
+                  .requireValue
+                  .ground
+                  .entries)
+            r.node,
+        ];
+        expect(shown(), const [berakhot1, peah]);
+
+        final accepted = await c
+            .read(subTrackGroundEditorProvider(school.id).notifier)
+            .commit(const [peah, berakhot1], prior: const [berakhot1, peah]);
+        await pumpEventQueue();
+        expect(accepted, isTrue, reason: 'queued counts as accepted');
+        expect(shown(), const [peah, berakhot1]);
+        expect(edits.read().lateRejections, 0);
+        final changeId = h.tracks.entries.single.$2.id;
+
+        // The server refuses it for good; the store keeps the unsaved order.
+        PendingFailure refused(String id) => PendingFailure(
+          id: id,
+          eventIds: const [],
+          changeIds: [id],
+          reason: PendingFailureReason.permissionDenied,
+        );
+        failures.add([refused('unrelated'), refused(changeId)]);
+        await pumpEventQueue();
+        expect(edits.read().lateRejections, 1);
+        expect(edits.read().rollback!.removal, isFalse);
+        expect(h.tracks.tracksOf(h.scope).single.ground, const [
+          peah,
+          berakhot1,
+        ]);
+        expect(shown(), const [berakhot1, peah]);
+
+        // The same failure listed again is not a second rejection.
+        failures.add([refused(changeId)]);
+        await pumpEventQueue();
+        expect(edits.read().lateRejections, 1);
+      },
+    );
+  });
+
   group('role', () {
     LearnerProfileEntity profile(ProfileMode mode) => LearnerProfileEntity(
       profileId: 'p1',
@@ -177,4 +304,24 @@ void main() {
       );
     });
   });
+}
+
+/// The real sub-track commands for writes, with a scripted
+/// pending-failure feed.
+final class _QueuedCommands implements LearningCommands {
+  _QueuedCommands(this.inner, this.failures);
+
+  final SubTrackCommands inner;
+  final Stream<List<PendingFailure>> failures;
+
+  @override
+  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>
+      inner.editSubTrack(subTrackId, edit);
+
+  @override
+  Stream<List<PendingFailure>> watchPendingFailures() => failures;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('${invocation.memberName}');
 }

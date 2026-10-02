@@ -367,8 +367,14 @@ final class FakeAsyncSafeSubTrackRepository implements SubTrackRepository {
     LearnerScope scope,
     SubTrackChange change,
   ) async {
+    // The fake applies the change to its local rows before its future
+    // settles (an offline write is held until `settleHeld`), like
+    // Firestore's latency compensation: show it at once, then again once
+    // the "server" settled it (a refused offline write is reverted).
+    final applied = inner.applyGovernedChange(scope, change);
+    _changes.add(null);
     try {
-      await inner.applyGovernedChange(scope, change);
+      await applied;
     } finally {
       _changes.add(null);
     }

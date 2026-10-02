@@ -11,6 +11,8 @@
 /// provider style.
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
@@ -103,59 +105,194 @@ final subTrackDetailRoleProvider = Provider.autoDispose<SubTrackDetailRole>((
 /// null when nothing is pending.
 final subTrackGroundOverrideProvider = Provider.autoDispose
     .family<List<NodeEntry>?, String>(
-      (ref, id) => ref.watch(subTrackGroundEditorProvider(id)),
+      (ref, id) => ref.watch(subTrackGroundEditorProvider(id)).pending,
     );
+
+/// A queued (offline) ground edit the server later refused for good
+/// (UX-DR-124): the order it sent and the last confirmed order before it.
+final class SubTrackGroundRollback {
+  /// Creates the rollback of [rejected] to [prior].
+  const SubTrackGroundRollback({
+    required this.rejected,
+    required this.prior,
+    required this.removal,
+  });
+
+  /// The order the refused edit wrote.
+  final List<NodeEntry> rejected;
+
+  /// The last confirmed order before it.
+  final List<NodeEntry> prior;
+
+  /// Whether the refused edit was a removal (else a reorder).
+  final bool removal;
+}
+
+/// The state of [SubTrackGroundEditor].
+final class SubTrackGroundEditState {
+  /// Creates the state.
+  const SubTrackGroundEditState({
+    this.pending,
+    this.rollback,
+    this.lateRejections = 0,
+  });
+
+  /// The optimistic order of the edit in flight, or null.
+  final List<NodeEntry>? pending;
+
+  /// The latest queued edit the server refused after it was accepted
+  /// locally, or null.
+  final SubTrackGroundRollback? rollback;
+
+  /// How many queued edits the server refused after they were accepted
+  /// locally; the detail shows a rollback snackbar each time it grows.
+  final int lateRejections;
+
+  /// Whether an edit is in flight.
+  bool get busy => pending != null;
+
+  /// The order to render over the [stored] ground: the pending order;
+  /// else, while the store still shows a refused edit's order (a cache
+  /// that has not reverted it yet), the last confirmed order before it;
+  /// else [stored].
+  List<NodeEntry> groundOver(List<NodeEntry> stored) {
+    final p = pending;
+    if (p != null) return p;
+    final r = rollback;
+    if (r != null && _sameOrder(stored, r.rejected)) return r.prior;
+    return stored;
+  }
+
+  static bool _sameOrder(List<NodeEntry> a, List<NodeEntry> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+}
 
 /// Commits whole-`ground` edits of one sub-track (AC-5, AC-6).
 ///
-/// [commit] shows the new order at once (the state is the pending order),
-/// sends the WHOLE new list through `LearningCommands.editSubTrack` (one
-/// governed `subTrack` change and one `change_log` entry; learning events
-/// untouched), then clears the pending order: on success the stored
-/// ground (already applied to the local cache, queued offline) takes over
-/// and the engine recomputes position, held ground, forecast and today's
-/// tasks; on rejection the last confirmed order is back. No widget writes
-/// Firestore.
+/// [SubTrackGroundEditor.commit] shows the new order at once (the pending
+/// order), sends the WHOLE new list through `LearningCommands.editSubTrack`
+/// (one governed `subTrack` change and one `change_log` entry; learning
+/// events untouched), then clears the pending order: on success the
+/// stored ground (already applied to the local cache) takes over and the
+/// engine recomputes position, held ground, forecast and today's tasks; on
+/// rejection the last confirmed order is back. An edit queued offline is
+/// tracked by its change id: when `LearningCommands.watchPendingFailures`
+/// later reports it refused for good, the last confirmed order is shown
+/// again and [SubTrackGroundEditState.lateRejections] grows (the detail's
+/// rollback snackbar). No widget writes Firestore.
 final subTrackGroundEditorProvider = NotifierProvider.autoDispose
-    .family<SubTrackGroundEditor, List<NodeEntry>?, String>(
+    .family<SubTrackGroundEditor, SubTrackGroundEditState, String>(
       SubTrackGroundEditor.new,
     );
 
 /// See [subTrackGroundEditorProvider].
-class SubTrackGroundEditor extends Notifier<List<NodeEntry>?> {
+class SubTrackGroundEditor extends Notifier<SubTrackGroundEditState> {
   /// Creates the editor of sub-track [subTrackId].
   SubTrackGroundEditor(this.subTrackId);
 
   /// The sub-track ULID.
   final String subTrackId;
 
+  /// Queued edits awaiting the server, by change-log entry id.
+  final Map<String, SubTrackGroundRollback> _queued = {};
+
+  StreamSubscription<List<PendingFailure>>? _failures;
+
   @override
-  List<NodeEntry>? build() => null;
+  SubTrackGroundEditState build() {
+    ref.onDispose(() => unawaited(_failures?.cancel()));
+    return const SubTrackGroundEditState();
+  }
 
   /// Whether an edit is in flight.
-  bool get busy => state != null;
+  bool get busy => state.busy;
 
-  /// Replaces the ground with [next]. Returns whether it was accepted
-  /// (saved, or queued offline); false means it was rejected and rolled
-  /// back.
-  Future<bool> commit(List<NodeEntry> next) async {
+  /// Replaces the ground [prior] (the order shown, the last confirmed one)
+  /// with [next]; [removal] names the edit for the late-rejection
+  /// snackbar. Returns whether it was accepted (saved, or queued offline);
+  /// false means it was rejected and rolled back.
+  Future<bool> commit(
+    List<NodeEntry> next, {
+    required List<NodeEntry> prior,
+    bool removal = false,
+  }) async {
     if (busy) return false;
-    state = List.unmodifiable(next);
-    var accepted = false;
+    final sent = List<NodeEntry>.unmodifiable(next);
+    state = SubTrackGroundEditState(
+      pending: sent,
+      rollback: state.rollback,
+      lateRejections: state.lateRejections,
+    );
+    CaptureResult? result;
+    LearningCommands? commands;
     try {
-      final commands = await ref.read(learningCommandsProvider.future);
+      commands = await ref.read(learningCommandsProvider.future);
       if (commands != null) {
-        final result = await commands.editSubTrack(
+        result = await commands.editSubTrack(
           subTrackId,
-          SubTrackEdit(ground: List.unmodifiable(next)),
+          SubTrackEdit(ground: sent),
         );
-        accepted = result is CaptureSuccess;
       }
     } on Object {
-      accepted = false;
+      result = null;
     }
-    if (ref.mounted) state = null;
+    if (!ref.mounted) return result is CaptureSuccess;
+    final accepted = result is CaptureSuccess;
+    if (result is CaptureSuccess && result.queued && commands != null) {
+      final rollback = SubTrackGroundRollback(
+        rejected: sent,
+        prior: List.unmodifiable(prior),
+        removal: removal,
+      );
+      for (final id in result.changeIds) {
+        _queued[id] = rollback;
+      }
+      _watchFailures(commands);
+    }
+    state = SubTrackGroundEditState(
+      // A newer accepted edit supersedes an earlier rollback.
+      rollback: accepted ? null : state.rollback,
+      lateRejections: state.lateRejections,
+    );
     return accepted;
+  }
+
+  void _watchFailures(LearningCommands commands) {
+    if (_failures != null) return;
+    try {
+      _failures = commands.watchPendingFailures().listen(
+        _onPendingFailures,
+        onError: (Object _) {},
+      );
+    } on Object {
+      // No pending-failure feed: the store's own revert still restores
+      // the confirmed order.
+    }
+  }
+
+  void _onPendingFailures(List<PendingFailure> failures) {
+    if (!ref.mounted || _queued.isEmpty) return;
+    SubTrackGroundRollback? latest;
+    var count = 0;
+    for (final failure in failures) {
+      for (final id in failure.changeIds) {
+        final rollback = _queued.remove(id);
+        if (rollback == null) continue;
+        latest = rollback;
+        count++;
+      }
+    }
+    if (latest == null) return;
+    state = SubTrackGroundEditState(
+      pending: state.pending,
+      rollback: latest,
+      lateRejections: state.lateRejections + count,
+    );
   }
 }
 
@@ -230,7 +367,10 @@ final subTrackDetailProvider = Provider.autoDispose
           ground: SubTrackGroundProjection.project(
             track: track,
             ground:
-                ref.watch(subTrackGroundOverrideProvider(id)) ?? track.ground,
+                ref.watch(subTrackGroundOverrideProvider(id)) ??
+                ref
+                    .watch(subTrackGroundEditorProvider(id))
+                    .groundOver(track.ground),
             corpus: corpus,
             learntLeaves: curriculum.learntLeaves,
             countedLearns: _countedLearns(
