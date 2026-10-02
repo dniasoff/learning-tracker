@@ -44,15 +44,11 @@ export 'package:learning_tracker/features/learning/domain/commands/sub_track_com
 /// back to the default stage ladder, so an uncached or unreachable
 /// `point_configs` read never blocks an offline capture (AC-9).
 const Duration defaultPointsReadWait = Duration(seconds: 2);
-import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
-
-export 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart'
-    show SubTrackDraft, SubTrackEdit;
-
 /// How long a `skipRecorded` capture waits for the event log before it
 /// writes the caller's refs as given, so an uncached or unreachable log
 /// never blocks an offline capture (AC-9).
 const Duration defaultRecordedReadWait = Duration(seconds: 2);
+
 
 /// The replacement fields of `LearningCommands.replace`; null keeps the
 /// target's value.
