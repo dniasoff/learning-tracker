@@ -172,15 +172,17 @@ AsyncValue<List<T>> _fromActiveState<T>(
 /// The parent forecast cards of the active learner, one per evaluated
 /// curriculum.
 ///
-/// Fail closed: while the session is resolving the value is loading, and
-/// any session that is not a parent's (a child without the parent PIN, a
-/// tutored session, an error) gets an empty list without reading the
-/// learner state at all (NFR-9, UX-DR-48, UX-DR-97).
+/// Fail closed: only a confirmed parent session reads the learner state.
+/// Until the role resolves (or while it re-resolves), and for any session
+/// that is not a parent's (a child without the parent PIN, a tutored
+/// session, an error), the value is an empty list, so not even the loading
+/// placeholder or its "Loading pace status" label reaches a child's first
+/// frame (NFR-9, UX-DR-48, UX-DR-97). Loading and error states exist only
+/// after parent authorization.
 final parentForecastProvider =
     Provider.autoDispose<AsyncValue<List<CurriculumForecast>>>((ref) {
       final access = ref.watch(parentSessionProvider);
-      if (access.isLoading) return const AsyncLoading();
-      if (access.hasError || access.value != true) {
+      if (access.isLoading || access.hasError || access.value != true) {
         return const AsyncData(<CurriculumForecast>[]);
       }
       return _fromActiveState(

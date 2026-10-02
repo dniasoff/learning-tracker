@@ -1,11 +1,14 @@
 // Story 2.11 (DNI-502) T1: the Dashboard forecast read path copies the
 // engine's LearnerState values (AD-35, AD-44), is parent-only (NFR-9) and
 // passes load errors through for the card's retry (AC-8).
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 
 import '../../../../helpers/dashboard/forecast_fixtures.dart';
 import '../../../../helpers/learner_state/provider_settle.dart';
@@ -16,6 +19,15 @@ ProviderContainer _container({bool parent = true, LearnerState? state}) {
   );
   addTearDown(container.dispose);
   return container;
+}
+
+/// The parent forecast once the session role has resolved: until then it
+/// is an empty list by design (fail closed, NFR-9).
+Future<AsyncValue<List<CurriculumForecast>>> _settledForecast(
+  ProviderContainer container,
+) async {
+  await settledAsync(container, parentSessionProvider);
+  return settledAsync(container, parentForecastProvider);
 }
 
 const _projection = Projection(
@@ -52,10 +64,7 @@ void main() {
   ]);
 
   test('a parent session gets the engine values as they are', () async {
-    final value = await settledAsync(
-      _container(state: state),
-      parentForecastProvider,
-    );
+    final value = await _settledForecast(_container(state: state));
     final forecasts = value.requireValue;
     expect(forecasts, hasLength(1));
     final f = forecasts.single;
@@ -76,10 +85,22 @@ void main() {
   });
 
   test('a child session never receives forecast values', () async {
-    final value = await settledAsync(
+    final value = await _settledForecast(
       _container(parent: false, state: state),
-      parentForecastProvider,
     );
+    expect(value.requireValue, isEmpty);
+  });
+
+  test('an unresolved role is empty, never loading (NFR-9)', () {
+    final container = ProviderContainer(
+      overrides: forecastOverrides(
+        parentSession: Completer<bool>().future,
+        state: state,
+      ),
+    );
+    addTearDown(container.dispose);
+    final value = container.read(parentForecastProvider);
+    expect(value, isA<AsyncData<List<CurriculumForecast>>>());
     expect(value.requireValue, isEmpty);
   });
 
@@ -98,7 +119,7 @@ void main() {
 
   test('a load error is passed through for the retry (AC-8)', () async {
     // No learner-state override: the C0 stub fails the read.
-    final value = await settledAsync(_container(), parentForecastProvider);
+    final value = await _settledForecast(_container());
     expect(value, isA<AsyncError<List<CurriculumForecast>>>());
   });
 

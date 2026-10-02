@@ -79,13 +79,19 @@ SubTrackState shortfallSubTrack({
 /// emitted through a broadcast controller) and the curriculum display
 /// labels ([nodeLabels] by ref, else the raw ref, so no content database
 /// is read).
+///
+/// [parentSession], when given, resolves the role in place of [parent]
+/// (a never-completing future keeps the role unresolved).
 List<Override> forecastOverrides({
   bool parent = true,
+  Future<bool>? parentSession,
   LearnerState? state,
   Stream<LearnerState>? states,
   Map<String, String> nodeLabels = const {},
 }) => [
-  parentSessionProvider.overrideWith((ref) async => parent),
+  parentSessionProvider.overrideWith(
+    (ref) => parentSession ?? Future.value(parent),
+  ),
   // English units ("Mishnayos"); Hebrew terms have their own setting.
   effectiveUseHebrewTermsProvider.overrideWithValue(false),
   activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),

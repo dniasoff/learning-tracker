@@ -103,8 +103,9 @@ class ForecastCardFrame extends StatelessWidget {
 /// Loading is a static placeholder (no spinner after a tick: a refresh
 /// keeps the shown state, UX-DR-102); a load error is an
 /// [InlineAsyncError] with retry (UX-DR-112). The surface is read-only, so
-/// there is no rejected-sync state (UX-DR-113). Outside a parent session it
-/// takes no space.
+/// there is no rejected-sync state (UX-DR-113). Outside a parent session,
+/// and while the session role is still resolving, it takes no space: the
+/// placeholder and error appear only once the parent is confirmed.
 class ParentForecastSection extends ConsumerWidget {
   /// Creates the section.
   const ParentForecastSection({super.key, this.belowCard});
