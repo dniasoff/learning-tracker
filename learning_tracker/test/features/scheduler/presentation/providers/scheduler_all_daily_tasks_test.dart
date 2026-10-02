@@ -1,4 +1,7 @@
-/// Provider integration coverage for the real allDailyTasksProvider.
+/// Provider integration coverage for the real allDailyTasksProvider and
+/// plannedTasksForDateProvider (DNI-477 T2): the task list is the planner's
+/// layout of the live LearnerState, with the Firestore-backed presentation
+/// inputs (tracks, stages, study days) read through the real graph.
 library;
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,7 +15,8 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
@@ -29,6 +33,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../helpers/firestore_governed_writer.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learner_state.dart';
+import '../../../../helpers/learner_state/learner_state_overrides.dart';
 
 const _uid = 'scheduler-all-tasks-uid';
 const _profileId = '01J9V8J5Q2K7M3N6P4R8T1WXYZ';
@@ -36,7 +43,6 @@ const _profileId = '01J9V8J5Q2K7M3N6P4R8T1WXYZ';
 class _FirebaseApp extends Mock implements FirebaseApp {}
 
 class _FirebaseAuth extends Mock implements FirebaseAuth {}
-
 
 class _ProfileId extends ActiveProfileId {
   @override
@@ -94,17 +100,13 @@ List<ContentItem> _content(CurriculumId curriculum, {int count = 3}) => [
 Future<ProviderContainer> _container({
   DateTime? clock,
   List<CurriculumId> curricula = const [CurriculumId.chumash],
-  bool seedStudyDays = false,
-  int? reviewDay,
+  Map<CurriculumId, CurriculumState> states = const {},
+  bool learnerActive = true,
   List<int> reviewDays = const [],
-  int paceValue = 1,
-  bool includeGoal = true,
-  Map<CurriculumId, DateTime>? activatedAt,
-  Map<String, DateTime>? completions,
   List<String> skippedRefs = const [],
   List<String> previouslySkippedRefs = const [],
 }) async {
-  final today = clock ?? DateTime.utc(2026, 5, 27);
+  final today = clock ?? DateTime.utc(2026, 5, 27, 12);
   final dateString =
       '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
   SharedPreferences.setMockInitialValues({
@@ -114,44 +116,31 @@ Future<ProviderContainer> _container({
   });
   final firestore = createFakeFirestore(authenticatedUid: _uid);
   for (final curriculum in curricula) {
-    final trackStart = activatedAt?[curriculum] ?? today;
     await seedTrack(
       firestore,
       uid: _uid,
       profileId: _profileId,
       curriculumId: curriculum,
-      activatedAt: trackStart,
+      activatedAt: today,
     );
-    if (includeGoal) {
-      await seedGoal(
-        firestore,
-        uid: _uid,
-        profileId: _profileId,
-        curriculumId: curriculum,
-        goalType: 'pace',
-        paceValue: paceValue,
-        pacePeriod: 'day',
-        createdAt: today,
-        updatedAt: today,
-      );
-    }
     await seedStageDefinitions(
       firestore,
       uid: _uid,
       profileId: _profileId,
       curriculumId: curriculum,
       stages: [
-        StageDefinition(
-          curriculumId: curriculum,
-          stageOrder: 1,
-          stageName: 'Learn',
-          delayDays: 0,
-          isDefault: true,
-        ),
+        for (final (order, name) in [(1, 'Learn'), (2, 'Chazara')])
+          StageDefinition(
+            curriculumId: curriculum,
+            stageOrder: order,
+            stageName: name,
+            delayDays: order - 1,
+            isDefault: true,
+          ),
       ],
       updatedAt: today,
     );
-    if (seedStudyDays) {
+    if (reviewDays.isNotEmpty) {
       final studyDays = FirestoreStudyDayConfigRepository(
         firestore: firestore,
         uid: _uid,
@@ -163,7 +152,7 @@ Future<ProviderContainer> _container({
         ),
       );
       await studyDays.initializeDefaults(curriculum);
-      for (final day in {...reviewDays, if (reviewDay != null) reviewDay}) {
+      for (final day in reviewDays) {
         await studyDays.setDayConfig(
           curriculumId: curriculum,
           dayOfWeek: day,
@@ -171,19 +160,6 @@ Future<ProviderContainer> _container({
         );
       }
     }
-  }
-
-  for (final entry
-      in completions?.entries ?? const <MapEntry<String, DateTime>>[]) {
-    await seedCompletion(
-      firestore,
-      uid: _uid,
-      profileId: _profileId,
-      curriculumId: CurriculumId.chumash,
-      sefariaRef: entry.key,
-      completedAt: entry.value,
-      source: CompletionSource.live,
-    );
   }
 
   final handles = AccountFirebaseHandles(
@@ -205,6 +181,16 @@ Future<ProviderContainer> _container({
       calendarProgramServiceProvider.overrideWith(
         (ref) async => CalendarProgramService(const _Calendar()),
       ),
+      corporaProvider.overrideWith((ref) async => const {}),
+      ...learnerStateOverrides(
+        scope: learnerActive ? c0Scope() : null,
+        state: fakeLearnerState(
+          curricula: {
+            for (final MapEntry(:key, :value) in states.entries)
+              key.storageKey: value,
+          },
+        ),
+      ),
       for (final curriculum in curricula)
         scopedCurriculumContentProvider(
           curriculum,
@@ -213,100 +199,105 @@ Future<ProviderContainer> _container({
   );
 }
 
+/// A main track with [refs] schedulable at [dailyTarget] per day.
+FakeCurriculumState _main(
+  CurriculumId curriculum,
+  List<String> refs, {
+  int? dailyTarget = 1,
+  Map<String, List<ReviewDue>> reviews = const {},
+}) => FakeCurriculumState(
+  curriculumId: curriculum.storageKey,
+  schedulableRefs: refs,
+  mainTrackPosition: refs.isEmpty ? null : refs.first,
+  mainTrackRemaining: refs.length,
+  dailyTarget: dailyTarget,
+  reviews: reviews,
+);
+
+const _genesis = ['Genesis 1:1', 'Genesis 1:2', 'Genesis 1:3', 'Genesis 1:4'];
+
+Future<List<DailyTask>> _tasks(ProviderContainer container) async {
+  final subscription = container.listen(allDailyTasksProvider, (_, __) {});
+  addTearDown(subscription.close);
+  return container.read(allDailyTasksProvider.future);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-    'real Firestore-backed provider graph projects an active track',
-    () async {
-      final container = await _container();
-      addTearDown(container.dispose);
-      final subscription = container.listen(
-        allDailyTasksProvider,
-        (_, __) {},
-        fireImmediately: false,
-      );
-      addTearDown(subscription.close);
-
-      final tasks = await container.read(allDailyTasksProvider.future);
-
-      expect(tasks, hasLength(1));
-      expect(tasks.single.contentItemSefariaRef, 'Genesis 1:1');
-      expect(tasks.single.curriculumId, CurriculumId.chumash);
-      expect(tasks.single.priority, DailyTaskPriority.newLearning);
-      expect(tasks.single.isOverdue, isFalse);
-    },
-  );
-
-  test(
-    'empty active-curriculum set produces an empty real-provider result',
-    () async {
-      final container = await _container(curricula: const []);
-      addTearDown(container.dispose);
-      final subscription = container.listen(allDailyTasksProvider, (_, __) {});
-      addTearDown(subscription.close);
-
-      expect(await container.read(allDailyTasksProvider.future), isEmpty);
-    },
-  );
-
-  test(
-    'an active track anchored three days ago yields overdue then today work',
-    () async {
-      final now = DateTime.utc(2026, 5, 27);
-      final container = await _container(
-        clock: now,
-        activatedAt: {
-          CurriculumId.chumash: now.subtract(const Duration(days: 3)),
-        },
-      );
-      addTearDown(container.dispose);
-      final subscription = container.listen(allDailyTasksProvider, (_, __) {});
-      addTearDown(subscription.close);
-
-      final tasks = await container.read(allDailyTasksProvider.future);
-      expect(tasks, hasLength(4));
-      expect(tasks.take(3).every((task) => task.isOverdue), isTrue);
-      expect(tasks.last.isOverdue, isFalse);
-      expect(tasks.map((task) => task.contentItemSefariaRef), [
-        'Genesis 1:1',
-        'Genesis 1:2',
-        'Genesis 1:3',
-        'Genesis 1:4',
-      ]);
-    },
-  );
-
-  test('a genuine completion is filtered from the returned queue', () async {
-    final now = DateTime.utc(2026, 5, 27);
+  test('the real provider graph lays out the engine\'s main track', () async {
     final container = await _container(
-      clock: now,
-      activatedAt: {
-        CurriculumId.chumash: now.subtract(const Duration(days: 2)),
-      },
-      completions: {'Genesis 1:1': now.subtract(const Duration(days: 1))},
+      states: {CurriculumId.chumash: _main(CurriculumId.chumash, _genesis)},
     );
     addTearDown(container.dispose);
-    final subscription = container.listen(allDailyTasksProvider, (_, __) {});
-    addTearDown(subscription.close);
 
-    final tasks = await container.read(allDailyTasksProvider.future);
-    expect(tasks.map((task) => task.contentItemSefariaRef), [
-      'Genesis 1:2',
-      'Genesis 1:3',
-    ]);
+    final tasks = await _tasks(container);
+
+    expect(tasks, hasLength(1));
+    expect(tasks.single.contentItemSefariaRef, 'Genesis 1:1');
+    expect(tasks.single.curriculumId, CurriculumId.chumash);
+    expect(tasks.single.priority, DailyTaskPriority.newLearning);
+    expect(tasks.single.stageName, 'Learn');
+    expect(tasks.single.isOverdue, isFalse);
+  });
+
+  test('empty active-curriculum set produces an empty result', () async {
+    final container = await _container(curricula: const []);
+    addTearDown(container.dispose);
+
+    expect(await _tasks(container), isEmpty);
+  });
+
+  test('chazara is reviewsDue(today), sorted ahead of new learning', () async {
+    final container = await _container(
+      states: {
+        CurriculumId.chumash: _main(
+          CurriculumId.chumash,
+          _genesis.skip(2).toList(),
+          reviews: {
+            '2026-05-27': [
+              const ReviewDue('Genesis 1:2', 2, dueFrom: '2026-05-27'),
+              const ReviewDue('Genesis 1:1', 2, dueFrom: '2026-05-25'),
+            ],
+          },
+        ),
+      },
+    );
+    addTearDown(container.dispose);
+
+    final tasks = await _tasks(container);
+    expect(
+      [for (final t in tasks) (t.contentItemSefariaRef, t.priority, t.reason)],
+      [
+        (
+          'Genesis 1:1',
+          DailyTaskPriority.overdueChazara,
+          'Chazara overdue by 2 day(s)',
+        ),
+        (
+          'Genesis 1:2',
+          DailyTaskPriority.scheduledChazara,
+          'Chazara due today',
+        ),
+        ('Genesis 1:3', DailyTaskPriority.newLearning, 'Due today'),
+      ],
+    );
   });
 
   test('today-skipped refs are excluded at provider read time', () async {
     final container = await _container(
-      paceValue: 3,
+      states: {
+        CurriculumId.chumash: _main(
+          CurriculumId.chumash,
+          _genesis,
+          dailyTarget: 3,
+        ),
+      },
       skippedRefs: ['Genesis 1:1'],
     );
     addTearDown(container.dispose);
-    final subscription = container.listen(allDailyTasksProvider, (_, __) {});
-    addTearDown(subscription.close);
 
-    final tasks = await container.read(allDailyTasksProvider.future);
+    final tasks = await _tasks(container);
     expect(
       tasks.map((task) => task.contentItemSefariaRef),
       isNot(contains('Genesis 1:1')),
@@ -316,14 +307,18 @@ void main() {
 
   test('yesterday-skipped refs receive the overdueChazara boost', () async {
     final container = await _container(
-      paceValue: 3,
+      states: {
+        CurriculumId.chumash: _main(
+          CurriculumId.chumash,
+          _genesis,
+          dailyTarget: 3,
+        ),
+      },
       previouslySkippedRefs: ['Genesis 1:2'],
     );
     addTearDown(container.dispose);
-    final subscription = container.listen(allDailyTasksProvider, (_, __) {});
-    addTearDown(subscription.close);
 
-    final tasks = await container.read(allDailyTasksProvider.future);
+    final tasks = await _tasks(container);
     final boosted = tasks.singleWhere(
       (task) => task.contentItemSefariaRef == 'Genesis 1:2',
     );
@@ -331,53 +326,105 @@ void main() {
     expect(boosted.reason, contains('previously skipped'));
   });
 
-  test('an active track without a goal contributes no tasks', () async {
-    final container = await _container(includeGoal: false);
+  test('an active track with no deadline and no pace contributes no new '
+      'learning', () async {
+    final container = await _container(
+      states: {
+        CurriculumId.chumash: _main(
+          CurriculumId.chumash,
+          _genesis,
+          dailyTarget: null,
+        ),
+      },
+    );
     addTearDown(container.dispose);
-    final subscription = container.listen(allDailyTasksProvider, (_, __) {});
-    addTearDown(subscription.close);
 
-    expect(await container.read(allDailyTasksProvider.future), isEmpty);
+    expect(await _tasks(container), isEmpty);
   });
 
   test('two active curricula remain isolated in the provider result', () async {
     final container = await _container(
       curricula: const [CurriculumId.chumash, CurriculumId.bavli],
+      states: {
+        CurriculumId.chumash: _main(CurriculumId.chumash, _genesis),
+        CurriculumId.bavli: _main(CurriculumId.bavli, const ['bavli_ref_0']),
+      },
     );
+    addTearDown(container.dispose);
+
+    final tasks = await _tasks(container);
+    expect(
+      tasks.where((task) => task.curriculumId == CurriculumId.chumash),
+      hasLength(1),
+    );
+    expect(
+      tasks
+          .singleWhere((task) => task.curriculumId == CurriculumId.bavli)
+          .contentItemSefariaRef,
+      'bavli_ref_0',
+    );
+  });
+
+  test('a review-only day (study-day config) shows reviews, no new '
+      'learning', () async {
+    // 2026-05-27 is a Wednesday (ISO 3).
+    final container = await _container(
+      states: {
+        CurriculumId.chumash: _main(
+          CurriculumId.chumash,
+          _genesis.skip(1).toList(),
+          reviews: {
+            '2026-05-27': [
+              const ReviewDue('Genesis 1:1', 2, dueFrom: '2026-05-27'),
+            ],
+          },
+        ),
+      },
+      reviewDays: const [3],
+    );
+    addTearDown(container.dispose);
+
+    final tasks = await _tasks(container);
+    expect(tasks.map((t) => t.contentItemSefariaRef), ['Genesis 1:1']);
+    expect(tasks.single.priority, DailyTaskPriority.scheduledChazara);
+  });
+
+  test('a later date is planned live over the current state (erev planned '
+      'list)', () async {
+    final container = await _container(
+      states: {
+        CurriculumId.chumash: _main(
+          CurriculumId.chumash,
+          _genesis.skip(1).toList(),
+          reviews: {
+            '2026-05-29': [
+              const ReviewDue('Genesis 1:1', 2, dueFrom: '2026-05-29'),
+            ],
+          },
+        ),
+      },
+    );
+    addTearDown(container.dispose);
+    final provider = plannedTasksForDateProvider('2026-05-29');
+    final subscription = container.listen(provider, (_, __) {});
+    addTearDown(subscription.close);
+
+    final tasks = await container.read(provider.future);
+    expect(tasks.map((t) => (t.contentItemSefariaRef, t.stageOrder)), [
+      ('Genesis 1:2', 1),
+      ('Genesis 1:1', 2),
+    ]);
+  });
+
+  test('no active learner is an error, not an empty plan', () async {
+    final container = await _container(learnerActive: false);
     addTearDown(container.dispose);
     final subscription = container.listen(allDailyTasksProvider, (_, __) {});
     addTearDown(subscription.close);
 
-    final tasks = await container.read(allDailyTasksProvider.future);
-    final chumash = tasks
-        .where((task) => task.curriculumId == CurriculumId.chumash)
-        .toList();
-    final bavli = tasks
-        .where((task) => task.curriculumId == CurriculumId.bavli)
-        .toList();
-    expect(chumash, hasLength(1));
-    expect(bavli, hasLength(1));
-    expect(bavli.single.contentItemSefariaRef, 'bavli_ref_0');
+    await expectLater(
+      container.read(allDailyTasksProvider.future),
+      throwsA(isA<SchedulerNoActiveProfileException>()),
+    );
   });
-
-  test(
-    'rest-day configuration preserves missed work and suppresses rest days',
-    () async {
-      final now = DateTime.utc(2026, 5, 27);
-      final container = await _container(
-        clock: now,
-        activatedAt: {CurriculumId.chumash: DateTime.utc(2026, 5, 25)},
-        seedStudyDays: true,
-        paceValue: 2,
-        reviewDays: const [2, 4, 5, 6, 7],
-      );
-      addTearDown(container.dispose);
-      final subscription = container.listen(allDailyTasksProvider, (_, __) {});
-      addTearDown(subscription.close);
-
-      final tasks = await container.read(allDailyTasksProvider.future);
-      expect(tasks.where((task) => task.isOverdue), hasLength(2));
-      expect(tasks.where((task) => !task.isOverdue), hasLength(2));
-    },
-  );
 }

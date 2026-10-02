@@ -545,8 +545,134 @@ final class DailyPlanRepositoryProvider
 String _$dailyPlanRepositoryHash() =>
     r'92ea79f7e36c0ab80617f82c349e9a2c4649246f';
 
+/// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+/// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+/// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+/// them out. Never persisted; it recomputes whenever the learner state
+/// changes. The erev planned list of an upcoming locked day is this
+/// provider for that date.
+
+@ProviderFor(plannedTasksForDate)
+final plannedTasksForDateProvider = PlannedTasksForDateFamily._();
+
+/// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+/// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+/// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+/// them out. Never persisted; it recomputes whenever the learner state
+/// changes. The erev planned list of an upcoming locked day is this
+/// provider for that date.
+
+final class PlannedTasksForDateProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<DailyTask>>,
+          List<DailyTask>,
+          FutureOr<List<DailyTask>>
+        >
+    with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
+  /// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+  /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+  /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+  /// them out. Never persisted; it recomputes whenever the learner state
+  /// changes. The erev planned list of an upcoming locked day is this
+  /// provider for that date.
+  PlannedTasksForDateProvider._({
+    required PlannedTasksForDateFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'plannedTasksForDateProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$plannedTasksForDateHash();
+
+  @override
+  String toString() {
+    return r'plannedTasksForDateProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<DailyTask>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<DailyTask>> create(Ref ref) {
+    final argument = this.argument as String;
+    return plannedTasksForDate(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PlannedTasksForDateProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$plannedTasksForDateHash() =>
+    r'76d916a3f3357159b40262a1ba9818f0a8b88d75';
+
+/// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+/// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+/// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+/// them out. Never persisted; it recomputes whenever the learner state
+/// changes. The erev planned list of an upcoming locked day is this
+/// provider for that date.
+
+final class PlannedTasksForDateFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<DailyTask>>, String> {
+  PlannedTasksForDateFamily._()
+    : super(
+        retry: null,
+        name: r'plannedTasksForDateProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+  /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+  /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+  /// them out. Never persisted; it recomputes whenever the learner state
+  /// changes. The erev planned list of an upcoming locked day is this
+  /// provider for that date.
+
+  PlannedTasksForDateProvider call(String date) =>
+      PlannedTasksForDateProvider._(argument: date, from: this);
+
+  @override
+  String toString() => r'plannedTasksForDateProvider';
+}
+
+/// All daily tasks across active curricula: today's [plannedTasksForDate]
+/// (the device's local date), with read-time skip handling — skipped-today
+/// refs removed, refs skipped yesterday boosted — sorted by priority.
+///
+/// The planner's list already excludes what is learnt or reviewed (AD-49:
+/// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
+/// so), so there is no completion filter here.
+
 @ProviderFor(allDailyTasks)
 final allDailyTasksProvider = AllDailyTasksProvider._();
+
+/// All daily tasks across active curricula: today's [plannedTasksForDate]
+/// (the device's local date), with read-time skip handling — skipped-today
+/// refs removed, refs skipped yesterday boosted — sorted by priority.
+///
+/// The planner's list already excludes what is learnt or reviewed (AD-49:
+/// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
+/// so), so there is no completion filter here.
 
 final class AllDailyTasksProvider
     extends
@@ -556,6 +682,13 @@ final class AllDailyTasksProvider
           FutureOr<List<DailyTask>>
         >
     with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
+  /// All daily tasks across active curricula: today's [plannedTasksForDate]
+  /// (the device's local date), with read-time skip handling — skipped-today
+  /// refs removed, refs skipped yesterday boosted — sorted by priority.
+  ///
+  /// The planner's list already excludes what is learnt or reviewed (AD-49:
+  /// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
+  /// so), so there is no completion filter here.
   AllDailyTasksProvider._()
     : super(
         from: null,
@@ -582,7 +715,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'08534f5c91ab38e387ad80e3c5365d0128eff3c7';
+String _$allDailyTasksHash() => r'd04155164655423f386d33470f815a5743f88643';
 
 /// Overdue task count for a single curriculum.
 ///
