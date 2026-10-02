@@ -170,6 +170,15 @@ final class GroundPickerModel {
   final Map<LeafRef, List<String>> _held;
   final Set<LeafRef> _own;
 
+  /// This model with [ground] as the sub-track's ground (the ground an
+  /// in-flight confirm shows before the store echoes it).
+  GroundPickerModel withOwnGround(List<NodeEntry> ground) => GroundPickerModel(
+    corpus: corpus,
+    ownGround: ground,
+    learnt: _learnt,
+    held: _held,
+  );
+
   /// Whether [leaf] is under this sub-track's stored ground.
   bool isOwnLeaf(LeafRef leaf) => _own.contains(leaf);
 
@@ -211,22 +220,24 @@ final class GroundPickerModel {
     if (entries.isEmpty) return const GroundAppendSummary(0, null);
     final level = entries.first.level;
     if (entries.every((e) => e.level == level)) {
-      return GroundAppendSummary(entries.length, level);
+      return GroundAppendSummary(entries.length, level, sample: entries.first);
     }
     // Mixed levels: count in the curriculum's leaf unit.
     final leaves = expandGround(entries, corpus);
-    return GroundAppendSummary(
-      leaves.length,
-      corpus.nodeForRef(leaves.first)?.level,
-    );
+    final leaf = corpus.nodeForRef(leaves.first);
+    return GroundAppendSummary(leaves.length, leaf?.level, sample: leaf);
   }
 }
 
 /// How many [level] units confirming appends; [level] is null when nothing
-/// is picked or the level is unknown.
+/// is picked or the level is unknown. [sample] is one node at that level
+/// (to resolve the level's display name by its depth).
 final class GroundAppendSummary {
   /// Creates a summary.
-  const GroundAppendSummary(this.count, this.level);
+  const GroundAppendSummary(this.count, this.level, {this.sample});
+
+  /// A node at [level], when there is one.
+  final NodeEntry? sample;
 
   /// The unit count.
   final int count;
@@ -262,6 +273,27 @@ final class GroundDraft {
   /// The empty draft of [model] (open, or after *Reset changes*).
   factory GroundDraft.empty(GroundPickerModel model) =>
       GroundDraft._(model, const {});
+
+  /// The draft of earlier [picks] over a (possibly refreshed) [model]:
+  /// picks the corpus does not hold, or under another pick, are dropped.
+  factory GroundDraft.of(GroundPickerModel model, Iterable<NodeEntry> picks) {
+    final corpus = model.corpus;
+    final held = {
+      for (final p in picks)
+        if (corpusHoldsNode(corpus, p)) p,
+    };
+    bool underAnother(NodeEntry node) {
+      for (var p = corpus.parentOf(node); p != null; p = corpus.parentOf(p)) {
+        if (held.contains(p)) return true;
+      }
+      return false;
+    }
+
+    return GroundDraft._(model, {
+      for (final p in held)
+        if (!underAnother(p)) p,
+    });
+  }
 
   final GroundPickerModel _model;
   final Set<LeafRef> _picked;
