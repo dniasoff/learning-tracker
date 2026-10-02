@@ -1613,6 +1613,67 @@
   "mishnaHistoryTagCatchUp": "catch-up",
   "mishnaHistoryTagChazara": "chazara",
   "mishnaHistoryTitle": "Mishna history",
+  "reportBySource": "By source",
+  "reportCountWithUnit": "{count} {unit}",
+  "@reportCountWithUnit": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportCurriculumLabel": "Curriculum",
+  "reportDistinctLabel": "Distinct",
+  "reportDistinctSemantics": "Distinct · {count} {unit}",
+  "@reportDistinctSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportEntry": "Report",
+  "reportEntryTooltip": "Open the lifetime report",
+  "reportGroupCollapseHint": "Hide years",
+  "reportGroupExpandHint": "Show years",
+  "reportGroupOngoing": "ongoing",
+  "reportLearningEventsLabel": "Learning events",
+  "reportLearningEventsSemantics": "Learning events · {count}",
+  "@reportLearningEventsSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "reportLineEnded": "Ended",
+  "reportLineInProgress": "In progress",
+  "reportSchoolYears": "School years",
+  "reportSourceBeforeTracking": "Before tracking",
+  "reportSourceCounts": "{events} learning events · {distinct} {unit}",
+  "@reportSourceCounts": {
+    "placeholders": {
+      "events": {
+        "type": "String"
+      },
+      "distinct": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportSourceHome": "Home",
+  "reportSourceUnknown": "Ended sub-track",
+  "reportTitle": "Lifetime report",
+  "reportUnitFallback": "items",
   "missedReview": "Missed review ({count})",
   "@missedReview": {
     "placeholders": {

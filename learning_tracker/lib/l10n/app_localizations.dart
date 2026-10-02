@@ -4757,6 +4757,132 @@ abstract class AppLocalizations {
   /// **'Mishna history'**
   String get mishnaHistoryTitle;
 
+  /// No description provided for @reportBySource.
+  ///
+  /// In en, this message translates to:
+  /// **'By source'**
+  String get reportBySource;
+
+  /// No description provided for @reportCountWithUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {unit}'**
+  String reportCountWithUnit(String count, String unit);
+
+  /// No description provided for @reportCurriculumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Curriculum'**
+  String get reportCurriculumLabel;
+
+  /// No description provided for @reportDistinctLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Distinct'**
+  String get reportDistinctLabel;
+
+  /// No description provided for @reportDistinctSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Distinct · {count} {unit}'**
+  String reportDistinctSemantics(String count, String unit);
+
+  /// No description provided for @reportEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get reportEntry;
+
+  /// No description provided for @reportEntryTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the lifetime report'**
+  String get reportEntryTooltip;
+
+  /// No description provided for @reportGroupCollapseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide years'**
+  String get reportGroupCollapseHint;
+
+  /// No description provided for @reportGroupExpandHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show years'**
+  String get reportGroupExpandHint;
+
+  /// No description provided for @reportGroupOngoing.
+  ///
+  /// In en, this message translates to:
+  /// **'ongoing'**
+  String get reportGroupOngoing;
+
+  /// No description provided for @reportLearningEventsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning events'**
+  String get reportLearningEventsLabel;
+
+  /// No description provided for @reportLearningEventsSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning events · {count}'**
+  String reportLearningEventsSemantics(String count);
+
+  /// No description provided for @reportLineEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get reportLineEnded;
+
+  /// No description provided for @reportLineInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get reportLineInProgress;
+
+  /// No description provided for @reportSchoolYears.
+  ///
+  /// In en, this message translates to:
+  /// **'School years'**
+  String get reportSchoolYears;
+
+  /// No description provided for @reportSourceBeforeTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Before tracking'**
+  String get reportSourceBeforeTracking;
+
+  /// No description provided for @reportSourceCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'{events} learning events · {distinct} {unit}'**
+  String reportSourceCounts(String events, String distinct, String unit);
+
+  /// No description provided for @reportSourceHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get reportSourceHome;
+
+  /// No description provided for @reportSourceUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended sub-track'**
+  String get reportSourceUnknown;
+
+  /// No description provided for @reportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime report'**
+  String get reportTitle;
+
+  /// No description provided for @reportUnitFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'items'**
+  String get reportUnitFallback;
+
   /// No description provided for @missedReview.
   ///
   /// In en, this message translates to:
