@@ -4,9 +4,11 @@
 // (AC-1), edit from a row (AC-6) and the rejected-sync rollback snackbar
 // with retry (AC-5 concurrent offline creates, AC-7, UX-DR-121).
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -52,6 +54,34 @@ class _EnglishTerms extends UseHebrewTerms {
 
 late FakeLearningCommands _commands;
 
+/// The learner the parent session grants; tests switch it.
+LearnerScope? _initialGrant;
+
+class _Grant extends Notifier<LearnerScope?> {
+  @override
+  LearnerScope? build() => _initialGrant;
+
+  void set(LearnerScope? scope) => state = scope;
+}
+
+final _grant = NotifierProvider<_Grant, LearnerScope?>(_Grant.new);
+
+/// The active commands instance; tests replace it.
+class _Commands extends Notifier<FakeLearningCommands> {
+  @override
+  FakeLearningCommands build() => _commands;
+
+  void set(FakeLearningCommands commands) => state = commands;
+}
+
+final _activeCommands = NotifierProvider<_Commands, FakeLearningCommands>(
+  _Commands.new,
+);
+
+ProviderContainer _container(WidgetTester tester) => ProviderScope.containerOf(
+  tester.element(find.byType(OngoingSubTrackHubSeam)),
+);
+
 Future<void> _pump(
   WidgetTester tester, {
   List<SubTrack> tracks = const [],
@@ -65,7 +95,7 @@ Future<void> _pump(
     useHebrewTermsProvider.overrideWith(_EnglishTerms.new),
     ongoingSubTrackParentSessionProvider.overrideWith((ref) async => parent),
     ongoingSubTrackWriteScopeProvider.overrideWith(
-      (ref) async => parent ? c0Scope() : null,
+      (ref) async => parent ? ref.watch(_grant) : null,
     ),
     ongoingSubTrackContextProvider(_curriculum).overrideWith(
       (ref) async => OngoingSubTrackContext(
@@ -77,7 +107,9 @@ Future<void> _pump(
         calendarProgram: calendarProgram,
       ),
     ),
-    learningCommandsProvider.overrideWith((ref) async => _commands),
+    learningCommandsProvider.overrideWith(
+      (ref) async => ref.watch(_activeCommands),
+    ),
   ];
   await tester.pumpWidget(
     pumpApp(
@@ -95,7 +127,111 @@ Future<void> _pump(
 Finder _key(String key) => find.byKey(ValueKey(key));
 
 void main() {
-  setUp(() => _commands = FakeLearningCommands());
+  setUp(() {
+    _commands = FakeLearningCommands();
+    _initialGrant = c0Scope();
+  });
+
+  /// Saves a new ongoing sub-track that is queued offline as [changeId],
+  /// then clears the "saved offline" notice.
+  Future<void> queueCreate(WidgetTester tester, String changeId) async {
+    _commands.nextResult = CaptureResult.success(
+      changeIds: [changeId],
+      queued: true,
+    );
+    await tester.tap(_key('ongoingSubTrackHubAdd'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ongoing'));
+    await tester.pumpAndSettle();
+    await tester.enterText(_key('ongoingSubTrackName'), 'Sixth rebbe');
+    await tester.dragUntilVisible(
+      _key('ongoingSubTrackSave'),
+      find.byType(ListView).last,
+      const Offset(0, -150),
+    );
+    await tester.tap(_key('ongoingSubTrackSave'));
+    await tester.pumpAndSettle();
+    ScaffoldMessenger.of(
+      tester.element(find.byType(OngoingSubTrackHubSeam)),
+    ).hideCurrentSnackBar();
+    await tester.pumpAndSettle();
+  }
+
+  PendingFailure rejected(String id, String changeId) => PendingFailure(
+    id: id,
+    eventIds: const [],
+    changeIds: [changeId],
+    reason: PendingFailureReason.failedPrecondition,
+  );
+
+  group('the pending-failure watch is bound to its learner', () {
+    const changeId = '01JQUEUED00000000000000009';
+
+    testWidgets('a profile switch drops the old learner\'s rejection', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await queueCreate(tester, changeId);
+      expect(_commands.pendingFailures.hasListener, isTrue);
+      _container(tester).read(_grant.notifier).set(c0Scope(ownerUid: 'other'));
+      await tester.pumpAndSettle();
+      expect(_commands.pendingFailures.hasListener, isFalse);
+      _commands.pendingFailures.add([rejected('pf-9', changeId)]);
+      await tester.pumpAndSettle();
+      expect(find.text("Your change couldn't be saved."), findsNothing);
+    });
+
+    testWidgets('a lost parent session drops the watch', (tester) async {
+      await _pump(tester);
+      await queueCreate(tester, changeId);
+      _container(tester).read(_grant.notifier).set(null);
+      await tester.pumpAndSettle();
+      expect(_commands.pendingFailures.hasListener, isFalse);
+    });
+
+    testWidgets('an open rejection notice closes at a switch, no retry', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await queueCreate(tester, changeId);
+      _commands.pendingFailures.add([rejected('pf-9', changeId)]);
+      await tester.pumpAndSettle();
+      expect(find.text("Your change couldn't be saved."), findsOneWidget);
+      _container(tester).read(_grant.notifier).set(c0Scope(ownerUid: 'other'));
+      await tester.pumpAndSettle();
+      expect(find.text("Your change couldn't be saved."), findsNothing);
+      expect(find.text('Retry'), findsNothing);
+      expect(_commands.calls.where((c) => c.name == 'retry'), isEmpty);
+    });
+
+    testWidgets('a new commands instance drops the old one\'s feed', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await queueCreate(tester, changeId);
+      final old = _commands;
+      _container(
+        tester,
+      ).read(_activeCommands.notifier).set(FakeLearningCommands());
+      await tester.pumpAndSettle();
+      expect(old.pendingFailures.hasListener, isFalse);
+      old.pendingFailures.add([rejected('pf-9', changeId)]);
+      await tester.pumpAndSettle();
+      expect(find.text("Your change couldn't be saved."), findsNothing);
+    });
+
+    testWidgets('a re-read of the same learner keeps the watch', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await queueCreate(tester, changeId);
+      _container(tester).read(_grant.notifier).set(c0Scope());
+      await tester.pumpAndSettle();
+      _commands.pendingFailures.add([rejected('pf-9', changeId)]);
+      await tester.pumpAndSettle();
+      expect(find.text("Your change couldn't be saved."), findsOneWidget);
+    });
+  });
 
   testWidgets('AC-4: a future-start row reads "Starts {date}"', (tester) async {
     await _pump(

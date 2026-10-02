@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -32,7 +33,12 @@ final _log = AppLogger.instance;
 /// failures: a create or edit the server later refuses for good (for
 /// example a sixth ongoing create from a second offline device, AD-45) is
 /// rolled back by the local cache and announced with "Your change couldn't
-/// be saved." and a retry (UX-DR-121).
+/// be saved." and a retry (UX-DR-121). That watch is bound to the learner
+/// the write was made for and to the commands instance it was made
+/// through: a profile switch, a lost parent session or a new commands
+/// instance cancels it, forgets the queued ids and closes an open
+/// rejection notice, so one learner's rejection (or its Retry) never shows
+/// in another learner's hub.
 ///
 /// When Story 2.4 lands, its `sub_track_hub_section.dart` replaces this
 /// widget; it keeps [subTrackStartsLabel], [showAddSubTrackChooser] and
@@ -50,13 +56,67 @@ class OngoingSubTrackHubSeam extends ConsumerStatefulWidget {
 
 class _OngoingSubTrackHubSeamState
     extends ConsumerState<OngoingSubTrackHubSeam> {
+  /// The learner the pending-failure watch is bound to.
+  LearnerScope? _watchScope;
+
+  /// The commands instance the watch listens to.
+  LearningCommands? _watchCommands;
+
+  /// Queued change ids of [_watchScope] still awaiting their sync.
   final Set<String> _awaitingSync = {};
   StreamSubscription<List<PendingFailure>>? _failures;
+
+  @override
+  void initState() {
+    super.initState();
+    // Keeps both providers alive for the save-time reads below, and drops
+    // the watch the moment either stops matching what it was bound to.
+    ref
+      ..listenManual(ongoingSubTrackWriteScopeProvider, (_, next) {
+        if (_watchScope == null || next.isLoading) return;
+        if (next.hasError || next.value != _watchScope) _unbind();
+      })
+      ..listenManual(learningCommandsProvider, (_, next) {
+        if (_watchCommands == null || next.isLoading) return;
+        if (next.hasError || !identical(next.value, _watchCommands)) {
+          _unbind();
+        }
+      });
+  }
 
   @override
   void dispose() {
     unawaited(_failures?.cancel());
     super.dispose();
+  }
+
+  /// Whether the parent session still grants [scope], settled (fails
+  /// closed while it reloads or on error).
+  bool _grantHolds(LearnerScope scope) {
+    final grant = ref.read(ongoingSubTrackWriteScopeProvider);
+    return !grant.hasError && !grant.isLoading && grant.value == scope;
+  }
+
+  /// Whether the watch is still bound to [scope] and [commands], and both
+  /// are still the active ones.
+  bool _boundTo(LearnerScope scope, LearningCommands commands) {
+    if (_watchScope != scope || !identical(_watchCommands, commands)) {
+      return false;
+    }
+    final current = ref.read(learningCommandsProvider);
+    return _grantHolds(scope) &&
+        !current.hasError &&
+        !current.isLoading &&
+        identical(current.value, commands);
+  }
+
+  /// Cancels the pending-failure watch and forgets its learner's queued ids.
+  void _unbind() {
+    unawaited(_failures?.cancel());
+    _failures = null;
+    _watchScope = null;
+    _watchCommands = null;
+    _awaitingSync.clear();
   }
 
   Future<void> _add(OngoingSubTrackContext data) async {
@@ -89,17 +149,27 @@ class _OngoingSubTrackHubSeamState
         ),
       ),
     );
+    // Watch only for the learner the write was made for, and only while
+    // it is still the granted one.
+    if (!_grantHolds(saved.scope)) return;
+    if (_watchScope != saved.scope) _unbind();
+    _watchScope = saved.scope;
     _awaitingSync.addAll(saved.changeIds);
-    unawaited(_watchFailures());
+    unawaited(_watchFailures(saved.scope));
   }
 
-  Future<void> _watchFailures() async {
+  Future<void> _watchFailures(LearnerScope scope) async {
     if (_failures != null) return;
     try {
       final commands = await ref.read(learningCommandsProvider.future);
       if (commands == null || !mounted || _failures != null) return;
+      if (_watchScope != scope || !_grantHolds(scope)) {
+        if (_watchScope == scope) _unbind();
+        return;
+      }
+      _watchCommands = commands;
       _failures = commands.watchPendingFailures().listen(
-        (failures) => _onFailures(commands, failures),
+        (failures) => _onFailures(scope, commands, failures),
         onError: (Object error, StackTrace stack) => _log.error(
           event: 'ongoing_sub_track_pending_failures_failed',
           exception: error,
@@ -115,18 +185,32 @@ class _OngoingSubTrackHubSeamState
     }
   }
 
-  void _onFailures(LearningCommands commands, List<PendingFailure> all) {
+  void _onFailures(
+    LearnerScope scope,
+    LearningCommands commands,
+    List<PendingFailure> all,
+  ) {
     if (!mounted) return;
+    if (!_boundTo(scope, commands)) {
+      // Another learner (or commands instance) is active now.
+      if (_watchScope == scope) _unbind();
+      return;
+    }
     for (final failure in all) {
       if (!failure.changeIds.any(_awaitingSync.contains)) continue;
       _awaitingSync.removeAll(failure.changeIds);
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.ongoingSubTrackSyncRejected),
+          content: _SyncRejectedNotice(
+            scope: scope,
+            text: l10n.ongoingSubTrackSyncRejected,
+          ),
           action: SnackBarAction(
             label: l10n.actionRetry,
             onPressed: () {
+              // Retry only for the learner and commands it was raised for.
+              if (!mounted || !_boundTo(scope, commands)) return;
               _awaitingSync.addAll(failure.changeIds);
               unawaited(commands.retry(failure.id));
             },
@@ -227,5 +311,40 @@ class _OngoingSubTrackHubSeamState
             : null,
       ),
     );
+  }
+}
+
+/// The "couldn't be saved" notice of one learner's rejected queued write.
+/// It dismisses itself as soon as the parent session no longer grants
+/// that learner (a profile switch or a lost session), so it never lingers
+/// in another learner's hub. Only the showing snackbar is built, so hiding
+/// the current one hides exactly this notice.
+class _SyncRejectedNotice extends ConsumerStatefulWidget {
+  const _SyncRejectedNotice({required this.scope, required this.text});
+
+  final LearnerScope scope;
+  final String text;
+
+  @override
+  ConsumerState<_SyncRejectedNotice> createState() =>
+      _SyncRejectedNoticeState();
+}
+
+class _SyncRejectedNoticeState extends ConsumerState<_SyncRejectedNotice> {
+  bool _hiding = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final grant = ref.watch(ongoingSubTrackWriteScopeProvider);
+    final lost =
+        grant.hasError ||
+        (!grant.isLoading && grant.hasValue && grant.value != widget.scope);
+    if (lost && !_hiding) {
+      _hiding = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+      });
+    }
+    return Text(widget.text);
   }
 }
