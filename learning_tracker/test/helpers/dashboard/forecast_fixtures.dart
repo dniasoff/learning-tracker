@@ -4,6 +4,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 // `Override` is part of Riverpod's public API but is only re-exported from
 // `misc.dart` (same import as `test/helpers/pump_app.dart`).
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -16,6 +17,7 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
@@ -74,6 +76,14 @@ SubTrackState shortfallSubTrack({
   lastShortfallNode: shortfall > 0 ? lastNode : null,
 );
 
+/// A [SubTrackDetailOpener] as if the sub-track detail route (DNI-497) were
+/// registered: every warning offers *View {name} →*, whose tap does
+/// nothing.
+VoidCallback? registeredDetailOpener(
+  BuildContext context,
+  ShortfallWarning warning,
+) => () {};
+
 /// Overrides for the forecast surfaces: the session role ([parent]), the
 /// active scope, the learner state ([state], or each element of [states]
 /// emitted through a broadcast controller) and the curriculum display
@@ -82,13 +92,21 @@ SubTrackState shortfallSubTrack({
 ///
 /// [parentSession], when given, resolves the role in place of [parent]
 /// (a never-completing future keeps the role unresolved).
+///
+/// [detailOpener] resolves *View {name} →*; the default
+/// [registeredDetailOpener] stands in for an app that registers the
+/// sub-track detail route, since these surfaces are pumped without a
+/// router. Null keeps the production [subTrackDetailAction].
 List<Override> forecastOverrides({
   bool parent = true,
   Future<bool>? parentSession,
   LearnerState? state,
   Stream<LearnerState>? states,
   Map<String, String> nodeLabels = const {},
+  SubTrackDetailOpener? detailOpener = registeredDetailOpener,
 }) => [
+  if (detailOpener != null)
+    subTrackDetailOpenerProvider.overrideWithValue(detailOpener),
   parentSessionProvider.overrideWith(
     (ref) => parentSession ?? Future.value(parent),
   ),

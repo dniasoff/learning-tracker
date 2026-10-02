@@ -124,7 +124,9 @@ void main() {
   });
 
   test('the detail opener is bound in production (AC-5)', () {
-    expect(_container().read(subTrackDetailOpenerProvider), openSubTrackDetail);
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    expect(container.read(subTrackDetailOpenerProvider), subTrackDetailAction);
   });
 
   test('the detail path is the DNI-497 route with an encoded id', () {

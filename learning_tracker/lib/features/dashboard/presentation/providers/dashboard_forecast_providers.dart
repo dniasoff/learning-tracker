@@ -246,13 +246,19 @@ void retryLearnerForecast(WidgetRef ref) {
     ..invalidate(learnerStateProvider);
 }
 
-/// Opens a sub-track's detail from a Dashboard shortfall warning
-/// (*View {name} →*, UX-DR-68).
+/// Resolves *View {name} →* for one Dashboard shortfall warning
+/// (UX-DR-68): the tap action that opens that sub-track's detail, or null
+/// when the detail cannot be opened from here, in which case the card shows
+/// no action at all (never a disabled button, never another screen).
 typedef SubTrackDetailOpener =
-    void Function(BuildContext context, ShortfallWarning warning);
+    VoidCallback? Function(BuildContext context, ShortfallWarning warning);
 
-/// The sub-track detail's path (Story 2.6, DNI-497 registers
-/// `/settings/tracks/sub-tracks/:subTrackId` as `SubTrackDetailRoute`).
+/// The sub-track detail's route path, as Story 2.6 (DNI-497) registers it
+/// for `SubTrackDetailRoute`.
+const subTrackDetailRoutePath = '/settings/tracks/sub-tracks/:subTrackId';
+
+/// The sub-track detail's location for [subTrackId] ([subTrackDetailRoutePath]
+/// filled in).
 ///
 /// Bound by path, not by the generated route class, so the Dashboard does
 /// not import the sub-tracks feature's screen (layering) and compiles on
@@ -260,37 +266,41 @@ typedef SubTrackDetailOpener =
 String subTrackDetailPath(String subTrackId) =>
     '/settings/tracks/sub-tracks/${Uri.encodeComponent(subTrackId)}';
 
-/// The Manage tracks hub (`TrackManagementHubRoute`), whose sub-track rows
-/// open the same detail. *View {name} →* lands here only while the detail
-/// route is not registered.
-const manageTracksPath = '/settings/tracks';
-
-/// The production *View {name} →* action: pushes the warning's sub-track
-/// detail. While that route is not registered (DNI-497 not merged yet) the
-/// router reports a [RouteNotFoundFailure] and the action opens the Manage
-/// tracks hub instead, the nearest screen that lists the sub-track. A guard
-/// refusal is left to the guard; nothing else is retried. Bead
-/// learning-tracker-fyh.217 swaps this for the typed `SubTrackDetailRoute`
-/// once DNI-497 is on `integ/sub-tracks`.
-void openSubTrackDetail(BuildContext context, ShortfallWarning warning) {
-  final router = context.router;
-  unawaited(
-    router.pushPath<void>(
-      subTrackDetailPath(warning.subTrackId),
-      onFailure: (failure) {
-        if (failure is RouteNotFoundFailure) {
-          unawaited(router.pushPath<void>(manageTracksPath));
-        }
-      },
-    ),
-  );
+/// Whether [router]'s app resolves [subTrackDetailPath] to the sub-track
+/// detail route for exactly [subTrackId]: a top-level match on
+/// [subTrackDetailRoutePath], not a redirect or another route, carrying the
+/// requested id. False while DNI-497's route is not registered.
+bool resolvesSubTrackDetail(RoutingController router, String subTrackId) {
+  final matches = router.root.matcher.match(subTrackDetailPath(subTrackId));
+  if (matches == null || matches.length != 1) return false;
+  final match = matches.single;
+  return match.redirectedFrom == null &&
+      match.path == subTrackDetailRoutePath &&
+      match.params.optString('subTrackId') == subTrackId;
 }
 
-/// Where *View {name} →* leads (AC-5): [openSubTrackDetail] in production.
-///
-/// Tests override it to observe the tap. A null value renders the action
-/// disabled; production never supplies null. Nothing here reaches a user
-/// before the DNI-490 cutover (AD-49 ship hold).
-final subTrackDetailOpenerProvider = Provider<SubTrackDetailOpener?>(
-  (ref) => openSubTrackDetail,
+/// The production *View {name} →* action (AC-5): pushes the warning's
+/// sub-track detail on the root router. Null, so the action is hidden, when
+/// the context has no router or the app does not register the detail route
+/// for that id ([resolvesSubTrackDetail]); this is the state on
+/// `integ/sub-tracks` until DNI-497 merges, and nothing here reaches a user
+/// before the DNI-490 cutover (AD-49 ship hold). Bead
+/// learning-tracker-fyh.217 swaps the path for the typed
+/// `SubTrackDetailRoute` once DNI-497 is on `integ/sub-tracks`.
+VoidCallback? subTrackDetailAction(
+  BuildContext context,
+  ShortfallWarning warning,
+) {
+  final router = StackRouterScope.of(context)?.controller;
+  if (router == null || !resolvesSubTrackDetail(router, warning.subTrackId)) {
+    return null;
+  }
+  final path = subTrackDetailPath(warning.subTrackId);
+  return () => unawaited(router.root.pushPath<void>(path));
+}
+
+/// Where *View {name} →* leads (AC-5): [subTrackDetailAction] in
+/// production. Tests override it to observe the tap.
+final subTrackDetailOpenerProvider = Provider<SubTrackDetailOpener>(
+  (ref) => subTrackDetailAction,
 );

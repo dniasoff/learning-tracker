@@ -5,7 +5,6 @@
 // overlapping ground shows the engine's de-duplicated amounts.
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -61,23 +60,21 @@ Future<void> _pump(
   WidgetTester tester, {
   LearnerState? state,
   Stream<LearnerState>? states,
-  List<Override> extra = const [],
+  SubTrackDetailOpener? detailOpener = registeredDetailOpener,
 }) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpWidget(
     pumpApp(
       theme: AppTheme.lightTheme(),
-      overrides: [
-        ...forecastOverrides(
-          state: state,
-          states: states,
-          nodeLabels: const {
-            'Mishnah Berakhot 3': 'Berachos perek 3',
-            'Mishnah Beitzah': 'Beitzah',
-          },
-        ),
-        ...extra,
-      ],
+      overrides: forecastOverrides(
+        state: state,
+        states: states,
+        detailOpener: detailOpener,
+        nodeLabels: const {
+          'Mishnah Berakhot 3': 'Berachos perek 3',
+          'Mishnah Beitzah': 'Beitzah',
+        },
+      ),
       child: Scaffold(
         body: SingleChildScrollView(
           child: ParentForecastSection(
@@ -153,11 +150,8 @@ void main() {
         schoolSubTrackId: _school(40),
         rebbeSubTrackId: _rebbe(12),
       }),
-      extra: [
-        subTrackDetailOpenerProvider.overrideWithValue(
-          (context, warning) => opened.add(warning.subTrackId),
-        ),
-      ],
+      detailOpener: (context, warning) =>
+          () => opened.add(warning.subTrackId),
     );
     await tester.tap(find.text('View School'));
     await tester.tap(find.text('View Rebbe'));
@@ -184,16 +178,28 @@ void main() {
       );
     });
 
-    testWidgets('before the detail route is registered (DNI-497) View '
-        'opens the Manage tracks hub', (tester) async {
+    testWidgets('before the detail route is registered (DNI-497) the card '
+        'offers no View action and opens nothing else', (tester) async {
       final router = _DashboardRouter(withDetailRoute: false);
       await _pumpRouted(tester, router);
 
-      await tester.tap(find.text('View School'));
-      await tester.pumpAndSettle();
-      expect(find.text('manage tracks'), findsOneWidget);
-      expect(router.currentPath, manageTracksPath);
+      expect(find.byType(ShortfallWarningCard), findsOneWidget);
+      expect(find.byKey(const Key('shortfallCardView')), findsNothing);
+      expect(find.text('View School'), findsNothing);
+      expect(router.currentPath, '/');
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('without a router the card offers no View action', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        state: _state({schoolSubTrackId: _school(40)}),
+        detailOpener: null,
+      );
+      expect(find.byType(ShortfallWarningCard), findsOneWidget);
+      expect(find.byKey(const Key('shortfallCardView')), findsNothing);
     });
   });
 
@@ -260,8 +266,8 @@ void main() {
 }
 
 /// A real router shaped like the app's for this tap: the Dashboard, the
-/// Manage tracks hub at its production path and, when [withDetailRoute],
-/// the DNI-497 sub-track detail path. The opener is the production one.
+/// Manage tracks hub and, when [withDetailRoute], the DNI-497 sub-track
+/// detail path. The opener is the production one.
 class _DashboardRouter extends RootStackRouter {
   _DashboardRouter({required this.withDetailRoute});
 
@@ -283,13 +289,13 @@ class _DashboardRouter extends RootStackRouter {
     ),
     NamedRouteDef(
       name: 'TestManageTracksRoute',
-      path: manageTracksPath,
+      path: '/settings/tracks',
       builder: (context, data) => const Text('manage tracks'),
     ),
     if (withDetailRoute)
       NamedRouteDef(
         name: 'TestSubTrackDetailRoute',
-        path: '/settings/tracks/sub-tracks/:subTrackId',
+        path: subTrackDetailRoutePath,
         builder: (context, data) =>
             Text('detail:${data.inheritedPathParams.getString('subTrackId')}'),
       ),
@@ -304,6 +310,7 @@ Future<void> _pumpRouted(WidgetTester tester, _DashboardRouter router) async {
       routerConfig: router.config(),
       overrides: forecastOverrides(
         state: _state({schoolSubTrackId: _school(40)}),
+        detailOpener: null,
         nodeLabels: const {'Mishnah Berakhot 3': 'Berachos perek 3'},
       ),
     ),

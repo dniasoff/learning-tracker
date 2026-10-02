@@ -94,7 +94,7 @@ class ShortfallWarningCard extends ConsumerWidget {
         count: warning.shortfall,
       ),
     );
-    final open = ref.watch(subTrackDetailOpenerProvider);
+    final onView = ref.watch(subTrackDetailOpenerProvider)(context, warning);
 
     return ForecastCardFrame(
       key: Key('shortfallCard-${warning.subTrackId}'),
@@ -125,27 +125,26 @@ class ShortfallWarningCard extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: TextButton(
-                    key: const Key('shortfallCardView'),
-                    onPressed: open == null
-                        ? null
-                        : () => open(context, warning),
-                    style: TextButton.styleFrom(foregroundColor: ink),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(l10n.shortfallCardView(warning.name)),
-                        ),
-                        const SizedBox(width: 4),
-                        // Mirrors under RTL (matchTextDirection).
-                        const Icon(Icons.arrow_forward_rounded, size: 18),
-                      ],
+                if (onView != null)
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: TextButton(
+                      key: const Key('shortfallCardView'),
+                      onPressed: onView,
+                      style: TextButton.styleFrom(foregroundColor: ink),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(l10n.shortfallCardView(warning.name)),
+                          ),
+                          const SizedBox(width: 4),
+                          // Mirrors under RTL (matchTextDirection).
+                          const Icon(Icons.arrow_forward_rounded, size: 18),
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
