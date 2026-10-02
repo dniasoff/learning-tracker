@@ -1119,6 +1119,117 @@ void main() {
   });
 
   group('DNI-518 (Story 5.3): what the report pace sections read', () {
+    test('AC-2: 500 before-tracking events change no velocity value', () {
+      final school = _sub(10);
+      final learning = [
+        _on(1, _b11, _vDay(-20)),
+        _on(2, _b12, _vDay(-5), source: school.id),
+        _on(3, _b13, _vDay(-3), dateState: DateState.catchUp),
+        _on(4, _b21, _vDay(-1), source: school.id),
+      ];
+      // Before-tracking ground the learner never learns dated: a leaf
+      // known before tracking is never newly learnt (AD-35), so the
+      // backfill covers other ground, from both sources, as leaves and as
+      // a node.
+      final backfill = [
+        for (var i = 0; i < 500; i++)
+          switch (i % 4) {
+            0 => engineGround(1000 + i, shabbat),
+            1 => engineLearn(
+              1000 + i,
+              _s11,
+              dateState: DateState.beforeTracking,
+            ),
+            2 => engineLearn(
+              1000 + i,
+              _s12,
+              source: school.id,
+              dateState: DateState.beforeTracking,
+            ),
+            _ => engineGround(1000 + i, peah),
+          },
+      ];
+      final deadline = DeadlineGoal(
+        curriculumId: engineCurriculum,
+        targetDate: '2027-09-01',
+      );
+      final without = _vRun(learning, subTracks: [school], deadline: deadline);
+      final with500 = _vRun(
+        [...learning, ...backfill],
+        subTracks: [school],
+        deadline: deadline,
+      );
+      expect(backfill, hasLength(500));
+      // The backfill is counted (the totals move)…
+      expect(
+        with500.report.totalEvents,
+        greaterThan(without.report.totalEvents),
+      );
+      // …but no velocity does.
+      Map<String, ReportVelocity?> velocities(CurriculumState c) => {
+        for (final s in c.report.sources.values) s.source: s.velocity,
+      };
+      expect(velocities(with500), velocities(without));
+      expect(with500.report.allSources, without.report.allSources);
+      expect(
+        with500.projection!.velocityPerDay,
+        without.projection!.velocityPerDay,
+      );
+      expect(with500.report.home.velocity!.trailing!.leaves, 2);
+      expect(with500.report.sources[school.id]!.velocity!.trailing!.leaves, 2);
+    });
+
+    group('AC-3: a Sunday catch-up for Shabbos counts on Shabbos, across '
+        'the week boundary', () {
+      // Shabbos 2026-09-19 ends week N; the catch-up is recorded on Sunday
+      // 2026-09-20 at 10:00Z (week N+1), after the fail-closed lock ends.
+      // (The next two weekends are Sukkos and Shemini Atzeres: Sunday is
+      // Yom Tov there, so a Sunday entry would be lock-ignored.)
+      const shabbos = '2026-09-19';
+      const sunday = '2026-09-20';
+      final sundayMorning = DateTime.utc(
+        2026,
+        9,
+        20,
+        10,
+      ).difference(DateTime.utc(2026, 9)).inMinutes;
+
+      LearningEvent catchUp({String source = LearningEvent.sourceMain}) => _on(
+        1,
+        _b11,
+        shabbos,
+        source: source,
+        dateState: DateState.catchUp,
+        recordedMinutes: sundayMorning,
+      );
+
+      test('a span starting on Sunday leaves it out; one starting on '
+          'Shabbos counts it', () {
+        final fromSunday = _vRun([catchUp()], trackingStartDate: sunday);
+        expect(fromSunday.report.home.velocity!.sinceTracking!.from, sunday);
+        expect(fromSunday.report.home.velocity!.sinceTracking!.leaves, 0);
+        expect(fromSunday.report.allSources!.sinceTracking!.leaves, 0);
+
+        final fromShabbos = _vRun([catchUp()], trackingStartDate: shabbos);
+        expect(fromShabbos.report.home.velocity!.sinceTracking!.leaves, 1);
+        expect(fromShabbos.report.allSources!.sinceTracking!.leaves, 1);
+      });
+
+      test('a source that ended on Shabbos still counts it in its own '
+          'window', () {
+        final ended = _sub(
+          10,
+          name: 'Shiur',
+          endedAt: DateTime.utc(2026, 9, 19, 15),
+          endReason: SubTrackEndReason.ended,
+        );
+        final c = _vRun([catchUp(source: ended.id)], subTracks: [ended]);
+        final since = c.report.sources[ended.id]!.velocity!.sinceTracking!;
+        expect(since.through, shabbos);
+        expect(since.leaves, 1);
+      });
+    });
+
     test('each member line carries its stored rate_per_week', () {
       final school = _sub(10);
       final report = _report(subTracks: [school]);
