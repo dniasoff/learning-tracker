@@ -30,6 +30,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_view.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_report_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_report_sections.dart';
@@ -126,8 +128,11 @@ class _Harness {
         currentSacredWindowProvider.overrideWithValue(null),
         activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
         learnerStateProvider.overrideWith((ref, _) {
-          stateReads++;
           return Stream.value(reportState(reports ?? [fullReport()]));
+        }),
+        lifetimeReportProvider.overrideWith((ref, _) {
+          reportReads++;
+          return const AsyncLoading<LifetimeReportView>();
         }),
         // The Lifetime screen's own (legacy) reads: the tree it lists.
         lifetimeViewSummariesProvider.overrideWith((ref) async => lifetime),
@@ -177,7 +182,7 @@ class _Harness {
   final _Session session;
   late final ProviderContainer container;
   late final AppRouter router;
-  var stateReads = 0;
+  var reportReads = 0;
 
   void unlockPin() => container
       .read(parentPinAuthenticatedProfileIdProvider.notifier)
@@ -223,7 +228,7 @@ void main() {
         expect(find.byType(LifetimeKnowledgeScreen), findsOneWidget);
         expect(find.byType(LifetimeReportScreen), findsNothing);
         expect(find.byType(LifetimeReportTotals), findsNothing);
-        expect(h.stateReads, 0);
+        expect(h.reportReads, 0);
       });
     }
   });

@@ -33,6 +33,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_view.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_report_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_report_sections.dart';
@@ -207,8 +209,11 @@ class _ChildHarness {
         currentSacredWindowProvider.overrideWithValue(null),
         activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
         learnerStateProvider.overrideWith((ref, _) {
-          stateReads++;
           return Stream.value(paceState([paceCurriculumState(paceReport())]));
+        }),
+        lifetimeReportProvider.overrideWith((ref, _) {
+          reportReads++;
+          return const AsyncLoading<LifetimeReportView>();
         }),
         lifetimeViewSummariesProvider.overrideWith((ref) async => const []),
         itemsLearnedSummariesProvider.overrideWith((ref) async => const []),
@@ -247,7 +252,7 @@ class _ChildHarness {
 
   late final ProviderContainer container;
   late final AppRouter router;
-  var stateReads = 0;
+  var reportReads = 0;
 
   void lockPin() =>
       container.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
@@ -323,7 +328,7 @@ void main() {
       await h.pump(tester, '/progress/lifetime/report?curriculum=mishnayos');
       expect(find.byType(LifetimeReportScreen), findsNothing);
       expect(find.byType(LifetimeKnowledgeScreen), findsOneWidget);
-      expect(h.stateReads, 0);
+      expect(h.reportReads, 0);
       _expectNoParentData(tester);
     });
 
