@@ -43,25 +43,83 @@ final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
   return pinService.hasProfilePin(selectedId);
 });
 
-/// Whether the holder of the device may change Sacred Time settings now:
-/// true straight away unless [sacredTimeLocationPinGuardRequiredProvider]
-/// requires the Parent PIN, which [context] (a context under the root
-/// navigator) then asks for. Used by the after-lock location prompt
-/// (DNI-481 AC-2) before it opens the city picker.
-Future<bool> guardSacredTimeSettingsAccess(
+/// The profiles whose Parent PIN must be verified before the after-lock
+/// location prompt (DNI-481 AC-2) may open the city picker for
+/// [targetProfileId]; null when the action is refused outright.
+///
+/// The city picker edits the ACTIVE learner through governed writes, and a
+/// prompt for another own learner first makes that learner the active one,
+/// so the gate covers both ends of the action:
+///  * the device holder: a child [selectedProfileId] with a Parent PIN (the
+///    rule of [sacredTimeLocationPinGuardRequiredProvider]);
+///  * the target: a child [targetProfileId] other than the selected one,
+///    with a Parent PIN, is challenged on ITS OWN profile. An adult holder
+///    never vouches for a child's PIN, so the picker never opens on a
+///    guarded child that was not authenticated for this action.
+/// A target that is not among the account's loaded [profiles] is refused
+/// (fail closed).
+Future<List<String>?> learnerLocationPromptPinChallenges({
+  required String? selectedProfileId,
+  required String targetProfileId,
+  required List<LearnerProfileEntity> profiles,
+  required Future<bool> Function(String profileId) hasProfilePin,
+}) async {
+  LearnerProfileEntity? byId(String? id) =>
+      profiles.where((p) => p.profileId == id).firstOrNull;
+  Future<bool> guarded(LearnerProfileEntity? profile) async =>
+      profile != null &&
+      profile.mode == ProfileMode.child &&
+      await hasProfilePin(profile.profileId);
+
+  final challenges = <String>[];
+  final selected = byId(selectedProfileId);
+  if (await guarded(selected)) challenges.add(selected!.profileId);
+  if (targetProfileId == selectedProfileId) return challenges;
+  final target = byId(targetProfileId);
+  if (target == null) return null;
+  if (await guarded(target)) challenges.add(target.profileId);
+  return challenges;
+}
+
+/// Whether the holder of the device may set [targetProfileId]'s location
+/// from the after-lock prompt (DNI-481 AC-2) now: every Parent PIN that
+/// [learnerLocationPromptPinChallenges] names is asked for, in turn, on
+/// [context] (a context under the root navigator); one cancel or wrong PIN
+/// refuses. Used by the app before it switches to the target learner and
+/// opens the city picker.
+Future<bool> guardLearnerLocationPromptAccess(
   BuildContext context,
   WidgetRef ref,
+  String targetProfileId,
 ) async {
-  final required = await ref.read(
-    sacredTimeLocationPinGuardRequiredProvider.future,
-  );
-  if (!required) return true;
-  if (!context.mounted) return false;
-  return _verifySacredTimeParentPin(
+  // The profile list is auto-disposed: hold a subscription while it loads.
+  final subscription = ProviderScope.containerOf(
     context,
-    ref,
-    ref.read(selectedProfileIdProvider),
+    listen: false,
+  ).listen(profileListStreamProvider.future, (_, _) {});
+  final List<LearnerProfileEntity> profiles;
+  try {
+    profiles = await subscription.read();
+  } on Object {
+    return false; // Fail closed: no profiles, no judgement, no picker.
+  } finally {
+    subscription.close();
+  }
+  final pinService = ref.read(pinServiceProvider);
+  final challenges = await learnerLocationPromptPinChallenges(
+    selectedProfileId: ref.read(selectedProfileIdProvider),
+    targetProfileId: targetProfileId,
+    profiles: profiles,
+    hasProfilePin: pinService.hasProfilePin,
   );
+  if (challenges == null) return false;
+  for (final profileId in challenges) {
+    if (!context.mounted) return false;
+    if (!await _verifySacredTimeParentPin(context, ref, profileId)) {
+      return false;
+    }
+  }
+  return context.mounted;
 }
 
 /// Settings card for the Sacred Time feature. Hard-on (no disable toggle).

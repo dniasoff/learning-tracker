@@ -71,25 +71,38 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
   }
 
   /// The after-lock location prompt's action (DNI-481 AC-2): the existing
-  /// city picker for the prompt's learner, behind the Parent PIN when one
-  /// guards the Sacred Time settings. The city picker edits the ACTIVE
-  /// learner, so a prompt for another own learner (a sibling with no
-  /// location on a multi-learner account) first makes that learner the
-  /// active one — the profile switcher's canonical switch (PIN session
-  /// locked, shell reloaded) — so the location lands on the right profile.
-  Future<void> _openLearnerLocationPicker(LearnerLocationPrompt prompt) async {
+  /// city picker for the prompt's learner, behind every Parent PIN that
+  /// guards it — the device holder's and, for another learner, the
+  /// TARGET's own ([guardLearnerLocationPromptAccess]). The city picker
+  /// edits the ACTIVE learner, so a prompt for another own learner (a
+  /// sibling with no location on a multi-learner account) then makes that
+  /// learner the active one — the profile switcher's canonical switch (PIN
+  /// session locked, shell reloaded) — and opens the picker straight away.
+  Future<void> _openLearnerLocationPicker(LearnerLocationPrompt prompt) {
     final router = ref.read(routerProvider);
-    final navigatorContext = router.navigatorKey.currentContext;
-    if (navigatorContext == null) return;
-    if (!await guardSacredTimeSettingsAccess(navigatorContext, ref)) return;
-    if (!mounted) return;
-    if (ref.read(selectedProfileIdProvider) != prompt.profileId) {
-      router.pinGuard.lock();
-      ref.read(selectedProfileIdProvider.notifier).select(prompt.profileId);
-      await router.replaceAll([const AppShellRoute()]);
-      if (!mounted) return;
-    }
-    await router.push(const CityPickerRoute());
+    return runLearnerLocationPromptAction(
+      prompt,
+      selectedProfileId: () => ref.read(selectedProfileIdProvider),
+      authorize: (targetProfileId) async {
+        final navigatorContext = router.navigatorKey.currentContext;
+        if (navigatorContext == null) return false;
+        return await guardLearnerLocationPromptAccess(
+              navigatorContext,
+              ref,
+              targetProfileId,
+            ) &&
+            mounted;
+      },
+      switchTo: (profileId) async {
+        router.pinGuard.lock();
+        ref.read(selectedProfileIdProvider.notifier).select(profileId);
+        await router.replaceAll([const AppShellRoute()]);
+        return mounted;
+      },
+      openCityPicker: () async {
+        if (mounted) await router.push(const CityPickerRoute());
+      },
+    );
   }
 
   /// The tutor's exit from a tutored session whose talmid is locked: the

@@ -122,6 +122,31 @@ LearnerLocationPrompt? _promptFor(
   );
 }
 
+/// The after-lock prompt's action for [prompt] (DNI-481 AC-2), each step
+/// gated on the one before:
+///  1. [authorize] the action for the prompt's TARGET learner (the Parent
+///     PINs of the device holder and, for another learner, of the target;
+///     see `guardLearnerLocationPromptAccess`). Refused: nothing changes.
+///  2. When the target is not the [selectedProfileId] learner, [switchTo]
+///     it (the city picker edits the ACTIVE learner); a switch that did not
+///     land on the target stops here.
+///  3. [openCityPicker], straight after the authorization, with no user
+///     turn in between: the picker never opens on a learner whose PIN was
+///     not just verified for this action.
+Future<void> runLearnerLocationPromptAction(
+  LearnerLocationPrompt prompt, {
+  required String? Function() selectedProfileId,
+  required Future<bool> Function(String targetProfileId) authorize,
+  required Future<bool> Function(String profileId) switchTo,
+  required Future<void> Function() openCityPicker,
+}) async {
+  final target = prompt.profileId;
+  if (!await authorize(target)) return;
+  if (selectedProfileId() != target && !await switchTo(target)) return;
+  if (selectedProfileId() != target) return;
+  await openCityPicker();
+}
+
 /// Shows each due [LearnerLocationPrompt] once, as a snack bar on the root
 /// messenger naming its learner, whose action calls [onSetLocation] with
 /// that prompt (the app makes its learner the active one and opens the

@@ -24,11 +24,14 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -78,6 +81,36 @@ Widget _buildCard({required bool pinGuardRequired, StackRouter? router}) {
       ),
     ),
   );
+}
+
+class _MockPinService extends Mock implements PinService {}
+
+const _adult = '01ARZ3NDEKTSV4RRFFQ69G5FA1';
+const _child = '01ARZ3NDEKTSV4RRFFQ69G5FC1';
+const _otherChild = '01ARZ3NDEKTSV4RRFFQ69G5FC2';
+
+LearnerProfileEntity _learner(String id, ProfileMode mode) =>
+    LearnerProfileEntity(
+      profileId: id,
+      displayName: id,
+      mode: mode,
+      createdAt: DateTime.utc(2026),
+      updatedAt: DateTime.utc(2026),
+    );
+
+final _account = [
+  _learner(_adult, ProfileMode.adult),
+  _learner(_child, ProfileMode.child),
+  _learner(_otherChild, ProfileMode.child),
+];
+
+class _Selected extends SelectedProfileId {
+  _Selected(this._id);
+
+  final String? _id;
+
+  @override
+  String? build() => _id;
 }
 
 void main() {
@@ -191,5 +224,143 @@ void main() {
         verify(() => mockRouter.push<Object?>(any())).called(1);
       },
     );
+  });
+
+  group('DNI-481 after-lock prompt: the PIN of the TARGET learner', () {
+    Future<List<String>?> challenges({
+      required String? selected,
+      required String target,
+      Set<String> withPin = const {_child, _otherChild},
+    }) => learnerLocationPromptPinChallenges(
+      selectedProfileId: selected,
+      targetProfileId: target,
+      profiles: _account,
+      hasProfilePin: (id) async => withPin.contains(id),
+    );
+
+    test('adult holder, guarded child target: the CHILD PIN is asked for '
+        '(an adult selection never vouches for the target)', () async {
+      expect(await challenges(selected: _adult, target: _child), [_child]);
+    });
+
+    test('guarded child holder, adult target: the holder PIN is asked for '
+        '(leaving the child context escalates)', () async {
+      expect(await challenges(selected: _child, target: _adult), [_child]);
+    });
+
+    test('guarded child holder, guarded sibling target: both PINs', () async {
+      expect(await challenges(selected: _child, target: _otherChild), [
+        _child,
+        _otherChild,
+      ]);
+    });
+
+    test('the active learner itself: the existing holder rule', () async {
+      expect(await challenges(selected: _child, target: _child), [_child]);
+      expect(await challenges(selected: _adult, target: _adult), isEmpty);
+    });
+
+    test('no PIN configured, adult target: nothing to ask', () async {
+      expect(
+        await challenges(selected: _child, target: _adult, withPin: {}),
+        isEmpty,
+      );
+    });
+
+    test('a target outside the loaded account is refused', () async {
+      expect(
+        await challenges(selected: _adult, target: 'not-on-account'),
+        isNull,
+      );
+    });
+
+    testWidgets('guardLearnerLocationPromptAccess: adult selected, guarded '
+        'child target — the Parent PIN dialog for the child; cancelling '
+        'refuses (no picker, no governed write)', (tester) async {
+      final pinService = _MockPinService();
+      when(() => pinService.hasProfilePin(any())).thenAnswer(
+        (invocation) async => invocation.positionalArguments.first == _child,
+      );
+      bool? granted;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pinServiceProvider.overrideWithValue(pinService),
+            selectedProfileIdProvider.overrideWith(() => _Selected(_adult)),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_account),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Consumer(
+              builder: (context, ref, _) => TextButton(
+                onPressed: () async =>
+                    granted = await guardLearnerLocationPromptAccess(
+                      context,
+                      ref,
+                      _child,
+                    ),
+                child: const Text('SET LOCATION'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('SET LOCATION'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter Parent PIN'), findsOneWidget);
+      verify(() => pinService.hasProfilePin(_child)).called(1);
+
+      Navigator.of(
+        tester.element(find.text('Enter Parent PIN')),
+        rootNavigator: true,
+      ).pop(false);
+      await tester.pumpAndSettle();
+      expect(granted, isFalse);
+    });
+
+    testWidgets('guardLearnerLocationPromptAccess: adult selected, unguarded '
+        'adult target — granted with no dialog', (tester) async {
+      final pinService = _MockPinService();
+      when(() => pinService.hasProfilePin(any())).thenAnswer((_) async => true);
+      const otherAdult = '01ARZ3NDEKTSV4RRFFQ69G5FA2';
+      bool? granted;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pinServiceProvider.overrideWithValue(pinService),
+            selectedProfileIdProvider.overrideWith(() => _Selected(_adult)),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value([
+                ..._account,
+                _learner(otherAdult, ProfileMode.adult),
+              ]),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Consumer(
+              builder: (context, ref, _) => TextButton(
+                onPressed: () async =>
+                    granted = await guardLearnerLocationPromptAccess(
+                      context,
+                      ref,
+                      otherAdult,
+                    ),
+                child: const Text('SET LOCATION'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('SET LOCATION'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter Parent PIN'), findsNothing);
+      expect(granted, isTrue);
+    });
   });
 }

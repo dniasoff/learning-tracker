@@ -208,4 +208,72 @@ void main() {
       expect(opened.single.profileId, _sibling);
     });
   });
+
+  group('runLearnerLocationPromptAction (multi-learner PIN boundary)', () {
+    final siblingPrompt = LearnerLocationPrompt(
+      profileId: _sibling,
+      lockEndUtc: _lockEnd,
+    );
+
+    Future<List<String>> run({
+      required LearnerLocationPrompt prompt,
+      required bool authorized,
+      String selected = profileUlid,
+      bool switchLands = true,
+    }) async {
+      final calls = <String>[];
+      var current = selected;
+      await runLearnerLocationPromptAction(
+        prompt,
+        selectedProfileId: () => current,
+        authorize: (target) async {
+          calls.add('authorize:$target');
+          return authorized;
+        },
+        switchTo: (id) async {
+          calls.add('switch:$id');
+          if (switchLands) current = id;
+          return true;
+        },
+        openCityPicker: () async => calls.add('picker:$current'),
+      );
+      return calls;
+    }
+
+    test('a sibling prompt authorizes the SIBLING, then switches to it and '
+        'opens its picker', () async {
+      expect(await run(prompt: siblingPrompt, authorized: true), [
+        'authorize:$_sibling',
+        'switch:$_sibling',
+        'picker:$_sibling',
+      ]);
+    });
+
+    test('refused for the target: no switch and no picker, so no governed '
+        'write can follow', () async {
+      expect(await run(prompt: siblingPrompt, authorized: false), [
+        'authorize:$_sibling',
+      ]);
+    });
+
+    test('a switch that did not land on the target opens no picker', () async {
+      expect(
+        await run(prompt: siblingPrompt, authorized: true, switchLands: false),
+        ['authorize:$_sibling', 'switch:$_sibling'],
+      );
+    });
+
+    test('the active learner: authorized, no switch, picker', () async {
+      expect(
+        await run(
+          prompt: LearnerLocationPrompt(
+            profileId: profileUlid,
+            lockEndUtc: _lockEnd,
+          ),
+          authorized: true,
+        ),
+        ['authorize:$profileUlid', 'picker:$profileUlid'],
+      );
+    });
+  });
 }
