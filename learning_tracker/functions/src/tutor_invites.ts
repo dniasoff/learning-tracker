@@ -79,6 +79,100 @@ export function buildInvitePermissions(raw: unknown): Record<string, boolean> {
   return out;
 }
 
+// ── Stale-transition guards (DNI-487 review) ─────────────────────────────────
+//
+// Grant ids are deterministic per (tutor email, parent, child), so inviteTutor
+// re-uses the same doc for a re-invite after a decline, rescind, expiry or
+// revocation. Every state transition therefore runs as a transactional
+// read-check-write and only applies to the exact grant generation it was
+// decided on: a pending invite is identified by its single-use invite_token,
+// an active grant by its tutor_uid + accepted_at. A transition that observed
+// an older generation is rejected (or, for expiry, skipped) instead of
+// clobbering the newer grant.
+
+function sameTimestamp(a: unknown, b: unknown): boolean {
+  if (a instanceof admin.firestore.Timestamp && b instanceof admin.firestore.Timestamp) {
+    return a.isEqual(b);
+  }
+  return a === undefined && b === undefined;
+}
+
+/** True when [fresh] is still the pending invite [observed] was read as. */
+function isSamePendingInvite(
+  fresh: admin.firestore.DocumentData | undefined,
+  observed: admin.firestore.DocumentData
+): boolean {
+  return (
+    fresh !== undefined &&
+    fresh.state === "pending" &&
+    fresh.invite_token === observed.invite_token
+  );
+}
+
+/** True when [fresh] is still the active grant [observed] was read as. */
+function isSameActiveGrant(
+  fresh: admin.firestore.DocumentData | undefined,
+  observed: admin.firestore.DocumentData
+): boolean {
+  return (
+    fresh !== undefined &&
+    fresh.state === "active" &&
+    fresh.tutor_uid === observed.tutor_uid &&
+    sameTimestamp(fresh.accepted_at, observed.accepted_at)
+  );
+}
+
+/**
+ * Expires the pending invite at [grantRef] only if, inside one transaction,
+ * it is still the invite identified by [observedToken] and its expires_at is
+ * at or before [now]. A re-invite (new token, fresh expiry), an acceptance,
+ * a decline or a rescind that committed after the caller's read makes this a
+ * no-op. Writes the `invite_expired` audit entry in the same transaction.
+ * Returns whether the grant was expired.
+ */
+async function expirePendingInviteIfUnchanged(
+  grantRef: admin.firestore.DocumentReference,
+  observedToken: unknown,
+  now: admin.firestore.Timestamp
+): Promise<boolean> {
+  return db.runTransaction(async (txn) => {
+    const freshSnap = await txn.get(grantRef);
+    const fresh = freshSnap.data();
+    const expiresAt = fresh?.expires_at;
+    if (
+      !freshSnap.exists ||
+      fresh!.state !== "pending" ||
+      fresh!.invite_token !== observedToken ||
+      !(expiresAt instanceof admin.firestore.Timestamp) ||
+      expiresAt.toMillis() > now.toMillis()
+    ) {
+      return false;
+    }
+
+    txn.update(grantRef, {
+      state: "expired",
+      updated_at: now,
+      invite_token: admin.firestore.FieldValue.delete(),
+    });
+    txn.set(grantRef.collection("audit_log").doc(), {
+      tutor_uid: null,
+      tutor_name_snapshot: fresh!.tutor_email ?? "",
+      action: "invite_expired",
+      target: `grant/${grantRef.id}`,
+      after_value: JSON.stringify({ state: "expired" }),
+      timestamp: now.toDate().toISOString(),
+    });
+    return true;
+  });
+}
+
+function staleGrantError(grantId: string): HttpsError {
+  return new HttpsError(
+    "failed-precondition",
+    `Grant ${grantId} changed while processing this request; reload and try again`
+  );
+}
+
 // ── inviteTutor ───────────────────────────────────────────────────────────────
 //
 // Creates a pending grant document for a tutor invite.
@@ -231,11 +325,14 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
 
   // Check expiry — server-side enforcement.
   if (grant.expires_at && grant.expires_at.toDate() < new Date()) {
-    // Transition to expired while we're here (opportunistic).
-    await grantRef.update({
-      state: "expired",
-      updated_at: admin.firestore.Timestamp.now(),
-    });
+    // Transition to expired while we're here (opportunistic) — but only the
+    // exact invite read above: a re-invite that committed since then keeps
+    // its fresh pending state (DNI-487 review).
+    await expirePendingInviteIfUnchanged(
+      grantRef,
+      grant.invite_token,
+      admin.firestore.Timestamp.now()
+    );
     throw new HttpsError(
       "failed-precondition",
       `Grant ${grantId} has expired`
@@ -379,12 +476,22 @@ export const declineTutorInvite = onCall(CALL_OPTS, async (request) => {
     );
   }
 
+  // The identity check above may await an Auth lookup, so re-read inside the
+  // transaction and decline only the invite that was checked: a re-invite,
+  // acceptance, rescind or expiry that committed since is never clobbered
+  // (DNI-487 review).
   const now = admin.firestore.Timestamp.now();
-  await grantRef.update({
-    state: "declined",
-    declined_at: now,
-    updated_at: now,
-    invite_token: admin.firestore.FieldValue.delete(),
+  await db.runTransaction(async (txn) => {
+    const freshSnap = await txn.get(grantRef);
+    if (!isSamePendingInvite(freshSnap.data(), grant)) {
+      throw staleGrantError(grantId);
+    }
+    txn.update(grantRef, {
+      state: "declined",
+      declined_at: now,
+      updated_at: now,
+      invite_token: admin.firestore.FieldValue.delete(),
+    });
   });
 
   logger.info(`declineTutorInvite: tutor=${callerUid} grantId=${grantId}`);
@@ -409,30 +516,35 @@ export const rescindTutorInvite = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   }
 
+  // Check and write in ONE transaction (DNI-487 review): the grant is
+  // re-read on every retry, so a concurrent accept, decline or expiry that
+  // commits first is seen and rejected instead of being overwritten.
   const grantRef = db.collection("tutor_grants").doc(grantId);
-  const grantSnap = await grantRef.get();
-  if (!grantSnap.exists) {
-    throw new HttpsError("not-found", `Grant not found: ${grantId}`);
-  }
-
-  const grant = grantSnap.data()!;
-
-  if (grant.parent_uid !== callerUid) {
-    throw new HttpsError("permission-denied", "Only the parent can rescind an invite");
-  }
-  if (grant.state !== "pending") {
-    throw new HttpsError(
-      "failed-precondition",
-      `Grant ${grantId} is not in pending state (state=${grant.state})`
-    );
-  }
-
   const now = admin.firestore.Timestamp.now();
-  await grantRef.update({
-    state: "rescinded",
-    revoked_at: now,
-    updated_at: now,
-    invite_token: admin.firestore.FieldValue.delete(),
+  await db.runTransaction(async (txn) => {
+    const grantSnap = await txn.get(grantRef);
+    if (!grantSnap.exists) {
+      throw new HttpsError("not-found", `Grant not found: ${grantId}`);
+    }
+
+    const grant = grantSnap.data()!;
+
+    if (grant.parent_uid !== callerUid) {
+      throw new HttpsError("permission-denied", "Only the parent can rescind an invite");
+    }
+    if (grant.state !== "pending") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Grant ${grantId} is not in pending state (state=${grant.state})`
+      );
+    }
+
+    txn.update(grantRef, {
+      state: "rescinded",
+      revoked_at: now,
+      updated_at: now,
+      invite_token: admin.firestore.FieldValue.delete(),
+    });
   });
 
   logger.info(`rescindTutorInvite: parent=${callerUid} grantId=${grantId}`);
@@ -481,6 +593,13 @@ export const revokeTutorGrant = onCall(CALL_OPTS, async (request) => {
   const accessId = buildAccessId(tutorUid, callerUid, profileId);
 
   await db.runTransaction(async (txn) => {
+    // Revoke only the active grant checked above (same tutor + acceptance):
+    // after a resign and re-invite, a stale revoke must not turn the fresh
+    // pending invite into revoked_by_parent (DNI-487 review).
+    const freshSnap = await txn.get(grantRef);
+    if (!isSameActiveGrant(freshSnap.data(), grant)) {
+      throw staleGrantError(grantId);
+    }
     txn.update(grantRef, {
       state: "revoked_by_parent",
       revoked_at: now,
@@ -610,6 +729,11 @@ export const resignTutorGrant = onCall(CALL_OPTS, async (request) => {
   const accessId = buildAccessId(callerUid, parentUid, profileId);
 
   await db.runTransaction(async (txn) => {
+    // Same stale-transition guard as revokeTutorGrant (DNI-487 review).
+    const freshSnap = await txn.get(grantRef);
+    if (!isSameActiveGrant(freshSnap.data(), grant)) {
+      throw staleGrantError(grantId);
+    }
     txn.update(grantRef, {
       state: "revoked_by_tutor",
       revoked_at: now,
@@ -732,37 +856,15 @@ export const expirePendingInvites = pubsub
     for (const grantDoc of snapshot.docs) {
       const grantId = grantDoc.id;
       try {
-        const didExpire = await db.runTransaction(async (txn) => {
-          // Re-read INSIDE the transaction: the grant may have been accepted,
-          // declined, or rescinded between the query above and now. Only expire
-          // a grant that is STILL pending — never clobber a newer state.
-          const fresh = await txn.get(grantDoc.ref);
-          if (!fresh.exists || fresh.data()?.state !== "pending") {
-            return false;
-          }
-
-          txn.update(grantDoc.ref, {
-            state: "expired",
-            updated_at: now,
-            invite_token: admin.firestore.FieldValue.delete(),
-          });
-
-          // Write audit log entry.
-          const auditRef = db
-            .collection("tutor_grants")
-            .doc(grantId)
-            .collection("audit_log")
-            .doc();
-          txn.set(auditRef, {
-            tutor_uid: null,
-            tutor_name_snapshot: fresh.data()?.tutor_email ?? "",
-            action: "invite_expired",
-            target: `grant/${grantId}`,
-            after_value: JSON.stringify({ state: "expired" }),
-            timestamp: now.toDate().toISOString(),
-          });
-          return true;
-        });
+        // Re-read INSIDE a transaction and expire only the exact invite the
+        // query returned (same token, still past expiry): a grant accepted,
+        // declined, rescinded or RE-INVITED since the query keeps its newer
+        // state (DNI-487 review).
+        const didExpire = await expirePendingInviteIfUnchanged(
+          grantDoc.ref,
+          grantDoc.data().invite_token,
+          now
+        );
 
         if (didExpire) {
           expiredCount++;
