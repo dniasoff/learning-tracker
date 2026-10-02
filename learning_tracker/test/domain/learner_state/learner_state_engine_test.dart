@@ -11,6 +11,8 @@ import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
+import '../../helpers/learner_state/lock_fixtures.dart';
+import '../../helpers/learner_state_fixtures.dart';
 
 void main() {
   const engine = LearnerStateEngine();
@@ -406,6 +408,140 @@ void main() {
       const CalendarAssignment('2026-09-01', node),
       isNot(const CalendarAssignment('2026-09-02', node)),
     );
+  });
+
+  group('DNI-466 AC-4: lock-ignored events', () {
+    // The fixture learner is UTC with no location, so the fail-closed
+    // Shabbos lock is Fri 2026-09-04 12:00Z → Sun 2026-09-06 01:00Z
+    // (engineAt(5040) → engineAt(7260)).
+    const inLock = 6000;
+    const b21 = 'Mishnah Berakhot 2:1';
+    const b22 = 'Mishnah Berakhot 2:2';
+
+    LearningEvent at(int id, String ref, DateTime recordedAt) =>
+        LearningEvent.learn(
+          id: engineUlid(id),
+          curriculumId: engineCurriculum,
+          ref: ref,
+          source: LearningEvent.sourceMain,
+          dateState: DateState.dated,
+          learnedOn: '2026-09-04',
+          stage: 1,
+          recordedAt: recordedAt,
+          actor: parentActor,
+        );
+
+    test('a locked event is excluded from every output and reported', () {
+      final kept = [engineLearn(1, b11, stage: 1)];
+      final locked = engineLearn(2, b12, stage: 1, minutes: inLock);
+      // One corpus instance: curriculum states compare their corpus.
+      final corpora = {engineCurriculum: mishnayosCorpus()};
+      final withLocked = engine.run(
+        engineInputs(events: [...kept, locked], corpora: corpora),
+      );
+      final without = engine.run(engineInputs(events: kept, corpora: corpora));
+
+      expect(withLocked.lockIgnoredEventIds, {engineUlid(2)});
+      expect(withLocked.countedEventIds, {engineUlid(1)});
+      // Learnt set, progress, tri-state, position, completed units and
+      // streak are exactly those of a log without the event.
+      expect(withLocked[engineCurriculum], without[engineCurriculum]);
+      expect(withLocked[engineCurriculum]!.learntLeaves, {b11});
+      expect(without.lockIgnoredEventIds, isEmpty);
+    });
+
+    test('a locked event cannot be the completing event of a unit', () {
+      // Masechta Peah is a unit of two mishnayos.
+      final first = engineLearn(1, 'Mishnah Peah 1:1', stage: 1);
+      LearnerState run(int minutes) => engine.run(
+        engineInputs(
+          events: [
+            first,
+            engineLearn(2, 'Mishnah Peah 1:2', stage: 1, minutes: minutes),
+          ],
+        ),
+      );
+      final completed = run(100)[engineCurriculum]!.completedUnits;
+      expect(completed.map((u) => u.unit), contains(peah));
+
+      final locked = run(inLock);
+      expect(locked.lockIgnoredEventIds, {engineUlid(2)});
+      final state = locked[engineCurriculum]!;
+      expect(state.completedUnits.map((u) => u.unit), isNot(contains(peah)));
+      expect(state.learntLeaves, {'Mishnah Peah 1:1'});
+    });
+
+    test('a locked void cancels nothing', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineVoid(2, 1, minutes: inLock),
+          ],
+        ),
+      );
+      expect(state.lockIgnoredEventIds, {engineUlid(2)});
+      expect(state.countedEventIds, {engineUlid(1)});
+      expect(state[engineCurriculum]!.learntLeaves, {b11});
+    });
+
+    test('both lock bounds are inside the lock; 1 µs outside counts', () {
+      const us = Duration(microseconds: 1);
+      final lockStart = DateTime.utc(2026, 9, 4, 12);
+      final lockEnd = DateTime.utc(2026, 9, 6, 1);
+      final state = engine.run(
+        engineInputs(
+          events: [
+            at(1, b11, lockStart.subtract(us)),
+            at(2, b12, lockStart),
+            at(3, b21, lockEnd),
+            at(4, b22, lockEnd.add(us)),
+          ],
+        ),
+      );
+      expect(state.lockIgnoredEventIds, {engineUlid(2), engineUlid(3)});
+      expect(state.countedEventIds, {engineUlid(1), engineUlid(4)});
+    });
+
+    test('effectiveAt decides: original_recorded_at, not recorded_at', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            // An undo copy recorded after the lock of a learn made inside it.
+            engineLearn(1, b11, minutes: 8000, originalMinutes: inLock),
+            // A copy recorded inside the lock of a learn made before it.
+            engineLearn(2, b12, minutes: inLock, originalMinutes: 10),
+          ],
+        ),
+      );
+      expect(state.lockIgnoredEventIds, {engineUlid(1)});
+      expect(state.countedEventIds, {engineUlid(2)});
+    });
+
+    test('each event is judged by the window of the settings in force', () {
+      // Fri 13:00Z and Sat 20:00Z are inside the no-location fallback but
+      // outside Jerusalem's computed Shabbos.
+      final events = [
+        at(1, b11, DateTime.utc(2026, 9, 4, 13)),
+        at(2, b12, DateTime.utc(2026, 9, 5, 20)),
+        at(3, b21, DateTime.utc(2026, 9, 5, 12)),
+      ];
+      final fallback = engine.run(engineInputs(events: events));
+      expect(fallback.lockIgnoredEventIds, hasLength(3));
+
+      final moved = engine.run(
+        engineInputs(
+          events: events,
+          settingsHistory: movedHistory(
+            lockSettings(timeZone: 'UTC'),
+            DateTime.utc(2026, 9, 4),
+            jerusalem,
+          ),
+        ),
+      );
+      expect(moved.lockIgnoredEventIds, {engineUlid(3)});
+      expect(moved.countedEventIds, {engineUlid(1), engineUlid(2)});
+    });
   });
 
   test('no inputs give no curricula', () {
