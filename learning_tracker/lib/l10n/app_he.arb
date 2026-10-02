@@ -4026,5 +4026,34 @@
   "backupImportConfirm": "שחזור גיבוי",
   "backupImportSuccess": "הגיבוי שוחזר בהצלחה.",
   "backupImportError": "לא ניתן לשחזר את הגיבוי. נסו שוב.",
-  "backupImportNotSaved": "לא נשמר — חלק מהגיבוי לא שוחזר. לנסות שוב?"
+  "backupImportNotSaved": "לא נשמר — חלק מהגיבוי לא שוחזר. לנסות שוב?",
+  "subTrackDetailNoDeadlineNote": "ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.",
+  "subTrackDetailNoDeadlineLink": "הגדרת תאריך יעד",
+  "subTrackDetailSelectPrompt": "יש לבחור תת-מסלול כדי לראות את פרטיו",
+  "goalTargetPercentOnly": "השלם {percent}% מהחומר",
+  "@goalTargetPercentOnly": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "goalTargetPercentWithCount": "השלם {percent}% מהחומר ({done} מתוך {total} פריטים)",
+  "@goalTargetPercentWithCount": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "siyumimPreviouslyLearnedDate": "נלמד בעבר",
+  "@siyumimPreviouslyLearnedDate": {
+    "description": "Replaces the achievement date on a Siyumim & Milestones row (and the timeline's month-group header) when the milestone's achievedAt is the bulk-mark-prior sentinel date rather than a real completion moment."
+  }
 }

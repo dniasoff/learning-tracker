@@ -7047,4 +7047,28 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get backupImportNotSaved =>
       'לא נשמר — חלק מהגיבוי לא שוחזר. לנסות שוב?';
+
+  @override
+  String get subTrackDetailNoDeadlineNote =>
+      'ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.';
+
+  @override
+  String get subTrackDetailNoDeadlineLink => 'הגדרת תאריך יעד';
+
+  @override
+  String get subTrackDetailSelectPrompt =>
+      'יש לבחור תת-מסלול כדי לראות את פרטיו';
+
+  @override
+  String goalTargetPercentOnly(int percent) {
+    return 'השלם $percent% מהחומר';
+  }
+
+  @override
+  String goalTargetPercentWithCount(int percent, int done, int total) {
+    return 'השלם $percent% מהחומר ($done מתוך $total פריטים)';
+  }
+
+  @override
+  String get siyumimPreviouslyLearnedDate => 'נלמד בעבר';
 }

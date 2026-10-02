@@ -7121,4 +7121,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backupImportNotSaved =>
       'Not saved — part of the backup was not restored. Retry?';
+
+  @override
+  String get subTrackDetailNoDeadlineNote =>
+      'Without a deadline, a sub-track can\'t lower the daily target.';
+
+  @override
+  String get subTrackDetailNoDeadlineLink => 'Set a deadline';
+
+  @override
+  String get subTrackDetailSelectPrompt =>
+      'Select a sub-track to see its details';
+
+  @override
+  String goalTargetPercentOnly(int percent) {
+    return 'Complete $percent% of the material';
+  }
+
+  @override
+  String goalTargetPercentWithCount(int percent, int done, int total) {
+    return 'Complete $percent% of the material ($done of $total items)';
+  }
+
+  @override
+  String get siyumimPreviouslyLearnedDate => 'Previously learned';
 }

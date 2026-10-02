@@ -11669,6 +11669,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not saved — part of the backup was not restored. Retry?'**
   String get backupImportNotSaved;
+
+  /// Sub-track detail: parent note when the curriculum has no deadline; Story 2.4 (DNI-495) wording, reused verbatim (DNI-497 AC-2). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Without a deadline, a sub-track can\'t lower the daily target.'**
+  String get subTrackDetailNoDeadlineNote;
+
+  /// Sub-track detail: link from the no-deadline note to the curriculum's goal setup; Story 2.4 (DNI-495) wording (DNI-497 AC-2). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a deadline'**
+  String get subTrackDetailNoDeadlineLink;
+
+  /// Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a sub-track to see its details'**
+  String get subTrackDetailSelectPrompt;
+
+  /// No description provided for @goalTargetPercentOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete {percent}% of the material'**
+  String goalTargetPercentOnly(int percent);
+
+  /// No description provided for @goalTargetPercentWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete {percent}% of the material ({done} of {total} items)'**
+  String goalTargetPercentWithCount(int percent, int done, int total);
+
+  /// Data-consistency fix (run-9 audit): replaces the achievement date on a Siyumim & Milestones row (and the timeline's month-group header) when the milestone's achievedAt is the bulk-mark-prior sentinel (kBulkPriorSentinelDate, 2000-01-01 UTC) rather than a real completion moment. Bulk-marked-as-previously-learned sections have no real completion date to show; formatting the sentinel through DateFormat rendered the nonsensical 'Jan 1, 2000' to the user. Do NOT change the stored sentinel — this only changes its presentation.
+  ///
+  /// In en, this message translates to:
+  /// **'Previously learned'**
+  String get siyumimPreviouslyLearnedDate;
 }
 
 class _AppLocalizationsDelegate

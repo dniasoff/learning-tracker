@@ -1911,57 +1911,142 @@
   "signUpRetryConnection": "Retry connection",
   "offlineAccountLabel": "Offline account",
   "ongoingSubTrackFormTitle": "Ongoing sub-track",
-  "@ongoingSubTrackFormTitle": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackFormTitle": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackEditTitle": "Edit ongoing sub-track",
-  "@ongoingSubTrackEditTitle": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackEditTitle": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackNameLabel": "Sub-track name",
-  "@ongoingSubTrackNameLabel": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackNameLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackRateLabel": "{unit} per week",
-  "@ongoingSubTrackRateLabel": {"description": "DNI-496 ongoing sub-track form", "placeholders": {"unit": {"type": "String"}}},
+  "@ongoingSubTrackRateLabel": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
   "ongoingSubTrackRateDecrease": "Fewer {unit} per week",
-  "@ongoingSubTrackRateDecrease": {"description": "DNI-496 ongoing sub-track form", "placeholders": {"unit": {"type": "String"}}},
+  "@ongoingSubTrackRateDecrease": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
   "ongoingSubTrackRateIncrease": "More {unit} per week",
-  "@ongoingSubTrackRateIncrease": {"description": "DNI-496 ongoing sub-track form", "placeholders": {"unit": {"type": "String"}}},
+  "@ongoingSubTrackRateIncrease": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
   "ongoingSubTrackBeinHazmanimLabel": "Not learning during bein hazmanim",
-  "@ongoingSubTrackBeinHazmanimLabel": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackBeinHazmanimLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackBeinHazmanimHelper": "Lowers weeks per year",
-  "@ongoingSubTrackBeinHazmanimHelper": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackBeinHazmanimHelper": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackWeeksLabel": "Weeks per year",
-  "@ongoingSubTrackWeeksLabel": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackWeeksLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackWeeksPrefillHelper": "Prefilled from bein hazmanim toggle — edit if needed",
-  "@ongoingSubTrackWeeksPrefillHelper": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackWeeksPrefillHelper": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackStartLabel": "Start date (optional)",
-  "@ongoingSubTrackStartLabel": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackStartLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackEndLabel": "End date (optional)",
-  "@ongoingSubTrackEndLabel": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackEndLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackClearDate": "Clear date",
-  "@ongoingSubTrackClearDate": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackClearDate": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackShabbosLabel": "Learns on shabbos / yom tov",
-  "@ongoingSubTrackShabbosLabel": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackShabbosLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackShabbosHelper": "Include this source on the catch-up card after shabbos",
-  "@ongoingSubTrackShabbosHelper": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackShabbosHelper": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackLimitLine": "You can have up to 5 ongoing sub-tracks. {count} in use.",
-  "@ongoingSubTrackLimitLine": {"description": "DNI-496 ongoing sub-track form", "placeholders": {"count": {"type": "int"}}},
+  "@ongoingSubTrackLimitLine": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ongoingSubTrackLimitReached": "You already have 5 ongoing sub-tracks.",
-  "@ongoingSubTrackLimitReached": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackLimitReached": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackSave": "Save sub-track",
-  "@ongoingSubTrackSave": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackSave": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackNameRequired": "Enter a name",
-  "@ongoingSubTrackNameRequired": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackNameRequired": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackPositiveNumber": "Enter a number above 0",
-  "@ongoingSubTrackPositiveNumber": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackPositiveNumber": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackEndBeforeStart": "The end date can't be before the start date",
-  "@ongoingSubTrackEndBeforeStart": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackEndBeforeStart": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackSaveFailed": "Couldn't save the sub-track. Your entries are kept.",
-  "@ongoingSubTrackSaveFailed": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackSaveFailed": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackStarts": "Starts {date}",
-  "@ongoingSubTrackStarts": {"description": "DNI-496 ongoing sub-track form", "placeholders": {"date": {"type": "String"}}},
+  "@ongoingSubTrackStarts": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "ongoingSubTrackRateSummary": "{rate}/wk × {weeks} weeks",
-  "@ongoingSubTrackRateSummary": {"description": "DNI-496 ongoing sub-track form", "placeholders": {"rate": {"type": "String"}, "weeks": {"type": "String"}}},
+  "@ongoingSubTrackRateSummary": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      }
+    }
+  },
   "ongoingSubTrackTabletSummaryTitle": "This learner's sub-tracks",
-  "@ongoingSubTrackTabletSummaryTitle": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackTabletSummaryTitle": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "ongoingSubTrackTabletSummaryEmpty": "No sub-tracks yet",
-  "@ongoingSubTrackTabletSummaryEmpty": {"description": "DNI-496 ongoing sub-track form"},
+  "@ongoingSubTrackTabletSummaryEmpty": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
   "signUpVerificationEmailSent": "Verification email sent. Verify your email, then sign in.",
   "signUpEmailAlreadyExists": "An account already exists with this email.",
   "signUpDeviceEmailExists": "An account with this email already exists on this device. Sign in instead.",
@@ -5472,5 +5557,43 @@
   "backupImportNotSaved": "Not saved — part of the backup was not restored. Retry?",
   "@backupImportNotSaved": {
     "description": "Snackbar after a backup restore when the server refused some of the replayed learning writes (AD-49, AD-54 Recovery: not saved — retry). Shown with a Retry action that re-sends exactly those writes. DRAFT copy, pending zc4."
+  },
+  "subTrackDetailNoDeadlineNote": "Without a deadline, a sub-track can't lower the daily target.",
+  "@subTrackDetailNoDeadlineNote": {
+    "description": "Sub-track detail: parent note when the curriculum has no deadline; Story 2.4 (DNI-495) wording, reused verbatim (DNI-497 AC-2). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailNoDeadlineLink": "Set a deadline",
+  "@subTrackDetailNoDeadlineLink": {
+    "description": "Sub-track detail: link from the no-deadline note to the curriculum's goal setup; Story 2.4 (DNI-495) wording (DNI-497 AC-2). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailSelectPrompt": "Select a sub-track to see its details",
+  "@subTrackDetailSelectPrompt": {
+    "description": "Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4."
+  },
+  "goalTargetPercentOnly": "Complete {percent}% of the material",
+  "@goalTargetPercentOnly": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "goalTargetPercentWithCount": "Complete {percent}% of the material ({done} of {total} items)",
+  "@goalTargetPercentWithCount": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "siyumimPreviouslyLearnedDate": "Previously learned",
+  "@siyumimPreviouslyLearnedDate": {
+    "description": "Data-consistency fix (run-9 audit): replaces the achievement date on a Siyumim & Milestones row (and the timeline's month-group header) when the milestone's achievedAt is the bulk-mark-prior sentinel (kBulkPriorSentinelDate, 2000-01-01 UTC) rather than a real completion moment. Bulk-marked-as-previously-learned sections have no real completion date to show; formatting the sentinel through DateFormat rendered the nonsensical 'Jan 1, 2000' to the user. Do NOT change the stored sentinel — this only changes its presentation."
   }
 }
