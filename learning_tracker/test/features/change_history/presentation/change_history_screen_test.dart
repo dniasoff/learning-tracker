@@ -201,6 +201,62 @@ void main() {
     });
   });
 
+  group('AC-5 the bell', () {
+    testWidgets('rings on tutor goal and main-track changes only', (
+      tester,
+    ) async {
+      final at = _m(DateTime.utc(2026, 9, 2, 6));
+      final entities = [
+        GovernedEntity.goal,
+        GovernedEntity.mainTrack,
+        GovernedEntity.mainTrackOrder,
+        GovernedEntity.mainTrackProgram,
+        GovernedEntity.mainTrackStudyDays,
+        GovernedEntity.subTrack,
+        GovernedEntity.mainTrackStages,
+        GovernedEntity.mainTrackScope,
+        GovernedEntity.learnerSettings,
+      ];
+      final repo = FakeChangeHistoryRepository(
+        entries: [
+          for (var i = 0; i < entities.length; i++)
+            historyEntry(
+              i + 1,
+              minutes: at + i,
+              entity: entities[i],
+              actor: historyTutor,
+            ),
+          // The same goal change by the parent: no bell.
+          historyEntry(20, minutes: at - 60, actor: historyParent),
+        ],
+      );
+      await pumpChangeHistory(
+        tester,
+        changeHistoryOverrides(repository: repo),
+        size: const Size(400, 3000),
+      );
+      bool rings(int n) => find
+          .descendant(
+            of: find.byKey(ValueKey('action:${historyId(n)}')),
+            matching: find.byKey(const ValueKey('changeHistoryBell')),
+          )
+          .evaluate()
+          .isNotEmpty;
+      expect(
+        [for (var n = 1; n <= 9; n++) rings(n)],
+        [true, true, true, true, true, false, false, false, false],
+      );
+      expect(rings(20), isFalse);
+      final semantics = tester.ensureSemantics();
+      await tester.pump();
+      expect(
+        find.bySemanticsLabel(RegExp('Parent notified')),
+        findsNWidgets(5),
+      );
+      semantics.dispose();
+    });
+  });
+
   group('AC-6 lock-ignored learning', () {
     testWidgets('is labelled kept, not counted, with no Undo', (tester) async {
       // Saturday 2026-09-05 15:00 in New York (no location: locked).
