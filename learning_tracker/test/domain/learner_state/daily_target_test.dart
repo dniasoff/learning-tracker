@@ -1,5 +1,7 @@
 // DNI-467 AC-6: no-sub-track deadline target and pace rate from the fixed
 // goal docs (AD-43, AD-44).
+// DNI-494 AC-5: with no deadline, no capacity, shortfall or daily target is
+// computed and no sub-track rate affects any value (FR-20).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -7,6 +9,7 @@ import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart'
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/study_days.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
 
@@ -45,15 +48,31 @@ final _monToThu = [
   for (final dow in [5, 6, 7]) _day(dow, 'review'),
 ];
 
+/// An ongoing sub-track over Peah (2 leaves) at [rate] a week.
+SubTrack _subTrack(double rate) => SubTrack(
+  id: engineUlid(800),
+  curriculumId: engineCurriculum,
+  name: 'Shiur',
+  type: SubTrackType.ongoing,
+  windowStart: '2026-09-01',
+  ratePerWeek: rate,
+  weeksPerYear: 52,
+  learnsOnShabbos: false,
+  ground: const [peah],
+  lastChangeId: engineUlid(801),
+);
+
 CurriculumState _run({
   DeadlineGoal? deadline,
   PaceGoal? pace,
   List<MainTrackConfigDoc> studyDays = const [],
   List<LearningEvent> events = const [],
   MainTrackProgram? program,
+  List<SubTrack> subTracks = const [],
 }) => const LearnerStateEngine().run(
   engineInputs(
     events: events,
+    subTracks: subTracks,
     intents: {
       engineCurriculum: MainTrackIntent(
         curriculumId: engineCurriculum,
@@ -228,6 +247,57 @@ void main() {
     );
     expect(state.dailyTarget, 0);
     expect(state.paceRate, isNull);
+  });
+
+  group('DNI-494 AC-5: no deadline goal', () {
+    test('capacity, shortfall and daily target are not computed', () {
+      final state = _run(subTracks: [_subTrack(2)]);
+      final sub = state.subTracks[engineUlid(800)]!;
+      expect(sub.holdsGround, isTrue);
+      expect(sub.capacity, isNull);
+      expect(sub.expectedNewGround, 0);
+      expect(sub.shortfall, 0);
+      expect(sub.shortfallLeaves, isEmpty);
+      expect(state.shortfall, isNull);
+      expect(state.dailyTarget, isNull);
+      expect(state.paceRate, isNull);
+      // The held ground still leaves the main track.
+      expect(state.mainTrackRemaining, 7);
+    });
+
+    test('a pace goal provides paceRate', () {
+      final state = _run(pace: _pace(3), subTracks: [_subTrack(2)]);
+      expect(state.paceRate, 3.0);
+      expect(state.dailyTarget, isNull);
+    });
+
+    test('no sub-track rate affects any value', () {
+      for (final pace in [null, _pace(3)]) {
+        final slow = _run(pace: pace, subTracks: [_subTrack(2)]);
+        final fast = _run(pace: pace, subTracks: [_subTrack(200)]);
+        expect(fast.subTracks, slow.subTracks);
+        expect(fast.dailyTarget, slow.dailyTarget);
+        expect(fast.paceRate, slow.paceRate);
+        expect(fast.shortfall, slow.shortfall);
+        expect(fast.projection, slow.projection);
+        expect(fast.schedulableRefs, slow.schedulableRefs);
+      }
+    });
+
+    test('with a deadline the same rate change does move the target', () {
+      // [Mon 7th, Sun 13th] = 7 days. Rate 2: floor(2 × 52 × 7 ÷ 365) = 1
+      // of 2 ground leaves → 1 shortfall: ceil((7 + 1) ÷ 7) = 2. Rate 200:
+      // capacity 199, expected 197 → numerator −190 → 0.
+      final deadline = _deadline('2026-09-13');
+      expect(
+        _run(deadline: deadline, subTracks: [_subTrack(2)]).dailyTarget,
+        2,
+      );
+      expect(
+        _run(deadline: deadline, subTracks: [_subTrack(200)]).dailyTarget,
+        0,
+      );
+    });
   });
 
   group('StudyDays.countStudyDays', () {
