@@ -1985,8 +1985,18 @@ describe('DNI-471 AC-4 — timestamp skew boundary for event and governed writes
 // `getAfter()` on a document written in the same batch, so it admits 20
 // governed docs and first denies the 21st (pinned below as supplemental
 // evidence) — and Firebase does not document whether production counts that
-// call. AC-5's 11th-doc denial is therefore recorded as UNVERIFIED for this
-// story and goes to release verification (bead learning-tracker-fyh.72).
+// call. AC-5's 11th-doc platform denial is therefore DEFERRED to DNI-490
+// (1.28 cutover) release verification, the first point where production
+// rules evaluation can be observed (no production access in this story,
+// AD-54 single production project). Recorded default pending the
+// architect/PO ruling on bead learning-tracker-fyh.72: this story's AC-5
+// evidence is the 2-call-per-doc accounting, the exactly-20-call 10-doc
+// commit and the 22-call 11-doc over-budget count below. Release
+// verification must confirm in production that a 10-doc owner batch
+// commits and record whether an 11-doc batch is denied, amending AD-54's
+// numbers if production counting differs. The batch size is a platform
+// budget, not an authorization boundary: every governed doc in any batch is
+// authorized individually by the AD-38 owner rule.
 // The rules keep AD-38's exact 2-call shape and never add an artificial
 // third call (that would break legitimate 10-doc batches if production
 // counts getAfter). Shipped clients never send an 11th governed doc: the
@@ -2100,13 +2110,13 @@ describe('DNI-471 AC-5 — AD-38 access-call budget (10 governed docs per owner 
 
   // NOT a denial proof. The emulator COMMITS this batch (it does not count
   // same-batch getAfter calls; see block comment), and production counting
-  // is undocumented, so AC-5's "11th doc is denied" is UNVERIFIED here and
-  // tracked for release verification by bead learning-tracker-fyh.72. The
+  // is undocumented, so AC-5's "11th doc is denied" is deferred to DNI-490
+  // release verification (bead learning-tracker-fyh.72). The
   // ≤ 10 guarantee in shipped code is the owner command path's own batch
   // split (DNI-470: 11+ governed docs go online through writeWithChangeLog).
   // This test pins only the arithmetic the budget rests on: the rules
   // evaluate 2 access calls per governed doc, so 11 docs need 22 > 20.
-  test('accounting only (11th-doc denial unverified on emulator, fyh.72): 11 governed docs evaluate 22 access calls, over the 20-call budget', async () => {
+  test('accounting only (11th-doc platform denial deferred to DNI-490 release verification, fyh.72): 11 governed docs evaluate 22 access calls, over the 20-call budget', async () => {
     const calls = await accountedBatch(11);
     assert.equal(calls, 22, 'each governed doc costs exactly 2 access calls (AD-54)');
     assert.ok(calls > AD54_BATCH_CALL_LIMIT, '11 governed docs exceed the AD-54 batch budget');
