@@ -40,6 +40,7 @@ import 'package:learning_tracker/domain/learner_state/main_track_position.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ordered_leaves.dart';
 import 'package:learning_tracker/domain/learner_state/predicates.dart';
+import 'package:learning_tracker/domain/learner_state/projection.dart';
 import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
@@ -299,10 +300,29 @@ final class LearnerStateEngine {
       settingsHistory: inputs.settingsHistory,
       errors: errors,
     );
+    final goals = inputs.goals[curriculumId];
+    final deadline = calendar == null ? liveDeadline(goals) : null;
+    final program = intent.program;
+    final projection = deriveProjection(
+      newlyLearnt: newlyLearntOn(
+        countedLearns: learns,
+        corpus: corpus,
+        inScope: learnt.inScope,
+        firstStage: firstStage,
+      ),
+      historyStart: trackedHistoryStart(
+        program?.endedAt == null ? program?.trackingStartDate : null,
+        learns,
+      ),
+      today: today,
+      remaining: learnt.scopedLeaves.length - learnt.learntLeaves.length,
+      deadline: deadline,
+    );
     if (calendar != null) {
       return PlanRecord(
         calendar: calendar,
         reviews: reviews,
+        projection: projection,
         dailyTarget: calendar.dailyTarget(today),
         shortfall: calendar.amnestyFrom == null
             ? null
@@ -314,8 +334,6 @@ final class LearnerStateEngine {
     // (it also feeds FR-20 with a deadline); neither gives nulls. The
     // numerator is the no-sub-track case (DNI-494 adds the sub-track
     // terms).
-    final goals = inputs.goals[curriculumId];
-    final deadline = liveDeadline(goals);
     final pace = livePace(goals);
     final studyDays = configHistory.current.studyDays;
     return PlanRecord(
@@ -336,6 +354,7 @@ final class LearnerStateEngine {
               inScope: learnt.inScope,
               studyDays: studyDays,
             ),
+      projection: projection,
       validationErrors: errors,
     );
   }

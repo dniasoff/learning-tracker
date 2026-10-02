@@ -240,7 +240,7 @@ ReviewSchedule deriveReviewSchedule({
           openedAt: effectiveAt(prev),
           dueFrom: next.scheduleType == StageScheduleType.delay
               ? config.studyDays.nextActiveOnOrAfter(
-                  addCivilDays(openedOn, next.delayDays),
+                  shiftCivilDate(openedOn, next.delayDays),
                 )
               : openedOn,
           daysOfWeek: next.daysOfWeek,
