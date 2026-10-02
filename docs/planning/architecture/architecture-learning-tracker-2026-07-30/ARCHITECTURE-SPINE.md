@@ -36,7 +36,7 @@ The current implementation is a hybrid of the following shape:
 | Area | Current implementation | Status |
 | --- | --- | --- |
 | User data | Firestore repositories in `lib/data/repositories/`, with feature-local adapters still present | Partially rewired |
-| Account Firestore handles | `AccountFirebase` named-app registry, private Auth/Firestore/cache/App Check | Implemented as a subsystem; production sign-in is not fully wired to it |
+| Account Firestore handles | `AccountFirebase` named-app registry, private Auth/Firestore/cache/App Check | Adopted: production sign-in, sign-up, magic link, account switch and bootstrap run on the named app (DNI-520) |
 | Local data | Bundled Content DB and Device Registry DB only; both are Drift | Adopted |
 | Sync durability | Firestore SDK offline persistence and queued writes; no user-data Outbox or custom sync engine | Adopted in native repositories |
 | Identity | Profile ULIDs and `CurriculumId` are used by the new repositories; integer-shaped feature seams remain | Incomplete |
@@ -55,7 +55,7 @@ The real source tree is not the original target tree from the 2026-07-30 draft:
 learning_tracker/lib/
   app/                         # bootstrap, routing, application composition
   core/
-    auth/                      # current default-app Auth gateway
+    auth/                      # account-bound Auth gateway over the named apps (DNI-520)
     database/content/           # bundled read-only Drift DB
     database/registry/          # device-account Drift DB
     preferences/               # SharedPreferences/SecureStorage helpers
@@ -81,7 +81,7 @@ retains the documented Firebase Storage exception.
 
 ## Invariants and rules
 
-### AD-1 — Per-account named FirebaseApp isolation `[PARTIAL — subsystem implemented, production wiring incomplete]`
+### AD-1 — Per-account named FirebaseApp isolation `[COMPLETE — DNI-520]`
 
 - **Binds:** account handles, Firestore cache isolation, multi-account operation.
 - **Prevents:** one account reading another account's cache or Auth identity.
@@ -89,16 +89,44 @@ retains the documented Firebase Storage exception.
   apps, each with its own `FirebaseAuth`, `FirebaseFirestore`, App Check handle,
   and bounded persistent cache. The registry enforces a five-account bound and
   pins Firestore settings before first use. The default app is not returned as a
-  per-account Firestore data handle.
-- **Verification:** the implementation is in
-  `lib/data/firestore/account_firebase.dart`; `account_firebase_providers.dart`
-  keeps the registry alive. The production account sign-in and sign-up flows,
-  however, still use `FirebaseAuthGatewayImpl` and the default
-  `FirebaseAuth.instance`. No production call site currently invokes
-  `createAnonymousAccount`, `signInCloudAccount`, or `linkCredential`. Setting
-  `activeAccountIdProvider` therefore does not by itself establish a named-app
-  Auth session; a named-app repository resolution can still fail with
-  `AccountNotAuthenticatedException`.
+  per-account Firestore data handle, and production Auth never uses the default
+  app's `FirebaseAuth.instance`.
+- **Verification (DNI-520, bead learning-tracker-gd7):**
+  - `lib/core/auth/account_auth_gateway.dart` (interface) and
+    `lib/data/firestore/account_firebase_auth_gateway.dart` (implementation)
+    route every sign-in, sign-up, anonymous session, credential link,
+    sign-out and session restore to `AccountFirebase` for an explicit account
+    id. `FirebaseAuthGatewayImpl` is bound to one account's named-app
+    `FirebaseAuth`; `firebaseAuthGatewayProvider` and `authRepositoryProvider`
+    are rebuilt per active account.
+  - `NamedAppSignIn` (`lib/features/account/domain/services/named_app_sign_in.dart`)
+    picks the target account before the single sign-in. Email/password,
+    Google (`pickGoogleAccount` → `signInToAccountWithGoogle`), magic link
+    (`signInWithMagicLink`) and email sign-up (`createAccountWithEmail` on a
+    transient account id) each authenticate exactly one named app; the old
+    default-app-then-named-app double sign-in in `sign_in_controller.dart` and
+    `signup_screen.dart` is gone.
+  - Account picker: local/anonymous accounts get `ensureAnonymousSession`
+    (`AccountFirebase.createAnonymousAccount`) before activation; cloud
+    accounts re-authenticate their own named app only when that app's session
+    is missing (`restoreSession`), so switching never disturbs another
+    account's session. Bootstrap re-attaches the restored account's own
+    named-app session.
+  - The bare-instance ratchet baseline (`tool/bare_firebase_instance_baseline.txt`)
+    is 0: no `FirebaseAuth.instance` site remains in `lib/`.
+  - App Check: unchanged. The default app is still activated in bootstrap and
+    each named app activates its own handle via `FirebaseAppCheck.instanceFor`
+    in `AccountFirebase` (see `tool/device_e2e/README.md`).
+  - Tests: `test/core/auth/firebase_auth_gateway_impl_test.dart`,
+    `test/data/firestore/account_firebase_auth_gateway_test.dart`,
+    `test/data/firestore/account_firebase_test.dart`,
+    `test/features/account/domain/services/named_app_sign_in_test.dart`,
+    `test/features/auth/data/repositories/auth_repository_impl_test.dart`,
+    the `sign_in_controller*` suites, `signup_screen*` suites,
+    `magic_link_service_test.dart`, and the account-picker switch suites
+    (`account_picker_switch_test.dart`, cloud ↔ anonymous switching).
+  - On-device two-named-app evidence (AD-29) is a release-time check under
+    the DNI-490 cutover, not part of this unit-level evidence.
 
 ### AD-2 — Account-scoped handle and path resolution `[PARTIAL]`
 
@@ -106,14 +134,14 @@ retains the documented Firebase Storage exception.
 - **Prevents:** using the wrong account's Firestore cache.
 - **Rule:** new repository providers resolve
   `activeAccountFirebaseProvider` and pass `handles.firestore`, not a bare
-  Firestore singleton. Profile paths use the active handle's uid and a profile
-  ULID. Bare default Auth remains in the current pre-existing Auth gateway.
+  Firestore singleton. Profile paths use the active handle's uid — the
+  account's persisted path uid (AD-24) — and a profile ULID.
 - **Verification:** `lib/data/firestore/repository_providers.dart` funnels
   profile-scoped repositories through one `(handles, ownerUid, profileId)`
-  resolution seam and validates tutor grants. `PathUidResolver` exists, but it
-  has no production callers; `AccountFirebaseHandles.uid` is still obtained
-  from the live named-app Auth user. The persisted-path-uid rule from the old
-  spine is therefore not yet enforced end to end.
+  resolution seam and validates tutor grants. Since DNI-520,
+  `activeAccountFirebaseProvider` hands out `AccountFirebaseHandles.withPathUid`
+  whose `uid` comes from `PathUidResolver.pathUidFor`, not the live Auth user
+  (see AD-24).
 
 ### AD-3 — Repository layer is the data seam `[PARTIAL]`
 
@@ -330,9 +358,9 @@ retains the documented Firebase Storage exception.
   or repository use. Web remains outside the offline-account guarantee.
 - **Verification:** the ordering and constant are in
   `lib/data/firestore/account_firebase.dart`. This applies to sessions the
-  registry creates; AD-1 remains open until production account flows use them.
+  registry creates; since DNI-520 every production account flow uses them.
 
-### AD-19 — Anonymous Auth for local-born accounts `[PARTIAL — API exists, flow not wired]`
+### AD-19 — Anonymous Auth for local-born accounts `[ADOPTED — DNI-520]`
 
 - **Binds:** device-only account creation and upgrade to a cloud credential.
 - **Prevents:** an account with no Auth principal being unable to use rules-gated
@@ -340,9 +368,14 @@ retains the documented Firebase Storage exception.
 - **Rule:** `createAnonymousAccount` signs in on the account's named app;
   `linkCredential` upgrades that same user without changing its uid.
 - **Verification:** both operations are implemented and unit-injectable in
-  `AccountFirebase`, but no production sign-up flow calls them. Current account
-  creation/sign-in remains on the default Auth gateway, so this is not an
-  adopted end-to-end behavior.
+  `AccountFirebase`. Since DNI-520 the account picker calls
+  `AuthRepository.ensureAnonymousSession` (→ `createAnonymousAccount`) for a
+  local account before activating it, and `linkGoogleProvider` /
+  `linkEmailProvider` upgrade the bound account through
+  `AccountFirebase.linkCredential`, keeping the uid (and so the path uid and
+  data). Tests: `account_firebase_auth_gateway_test.dart`,
+  `auth_repository_impl_test.dart`, `active_account_providers_test.dart`,
+  and the account-picker suites.
 
 ### AD-20 — Curriculum-scope ownership `[ADOPTED in the native repository]`
 
@@ -396,7 +429,7 @@ retains the documented Firebase Storage exception.
   but the `lib/domain` target layer does not exist and the broader SDK boundary
   still has the violations recorded under AD-3.
 
-### AD-24 — Distinct app identity, profile identity, and path uid `[INCOMPLETE]`
+### AD-24 — Distinct app identity, profile identity, and path uid `[COMPLETE — DNI-520; anon-reset re-home out of scope]`
 
 - **Binds:** account registry and all profile-scoped paths.
 - **Prevents:** conflating a device account id, Firebase uid, profile ULID, and
@@ -405,10 +438,20 @@ retains the documented Firebase Storage exception.
   profile document key is a ULID; the Firestore path uid must be an explicitly
   persisted account value and must not be inferred from a live user at each
   call.
-- **Verification:** the named-app key and profile ULID portions are present.
-  `PathUidResolver` only defines the persisted-uid/remap mechanism and has no
-  callers; the current handle exposes the live named-app user's uid. The
-  anon-reset re-home half is not implemented.
+- **Verification (DNI-520, bead learning-tracker-gd7):** the named-app key and
+  profile ULID portions are present. `pathUidResolverProvider`
+  (`lib/core/providers/path_uid_resolver_provider.dart`) is the single
+  `PathUidResolver`. `activeAccountFirebaseProvider` returns handles whose
+  `uid` is the persisted path uid (`persistedPathUidFor`: an initial bind for
+  a row that has none, never a silent replace from live auth; the live uid
+  stays available as `authUid` for identity checks). Every repository
+  provider builds `users/{uid}/…` from that `uid`. Sign-in flows reconcile the
+  persisted uid through `NamedAppSignIn.reconcilePathUid`
+  (`PathUidResolver.reconcileLiveUid`) before activation; the account picker
+  does the same after an anonymous session. Tests:
+  `active_account_providers_test.dart`, `named_app_sign_in_test.dart`.
+  The anon-reset Firestore re-home is data migration and stays out of scope
+  (the remap breadcrumb columns record the old uid for it).
 
 ### AD-25 — CurriculumId is the track identity `[PARTIAL]`
 
@@ -453,9 +496,8 @@ retains the documented Firebase Storage exception.
 - **Rule:** the repository uses source-based checks for Firebase confinement,
   bare-instance ratcheting, dependency direction, and profile-path keying.
 - **Verification:** the checkers and Make targets exist. The bare-instance
-  baseline is stale relative to the checked-out source (the source has one
-  non-comment default `FirebaseAuth.instance` site while the baseline records
-  two), and Firebase confinement retains a documented Storage exception plus
+  baseline is 0 since DNI-520 (no default `FirebaseAuth.instance` site
+  remains), and Firebase confinement retains a documented Storage exception plus
   the two settings offenders. The gates are useful guardrails, not proof that
   the target layering is complete.
 
@@ -470,7 +512,8 @@ retains the documented Firebase Storage exception.
 - **Verification:** the repository contains the corresponding unit and
   integration-test scaffolding, and the historical memlog records a successful
   two-named-app topology run. This document does not claim a new test run for
-  this rewrite, and the production wiring gaps in AD-1/AD-24 remain.
+  this rewrite; the AD-1/AD-24 production wiring landed in DNI-520 with
+  unit/widget evidence, and its on-device run belongs to the DNI-490 release.
 
 ### AD-30 — Recovery for non-retryable writes `[INCOMPLETE]`
 
@@ -507,7 +550,7 @@ be reviewed before tightening that rule globally.
 | Concern | Current convention |
 | --- | --- |
 | Account app key | `account_<DeviceAccounts.accountId>` in `AccountFirebase` |
-| Firestore account path | `users/{uid}`; current repository providers use the resolved handle uid |
+| Firestore account path | `users/{uid}`; `uid` is the account's persisted path uid (`PathUidResolver`, AD-24) |
 | Profile path | `users/{uid}/learner_profiles/{profileUlid}` |
 | Track key | `CurriculumId.storageKey` in new repositories/functions |
 | Stage/order ids | Deterministic `DocIds` formulas; no new `collection.add()` for these entities |
@@ -515,7 +558,7 @@ be reviewed before tightening that rule globally.
 | History | Append-only rules; legal tombstone or Cloud Function for deletion cases |
 | Offline durability | Firestore SDK persistence/queue; no custom user-data Outbox |
 | Local stores | Bundled Content DB, Device Registry DB, SharedPreferences, SecureStorage |
-| Auth | Default-app `FirebaseAuthGateway` still live; named-app Auth registry exists but is not fully wired |
+| Auth | Named-app only: account-bound `FirebaseAuthGateway` + `AccountAuthGateway` over `AccountFirebase` (DNI-520) |
 
 ## Verified open work
 
@@ -525,7 +568,6 @@ These are source-backed gaps, not inherited plan prose:
 | --- | --- |
 | Integer sentinels remain | `RewardMilestone.kGlobalTrackSentinel` still equals `0`; `profileId: 0` and `trackId: 0` call sites remain; the planned identity cleanup is not complete. |
 | Path uid remap is only a registry mechanism | `PathUidResolver` and breadcrumb columns exist, but no production caller performs the Firestore tree re-home after an uid change. |
-| Named-app Auth is not the production sign-in path | `sign_in_controller.dart` and `signup_screen.dart` use the default Auth repository; the registry's account-creation methods have no production callers. |
 | SDK boundary still leaks | Settings data-export and sync-status files directly use Firestore; the confinement checker also documents a Firebase Storage exception. |
 | Old user-DB cleanup residue remains | No user DB/Outbox/SyncKv tables or custom sync engine files remain, but `DeviceAccounts.dbFileName`, `drift_db_file.dart`, `user_acc_*.db` cleanup, and many stale Drift-era comments remain. |
 | Listener policy is not universal | Native repositories use resilient wrappers; the sync-status UI uses a raw snapshot listener and retry UI. |
