@@ -17,6 +17,9 @@
 /// Plain Riverpod providers (no codegen), matching the C0 provider style.
 library;
 
+import 'dart:async';
+
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -248,14 +251,46 @@ void retryLearnerForecast(WidgetRef ref) {
 typedef SubTrackDetailOpener =
     void Function(BuildContext context, ShortfallWarning warning);
 
-/// Where *View {name} →* leads.
+/// The sub-track detail's path (Story 2.6, DNI-497 registers
+/// `/settings/tracks/sub-tracks/:subTrackId` as `SubTrackDetailRoute`).
 ///
-/// The sub-track detail screen and its route belong to Story 2.6
-/// (DNI-497), which is not on `integ/sub-tracks` yet. Until it binds this
-/// provider the value is null and the action is rendered disabled, never
-/// routed somewhere else (bead learning-tracker-fyh.217). Nothing
-/// here reaches a user before then: sub-track UI ships only after the
-/// DNI-490 cutover (AD-49 ship hold).
+/// Bound by path, not by the generated route class, so the Dashboard does
+/// not import the sub-tracks feature's screen (layering) and compiles on
+/// `integ/sub-tracks` before DNI-497 lands there.
+String subTrackDetailPath(String subTrackId) =>
+    '/settings/tracks/sub-tracks/${Uri.encodeComponent(subTrackId)}';
+
+/// The Manage tracks hub (`TrackManagementHubRoute`), whose sub-track rows
+/// open the same detail. *View {name} →* lands here only while the detail
+/// route is not registered.
+const manageTracksPath = '/settings/tracks';
+
+/// The production *View {name} →* action: pushes the warning's sub-track
+/// detail. While that route is not registered (DNI-497 not merged yet) the
+/// router reports a [RouteNotFoundFailure] and the action opens the Manage
+/// tracks hub instead, the nearest screen that lists the sub-track. A guard
+/// refusal is left to the guard; nothing else is retried. Bead
+/// learning-tracker-fyh.217 swaps this for the typed `SubTrackDetailRoute`
+/// once DNI-497 is on `integ/sub-tracks`.
+void openSubTrackDetail(BuildContext context, ShortfallWarning warning) {
+  final router = context.router;
+  unawaited(
+    router.pushPath<void>(
+      subTrackDetailPath(warning.subTrackId),
+      onFailure: (failure) {
+        if (failure is RouteNotFoundFailure) {
+          unawaited(router.pushPath<void>(manageTracksPath));
+        }
+      },
+    ),
+  );
+}
+
+/// Where *View {name} →* leads (AC-5): [openSubTrackDetail] in production.
+///
+/// Tests override it to observe the tap. A null value renders the action
+/// disabled; production never supplies null. Nothing here reaches a user
+/// before the DNI-490 cutover (AD-49 ship hold).
 final subTrackDetailOpenerProvider = Provider<SubTrackDetailOpener?>(
-  (ref) => null,
+  (ref) => openSubTrackDetail,
 );
