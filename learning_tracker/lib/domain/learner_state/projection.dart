@@ -11,10 +11,13 @@ library;
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
+import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/study_days.dart';
 
 /// The fewest days of tracked history a projection needs.
@@ -71,9 +74,13 @@ Map<LeafRef, CivilDate> newlyLearntOn({
 /// * `velocityPerDay` = newly learnt leaves dated in the window ÷ window
 ///   days, the window being the trailing [projectionWindowDays] days, or
 ///   all history when shorter.
-/// * `projectedFinish` = the day the [remaining] leaves are done at that
-///   velocity, counting today as the first day; [today] when nothing
+/// * `projectedFinish` = `today + ⌈remaining ÷ velocity⌉` days (DNI-494
+///   AC-6), computed in integers as `⌈remaining × windowDays ÷ learnt⌉`
+///   so no floating-point error moves the date; [today] when nothing
 ///   remains; null at zero velocity.
+/// * During a lock the engine passes the civil day of the lock's start as
+///   [today] (see [projectionDay]), so status and projection hold still
+///   until the lock ends.
 /// * Status: [ProjectionStatus.noDeadline] without a live [deadline];
 ///   otherwise [ProjectionStatus.onTrack] when the finish is on or before
 ///   `target_date`, else [ProjectionStatus.behindPace].
@@ -104,10 +111,12 @@ Projection deriveProjection({
   final CivilDate? finish;
   if (remaining <= 0) {
     finish = today;
-  } else if (velocity == 0) {
+  } else if (learnt == 0) {
     finish = null;
   } else {
-    finish = shiftCivilDate(today, (remaining / velocity).ceil() - 1);
+    // ⌈remaining ÷ (learnt ÷ windowDays)⌉ in integers.
+    final days = (remaining * windowDays + learnt - 1) ~/ learnt;
+    finish = shiftCivilDate(today, days);
   }
   final ProjectionStatus status;
   if (deadline == null) {
@@ -122,6 +131,21 @@ Projection deriveProjection({
     velocityPerDay: velocity,
     projectedFinish: finish,
   );
+}
+
+/// The civil day the projection is evaluated on at [nowUtc] (AD-35,
+/// NFR-9, FR-23): while [nowUtc] is inside one of [locks], the civil day
+/// of that lock's start, so status and projection stay as they were when
+/// the lock began; otherwise `civilDate(nowUtc)`. After the lock ends the
+/// next run evaluates on its own day again. [locks] are the engine run's
+/// [lockWindows] (ascending, disjoint, true bounds).
+CivilDate projectionDay({
+  required List<LockWindow> locks,
+  required DateTime nowUtc,
+  required LearnerSettingsHistory settingsHistory,
+}) {
+  final lock = lockAt(locks, nowUtc);
+  return civilDate(lock?.startUtc ?? nowUtc, settingsHistory);
 }
 
 /// The start of tracked history: [trackingStartDate], else the earliest

@@ -16,7 +16,8 @@
 /// 6. planning (DNI-467, evaluated curricula only): calendar plan
 ///    (`calendar_plan.dart`), reviews (`review_schedule.dart` over
 ///    `main_track_config_history.dart`), goal target and pace
-///    (`goal_target.dart`) and projection (`projection.dart`);
+///    (`goal_target.dart`) and projection (`projection.dart`; held at
+///    the lock's start while a lock is active, DNI-494);
 ///    sub-track states (`sub_track_positions.dart`, DNI-493): each
 ///    sub-track's own position, ticked count and remaining path; and the
 ///    AD-44 deadline forecast (`sub_track_forecast.dart` over
@@ -229,6 +230,7 @@ final class LearnerStateEngine {
               learns,
               firstStage,
               mainTrack,
+              locks,
             )
           : const PlanRecord.none(),
       streak: evaluated
@@ -285,6 +287,7 @@ final class LearnerStateEngine {
     List<LearningEvent> learns,
     int? firstStage,
     MainTrackRecord mainTrack,
+    List<LockWindow> locks,
   ) {
     final today = civilDate(inputs.nowUtc, inputs.settingsHistory);
     final configHistory = MainTrackConfigHistory.build(
@@ -335,7 +338,12 @@ final class LearnerStateEngine {
         program?.endedAt == null ? program?.trackingStartDate : null,
         learns,
       ),
-      today: today,
+      // NFR-9/FR-23: during a lock, as evaluated at the lock's start.
+      today: projectionDay(
+        locks: locks,
+        nowUtc: inputs.nowUtc,
+        settingsHistory: inputs.settingsHistory,
+      ),
       remaining: learnt.scopedLeaves.length - learnt.learntLeaves.length,
       deadline: deadline,
     );

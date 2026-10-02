@@ -397,8 +397,11 @@ abstract interface class CurriculumState {
   /// The finish projection of an evaluated curriculum (AD-35): velocity =
   /// distinct leaves newly learnt per `learned_on` day from dated/catch_up
   /// non-chazara events over the trailing 28 days (all history at 14–27
-  /// days); [ProjectionStatus.tooEarly] under 14 days. Null when not
-  /// evaluated.
+  /// days); [ProjectionStatus.tooEarly] under 14 days. Projected finish =
+  /// today + ⌈remaining corpus ÷ velocity⌉; on track iff it is on or
+  /// before `target_date`. While a lock is active, the projection as
+  /// evaluated on the lock's start day, re-evaluated after the lock ends
+  /// (NFR-9, FR-23; DNI-494). Null when not evaluated.
   Projection? get projection;
 
   /// Completed units in completion order.
