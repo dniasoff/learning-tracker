@@ -359,7 +359,7 @@ void main() {
       _learn(1, 'Mishnah Berakhot 1:1', '2026-09-12'),
       _learn(2, 'Mishnah Berakhot 1:2', '2026-10-08'),
     ];
-    final goal = DeadlineGoal(
+    const goal = DeadlineGoal(
       curriculumId: engineCurriculum,
       targetDate: '2027-02-01',
     );

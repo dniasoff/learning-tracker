@@ -589,6 +589,55 @@ void main() {
       );
     });
 
+    test('window_end today is a one-day interval; the day after, the '
+        'track holds nothing and is not forecast', () {
+      final ground = [_perek('Berakhot', 1)];
+      final lastDay = _run(
+        subTracks: [_school(ground: ground)],
+        today: '2027-07-31',
+        target: '2029-03-14',
+      );
+      // floor(10 × 39 × 1 ÷ 334) = 1 of 5 leaves: 4 shortfall.
+      _expectTrack(
+        lastDay,
+        _schoolId,
+        capacity: 1,
+        expectedNewGround: 0,
+        shortfall: 4,
+      );
+      expect(lastDay.mainTrackRemaining, 4187);
+      final after = _run(
+        subTracks: [_school(ground: ground)],
+        today: '2027-08-01',
+        target: '2029-03-14',
+      );
+      expect(after.subTracks[_schoolId]!.holdsGround, isFalse);
+      expect(after.subTracks[_schoolId]!.capacity, isNull);
+      expect(after.shortfall, 0);
+      // The ground is back on the main track.
+      expect(after.mainTrackRemaining, 4192);
+    });
+
+    test('a deadline on window_start gives a one-day interval', () {
+      final s = _run(
+        subTracks: [
+          _track(
+            _rebbeId,
+            windowStart: '2026-12-09',
+            ratePerWeek: 100,
+            weeksPerYear: 52,
+          ),
+        ],
+      );
+      _expectTrack(
+        s,
+        _rebbeId,
+        capacity: 14,
+        expectedNewGround: 14,
+        shortfall: 0,
+      );
+    });
+
     test('already-learnt path leaves consume capacity but are never '
         'shortfall', () {
       // Learnt inside reach (Berakhot 2): no change to the shortfall.
