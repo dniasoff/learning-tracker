@@ -253,6 +253,7 @@ graph TD
     sacred_time["sacred_time"]
     scheduler["scheduler"]
     settings["settings"]
+    sub_tracks["sub_tracks"]
     tracks["tracks"]
     tutoring["tutoring"]
 
@@ -269,6 +270,7 @@ graph TD
     scheduler --> tracks
     settings --> account
     tracks --> learning
+    sub_tracks --> learning
     tracks --> onboarding
     tracks --> scheduler
     tracks --> settings

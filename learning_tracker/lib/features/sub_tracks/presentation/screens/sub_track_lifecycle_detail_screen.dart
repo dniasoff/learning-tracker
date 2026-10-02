@@ -8,8 +8,8 @@
 /// this screen hosts the lifecycle actions so they are reachable and
 /// testable. When DNI-497 lands: register `subTrackLifecycleMenuActions`
 /// in its ⋮ registry, mount [SubTrackLifecycleFooter] at the foot of its
-/// body, route its hub rows there and delete this screen (bead filed under
-/// learning-tracker-fyh).
+/// body, route its hub rows there and delete this screen (bead
+/// learning-tracker-fyh.208).
 ///
 /// Read-only is decided from the stored row and the learner's today, never
 /// from how the screen was reached, so a stale or deep link to an ended
