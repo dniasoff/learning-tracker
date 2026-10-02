@@ -7,16 +7,29 @@
 /// The collection is split into a chain of live page listeners, each
 /// `orderBy(FieldPath.documentId).startAfterDocument(prev.last).limit(500)`
 /// and each wrapped in [resilientQueryStream] so a dead listener
-/// resubscribes with backoff. Page `i + 1` is opened only once page `i`
-/// arrives full; a short page proves the collection is exhausted and closes
-/// every later page. Ordering by document id needs no composite index
-/// (AD-54 "Indexes: none added").
+/// resubscribes with backoff. Ordering by document id needs no composite
+/// index (AD-54 "Indexes: none added").
+///
+/// The chain invariant: page `i + 1` always starts right after page `i`'s
+/// end cursor (its last document, or its own start cursor when it is
+/// empty), so the pages together cover the collection without gaps.
+///
+/// - A FULL page makes sure its successor exists at that cursor (opening
+///   or re-cursoring it), so the chain grows until a page comes back short.
+/// - A SHORT page that already has a successor — an established page that
+///   shrank, e.g. a delete before its limit window refilled — is NOT taken
+///   as end-of-collection: its successor is re-cursored to the new end
+///   cursor (or kept, when the cursor did not move) and the chain is
+///   rebuilt from there, so rows on later pages are never dropped.
+/// - An EMPTY page closes every later page: nothing exists after its
+///   cursor, and any later page could only repeat that same query.
 ///
 /// ## Publication
 ///
 /// The returned stream emits [CompleteReadLoading] once, on listen, and
 /// then a [CompleteReadReady] only when EVERY page in the chain has
-/// delivered and the last one is short. While a later change re-pages the
+/// delivered and the last one is short (the union of consistent pages is
+/// then the whole collection, whatever the earlier pages' sizes). While a later change re-pages the
 /// chain (a page's last document shifts, so every later page reopens with
 /// the new cursor), nothing is published: the previous complete list stays
 /// current until the new assembly is complete again. Identical assemblies
@@ -206,17 +219,21 @@ final class _PagedAssembler<T> {
       limit: pageSize,
       delivered: docs.length,
     );
-    if (docs.length >= pageSize) {
+    final next = page.index + 1 < _pages.length ? _pages[page.index + 1] : null;
+    if (docs.isEmpty) {
+      // Nothing after this page's cursor: a successor could only re-run
+      // the same (empty) query.
+      _truncateAfter(page.index);
+    } else if (docs.length >= pageSize || next != null) {
+      // A full page needs a successor; a short page that HAD one keeps the
+      // chain alive from its new end cursor rather than declaring the
+      // collection exhausted (an earlier page shrinking must never drop the
+      // rows that later pages hold).
       final cursor = docs.last;
-      final next = page.index + 1 < _pages.length
-          ? _pages[page.index + 1]
-          : null;
       if (next == null || next.after?.id != cursor.id) {
         _truncateAfter(page.index);
         _open(page.index + 1, cursor);
       }
-    } else {
-      _truncateAfter(page.index);
     }
     _tryPublish();
   }

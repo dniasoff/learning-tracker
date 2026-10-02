@@ -1,13 +1,20 @@
 /// Unit tests for `learner_state_repository_providers.dart` (DNI-464 T8):
 /// repositories are built only from `activeAccountFirebaseProvider`'s
-/// handle, and the scope only from the shared active account/profile seam.
+/// handle; the own-profile scope's `{uid}` comes only from the persisted
+/// path uid (`PathUidResolver.pathUidFor`, ruling B1), never from the live
+/// Auth uid; a tutored scope's owner comes from the validated grant.
 library;
 
+import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/native.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/database/registry/path_uid_resolver.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
@@ -15,6 +22,9 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/learner_state_fixtures.dart';
@@ -23,15 +33,63 @@ class _MockApp extends Mock implements FirebaseApp {}
 
 class _MockAuth extends Mock implements FirebaseAuth {}
 
+const _accountId = 'acc-1';
+
+/// The LIVE Auth uid on the handles — deliberately different from every
+/// persisted path uid below, so a test that reads it fails.
+const _liveUid = 'live-auth-uid';
+
 AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) =>
     AccountFirebaseHandles(
       app: _MockApp(),
       firestore: firestore,
       auth: _MockAuth(),
-      uid: 'path-uid',
+      uid: _liveUid,
     );
 
+Future<DeviceRegistryDatabase> _registry({String? boundUid}) async {
+  final db = DeviceRegistryDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  await db.addAccount(
+    DeviceAccountsCompanion.insert(
+      accountId: _accountId,
+      email: 'parent@test.com',
+      displayName: 'Parent',
+      tier: 'cloudBorn',
+      dbFileName: 'user_acc_1.db',
+      createdAt: DateTime.utc(2026),
+      lastUsedAt: DateTime.utc(2026),
+    ),
+  );
+  if (boundUid != null) {
+    await PathUidResolver(
+      db,
+    ).reconcileLiveUid(accountId: _accountId, liveUid: boundUid);
+  }
+  return db;
+}
+
+ProviderContainer _container(
+  FakeFirebaseFirestore firestore,
+  DeviceRegistryDatabase registry,
+) {
+  final container = ProviderContainer(
+    retry: (_, _) => null,
+    overrides: [
+      activeAccountFirebaseProvider.overrideWith(
+        (ref) async => _handles(firestore),
+      ),
+      deviceRegistryProvider.overrideWithValue(registry),
+    ],
+  );
+  addTearDown(container.dispose);
+  container.read(activeAccountIdProvider.notifier).set(_accountId);
+  return container;
+}
+
 void main() {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
   test(
     'no active account → every provider resolves null (not ready)',
     () async {
@@ -49,14 +107,10 @@ void main() {
   test('active account → repositories over that account\'s Firestore handle; '
       'scope still null until a profile is active', () async {
     final firestore = FakeFirebaseFirestore();
-    final container = ProviderContainer(
-      overrides: [
-        activeAccountFirebaseProvider.overrideWith(
-          (ref) async => _handles(firestore),
-        ),
-      ],
+    final container = _container(
+      firestore,
+      await _registry(boundUid: 'path-uid'),
     );
-    addTearDown(container.dispose);
 
     final events = await container.read(learningEventRepositoryProvider.future);
     final subTracks = await container.read(subTrackRepositoryProvider.future);
@@ -75,31 +129,111 @@ void main() {
     expect(doc.exists, isTrue);
   });
 
-  test('active account + profile → scope from the shared seam', () async {
-    final firestore = FakeFirebaseFirestore();
-    final container = ProviderContainer(
-      overrides: [
-        activeAccountFirebaseProvider.overrideWith(
-          (ref) async => _handles(firestore),
-        ),
-      ],
+  test('own profile → scope uid is the PERSISTED path uid, never the live '
+      'Auth uid', () async {
+    final container = _container(
+      FakeFirebaseFirestore(),
+      await _registry(boundUid: 'persisted-uid'),
     );
-    addTearDown(container.dispose);
     container.read(activeProfileDocIdProvider.notifier).set(profileUlid);
 
     final scope = await container.read(activeLearnerScopeProvider.future);
-    expect(scope, LearnerScope(ownerUid: 'path-uid', profileId: profileUlid));
+    expect(
+      scope,
+      LearnerScope(ownerUid: 'persisted-uid', profileId: profileUlid),
+    );
+    expect(scope!.ownerUid, isNot(_liveUid));
+  });
+
+  test('an account whose path uid is not yet bound → not ready (null), not '
+      'the live Auth uid', () async {
+    final container = _container(FakeFirebaseFirestore(), await _registry());
+    container.read(activeProfileDocIdProvider.notifier).set(profileUlid);
+
+    expect(await container.read(activeLearnerScopeProvider.future), isNull);
+  });
+
+  test('an active account id with no registry row is an error', () async {
+    final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+    addTearDown(registry.close);
+    final container = _container(FakeFirebaseFirestore(), registry);
+    container.read(activeProfileDocIdProvider.notifier).set(profileUlid);
+
+    await expectLater(
+      container.read(activeLearnerScopeProvider.future),
+      throwsA(isA<UnknownDeviceAccountException>()),
+    );
+  });
+
+  test('reconciliation: an initial bind, then an AD-19 anon-uid remap, each '
+      're-resolve the scope to the newly persisted uid', () async {
+    final registry = await _registry();
+    final container = _container(FakeFirebaseFirestore(), registry);
+    container.read(activeProfileDocIdProvider.notifier).set(profileUlid);
+    final sub = container.listen(activeLearnerScopeProvider, (_, _) {});
+    addTearDown(sub.close);
+
+    expect(await container.read(activeLearnerScopeProvider.future), isNull);
+
+    final resolver = PathUidResolver(registry);
+    final bind = await resolver.reconcileLiveUid(
+      accountId: _accountId,
+      liveUid: 'anon-uid-1',
+    );
+    expect(bind.kind, PathUidReconcileKind.initialBind);
+    await pumpEventQueue();
+    expect(
+      await container.read(activeLearnerScopeProvider.future),
+      LearnerScope(ownerUid: 'anon-uid-1', profileId: profileUlid),
+    );
+
+    final remap = await resolver.reconcileLiveUid(
+      accountId: _accountId,
+      liveUid: 'anon-uid-2',
+    );
+    expect(remap.kind, PathUidReconcileKind.remapped);
+    await pumpEventQueue();
+    expect(
+      await container.read(activeLearnerScopeProvider.future),
+      LearnerScope(ownerUid: 'anon-uid-2', profileId: profileUlid),
+    );
+  });
+
+  test('tutored session → owner uid is the validated grant\'s parent_uid, '
+      'not this account\'s path uid', () async {
+    final firestore = FakeFirebaseFirestore();
+    await firestore.collection('tutor_grants').doc('grant-1').set({
+      'state': 'active',
+      'tutor_uid': _liveUid,
+      'parent_uid': 'parent-uid',
+      'child_profile_id': profileUlid,
+    });
+    final container = _container(
+      firestore,
+      await _registry(boundUid: 'tutor-path-uid'),
+    );
+    container
+        .read(activeTutoredProfileSelectionProvider.notifier)
+        .enter(
+          const TutoredProfileSelection(
+            profileId: profileUlid,
+            ownerUid: 'parent-uid',
+            grantId: 'grant-1',
+            permissions: TutorPermissions(),
+          ),
+        );
+
+    expect(
+      await container.read(activeLearnerScopeProvider.future),
+      LearnerScope(ownerUid: 'parent-uid', profileId: profileUlid),
+    );
   });
 
   test('a non-ULID active profile id is an error, not an empty read', () async {
-    final container = ProviderContainer(
-      overrides: [
-        activeAccountFirebaseProvider.overrideWith(
-          (ref) async => _handles(FakeFirebaseFirestore()),
-        ),
-      ],
+    final container = _container(
+      FakeFirebaseFirestore(),
+      await _registry(boundUid: 'path-uid'),
     );
-    addTearDown(container.dispose);
     container.read(activeProfileDocIdProvider.notifier).set('42');
     await expectLater(
       container.read(activeLearnerScopeProvider.future),

@@ -14,6 +14,7 @@ import 'package:learning_tracker/data/repositories/firestore_learning_event_repo
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
 import '../../helpers/learner_state_fixtures.dart';
@@ -266,6 +267,56 @@ void main() {
       ).get();
       expect(all.docs.map((d) => d.id), [ulidA]);
       expect(all.docs.single.data(), first);
+    });
+
+    test('a CONFLICTING replay at an existing ULID throws and leaves the '
+        'original event unchanged (append-only)', () async {
+      final h = _Harness();
+      final events = profileCollection(
+        h.firestore,
+        _owner,
+        profileUlid,
+        'learning_events',
+      );
+      await h.repository.create(h.scope, datedLearn());
+      final original = (await events.doc(ulidA).get()).data();
+
+      // Same ULID, rebuilt payload: a different time and a different source.
+      await expectLater(
+        h.repository.create(
+          h.scope,
+          datedLearn(recordedAt: t2, source: ulidB, stage: null),
+        ),
+        throwsA(
+          isA<LearningEventConflictException>().having(
+            (e) => e.eventId,
+            'eventId',
+            ulidA,
+          ),
+        ),
+      );
+
+      final all = await events.get();
+      expect(all.docs.map((d) => d.id), [ulidA]);
+      expect(all.docs.single.data(), original);
+    });
+
+    test('an undecodable stored row at the ULID is a conflict, never '
+        'overwritten', () async {
+      final h = _Harness();
+      final doc = profileCollection(
+        h.firestore,
+        _owner,
+        profileUlid,
+        'learning_events',
+      ).doc(ulidA);
+      await doc.set({'kind': 'learn', 'junk': true});
+
+      await expectLater(
+        h.repository.create(h.scope, datedLearn()),
+        throwsA(isA<LearningEventConflictException>()),
+      );
+      expect((await doc.get()).data(), {'kind': 'learn', 'junk': true});
     });
 
     test('an invalid event is rejected before any write', () async {

@@ -10,9 +10,19 @@
 /// - **Writes** are create-only `set()` at the event's own client ULID.
 ///   The payload is the event's validated AD-52 map with timestamps
 ///   converted to Firestore `Timestamp`s — never a `FieldValue`, so a
-///   retry re-sends byte-for-byte the same value (AD-46). A plain `set()`
-///   (not a transaction) keeps the write queueable offline; the rules
-///   accept an identical replay (SR-1).
+///   retry re-sends byte-for-byte the same value (AD-46).
+/// - **Create-only guard.** Before the `set()`, the doc is read from the
+///   LOCAL cache only: an existing identical event makes the call a no-op
+///   (idempotent replay); an existing different (or undecodable) event
+///   throws [LearningEventConflictException] and nothing is written, so a
+///   conflicting replay can never overwrite an appended event. The cache
+///   holds every pending local write and every event a `watchAll` listener
+///   has seen, which covers the realistic conflict (a retry that rebuilt
+///   its payload). The check is cache-only — never a server round trip and
+///   never a transaction — so the write stays queueable offline (AD-38
+///   offline owner create). An event present only on the server is guarded
+///   by the AD-46 rules whitelist (create-only plus identical replay,
+///   Story 1.9), which rejects the non-identical update server-side.
 /// - The `{uid}` path segment is the caller-supplied [LearnerScope.ownerUid]
 ///   (the persisted path uid, or a grant's owner uid — ruling B10), never
 ///   read from the live Auth user here.
@@ -88,6 +98,35 @@ final class FirestoreLearningEventRepository
     // Validates (throws StorageFormatException) before any I/O, and never
     // lets a null/invalid id reach `.doc()` — which would mint a random id.
     final payload = toFirestoreMap(event.toStorage());
-    await collectionFor(scope).doc(event.id).set(payload);
+    final doc = collectionFor(scope).doc(event.id);
+    final existing = await _cachedData(doc);
+    if (existing != null) {
+      if (_decodesTo(event, existing)) return; // identical replay: no-op
+      throw LearningEventConflictException(event.id);
+    }
+    await doc.set(payload);
+  }
+
+  /// The doc's data from the local cache, or null when the cache holds no
+  /// such document (a cache miss throws `unavailable`; never goes to the
+  /// server).
+  static Future<Map<String, dynamic>?> _cachedData(
+    DocumentReference<Map<String, dynamic>> doc,
+  ) async {
+    try {
+      final snapshot = await doc.get(const GetOptions(source: Source.cache));
+      return snapshot.exists ? snapshot.data() : null;
+    } on FirebaseException {
+      return null;
+    }
+  }
+
+  static bool _decodesTo(LearningEvent event, Map<String, dynamic> data) {
+    try {
+      return LearningEvent.fromStorage(event.id, fromFirestoreMap(data)) ==
+          event;
+    } on Object {
+      return false; // an undecodable stored row is never silently replaced
+    }
   }
 }
