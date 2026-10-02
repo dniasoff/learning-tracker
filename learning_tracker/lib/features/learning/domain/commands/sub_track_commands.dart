@@ -315,11 +315,13 @@ final class SubTrackCommands {
     // Absent optional fields are not written (nor logged as null → null).
     final fields = _fieldsOf(candidate)..removeWhere((_, v) => v == null);
     final entry = _entry(id, entryId, before: const {}, after: fields);
-    return _commit(
-      SubTrackChange.create(
-        subTrackId: id,
-        changedFields: fields,
-        entry: entry,
+    return _emitOnSuccess(
+      await _commit(
+        SubTrackChange.create(
+          subTrackId: id,
+          changedFields: fields,
+          entry: entry,
+        ),
       ),
       onConfirmed: _emitter(
         candidate,
@@ -365,11 +367,13 @@ final class SubTrackCommands {
     }
     final entryId = _newId();
     final entry = _entry(subTrackId, entryId, before: before, after: after);
-    return _commit(
-      SubTrackChange.fields(
-        subTrackId: subTrackId,
-        changedFields: after,
-        entry: entry,
+    return _emitOnSuccess(
+      await _commit(
+        SubTrackChange.fields(
+          subTrackId: subTrackId,
+          changedFields: after,
+          entry: entry,
+        ),
       ),
       onConfirmed: _emitter(
         candidate,
@@ -465,12 +469,14 @@ final class SubTrackCommands {
       after: {SubTrack.kEndedAt: endedAt, SubTrack.kEndReason: reason.storage},
       at: endedAt,
     );
-    return _commit(
-      SubTrackChange.tombstone(
-        subTrackId: subTrackId,
-        endedAt: endedAt,
-        reason: reason,
-        entry: entry,
+    return _emitOnSuccess(
+      await _commit(
+        SubTrackChange.tombstone(
+          subTrackId: subTrackId,
+          endedAt: endedAt,
+          reason: reason,
+          entry: entry,
+        ),
       ),
       onConfirmed: _emitter(
         current,
