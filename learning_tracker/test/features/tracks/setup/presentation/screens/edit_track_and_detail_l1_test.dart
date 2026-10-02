@@ -1057,7 +1057,8 @@ void main() {
     );
 
     testWidgets(
-      'tutor with canEditLearning=false: tapping Save shows snackbar, not dialog',
+      'tutor with canEditLearning=false: Save is visible but disabled '
+      '(DNI-486), with the parent-access note and no dialog',
       (tester) async {
         await _seedGoal(db);
 
@@ -1073,12 +1074,26 @@ void main() {
         );
         await _pump(tester);
 
-        await tester.tap(find.text('Save Changes'));
+        expect(find.text('Save Changes'), findsOneWidget);
+        final save = tester.widget<TextButton>(
+          find.ancestor(
+            of: find.text('Save Changes'),
+            matching: find.byType(TextButton),
+          ),
+        );
+        expect(save.onPressed, isNull);
+        expect(
+          find.ancestor(
+            of: find.text('Save Changes'),
+            matching: find.byKey(const Key('tutorDisabledControl')),
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('tutorWriteNote')), findsOneWidget);
+
+        await tester.tap(find.text('Save Changes'), warnIfMissed: false);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
-
-        // SnackBar with permission denied text.
-        expect(find.byType(SnackBar), findsOneWidget);
         // The confirmation dialog must NOT have appeared.
         expect(find.text('Apply changes?'), findsNothing);
 

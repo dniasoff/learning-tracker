@@ -13,6 +13,7 @@ export 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log
 export 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 export 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 export 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
+export 'package:learning_tracker/features/tutoring/domain/models/tutor_write_availability.dart';
 
 // ── Data services (S4 — tutor write-path CF proxy) ────────────────────────
 export 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
@@ -40,6 +41,8 @@ export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
 export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 export 'package:learning_tracker/features/tutoring/presentation/utils/tutor_write_failure_message.dart';
+export 'package:learning_tracker/features/tutoring/presentation/widgets/tutor_write_gate.dart';
+export 'package:learning_tracker/features/tutoring/presentation/widgets/tutored_learner_lock_overlay.dart';
 
 // ── Presentation screens (W6.4–W6.10) ────────────────────────────────────
 export 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';

@@ -419,9 +419,10 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-    // AD-53: one permission gates every learning edit for tutors.
-    final canSave = tutorPerms == null || tutorPerms.canEditLearning;
+    // AD-53 / DNI-486: a tutor saves only with the parent's
+    // can_edit_learning, online, and the talmid outside a lock; otherwise
+    // Save stays visible but disabled, with one note saying why.
+    final canSave = ref.watch(tutorWriteAvailabilityProvider).allowsWrite;
 
     if (_loading) {
       return Scaffold(
@@ -453,15 +454,14 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               ),
             )
           else
-            TextButton(
-              onPressed: canSave
-                  ? _save
-                  : () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.tutorPermissionDenied)),
-                    ),
-              child: Text(
-                l10n.trackEditSaveButton,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+            TutorDisabledControl(
+              blocked: !canSave,
+              child: TextButton(
+                onPressed: canSave ? _save : null,
+                child: Text(
+                  l10n.trackEditSaveButton,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
         ],
@@ -469,6 +469,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const TutorWriteNote(padding: EdgeInsets.only(bottom: 12)),
           _SectionCard(
             title: l10n.trackEditSectionName,
             child: TextField(
