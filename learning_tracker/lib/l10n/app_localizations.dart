@@ -5171,6 +5171,12 @@ abstract class AppLocalizations {
   /// **'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
   String sacredTimeLocationPromptMessage(String term);
 
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
+  String sacredTimeLocationPromptMessageNamed(String name, String term);
+
   /// DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved.
   ///
   /// In en, this message translates to:

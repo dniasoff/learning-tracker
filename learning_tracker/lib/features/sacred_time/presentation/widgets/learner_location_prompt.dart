@@ -3,11 +3,14 @@
 ///
 /// A learner with no location is locked by the fail-closed fallback window
 /// (Fri 12:00 → Sun 01:00 learner-local, and the yom tov equivalent). Once
-/// such a lock has ended, the device shows a prompt — once per lock per app
-/// session — whose action opens the existing city picker
-/// (`/sacred-time/city`) for that learner. Never during a lock (the overlay
-/// covers the app) and never in a tutored session (the talmid's settings
-/// are the parent's to set).
+/// such a lock has ended, the device shows a prompt — once per learner per
+/// lock per app session — naming that learner, whose action opens the
+/// existing city picker (`/sacred-time/city`) for THAT learner. Every own
+/// learner whose lock drives the device is considered (not only the active
+/// one): on a multi-learner account, a sibling with no location also locks
+/// the device and is prompted for. Never during a lock (the overlay covers
+/// the app) and never in a tutored session (the talmid's settings are the
+/// parent's to set).
 library;
 
 import 'package:flutter/material.dart';
@@ -16,8 +19,10 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
-import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
+import 'package:learning_tracker/features/profiles/profiles.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -26,14 +31,15 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// How far back an ended lock still earns the prompt.
 const Duration learnerLocationPromptLookBack = Duration(days: 8);
 
-/// One prompt: learner [profileId] has no location and its lock ended at
-/// [lockEndUtc].
+/// One prompt: learner [profileId] ([displayName]) has no location and its
+/// lock ended at [lockEndUtc].
 @immutable
 final class LearnerLocationPrompt {
   /// Creates the prompt.
   const LearnerLocationPrompt({
     required this.profileId,
     required this.lockEndUtc,
+    this.displayName = '',
   });
 
   /// The learner to prompt for.
@@ -41,6 +47,10 @@ final class LearnerLocationPrompt {
 
   /// The end of the lock that prompted it.
   final DateTime lockEndUtc;
+
+  /// The learner's display name ('' while unknown); copy only, not part of
+  /// the prompt's identity.
+  final String displayName;
 
   @override
   bool operator ==(Object other) =>
@@ -55,40 +65,67 @@ final class LearnerLocationPrompt {
   String toString() => 'LearnerLocationPrompt($profileId, $lockEndUtc)';
 }
 
-/// The prompt due now, or null: the active own learner has no location, a
-/// lock of theirs ended within [learnerLocationPromptLookBack], and no lock
-/// is in force.
-final learnerLocationPromptProvider =
-    Provider.autoDispose<LearnerLocationPrompt?>((ref) {
-      if (ref.watch(currentSacredWindowProvider) != null) return null;
+/// The prompts due now, one per own learner (every learner whose lock
+/// drives the device, [lockDrivingScopesProvider]) that has no location
+/// and whose lock ended within [learnerLocationPromptLookBack]; empty
+/// while a lock is in force, in a tutored session, or while the account's
+/// learners load. A learner whose settings load or fail is skipped (its
+/// lock is fail-closed anyway; the prompt waits for a readable history).
+final learnerLocationPromptsProvider =
+    Provider.autoDispose<List<LearnerLocationPrompt>>((ref) {
+      if (ref.watch(currentSacredWindowProvider) != null) return const [];
       if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
-        return null;
+        return const [];
       }
-      final scope = ref.watch(activeLearnerScopeProvider).asData?.value;
-      if (scope == null) return null;
-      final history = ref.watch(learnerLockSettingsProvider(scope));
-      if (history.hasError || !history.hasValue) return null;
-      final settings = history.requireValue;
-      if (settings.spans.last.settings.hasLocation) return null;
+      final scopes = ref.watch(lockDrivingScopesProvider).asData?.value;
+      if (scopes == null || scopes.isEmpty) return const [];
+      final profiles = ref.watch(profileListStreamProvider).asData?.value;
+      if (profiles == null) return const [];
+      final names = {
+        for (final profile in profiles)
+          profile.profileId: profile.displayName.trim(),
+      };
       final now = ref.watch(localDayClockProvider).nowUtc();
-      final ended = [
-        for (final w in lockWindows(
-          settings,
-          now.subtract(learnerLocationPromptLookBack),
-          now,
-        ))
-          if (w.endUtc.isBefore(now)) w,
+      return [
+        for (final scope in scopes)
+          ?_promptFor(
+            ref.watch(learnerLockSettingsProvider(scope)),
+            scope.profileId,
+            names[scope.profileId] ?? '',
+            now,
+          ),
       ];
-      if (ended.isEmpty) return null;
-      return LearnerLocationPrompt(
-        profileId: scope.profileId,
-        lockEndUtc: ended.last.endUtc,
-      );
     });
 
+LearnerLocationPrompt? _promptFor(
+  AsyncValue<LearnerSettingsHistory> history,
+  String profileId,
+  String displayName,
+  DateTime now,
+) {
+  if (history.hasError || !history.hasValue) return null;
+  final settings = history.requireValue;
+  if (settings.spans.last.settings.hasLocation) return null;
+  final ended = [
+    for (final w in lockWindows(
+      settings,
+      now.subtract(learnerLocationPromptLookBack),
+      now,
+    ))
+      if (w.endUtc.isBefore(now)) w,
+  ];
+  if (ended.isEmpty) return null;
+  return LearnerLocationPrompt(
+    profileId: profileId,
+    lockEndUtc: ended.last.endUtc,
+    displayName: displayName,
+  );
+}
+
 /// Shows each due [LearnerLocationPrompt] once, as a snack bar on the root
-/// messenger whose action calls [onSetLocation] (the app opens the city
-/// picker, behind the parent PIN when one guards the settings).
+/// messenger naming its learner, whose action calls [onSetLocation] with
+/// that prompt (the app makes its learner the active one and opens the
+/// city picker, behind the parent PIN when one guards the settings).
 class LearnerLocationPromptListener extends ConsumerStatefulWidget {
   /// Creates the listener around [child].
   const LearnerLocationPromptListener({
@@ -97,8 +134,8 @@ class LearnerLocationPromptListener extends ConsumerStatefulWidget {
     super.key,
   });
 
-  /// Opens the location picker for the active learner.
-  final Future<void> Function() onSetLocation;
+  /// Opens the location picker for the prompt's learner.
+  final Future<void> Function(LearnerLocationPrompt prompt) onSetLocation;
 
   /// The app.
   final Widget child;
@@ -116,15 +153,15 @@ class _LearnerLocationPromptListenerState
   @override
   void initState() {
     super.initState();
-    ref.listenManual<LearnerLocationPrompt?>(
-      learnerLocationPromptProvider,
-      (_, next) => _show(next),
+    ref.listenManual<List<LearnerLocationPrompt>>(
+      learnerLocationPromptsProvider,
+      (_, next) => next.forEach(_show),
       fireImmediately: true,
     );
   }
 
-  void _show(LearnerLocationPrompt? prompt) {
-    if (prompt == null || !_shown.add(prompt)) return;
+  void _show(LearnerLocationPrompt prompt) {
+    if (!_shown.add(prompt)) return;
     // After this frame: the messenger and its localizations are built.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -137,10 +174,17 @@ class _LearnerLocationPromptListenerState
       messenger.showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 12),
-          content: Text(l10n.sacredTimeLocationPromptMessage(shabbos)),
+          content: Text(
+            prompt.displayName.isEmpty
+                ? l10n.sacredTimeLocationPromptMessage(shabbos)
+                : l10n.sacredTimeLocationPromptMessageNamed(
+                    prompt.displayName,
+                    shabbos,
+                  ),
+          ),
           action: SnackBarAction(
             label: l10n.sacredTimeLocationPromptAction,
-            onPressed: () => widget.onSetLocation(),
+            onPressed: () => widget.onSetLocation(prompt),
           ),
         ),
       );

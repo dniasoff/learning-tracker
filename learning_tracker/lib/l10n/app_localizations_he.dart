@@ -2903,6 +2903,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String sacredTimeLocationPromptMessageNamed(String name, String term) {
+    return 'ל$name אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
+  }
+
+  @override
   String get sacredTimeSettingsNotSaved =>
       'לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.';
 

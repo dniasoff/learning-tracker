@@ -1825,6 +1825,18 @@
       }
     }
   },
+  "sacredTimeLocationPromptMessageNamed": "{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.",
+  "@sacredTimeLocationPromptMessageNamed": {
+    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "term": {
+        "type": "String"
+      }
+    }
+  },
   "sacredTimeSettingsNotSaved": "Couldn't save this learner's Sacred Time settings. Try again.",
   "@sacredTimeSettingsNotSaved": {
     "description": "DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved."

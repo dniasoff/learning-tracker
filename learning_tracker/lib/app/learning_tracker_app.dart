@@ -71,13 +71,24 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
   }
 
   /// The after-lock location prompt's action (DNI-481 AC-2): the existing
-  /// city picker for the active learner, behind the Parent PIN when one
-  /// guards the Sacred Time settings.
-  Future<void> _openLearnerLocationPicker() async {
+  /// city picker for the prompt's learner, behind the Parent PIN when one
+  /// guards the Sacred Time settings. The city picker edits the ACTIVE
+  /// learner, so a prompt for another own learner (a sibling with no
+  /// location on a multi-learner account) first makes that learner the
+  /// active one — the profile switcher's canonical switch (PIN session
+  /// locked, shell reloaded) — so the location lands on the right profile.
+  Future<void> _openLearnerLocationPicker(LearnerLocationPrompt prompt) async {
     final router = ref.read(routerProvider);
     final navigatorContext = router.navigatorKey.currentContext;
     if (navigatorContext == null) return;
     if (!await guardSacredTimeSettingsAccess(navigatorContext, ref)) return;
+    if (!mounted) return;
+    if (ref.read(selectedProfileIdProvider) != prompt.profileId) {
+      router.pinGuard.lock();
+      ref.read(selectedProfileIdProvider.notifier).select(prompt.profileId);
+      await router.replaceAll([const AppShellRoute()]);
+      if (!mounted) return;
+    }
     await router.push(const CityPickerRoute());
   }
 

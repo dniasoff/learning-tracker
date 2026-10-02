@@ -2942,6 +2942,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String sacredTimeLocationPromptMessageNamed(String name, String term) {
+    return '$name has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
+  }
+
+  @override
   String get sacredTimeSettingsNotSaved =>
       'Couldn\'t save this learner\'s Sacred Time settings. Try again.';
 
