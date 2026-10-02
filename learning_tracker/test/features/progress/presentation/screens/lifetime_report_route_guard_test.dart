@@ -14,11 +14,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
@@ -102,7 +104,11 @@ const _profileId = 'profile-1';
 enum _Session { child, childPinUnlocked, adult, tutor }
 
 class _Harness {
-  _Harness(this.session) {
+  _Harness(
+    this.session, {
+    List<CurriculumCompletionSummary> lifetime = const [],
+    List<ReportProjection>? reports,
+  }) {
     container = ProviderContainer(
       overrides: [
         activeProfileProvider.overrideWith(
@@ -121,15 +127,11 @@ class _Harness {
         activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
         learnerStateProvider.overrideWith((ref, _) {
           stateReads++;
-          return Stream.value(reportState([fullReport()]));
+          return Stream.value(reportState(reports ?? [fullReport()]));
         }),
-        // The Lifetime screen's own (legacy) reads, empty.
-        lifetimeViewSummariesProvider.overrideWith(
-          (ref) async => <CurriculumCompletionSummary>[],
-        ),
-        itemsLearnedSummariesProvider.overrideWith(
-          (ref) async => <CurriculumCompletionSummary>[],
-        ),
+        // The Lifetime screen's own (legacy) reads: the tree it lists.
+        lifetimeViewSummariesProvider.overrideWith((ref) async => lifetime),
+        itemsLearnedSummariesProvider.overrideWith((ref) async => lifetime),
         lifetimeHeaderCountersProvider.overrideWith(
           (ref) async =>
               const LifetimeHeaderCounters(itemsLearned: 0, totalChazaros: 0),
@@ -257,6 +259,91 @@ void main() {
         );
       });
     }
+  });
+
+  group('the report opens for the curriculum in view on Lifetime (AC-1)', () {
+    CurriculumCompletionSummary listed(CurriculumId curriculum) =>
+        CurriculumCompletionSummary(
+          curriculumId: curriculum,
+          learnedLeafCount: 3,
+          totalLeafCount: 10,
+          tree: const [],
+        );
+
+    // Chumash is first in app order, so it is what the report would pick
+    // on its own.
+    final both = [
+      fullReport(),
+      homeOnlyReport(
+        curriculumId: reportRetiredCurriculum,
+        events: 30,
+        distinct: 25,
+        withBeforeTracking: false,
+      ),
+    ];
+
+    testWidgets('the expanded curriculum card, not the first one', (
+      tester,
+    ) async {
+      final h = _Harness(
+        _Session.adult,
+        lifetime: [
+          listed(CurriculumId.chumash),
+          listed(CurriculumId.mishnayos),
+        ],
+        reports: both,
+      );
+      await h.pump(tester, '/progress/lifetime');
+      await tester.tap(find.text('Mishnayos'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(_entry);
+      await tester.pumpAndSettle();
+      expect(find.byType(LifetimeReportScreen), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Distinct · 1,204 Mishnayos'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Distinct · 25 Pesukim'), findsNothing);
+    });
+
+    testWidgets('the curriculum the tree lists when it is not the first with '
+        'report data', (tester) async {
+      final h = _Harness(
+        _Session.childPinUnlocked,
+        lifetime: [listed(CurriculumId.mishnayos)],
+        reports: both,
+      );
+      await h.pump(tester, '/progress/lifetime');
+      await tester.tap(_entry);
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel('Distinct · 1,204 Mishnayos'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('collapsing the card falls back to the first one listed', (
+      tester,
+    ) async {
+      final h = _Harness(
+        _Session.adult,
+        lifetime: [
+          listed(CurriculumId.chumash),
+          listed(CurriculumId.mishnayos),
+        ],
+        reports: both,
+      );
+      await h.pump(tester, '/progress/lifetime');
+      await tester.tap(find.text('Mishnayos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mishnayos'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(_entry);
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Distinct · 25 Pesukim'), findsOneWidget);
+    });
   });
 
   testWidgets('locking the parent PIN on the report leaves for Lifetime and '
