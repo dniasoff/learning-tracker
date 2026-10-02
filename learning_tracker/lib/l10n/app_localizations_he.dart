@@ -556,6 +556,34 @@ class AppLocalizationsHe extends AppLocalizations {
   String get language => 'שפה';
 
   @override
+  String get subTrackDetailCapacityTitle => 'קיבולת מול מסלול';
+
+  @override
+  String subTrackDetailCapacityValue(int path, int capacity) {
+    return '$path / $capacity';
+  }
+
+  @override
+  String subTrackDetailCapacityCaption(int path, int capacity) {
+    return 'מסלול שנותר: $path · קיבולת כוללת: $capacity';
+  }
+
+  @override
+  String get subTrackDetailNoShortfall => 'אין חוסר';
+
+  @override
+  String subTrackDetailShortfall(int count) {
+    return 'חוסר: $count';
+  }
+
+  @override
+  String get subTrackDetailNoDeadlineNote =>
+      'ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.';
+
+  @override
+  String get subTrackDetailNoDeadlineLink => 'הגדרת תאריך יעד';
+
+  @override
   String get switchProfile => 'החלף פרופיל';
 
   @override
