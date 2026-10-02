@@ -48,6 +48,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -369,6 +370,8 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     governed: governed,
     achievements: achievements,
     subTrackCommands: subTrackCommands,
+    // A sub-track source must be live in this learner's scope and curriculum.
+    sourceCheck: subTrackSourceCheckFrom(subTracks, scope),
   );
   // Recover any latch a failed check left absent (app start, learner
   // switch); runs in the background and retries its own failures.
