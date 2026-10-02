@@ -22,7 +22,9 @@
 ///
 /// Entry keys:
 /// - `symbol` (required): matched on identifier word boundaries
-///   (`[A-Za-z0-9_$]`), case-sensitive, never inside comments.
+///   (`[A-Za-z0-9_$]`), case-sensitive, never inside comments. A `$` is a
+///   boundary only where it is a string-interpolation sigil or string
+///   text: Dart `'$symbol'` matches, code `$symbol` does not.
 /// - `kind` (required): `collection | type | service | callable | field | ui`.
 /// - `state` (required): `pending | retired`.
 /// - `owner` (required): the Linear story that deletes it, `DNI-<n>`.
@@ -34,10 +36,15 @@
 ///   `string` (only where the symbol is a whole string literal or a
 ///   `/`-delimited segment of one, i.e. a Firestore path or field key;
 ///   never a variable, interpolated code, or a word in prose such as an
-///   error message). Defaults by kind: `collection` and
-///   `field` are `string`, everything else `any`. `string` only narrows
-///   `.dart` and `.ts` files: `firestore.rules` path segments and
-///   `firestore.indexes.json` values are always matched.
+///   error message). A `string`-mode `field` also matches the code
+///   positions that name a document field: object-literal, interface and
+///   class keys and shorthand properties / destructuring in TS
+///   (`{ field: x }`, `{ field }`), named arguments in Dart
+///   (`f(field: x)`), and member access in both (`perms.field`); a local
+///   such as `const field = 3` still does not match. Defaults by kind:
+///   `collection` and `field` are `string`, everything else `any`.
+///   `string` only narrows `.dart` and `.ts` files: `firestore.rules` path
+///   segments and `firestore.indexes.json` values are always matched.
 /// - `note` (optional): free text.
 ///
 /// The same symbol may appear in more than one entry only with a different
@@ -58,7 +65,12 @@
 /// Per AD-49 an entry is valid only when `symbol` is an R14 `collection`
 /// entry whose scope covers `path`, and `path` is `firestore.rules`,
 /// `firestore.indexes.json` or `functions/src/deletes.ts`; anything else
-/// is malformed (exit 2), in every mode.
+/// is malformed (exit 2), in every mode. An allowlisted `firestore.rules`
+/// hit must also be a deny-all match block: a segment of a `match /...`
+/// path whose block (nested matches included) grants no `write`, `create`,
+/// `update` or `delete` other than `if false` (reads may stay). Otherwise
+/// the gate fails (exit 1), whatever the count. That this static check
+/// holds under the deployed rules is DNI-490's emulator test (AC-2).
 ///
 /// ## Behaviour
 ///
@@ -99,6 +111,7 @@ const _kinds = {'collection', 'type', 'service', 'callable', 'field', 'ui'};
 const _states = {'pending', 'retired'};
 const _matchModes = {'any', 'string'};
 const _stringKinds = {'collection', 'field'};
+const _fieldKind = 'field';
 const _entryKeys = {
   'symbol',
   'kind',
@@ -139,6 +152,7 @@ class _Entry {
     required this.include,
     required this.exclude,
     required this.stringOnly,
+    required this.codeKeys,
   });
 
   final String group;
@@ -149,6 +163,12 @@ class _Entry {
   final List<RegExp> include;
   final List<RegExp> exclude;
   final bool stringOnly;
+
+  /// `string`-mode `field` entries also match the identifier positions that
+  /// name a document field in code: object-literal / interface keys,
+  /// shorthand properties and destructuring (TS), named arguments (Dart)
+  /// and member access (both). See [_isCodeKey].
+  final bool codeKeys;
 
   bool appliesTo(String path) {
     if (include.isNotEmpty && !include.any((r) => r.hasMatch(path))) {
@@ -166,8 +186,9 @@ class _AllowEntry {
 }
 
 class _Hit {
-  _Hit(this.path, this.line, this.column, this.text);
+  _Hit(this.path, this.offset, this.line, this.column, this.text);
   final String path;
+  final int offset;
   final int line;
   final int column;
   final String text;
@@ -415,6 +436,9 @@ _Entry? _parseEntry(
     }
   }
   if (!ok) return null;
+  final stringOnly = match == null
+      ? _stringKinds.contains(kind)
+      : match == 'string';
   return _Entry(
     group: group,
     symbol: symbol as String,
@@ -423,7 +447,8 @@ _Entry? _parseEntry(
     owner: owner as String,
     include: include.map(_globToRegExp).toList(),
     exclude: exclude.map(_globToRegExp).toList(),
-    stringOnly: match == null ? _stringKinds.contains(kind) : match == 'string',
+    stringOnly: stringOnly,
+    codeKeys: stringOnly && kind == _fieldKind,
   );
 }
 
@@ -762,14 +787,32 @@ _Lang _langFor(String path) {
   return _Lang.plain;
 }
 
+// The regexes treat `$` as a boundary; [_sigilJoins] then rejects a match
+// whose neighbouring `$` is part of the identifier (code `$foo`, `foo$`),
+// while a Dart interpolation sigil (`'$foo'`) or literal string text keeps
+// the match: `'$completionHistoryProvider'` references the identifier.
+const _before = '(?<![A-Za-z0-9_])';
+const _after = '(?![A-Za-z0-9_])';
+
 String _boundedPattern(String symbol) {
   final b = StringBuffer();
-  if (_isWordUnit(symbol.codeUnitAt(0))) b.write(r'(?<![A-Za-z0-9_$])');
+  if (_isWordUnit(symbol.codeUnitAt(0))) b.write(_before);
   b.write(RegExp.escape(symbol));
-  if (_isWordUnit(symbol.codeUnitAt(symbol.length - 1))) {
-    b.write(r'(?![A-Za-z0-9_$])');
-  }
+  if (_isWordUnit(symbol.codeUnitAt(symbol.length - 1))) b.write(_after);
   return b.toString();
+}
+
+/// True when a `$` directly before [start] or at [end] belongs to the same
+/// identifier as the match, i.e. it is code (or plain-file text), not a
+/// string-interpolation sigil or literal string text.
+bool _sigilJoins(String s, Uint8List cls, int start, int end) {
+  bool joins(int at) =>
+      at >= 0 &&
+      at < s.length &&
+      s.codeUnitAt(at) == 0x24 &&
+      cls[at] != _string;
+  return (_isWordUnit(s.codeUnitAt(start)) && joins(start - 1)) ||
+      (_isWordUnit(s.codeUnitAt(end - 1)) && joins(end));
 }
 
 /// Returns hits per entry index.
@@ -791,11 +834,7 @@ Map<int, List<_Hit>> _scan(String root, List<_Entry> entries) {
   final multi = bySymbol.keys.where((s) => !single.contains(s)).toList();
   final patterns = <RegExp>[
     if (single.isNotEmpty)
-      RegExp(
-        r'(?<![A-Za-z0-9_$])(?:' +
-            single.map(RegExp.escape).join('|') +
-            r')(?![A-Za-z0-9_$])',
-      ),
+      RegExp('$_before(?:${single.map(RegExp.escape).join('|')})$_after'),
     for (final s in multi) RegExp(_boundedPattern(s)),
   ];
 
@@ -820,20 +859,28 @@ Map<int, List<_Hit>> _scan(String root, List<_Entry> entries) {
     List<int>? lineStarts;
     for (final re in patterns) {
       for (final m in re.allMatches(content)) {
-        cls ??= _classify(content, lang);
+        final c = cls ??= _classify(content, lang);
         var inComment = false;
         var allString = true;
+        var allCode = true;
         for (var k = m.start; k < m.end; k++) {
-          if (cls[k] == _comment) inComment = true;
-          if (cls[k] != _string) allString = false;
+          if (c[k] == _comment) inComment = true;
+          if (c[k] != _string) allString = false;
+          if (c[k] != _code) allCode = false;
         }
         if (inComment) continue;
+        if (_sigilJoins(content, c, m.start, m.end)) continue;
         final keyLike = allString && _isKeyLike(content, m.start, m.end);
+        bool? codeKey;
         final symbol = m[0]!;
         for (final idx in bySymbol[symbol] ?? const <int>[]) {
           final e = entries[idx];
           if (!e.appliesTo(path)) continue;
-          if (e.stringOnly && codeFile && !keyLike) continue;
+          if (e.stringOnly && codeFile && !keyLike) {
+            if (!e.codeKeys || !allCode) continue;
+            codeKey ??= _isCodeKey(content, c, m.start, m.end, lang);
+            if (!codeKey) continue;
+          }
           lineStarts ??= _lineStarts(content);
           final line = _lineOf(lineStarts, m.start);
           final start = lineStarts[line];
@@ -843,7 +890,7 @@ Map<int, List<_Hit>> _scan(String root, List<_Entry> entries) {
           if (text.length > 160) text = '${text.substring(0, 157)}...';
           hits
               .putIfAbsent(idx, () => [])
-              .add(_Hit(path, line + 1, m.start - start + 1, text));
+              .add(_Hit(path, m.start, line + 1, m.start - start + 1, text));
         }
       }
     }
@@ -862,6 +909,178 @@ bool _isKeyLike(String s, int start, int end) {
   final afterOk =
       quotes.contains(after) || after == 0x2F || after == 0x24; // / $
   return beforeOk && afterOk;
+}
+
+bool _isSpace(int u) => u == 0x20 || u == 0x09 || u == 0x0A || u == 0x0D;
+
+/// Index of the nearest code character before [i] (skipping whitespace and
+/// comments), or -1.
+int _prevCode(String s, Uint8List cls, int i) {
+  var k = i - 1;
+  while (k >= 0 && (cls[k] == _comment || _isSpace(s.codeUnitAt(k)))) {
+    k--;
+  }
+  return k >= 0 && cls[k] == _code ? k : -1;
+}
+
+/// Index of the nearest code character at or after [i] (skipping
+/// whitespace and comments), or -1.
+int _nextCode(String s, Uint8List cls, int i) {
+  var k = i;
+  while (k < s.length && (cls[k] == _comment || _isSpace(s.codeUnitAt(k)))) {
+    k++;
+  }
+  return k < s.length && cls[k] == _code ? k : -1;
+}
+
+/// The innermost unclosed `(`, `[` or `{` (in code) before [i], or -1.
+int _enclosingOpener(String s, Uint8List cls, int i) {
+  var depth = 0;
+  for (var k = i - 1; k >= 0; k--) {
+    if (cls[k] != _code) continue;
+    final u = s.codeUnitAt(k);
+    if (u == 0x29 || u == 0x5D || u == 0x7D) {
+      depth++;
+    } else if (u == 0x28 || u == 0x5B || u == 0x7B) {
+      if (depth == 0) return u;
+      depth--;
+    }
+  }
+  return -1;
+}
+
+/// True when the identifier in code at [start, end) names a document field
+/// rather than a local variable, so a `string`-mode `field` entry matches
+/// it (AD-49: a retired field fails wherever it is read or written):
+/// - member access `x.field`, `x?.field`, `x!.field`, `..field` (not a
+///   `...spread`);
+/// - a key: `field:` / `field?:` inside `{...}` in TS (object literal,
+///   interface, type literal, class field), `field:` inside `(...)` in
+///   Dart (named argument or record field); never a ternary branch
+///   (`c ? field : x`) or a `case field:` label;
+/// - TS shorthand property or destructuring: `{ field }`, `{ a, field }`,
+///   `{ field = d }`.
+/// A plain local such as `const field = 3` or `final field = 3` is never a
+/// field position.
+bool _isCodeKey(String s, Uint8List cls, int start, int end, _Lang lang) {
+  if (!_isIdentStart(s.codeUnitAt(start))) return false;
+  for (var k = start; k < end; k++) {
+    if (!_isWordUnit(s.codeUnitAt(k))) return false;
+  }
+  final p = _prevCode(s, cls, start);
+  final prev = p < 0 ? -1 : s.codeUnitAt(p);
+  if (prev == 0x2E /* . */ ) {
+    final spread = p >= 2 && s.startsWith('...', p - 2);
+    return !spread;
+  }
+  final nx = _nextCode(s, cls, end);
+  var next = nx < 0 ? -1 : s.codeUnitAt(nx);
+  if (lang == _Lang.ts && next == 0x3F /* ? */ ) {
+    final nx2 = _nextCode(s, cls, nx + 1);
+    if (nx2 >= 0 && s.codeUnitAt(nx2) == 0x3A) next = 0x3A;
+  }
+  final opener = _enclosingOpener(s, cls, start);
+  if (next == 0x3A /* : */ ) {
+    if (prev == 0x3F /* ? */ ) return false; // ternary consequent
+    if (p >= 3 &&
+        s.startsWith('case', p - 3) &&
+        (p < 4 || !_isWordUnit(s.codeUnitAt(p - 4)))) {
+      return false; // case label
+    }
+    return lang == _Lang.ts ? opener == 0x7B : opener == 0x28;
+  }
+  if (lang == _Lang.ts &&
+      opener == 0x7B &&
+      (prev == 0x7B || prev == 0x2C /* , */ ) &&
+      (next == 0x7D || next == 0x2C || next == 0x3D /* = */ )) {
+    // `{ field = d }` is a destructuring default; `{ field == x }` is not.
+    return next != 0x3D || nx + 1 >= s.length || s.codeUnitAt(nx + 1) != 0x3D;
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// firestore.rules: allowlisted hits must be deny-all match blocks (AD-49)
+// ---------------------------------------------------------------------------
+
+const _rulesPath = 'firestore.rules';
+const _writeOps = {'write', 'create', 'update', 'delete'};
+final _matchPrefix = RegExp(r'^\s*match\s+/\S*$');
+final _allowWord = RegExp(r'(?<![A-Za-z0-9_$])allow(?![A-Za-z0-9_$])');
+final _allowStatement = RegExp(
+  r'^\s*([A-Za-z_,\s]*?)\s*(?::(.*))?$',
+  dotAll: true,
+);
+final _ifFalse = RegExp(r'^if\s*\(*\s*false\s*\)*$');
+
+/// Why the allowlisted `firestore.rules` hit at [offset] is not a deny-all
+/// match block, or null when it is. AD-49 permits only "the deny-all
+/// `match` blocks for the retired collections": the symbol must be a
+/// segment of a `match /...` path, and every `allow` in that block
+/// (nested matches included) that grants `write`, `create`, `update` or
+/// `delete` must be exactly `if false`. Read grants may stay.
+String? _rulesDenyAllProblem(String s, Uint8List cls, int offset) {
+  final lineStart = s.lastIndexOf('\n', offset - 1) + 1;
+  if (!_matchPrefix.hasMatch(s.substring(lineStart, offset))) {
+    return 'not a segment of a `match /...` path';
+  }
+  // Skip the rest of the path (wildcards like `/{id}` included) to the
+  // block's opening brace.
+  var i = offset;
+  while (i < s.length &&
+      !_isSpace(s.codeUnitAt(i)) &&
+      !(s.codeUnitAt(i) == 0x7B && s.codeUnitAt(i - 1) != 0x2F)) {
+    if (s.codeUnitAt(i) == 0x7B) {
+      final close = s.indexOf('}', i);
+      if (close < 0) break;
+      i = close + 1;
+    } else {
+      i++;
+    }
+  }
+  final open = _nextCode(s, cls, i);
+  if (open < 0 || s.codeUnitAt(open) != 0x7B) {
+    return 'the match has no `{ ... }` block';
+  }
+  var depth = 0;
+  var close = -1;
+  for (var k = open; k < s.length; k++) {
+    if (cls[k] != _code) continue;
+    final u = s.codeUnitAt(k);
+    if (u == 0x7B) depth++;
+    if (u == 0x7D && --depth == 0) {
+      close = k;
+      break;
+    }
+  }
+  if (close < 0) return 'the match block is not closed';
+  for (final a in _allowWord.allMatches(s.substring(open + 1, close))) {
+    final at = open + 1 + a.start;
+    if (cls[at] != _code) continue;
+    final b = StringBuffer();
+    var k = at + a.end - a.start;
+    for (; k < close; k++) {
+      if (cls[k] == _code && s.codeUnitAt(k) == 0x3B /* ; */ ) break;
+      b.write(cls[k] == _comment ? ' ' : s[k]);
+    }
+    final m = _allowStatement.firstMatch(b.toString());
+    final ops = m == null
+        ? const <String>{'?'}
+        : m[1]!
+              .split(',')
+              .map((o) => o.trim())
+              .where((o) => o.isNotEmpty)
+              .toSet();
+    final grantsWrite = m == null || ops.isEmpty || ops.any(_writeOps.contains);
+    if (!grantsWrite) continue;
+    final cond = (m?[2] ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (!_ifFalse.hasMatch(cond)) {
+      final text = s.substring(at, k).replaceAll(RegExp(r'\s+'), ' ').trim();
+      return 'the block grants a client write (`$text`); a retired '
+          'collection\'s match must deny every write (`if false`)';
+    }
+  }
+  return null;
 }
 
 List<int> _lineStarts(String s) {
@@ -889,6 +1108,23 @@ int _lineOf(List<int> starts, int offset) {
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+
+/// Deny-all problems of the allowlisted `firestore.rules` [hits], one
+/// line per hit.
+List<String> _rulesProblems(String root, List<_Hit> hits) {
+  final String s;
+  try {
+    s = File('$root/$_rulesPath').readAsStringSync();
+  } on Object catch (e) {
+    return ['    $_rulesPath: unreadable ($e)'];
+  }
+  final cls = _classify(s, _Lang.plain);
+  return [
+    for (final h in hits)
+      if (_rulesDenyAllProblem(s, cls, h.offset) case final why?)
+        '    $h — $why',
+  ];
+}
 
 const _usage =
     'Usage: dart run tool/check_retired_symbols.dart '
@@ -979,7 +1215,19 @@ void main(List<String> args) {
         );
       final key = '$symbol\u0000$path';
       final allow = allowed[key];
-      if (allow != null) usedAllow.add(key);
+      if (allow != null) {
+        usedAllow.add(key);
+        if (path == _rulesPath) {
+          final problems = _rulesProblems(root, found);
+          if (problems.isNotEmpty) {
+            violations.add(
+              '"$symbol" is allowlisted in $path, but AD-49 allowlists only '
+              'deny-all match blocks:',
+            );
+            violations.addAll(problems);
+          }
+        }
+      }
       final permitted = allow?.count ?? 0;
       if (found.length > permitted) {
         violations.add(

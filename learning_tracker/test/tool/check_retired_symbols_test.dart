@@ -276,6 +276,130 @@ match /completions/{id} { allow write: if false; }
       expect(stderr, contains('firestore.indexes.json:1:'));
     });
 
+    test('a Dart interpolation sigil does not hide an identifier; a code '
+        r'`$` prefix or suffix still makes a different identifier', () async {
+      final root = await fixtureRoot(
+        groups: {
+          'R1': [
+            _entry('completionHistoryForCurriculumProvider', kind: 'service'),
+          ],
+        },
+        files: {
+          'lib/a.dart': r'''
+final a = 'watching $completionHistoryForCurriculumProvider now';
+final b = "${completionHistoryForCurriculumProvider.name}";
+final $completionHistoryForCurriculumProvider = 1;
+final completionHistoryForCurriculumProvider$ = 2;
+final c = 'cost: \$completionHistoryForCurriculumProvider';
+''',
+          'functions/src/x.ts': r'''
+const t = `x $completionHistoryForCurriculumProvider y`;
+const $completionHistoryForCurriculumProvider = 1;
+''',
+        },
+      );
+      final result = await run(root);
+      expect(result.exitCode, 1, reason: out(result));
+      final stderr = result.stderr.toString();
+      expect(stderr, contains('lib/a.dart:1:22:'));
+      expect(stderr, contains('lib/a.dart:2:'));
+      expect(stderr, isNot(contains('lib/a.dart:3:')));
+      expect(stderr, isNot(contains('lib/a.dart:4:')));
+      expect(stderr, contains('lib/a.dart:5:'));
+      expect(stderr, contains('functions/src/x.ts:1:'));
+      expect(stderr, isNot(contains('functions/src/x.ts:2:')));
+    });
+
+    test('a string-mode field matches object keys, shorthand, destructuring '
+        'and property access in TS, never locals', () async {
+      final root = await fixtureRoot(
+        groups: {
+          'R16': [_entry('can_edit_goals', kind: 'field', owner: 'DNI-487')],
+        },
+        files: {
+          'functions/src/tutor_invites.ts': r'''
+const grant = { can_edit_goals: false, other: 1 };
+if (perms.can_edit_goals) {}
+const x = perms?.can_edit_goals;
+interface P { can_edit_goals?: boolean; }
+const { can_edit_goals } = perms;
+const y = { a, can_edit_goals };
+const can_edit_goals = 3;
+let z = can_edit_goals ? 1 : 2;
+const w = cond ? can_edit_goals : 0;
+function f(can_edit_goals: boolean) {}
+const v = [...can_edit_goals];
+const u = { ...can_edit_goals };
+''',
+        },
+      );
+      final result = await run(root);
+      expect(result.exitCode, 1, reason: out(result));
+      final stderr = result.stderr.toString();
+      for (final line in const [1, 2, 3, 4, 5, 6]) {
+        expect(
+          stderr,
+          contains('functions/src/tutor_invites.ts:$line:'),
+          reason: 'line $line',
+        );
+      }
+      for (final line in const [7, 8, 9, 10, 11, 12]) {
+        expect(
+          stderr,
+          isNot(contains('functions/src/tutor_invites.ts:$line:')),
+          reason: 'line $line',
+        );
+      }
+    });
+
+    test('a string-mode field matches Dart named arguments and member '
+        'access, never locals or ternaries', () async {
+      final root = await fixtureRoot(
+        groups: {
+          'R16': [_entry('purged', kind: 'field', owner: 'DNI-484')],
+        },
+        files: {
+          'lib/a.dart': r'''
+final t = Track(id: 'x', purged: true);
+if (track.purged) {}
+final c = Track()..purged = true;
+final r = (purged: true, n: 1);
+final purged = 3;
+final d = cond ? purged : 0;
+final m = {purged: 1};
+''',
+        },
+      );
+      final result = await run(root);
+      expect(result.exitCode, 1, reason: out(result));
+      final stderr = result.stderr.toString();
+      for (final line in const [1, 2, 3, 4]) {
+        expect(stderr, contains('lib/a.dart:$line:'), reason: 'line $line');
+      }
+      for (final line in const [5, 6, 7]) {
+        expect(
+          stderr,
+          isNot(contains('lib/a.dart:$line:')),
+          reason: 'line $line',
+        );
+      }
+    });
+
+    test('a string-mode collection never matches object keys or property '
+        'access', () async {
+      final root = await fixtureRoot(
+        groups: {
+          'R12': [_entry('completions', kind: 'collection', owner: 'DNI-488')],
+        },
+        files: {
+          'functions/src/x.ts':
+              'const s = { completions: 3 };\nconst n = stats.completions;\n',
+        },
+      );
+      final result = await run(root);
+      expect(result.exitCode, 0, reason: out(result));
+    });
+
     test('"match": "any" widens a field to identifiers', () async {
       final root = await fixtureRoot(
         groups: {
@@ -492,6 +616,49 @@ match /completions/{id} { allow write: if false; }
       );
       final result = await run(root);
       expect(result.exitCode, 0, reason: out(result));
+    });
+
+    test('an allowlisted firestore.rules hit must be a deny-all match block '
+        '(reads may stay; nested matches count)', () async {
+      Future<ProcessResult> withRules(String text, [int count = 1]) async =>
+          run(
+            await fixtureRoot(
+              groups: remnants,
+              files: {'firestore.rules': text},
+              allow: [_allow('completions', 'firestore.rules', count)],
+            ),
+          );
+
+      const denyAll = '''
+match /users/{uid}/learner_profiles/{profileId}/completions/{id} {
+  // reads stay for the cutover
+  allow get: if isOwner(uid);
+  allow list: if isOwner(uid) && request.query.limit <= 500;
+  allow create, update: if false;
+  allow delete: if (false);
+}
+''';
+      final ok = await withRules(denyAll);
+      expect(ok.exitCode, 0, reason: out(ok));
+
+      for (final bad in const [
+        'match /completions/{id} { allow write: if true; }\n',
+        'match /completions/{id} {\n  allow read: if true;\n'
+            '  allow create: if isOwner(uid)\n    && x;\n}\n',
+        'match /completions/{id} { allow read, write; }\n',
+        'match /completions/{id} { allow delete: if false || true; }\n',
+        'match /completions/{id} {\n  allow write: if false;\n'
+            '  match /sub/{s} { allow update: if isOwner(uid); }\n}\n',
+        'function f() { return exists(/databases/x/documents/completions/a); }\n',
+      ]) {
+        final result = await withRules(bad);
+        expect(result.exitCode, 1, reason: '$bad\n${out(result)}');
+        expect(
+          result.stderr.toString(),
+          contains('AD-49 allowlists only deny-all match blocks'),
+          reason: bad,
+        );
+      }
     });
 
     test('a hit beyond the allowlisted count fails', () async {
