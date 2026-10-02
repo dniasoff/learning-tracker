@@ -632,6 +632,33 @@ void main() {
       );
     });
 
+    test('an old catch-up event still finds the lock it catches up', () {
+      // The Sunday catch-up is the earliest event and more than the
+      // 21-day look-back before now, so only the catch-up reach brings the
+      // Shabbos lock (ended Sun 01:00Z) into the run.
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(
+              5,
+              b11,
+              minutes: day(6),
+              learnedOn: on(5),
+              dateState: DateState.catchUp,
+            ),
+            dated(6, 6),
+            dated(7, 7),
+            dated(8, 8),
+          ],
+          nowUtc: engineAt(40 * 1440),
+        ),
+      );
+      expect(
+        state[engineCurriculum]!.streak,
+        const CurriculumStreak(current: 0, best: 4, lastDay: '2026-09-08'),
+      );
+    });
+
     test('an evaluated curriculum with no learning has a zero streak', () {
       final state = engine.run(inputs(const []));
       expect(

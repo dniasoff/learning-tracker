@@ -15,9 +15,17 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 
-/// The lock windows one engine run needs: every lock that overlaps an
-/// event's `effectiveAt` or the span from [lookBack] before [nowUtc] to
-/// [nowUtc] (the streak reads recent locks), ascending and disjoint.
+/// How long before a `catch_up` event the lock it catches up can have
+/// ended: a catch-up window ends within 16 civil days of its lock's end
+/// (`catchUpWindow` skips at most 14 lock-touched days), so 21 days
+/// always reaches the preceding lock.
+const Duration catchUpReach = Duration(days: 21);
+
+/// The lock windows one engine run needs, ascending and disjoint: every
+/// lock that overlaps an event's `effectiveAt`, the [catchUpReach] before
+/// a `catch_up` learn (so `streakDay` finds the earlier lock it catches
+/// up, however old the event), or the span from [lookBack] before
+/// [nowUtc] to [nowUtc] (the streak reads recent locks).
 List<LockWindow> engineLockWindows(
   LearnerSettingsHistory settingsHistory,
   Iterable<LearningEvent> events,
@@ -28,7 +36,10 @@ List<LockWindow> engineLockWindows(
   var hi = nowUtc.toUtc();
   for (final e in events) {
     final t = effectiveAt(e);
-    if (t.isBefore(lo)) lo = t;
+    final from = e.isLearn && e.dateState == DateState.catchUp
+        ? t.subtract(catchUpReach)
+        : t;
+    if (from.isBefore(lo)) lo = from;
     if (t.isAfter(hi)) hi = t;
   }
   return lockWindows(settingsHistory, lo, hi);

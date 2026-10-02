@@ -82,8 +82,9 @@ CivilDate? streakDay(
 ///   than `current`.
 /// * `lastDay` is the latest streak day.
 ///
-/// [locks] must cover every event and the last weeks before [nowUtc]
-/// (`engineLockWindows` with a look-back).
+/// [locks] must cover every event, the lock each `catch_up` event catches
+/// up, and the last weeks before [nowUtc] (`engineLockWindows` with a
+/// look-back).
 CurriculumStreak curriculumStreak(
   Iterable<LearningEvent> countedLearns, {
   required LearnerSettingsHistory settingsHistory,
