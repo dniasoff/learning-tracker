@@ -1,0 +1,95 @@
+/// The pure learner-state engine (AD-35):
+/// `const LearnerStateEngine().run(LearnerStateInputs(...)) → LearnerState`.
+///
+/// DNI-465 (1.3) fills [LearnerStateEngine.run]; DNI-466, 467 and 468 add
+/// the lock, planning and points stages.
+library;
+
+import 'package:learning_tracker/domain/learner_state/c0_stub.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/goals.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+
+/// One calendar program assignment: [node] is assigned on [date].
+final class CalendarAssignment {
+  /// Creates an assignment.
+  const CalendarAssignment(this.date, this.node);
+
+  /// The civil date.
+  final CivilDate date;
+
+  /// The assigned node.
+  final NodeEntry node;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CalendarAssignment && other.date == date && other.node == node;
+
+  @override
+  int get hashCode => Object.hash(date, node);
+
+  @override
+  String toString() => 'CalendarAssignment($date, $node)';
+}
+
+/// The complete inputs of one engine run (AD-35 "Complete inputs").
+final class LearnerStateInputs {
+  /// Creates the inputs.
+  const LearnerStateInputs({
+    required this.events,
+    required this.subTracks,
+    required this.mainTrackIntent,
+    required this.goals,
+    required this.intentHistory,
+    required this.settingsHistory,
+    required this.calendars,
+    required this.corpora,
+    required this.nowUtc,
+  });
+
+  /// Every learning event (complete).
+  final List<LearningEvent> events;
+
+  /// Every sub-track, live and tombstoned.
+  final List<SubTrack> subTracks;
+
+  /// Main-track intent by curriculum id.
+  final Map<String, MainTrackIntent> mainTrackIntent;
+
+  /// Goals by curriculum id.
+  final Map<String, CurriculumGoals> goals;
+
+  /// The governed intent change history (AD-37).
+  final List<ChangeLogEntry> intentHistory;
+
+  /// The learnerSettings slice of [intentHistory], reconstructed.
+  final LearnerSettingsHistory settingsHistory;
+
+  /// Calendar program assignments by `program_id`.
+  final Map<String, List<CalendarAssignment>> calendars;
+
+  /// Unscoped corpora by curriculum id.
+  final Map<String, Corpus> corpora;
+
+  /// The instant to evaluate at (UTC).
+  final DateTime nowUtc;
+}
+
+/// The pure learner-state engine.
+final class LearnerStateEngine {
+  /// The engine has no state.
+  const LearnerStateEngine();
+
+  /// Folds [inputs] into a [LearnerState].
+  ///
+  /// C0 stub, filled by DNI-465 (1.3).
+  LearnerState run(LearnerStateInputs inputs) =>
+      c0Stub('DNI-465', 'LearnerStateEngine.run');
+}
