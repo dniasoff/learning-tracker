@@ -275,7 +275,14 @@ final class GatedLearningCommands implements LearningCommands {
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
-  }) => _held(() => inner.createSubTrack(draft, subTrackId: subTrackId));
+    bool addNextYear = false,
+  }) => _held(
+    () => inner.createSubTrack(
+      draft,
+      subTrackId: subTrackId,
+      addNextYear: addNextYear,
+    ),
+  );
 
   @override
   Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>

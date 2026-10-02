@@ -234,10 +234,14 @@ abstract interface class LearningCommands {
   /// batch of the new `sub_tracks/{ulid}` doc and its change-log entry,
   /// every `before` null. [subTrackId] is the new doc ULID (minted when
   /// omitted). Rejected with the violated AD-45 rules before any write.
+  /// [addNextYear] marks a create made by the detail's *Add next year*
+  /// (Story 2.8): the same write, reported as that `subtrack_lifecycle`
+  /// action instead of `create`.
   /// Implemented by `SubTrackCommands.createSubTrack`.
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
+    bool addNextYear = false,
   });
 
   /// Edits any field of sub-track [subTrackId] except `curriculum_id`;
@@ -888,10 +892,15 @@ final class DefaultLearningCommands implements LearningCommands {
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
+    bool addNextYear = false,
   }) => _gated((_, _) async {
     final commands = _subTrackCommands;
     if (commands == null) return const CaptureResult.onlineRequired();
-    return commands.createSubTrack(draft, subTrackId: subTrackId);
+    return commands.createSubTrack(
+      draft,
+      subTrackId: subTrackId,
+      addNextYear: addNextYear,
+    );
   });
 
   @override

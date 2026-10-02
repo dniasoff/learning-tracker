@@ -29,8 +29,8 @@ enum CaptureSourceKind {
 }
 
 /// The `action` of a `subtrack_lifecycle` event (AD-47). Story 2.1 emits
-/// the four lifecycle commands; later stories add ground add, reorder,
-/// remove and *Add next year*.
+/// the four lifecycle commands; Story 2.8 (DNI-499) adds *Add next year*;
+/// later stories add ground add, reorder and remove.
 enum SubTrackLifecycleAction {
   /// A sub-track was created.
   create('create'),
@@ -42,7 +42,11 @@ enum SubTrackLifecycleAction {
   end('end'),
 
   /// A sub-track was deleted (tombstoned).
-  delete('delete');
+  delete('delete'),
+
+  /// A school-year sub-track was rolled into the next academic year: a
+  /// create from the detail's *Add next year* (Story 2.8 / DNI-499).
+  addNextYear('add_next_year');
 
   const SubTrackLifecycleAction(this.storage);
 
