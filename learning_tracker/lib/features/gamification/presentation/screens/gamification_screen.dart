@@ -11,7 +11,6 @@ import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_tier_card.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievements_header.dart';
@@ -26,13 +25,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'gamification_screen.g.dart';
 
+/// The streak calendar's active days: the last 30 days with counted
+/// learning in the curriculum in view (DNI-479; AD-40 has no profile-wide
+/// streak).
 @riverpod
-Future<Set<DateTime>> streakCalendar(Ref ref) async {
-  final streakService = ref.watch(streakServiceProvider);
-  final now = DateTimeFactory.nowUtc();
-  final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-  return streakService.getStreakCalendar(startUtc: thirtyDaysAgo, endUtc: now);
-}
+Future<Set<DateTime>> streakCalendar(Ref ref) =>
+    ref.watch(dashboardStreakCalendarProvider.future);
 
 Color _kPageBg(BuildContext context) => context.colors.surfaceF5;
 

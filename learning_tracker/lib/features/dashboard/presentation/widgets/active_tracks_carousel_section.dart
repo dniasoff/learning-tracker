@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/arrow_button.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-class ActiveTracksCarouselSection extends StatefulWidget {
+/// The active-tracks carousel. Its visible page is the curriculum in view
+/// ([dashboardCurriculumInViewProvider]), whose streak the dashboard shows
+/// (DNI-479, AD-40).
+class ActiveTracksCarouselSection extends ConsumerStatefulWidget {
   const ActiveTracksCarouselSection({
     super.key,
     required this.title,
@@ -23,19 +28,26 @@ class ActiveTracksCarouselSection extends StatefulWidget {
   final TextStyle titleStyle;
 
   @override
-  State<ActiveTracksCarouselSection> createState() =>
+  ConsumerState<ActiveTracksCarouselSection> createState() =>
       _ActiveTracksCarouselSectionState();
 }
 
 class _ActiveTracksCarouselSectionState
-    extends State<ActiveTracksCarouselSection> {
+    extends ConsumerState<ActiveTracksCarouselSection> {
   late final PageController _controller;
   int _activeIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _controller = PageController();
+    // Open on the curriculum already in view, so the streak shown and the
+    // visible track agree when the dashboard is rebuilt.
+    final inView = ref.read(dashboardCurriculumInViewProvider);
+    final index = widget.activeTracks.indexWhere(
+      (t) => t.curriculumId == inView,
+    );
+    _activeIndex = index < 0 ? 0 : index;
+    _controller = PageController(initialPage: _activeIndex);
   }
 
   @override
@@ -120,6 +132,9 @@ class _ActiveTracksCarouselSectionState
               setState(() {
                 _activeIndex = value;
               });
+              ref
+                  .read(dashboardCurriculumInViewProvider.notifier)
+                  .show(widget.activeTracks[value].curriculumId);
             },
             itemBuilder: (context, index) {
               return Padding(
