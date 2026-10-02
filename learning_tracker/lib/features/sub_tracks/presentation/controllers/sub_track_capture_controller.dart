@@ -6,6 +6,14 @@
 /// `learned_on` left to the command's default — the learner's civil today
 /// (DNI-469 AC-2). Sub-track events never carry a `pts_` entry (AD-50); the
 /// command owns that rule. A tutor device never writes here (UX-DR-158).
+///
+/// Production wiring: this reads `learningCommandsProvider`, the C0
+/// (DNI-524) seam that DNI-469 fills. While it is still the C0 stub every
+/// *+1* returns [PlusOneFailed] and writes nothing. DNI-500 does not fill
+/// it (orchestrator rule: build and test against the C0 seam). The stub
+/// cannot ship: `tool/retired_symbols/R15.json` makes DNI-490 remove every
+/// `c0Stub` call before the cutover release. The no-override integration
+/// test follows in bead learning-tracker-fyh.135.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
