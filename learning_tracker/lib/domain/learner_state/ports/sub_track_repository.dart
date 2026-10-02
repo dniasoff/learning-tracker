@@ -43,6 +43,50 @@ abstract interface class SubTrackRepository {
   Future<void> applyGovernedChange(LearnerScope scope, SubTrackChange change);
 }
 
+/// UI-facing curriculum views over [SubTrackRepository.watchAll] (Story 2.1
+/// / DNI-492 T1).
+///
+/// Each view filters the complete read client-side, so no Firestore query
+/// shape and no index is added (AD-54 "Indexes: none added"), and each
+/// keeps the complete-read contract: loading until the whole collection is
+/// read, never partial; rows the codec rejected stay in
+/// [CompleteReadReady.rejected] so a reader never silently loses them.
+///
+/// "Active" and "ended" split on the tombstone only: a sub-track is ended
+/// iff `ended_at` is set ([SubTrack.isEnded]). A live sub-track whose window
+/// has passed is still active here; the engine predicates (`holdsGround`,
+/// `onHome`, AD-34) decide what a passed window means.
+extension SubTrackCurriculumViews on SubTrackRepository {
+  /// Every sub-track of [curriculumId] in [scope], live and ended.
+  Stream<CompleteRead<SubTrack>> watchByCurriculum(
+    LearnerScope scope,
+    String curriculumId,
+  ) => _filtered(scope, (t) => t.curriculumId == curriculumId);
+
+  /// The live (non-tombstoned) sub-tracks of [curriculumId] in [scope].
+  Stream<CompleteRead<SubTrack>> watchActiveByCurriculum(
+    LearnerScope scope,
+    String curriculumId,
+  ) => _filtered(scope, (t) => t.curriculumId == curriculumId && !t.isEnded);
+
+  /// The ended (tombstoned) sub-tracks of [curriculumId] in [scope].
+  Stream<CompleteRead<SubTrack>> watchEndedByCurriculum(
+    LearnerScope scope,
+    String curriculumId,
+  ) => _filtered(scope, (t) => t.curriculumId == curriculumId && t.isEnded);
+
+  Stream<CompleteRead<SubTrack>> _filtered(
+    LearnerScope scope,
+    bool Function(SubTrack track) keep,
+  ) => watchAll(scope).map(
+    (read) => switch (read) {
+      CompleteReadLoading<SubTrack>() => read,
+      CompleteReadReady<SubTrack>(:final items, :final rejected) =>
+        CompleteReadReady(items.where(keep).toList(), rejected: rejected),
+    },
+  );
+}
+
 /// A governed change whose `change_log/{entryId}` already holds a DIFFERENT
 /// entry — a retry whose entry was rebuilt instead of reused, or an id
 /// collision. Neither the audit row nor the sub-track is written (AD-38
