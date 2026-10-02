@@ -284,8 +284,9 @@ bool resolvesSubTrackDetail(RoutingController router, String subTrackId) {
 /// the context has no router or the app does not register the detail route
 /// for that id ([resolvesSubTrackDetail]); this is the state on
 /// `integ/sub-tracks` until DNI-497 merges, and nothing here reaches a user
-/// before the DNI-490 cutover (AD-49 ship hold). Bead
-/// learning-tracker-fyh.217 swaps the path for the typed
+/// before the DNI-490 cutover (AD-49 ship hold). AC-5 ships only with
+/// DNI-497: bead learning-tracker-fyh.217 is the merge gate from
+/// `integ/sub-tracks` to dev, and swaps the path for the typed
 /// `SubTrackDetailRoute` once DNI-497 is on `integ/sub-tracks`.
 VoidCallback? subTrackDetailAction(
   BuildContext context,
