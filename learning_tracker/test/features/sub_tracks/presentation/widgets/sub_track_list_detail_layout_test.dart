@@ -12,9 +12,9 @@ import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_tr
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_list_detail_layout.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../helpers/learner_state/engine_fixtures.dart';
-import '../../../helpers/pump_app.dart';
-import '../sub_track_detail_harness.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/pump_app.dart';
+import '../../sub_track_detail_harness.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 

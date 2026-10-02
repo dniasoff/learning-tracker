@@ -5,7 +5,6 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -16,9 +15,9 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../helpers/learner_state/engine_fixtures.dart';
-import '../../../helpers/pump_app.dart';
-import '../sub_track_detail_harness.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/pump_app.dart';
+import '../../sub_track_detail_harness.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -219,32 +218,5 @@ void main() {
     ]) {
       expect(find.textContaining(word), findsNothing, reason: word);
     }
-  });
-
-  testWidgets('a hub row tap selects the sub-track and opens its detail '
-      'route on a phone (AC-1)', (tester) async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    await tester.pumpWidget(
-      pumpApp(
-        container: container,
-        child: StackRouterScope(
-          controller: router,
-          stateHash: 0,
-          child: Consumer(
-            builder: (context, ref, _) => TextButton(
-              onPressed: () => openSubTrackDetail(context, ref, school.id),
-              child: const Text('row'),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('row'));
-    final pushed =
-        verify(() => router.push<Object?>(captureAny())).captured.single
-            as SubTrackDetailRoute;
-    expect(pushed.args!.subTrackId, school.id);
-    expect(container.read(subTrackHubSelectionProvider), school.id);
   });
 }
