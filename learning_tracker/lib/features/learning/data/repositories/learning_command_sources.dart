@@ -3,7 +3,7 @@
 /// data-access ring (`tool/check_dependency_direction.dart` Rule A).
 ///
 /// Re-exports the learner-state providers the commands are built from
-/// (DNI-464, C0 DNI-524, DNI-469), without a second declaration (ruling
+/// (DNI-464, C0 DNI-524, DNI-469; the governed sources DNI-470), without a second declaration (ruling
 /// B4).
 library;
 
@@ -11,6 +11,10 @@ export 'package:learning_tracker/data/firestore/learner_state_repository_provide
     show
         activeAuthUidProvider,
         activeLearnerScopeProvider,
+        changeLogRepositoryProvider,
+        governedDocReaderProvider,
         learningEventRepositoryProvider,
         learningWritePortProvider,
-        pointsAmountReaderProvider;
+        oversizedGovernedWritePortProvider,
+        pointsAmountReaderProvider,
+        subTrackRepositoryProvider;

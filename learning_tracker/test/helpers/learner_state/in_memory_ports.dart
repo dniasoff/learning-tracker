@@ -15,6 +15,7 @@ import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
@@ -198,8 +199,10 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
 }
 
 /// In-memory [ChangeLogRepository]. [commitGoverned] merges each
-/// `GovernedDocMerge.toMergePatch` into [doc] and records the entry.
-final class InMemoryChangeLogRepository implements ChangeLogRepository {
+/// `GovernedDocMerge.toMergePatch` into [doc] and records the entry. It is
+/// also the [GovernedDocReader] over those docs and entries (DNI-470).
+final class InMemoryChangeLogRepository
+    implements ChangeLogRepository, GovernedDocReader {
   final _changes = _ScopeChanges();
   final Map<LearnerScope, Map<String, ChangeLogEntry>> _log = {};
   final Map<LearnerScope, Map<String, Map<String, Object?>>> _docs = {};
@@ -219,6 +222,31 @@ final class InMemoryChangeLogRepository implements ChangeLogRepository {
   /// Every entry of [scope] in document-id order.
   List<ChangeLogEntry> entriesOf(LearnerScope scope) =>
       _sortedById(_log[scope]?.values ?? const [], (e) => e.id);
+
+  /// Stores `{collection}/{docId}` in [scope] with [fields] (a governed doc
+  /// as the writer's cache holds it). Added by DNI-470.
+  void seedDoc(
+    LearnerScope scope,
+    String collection,
+    String docId,
+    Map<String, Object?> fields,
+  ) {
+    _docs.putIfAbsent(scope, () => {})['$collection/$docId'] = {...fields};
+  }
+
+  @override
+  Future<Map<String, Object?>?> currentDoc(
+    LearnerScope scope,
+    String collection,
+    String docId,
+  ) async {
+    final fields = doc(scope, collection, docId);
+    return fields == null ? null : {...fields};
+  }
+
+  @override
+  Future<ChangeLogEntry?> entry(LearnerScope scope, String entryId) async =>
+      _log[scope]?[entryId];
 
   /// The merged fields of `{collection}/{docId}` in [scope], or null.
   Map<String, Object?>? doc(

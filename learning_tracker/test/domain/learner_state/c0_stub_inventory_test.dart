@@ -24,7 +24,6 @@ const _inventory = <(String, String)>[
   ('DNI-470', 'LearnerSettingsHistory.reconstruct'),
   ('DNI-470', 'governedIntentRepositoryProvider'),
   ('DNI-470', 'learnerLockSettingsProvider'),
-  ('DNI-470', 'oversizedGovernedWritePortProvider'),
   // DNI-474 (1.12)
   ('DNI-474', 'corporaProvider'),
   ('DNI-474', 'learnerStateProvider'),

@@ -19,6 +19,7 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/callable_oversized_governed_write_port.dart';
 import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
@@ -107,6 +108,10 @@ void main() {
       expect(await container.read(pointsAmountReaderProvider.future), isNull);
       expect(await container.read(changeLogRepositoryProvider.future), isNull);
       expect(await container.read(governedDocReaderProvider.future), isNull);
+      expect(
+        await container.read(oversizedGovernedWritePortProvider.future),
+        isNull,
+      );
       expect(await container.read(activeLearnerScopeProvider.future), isNull);
     },
   );
@@ -194,6 +199,10 @@ void main() {
     expect(
       await container.read(governedDocReaderProvider.future),
       isA<FirestoreChangeLogRepository>(),
+    );
+    expect(
+      await container.read(oversizedGovernedWritePortProvider.future),
+      isA<CallableOversizedGovernedWritePort>(),
     );
     expect(await container.read(activeLearnerScopeProvider.future), isNull);
 
@@ -371,11 +380,6 @@ void main() {
         governedIntentRepositoryProvider,
         'DNI-470',
         'governedIntentRepositoryProvider',
-      ),
-      (
-        oversizedGovernedWritePortProvider,
-        'DNI-470',
-        'oversizedGovernedWritePortProvider',
       ),
     ]) {
       test(what, () async {
