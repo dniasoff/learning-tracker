@@ -1,6 +1,7 @@
 // Mirror test for `lib/domain/learner_state/lock_filter.dart` (DNI-466
 // AC-4): the engine's lock-ignore stage.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 
@@ -52,6 +53,34 @@ void main() {
         hasLength(3),
       );
       expect(engineLockWindows(h, const [], engineAt(0)), isEmpty);
+    });
+
+    test('reaches the lock an old catch-up event catches up', () {
+      final h = constantHistory(newYorkNoLocation);
+      // Sun 2026-09-06 18:00Z: catching up Shabbos 09-05, whose lock ended
+      // before the event; now is weeks later, past the look-back.
+      final catchUp = engineLearn(
+        1,
+        'x',
+        minutes: 5 * 1440 + 1080,
+        learnedOn: '2026-09-05',
+        dateState: DateState.catchUp,
+      );
+      final now = engineAt(40 * 1440);
+      const lookBack = Duration(days: 21);
+      final locks = engineLockWindows(h, [catchUp], now, lookBack: lookBack);
+      expect(locks.any((l) => l.endUtc.isBefore(effectiveAt(catchUp))), isTrue);
+      // A dated learn at the same instant needs no earlier lock.
+      final dated = engineLearn(2, 'x', minutes: 5 * 1440 + 1080);
+      expect(
+        engineLockWindows(
+          h,
+          [dated],
+          now,
+          lookBack: lookBack,
+        ).any((l) => l.endUtc.isBefore(effectiveAt(dated))),
+        isFalse,
+      );
     });
   });
 
