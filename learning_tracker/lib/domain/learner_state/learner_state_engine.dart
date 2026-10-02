@@ -334,6 +334,7 @@ final class LearnerStateEngine {
                 today: velocity.today,
                 firstStage: firstStage,
                 projection: plan.projection,
+                calendarProgram: plan.calendar != null,
               ),
       ),
     );

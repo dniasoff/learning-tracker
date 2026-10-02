@@ -168,6 +168,7 @@ final class ReportVelocityBasis {
     required this.today,
     required this.firstStage,
     this.projection,
+    this.calendarProgram = false,
   });
 
   /// AD-35 `newlyLearntOn`: the day each leaf was newly learnt overall.
@@ -186,6 +187,10 @@ final class ReportVelocityBasis {
 
   /// The engine's projection, for the FR-18/FR-21 on-track status.
   final Projection? projection;
+
+  /// Whether the engine planned the curriculum from a calendar program
+  /// ([ReportProjection.calendarProgram]).
+  final bool calendarProgram;
 }
 
 /// The key of the Before-tracking bucket; never a valid `source` value.
@@ -295,6 +300,7 @@ final class ReportMemberLine {
     this.endedAt,
     this.endedOn,
     this.endReason,
+    this.ratePerWeek,
   });
 
   /// The sub-track ULID (the `source` of its events).
@@ -328,6 +334,11 @@ final class ReportMemberLine {
   /// The stored `end_reason`.
   final SubTrackEndReason? endReason;
 
+  /// The stored `rate_per_week`: the parent's estimate, in the
+  /// curriculum's leaves per week (PRD deviation #12). A report shows it
+  /// beside the measured velocity and never computes with it (FR-32).
+  final double? ratePerWeek;
+
   /// The sub-track's source totals (also in [ReportProjection.sources]).
   final ReportSourceTotals totals;
 
@@ -348,6 +359,7 @@ final class ReportMemberLine {
       other.endedAt == endedAt &&
       other.endedOn == endedOn &&
       other.endReason == endReason &&
+      other.ratePerWeek == ratePerWeek &&
       other.totals == totals;
 
   @override
@@ -362,6 +374,7 @@ final class ReportMemberLine {
     endedAt,
     endedOn,
     endReason,
+    ratePerWeek,
     totals,
   );
 
@@ -427,6 +440,7 @@ final class ReportProjection {
     List<ReportGroup> groups = const [],
     this.allSources,
     this.projectionStatus,
+    this.calendarProgram = false,
   }) : sources = Map.unmodifiable(sources),
        groups = List.unmodifiable(groups);
 
@@ -473,6 +487,13 @@ final class ReportProjection {
   /// null when the curriculum is not evaluated.
   final ProjectionStatus? projectionStatus;
 
+  /// Whether the curriculum's main track follows a calendar program
+  /// (AD-33, AD-35): its on-track status is the engine's calendar
+  /// shortfall (assigned through today minus learnt), not the deadline
+  /// projection, and it has no sub-tracks (PRD deviation #12). False when
+  /// the curriculum is not evaluated.
+  final bool calendarProgram;
+
   /// The Home (`main`) totals.
   ReportSourceTotals get home => sources[LearningEvent.sourceMain]!;
 
@@ -486,7 +507,8 @@ final class ReportProjection {
       other.beforeTracking == beforeTracking &&
       _listEquals(other.groups, groups) &&
       other.allSources == allSources &&
-      other.projectionStatus == projectionStatus;
+      other.projectionStatus == projectionStatus &&
+      other.calendarProgram == calendarProgram;
 
   @override
   int get hashCode => Object.hash(
@@ -498,6 +520,7 @@ final class ReportProjection {
     Object.hashAll(groups),
     allSources,
     projectionStatus,
+    calendarProgram,
   );
 
   @override
@@ -618,6 +641,7 @@ ReportProjection deriveReportProjection({
             velocity.today,
           ),
     projectionStatus: velocity?.projection?.status,
+    calendarProgram: velocity?.calendarProgram ?? false,
     beforeTracking: before == null
         ? null
         : ReportSourceTotals(
@@ -673,6 +697,7 @@ ReportGroup _group(
           endedAt: s.endedAt,
           endedOn: s.endedAt == null ? null : civilDayOf(s.endedAt!),
           endReason: s.endReason,
+          ratePerWeek: s.ratePerWeek,
           totals: sources[s.id]!,
         ),
     ],

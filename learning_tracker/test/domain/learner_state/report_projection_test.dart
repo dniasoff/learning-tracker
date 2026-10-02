@@ -1117,4 +1117,47 @@ void main() {
       });
     });
   });
+
+  group('DNI-518 (Story 5.3): what the report pace sections read', () {
+    test('each member line carries its stored rate_per_week', () {
+      final school = _sub(10);
+      final report = _report(subTracks: [school]);
+      final line = report.groups.single.members.single;
+      expect(line.ratePerWeek, school.ratePerWeek);
+    });
+
+    test('a calendar-program curriculum is marked; others are not', () {
+      final calendar = const LearnerStateEngine().run(
+        engineInputs(
+          nowUtc: _vNow,
+          intents: {
+            engineCurriculum: MainTrackIntent(
+              curriculumId: engineCurriculum,
+              track: MainTrack(
+                curriculumId: engineCurriculum,
+                state: MainTrackState.active,
+              ),
+              program: MainTrackProgram(
+                curriculumId: engineCurriculum,
+                programId: 'mishnah_yomit',
+                trackingStartDate: '2026-09-01',
+              ),
+            ),
+          },
+          calendars: {
+            'mishnah_yomit': [
+              const CalendarAssignment('2026-09-02', berakhot1),
+            ],
+          },
+        ),
+      )[engineCurriculum]!;
+      expect(calendar.report.calendarProgram, isTrue);
+      // The calendar shortfall the report shows is the engine's.
+      expect(calendar.shortfall, 3);
+
+      expect(_vRun(const []).report.calendarProgram, isFalse);
+      final retired = _vRun(const [], state: MainTrackState.retired);
+      expect(retired.report.calendarProgram, isFalse);
+    });
+  });
 }
