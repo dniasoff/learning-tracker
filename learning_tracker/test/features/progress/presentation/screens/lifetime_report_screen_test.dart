@@ -11,6 +11,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -21,6 +22,7 @@ import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
@@ -105,6 +107,17 @@ Finder _groupHeader(String key) =>
     find.byKey(ValueKey('lifetimeReportGroupHeader-$key'));
 
 Finder _line(String id) => find.byKey(ValueKey('lifetimeReportLine-$id'));
+
+/// Bumped to re-run the session or learner-scope resolution, as a PIN,
+/// profile or tutor change does.
+final _identityEpoch = NotifierProvider<_Epoch, int>(_Epoch.new);
+
+class _Epoch extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
 
 void main() {
   group('AC-1 sections and totals', () {
@@ -455,9 +468,16 @@ void main() {
       expect(find.byType(LifetimeReportTotals), findsNothing);
 
       await tester.tap(find.text('Retry'));
-      await _pumpUntil(tester, () => streams.length == 2);
-      expect(streams, hasLength(2));
-      streams.last.add(reportState([fullReport()]));
+      // The session and scope re-resolve first (the report fails closed
+      // meanwhile), so the read may be re-opened more than once; the one
+      // still listened to is the fresh complete read.
+      await _pumpUntil(tester, () => streams.length >= 2);
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      final live = streams.skip(1).where((c) => c.hasListener).toList();
+      expect(live, hasLength(1));
+      live.single.add(reportState([fullReport()]));
       await tester.pumpAndSettle();
       expect(find.byType(AppErrorView), findsNothing);
       expect(find.bySemanticsLabel('Learning events · 2,040'), findsOneWidget);
@@ -480,6 +500,117 @@ void main() {
     for (final word in ['goal reached', 'complete', 'finished', 'stopped']) {
       expect(painted, isNot(contains(word)));
     }
+  });
+
+  group('AC-2 an identity change mid-report fails closed', () {
+    testWidgets('a session re-resolving (PIN, profile or tutor change) hides '
+        'the report until it settles', (tester) async {
+      final gate = Completer<bool>();
+      var sessionBuilds = 0;
+      final container = ProviderContainer(
+        overrides: [
+          parentSessionProvider.overrideWith((ref) async {
+            ref.watch(_identityEpoch);
+            if (++sessionBuilds == 1) return true;
+            return gate.future;
+          }),
+          effectiveUseHebrewTermsProvider.overrideWithValue(false),
+          activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
+          learnerStateProvider.overrideWith(
+            (ref, _) => Stream.value(reportState([fullReport()])),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        pumpApp(child: const LifetimeReportScreen(), container: container),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(LifetimeReportTotals), findsOneWidget);
+
+      // A PIN lock, profile switch or tutor entry re-runs the check.
+      container.read(_identityEpoch.notifier).bump();
+      await tester.pump();
+      await tester.pump();
+      expect(container.read(parentSessionProvider).value, isTrue);
+      expect(find.byType(LifetimeReportTotals), findsNothing);
+      expect(find.byType(LoadingIndicator), findsOneWidget);
+
+      gate.complete(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(LifetimeReportTotals), findsOneWidget);
+    });
+
+    testWidgets('switching learner never shows the previous learner\'s '
+        'report, and drops the curriculum picked for them', (tester) async {
+      final learnerA = c0Scope(ownerUid: 'owner-a');
+      final learnerB = c0Scope(ownerUid: 'owner-b');
+      final gate = Completer<LearnerScope>();
+      var scopeBuilds = 0;
+      final container = ProviderContainer(
+        overrides: [
+          parentSessionProvider.overrideWith((ref) async => true),
+          effectiveUseHebrewTermsProvider.overrideWithValue(false),
+          activeLearnerScopeProvider.overrideWith((ref) async {
+            ref.watch(_identityEpoch);
+            if (++scopeBuilds == 1) return learnerA;
+            return gate.future;
+          }),
+          learnerStateProvider.overrideWith(
+            (ref, scope) => Stream.value(
+              scope == learnerA
+                  ? reportState([
+                      fullReport(),
+                      homeOnlyReport(
+                        curriculumId: reportRetiredCurriculum,
+                        events: 30,
+                        distinct: 25,
+                        withBeforeTracking: false,
+                      ),
+                    ])
+                  : reportState([
+                      homeOnlyReport(
+                        events: 3,
+                        distinct: 3,
+                        withBeforeTracking: false,
+                      ),
+                    ]),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        pumpApp(
+          child: const LifetimeReportScreen(curriculumId: reportCurriculum),
+          container: container,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('lifetimeReportCurriculum-chumash')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Distinct · 25 Pesukim'), findsOneWidget);
+
+      // The parent switches to another learner.
+      container.read(_identityEpoch.notifier).bump();
+      await tester.pump();
+      await tester.pump();
+      expect(container.read(activeLearnerScopeProvider).value, learnerA);
+      expect(find.byType(LifetimeReportTotals), findsNothing);
+      expect(find.byType(LoadingIndicator), findsOneWidget);
+
+      gate.complete(learnerB);
+      await tester.pumpAndSettle();
+      // Learner B's report, for the curriculum the report was opened with.
+      expect(find.bySemanticsLabel('Learning events · 3'), findsOneWidget);
+      expect(find.bySemanticsLabel('Distinct · 3 Mishnayos'), findsOneWidget);
+    });
   });
 
   group('AC-12 layout', () {

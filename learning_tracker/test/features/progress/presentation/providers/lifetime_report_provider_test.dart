@@ -88,7 +88,13 @@ void main() {
       ..invalidate(learnerStateProvider)
       ..invalidate(corporaProvider);
     await pumpEventQueue();
-    expect(h.streams, hasLength(2), reason: 'a fresh complete read');
+    // The session and scope re-resolve first (the report fails closed
+    // meanwhile), so the read may be re-opened; the live one is fresh.
+    expect(
+      h.streams.length,
+      greaterThanOrEqualTo(2),
+      reason: 'a fresh complete read',
+    );
     expect(sub.read().isLoading, isTrue);
     h.streams.last.add(reportState([fullReport()]));
     await pumpEventQueue();
@@ -100,6 +106,85 @@ void main() {
     final value = await settledAsync(h.container, lifetimeReportProvider(null));
     expect(value.error, isA<LifetimeReportAccessDenied>());
     expect(h.streams, isEmpty, reason: 'the learner state is never read');
+  });
+
+  group('fails closed while the identity re-resolves (AC-2)', () {
+    test('a parent session re-resolving with its earlier true retained '
+        'shows nothing of the report', () async {
+      final gate = Completer<bool>();
+      var sessionBuilds = 0;
+      final container = ProviderContainer(
+        overrides: [
+          parentSessionProvider.overrideWith((ref) async {
+            if (++sessionBuilds == 1) return true;
+            return gate.future;
+          }),
+          activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
+          learnerStateProvider.overrideWith(
+            (ref, _) => Stream.value(reportState([fullReport()])),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen(lifetimeReportProvider(null), (_, _) {});
+      addTearDown(sub.close);
+      await pumpEventQueue();
+      expect(sub.read().requireValue.report.totalEvents, 2040);
+
+      // A PIN lock or profile switch re-runs the session check.
+      container.invalidate(parentSessionProvider);
+      await pumpEventQueue();
+      expect(container.read(parentSessionProvider).value, isTrue);
+      expect(sub.read().isLoading, isTrue);
+      expect(sub.read().hasValue, isFalse);
+
+      gate.complete(false);
+      await pumpEventQueue();
+      expect(sub.read().error, isA<LifetimeReportAccessDenied>());
+    });
+
+    test('a learner switch never shows the previous learner\'s report '
+        'before the new scope settles', () async {
+      final learnerA = c0Scope(ownerUid: 'owner-a');
+      final learnerB = c0Scope(ownerUid: 'owner-b');
+      final gate = Completer<LearnerScope>();
+      var scopeBuilds = 0;
+      final container = ProviderContainer(
+        overrides: [
+          parentSessionProvider.overrideWith((ref) async => true),
+          activeLearnerScopeProvider.overrideWith((ref) async {
+            if (++scopeBuilds == 1) return learnerA;
+            return gate.future;
+          }),
+          learnerStateProvider.overrideWith(
+            (ref, scope) => Stream.value(
+              reportState([
+                if (scope == learnerA)
+                  fullReport()
+                else
+                  homeOnlyReport(events: 3, withBeforeTracking: false),
+              ]),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen(lifetimeReportProvider(null), (_, _) {});
+      addTearDown(sub.close);
+      await pumpEventQueue();
+      expect(sub.read().requireValue.report.totalEvents, 2040);
+
+      container.invalidate(activeLearnerScopeProvider);
+      await pumpEventQueue();
+      // The scope still retains learner A while it re-resolves.
+      expect(container.read(activeLearnerScopeProvider).value, learnerA);
+      expect(sub.read().isLoading, isTrue);
+      expect(sub.read().hasValue, isFalse);
+
+      gate.complete(learnerB);
+      await pumpEventQueue();
+      expect(sub.read().requireValue.report.totalEvents, 3);
+    });
   });
 
   group('curriculum selection (AC-9)', () {
