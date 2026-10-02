@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/codec/firestore_codec.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 
 /// Domain model for one append-only `points_ledger/{ulid}` document
@@ -71,7 +72,21 @@ class PointsLedgerEntry {
     required this.source,
     this.note,
     this.redemptionUlid,
+    this.eventId,
   });
+
+  /// The AD-50 `points_ledger/pts_{eventId}` entry co-written with an
+  /// earning learning event (DNI-469): the existing entry shape plus
+  /// `event_id`, with `created_at = recorded_at` of the event, never a
+  /// fresh or server time (AD-46, AD-54).
+  factory PointsLedgerEntry.forAward(PointsAward award) => PointsLedgerEntry(
+    ulid: award.docId,
+    entryKind: 'completion',
+    delta: award.amount,
+    createdAt: award.createdAt,
+    source: CompletionSource.live,
+    eventId: award.eventId,
+  );
 
   /// This entry's identity — also its Firestore doc-id
   /// (`DocIds.pointsLedgerDocId`, keyed off this same value). Never
@@ -106,6 +121,10 @@ class PointsLedgerEntry {
   /// Which write-time policy tier produced this entry — see the class doc
   /// comment's "[source] is new" section.
   final CompletionSource source;
+
+  /// The earning learning event of a `pts_{eventId}` entry (AD-50), else
+  /// null. `firestore.rules` requires the doc id to be `'pts_' + event_id`.
+  final String? eventId;
 }
 
 /// Firestore document codec for `points_ledger/{ulid}`. Self-contained, no
@@ -151,6 +170,7 @@ extension PointsLedgerEntryFirestoreCodec on PointsLedgerEntry {
     if (redemptionUlid != null) 'redemption_ulid': redemptionUlid,
     'created_at': createdAt.toUtc(),
     'source': source.name,
+    if (eventId != null) 'event_id': eventId,
   };
 }
 
@@ -200,6 +220,7 @@ PointsLedgerEntry pointsLedgerEntryFromFirestore(Map<String, dynamic> data) {
     redemptionUlid: data['redemption_ulid'] as String?,
     createdAt: createdAt,
     source: _parseSource(data['source']),
+    eventId: data['event_id'] as String?,
   );
 }
 
