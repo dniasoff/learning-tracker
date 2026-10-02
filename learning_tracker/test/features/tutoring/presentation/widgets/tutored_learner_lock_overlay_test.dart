@@ -15,9 +15,16 @@ import '../../../../helpers/pump_app.dart';
 
 const _cover = Key('tutoredLearnerLockOverlay');
 
-Widget _host(AsyncValue<bool> lock) => pumpApp(
+Widget _host(AsyncValue<bool> lock, {VoidCallback? onTap}) => pumpApp(
   overrides: [tutoredLearnerLockProvider.overrideWithValue(lock)],
-  child: const TutoredLearnerLockOverlay(child: Text('Talmid data')),
+  child: TutoredLearnerLockOverlay(
+    child: Column(
+      children: [
+        const Text('Talmid data'),
+        TextButton(onPressed: onTap, child: const Text('Talmid control')),
+      ],
+    ),
+  ),
 );
 
 void main() {
@@ -40,5 +47,35 @@ void main() {
     await tester.pumpWidget(_host(const AsyncData(false)));
     expect(find.byKey(_cover), findsNothing);
     expect(find.text('Talmid data').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('while locked the learner\'s screens are absent from the '
+      'semantics tree and take no input (AC-6)', (tester) async {
+    final semantics = tester.ensureSemantics();
+    var taps = 0;
+    await tester.pumpWidget(_host(const AsyncData(true), onTap: () => taps++));
+
+    expect(find.bySemanticsLabel('Talmid data'), findsNothing);
+    expect(find.bySemanticsLabel('Talmid control'), findsNothing);
+    // The cover itself stays readable: its exit action is announced.
+    expect(find.byKey(const Key('tutoredLearnerLockExit')), findsOneWidget);
+    expect(
+      tester.getSemantics(find.byKey(const Key('tutoredLearnerLockExit'))),
+      isSemantics(isButton: true),
+    );
+
+    await tester.tap(find.text('Talmid control'), warnIfMissed: false);
+    expect(taps, 0);
+    semantics.dispose();
+  });
+
+  testWidgets('unlocked, the learner\'s screens are in the semantics tree', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_host(const AsyncData(false)));
+    expect(find.bySemanticsLabel('Talmid data'), findsOneWidget);
+    expect(find.bySemanticsLabel('Talmid control'), findsOneWidget);
+    semantics.dispose();
   });
 }
