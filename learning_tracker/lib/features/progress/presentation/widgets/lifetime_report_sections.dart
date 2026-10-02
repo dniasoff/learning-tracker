@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -298,6 +298,7 @@ class LifetimeReportBySource extends ConsumerWidget {
       key: const ValueKey('lifetimeReportBySource'),
       title: l10n.reportBySource,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final (i, row) in rows.indexed) ...[
             if (i > 0) Divider(height: 1, color: colors.brandOutlineMuted),
@@ -327,6 +328,9 @@ class LifetimeReportBySource extends ConsumerWidget {
                       if (row.line case final line?)
                         Text(
                           line.label,
+                          // A year or date range reads left to right in
+                          // Hebrew too ("2024–25", not "25–2024").
+                          textDirection: TextDirection.ltr,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colors.brandInk2,
                           ),
@@ -417,6 +421,8 @@ class _LifetimeReportGroupTileState
     extends ConsumerState<LifetimeReportGroupTile> {
   bool _expanded = false;
 
+  void _toggle() => setState(() => _expanded = !_expanded);
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -446,11 +452,14 @@ class _LifetimeReportGroupTileState
           onTapHint: _expanded
               ? l10n.reportGroupCollapseHint
               : l10n.reportGroupExpandHint,
+          // The tile's own children are replaced by this node, so it
+          // carries the tap action itself.
+          onTap: _toggle,
           excludeSemantics: true,
           child: InkWell(
             key: ValueKey('lifetimeReportGroupHeader-${group.key}'),
             borderRadius: BorderRadius.circular(12),
-            onTap: () => setState(() => _expanded = !_expanded),
+            onTap: _toggle,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 48),
               child: Padding(
@@ -527,6 +536,7 @@ class _MemberLine extends ConsumerWidget {
           children: [
             Text(
               member.label,
+              textDirection: TextDirection.ltr,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colors.brandInk,
                 fontWeight: FontWeight.w600,
