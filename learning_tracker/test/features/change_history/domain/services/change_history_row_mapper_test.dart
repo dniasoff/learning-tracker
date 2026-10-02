@@ -14,8 +14,8 @@ import 'package:learning_tracker/features/change_history/domain/models/change_hi
 import 'package:learning_tracker/features/change_history/domain/services/change_history_merge.dart';
 import 'package:learning_tracker/features/change_history/domain/services/change_history_row_mapper.dart';
 
-import '../../../helpers/change_history_fixtures.dart';
-import '../../../helpers/learner_state/lock_fixtures.dart';
+import '../../../../helpers/change_history_fixtures.dart';
+import '../../../../helpers/learner_state/lock_fixtures.dart';
 
 final _ny = constantHistory(newYorkNoLocation);
 

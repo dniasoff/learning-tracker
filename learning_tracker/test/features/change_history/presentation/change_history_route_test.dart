@@ -1,13 +1,13 @@
 /// DNI-513 AC-1: the parent Change history is a NEW parent-scoped route
 /// (not `/tutor/audit-log`) behind the parent-mode gates plus a guard that
-/// refuses tutored sessions; Settings shows its entry only in parent mode;
-/// and the screen's own access check admits only an own session whose
-/// parent PIN is unlocked for the active profile.
+/// refuses tutored sessions, and Settings shows its entry only in parent
+/// mode. The screen's own access check is covered in
+/// `providers/change_history_providers_test.dart`, the guard itself in
+/// `test/core/navigation/guards/own_session_guard_test.dart`.
 library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -20,7 +20,6 @@ import 'package:learning_tracker/features/account/domain/repositories/auth_repos
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/change_history/presentation/providers/change_history_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -28,7 +27,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
     show incomingTutorGrantsProvider;
@@ -58,19 +56,6 @@ class _MockPinService extends Mock implements PinService {}
 class _FakePageRouteInfo extends Fake implements PageRouteInfo<Object?> {}
 
 const _childId = '01J6Q2H4A8M7K3P9R5T6V8WXY8';
-const _otherId = '01J6Q2H4A8M7K3P9R5T6V8WXY9';
-
-const _tutored = TutoredProfileSelection(
-  profileId: _childId,
-  ownerUid: 'parent-uid',
-  grantId: 'grant-1',
-  permissions: TutorPermissions(),
-);
-
-class _Tutored extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => _tutored;
-}
 
 class _Own extends ActiveTutoredProfileSelection {
   @override
@@ -158,64 +143,6 @@ void main() {
         pinGuard: _MockPinGuard(),
       );
       expect(await _resolve(router.ownSessionGuard), isFalse);
-    });
-
-    test(
-      'OwnSessionGuard refuses a tutored session and fails closed',
-      () async {
-        expect(
-          await _resolve(OwnSessionGuard(isTutoredSession: () => true)),
-          isFalse,
-        );
-        expect(
-          await _resolve(OwnSessionGuard(isTutoredSession: () => false)),
-          isTrue,
-        );
-        expect(
-          await _resolve(
-            OwnSessionGuard(isTutoredSession: () => throw StateError('x')),
-          ),
-          isFalse,
-        );
-      },
-    );
-  });
-
-  group('screen access', () {
-    bool access({
-      required bool tutored,
-      required String? pinFor,
-      String? active = _childId,
-    }) {
-      final container = ProviderContainer(
-        overrides: [
-          activeTutoredProfileSelectionProvider.overrideWith(
-            tutored ? _Tutored.new : _Own.new,
-          ),
-          activeProfileIdProvider.overrideWithValue(active),
-          parentPinAuthenticatedProfileIdProvider.overrideWith(
-            () => _PinFor(pinFor),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      return container.read(changeHistoryAccessProvider);
-    }
-
-    test('parent PIN unlocked for the active learner: open', () {
-      expect(access(tutored: false, pinFor: _childId), isTrue);
-    });
-
-    test('child role (no parent PIN session): closed', () {
-      expect(access(tutored: false, pinFor: null), isFalse);
-    });
-
-    test('parent PIN unlocked for another learner: closed', () {
-      expect(access(tutored: false, pinFor: _otherId), isFalse);
-    });
-
-    test('tutor device (tutored session): closed', () {
-      expect(access(tutored: true, pinFor: _childId), isFalse);
     });
   });
 

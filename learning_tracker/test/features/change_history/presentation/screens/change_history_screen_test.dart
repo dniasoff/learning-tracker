@@ -26,10 +26,10 @@ import 'package:learning_tracker/features/change_history/presentation/providers/
 import 'package:learning_tracker/features/change_history/presentation/widgets/change_history_row_tile.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 
-import '../../../helpers/change_history_fixtures.dart';
-import '../../../helpers/fake_history_ports.dart';
-import '../../../helpers/learner_state/lock_fixtures.dart';
-import 'change_history_harness.dart';
+import '../../../../helpers/change_history_fixtures.dart';
+import '../../../../helpers/fake_history_ports.dart';
+import '../../../../helpers/learner_state/lock_fixtures.dart';
+import '../change_history_harness.dart';
 
 /// Minutes from 2026-09-01T00:00Z to [t].
 int _m(DateTime t) => t.difference(historyAt(0)).inMinutes;
