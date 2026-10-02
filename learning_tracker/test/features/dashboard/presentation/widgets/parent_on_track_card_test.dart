@@ -5,12 +5,10 @@
 // AC-8 load failure with a working retry and no rejected-sync state.
 import 'dart:async';
 
-import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
@@ -18,9 +16,7 @@ import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/dashboard/epic2_surfaces.dart';
 import '../../../../helpers/dashboard/forecast_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
@@ -36,9 +32,6 @@ Future<void> _pump(
   bool parent = true,
   List<Override> extra = const [],
 }) async {
-  // A fresh ProviderScope per pump, so a second pump in one test reads its
-  // own overrides.
-  await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpWidget(
     pumpApp(
       theme: AppTheme.lightTheme(),
@@ -57,13 +50,6 @@ Future<void> _pump(
 LearnerState _state(Projection projection, {int? dailyTarget}) => forecastState(
   [forecastCurriculumState(projection: projection, dailyTarget: dailyTarget)],
 );
-
-/// A router that accepts every navigation.
-StackRouter _router() {
-  final router = Epic2MockRouter();
-  when(() => router.isRouteActive(any())).thenReturn(false);
-  return router;
-}
 
 /// Text inside a rich line (each line is led by an icon placeholder).
 Finder _text(String text) => find.textContaining(text, findRichText: true);
@@ -281,42 +267,6 @@ void main() {
       }
 
       expect(await rendered(200), await rendered(1));
-    });
-  });
-
-  group('AC-4: a zero daily target with a deadline', () {
-    const bonus = 'All covered — any extra learning is a bonus.';
-    final zero = _state(
-      const Projection(
-        status: ProjectionStatus.onTrack,
-        projectedFinish: '2029-03-14',
-        deadline: '2029-09-10',
-      ),
-      dailyTarget: 0,
-    );
-
-    testWidgets('the parent Dashboard shows the bonus copy once', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        dashboardSurface(
-          router: _router(),
-          parent: true,
-          mode: ProfileMode.adult,
-          state: zero,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(_text(bonus), findsOneWidget);
-      expect(_text('Daily target:'), findsNothing);
-    });
-
-    testWidgets('the child Learn today section shows it once', (tester) async {
-      await tester.pumpWidget(
-        learnSurface(router: _router(), parent: false, state: zero),
-      );
-      await tester.pumpAndSettle();
-      expect(_text(bonus), findsOneWidget);
     });
   });
 

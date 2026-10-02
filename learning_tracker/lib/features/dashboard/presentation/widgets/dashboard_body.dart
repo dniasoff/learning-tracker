@@ -424,6 +424,9 @@ class DashboardBody extends ConsumerWidget {
         // DNI-502: everyone else (a child without the parent PIN, a tutor)
         // sees today against the target with encouragement only.
         const NonParentTodaySection(),
+        // DNI-502: the parent on-track card (FR-18 to FR-20); it takes no
+        // space outside a parent session (NFR-9).
+        const ParentForecastSection(),
         // Tier counter row (engagement / achievement / lifetime [/ ⭐ points]).
         // Shared with Progress hub — same widget, same providers.
         // Child mode renders the fourth ⭐ points counter (see Task #14 brief).
