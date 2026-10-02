@@ -50,6 +50,11 @@ final learningAnalyticsProvider = Provider<LearningAnalytics>((ref) {
           AnalyticsEvent.capture,
           parameters: parameters,
         );
+      case LearningAnalyticsEvent.subTrackLifecycle:
+        sent = analytics.logEvent(
+          AnalyticsEvent.subTrackLifecycle,
+          parameters: parameters,
+        );
     }
     // Analytics never fails a command.
     unawaited(sent.catchError((Object _) {}));

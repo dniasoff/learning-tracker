@@ -22,17 +22,17 @@ import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
-
-export 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart'
-    show SubTrackDraft, SubTrackEdit;
 import 'package:learning_tracker/features/learning/domain/commands/child_redate_limit.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_event_plans.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_chunker.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_dispatcher.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/unlearn_plan.dart';
+
+export 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart'
+    show SubTrackDraft, SubTrackEdit;
 
 /// How long a command waits for the AD-50 points amount before it falls
 /// back to the default stage ladder, so an uncached or unreachable
@@ -198,6 +198,7 @@ final class DefaultLearningCommands implements LearningCommands {
     Duration ackWait = defaultLearningAckWait,
     Duration pointsWait = defaultPointsReadWait,
     GovernedLearningCommands? governed,
+    SubTrackCommands? subTrackCommands,
   }) : _scope = scope,
        _pointsWait = pointsWait,
        _actor = actor,
@@ -207,6 +208,7 @@ final class DefaultLearningCommands implements LearningCommands {
        _clock = clock,
        _newUlid = newUlid,
        _governed = governed,
+       _subTrackCommands = subTrackCommands,
        _dispatcher = LearningWriteDispatcher(
          scope: scope,
          port: writePort,
@@ -222,6 +224,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final UtcClock _clock;
   final UlidSource _newUlid;
   final GovernedLearningCommands? _governed;
+  final SubTrackCommands? _subTrackCommands;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
 
@@ -565,6 +568,39 @@ final class DefaultLearningCommands implements LearningCommands {
     }
     return _gated((_, _) => governed.undoAction(actionId));
   }
+
+  @override
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+  }) => _gated((_, _) async {
+    final commands = _subTrackCommands;
+    if (commands == null) return const CaptureResult.onlineRequired();
+    return commands.createSubTrack(draft, subTrackId: subTrackId);
+  });
+
+  @override
+  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>
+      _gated((_, _) async {
+        final commands = _subTrackCommands;
+        if (commands == null) return const CaptureResult.onlineRequired();
+        return commands.editSubTrack(subTrackId, edit);
+      });
+
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) => _gated((_, _) async {
+    final commands = _subTrackCommands;
+    if (commands == null) return const CaptureResult.onlineRequired();
+    return commands.endSubTrack(subTrackId);
+  });
+
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) =>
+      _gated((_, _) async {
+        final commands = _subTrackCommands;
+        if (commands == null) return const CaptureResult.onlineRequired();
+        return commands.deleteSubTrack(subTrackId);
+      });
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>

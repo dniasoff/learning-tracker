@@ -65,6 +65,9 @@ abstract final class AnalyticsEvent {
   /// DNI-469: a successful learning capture — `curriculum_id`,
   /// `source_kind` (`main` | `sub_track`), `date_state` and `count`.
   static const capture = 'capture';
+
+  /// AD-47: a successful sub-track lifecycle command; enums and counts only.
+  static const subTrackLifecycle = 'subtrack_lifecycle';
 }
 
 /// Milestone thresholds for [AnalyticsEvent.streakMilestoneReached].

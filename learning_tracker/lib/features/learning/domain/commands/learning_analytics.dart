@@ -75,6 +75,9 @@ abstract interface class LearningAnalytics {
 enum LearningAnalyticsEvent {
   /// `AnalyticsEvent.capture`.
   capture,
+
+  /// `AnalyticsEvent.subTrackLifecycle`.
+  subTrackLifecycle,
 }
 
 /// Receives one event with its enum/count-only [parameters].
@@ -102,5 +105,18 @@ final class SinkLearningAnalytics implements LearningAnalytics {
     'source_kind': sourceKind.storage,
     'date_state': dateState.storage,
     'count': count,
+  });
+
+  @override
+  void subTrackLifecycle({
+    required String curriculumId,
+    required SubTrackType type,
+    required SubTrackLifecycleAction action,
+    required int groundEntries,
+  }) => sink(LearningAnalyticsEvent.subTrackLifecycle, {
+    'curriculum_id': curriculumId,
+    'track_type': type.storage,
+    'action': action.storage,
+    'ground_entries': groundEntries,
   });
 }
