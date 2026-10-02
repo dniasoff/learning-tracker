@@ -537,6 +537,28 @@ void main() {
       await _pumpForm(tester, h, subTrackId: _existingId);
       expect(find.text('No end month'), findsNothing);
     });
+
+    testWidgets("another curriculum's row is not found, never edited", (
+      tester,
+    ) async {
+      h = SubTrackHarness(
+        seed: [storedSchoolYear(_existingId, curriculumId: 'bavli')],
+      );
+      await _pumpForm(tester, h, subTrackId: _existingId);
+      expect(find.byType(SchoolYearSubTrackForm), findsNothing);
+      expect(find.text('Save sub-track'), findsNothing);
+      expect(h.commands.edits, isEmpty);
+    });
+
+    testWidgets('an ongoing row is not found on the school-year form', (
+      tester,
+    ) async {
+      h = SubTrackHarness(seed: [storedOngoing(_existingId)]);
+      await _pumpForm(tester, h, subTrackId: _existingId);
+      expect(find.byType(SchoolYearSubTrackForm), findsNothing);
+      expect(find.text('Save sub-track'), findsNothing);
+      expect(h.commands.edits, isEmpty);
+    });
   });
 
   group('AC-3 parent session', () {

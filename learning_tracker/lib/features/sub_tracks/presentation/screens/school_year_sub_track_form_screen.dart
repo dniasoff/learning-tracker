@@ -85,7 +85,18 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
           data: (tracks) {
             SubTrack? existing;
             if (subTrackId case final id?) {
-              existing = tracks.where((t) => t.id == id).firstOrNull;
+              // The id must name a school-year row of this route's
+              // curriculum: a stale or crafted URL must not edit another
+              // curriculum's row (or an ongoing one) against the wrong
+              // sibling set.
+              existing = tracks
+                  .where(
+                    (t) =>
+                        t.id == id &&
+                        t.curriculumId == curriculumId &&
+                        t.type == SubTrackType.schoolYear,
+                  )
+                  .firstOrNull;
               if (existing == null) {
                 return AppErrorView(
                   error: SubTrackNotFoundForFormException(id),
@@ -108,7 +119,8 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
   }
 }
 
-/// The edited sub-track is not in the learner's complete sub-track read.
+/// The edited sub-track is not a school-year row of the route's curriculum
+/// in the learner's complete sub-track read.
 final class SubTrackNotFoundForFormException implements Exception {
   /// Creates the exception.
   const SubTrackNotFoundForFormException(this.subTrackId);
