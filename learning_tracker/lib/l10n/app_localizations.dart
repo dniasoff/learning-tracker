@@ -836,6 +836,42 @@ abstract class AppLocalizations {
   /// **'All covered — any extra learning is a bonus.'**
   String get todayTargetAllCovered;
 
+  /// No description provided for @todayTargetGoalDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s goal is done — wonderful!'**
+  String get todayTargetGoalDone;
+
+  /// No description provided for @todayTargetLearntToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} learnt today'**
+  String todayTargetLearntToday(String count);
+
+  /// No description provided for @todayTargetLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Great pace! Only one left to finish today\'s goal.} other{Great pace! Only {count} left to finish today\'s goal.}}'**
+  String todayTargetLeft(int count);
+
+  /// No description provided for @todayTargetProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Today {done} of {target} done'**
+  String todayTargetProgress(String done, String target);
+
+  /// No description provided for @todayTargetStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Every step counts — let\'s begin!'**
+  String get todayTargetStart;
+
+  /// No description provided for @todayTargetStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1-day streak} other{{count}-day streak}}'**
+  String todayTargetStreak(int count);
+
   /// No description provided for @onboarding.
   ///
   /// In en, this message translates to:

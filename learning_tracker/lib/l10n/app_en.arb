@@ -284,6 +284,43 @@
   },
   "onTrackTooEarly": "Too early to tell",
   "todayTargetAllCovered": "All covered — any extra learning is a bonus.",
+  "todayTargetGoalDone": "Today's goal is done — wonderful!",
+  "todayTargetLearntToday": "{count} learnt today",
+  "@todayTargetLearntToday": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "todayTargetLeft": "{count, plural, =1{Great pace! Only one left to finish today's goal.} other{Great pace! Only {count} left to finish today's goal.}}",
+  "@todayTargetLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayTargetProgress": "Today {done} of {target} done",
+  "@todayTargetProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "todayTargetStart": "Every step counts — let's begin!",
+  "todayTargetStreak": "{count, plural, =1{1-day streak} other{{count}-day streak}}",
+  "@todayTargetStreak": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "onboarding": "Onboarding",
   "getStarted": "Get Started",
   "ctaGetStartedTitle": "Get started",
