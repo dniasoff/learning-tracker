@@ -13,7 +13,9 @@
 /// Story 2.6's detail screen (DNI-497) hosts these: it wraps its body in
 /// [GroundPickerSplitView] and places [AddGroundButton] in its ground
 /// section. Until DNI-497 lands on the integration branch they have no
-/// production host (follow-up bead in the DNI-498 hand-off).
+/// production host: merge-gate bead learning-tracker-fyh.228, enforced by
+/// `test/features/sub_tracks/presentation/screens/add_ground_host_gate_test.dart`,
+/// which fails as soon as `SubTrackDetailScreen` exists without them.
 library;
 
 import 'package:auto_route/auto_route.dart';
