@@ -257,8 +257,6 @@ void main() {
         time: const TimeOfDay(hour: 19, minute: 0),
         title: 'Learning Reminder',
         body: expectedBody,
-        location: null,
-        inIsrael: false,
       );
 
       // Then: scheduleBatchRemindersForProfile was called exactly once with
@@ -370,8 +368,6 @@ void main() {
         time: time,
         title: title,
         body: bodyBefore,
-        location: null,
-        inIsrael: false,
       );
       expect(
         notifService.scheduledBatches,
@@ -386,8 +382,6 @@ void main() {
         time: time,
         title: title,
         body: bodyAfter,
-        location: null,
-        inIsrael: false,
       );
 
       // Two scheduleBatchRemindersForProfile calls recorded (cancel-then-

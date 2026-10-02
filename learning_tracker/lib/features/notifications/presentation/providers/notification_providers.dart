@@ -8,8 +8,8 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/notifications/data/repositories/firestore_notifications_completion_adapter.dart';
 import 'package:learning_tracker/features/notifications/data/repositories/shared_prefs_streak_alert_markers.dart';
-import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
     show NotificationPreferencesRepository;
@@ -18,8 +18,8 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -348,26 +348,11 @@ String buildNotificationSettingsSignature({
 
 /// Returns true if notifications should currently be suppressed because
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
-/// notifications follow the same window the lock screen does.
+/// notifications follow the same lock the overlay does (DNI-481 AC-5: the
+/// union of `lockWindows` over the account's learners, fail-closed).
 @riverpod
 bool isSacredTimeActive(Ref ref) {
   return ref.watch(currentSacredWindowProvider) != null;
-}
-
-/// Provides the [SacredWindowRepository] singleton.
-///
-/// Kept alive so the in-memory cache survives across provider rebuilds.
-/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
-/// on resume (DNI-367).
-///
-/// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
-/// dead — nothing in Dart read the windows back, and no native SQLite reader
-/// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
-/// device-local ("Stays local, never leaves the device") — it is not a
-/// Firestore migration target, so the repository is constructed bare.
-@Riverpod(keepAlive: true)
-SacredWindowRepository sacredWindowRepository(Ref ref) {
-  return SacredWindowRepository();
 }
 
 /// Provides the [NotificationScheduler] instance.
@@ -375,10 +360,10 @@ SacredWindowRepository sacredWindowRepository(Ref ref) {
 NotificationScheduler notificationScheduler(Ref ref) {
   final service = ref.watch(notificationServiceProvider);
   final analytics = ref.watch(analyticsServiceProvider);
-  final sacredRepo = ref.watch(sacredWindowRepositoryProvider);
   return NotificationScheduler(
     service: service,
-    sacredWindowRepository: sacredRepo,
+    // DNI-481 AC-5: the SAME lock predicate as the overlay.
+    isLockedAt: ref.watch(deviceLockPredicateProvider),
     analytics: analytics,
   );
 }
@@ -496,10 +481,6 @@ Future<void> reminderSyncEffect(Ref ref) async {
     return;
   }
 
-  // Resolve Sacred Location for per-fire-time window filtering (DNI-367).
-  final location = ref.read(sacredLocationProvider);
-  final inIsrael = ref.read(inIsraelProvider);
-
   // Build locale-aware notification body (UX-DR7). The active UI locale is
   // resolved from the locale provider and looked up via lookupAppLocalizations,
   // so the background-scheduled body matches the user's chosen language.
@@ -514,8 +495,6 @@ Future<void> reminderSyncEffect(Ref ref) async {
     time: time,
     title: l10n.notificationReminderTitle,
     body: body,
-    location: location,
-    inIsrael: inIsrael,
   );
 }
 
@@ -583,11 +562,8 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
   final scheduler = ref.read(notificationSchedulerProvider);
   final ownDeviceProfileId = ref.watch(selectedProfileIdProvider);
 
-  // L2: resolve Sacred Location so per-profile reminders get the SAME per-fire
-  // Sacred-Time suppression the active path uses (not just a one-time global
-  // check).
-  final location = ref.read(sacredLocationProvider);
-  final inIsrael = ref.read(inIsraelProvider);
+  // L2: per-profile reminders get the SAME per-fire Sacred-Time suppression
+  // the active path uses: the scheduler's lock predicate (DNI-481 AC-5).
 
   // Locale-aware notification copy (UX-DR7) resolved from the active UI locale.
   final l10n = lookupAppLocalizations(ref.read(currentAppLocaleProvider));
@@ -656,8 +632,6 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
         time: TimeOfDay(hour: hour, minute: minute),
         title: l10n.notificationReminderTitle,
         body: l10n.notificationReminderGenericBody,
-        location: location,
-        inIsrael: inIsrael,
       );
     }
 

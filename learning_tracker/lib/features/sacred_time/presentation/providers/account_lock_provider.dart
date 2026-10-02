@@ -100,3 +100,16 @@ LearnerSettingsHistory _historyOrFailClosed(
   }
   return history.requireValue;
 }
+
+/// The device lock predicate for a UTC instant: [isLockedAt] over
+/// [accountLockHistoriesProvider] — the SAME union the lock overlay shows
+/// (AD-36), so notification suppression and reminders never disagree with
+/// the overlay (DNI-481 AC-5). Rebuilt whenever a learner's settings
+/// change, so future scheduling follows a settings change while a past
+/// instant keeps the settings in force then.
+final deviceLockPredicateProvider = Provider<bool Function(DateTime utc)>((
+  ref,
+) {
+  final histories = ref.watch(accountLockHistoriesProvider);
+  return (utc) => isLockedAt(histories, utc);
+});

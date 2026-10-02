@@ -190,7 +190,6 @@ lib/features/learning/presentation/providers/completion_writer_providers.dart
 lib/features/learning/presentation/providers/learning_ledger_providers.dart
 lib/features/learning/presentation/providers/optimistic_completion_provider.dart
 lib/features/notifications/data/repositories/firestore_notifications_completion_adapter.dart
-lib/features/notifications/data/services/sacred_window_repository.dart
 lib/features/notifications/domain/models/reminder_preferences.dart
 lib/features/notifications/domain/repositories/notification_preferences_repository.dart
 lib/features/notifications/domain/services/notification_initializer.dart
@@ -265,10 +264,8 @@ lib/features/sacred_time/data/services/location_service.dart
 lib/features/sacred_time/domain/models/city.dart
 lib/features/sacred_time/domain/models/sacred_location.dart
 lib/features/sacred_time/domain/models/sacred_window.dart
-lib/features/sacred_time/domain/services/zmanim_window_service.dart
 lib/features/sacred_time/presentation/providers/cities_provider.dart
 lib/features/sacred_time/presentation/providers/sacred_location_provider.dart
-lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart
 lib/features/sacred_time/presentation/screens/city_picker_screen.dart
 lib/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart
 lib/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart

@@ -104,17 +104,37 @@ void main() {
     });
 
     test(
-      'buildFireTimesForTest returns up to 14 entries without repository',
+      'buildFireTimesForTest returns up to 14 entries without a lock predicate',
       () {
         final fireTimes = scheduler.buildFireTimesForTest(
           time: const TimeOfDay(hour: 19, minute: 0),
-          location: null,
-          inIsrael: false,
           fromDay: DateTime(2026, 5, 13), // a Wednesday
         );
-        // Without a sacred window repository, all 14 entries should be returned.
+        // Without a lock predicate, all 14 entries should be returned.
         expect(fireTimes.length, equals(kBatchDays));
       },
     );
+
+    test('DNI-481 AC-5: a fire time the lock predicate holds locked is '
+        'dropped; every other day stays eligible', () {
+      final judged = <DateTime>[];
+      final locking = NotificationScheduler(
+        service: mockService,
+        isLockedAt: (utc) {
+          judged.add(utc);
+          return judged.length.isOdd; // lock every other candidate
+        },
+      );
+      final fireTimes = locking.buildFireTimesForTest(
+        time: const TimeOfDay(hour: 19, minute: 0),
+        fromDay: DateTime(2026, 5, 13),
+      );
+      expect(judged, hasLength(kBatchDays));
+      expect(judged.every((t) => t.isUtc), isTrue);
+      expect(fireTimes, hasLength(kBatchDays ~/ 2));
+      expect(fireTimes.map((t) => t.toUtc()), [
+        for (var i = 1; i < judged.length; i += 2) judged[i],
+      ]);
+    });
   });
 }

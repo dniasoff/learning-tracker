@@ -7,13 +7,11 @@
 //
 // AUD-notifications-06: minimal exports — only the types demonstrably
 // consumed by another feature live here (same discipline as
-// lib/features/progress/progress.dart). Consumed by:
-//   - lib/features/notifications/data/services/sacred_window_repository.dart
-//   - test/features/notifications/data/services/sacred_window_repository_test.dart
-//     (AUD-notifications-09 — needs SacredLocationSource to build fixtures)
+// lib/features/progress/progress.dart). DNI-481 retired the old window
+// service (R9); the one lock source is `lockWindows` (lib/domain) read
+// through the sacred-time providers.
 library sacred_time;
 
 export 'domain/models/sacred_location.dart'
     show SacredLocation, SacredLocationSource;
-export 'domain/models/sacred_window.dart' show SacredWindow;
-export 'domain/services/zmanim_window_service.dart' show ZmanimWindowService;
+export 'domain/models/sacred_window.dart' show SacredWindow, SacredWindowKind;
