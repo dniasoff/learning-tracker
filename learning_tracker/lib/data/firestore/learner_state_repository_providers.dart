@@ -14,9 +14,12 @@
 ///   is the validated grant's `parent_uid` from
 ///   [resolveActiveAccountAndProfile] (ruling B10). Either way the pair is
 ///   wrapped in a [LearnerScope];
-/// - no active account, no active profile, or an account whose path uid is
-///   not yet bound resolves to `null` ("not ready"), never a crash, matching
-///   the rest of the provider layer;
+/// - no active account, no active profile, an account whose path uid is
+///   not yet bound, or an active account id with no authenticated session
+///   ([AccountNotAuthenticatedException] — signed out, or restored before
+///   sign-in) resolves to `null` ("not ready"), never a terminal error
+///   (orchestrator ruling B1: "treat a null or unauthenticated handle as not
+///   ready"). Every other resolution failure still surfaces as an error;
 /// - an account with a pending AD-19 re-home (a non-null
 ///   `previousFirebaseUid` breadcrumb after an anon-uid remap) is REFUSED
 ///   with [LearnerScopeRehomePendingException]: the learner's events,
@@ -35,6 +38,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/registry/path_uid_resolver.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
@@ -83,13 +87,31 @@ final class LearnerScopeRehomePendingException implements Exception {
       'and its learner data has not been re-homed yet';
 }
 
+/// The active account's Firestore handles, or null while no account is
+/// active OR the active account id has no authenticated session
+/// ([AccountNotAuthenticatedException]) — ruling B1: an unauthenticated
+/// handle is "not ready", not a crash. Watching the shared provider's
+/// `.future` keeps the dependency, so the sign-in that re-sets the id
+/// re-resolves every learner-state provider. Any other failure propagates.
+Future<AccountFirebaseHandles?> _readyHandles(Ref ref) async {
+  try {
+    return await ref.watch(activeAccountFirebaseProvider.future);
+  } on AccountNotAuthenticatedException {
+    return null;
+  }
+}
+
 /// The active learner's [LearnerScope], or null while no account or no
-/// profile is active, or while the active account's path uid is unbound.
+/// profile is active, while the active account is unauthenticated, or while
+/// the active account's path uid is unbound.
 /// A stale/invalid tutor selection, a non-ULID profile id, or an account id
 /// with no registry row surfaces as an error (same contract as the
 /// profile-scoped providers in `repository_providers.dart`), as does an
 /// account with a pending re-home ([LearnerScopeRehomePendingException]).
 final activeLearnerScopeProvider = FutureProvider<LearnerScope?>((ref) async {
+  // Not ready while the active account is unauthenticated (ruling B1). The
+  // shared seam below awaits the same handle, so gate on it first.
+  if (await _readyHandles(ref) == null) return null;
   final resolved = await resolveActiveAccountAndProfile(ref);
   if (resolved == null) return null;
   final (_, grantOrLiveOwnerUid, profileId) = resolved;
@@ -127,20 +149,22 @@ final activeLearnerScopeProvider = FutureProvider<LearnerScope?>((ref) async {
 }, retry: (retryCount, error) => null);
 
 /// [LearningEventRepository] over the active account's Firestore handle,
-/// or null while no account is active. Scope is passed per call.
+/// or null while no account is active or it is unauthenticated (ruling B1).
+/// Scope is passed per call.
 final learningEventRepositoryProvider =
     FutureProvider<LearningEventRepository?>((ref) async {
-      final handles = await ref.watch(activeAccountFirebaseProvider.future);
+      final handles = await _readyHandles(ref);
       if (handles == null) return null;
       return FirestoreLearningEventRepository(firestore: handles.firestore);
     }, retry: (retryCount, error) => null);
 
 /// [SubTrackRepository] over the active account's Firestore handle, or
-/// null while no account is active. Scope is passed per call.
+/// null while no account is active or it is unauthenticated (ruling B1).
+/// Scope is passed per call.
 final subTrackRepositoryProvider = FutureProvider<SubTrackRepository?>((
   ref,
 ) async {
-  final handles = await ref.watch(activeAccountFirebaseProvider.future);
+  final handles = await _readyHandles(ref);
   if (handles == null) return null;
   return FirestoreSubTrackRepository(firestore: handles.firestore);
 }, retry: (retryCount, error) => null);
