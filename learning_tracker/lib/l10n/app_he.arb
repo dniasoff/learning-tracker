@@ -1393,6 +1393,7 @@
   "groundPickerLoadError": "לא ניתן היה לטעון את תוכנית הלימוד.",
   "groundPickerNoMatches": "אין תוצאות עבור “{query}”.",
   "groundPickerNotSelected": "לא נבחר",
+  "groundPickerOnlineRequired": "אין חיבור לאינטרנט. אפשר להוסיף חומר כשהחיבור יחזור. לא בוצע שינוי.",
   "groundPickerPartlySelected": "נבחר חלקית",
   "groundPickerProgressComplete": "הושלם",
   "groundPickerProgressEmpty": "ריק",

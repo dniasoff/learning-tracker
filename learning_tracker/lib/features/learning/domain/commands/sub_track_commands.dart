@@ -171,11 +171,15 @@ final class SubTrackEdit {
   /// one change-log entry. Every node must belong to the sub-track's own
   /// curriculum. Exclusive with [ground]; a replay appends nothing.
   ///
-  /// Online, when the repository implements [SubTrackLatestWrite], the new
-  /// list is derived from the row the server holds at commit time inside
-  /// one transaction, so two devices appending at once both keep their
-  /// nodes. Offline it is derived from the cached row and queued (AD-38
-  /// per-field LWW applies to that queued batch).
+  /// An append needs the server: the new list is derived from the row the
+  /// server holds at commit time inside one transaction
+  /// ([SubTrackLatestWrite]), so two devices appending at once both keep
+  /// their nodes. It is never queued: a whole list derived from a cached
+  /// row and replayed after reconnecting would, under AD-38 per-field LWW,
+  /// overwrite nodes another device appended meanwhile, and the rules do
+  /// not compare `ground` with the server row. Offline, or when the
+  /// repository has no latest-row write, the command returns
+  /// `CaptureResult.onlineRequired()` and writes nothing.
   final List<NodeEntry>? appendGround;
 }
 
@@ -321,17 +325,22 @@ final class SubTrackCommands {
     if (!_encodes(candidate)) {
       return const CaptureResult.rejected(CaptureRejection.invalid);
     }
-    if (_subTracks case final SubTrackLatestWrite writer
-        when appended != null && corpus != null) {
-      final atomic = await _appendToLatest(
-        writer,
-        subTrackId,
-        edit,
-        corpus: corpus,
-        siblings: siblings,
-      );
-      // Null: the server is unreachable; queue the batch below instead.
-      if (atomic != null) return atomic;
+    if (appended != null) {
+      // Never queue a whole-list `ground` built from the cached row (see
+      // SubTrackEdit.appendGround): an append commits on the server or not
+      // at all.
+      if (_subTracks case final SubTrackLatestWrite writer
+          when corpus != null) {
+        return await _appendToLatest(
+              writer,
+              subTrackId,
+              edit,
+              corpus: corpus,
+              siblings: siblings,
+            ) ??
+            const CaptureResult.onlineRequired();
+      }
+      return const CaptureResult.onlineRequired();
     }
     final entryId = _newId();
     final entry = _entry(subTrackId, entryId, before: before, after: after);
@@ -398,9 +407,10 @@ final class SubTrackCommands {
   /// written with one change-log entry whose `before` is that row. The
   /// picks were already checked against [corpus] on the cached row.
   ///
-  /// Returns null when the server cannot be reached (nothing written; the
-  /// caller queues the ordinary batch), else the command result. A latest
-  /// row that already covers every pick writes nothing (success).
+  /// Returns null when the server cannot be reached (nothing written or
+  /// queued; the caller answers `onlineRequired`), else the command
+  /// result. A latest row that already covers every pick writes nothing
+  /// (success).
   Future<CaptureResult?> _appendToLatest(
     SubTrackLatestWrite writer,
     String subTrackId,

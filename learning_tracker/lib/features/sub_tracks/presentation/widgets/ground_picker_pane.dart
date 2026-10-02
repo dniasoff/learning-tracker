@@ -24,40 +24,11 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ground_selection.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_assignment_rollbacks_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_picker_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ground_picker_labels.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ground_picker_row.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ground_picker_tree.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-
-/// Shows the rollback snackbar (UX-DR-127) when a queued ground assignment
-/// of [subTrackId] the server later refused has been reverted. Call from
-/// `build` of every widget that outlives or hosts the picker (the picker
-/// itself and *Add ground*); each rollback is announced once, by whichever
-/// listener takes it first.
-void listenForGroundRollbacks(
-  WidgetRef ref,
-  BuildContext context,
-  String subTrackId,
-) {
-  ref.listen(
-    groundAssignmentRollbacksProvider.select((s) => s[subTrackId] ?? 0),
-    (previous, next) {
-      if (next <= (previous ?? 0)) return;
-      if (!ref
-          .read(groundAssignmentRollbacksProvider.notifier)
-          .take(subTrackId)) {
-        return;
-      }
-      final l10n = AppLocalizations.of(context);
-      if (l10n == null) return;
-      ScaffoldMessenger.maybeOf(
-        context,
-      )?.showSnackBar(SnackBar(content: Text(l10n.groundPickerRejected)));
-    },
-  );
-}
 
 /// The picker for sub-track [subTrackId].
 class GroundPickerPane extends ConsumerStatefulWidget {
@@ -119,15 +90,14 @@ class _GroundPickerPaneState extends ConsumerState<GroundPickerPane> {
     final model = inputs.model;
     final ground = [...model.ownGround, ...model.appended(draft)];
     final picks = draft.picks.toList();
-    // Read before the await: the picker may close while the write runs.
-    final rollbacks = ref.read(groundAssignmentRollbacksProvider.notifier);
     _controller.submitting(ground);
     CaptureResult result;
-    LearningCommands? commands;
     try {
-      commands = await ref.read(learningCommandsProvider.future);
+      final commands = await ref.read(learningCommandsProvider.future);
+      // Not ready (no account or learner yet) is a plain refusal; only the
+      // command itself says when the server is needed.
       result = commands == null
-          ? const CaptureResult.onlineRequired()
+          ? const CaptureResult.rejected(CaptureRejection.notSaved)
           : await commands.editSubTrack(
               inputs.track.id,
               SubTrackEdit(appendGround: picks),
@@ -135,23 +105,24 @@ class _GroundPickerPaneState extends ConsumerState<GroundPickerPane> {
     } on Object {
       result = const CaptureResult.rejected(CaptureRejection.notSaved);
     }
-    // Queued offline: the local write shows at once, but the server may
-    // still refuse it. Watch for that, past this picker's lifetime, so a
-    // late refusal is announced once the data layer has reverted it.
-    if (result case CaptureSuccess(queued: true) when commands != null) {
-      rollbacks.trackQueued(commands, inputs.track.id, result);
-    }
     if (!mounted) return;
     if (result is CaptureSuccess) {
       _controller.accepted();
       widget.onClose();
       return;
     }
-    // Rolled back to the last accepted ground (UX-DR-127).
+    // Rolled back to the last accepted ground (UX-DR-127). An append is
+    // never queued (it is derived from the server's row), so offline it is
+    // refused as online-required and the parent's picks are kept.
     _controller.rejected();
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
-        content: Text(AppLocalizations.of(context)!.groundPickerRejected),
+        content: Text(
+          result is CaptureOnlineRequired
+              ? l10n.groundPickerOnlineRequired
+              : l10n.groundPickerRejected,
+        ),
       ),
     );
   }
@@ -159,7 +130,6 @@ class _GroundPickerPaneState extends ConsumerState<GroundPickerPane> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    listenForGroundRollbacks(ref, context, widget.subTrackId);
     final access = ref.watch(groundPickerAccessProvider(widget.subTrackId));
     final name = switch (access) {
       AsyncData(value: GroundPickerReady(:final inputs)) => inputs.track.name,

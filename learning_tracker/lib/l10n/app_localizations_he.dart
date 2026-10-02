@@ -2657,6 +2657,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get groundPickerNotSelected => 'לא נבחר';
 
   @override
+  String get groundPickerOnlineRequired =>
+      'אין חיבור לאינטרנט. אפשר להוסיף חומר כשהחיבור יחזור. לא בוצע שינוי.';
+
+  @override
   String get groundPickerPartlySelected => 'נבחר חלקית';
 
   @override

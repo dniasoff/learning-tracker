@@ -88,7 +88,9 @@ void main() {
   }) => SubTrackCommands(
     scope: scope,
     actor: actor,
-    subTracks: subTracks ?? repo,
+    // Like FirestoreSubTrackRepository, the default device commits an
+    // append as a latest-row (server) write; its cache is the server.
+    subTracks: subTracks ?? LatestWriteSubTrackRepository(repo),
     intent: intent,
     today: () => _today,
     nowUtc: () => _now,
@@ -281,6 +283,19 @@ void main() {
       expect(repo.calls, isEmpty);
     });
 
+    test('a repository without a latest-row write refuses the append as '
+        'online-required and writes nothing', () async {
+      repo.seed(scope, [_school()]);
+      final plain = build(subTracks: repo);
+      addTearDown(plain.dispose);
+      expect(
+        await add(const [berakhot1], via: plain),
+        const CaptureResult.onlineRequired(),
+      );
+      expect(repo.calls, isEmpty);
+      expect(storedGround(), isEmpty);
+    });
+
     test('an empty pick writes nothing', () async {
       repo.seed(scope, [_school()]);
       expect(await add(const []), const CaptureResult.success());
@@ -354,16 +369,35 @@ void main() {
       expect(repo.entries, hasLength(1));
     });
 
-    test('offline the append is queued as the ordinary batch from the '
-        'cached row', () async {
+    test('offline the append is refused as online-required: no stale '
+        'whole-list batch is queued from the cached row', () async {
       repo.offline = true;
       final result = await add(const [berakhot1], via: onTablet);
-      expect(result, isA<CaptureSuccess>());
-      expect((result as CaptureSuccess).queued, isTrue);
+      expect(result, const CaptureResult.onlineRequired());
       expect(tablet.builds, 0);
-      expect(repo.heldCount, 1);
-      expect(storedGround(), const [berakhot1]);
-      repo.settleHeld();
+      expect(repo.heldCount, 0);
+      expect(repo.calls, isEmpty);
+      expect(storedGround(), isEmpty);
+    });
+
+    test('a device that was offline cannot later overwrite an append the '
+        'other device made meanwhile', () async {
+      // The tablet's attempt while offline left nothing behind to replay.
+      repo.offline = true;
+      expect(
+        await add(const [berakhot1], via: onTablet),
+        const CaptureResult.onlineRequired(),
+      );
+      repo.offline = false;
+      await add(const [_peah1], via: onPhone);
+      // Back online, the tablet (cache still stale) appends to the
+      // server's row: both survive.
+      expect(
+        await add(const [berakhot1], via: onTablet),
+        isA<CaptureSuccess>(),
+      );
+      expect(storedGround(), const [_peah1, berakhot1]);
+      expect(repo.entries, hasLength(2));
     });
   });
 }

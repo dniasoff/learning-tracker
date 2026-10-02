@@ -13,9 +13,10 @@
 /// It is a separate interface, not a [SubTrackRepository] member, so every
 /// existing implementation and fake keeps compiling; the commands use it
 /// only when the injected repository implements it. It needs the server:
-/// offline it throws [OnlineRequiredException], and the caller falls back
-/// to the ordinary queued
-/// [SubTrackRepository.applyGovernedChange] batch.
+/// offline it throws [OnlineRequiredException], and the caller refuses the
+/// append as online-required. It never falls back to a queued
+/// [SubTrackRepository.applyGovernedChange] batch, whose whole list from a
+/// stale cache could overwrite a concurrent append when it syncs.
 library;
 
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';

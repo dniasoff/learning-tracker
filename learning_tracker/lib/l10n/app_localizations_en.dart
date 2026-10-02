@@ -2688,6 +2688,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groundPickerNotSelected => 'Not selected';
 
   @override
+  String get groundPickerOnlineRequired =>
+      'You\'re offline. Ground can be added once you\'re back online. Nothing was changed.';
+
+  @override
   String get groundPickerPartlySelected => 'Partly selected';
 
   @override

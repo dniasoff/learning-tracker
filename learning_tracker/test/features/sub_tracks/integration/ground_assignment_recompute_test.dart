@@ -5,7 +5,8 @@
 // ContentIndex — recomputes on the same screen. The FR-19 fixture: School
 // (school-year, 10/wk, groundless, all Berachos unlearnt) with a deadline;
 // adding Berachos perakim 1–3 takes 19 leaves off the main track and leaves
-// the daily target unchanged. A refused write rolls back with a snackbar.
+// the daily target unchanged. A refused write rolls back with a snackbar;
+// offline the append is refused as online-required, never queued.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +31,7 @@ import '../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../helpers/pump_app.dart';
 import '../../../helpers/sub_tracks/ground_picker_harness.dart';
+import '../../../helpers/sub_tracks/latest_write_sub_track_repository.dart';
 
 const _today = '2026-10-01';
 final _now = DateTime.parse('${_today}T12:00:00Z');
@@ -106,7 +108,9 @@ final class _Rig {
         role: ActorRole.parent,
         displayName: '',
       ),
-      subTracks: world.subTracks,
+      // Like FirestoreSubTrackRepository: the append commits as a
+      // latest-row (server) write.
+      subTracks: LatestWriteSubTrackRepository(world.subTracks),
       intent: world.intent,
       today: () => _today,
       nowUtc: () => _now,
@@ -251,54 +255,27 @@ void main() {
     expect(find.text('Already in School'), findsNothing);
   });
 
-  testWidgets('a queued assignment closes the picker; when the server later '
-      'refuses it, the ground and target roll back and the rollback is '
-      'announced once', (tester) async {
-    final rig = _Rig();
-    final repo = rig.world.subTracks
-      ..offline = true
-      ..failNextWith(const PermanentWriteRejection('permission-denied'));
-    await rig.pump(tester);
-    await _pickBerakhot1to3(tester);
-    await _confirm(tester);
-    // Queued: applied locally at once, no refusal yet.
-    expect(repo.heldCount, 1);
-    expect(rig.closed, 1);
-    expect(find.text('target 5 · remaining 4173'), findsOneWidget);
-    expect(
-      find.text("Couldn't add the ground. Nothing was changed."),
-      findsNothing,
-    );
-    // Reconnect: the server refuses the batch for good.
-    await tester.runAsync(() async {
-      repo.settleHeld();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pumpAndSettle();
-    expect(repo.tracksOf(rig.world.scope).single.ground, isEmpty);
-    expect(find.text('target 5 · remaining 4192'), findsOneWidget);
-    expect(
-      find.text("Couldn't add the ground. Nothing was changed."),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('a queued assignment the server accepts announces nothing', (
-    tester,
-  ) async {
+  testWidgets('offline the assignment is refused as online-required: '
+      'nothing is written or queued, the picks are kept and the target '
+      'is unchanged', (tester) async {
     final rig = _Rig();
     final repo = rig.world.subTracks..offline = true;
     await rig.pump(tester);
     await _pickBerakhot1to3(tester);
     await _confirm(tester);
-    expect(rig.closed, 1);
-    await tester.runAsync(() async {
-      repo.settleHeld();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    await tester.pumpAndSettle();
-    expect(repo.tracksOf(rig.world.scope).single.ground, hasLength(3));
-    expect(find.text('target 5 · remaining 4173'), findsOneWidget);
-    expect(find.byType(SnackBar), findsNothing);
+    expect(repo.heldCount, 0);
+    expect(repo.calls, isEmpty);
+    expect(repo.entries, isEmpty);
+    expect(repo.tracksOf(rig.world.scope).single.ground, isEmpty);
+    expect(rig.closed, 0);
+    expect(
+      find.text(
+        "You're offline. Ground can be added once you're back online. "
+        'Nothing was changed.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('target 5 · remaining 4192'), findsOneWidget);
+    expect(find.text('Add 3 Perakim to School'), findsOneWidget);
   });
 }
