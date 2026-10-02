@@ -69,6 +69,29 @@ final class SubTrackTestEngine {
   /// When true, the next recorded event is found lock-stamped (one-shot).
   bool lockStampNext = false;
 
+  /// When true, recorded events stay pending (queued offline, not yet
+  /// synced): stored but neither counted nor lock-ignored until
+  /// [syncPending] runs.
+  bool holdPending = false;
+
+  final List<String> _pending = [];
+
+  /// Syncs every pending event; with [lockStamped] the engine finds them
+  /// recorded inside a lock (the lock crossed before sync).
+  void syncPending({bool lockStamped = false}) {
+    for (final id in [..._pending]) {
+      final (source, ref) = _events[id]!;
+      if (lockStamped) {
+        _lockIgnored.add(id);
+      } else {
+        _counted.add(id);
+        _ticked.putIfAbsent(source, () => {}).add(ref);
+      }
+    }
+    _pending.clear();
+    _emit();
+  }
+
   final _controller = StreamController<LearnerState>.broadcast();
   late LearnerState _state = _derive();
 
@@ -84,7 +107,9 @@ final class SubTrackTestEngine {
   /// Applies a captured event.
   void record(String eventId, String source, String ref) {
     _events[eventId] = (source, ref);
-    if (lockStampNext) {
+    if (holdPending) {
+      _pending.add(eventId);
+    } else if (lockStampNext) {
       lockStampNext = false;
       _lockIgnored.add(eventId);
     } else {

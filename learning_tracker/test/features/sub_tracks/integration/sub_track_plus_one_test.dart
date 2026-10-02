@@ -184,6 +184,45 @@ void main() {
     expect(find.text('Recorded 1'), findsNothing);
   });
 
+  testWidgets('AC-5: the lock crosses before an offline capture syncs: after '
+      'sync the row reflects the engine and the learner is told once', (
+    tester,
+  ) async {
+    final (engine, _) = await _pump(tester);
+    engine.holdPending = true;
+    await tester.tap(_plusOne(schoolId));
+    await tester.pumpAndSettle();
+    expect(find.text('Recorded 1'), findsOneWidget);
+    expect(_lineText(tester, schoolId), 'Next: Berachos 1:4');
+
+    engine.syncPending(lockStamped: true);
+    await tester.pumpAndSettle();
+    expect(_lineText(tester, schoolId), 'Next: Berachos 1:4');
+    expect(
+      find.text('Kept, not counted — recorded during Shabbos'),
+      findsOneWidget,
+    );
+    // Told once: a later emission does not repeat it.
+    engine.syncPending();
+    await tester.pump();
+    expect(find.text('Recorded 1'), findsNothing);
+  });
+
+  testWidgets('a queued capture that syncs normally needs no further '
+      'message', (tester) async {
+    final (engine, _) = await _pump(tester);
+    engine.holdPending = true;
+    await tester.tap(_plusOne(schoolId));
+    await tester.pumpAndSettle();
+    engine.syncPending();
+    await tester.pumpAndSettle();
+    expect(_lineText(tester, schoolId), 'Next: Berachos 1:5');
+    expect(
+      find.text('Kept, not counted — recorded during Shabbos'),
+      findsNothing,
+    );
+  });
+
   testWidgets('a refused capture shows the retry message and writes nothing', (
     tester,
   ) async {
