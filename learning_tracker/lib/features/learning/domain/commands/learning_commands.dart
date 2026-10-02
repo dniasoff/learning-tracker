@@ -10,6 +10,7 @@ library;
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/default_points.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -28,6 +29,11 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_fail
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_chunker.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_dispatcher.dart';
 import 'package:learning_tracker/features/learning/domain/commands/unlearn_plan.dart';
+
+/// How long a command waits for the AD-50 points amount before it falls
+/// back to the default stage ladder, so an uncached or unreachable
+/// `point_configs` read never blocks an offline capture (AC-9).
+const Duration defaultPointsReadWait = Duration(seconds: 2);
 
 /// The replacement fields of `LearningCommands.replace`; null keeps the
 /// target's value.
@@ -148,8 +154,10 @@ final class DefaultLearningCommands implements LearningCommands {
     required UtcClock clock,
     required UlidSource newUlid,
     Duration ackWait = defaultLearningAckWait,
+    Duration pointsWait = defaultPointsReadWait,
     GovernedLearningCommands? governed,
   }) : _scope = scope,
+       _pointsWait = pointsWait,
        _actor = actor,
        _reads = reads,
        _gate = gate,
@@ -173,6 +181,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final UlidSource _newUlid;
   final GovernedLearningCommands? _governed;
   final LearningWriteDispatcher _dispatcher;
+  final Duration _pointsWait;
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -214,6 +223,23 @@ final class DefaultLearningCommands implements LearningCommands {
     );
   }
 
+  /// The AD-50 amount of an earning event of [curriculumId] at [stage].
+  ///
+  /// Offline the points read may be uncached, fail or stall; the capture
+  /// must still queue locally (AC-9), so any failure or a read slower than
+  /// the points wait resolves to the default ladder at `stage ??
+  /// firstStageOrder` (first stage 1 when unknown) — the same amount an
+  /// absent override resolves to.
+  Future<int> _pointsAmount(String curriculumId, int? stage) async {
+    try {
+      return await _reads
+          .pointsAmount(_scope, curriculumId, stage)
+          .timeout(_pointsWait);
+    } on Object {
+      return defaultStagePoints(stage ?? 1);
+    }
+  }
+
   Future<LearningLogView> _log(CommandStamp stamp, LearnerSettingsHistory h) =>
       _reads
           .events(_scope)
@@ -253,9 +279,7 @@ final class DefaultLearningCommands implements LearningCommands {
     final earns =
         source == LearningEvent.sourceMain &&
         dateState != DateState.beforeTracking;
-    final amount = earns
-        ? await _reads.pointsAmount(_scope, curriculumId, stage)
-        : null;
+    final amount = earns ? await _pointsAmount(curriculumId, stage) : null;
     final List<WriteUnit> units;
     try {
       units = planCapture(
@@ -349,7 +373,7 @@ final class DefaultLearningCommands implements LearningCommands {
     try {
       final next = replacementOf(stamp, ids[1], target, fields);
       final amount = earnsPointsEntry(next)
-          ? await _reads.pointsAmount(_scope, next.curriculumId!, next.stage)
+          ? await _pointsAmount(next.curriculumId!, next.stage)
           : null;
       units = [
         learnUnit(
@@ -468,7 +492,7 @@ final class DefaultLearningCommands implements LearningCommands {
       for (final t in copies) {
         final copy = copyOf(stamp, ids[i++], t);
         final amount = earnsPointsEntry(copy)
-            ? await _reads.pointsAmount(_scope, t.curriculumId!, t.stage)
+            ? await _pointsAmount(t.curriculumId!, t.stage)
             : null;
         units.add(learnUnit(copy, amount, stamp.nowUtc));
       }

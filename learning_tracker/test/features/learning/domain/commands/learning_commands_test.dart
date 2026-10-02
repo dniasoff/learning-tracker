@@ -3,6 +3,8 @@
 // (C0 DNI-524 EventReplacement; DNI-469 AC-1..AC-9 on
 // DefaultLearningCommands with fake ports, a fixed clock, a stable id
 // source, a fake failure reporter and fake analytics).
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
@@ -48,6 +50,9 @@ final class _LoggedReads implements LearningCommandReads {
   final FakeLearningCommandReads inner;
   final _Log log;
 
+  /// When set, every points read waits on it (a stalled offline read).
+  Completer<int>? stalledPoints;
+
   @override
   Future<LearnerSettingsHistory> settingsHistory(LearnerScope scope) {
     log.add('settings');
@@ -69,6 +74,8 @@ final class _LoggedReads implements LearningCommandReads {
   @override
   Future<int> pointsAmount(LearnerScope scope, String curriculumId, int? s) {
     log.add('points');
+    final stalled = stalledPoints;
+    if (stalled != null) return stalled.future;
     return inner.pointsAmount(scope, curriculumId, s);
   }
 }
@@ -143,10 +150,11 @@ final class _Harness {
       corpora: {engineCurriculum: mishnayosCorpus()},
     );
     gate = _LoggedGate(log);
+    reads = _LoggedReads(fakeReads, log);
     commands = DefaultLearningCommands(
       scope: c0Scope(),
       actor: Actor(uid: 'owner-uid', role: role, displayName: 'Abba'),
-      reads: _LoggedReads(fakeReads, log),
+      reads: reads,
       writePort: _LoggedPort(port, log, this),
       gate: gate,
       analytics: analytics,
@@ -157,6 +165,7 @@ final class _Harness {
         return engineUlid(_seq++);
       },
       ackWait: const Duration(milliseconds: 40),
+      pointsWait: const Duration(milliseconds: 40),
       governed: governed ? _LoggedGoverned(log) : null,
     );
     addTearDown(commands.dispose);
@@ -165,6 +174,7 @@ final class _Harness {
   DateTime now;
   final _Log log = [];
   late final FakeLearningCommandReads fakeReads;
+  late final _LoggedReads reads;
   late final _LoggedGate gate;
   final port = InMemoryLearningWritePort();
   final analytics = RecordingLearningAnalytics();
@@ -856,6 +866,73 @@ void main() {
     expect(h.port.heldCount, 1, reason: 'server never acknowledged');
     expect(h.analytics.captures, hasLength(1));
   });
+
+  group(
+    'AC-9: an unreadable points amount never blocks an offline capture',
+    () {
+      test('an uncached (failing) points read queues the event and its pts_ '
+          'entry at the default first-stage amount', () async {
+        final h = _Harness();
+        h.fakeReads.pointsFor = (c, s) => throw StateError('unavailable');
+        h.port.holdNext();
+        final result = await _captureDated(h, refs: const [_b11]);
+        expect(result, isA<CaptureSuccess>());
+        expect((result as CaptureSuccess).queued, isTrue);
+        expect(h.port.heldCount, 1, reason: 'one queued batch');
+        final batch = h.port.attempts.single;
+        expect(batch.events.single.ref, _b11);
+        expect(batch.awards.single.eventId, batch.events.single.id);
+        expect(
+          batch.awards.single.amount,
+          10,
+          reason: 'default ladder, stage 1',
+        );
+        expect(h.analytics.captures, hasLength(1));
+      });
+
+      test('a failing read at an explicit stage uses that stage on the default '
+          'ladder', () async {
+        final h = _Harness();
+        h.fakeReads.pointsFor = (c, s) => throw StateError('unavailable');
+        await _captureDated(h, refs: const [_b11], stage: 2);
+        expect(h.awards.single.amount, 5);
+      });
+
+      test('a stalled points read falls back after the points wait', () async {
+        final h = _Harness();
+        h.reads.stalledPoints = Completer<int>();
+        h.port.holdNext();
+        final result = await _captureDated(h, refs: const [_b11]);
+        expect((result as CaptureSuccess).queued, isTrue);
+        expect(h.port.attempts.single.awards.single.amount, 10);
+        expect(h.log, ['settings', 'gate', 'points', 'commit']);
+      });
+
+      test(
+        'a replacement and an undo re-issue fall back the same way',
+        () async {
+          final h = _Harness(events: [engineLearn(1, _b11)]);
+          h.fakeReads.pointsFor = (c, s) => throw StateError('unavailable');
+          final replaced = await h.commands.replace(
+            engineUlid(1),
+            const EventReplacement(ref: _b12),
+          );
+          expect(replaced, isA<CaptureSuccess>());
+          expect(h.awards.single.amount, 10);
+
+          final undo = _Harness(
+            events: [engineLearn(1, _b11, stage: 3), engineVoid(2, 1)],
+          );
+          undo.fakeReads.pointsFor = (c, s) => throw StateError('unavailable');
+          expect(
+            await undo.commands.undoEvents([engineUlid(2)]),
+            isA<CaptureSuccess>(),
+          );
+          expect(undo.awards.single.amount, 3, reason: 'stage 3 on the ladder');
+        },
+      );
+    },
+  );
 
   test('governed commands are delegated (DNI-470 fills them)', () {
     final h = _Harness();
