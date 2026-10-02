@@ -417,7 +417,6 @@ final class LearnerStateEngine {
     List<LearningEvent> learns,
     int? firstStage,
     MainTrackRecord mainTrack,
-    List<LockWindow> locks,
     MainTrackConfigHistory configHistory,
     ReviewSchedule reviews,
     _VelocityInputs velocity,
