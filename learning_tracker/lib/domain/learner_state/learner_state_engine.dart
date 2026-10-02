@@ -17,12 +17,8 @@
 ///    (`calendar_plan.dart`), reviews (`review_schedule.dart` over
 ///    `main_track_config_history.dart`), goal target and pace
 ///    (`goal_target.dart`) and projection (`projection.dart`);
-<<<<<<< HEAD
 /// 7. points (`earning_events.dart`, DNI-468): the profile-wide
 ///    `earningEventIds`, from every curriculum with a corpus.
-=======
-/// 7. points (DNI-468).
->>>>>>> eedaa72649fa2fa09b196ab8738699d58f9399d9
 ///
 /// No I/O, clock read or global state: every input is in
 /// [LearnerStateInputs], and identical inputs give equal outputs.
