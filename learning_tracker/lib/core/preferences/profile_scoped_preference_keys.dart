@@ -46,6 +46,33 @@ class ProfileScopedPreferenceKeys {
     String curriculumStorageKey,
   ) => 'siyum_granularity_p${profileId}_$curriculumStorageKey';
 
+  /// Prefix of every per-device siyum-shown key of [profileId] (AD-15,
+  /// DNI-474 AC-4). Device-local: never part of the synced UI preferences.
+  static String siyumShownPrefix(String profileId) =>
+      'siyum_shown_p${profileId}_';
+
+  /// The per-device siyum-shown key of one completion: scoped by
+  /// [profileId], the unit ([curriculumStorageKey] + [unitRef]) and the
+  /// unit's `first_completed_at(1)` ([firstCompletedAt], the engine's
+  /// `effectiveAt` instant). A void that takes the siyum away clears it, and
+  /// a later re-completion has a new instant and so a new key (Consistency
+  /// → Siyum; `prd-deviations` #11).
+  static String siyumShown(
+    String profileId,
+    String curriculumStorageKey,
+    String unitRef,
+    DateTime firstCompletedAt,
+  ) =>
+      '${siyumShownPrefix(profileId)}${curriculumStorageKey}_'
+      '${Uri.encodeComponent(unitRef)}_'
+      '${firstCompletedAt.toUtc().microsecondsSinceEpoch}';
+
+  /// Whether this device has seeded [profileId]'s already-completed units
+  /// (so installing the app, or the cutover, does not replay every past
+  /// siyum at once).
+  static String siyumShownSeeded(String profileId) =>
+      'siyum_shown_seeded_p$profileId';
+
   static String readAppLocale(SharedPreferences prefs, String profileId) {
     final scoped = prefs.getString(appLocale(profileId));
     if (scoped != null) return scoped;

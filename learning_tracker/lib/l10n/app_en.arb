@@ -2937,6 +2937,15 @@
   "@siyumCelebrationTitle": {
     "description": "DNI-474 (FR-17): siyum celebration title."
   },
+  "siyumimCompletionNumber": "#{number}",
+  "@siyumimCompletionNumber": {
+    "description": "DNI-474 (AC-4): the engine's completion number k of a siyum on the siyumim timeline: #1 for the first full completion, #2 for the second.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "siyumHaShas": "Siyum HaShas",
   "@siyumHaShas": {
     "description": "Top-level curriculum-complete celebration — Talmud Bavli."

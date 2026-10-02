@@ -2,8 +2,9 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/core/widgets/error_display.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart';
@@ -50,9 +51,14 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
         top: false,
         child: journeyAsync.when(
           loading: () => const LoadingIndicator(),
-          error: (error, _) => ErrorDisplay(
-            message: l10n.failedToLoadJourney,
-            onRetry: () => ref.invalidate(journeyViewModelProvider),
+          // DNI-474 AC-1: the shared retryable error view over the engine.
+          error: (error, stackTrace) => AppErrorView(
+            error: error,
+            stackTrace: stackTrace,
+            onRetry: () {
+              retryLearnerState(ref);
+              ref.invalidate(journeyViewModelProvider);
+            },
           ),
           data: (viewModel) {
             if (_isEmpty(viewModel)) {

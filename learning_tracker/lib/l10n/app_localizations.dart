@@ -7570,6 +7570,12 @@ abstract class AppLocalizations {
   /// **'Siyum!'**
   String get siyumCelebrationTitle;
 
+  /// DNI-474 (AC-4): the engine's completion number k of a siyum on the siyumim timeline: #1 for the first full completion, #2 for the second.
+  ///
+  /// In en, this message translates to:
+  /// **'#{number}'**
+  String siyumimCompletionNumber(int number);
+
   /// Top-level curriculum-complete celebration — Talmud Bavli.
   ///
   /// In en, this message translates to:

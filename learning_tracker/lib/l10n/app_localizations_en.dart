@@ -4467,6 +4467,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get siyumCelebrationTitle => 'Siyum!';
 
   @override
+  String siyumimCompletionNumber(int number) {
+    return '#$number';
+  }
+
+  @override
   String get siyumHaShas => 'Siyum HaShas';
 
   @override

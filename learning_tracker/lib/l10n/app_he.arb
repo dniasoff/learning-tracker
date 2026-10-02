@@ -2459,6 +2459,7 @@
   "siyumCelebrationDismiss": "מזל טוב!",
   "siyumCelebrationMore": "{count, plural, =1{ועוד אחד} other{ועוד {count}}}",
   "siyumCelebrationTitle": "סיום!",
+  "siyumimCompletionNumber": "מס׳ {number}",
   "siyumHaShas": "סיום הש״ס",
   "@siyumHaShas": {
     "description": "Top-level curriculum-complete celebration — Talmud Bavli."

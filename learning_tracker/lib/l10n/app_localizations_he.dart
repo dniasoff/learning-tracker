@@ -4420,6 +4420,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get siyumCelebrationTitle => 'סיום!';
 
   @override
+  String siyumimCompletionNumber(int number) {
+    return 'מס׳ $number';
+  }
+
+  @override
   String get siyumHaShas => 'סיום הש״ס';
 
   @override
