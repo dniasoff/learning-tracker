@@ -166,15 +166,14 @@ class SettingsScreen extends ConsumerWidget {
             // TutorPermissions. Without this, a tutor session showed only the bare
             // learner shell with no management access at all (TUT-02/TUT-06).
             //
-            // Shown whenever the tutor has ANY management permission. canEditStages
-            // (track/stage config) is the broadest of the parent-equivalent edit
-            // flags; the hub itself re-gates each individual tile.
+            // Shown whenever the tutor has ANY management permission.
+            // canEditLearning (AD-53) covers tracks, goals, study days and
+            // learning records; the hub itself re-gates each individual tile.
             if (isTutorElevated &&
                 (tutorPerms == null ||
-                    tutorPerms.canEditStages ||
+                    tutorPerms.canEditLearning ||
                     tutorPerms.canEditPoints ||
-                    tutorPerms.canEditRewards ||
-                    tutorPerms.canBulkPriorCompletion)) ...[
+                    tutorPerms.canEditRewards)) ...[
               _SurfaceCard(
                 child: PreferenceListTile.withIcon(
                   icon: Icons.admin_panel_settings_outlined,

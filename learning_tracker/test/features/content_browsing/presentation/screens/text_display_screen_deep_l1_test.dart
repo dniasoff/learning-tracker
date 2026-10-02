@@ -588,11 +588,8 @@ void main() {
       final perms = TutorPermissions.readOnly();
       expect(perms.canMarkLiveCompletion, isFalse);
       // Also verify it is maximally restricted
-      expect(perms.canBulkPriorCompletion, isFalse);
-      expect(perms.canEditGoals, isFalse);
-      expect(perms.canEditStages, isFalse);
+      expect(perms.canEditLearning, isFalse);
       expect(perms.canEditRewards, isFalse);
-      expect(perms.canEditStudyDays, isFalse);
       expect(perms.canEditPoints, isFalse);
       // Still can view
       expect(perms.canViewProgress, isTrue);
@@ -608,12 +605,8 @@ void main() {
       final copied = base.copyWith(
         canViewProgress: true,
         canViewContent: true,
-        canBulkPriorCompletion: true,
-        canResetCompletion: true,
-        canEditGoals: true,
-        canEditStages: true,
+        canEditLearning: true,
         canEditRewards: true,
-        canEditStudyDays: true,
         canEditPoints: true,
       );
       expect(copied.canMarkLiveCompletion, isFalse);
@@ -671,7 +664,7 @@ void main() {
     () {
       const customPerms = TutorPermissions(
         canViewProgress: false,
-        canEditGoals: false,
+        canEditLearning: false,
       );
       const selection = TutoredProfileSelection(
         profileId: 'child-1',
@@ -682,7 +675,7 @@ void main() {
       final session = ResolvedSession.forTutor(selection: selection);
       expect(session.effectivePermissions, equals(customPerms));
       expect(session.effectivePermissions.canViewProgress, isFalse);
-      expect(session.effectivePermissions.canEditGoals, isFalse);
+      expect(session.effectivePermissions.canEditLearning, isFalse);
     },
   );
 
@@ -854,7 +847,7 @@ void main() {
     expect(a, equals(b));
     expect(a.hashCode, equals(b.hashCode));
 
-    final c = a.copyWith(canEditGoals: false);
+    final c = a.copyWith(canEditLearning: true);
     expect(a, isNot(equals(c)));
   });
 }

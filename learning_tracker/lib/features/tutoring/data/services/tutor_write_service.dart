@@ -100,7 +100,7 @@ class TutorWriteService {
     }
   }
 
-  // ── Completion reset (canResetCompletion) ────────────────────────────────────
+  // ── Completion reset (canEditLearning, AD-53) ────────────────────────────────────
 
   /// Deletes a completion document from the child's profile as a correction.
   Future<TutorWriteResult> resetCompletion({
@@ -115,7 +115,7 @@ class TutorWriteService {
     'completionId': completionId,
   });
 
-  // ── Goals (canEditGoals) ─────────────────────────────────────────────────────
+  // ── Goals (canEditLearning, AD-53) ─────────────────────────────────────────────────────
 
   /// Creates or updates a goal document in the child's profile.
   Future<TutorWriteResult> upsertGoal({
@@ -145,7 +145,7 @@ class TutorWriteService {
     'goalId': goalId,
   });
 
-  // ── Tracks (canEditStages) ───────────────────────────────────────────────────
+  // ── Tracks (canEditLearning, AD-53) ───────────────────────────────────────────────────
 
   /// Creates or updates a curriculum_tracks document in the child's profile.
   Future<TutorWriteResult> upsertTrack({
@@ -175,7 +175,7 @@ class TutorWriteService {
     'trackId': trackId,
   });
 
-  // ── Stage definitions (canEditStages) ───────────────────────────────────────
+  // ── Stage definitions (canEditLearning, AD-53) ───────────────────────────────────────
 
   /// Creates or updates a stage_definitions document in the child's profile.
   Future<TutorWriteResult> upsertStageDefinition({
@@ -192,7 +192,7 @@ class TutorWriteService {
     'stageData': stageData,
   });
 
-  // ── Study day configs (canEditStudyDays) ─────────────────────────────────────
+  // ── Study day configs (canEditLearning, AD-53) ─────────────────────────────────────
 
   /// Creates or updates a study_day_configs document in the child's profile.
   Future<TutorWriteResult> upsertStudyDayConfig({
@@ -241,7 +241,7 @@ class TutorWriteService {
     'settingsData': settingsData,
   });
 
-  // ── Bookmark (canEditStages) ─────────────────────────────────────────────────
+  // ── Bookmark (canEditLearning, AD-53) ─────────────────────────────────────────────────
 
   /// Creates or updates a bookmark document in the child's profile.
   Future<TutorWriteResult> upsertBookmark({
@@ -258,7 +258,7 @@ class TutorWriteService {
     'bookmarkData': bookmarkData,
   });
 
-  // ── Profile program (canEditStages) ──────────────────────────────────────────
+  // ── Profile program (canEditLearning, AD-53) ──────────────────────────────────────────
 
   /// Creates or updates a profile_programs document in the child's profile.
   Future<TutorWriteResult> setProfileProgram({
@@ -275,7 +275,7 @@ class TutorWriteService {
     'programData': programData,
   });
 
-  // ── Curriculum scope (canEditStages) ─────────────────────────────────────────
+  // ── Curriculum scope (canEditLearning, AD-53) ─────────────────────────────────────────
 
   /// Creates or updates a curriculum_scopes document in the child's profile.
   Future<TutorWriteResult> upsertCurriculumScope({

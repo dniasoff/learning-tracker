@@ -153,12 +153,8 @@ void main() {
         permissions: TutorPermissions(
           canViewProgress: true,
           canViewContent: true,
-          canBulkPriorCompletion: true,
-          canResetCompletion: true,
-          canEditGoals: true,
-          canEditStages: true,
+          canEditLearning: true,
           canEditRewards: true,
-          canEditStudyDays: true,
           canEditPoints: true,
         ),
         tutorOwnProfileId: 'tutor-own-904',

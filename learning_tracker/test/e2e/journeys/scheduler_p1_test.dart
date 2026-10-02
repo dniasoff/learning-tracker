@@ -516,7 +516,7 @@ void main() {
 
   group('E2E-511 — Tutor cannot edit study days — read-only mode', () {
     // Journey: StudyDayConfigScreen with activeTutorPermissionsProvider
-    // returning TutorPermissions(canEditStudyDays: false); day tiles have
+    // returning TutorPermissions(canEditLearning: false); day tiles have
     // onToggle=null (disabled); tapping shows no change (no DB write).
     //
     // The _DayToggleTile passes onToggle=null when canEdit=false, which makes
@@ -529,7 +529,7 @@ void main() {
     // We seed a chazara-enabled track (2 stages) so the grid is shown
     // (a no-chazara track shows the neutral message, not tiles — E2E-510).
     testWidgets(
-      'StudyDayConfigScreen tiles are read-only when tutor canEditStudyDays=false',
+      'StudyDayConfigScreen tiles are read-only when tutor canEditLearning=false',
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Eve511');
         final h = E2EHarness(tester, identity: identity);
@@ -541,8 +541,8 @@ void main() {
           curriculum: CurriculumId.mishnayos,
         );
 
-        // TutorPermissions with canEditStudyDays=false.
-        const tutorPerms = TutorPermissions(canEditStudyDays: false);
+        // TutorPermissions with canEditLearning=false (AD-53).
+        const tutorPerms = TutorPermissions(canEditLearning: false);
 
         await h.pumpApp(
           path: '/settings/tracks',
@@ -561,7 +561,7 @@ void main() {
             dashboardTrackCompletionPercentageProvider.overrideWith(
               (ref, trackId) => Future.value(0.0),
             ),
-            // Tutor with canEditStudyDays=false.
+            // Tutor with canEditLearning=false.
             activeTutorPermissionsProvider.overrideWith((ref) => tutorPerms),
             // Override studyDayConfigsProvider to avoid pending Drift timers.
             studyDayConfigsProvider.overrideWith(

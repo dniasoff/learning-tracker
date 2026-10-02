@@ -611,8 +611,7 @@ void main() {
           state: 'active',
           permissions: const TutorPermissions(
             canViewProgress: true,
-            canResetCompletion: true,
-            canEditGoals: false,
+            canEditLearning: false,
           ).toFirestore(),
         ),
       );
@@ -620,8 +619,7 @@ void main() {
       expect(grant.grantState, isA<ActiveGrant>());
       final active = grant.grantState as ActiveGrant;
       expect(active.permissions.canViewProgress, isTrue);
-      expect(active.permissions.canResetCompletion, isTrue);
-      expect(active.permissions.canEditGoals, isFalse);
+      expect(active.permissions.canEditLearning, isFalse);
     });
 
     test(
@@ -1249,12 +1247,8 @@ void main() {
       const original = TutorPermissions(
         canViewProgress: true,
         canViewContent: false,
-        canBulkPriorCompletion: true,
-        canResetCompletion: true,
-        canEditGoals: false,
-        canEditStages: true,
+        canEditLearning: false,
         canEditRewards: false,
-        canEditStudyDays: true,
         canEditPoints: false,
       );
 
@@ -1270,8 +1264,8 @@ void main() {
       // All missing → defaults applied.
       expect(partial.canViewProgress, isTrue);
       expect(partial.canViewContent, isTrue);
-      expect(partial.canBulkPriorCompletion, isTrue);
-      expect(partial.canResetCompletion, isFalse);
+      // AD-53: a grant without can_edit_learning is read-only.
+      expect(partial.canEditLearning, isFalse);
       expect(partial.canMarkLiveCompletion, isFalse);
     });
   });

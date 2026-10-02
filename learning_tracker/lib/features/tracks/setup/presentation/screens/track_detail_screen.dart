@@ -771,7 +771,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 builder: (context) {
                   final tutorPerms = ref.watch(activeTutorPermissionsProvider);
                   final canEditGoals =
-                      tutorPerms == null || tutorPerms.canEditGoals;
+                      tutorPerms == null || tutorPerms.canEditLearning;
                   final hasGoal =
                       ref
                           .watch(_trackGoalProvider(track.curriculumId))

@@ -151,7 +151,7 @@ void main() {
     // ── AC4: Domain model round-trip ─────────────────────────────────────────
 
     test('AC4d: TutoredProfileSelection carries correct fields', () {
-      const perms = TutorPermissions(canBulkPriorCompletion: true);
+      const perms = TutorPermissions(canEditLearning: true);
       const selection = TutoredProfileSelection(
         profileId: 'child-profile-123',
         ownerUid: 'parent-uid-456',
@@ -161,7 +161,7 @@ void main() {
       expect(selection.profileId, 'child-profile-123');
       expect(selection.ownerUid, 'parent-uid-456');
       expect(selection.grantId, 'grant-789');
-      expect(selection.permissions.canBulkPriorCompletion, isTrue);
+      expect(selection.permissions.canEditLearning, isTrue);
     });
 
     test('AC4e: PinScope.tutor resolves correct profileId', () {

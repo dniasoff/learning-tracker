@@ -425,9 +425,8 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-    final canEditGoals = tutorPerms == null || tutorPerms.canEditGoals;
-    final canEditStages = tutorPerms == null || tutorPerms.canEditStages;
-    final canSave = canEditGoals && canEditStages;
+    // AD-53: one permission gates every learning edit for tutors.
+    final canSave = tutorPerms == null || tutorPerms.canEditLearning;
 
     if (_loading) {
       return Scaffold(

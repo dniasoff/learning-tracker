@@ -314,7 +314,7 @@ void main() {
               (ref, trackId) => Future.value(0.0),
             ),
             // Required: activeTutorPermissionsProvider must return null so
-            // canEditGoals=true (the tile's onTap is null otherwise).
+            // canEditLearning=true (the tile's onTap is null otherwise).
             activeTutorPermissionsProvider.overrideWith((ref) => null),
             // _openGoalEdit reads scopedItemCountProvider to get totalItems.
             // Without this override, it loads from bundled JSON assets which

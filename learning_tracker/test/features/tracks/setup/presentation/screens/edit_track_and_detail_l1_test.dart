@@ -17,7 +17,7 @@
 //   • chazara UI ONLY when chazaraEnabled / trackHasChazaraProvider is true (Rule 8)
 //   • No chazara / review references on learn-only track
 //   • Program track shows locked banner, hides study days + chazara
-//   • Tutor with canEditGoals=false: Save button still renders (shows snackbar)
+//   • Tutor with canEditLearning=false: Save button still renders (shows snackbar)
 //   • No track-type labels: Personal / Standard / Custom / אישי
 //   • Hebrew locale smoke test
 //
@@ -1033,16 +1033,13 @@ void main() {
 
   group('EditTrackScreen — tutor permission gating', () {
     testWidgets(
-      'tutor with canEditGoals=false: Save button still renders in AppBar',
+      'tutor with canEditLearning=false: Save button still renders in AppBar',
       (tester) async {
         // When a tutor doesn't have edit permissions the button must still
         // render (it just shows a permission snackbar on tap).
         await _seedGoal(db);
 
-        const noEditPerms = TutorPermissions(
-          canEditGoals: false,
-          canEditStages: false,
-        );
+        const noEditPerms = TutorPermissions(canEditLearning: false);
 
         await tester.pumpWidget(
           _buildEditApp(
@@ -1062,14 +1059,11 @@ void main() {
     );
 
     testWidgets(
-      'tutor with canEditGoals=false: tapping Save shows snackbar, not dialog',
+      'tutor with canEditLearning=false: tapping Save shows snackbar, not dialog',
       (tester) async {
         await _seedGoal(db);
 
-        const noEditPerms = TutorPermissions(
-          canEditGoals: false,
-          canEditStages: false,
-        );
+        const noEditPerms = TutorPermissions(canEditLearning: false);
 
         await tester.pumpWidget(
           _buildEditApp(

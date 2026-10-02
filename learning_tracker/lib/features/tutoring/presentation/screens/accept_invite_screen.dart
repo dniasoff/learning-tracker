@@ -383,10 +383,9 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                   icon: Icons.check_circle_rounded,
                   text: l10n.acceptInvitePermissionViewData,
                 ),
-                // WS3.3h: corrected copy — reflects actual default permission
-                // set. Default grant allows bulk-mark + optional
-                // track/point/reward editing (canBulkPriorCompletion: true per
-                // G3/DEC-33; edit flags set by parent).
+                // WS3.3h / AD-53: learning edits (tracks, deadline, records)
+                // follow the parent-set canEditLearning permission; point and
+                // reward editing follow their own flags.
                 _PermissionRow(
                   icon: Icons.check_circle_rounded,
                   text: l10n.acceptInvitePermissionConfigure,

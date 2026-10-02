@@ -134,19 +134,20 @@ class ParentSettingsScreen extends ConsumerWidget {
 
     // Ownership gate helpers — whether each category tile should be shown.
     // Owners always see every tile; tutors see only what they're permitted.
-    final canEditTracks = !isTutoredContext || tutorPerms.canEditStages;
+    // AD-53: tracks, goals and prior-learning marking are all learning edits,
+    // gated by the single canEditLearning permission.
+    final canEditLearning = !isTutoredContext || tutorPerms.canEditLearning;
+    final canEditTracks = canEditLearning;
     // H5: point configuration + parent_points_adjust gate on the dedicated
-    // canEditPoints permission, NOT canEditGoals (a different concept).
+    // canEditPoints permission, NOT canEditLearning (a different concept).
     final canEditPoints = !isTutoredContext || tutorPerms.canEditPoints;
     final canEditRewards = !isTutoredContext || tutorPerms.canEditRewards;
     // Goals are per-track (set/edited from each track's "Set/Edit Goal" tile),
-    // so the hub's "Manage Goals" row routes into the track list. Gated on the
-    // dedicated canEditGoals permission (default true for tutors), distinct
-    // from canEditStages which gates track add/edit/archive.
-    final canEditGoals = !isTutoredContext || tutorPerms.canEditGoals;
-    // WS3.3h: canBulkPriorCompletion = true by default (G3/DEC-33) — tutors
-    // always see the bulk-mark tile unless the parent explicitly disabled it.
-    final canBulkMark = !isTutoredContext || tutorPerms.canBulkPriorCompletion;
+    // so the hub's "Manage Goals" row routes into the track list.
+    final canEditGoals = canEditLearning;
+    // WS3.3h: the bulk-mark tile records prior learning, so it follows the
+    // same AD-53 learning permission.
+    final canBulkMark = canEditLearning;
 
     // Owner-only tiles are completely hidden in tutored mode.
     final showOwnerOnlyTiles = !isTutoredContext;
@@ -198,7 +199,7 @@ class ParentSettingsScreen extends ConsumerWidget {
               // avatar switcher in the bottom nav is the canonical path (DEC-11).
               child: Column(
                 children: [
-                  // WS3.3d: canEditStages gates "Manage Tracks" for tutors.
+                  // AD-53: canEditLearning gates "Manage Tracks" for tutors.
                   if (canEditTracks) ...[
                     _ManageRow(
                       iconBackground: _managePurple,
@@ -217,8 +218,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                   ],
                   // Goals: per-track pace/deadline goals are set from each
                   // track's "Set/Edit Goal" tile, so this row routes into the
-                  // track list. Gated on canEditGoals (default true for tutors),
-                  // distinct from canEditStages above.
+                  // track list. Gated on canEditLearning (AD-53), like tracks.
                   if (canEditGoals) ...[
                     if (canEditTracks) _rowDivider(context),
                     _ManageRow(
@@ -316,9 +316,8 @@ class ParentSettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
           ],
-          // WS3.3h: bulk-mark tile — shown when canBulkPriorCompletion.
-          // Default = true (G3/DEC-33); tutors always see it unless
-          // the parent explicitly disabled canBulkPriorCompletion.
+          // WS3.3h: bulk-mark tile — records prior learning, so tutors see
+          // it only with canEditLearning (AD-53); owners always see it.
           if (canBulkMark)
             _WhitePanel(
               child: _ManageRow(

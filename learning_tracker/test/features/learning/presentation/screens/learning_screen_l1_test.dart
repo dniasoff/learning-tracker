@@ -7,9 +7,9 @@
 //   4.  Empty state (adult owner) — 'No active tracks' + Add Track button shown.
 //   5.  Empty state (child mode) — 'No active tracks' + 'Ask a grown-up' subtitle;
 //       Add Track button must NOT appear (child cannot add tracks).
-//   6.  Empty state (tutor session, canEditStages=false) — 'Ask a grown-up';
+//   6.  Empty state (tutor session, canEditLearning=false) — 'Ask a grown-up';
 //       Add Track button absent (tutor without edit-stages permission).
-//   7.  Empty state (tutor session, canEditStages=true) — Add Track button IS shown.
+//   7.  Empty state (tutor session, canEditLearning=true) — Add Track button IS shown.
 //   8.  PRODUCT INVARIANT: tutor canMarkLiveCompletion is always false — the
 //       active tutor selection fixture verifies the TutorPermissions VO enforces
 //       this at model level (no live-mark gating in LearningScreen itself; the
@@ -394,23 +394,23 @@ void main() {
     },
   );
 
-  // ── 6. Empty state (tutor session, canEditStages=false) ─────────────────────
+  // ── 6. Empty state (tutor session, canEditLearning=false) ─────────────────────
 
   testWidgets(
-    'empty state (tutor, canEditStages=false): "Ask a grown-up" shown; no Add Track button',
+    'empty state (tutor, canEditLearning=false): "Ask a grown-up" shown; no Add Track button',
     (tester) async {
       await tester.pumpWidget(
         _buildScreen(
           curricula: const [],
-          // Tutor with NO canEditStages permission.
-          tutorPerms: const TutorPermissions(canEditStages: false),
+          // Tutor with NO canEditLearning permission.
+          tutorPerms: const TutorPermissions(canEditLearning: false),
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('No active tracks'), findsOneWidget);
-      // Tutor without canEditStages → child-like message; no add button.
+      // Tutor without canEditLearning → child-like message; no add button.
       expect(
         find.text('Ask a grown-up to add a learning track.'),
         findsOneWidget,
@@ -422,16 +422,16 @@ void main() {
     },
   );
 
-  // ── 7. Empty state (tutor session, canEditStages=true) ──────────────────────
+  // ── 7. Empty state (tutor session, canEditLearning=true) ──────────────────────
 
   testWidgets(
-    'empty state (tutor, canEditStages=true): Add Track button IS shown',
+    'empty state (tutor, canEditLearning=true): Add Track button IS shown',
     (tester) async {
       await tester.pumpWidget(
         _buildScreen(
           curricula: const [],
-          // Tutor WITH canEditStages permission.
-          tutorPerms: const TutorPermissions(canEditStages: true),
+          // Tutor WITH canEditLearning permission.
+          tutorPerms: const TutorPermissions(canEditLearning: true),
         ),
       );
       await tester.pump();
@@ -458,12 +458,8 @@ void main() {
       const perms = TutorPermissions(
         canViewProgress: true,
         canViewContent: true,
-        canBulkPriorCompletion: true,
-        canResetCompletion: true,
-        canEditGoals: true,
-        canEditStages: true,
+        canEditLearning: true,
         canEditRewards: true,
-        canEditStudyDays: true,
         canEditPoints: true,
       );
       expect(
@@ -483,7 +479,7 @@ void main() {
       expect(readOnly.canMarkLiveCompletion, isFalse);
 
       // copyWith cannot change the invariant.
-      final copied = perms.copyWith(canEditGoals: false);
+      final copied = perms.copyWith(canEditLearning: false);
       expect(copied.canMarkLiveCompletion, isFalse);
     },
   );

@@ -4,8 +4,8 @@
 //   AC1 — activeTutorPermissionsProvider is declared in
 //          active_tutored_profile_provider.dart (reads from active selection).
 //   AC2 — parent_settings_screen.dart gates edit tiles behind
-//          activeTutorPermissionsProvider (canEditStages, canEditGoals,
-//          canEditRewards).
+//          activeTutorPermissionsProvider (canEditLearning per AD-53,
+//          canEditPoints, canEditRewards).
 //   AC3 — parent_settings_screen.dart hides owner-only tiles (manageTutors,
 //          BackupSyncSection, sectionAccountSafety) when in tutored context.
 //   AC4 — permissions_provider.dart is deleted (dead code — zero call sites).
@@ -90,23 +90,23 @@ void main() {
       },
     );
 
-    test('AC2: Manage Tracks tile gated on canEditStages', () {
+    test('AC2: Manage Tracks tile gated on canEditLearning (AD-53)', () {
       expect(
         parentSettingsSrc,
-        contains('canEditStages'),
+        contains('tutorPerms.canEditLearning'),
         reason:
             'parent_settings_screen.dart must gate the Manage Tracks tile '
-            'on canEditStages (stage config = track config)',
+            'on the single AD-53 learning permission',
       );
     });
 
-    test('AC2: Point Configuration tile gated on canEditGoals', () {
+    test('AC2: Point Configuration tile gated on canEditPoints', () {
       expect(
         parentSettingsSrc,
-        contains('canEditGoals'),
+        contains('tutorPerms.canEditPoints'),
         reason:
             'parent_settings_screen.dart must gate the Point Configuration tile '
-            'on canEditGoals',
+            'on canEditPoints',
       );
     });
 
@@ -187,16 +187,11 @@ void main() {
       const perms = TutorPermissions();
       expect(perms.canViewProgress, isTrue);
       expect(perms.canViewContent, isTrue);
-      expect(perms.canBulkPriorCompletion, isTrue);
-      expect(perms.canResetCompletion, isFalse);
-      // DEC: tutor defaults now grant full parent-equivalent edit access
-      // (manage the talmid's goals/stages/rewards/study-days/points). Only
-      // live completion-marking is barred. TutorPermissions.readOnly() opts
-      // every edit flag back out.
-      expect(perms.canEditGoals, isTrue);
-      expect(perms.canEditStages, isTrue);
+      // AD-53 (DNI-487): the single learning-edit permission fails closed —
+      // it is set only by explicit parent action (pre-checked invite box or
+      // updateTutorGrantPermissions). Rewards/points keep their defaults.
+      expect(perms.canEditLearning, isFalse);
       expect(perms.canEditRewards, isTrue);
-      expect(perms.canEditStudyDays, isTrue);
       expect(perms.canEditPoints, isTrue);
       // Hard invariant.
       expect(perms.canMarkLiveCompletion, isFalse);
@@ -205,14 +200,16 @@ void main() {
     test('AC5: TutorPermissions.copyWith updates individual fields', () {
       // Start from readOnly() (all edit flags false) so we can prove copyWith
       // flips individual fields on without disturbing the rest. (The default
-      // TutorPermissions() now has every edit flag true — see defaults test.)
+      // TutorPermissions() keeps rewards/points on — see defaults test.)
       final base = TutorPermissions.readOnly();
-      final updated = base.copyWith(canEditRewards: true, canEditGoals: true);
+      final updated = base.copyWith(
+        canEditRewards: true,
+        canEditLearning: true,
+      );
       expect(updated.canEditRewards, isTrue);
-      expect(updated.canEditGoals, isTrue);
+      expect(updated.canEditLearning, isTrue);
       // Unchanged fields preserved.
-      expect(updated.canEditStages, isFalse);
-      expect(updated.canEditStudyDays, isFalse);
+      expect(updated.canEditPoints, isFalse);
       // Hard invariant survives copyWith.
       expect(updated.canMarkLiveCompletion, isFalse);
     });
