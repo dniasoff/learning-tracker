@@ -39,6 +39,16 @@ const kDefaultStudyDays = <int, String>{
 /// writes (Firestore has no cross-collection transaction reachable through
 /// the plain repository calls this whole migration already uses elsewhere —
 /// same disclosed trade-off as `TrackEditService`/`LearningProcessWizardService`).
+///
+/// **Tutored session (Story 1.24, DNI-486).** A tutor reaches the talmid's
+/// governed docs only through governed callables, and adding a track has no
+/// governed path yet: the track doc, stage set (chazara wizard), scopes,
+/// program enrolment and activation are client writes into the talmid's
+/// tree, which the rules deny (tutor writes are Admin-SDK only). So a tutor
+/// [createTrack] is refused with [TutorTrackCreationUnsupportedException]
+/// BEFORE any write begins — never half-applied, never a pending offline
+/// write. Follow-up: learning-tracker-fyh.212 (route the add-track writes
+/// through TutorGovernedWrites) and learning-tracker-fyh.226 (stage set).
 class TrackCreationService {
   TrackCreationService({
     required CurriculumActivationService activationService,
@@ -50,6 +60,7 @@ class TrackCreationService {
     required ProfileProgramRepository profileProgramRepository,
     required BookmarkRepository bookmarkRepository,
     AnalyticsService? analytics,
+    bool Function() isTutoredSession = _ownerSession,
   }) : _activationService = activationService,
        _wizardService = wizardService,
        _goalRepository = goalRepository,
@@ -58,7 +69,10 @@ class TrackCreationService {
        _scopeRepository = scopeRepository,
        _profileProgramRepository = profileProgramRepository,
        _bookmarkRepository = bookmarkRepository,
-       _analytics = analytics ?? const NullAnalyticsService();
+       _analytics = analytics ?? const NullAnalyticsService(),
+       _isTutoredSession = isTutoredSession;
+
+  static bool _ownerSession() => false;
 
   final CurriculumActivationService _activationService;
   final LearningProcessWizardService _wizardService;
@@ -71,9 +85,16 @@ class TrackCreationService {
   // (Firestore-backed, ULID-profile-keyed — see bookmark_providers.dart).
   final BookmarkRepository _bookmarkRepository;
   final AnalyticsService _analytics;
+  final bool Function() _isTutoredSession;
 
   /// Persist all track configuration from the AddTrackFlow result.
+  ///
+  /// Throws [TutorTrackCreationUnsupportedException] in a tutored session,
+  /// before anything is written (see the class doc comment).
   Future<void> createTrack({required AddTrackResult result}) async {
+    if (_isTutoredSession()) {
+      throw const TutorTrackCreationUnsupportedException();
+    }
     final curriculum = result.curriculumId;
     final (:bookmarkRef, :trackingStartDate) = result.programId == null
         ? (bookmarkRef: null, trackingStartDate: null)
@@ -262,4 +283,16 @@ class TrackCreationService {
 
     return (bookmarkRef: bookmarkRef, trackingStartDate: trackingStartDate);
   }
+}
+
+/// A tutor tried to add a track for the talmid, which has no governed tutor
+/// path yet (DNI-486). Thrown before any write.
+final class TutorTrackCreationUnsupportedException implements Exception {
+  /// Creates the exception.
+  const TutorTrackCreationUnsupportedException();
+
+  @override
+  String toString() =>
+      'TutorTrackCreationUnsupportedException: a tutor cannot add a track '
+      'yet';
 }

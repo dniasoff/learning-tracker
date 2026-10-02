@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
     as tm;
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Parent mode: same track UI as [TrackManagementHubScreen], scoped to the
@@ -33,8 +34,13 @@ class _ParentTrackManagementScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // DNI-486: adding, archiving and deleting a track have no governed tutor
+    // path (they would be client writes into the talmid's tree), so a tutor
+    // managing a talmid's tracks opens and edits them from Track detail only
+    // (learning-tracker-fyh.212 / fyh.227).
+    final tutored = ref.watch(activeTutoredProfileSelectionProvider) != null;
 
-    if (_addingTrack) {
+    if (_addingTrack && !tutored) {
       return Scaffold(
         body: AddTrackFlow(
           isOnboarding: false,
@@ -50,7 +56,8 @@ class _ParentTrackManagementScreenState
     // value.isNotEmpty chain when asData is null (loading/error), so `?? false`
     // correctly falls back.  No NPE is possible here (AsyncData.value is T,
     // non-nullable).
-    final showAddTrackFab = activeAsync.asData?.value.isNotEmpty ?? false;
+    final showAddTrackFab =
+        !tutored && (activeAsync.asData?.value.isNotEmpty ?? false);
 
     // AUD-profiles dark-mode sweep: `context.colors.brandBlue` LIGHTENS in
     // dark mode (it's a contrast/ink-role token, not a "stays deep" fill), so
@@ -120,7 +127,7 @@ class _ParentTrackManagementScreenState
         ),
         data: (activeTracks) {
           if (activeTracks.isEmpty) {
-            return _buildEmptyState(l10n);
+            return _buildEmptyState(l10n, canAdd: !tutored);
           }
 
           return ListView(
@@ -140,7 +147,9 @@ class _ParentTrackManagementScreenState
                     showProgress: true,
                     onTap: () =>
                         context.router.push(TrackDetailRoute(track: track)),
-                    onLongPress: () => _showDeleteDialog(track),
+                    onLongPress: tutored
+                        ? null
+                        : () => _showDeleteDialog(track),
                   ),
                 ),
               ),
@@ -186,7 +195,7 @@ class _ParentTrackManagementScreenState
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n) {
+  Widget _buildEmptyState(AppLocalizations l10n, {required bool canAdd}) {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
@@ -201,21 +210,24 @@ class _ParentTrackManagementScreenState
             ),
             const SizedBox(height: 16),
             Text(l10n.noActiveTracks, style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            // TS-14: use child-scoped copy in this parent-manages-child context.
-            Text(
-              l10n.parentManageTracksDetail,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            if (canAdd) ...[
+              const SizedBox(height: 8),
+              // TS-14: use child-scoped copy in this parent-manages-child
+              // context.
+              Text(
+                l10n.parentManageTracksDetail,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () => setState(() => _addingTrack = true),
-              icon: const Icon(Icons.add),
-              label: Text(l10n.addTrack),
-            ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => setState(() => _addingTrack = true),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.addTrack),
+              ),
+            ],
           ],
         ),
       ),

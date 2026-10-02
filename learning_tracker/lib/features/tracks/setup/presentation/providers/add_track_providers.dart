@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/tracks/setup/data/repositories/curricu
 import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/study_day_write_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// Provider for [TrackCreationService] used by AddTrackFlow.
 final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
@@ -29,5 +30,8 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
     ),
     bookmarkRepository: bookmarkRepository,
     analytics: analytics,
+    // DNI-486: a tutor's add-track is refused before any write.
+    isTutoredSession: () =>
+        ref.read(activeTutoredProfileSelectionProvider) != null,
   );
 });
