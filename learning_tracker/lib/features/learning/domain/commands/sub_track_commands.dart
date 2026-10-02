@@ -50,6 +50,7 @@ library;
 import 'dart:async';
 
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/append_ground.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
@@ -115,7 +116,8 @@ final class SubTrackDraft {
 
 /// The fields an edit changes; a null field keeps its value. Nullable
 /// stored fields are cleared with [clearAcademicYear] / [clearWindowEnd].
-/// `ground`, when given, replaces the whole ordered list.
+/// `ground`, when given, replaces the whole ordered list; [appendGround]
+/// instead appends picked nodes to the latest stored ground (Story 2.7).
 final class SubTrackEdit {
   /// Creates an edit.
   const SubTrackEdit({
@@ -130,6 +132,7 @@ final class SubTrackEdit {
     this.weeksPerYear,
     this.learnsOnShabbos,
     this.ground,
+    this.appendGround,
   });
 
   /// New name.
@@ -164,6 +167,16 @@ final class SubTrackEdit {
 
   /// The whole new ordered ground.
   final List<NodeEntry>? ground;
+
+  /// Ground-picker nodes to append (Story 2.7 / DNI-498, FR-10/FR-11).
+  ///
+  /// The command re-reads the sub-track's latest `ground`, drops every
+  /// picked leaf an existing entry already covers, and appends the rest in
+  /// ContentIndex order (`groundToAppend`); the stored entries are kept as
+  /// entered and the result is written as the whole new `ground` list with
+  /// one change-log entry. Every node must belong to the sub-track's own
+  /// curriculum. Exclusive with [ground]; a replay appends nothing.
+  final List<NodeEntry>? appendGround;
 }
 
 /// The sub-track lifecycle commands for one learner and actor.
@@ -319,7 +332,9 @@ final class SubTrackCommands {
     if (current == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
-    final candidate = _applyEdit(current, edit);
+    final (appended, refusedAppend) = await _appendedGround(current, edit);
+    if (refusedAppend != null) return refusedAppend;
+    final candidate = _applyEdit(current, edit, ground: appended);
     final old = _fieldsOf(current);
     final now = _fieldsOf(candidate);
     final changed = [
@@ -348,6 +363,44 @@ final class SubTrackCommands {
       ),
       onConfirmed: _emitter(candidate, SubTrackLifecycleAction.edit),
     );
+  }
+
+  /// The whole new `ground` of an [SubTrackEdit.appendGround] edit of
+  /// [current] (its latest stored value, read by this command) — null
+  /// when [edit] does not append — or the result refusing it: a picked node
+  /// outside the sub-track's curriculum (`crossCurriculumGround`), an ended
+  /// sub-track, a missing corpus, or `ground` given as well.
+  Future<(List<NodeEntry>?, CaptureResult?)> _appendedGround(
+    SubTrack current,
+    SubTrackEdit edit,
+  ) async {
+    const invalid = CaptureResult.rejected(CaptureRejection.invalid);
+    final picked = edit.appendGround;
+    if (picked == null) return (null, null);
+    if (edit.ground != null || current.isEnded) return (null, invalid);
+    final corpus = await _corpusOf?.call(current.curriculumId);
+    if (corpus == null) return (null, invalid);
+    final foreign = [
+      for (final node in picked)
+        if (corpus.curriculumId != current.curriculumId ||
+            !corpusHoldsNode(corpus, node))
+          SubTrackViolation(
+            SubTrackLimit.crossCurriculumGround,
+            subject: node.ref,
+          ),
+    ];
+    if (foreign.isNotEmpty) {
+      return (
+        null,
+        CaptureResult.rejected(CaptureRejection.invalid, violations: foreign),
+      );
+    }
+    final added = groundToAppend(
+      current: current.ground,
+      selected: picked,
+      corpus: corpus,
+    );
+    return (<NodeEntry>[...current.ground, ...added], null);
   }
 
   /// Ends sub-track [subTrackId] (`end_reason = ended`).
@@ -703,7 +756,11 @@ final class SubTrackCommands {
     }
   }
 
-  static SubTrack _applyEdit(SubTrack t, SubTrackEdit e) => SubTrack(
+  static SubTrack _applyEdit(
+    SubTrack t,
+    SubTrackEdit e, {
+    List<NodeEntry>? ground,
+  }) => SubTrack(
     id: t.id,
     curriculumId: t.curriculumId,
     name: e.name ?? t.name,
@@ -716,7 +773,7 @@ final class SubTrackCommands {
     ratePerWeek: e.ratePerWeek ?? t.ratePerWeek,
     weeksPerYear: e.weeksPerYear ?? t.weeksPerYear,
     learnsOnShabbos: e.learnsOnShabbos ?? t.learnsOnShabbos,
-    ground: e.ground ?? t.ground,
+    ground: ground ?? e.ground ?? t.ground,
     endedAt: t.endedAt,
     endReason: t.endReason,
     lastChangeId: t.lastChangeId,
