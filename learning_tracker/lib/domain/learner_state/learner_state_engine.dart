@@ -303,6 +303,7 @@ final class LearnerStateEngine {
           for (final s in inputs.subTracks)
             if (s.curriculumId == curriculumId) s,
         ],
+        civilDayOf: (instant) => civilDate(instant, inputs.settingsHistory),
       ),
     );
     return (state, earners);

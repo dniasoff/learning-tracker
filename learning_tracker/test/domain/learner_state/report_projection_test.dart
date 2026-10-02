@@ -301,4 +301,206 @@ void main() {
     expect(unknown.leaves, {_b12});
     expect(report.totalEvents, 2);
   });
+
+  group('AC-5: normalized groups and member lines', () {
+    final y2024 = _sub(
+      10,
+      type: SubTrackType.schoolYear,
+      academicYear: 2024,
+      start: '2024-09-01',
+      end: '2025-06-30',
+    );
+    final y2025 = _sub(
+      20,
+      type: SubTrackType.schoolYear,
+      academicYear: 2025,
+      start: '2025-09-01',
+      end: '2026-06-30',
+    );
+    final y2026 = _sub(
+      30,
+      name: 'school ',
+      type: SubTrackType.schoolYear,
+      academicYear: 2026,
+      start: '2026-09-01',
+      end: '2027-06-30',
+    );
+    final summer = _sub(40, name: 'SCHOOL', start: '2026-07-01');
+    final rebbe = _sub(50, name: 'Rebbe');
+    final events = [
+      engineLearn(1, _b11, source: y2024.id),
+      engineLearn(2, _b12, source: y2024.id),
+      // 1:1 again in another year: two events, one group leaf.
+      engineLearn(3, _b11, source: y2025.id),
+      engineLearn(4, _b13, source: y2026.id),
+      engineLearn(5, _b21, source: summer.id),
+      engineLearn(6, _p11, source: rebbe.id),
+    ];
+    final report = _report(
+      subTracks: [y2026, rebbe, summer, y2025, y2024],
+      events: events,
+    );
+
+    test('trimmed, case-folded names form one group', () {
+      expect(report.groups.map((g) => g.key), ['rebbe', 'school']);
+      final school = report.groups.last;
+      expect(school.members.map((m) => m.subTrackId), [
+        y2024.id,
+        y2025.id,
+        summer.id,
+        y2026.id,
+      ]);
+      // The latest member names the group, trimmed.
+      expect(school.name, 'school');
+    });
+
+    test('group events add up; group distinct leaves are a union', () {
+      final school = report.groups.last;
+      expect(school.events, 5);
+      expect(
+        school.events,
+        school.members.fold<int>(0, (n, m) => n + m.totals.events),
+      );
+      expect(school.leaves, {_b11, _b12, _b13, _b21});
+      expect(school.distinctLeaves, 4);
+      expect(
+        school.members.fold<int>(0, (n, m) => n + m.totals.distinctLeaves),
+        5,
+      );
+    });
+
+    test('year lines are keyed by academic_year and labelled YYYY–YY', () {
+      final lines = report.groups.last.members;
+      expect(lines[0].academicYear, 2024);
+      expect(lines[0].label, '2024–25');
+      expect(lines[1].label, '2025–26');
+      expect(lines[3].label, '2026–27');
+      expect(reportSchoolYearLabel(2099), '2099–00');
+    });
+
+    test('an ongoing member is labelled by its stored window', () {
+      final line = report.groups.last.members[2];
+      expect(line.type, SubTrackType.ongoing);
+      expect(line.academicYear, isNull);
+      expect(line.label, '2026-07-01 –');
+      expect(
+        reportWindowLabel('2026-07-01', '2026-08-31'),
+        '2026-07-01 – 2026-08-31',
+      );
+    });
+
+    test('every member is also a per-source total', () {
+      for (final line in report.groups.expand((g) => g.members)) {
+        expect(report.sources[line.subTrackId], same(line.totals));
+      }
+      expect(report.sources.keys.first, LearningEvent.sourceMain);
+      expect(report.sources, hasLength(6));
+    });
+
+    test('a sub-track with no events is listed at zero', () {
+      final idle = _report(subTracks: [rebbe]);
+      expect(idle.groups.single.members.single.totals.events, 0);
+      expect(idle.sources[rebbe.id]!.events, 0);
+    });
+  });
+
+  group('AC-6: ended and deleted sources stay reportable', () {
+    final deleted = _sub(
+      10,
+      name: 'Shiur',
+      endedAt: engineAt(3000),
+      endReason: SubTrackEndReason.deleted,
+    );
+    final trackDeleted = _sub(
+      20,
+      name: 'Chavrusa',
+      endedAt: engineAt(3000),
+      endReason: SubTrackEndReason.trackDeleted,
+    );
+    final ended = _sub(
+      30,
+      name: 'Camp',
+      endedAt: engineAt(3000),
+      endReason: SubTrackEndReason.ended,
+    );
+    final live = _sub(40, name: 'Rebbe');
+    final events = [
+      engineLearn(1, _b11, source: deleted.id),
+      engineLearn(2, _b12, source: trackDeleted.id),
+      engineLearn(3, _b13, source: ended.id),
+      engineLearn(4, _b21, source: live.id),
+    ];
+    final report = _report(
+      subTracks: [deleted, trackDeleted, ended, live],
+      events: events,
+    );
+
+    test('their events stay in every total', () {
+      expect(report.totalEvents, 4);
+      expect(report.distinctLearnt, 4);
+      expect(report.sources[deleted.id]!.events, 1);
+      expect(report.sources[trackDeleted.id]!.events, 1);
+    });
+
+    test('listed under the stored name and marked Ended', () {
+      final byKey = {for (final g in report.groups) g.key: g};
+      expect(byKey.keys, containsAll(['shiur', 'chavrusa', 'camp']));
+      for (final key in ['shiur', 'chavrusa', 'camp']) {
+        final line = byKey[key]!.members.single;
+        expect(line.status, ReportLineStatus.ended);
+        expect(line.endedOn, '2026-09-03');
+      }
+      expect(byKey['shiur']!.name, 'Shiur');
+      expect(
+        byKey['shiur']!.members.single.endReason,
+        SubTrackEndReason.deleted,
+      );
+      expect(byKey['rebbe']!.members.single.status, ReportLineStatus.active);
+    });
+
+    test('unfinished ground is never reported completed; a live track '
+        'with all ground ticked is still active', () {
+      final finished = _sub(50, name: 'Done');
+      final r = _report(
+        subTracks: [finished],
+        events: [
+          for (final (i, leaf) in [_b11, _b12, _b13, _b21, _b22].indexed)
+            engineLearn(i + 1, leaf, source: finished.id),
+        ],
+      );
+      expect(r.groups.single.members.single.status, ReportLineStatus.active);
+      expect(ReportLineStatus.values.map((s) => s.name), ['active', 'ended']);
+    });
+
+    test('an undone creation with no events is not listed', () {
+      final undone = _sub(
+        60,
+        name: 'Oops',
+        endedAt: engineAt(10),
+        endReason: SubTrackEndReason.undo,
+      );
+      final r = _report(subTracks: [undone]);
+      expect(r.groups, isEmpty);
+      expect(r.sources.keys, [LearningEvent.sourceMain]);
+    });
+  });
+
+  test('AC-7: after a rename every event of the sub-track groups under its '
+      'current name', () {
+    final renamed = _sub(10, name: 'Morning seder');
+    final report = _report(
+      subTracks: [renamed],
+      events: [
+        // Recorded while it was still called "School".
+        engineLearn(1, _b11, source: renamed.id),
+        engineLearn(2, _b12, source: renamed.id, minutes: 3000),
+      ],
+    );
+    expect(report.groups, hasLength(1));
+    final group = report.groups.single;
+    expect(group.key, 'morning seder');
+    expect(group.name, 'Morning seder');
+    expect(group.events, 2);
+    expect(group.members.single.name, 'Morning seder');
+  });
 }
