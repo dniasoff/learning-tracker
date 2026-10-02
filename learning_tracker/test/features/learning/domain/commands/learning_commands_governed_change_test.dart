@@ -94,84 +94,89 @@ void main() {
       );
     });
 
-    test('an uncached doc: every before field is null, never a default', () async {
-      final h = GovernedHarness();
-      await h.commands.applyGovernedChange(
-        oneEntity(GovernedEntity.goal, '${_cid}_deadline', [
-          patch(GovernedEntity.goal, '${_cid}_deadline', {
-            'goal_type': 'deadline',
-            'target_date': '2027-06-01',
-            'curriculum_id': _cid,
-          }),
-        ]),
-      );
-      expect(h.batches.single.entry.before.values, everyElement(isNull));
-      expect(h.batches.single.entry.before, hasLength(3));
-    });
+    test(
+      'an uncached doc: every before field is null, never a default',
+      () async {
+        final h = GovernedHarness();
+        await h.commands.applyGovernedChange(
+          oneEntity(GovernedEntity.goal, '${_cid}_deadline', [
+            patch(GovernedEntity.goal, '${_cid}_deadline', {
+              'goal_type': 'deadline',
+              'target_date': '2027-06-01',
+              'curriculum_id': _cid,
+            }),
+          ]),
+        );
+        expect(h.batches.single.entry.before.values, everyElement(isNull));
+        expect(h.batches.single.entry.before, hasLength(3));
+      },
+    );
 
-    test('a multi-entity action: one entry per entity, batches in action '
-        'order, each self-contained, all carrying the first entry id', () async {
-      final h = GovernedHarness()
-        ..seedDoc('learner_profiles', profileUlid, {
+    test(
+      'a multi-entity action: one entry per entity, batches in action '
+      'order, each self-contained, all carrying the first entry id',
+      () async {
+        final h = GovernedHarness()
+          ..seedDoc('learner_profiles', profileUlid, {
+            'display_name': 'Avi',
+            'time_zone': 'UTC',
+          });
+
+        final result = await h.commands.applyGovernedChange(
+          GovernedAction([
+            GovernedEntityChange(
+              entity: _order,
+              entityId: _cid,
+              docs: _orderDocs(2),
+            ),
+            GovernedEntityChange(
+              entity: GovernedEntity.learnerSettings,
+              entityId: profileUlid,
+              docs: [
+                patch(GovernedEntity.learnerSettings, profileUlid, {
+                  'time_zone': 'Asia/Jerusalem',
+                  'in_israel': true,
+                }),
+              ],
+            ),
+            GovernedEntityChange(
+              entity: GovernedEntity.goal,
+              entityId: '${_cid}_pace',
+              docs: [
+                patch(GovernedEntity.goal, '${_cid}_pace', {
+                  'goal_type': 'pace',
+                  'pace_value': 2,
+                }),
+              ],
+            ),
+          ]),
+        );
+
+        final ids = [engineUlid(100), engineUlid(101), engineUlid(102)];
+        expect(h.changeLog.issued, ids, reason: 'action order');
+        expect(h.batches.map((b) => b.entry.entity), [
+          _order,
+          GovernedEntity.learnerSettings,
+          GovernedEntity.goal,
+        ]);
+        for (final b in h.batches) {
+          expect(b.entry.actionId, ids.first);
+          // Self-contained: the entry describes exactly its batch's docs.
+          expect(b.entry.after.keys.toSet(), {
+            for (final m in b.merges)
+              for (final f in m.fields.keys) _key(m.collection, m.docId, f),
+          });
+        }
+        expect(h.batches.first.merges, hasLength(2));
+        expect(h.doc('learner_profiles', profileUlid), {
           'display_name': 'Avi',
-          'time_zone': 'UTC',
+          'time_zone': 'Asia/Jerusalem',
+          'in_israel': true,
+          'last_change_id': ids[1],
         });
-
-      final result = await h.commands.applyGovernedChange(
-        GovernedAction([
-          GovernedEntityChange(
-            entity: _order,
-            entityId: _cid,
-            docs: _orderDocs(2),
-          ),
-          GovernedEntityChange(
-            entity: GovernedEntity.learnerSettings,
-            entityId: profileUlid,
-            docs: [
-              patch(GovernedEntity.learnerSettings, profileUlid, {
-                'time_zone': 'Asia/Jerusalem',
-                'in_israel': true,
-              }),
-            ],
-          ),
-          GovernedEntityChange(
-            entity: GovernedEntity.goal,
-            entityId: '${_cid}_pace',
-            docs: [
-              patch(GovernedEntity.goal, '${_cid}_pace', {
-                'goal_type': 'pace',
-                'pace_value': 2,
-              }),
-            ],
-          ),
-        ]),
-      );
-
-      final ids = [engineUlid(100), engineUlid(101), engineUlid(102)];
-      expect(h.changeLog.issued, ids, reason: 'action order');
-      expect(h.batches.map((b) => b.entry.entity), [
-        _order,
-        GovernedEntity.learnerSettings,
-        GovernedEntity.goal,
-      ]);
-      for (final b in h.batches) {
-        expect(b.entry.actionId, ids.first);
-        // Self-contained: the entry describes exactly its batch's docs.
-        expect(b.entry.after.keys.toSet(), {
-          for (final m in b.merges)
-            for (final f in m.fields.keys)
-              _key(m.collection, m.docId, f),
-        });
-      }
-      expect(h.batches.first.merges, hasLength(2));
-      expect(h.doc('learner_profiles', profileUlid), {
-        'display_name': 'Avi',
-        'time_zone': 'Asia/Jerusalem',
-        'in_israel': true,
-        'last_change_id': ids[1],
-      });
-      expect(result, CaptureResult.success(changeIds: ids, actionId: ids[0]));
-    });
+        expect(result, CaptureResult.success(changeIds: ids, actionId: ids[0]));
+      },
+    );
 
     test('an entity with nothing changed writes nothing and does not take '
         'the action id', () async {
@@ -243,21 +248,25 @@ void main() {
       }
     });
 
-    test('a value that is not a storage value is invalid before any write', () async {
-      final h = GovernedHarness();
-      final result = await h.commands.applyGovernedChange(
-        oneEntity(_order, _cid, [
-          ..._orderDocs(1),
-          patch(_order, 'bad', {'ref': Object()}),
-        ]),
-      );
-      expect(result, const CaptureResult.rejected(CaptureRejection.invalid));
-      expect(h.changeLog.issued, isEmpty);
-    });
+    test(
+      'a value that is not a storage value is invalid before any write',
+      () async {
+        final h = GovernedHarness();
+        final result = await h.commands.applyGovernedChange(
+          oneEntity(_order, _cid, [
+            ..._orderDocs(1),
+            patch(_order, 'bad', {'ref': Object()}),
+          ]),
+        );
+        expect(result, const CaptureResult.rejected(CaptureRejection.invalid));
+        expect(h.changeLog.issued, isEmpty);
+      },
+    );
 
     test('create on a doc the writer sees is invalid; update on a doc it '
         'cannot see is targetNotFound; neither writes', () async {
-      final h = GovernedHarness()..seedDoc('goals', 'g1', {'goal_type': 'pace'});
+      final h = GovernedHarness()
+        ..seedDoc('goals', 'g1', {'goal_type': 'pace'});
       expect(
         await h.commands.applyGovernedChange(
           oneEntity(GovernedEntity.goal, 'g1', [
@@ -282,7 +291,8 @@ void main() {
     });
 
     test('a doc read failure writes nothing', () async {
-      final h = GovernedHarness()..reader.failWith = const FormatException('io');
+      final h = GovernedHarness()
+        ..reader.failWith = const FormatException('io');
       expect(
         await h.commands.applyGovernedChange(
           oneEntity(_order, _cid, _orderDocs(1)),
@@ -330,7 +340,11 @@ void main() {
       h.changeLog.hold.add(engineUlid(100));
       final result = await h.commands.applyGovernedChange(
         GovernedAction([
-          GovernedEntityChange(entity: _order, entityId: _cid, docs: _orderDocs(1)),
+          GovernedEntityChange(
+            entity: _order,
+            entityId: _cid,
+            docs: _orderDocs(1),
+          ),
           GovernedEntityChange(
             entity: _program,
             entityId: _cid,
@@ -360,7 +374,11 @@ void main() {
       );
       final result = await h.commands.applyGovernedChange(
         GovernedAction([
-          GovernedEntityChange(entity: _order, entityId: _cid, docs: _orderDocs(1)),
+          GovernedEntityChange(
+            entity: _order,
+            entityId: _cid,
+            docs: _orderDocs(1),
+          ),
           GovernedEntityChange(
             entity: _program,
             entityId: _cid,

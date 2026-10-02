@@ -120,10 +120,9 @@ final class FirestoreChangeLogRepository
   @override
   Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>
       watchCompletePaged<ChangeLogEntry>(
-        collection: collectionFor(scope).where(
-          ChangeLogEntry.kEntity,
-          whereIn: intentHistoryEntityValues,
-        ),
+        collection: collectionFor(
+          scope,
+        ).where(ChangeLogEntry.kEntity, whereIn: intentHistoryEntityValues),
         decode: ChangeLogEntry.fromStorage,
         backoffBase: backoffBase,
         backoffCap: backoffCap,

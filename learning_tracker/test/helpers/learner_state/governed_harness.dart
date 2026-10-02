@@ -23,7 +23,11 @@ import 'in_memory_ports.dart';
 final governedNow = DateTime.utc(2026, 9, 10, 12);
 
 /// A child actor (another device / session).
-const childActor = Actor(uid: 'child-uid', role: ActorRole.child, displayName: 'Dovi');
+const childActor = Actor(
+  uid: 'child-uid',
+  role: ActorRole.child,
+  displayName: 'Dovi',
+);
 
 /// A [ChangeLogRepository] whose commits can be held (queued offline) or
 /// failed, recording the order commits were issued in.

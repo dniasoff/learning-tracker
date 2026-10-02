@@ -373,10 +373,7 @@ final class DefaultGovernedLearningCommands
           ));
         } else {
           final batch = GovernedBatch(entry: entry, merges: plan.merges);
-          units.add((
-            entry.id,
-            () => _changeLog.commitGoverned(_scope, batch),
-          ));
+          units.add((entry.id, () => _changeLog.commitGoverned(_scope, batch)));
         }
       }
     } on StorageFormatException {
@@ -417,8 +414,8 @@ final class DefaultGovernedLearningCommands
         SubTrackNotFoundException() => const CaptureResult.rejected(
           CaptureRejection.targetNotFound,
         ),
-        StorageFormatException() || ChangeBaselineMismatchException() =>
-          _invalid,
+        StorageFormatException() ||
+        ChangeBaselineMismatchException() => _invalid,
         _ => _notSaved,
       };
     }
@@ -476,8 +473,7 @@ final class DefaultGovernedLearningCommands
     if (changes.isEmpty) return false;
     for (final change in changes) {
       if (change.docs.isEmpty || change.entityId.isEmpty) return false;
-      if (change.entity == GovernedEntity.subTrack &&
-          change.docs.length != 1) {
+      if (change.entity == GovernedEntity.subTrack && change.docs.length != 1) {
         return false;
       }
       final seen = <String>{};
