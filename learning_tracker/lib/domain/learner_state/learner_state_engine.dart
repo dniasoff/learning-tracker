@@ -12,7 +12,12 @@
 ///    by DNI-467);
 /// 4. completed units (DNI-465);
 /// 5. streak (`streak.dart`, DNI-466: per curriculum, evaluated
-///    curricula only); planning and points (DNI-467, 468).
+///    curricula only);
+/// 6. planning (DNI-467, evaluated curricula only): calendar plan
+///    (`calendar_plan.dart`), reviews (`review_schedule.dart` over
+///    `main_track_config_history.dart`), goal target and pace
+///    (`goal_target.dart`) and projection (`projection.dart`);
+/// 7. points (DNI-468).
 ///
 /// No I/O, clock read or global state: every input is in
 /// [LearnerStateInputs], and identical inputs give equal outputs.
