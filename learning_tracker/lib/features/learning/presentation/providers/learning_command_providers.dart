@@ -191,6 +191,12 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     newUlid: newUlid,
     failureReporter: failureReporter,
   );
+  final achievements = AchievementLatch(
+    FirestoreAchievementLatchAdapter(
+      ref: ref,
+      states: learnerStateFeed(ref, scope),
+    ),
+  );
   final commands = DefaultLearningCommands(
     scope: scope,
     actor: actor,
@@ -212,13 +218,12 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
     governed: governed,
-    achievements: AchievementLatch(
-      FirestoreAchievementLatchAdapter(
-        ref: ref,
-        states: learnerStateFeed(ref, scope),
-      ),
-    ),
+    achievements: achievements,
   );
+  // Recover any latch a failed check left absent (app start, learner
+  // switch); runs in the background and retries its own failures.
+  unawaited(achievements.reconcile(scope));
+  ref.onDispose(achievements.dispose);
   ref.onDispose(commands.dispose);
   ref.onDispose(governed.dispose);
   return commands;

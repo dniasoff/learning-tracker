@@ -59,6 +59,9 @@ final class _EnginePort implements AchievementLatchPort {
   Completer<void>? holdUnlocked;
   bool failTotals = false;
 
+  /// When positive, the next [failTotalsTimes] totals reads throw.
+  int failTotalsTimes = 0;
+
   @override
   Future<PointsTotals> totalsIncluding(
     LearnerScope scope,
@@ -66,6 +69,10 @@ final class _EnginePort implements AchievementLatchPort {
   ) async {
     totalsRequests.add(learnEventIds);
     if (failTotals) throw StateError('ledger unreadable');
+    if (failTotalsTimes > 0) {
+      failTotalsTimes--;
+      throw StateError('ledger unreadable');
+    }
     final events = [for (final c in writes.chunks) ...c.events, ...extra];
     final state = const LearnerStateEngine().run(engineInputs(events: events));
     return pointsTotals([
@@ -98,14 +105,17 @@ final class _EnginePort implements AchievementLatchPort {
 }
 
 final class _Harness {
-  _Harness(FakeFirebaseFirestore firestore)
-    : settings = FirestoreRewardSettingsRepository(
+  _Harness(
+    FakeFirebaseFirestore firestore, {
+    List<Duration> retryDelays = const [],
+  }) : settings = FirestoreRewardSettingsRepository(
         firestore: firestore,
         uid: _uid,
         profileId: _profileId,
       ) {
     port = _EnginePort(writes, settings);
-    latch = AchievementLatch(port);
+    latch = AchievementLatch(port, retryDelays: retryDelays);
+    addTearDown(latch.dispose);
     commands = DefaultLearningCommands(
       scope: c0Scope(),
       actor: const Actor(
@@ -278,6 +288,67 @@ void main() {
     final retried = await h.commands.retry(failure.id) as CaptureSuccess;
     expect(await h.unlocked(), {'bronze'});
     expect(h.port.totalsRequests.last, retried.eventIds.toSet());
+  });
+
+  test('a failed latch check retries on its own with no follow-up '
+      'write', () async {
+    final h = _Harness(
+      firestore,
+      retryDelays: const [Duration(milliseconds: 5), Duration(milliseconds: 5)],
+    );
+    await h.capture([_b11]);
+    await pumpEventQueue();
+
+    // The check after the crossing write fails twice; the command still
+    // succeeds and nothing is latched yet.
+    h.port.failTotalsTimes = 2;
+    expect(await h.capture([_b12]), isA<CaptureSuccess>());
+    expect(await h.unlocked(), isEmpty);
+
+    // The latch retries by itself; no other write happens.
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    expect(await h.unlocked(), {'bronze'});
+    expect(h.port.latchCalls, 1);
+    expect(h.writes.chunks, hasLength(2), reason: 'no follow-up write');
+  });
+
+  test('a latch whose retries ran out is recovered by the reconcile the '
+      'commands run when created', () async {
+    final h = _Harness(firestore); // no retries
+    await h.capture([_b11]);
+    await pumpEventQueue();
+    h.port.failTotals = true;
+    expect(await h.capture([_b12]), isA<CaptureSuccess>());
+    expect(await h.unlocked(), isEmpty);
+
+    // The app restarts: a new latch over the same records reconciles the
+    // current totals against the stored list, with no write.
+    h.port.failTotals = false;
+    final restarted = AchievementLatch(h.port);
+    addTearDown(restarted.dispose);
+    expect(await restarted.reconcile(c0Scope()), {'bronze'});
+    expect(await h.unlocked(), {'bronze'});
+    expect(h.port.totalsRequests.last, isEmpty, reason: 'current totals');
+
+    // Reconciling again latches nothing new.
+    expect(await restarted.reconcile(c0Scope()), isEmpty);
+    expect(h.port.latchCalls, 1);
+  });
+
+  test('dispose cancels pending retries', () async {
+    final h = _Harness(
+      firestore,
+      retryDelays: const [Duration(milliseconds: 5)],
+    );
+    await h.capture([_b11]);
+    await pumpEventQueue();
+    h.port.failTotalsTimes = 1;
+    await h.capture([_b12]);
+    await pumpEventQueue();
+    h.latch.dispose();
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(await h.unlocked(), isEmpty);
+    expect(h.port.latchCalls, 0);
   });
 
   test('no configured thresholds reads nothing else', () async {
