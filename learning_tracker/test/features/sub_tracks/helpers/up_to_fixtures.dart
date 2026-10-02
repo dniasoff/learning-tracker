@@ -45,11 +45,12 @@ SubTrackState fixtureSubTrackState(
   List<String> path = const [],
   Set<String> recordedAhead = const {},
   bool exhausted = false,
+  bool onHome = true,
 }) => SubTrackState(
   subTrackId: id,
   holdsGround: true,
   inForecast: true,
-  onHome: true,
+  onHome: onHome,
   position: path.isEmpty ? null : path.first,
   groundExhausted: exhausted,
   remainingPath: path,
