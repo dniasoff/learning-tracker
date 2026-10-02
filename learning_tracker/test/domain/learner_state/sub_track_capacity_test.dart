@@ -122,6 +122,7 @@ CurriculumState _run({
   bool bundled = true,
   List<MainTrackConfigDoc> studyDays = const [],
   MainTrackProgram? program,
+  MainTrackConfigDoc? scope,
   bool withDeadline = true,
 }) => const LearnerStateEngine().run(
   engineInputs(
@@ -140,6 +141,7 @@ CurriculumState _run({
         ),
         studyDays: studyDays,
         program: program,
+        scope: scope,
       ),
     },
     goals: {
@@ -660,6 +662,45 @@ void main() {
         ],
       );
       expect(beyond.subTracks[_rebbeId]!.shortfall, 16);
+    });
+
+    test('out-of-scope ground uses no capacity and shifts no in-scope '
+        'leaf into shortfall (AD-42)', () {
+      // Scope Seder Zeraim. The Rebbe's ground leads with Shabbat 1
+      // (Moed, 11 leaves, out of scope), then Peah 2 and Peah 3 (16
+      // in-scope leaves). Capacity 19 covers the 16-leaf scoped path, so
+      // nothing is short and 3 leaves are expected new ground. Counting
+      // Shabbat 1 would have spent 11 of the capacity on it and put
+      // all of Peah 3 into shortfall instead.
+      final zeraim = engineScope({'level': 'seder', 'ref': 'Seder Zeraim'});
+      final s = _run(
+        scope: zeraim,
+        subTracks: [
+          _rebbe(
+            ground: [
+              _perek('Shabbat', 1),
+              _perek('Peah', 2),
+              _perek('Peah', 3),
+            ],
+          ),
+        ],
+      );
+      final t = s.subTracks[_rebbeId]!;
+      expect(t.remainingPath, hasLength(11 + 16));
+      _expectTrack(
+        s,
+        _rebbeId,
+        capacity: 19,
+        expectedNewGround: 3,
+        shortfall: 0,
+      );
+      expect(t.shortfallLeaves, isEmpty);
+      expect(t.lastShortfallNode, isNull);
+      final zeraimLeaves = corpus
+          .leavesUnder(const NodeEntry(level: 'seder', ref: 'Seder Zeraim'))
+          .length;
+      expect(s.mainTrackRemaining, zeraimLeaves - 16);
+      expect(_numerator(s), zeraimLeaves - 16 - 3);
     });
 
     test('a sub-track that does not hold ground is not forecast', () {

@@ -239,7 +239,8 @@ final class SubTrackState {
   final int ticked;
 
   /// `expandGround(ground)` from [position] to the end, learnt or not;
-  /// empty with no [position] (DNI-493). The AD-44 `path`.
+  /// empty with no [position] (DNI-493). The AD-44 `path` is this list
+  /// restricted to the learner's scoped corpus (AD-42).
   final List<LeafRef> remainingPath;
 
   /// AD-44 capacity in leaves: `floor(rate_per_week × activeWeeksLeft)`
@@ -248,14 +249,15 @@ final class SubTrackState {
   /// sub-track that does not hold ground (DNI-494).
   final int? capacity;
 
-  /// `max(0, capacity − |remainingPath|)`: capacity left over for ground
+  /// `max(0, capacity − |path|)`, `path` being [remainingPath] in the
+  /// learner's scoped corpus: capacity left over for ground
   /// not entered yet, credited against the main track (FR-19). 0 when
   /// [capacity] is null.
   final int expectedNewGround;
 
-  /// The leaves of [remainingPath] this sub-track will not reach by the
-  /// deadline and that come back to the main track: unlearnt, at indices
-  /// `≥ capacity`, not reached within capacity by another holder, each
+  /// The leaves of the scoped `path` this sub-track will not reach by the
+  /// deadline and that come back to the main track: unlearnt, at `path`
+  /// indices `≥ capacity`, not reached within capacity by another holder, each
   /// counted under one sub-track only (DNI-494). Its sum over the
   /// curriculum's sub-tracks is the FR-19 shortfall term. 0 when
   /// [capacity] is null.
