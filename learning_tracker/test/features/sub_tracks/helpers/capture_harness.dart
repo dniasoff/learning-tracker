@@ -125,6 +125,14 @@ final class CaptureRig {
     _publish();
   }
 
+  /// Lands [event] in the persisted log as another device's write: the
+  /// commands' reads and the engine see it, but this rig's port did not
+  /// commit it.
+  void recordElsewhere(LearningEvent event) {
+    _seed.add(event);
+    _publish();
+  }
+
   /// The seed plus every committed event.
   List<LearningEvent> get events => [
     ..._seed,

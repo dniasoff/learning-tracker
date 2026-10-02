@@ -170,30 +170,40 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
   /// reported failed ([rollBack]) is dropped, so only saved or queued
   /// leaves stay recorded. A plan that does not match the leaves one to
   /// one drops the whole capture (the engine then shows what was saved).
+  /// The [alreadyRecorded] leaves got no event (the log already had them,
+  /// AC-2): they leave the capture before the plan is lined up.
   void bind(
     int token,
     List<String> plannedIds, {
     Iterable<String> notSaved = const [],
+    Iterable<LeafRef> alreadyRecorded = const [],
   }) {
     final gone = {...notSaved, ..._failed};
+    final skipped = alreadyRecorded.toSet();
     state = PendingCaptures(
       [
         for (final e in state.entries)
           if (e.token != token)
             e
-          else if (e.refs.length == plannedIds.length)
+          else if (_planned(e, skipped) case final leaves
+              when leaves.length == plannedIds.length)
             PendingCapture(
               token: token,
               curriculumId: e.curriculumId,
               source: e.source,
               refs: {
-                for (final (i, r) in e.refs.values.indexed)
+                for (final (i, r) in leaves.indexed)
                   if (!gone.contains(plannedIds[i])) plannedIds[i]: r,
               },
             ),
       ].where((e) => e.refs.isNotEmpty).toList(),
     );
   }
+
+  static List<LeafRef> _planned(PendingCapture e, Set<LeafRef> skipped) => [
+    for (final r in e.refs.values)
+      if (!skipped.contains(r)) r,
+  ];
 
   /// Drops the capture [token] (nothing was written).
   void dropToken(int token) => state = PendingCaptures([
@@ -305,6 +315,10 @@ Future<CaptureResult?> captureLeaves(
       source: source,
       dateState: DateState.dated,
       stage: source == LearningEvent.sourceMain ? stage : null,
+      // AC-2: the picker's rows are frozen while it is open; a leaf another
+      // device recorded meanwhile is dropped against the persisted log
+      // rather than written twice.
+      skipRecorded: true,
     );
   } on Exception {
     notSaved();
@@ -314,14 +328,16 @@ Future<CaptureResult?> captureLeaves(
     if (result case CaptureSuccess(
       :final eventIds,
       :final rejectedEventIds,
+      :final alreadyRecordedRefs,
     ) when eventIds.isNotEmpty) {
       // A partly rejected capture omits the rejected chunks from
       // `eventIds`: the sorted union is the plan, one id per leaf in leaf
-      // order.
+      // order, after the leaves the log already recorded are dropped.
       pending.bind(
         token,
         [...eventIds, ...rejectedEventIds]..sort(),
         notSaved: rejectedEventIds,
+        alreadyRecorded: alreadyRecordedRefs,
       );
     } else {
       pending.dropToken(token);

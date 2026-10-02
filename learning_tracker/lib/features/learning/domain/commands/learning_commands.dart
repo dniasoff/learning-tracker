@@ -17,6 +17,7 @@ import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
+import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
@@ -42,6 +43,11 @@ export 'package:learning_tracker/features/learning/domain/commands/sub_track_com
 /// back to the default stage ladder, so an uncached or unreachable
 /// `point_configs` read never blocks an offline capture (AC-9).
 const Duration defaultPointsReadWait = Duration(seconds: 2);
+
+/// How long a `skipRecorded` capture waits for the event log before it
+/// writes the caller's refs as given, so an uncached or unreachable log
+/// never blocks an offline capture (AC-9).
+const Duration defaultRecordedReadWait = Duration(seconds: 2);
 
 /// The replacement fields of `LearningCommands.replace`; null keeps the
 /// target's value.
@@ -113,6 +119,16 @@ abstract interface class LearningCommands {
   /// One event is planned per ref, then per node, in the given order and
   /// with ascending ids, so the sorted union of a success's `eventIds` and
   /// `rejectedEventIds` lines up with [refs] followed by [nodes].
+  ///
+  /// With [skipRecorded] (Up to… and +1, DNI-501 AC-2) the command first
+  /// re-reads the persisted event log and drops every ref already learnt
+  /// in this track: for a sub-track [source], a counted `learn` event of
+  /// that source covers it (AD-33 position); for `main`, any counted
+  /// `learn` event of [curriculumId] covers it (AD-33 `schedulableRefs`).
+  /// The dropped refs are returned in the success's `alreadyRecordedRefs`
+  /// and the plan then lines up with the remaining refs. A log that cannot
+  /// be read in time (offline, uncached) leaves [refs] as given: the
+  /// caller's snapshot already excluded what it knew was recorded.
   Future<CaptureResult> capture({
     required String curriculumId,
     List<LeafRef> refs = const [],
@@ -121,6 +137,7 @@ abstract interface class LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
   });
 
   /// Voids the `learn` event [targetId].
@@ -235,6 +252,7 @@ final class DefaultLearningCommands implements LearningCommands {
     required UlidSource newUlid,
     Duration ackWait = defaultLearningAckWait,
     Duration pointsWait = defaultPointsReadWait,
+    Duration recordedWait = defaultRecordedReadWait,
     GovernedLearningCommands? governed,
     SubTrackCommands? subTrackCommands,
     AchievementLatch? achievements,
@@ -243,6 +261,7 @@ final class DefaultLearningCommands implements LearningCommands {
        _achievements = achievements,
        _sourceCheck = sourceCheck,
        _pointsWait = pointsWait,
+       _recordedWait = recordedWait,
        _actor = actor,
        _reads = reads,
        _gate = gate,
@@ -271,6 +290,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
   final AchievementLatch? _achievements;
+  final Duration _recordedWait;
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -336,6 +356,34 @@ final class DefaultLearningCommands implements LearningCommands {
           .events(_scope)
           .then((events) => LearningLogView.of(events, h, stamp.nowUtc));
 
+  /// The leaves of [curriculumId] already learnt in the track [source]
+  /// per the persisted log judged at [stamp] (see `capture`'s
+  /// `skipRecorded`), or null when the log or corpus cannot be read
+  /// within the recorded wait.
+  Future<Set<LeafRef>?> _recordedIn(
+    String curriculumId,
+    String source,
+    CommandStamp stamp,
+    LearnerSettingsHistory history,
+  ) async {
+    try {
+      final (log, corpus) = await (
+        _log(stamp, history),
+        _reads.corpus(curriculumId),
+      ).wait.timeout(_recordedWait);
+      return {
+        for (final e in log.counted.learns)
+          if (e.curriculumId == curriculumId &&
+              (source == LearningEvent.sourceMain || e.source == source))
+            ...?(corpus == null
+                ? (e.level == null && e.ref != null ? [e.ref!] : null)
+                : coveredLeaves(e, corpus)),
+      };
+    } on Object {
+      return null;
+    }
+  }
+
   static bool _validSource(String source) =>
       source == LearningEvent.sourceMain || isUlid(source);
 
@@ -362,6 +410,7 @@ final class DefaultLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
   }) => _gated((stamp, history) async {
     if (curriculumId.isEmpty || !_validSource(source)) return _invalid;
     if (!await _sourceAllowed(curriculumId, source)) return _invalid;
@@ -371,11 +420,28 @@ final class DefaultLearningCommands implements LearningCommands {
     if (stage != null && (source != LearningEvent.sourceMain || stage < 0)) {
       return _invalid;
     }
-    final leaves = refs.where((r) => r.isNotEmpty).toSet().toList();
+    var leaves = refs.where((r) => r.isNotEmpty).toSet().toList();
     final nodeList = nodes.toSet().toList();
     if (leaves.length != refs.toSet().length) return _invalid;
+    var alreadyRecorded = const <LeafRef>[];
+    if (skipRecorded && leaves.isNotEmpty) {
+      // AC-2: a leaf another device (or an earlier capture) recorded while
+      // the caller's picker was open is never written twice.
+      final recorded = await _recordedIn(curriculumId, source, stamp, history);
+      if (recorded != null && recorded.isNotEmpty) {
+        alreadyRecorded = [
+          for (final r in leaves)
+            if (recorded.contains(r)) r,
+        ];
+        leaves = [
+          for (final r in leaves)
+            if (!recorded.contains(r)) r,
+        ];
+      }
+    }
     if (leaves.isEmpty && nodeList.isEmpty) {
-      return const CaptureResult.success(); // nothing to write
+      // Nothing to write.
+      return CaptureResult.success(alreadyRecordedRefs: alreadyRecorded);
     }
     CivilDate? day;
     if (dateState != DateState.beforeTracking) {
@@ -403,7 +469,15 @@ final class DefaultLearningCommands implements LearningCommands {
     } on StorageFormatException {
       return _invalid;
     }
-    final result = await _write(LearningCommandKind.capture, units);
+    var result = await _write(LearningCommandKind.capture, units);
+    if (result is CaptureSuccess && alreadyRecorded.isNotEmpty) {
+      result = CaptureResult.success(
+        eventIds: result.eventIds,
+        queued: result.queued,
+        rejectedEventIds: result.rejectedEventIds,
+        alreadyRecordedRefs: alreadyRecorded,
+      );
+    }
     if (result is CaptureSuccess) {
       _analytics.capture(
         curriculumId: curriculumId,

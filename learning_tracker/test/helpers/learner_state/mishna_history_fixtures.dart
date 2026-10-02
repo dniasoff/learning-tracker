@@ -220,6 +220,7 @@ final class GatedLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
   }) => _held(
     () => inner.capture(
       curriculumId: curriculumId,
@@ -229,6 +230,7 @@ final class GatedLearningCommands implements LearningCommands {
       dateState: dateState,
       learnedOn: learnedOn,
       stage: stage,
+      skipRecorded: skipRecorded,
     ),
   );
 

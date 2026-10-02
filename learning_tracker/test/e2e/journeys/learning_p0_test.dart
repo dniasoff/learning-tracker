@@ -69,6 +69,7 @@ class _ThrowingCaptureCommands implements LearningCommands {
     required DateState dateState,
     String? learnedOn,
     int? stage,
+    bool skipRecorded = false,
   }) async => throw _error;
 
   @override

@@ -5,6 +5,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 
@@ -20,6 +21,7 @@ sealed class CaptureResult {
     bool queued,
     List<ChangedSinceField> changedSince,
     List<String> rejectedEventIds,
+    List<LeafRef> alreadyRecordedRefs,
   }) = CaptureSuccess;
 
   /// Refused: the learner is inside lock [window] (AD-36).
@@ -49,7 +51,13 @@ final class CaptureSuccess extends CaptureResult {
     this.queued = false,
     this.changedSince = const [],
     this.rejectedEventIds = const [],
+    this.alreadyRecordedRefs = const [],
   });
+
+  /// The refs of a `skipRecorded` capture that the persisted log already
+  /// recorded in this track, so no event was planned for them (DNI-501
+  /// AC-2); in the caller's order. Empty for every other command.
+  final List<LeafRef> alreadyRecordedRefs;
 
   /// The learning events written.
   final List<String> eventIds;
@@ -83,7 +91,8 @@ final class CaptureSuccess extends CaptureResult {
       other.actionId == actionId &&
       other.queued == queued &&
       _listEquals(other.changedSince, changedSince) &&
-      _listEquals(other.rejectedEventIds, rejectedEventIds);
+      _listEquals(other.rejectedEventIds, rejectedEventIds) &&
+      _listEquals(other.alreadyRecordedRefs, alreadyRecordedRefs);
 
   @override
   int get hashCode => Object.hash(
@@ -93,6 +102,7 @@ final class CaptureSuccess extends CaptureResult {
     queued,
     Object.hashAll(changedSince),
     Object.hashAll(rejectedEventIds),
+    Object.hashAll(alreadyRecordedRefs),
   );
 
   @override
