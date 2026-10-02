@@ -72,15 +72,32 @@ final class CompletedUnit {
 }
 
 /// A leaf due for review at stage [stageOrder].
+///
+/// A review is identified by `(leaf, stageOrder)`: equality and hash read
+/// only those two. [dueFrom] and [completedOn] describe the review on the
+/// date it was queried for (DNI-477, additive to the C0 contract) so the
+/// planner takes the due date from `reviewsDue(date)` and never schedules
+/// a review itself (AD-49).
 final class ReviewDue {
   /// Creates a review item.
-  const ReviewDue(this.leaf, this.stageOrder);
+  const ReviewDue(this.leaf, this.stageOrder, {this.dueFrom, this.completedOn});
 
   /// The leaf.
   final LeafRef leaf;
 
   /// The review stage order.
   final int stageOrder;
+
+  /// The first civil date the review was due. Earlier than the queried
+  /// date only for an overdue delay review (it stays due until done); the
+  /// queried date for a weekly or rolling review. Null when the source did
+  /// not say.
+  final CivilDate? dueFrom;
+
+  /// The civil date the review was done, when it was done on the queried
+  /// date (a review done on a date still counts as due that day); null
+  /// while it is still to do.
+  final CivilDate? completedOn;
 
   @override
   bool operator ==(Object other) =>

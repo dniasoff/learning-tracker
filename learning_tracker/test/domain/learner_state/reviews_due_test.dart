@@ -324,6 +324,54 @@ void main() {
     });
   });
 
+  // DNI-477: the planner reads each review's due date and done-today
+  // marker from reviewsDue(date) instead of scheduling reviews itself
+  // (AD-49; ported from the retired SchedulerEngine due-review tests:
+  // "overdue by N day(s)", "due today", and the completion filter).
+  group('due date and done marker (DNI-477)', () {
+    test('a delay review carries the date it first fell due', () {
+      final state = _run([_main(1, _b11, 1, 1)]);
+      final due = state.reviewsDue(_sep(5)).single;
+      expect(due, const ReviewDue(_b11, 2));
+      expect(due.dueFrom, _sep(2));
+      expect(due.completedOn, isNull);
+      expect(state.reviewsDue(_sep(2)).single.dueFrom, _sep(2));
+    });
+
+    test('a review done on the queried date is marked done; on an earlier '
+        'date it is still to do', () {
+      final state = _run([_main(1, _b11, 1, 1), _main(2, _b11, 2, 3)]);
+      expect(state.reviewsDue(_sep(3)).single.completedOn, _sep(3));
+      expect(state.reviewsDue(_sep(2)).single.completedOn, isNull);
+    });
+
+    test('weekly and rolling reviews are due from the queried date', () {
+      final weekly = _run(
+        [_main(1, _b11, 1, 1)],
+        stages: [
+          _stage(1),
+          _stage(2, type: 'weekly', daysOfWeek: [1]),
+        ],
+      );
+      expect(weekly.reviewsDue(_sep(14)).single.dueFrom, _sep(14));
+      final rolling = _run(
+        [_main(1, _b11, 1, 1)],
+        stages: [
+          _stage(1),
+          _stage(2, type: 'rolling', window: 2),
+        ],
+      );
+      expect(rolling.reviewsDue(_sep(4)).single.dueFrom, _sep(4));
+    });
+
+    test('identity is (leaf, stage): the metadata is not part of equality', () {
+      expect(
+        const ReviewDue(_b11, 2, dueFrom: '2026-09-02'),
+        const ReviewDue(_b11, 2, completedOn: '2026-09-03'),
+      );
+    });
+  });
+
   test('reviews are ordered by cycle start', () {
     final state = _run([_main(2, _b12, 1, 1), _main(1, _b11, 1, 2)]);
     expect(state.reviewsDue(_sep(5)), [

@@ -1,64 +1,567 @@
-/// Domain-layer projection branch tests.
+/// The planner on LearnerState (DNI-477 AC-1, AC-2; AD-49).
+///
+/// The planner lays out the engine's numbers and never computes one:
+/// main-track tasks come from `schedulableRefs` (position / current unit)
+/// up to `dailyTarget`, else `paceRate`, else nothing; calendar programs
+/// from `programAssignments(date) ∪ programBacklog(date)`; reviews from
+/// `reviewsDue(date)` with their stage order and due date. Every state
+/// here is a [FakeCurriculumState] (the C0 contract), so each case pins
+/// what the planner does with a given engine output.
+///
+/// R15 disposition of the retired planner tests: the self-paced accrual
+/// ("Behind pace" overdue from `selfPacedSchedule`), the reorder amnesty
+/// and the program anchor clamp are deleted with their code (AD-49 retires
+/// planner quantities and planner amnesty); calendar overdue/today routing
+/// is the "calendar program" group below; the golden parity of the
+/// no-sub-track learner is `legacy_planner_golden_parity_test.dart`.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
-import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
-import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
-import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
-import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
-import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_projection_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
-import 'package:mocktail/mocktail.dart';
 
-class _StudyDays extends Mock implements FirestoreStudyDayReaderAdapter {}
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learner_state.dart';
 
-class _Content implements SchedulerContentRepository {
-  @override
-  Future<List<SchedulerContentItem>> getLeafItems(CurriculumId id) async => [
-    for (var i = 0; i < 20; i++)
-      SchedulerContentItem(
-        sefariaRef: '${id.storageKey}-$i',
-        sortOrder: i,
-        level1: 'Seder',
-        level2: 'Masechta',
-        level3: 'Perek 1',
-        level4: 'Mishna $i',
-      ),
-  ];
-}
+const _c = CurriculumId.mishnayos;
+const _today = '2026-09-07'; // a Monday
 
-class _Completions implements SchedulerCompletionRepository {
-  final Map<CurriculumId, List<SchedulerCompletion>> byCurriculum = {};
+// The engine fixture corpus: Berakhot (1:1, 1:2, 1:3, 2:1, 2:2), Peah
+// (1:1, 1:2), Shabbat (1:1, 1:2).
+const _b11 = 'Mishnah Berakhot 1:1';
+const _b13 = 'Mishnah Berakhot 1:3';
+const _b21 = 'Mishnah Berakhot 2:1';
+const _b22 = 'Mishnah Berakhot 2:2';
+const _p11 = 'Mishnah Peah 1:1';
+const _p12 = 'Mishnah Peah 1:2';
+const _s11 = 'Mishnah Shabbat 1:1';
+const _s12 = 'Mishnah Shabbat 1:2';
 
-  @override
-  Future<List<SchedulerCompletion>> getCompletions(CurriculumId id) async =>
-      byCurriculum[id] ?? const [];
-}
+final Corpus _corpus = mishnayosCorpus();
 
-class _Order implements SchedulerLearningOrderRepository {
-  @override
-  Future<List<SchedulerOrderItem>> getOrder(CurriculumId id) async => const [];
-}
+const _stages = {1: 'Learn', 2: 'Chazara A', 3: 'Chazara B'};
 
-class _Stages implements SchedulerStageRepository {
-  @override
-  Future<List<SchedulerStage>> getStages(CurriculumId id) async => const [
-    SchedulerStage(stageOrder: 1, stageName: 'Learn', delayDays: 0),
-  ];
+CurriculumTaskPresentation _presentation({
+  bool studyDay = true,
+  Map<String, ProgramDayLabel>? labels,
+  Map<int, String> stages = _stages,
+}) => CurriculumTaskPresentation(
+  trackLabel: 'Mishnayos',
+  stageNames: stages,
+  studyDay: studyDay,
+  programDayLabels: labels,
+);
+
+CurriculumTasks _plan(
+  CurriculumState state, {
+  CurriculumTaskPresentation? presentation,
+  String date = _today,
+}) => planCurriculumTasks(
+  curriculum: _c,
+  state: state,
+  corpus: _corpus,
+  date: date,
+  presentation: presentation ?? _presentation(),
+);
+
+List<String> _refs(List<DailyTask> tasks) =>
+    tasks.map((t) => t.contentItemSefariaRef).toList();
+
+/// A Berakhot learner with the rest of the corpus schedulable.
+FakeCurriculumState _midBerakhot({
+  int? dailyTarget,
+  double? paceRate,
+  List<String> schedulable = const [_b21, _b22, _p11, _p12, _s11, _s12],
+  Map<String, List<ReviewDue>> reviews = const {},
+}) => FakeCurriculumState(
+  curriculumId: _c.storageKey,
+  currentUnit: berakhot,
+  mainTrackPosition: schedulable.isEmpty ? null : schedulable.first,
+  schedulableRefs: schedulable,
+  mainTrackRemaining: schedulable.length,
+  dailyTarget: dailyTarget,
+  paceRate: paceRate,
+  reviews: reviews,
+);
+
+void main() {
+  group('AC-1: the quantity is the engine\'s', () {
+    test('a deadline lays out dailyTarget leaves, even with a pace', () {
+      final tasks = _plan(_midBerakhot(dailyTarget: 1, paceRate: 2));
+      expect(_refs(tasks.learning), [_b21]);
+    });
+
+    test('a pace alone lays out paceRate leaves (whole leaves, rounded '
+        'up)', () {
+      expect(_refs(_plan(_midBerakhot(paceRate: 2)).learning), [_b21, _b22]);
+      expect(_refs(_plan(_midBerakhot(paceRate: 1.2)).learning), [_b21, _b22]);
+    });
+
+    test('no deadline and no pace: no new learning; reviews still show', () {
+      final tasks = _plan(
+        _midBerakhot(
+          reviews: {
+            _today: [const ReviewDue(_b11, 2, dueFrom: _today)],
+          },
+        ),
+      );
+      expect(tasks.learning, isEmpty);
+      expect(_refs(tasks.reviews), [_b11]);
+    });
+
+    test('a zero dailyTarget is not replaced by the pace', () {
+      expect(
+        _plan(_midBerakhot(dailyTarget: 0, paceRate: 3)).learning,
+        isEmpty,
+      );
+    });
+
+    test('new learning is the learn stage, due today', () {
+      final task = _plan(_midBerakhot(dailyTarget: 1)).learning.single;
+      expect(
+        task,
+        const DailyTask(
+          curriculumId: _c,
+          contentItemSefariaRef: _b21,
+          stageOrder: 1,
+          priority: DailyTaskPriority.newLearning,
+          isOverdue: false,
+          reason: 'Due today',
+          stageName: 'Learn',
+          trackLabel: 'Mishnayos',
+          estimatedEffortMinutes: 5,
+        ),
+      );
+    });
+
+    test('only schedulableRefs are laid out: a learnt or sub-track-held '
+        'leaf never re-enters', () {
+      // Berakhot 1:x is learnt, Peah is held by a sub-track: neither is in
+      // the engine's schedulableRefs.
+      final tasks = _plan(
+        _midBerakhot(dailyTarget: 9, schedulable: const [_b21, _b22, _s11]),
+      );
+      expect(_refs(tasks.learning), [_b21, _b22, _s11]);
+    });
+
+    test('a review-only day shows no new learning but keeps reviews', () {
+      final tasks = _plan(
+        _midBerakhot(
+          dailyTarget: 2,
+          reviews: {
+            _today: [const ReviewDue(_b11, 2, dueFrom: _today)],
+          },
+        ),
+        presentation: _presentation(studyDay: false),
+      );
+      expect(tasks.learning, isEmpty);
+      expect(tasks.reviews, hasLength(1));
+    });
+
+    test('nothing schedulable, nothing due: an empty plan', () {
+      final tasks = _plan(
+        FakeCurriculumState(curriculumId: _c.storageKey, dailyTarget: 3),
+      );
+      expect(tasks.learning, isEmpty);
+      expect(tasks.reviews, isEmpty);
+    });
+
+    test('a curriculum the engine did not evaluate, or with no stages, has '
+        'no tasks', () {
+      expect(
+        _plan(
+          FakeCurriculumState(
+            curriculumId: _c.storageKey,
+            evaluated: false,
+            schedulableRefs: const [_b21],
+            dailyTarget: 1,
+          ),
+        ).learning,
+        isEmpty,
+      );
+      expect(
+        _plan(
+          _midBerakhot(dailyTarget: 1),
+          presentation: _presentation(stages: const {}),
+        ).learning,
+        isEmpty,
+      );
+    });
+  });
+
+  group('AC-2: FR-12a, one masechta at a time', () {
+    test('mid-masechta: the batch stays in the current unit', () {
+      expect(_refs(_plan(_midBerakhot(dailyTarget: 2)).learning), [_b21, _b22]);
+    });
+
+    test('the day the masechta finishes, the next one begins — and only '
+        'that one', () {
+      expect(_refs(_plan(_midBerakhot(dailyTarget: 3)).learning), [
+        _b21,
+        _b22,
+        _p11,
+      ]);
+      // Room for more than the next masechta still stops at it.
+      expect(_refs(_plan(_midBerakhot(dailyTarget: 6)).learning), [
+        _b21,
+        _b22,
+        _p11,
+        _p12,
+      ]);
+    });
+
+    test('an interleaved order still finishes the current unit first', () {
+      final tasks = _plan(
+        _midBerakhot(
+          dailyTarget: 2,
+          schedulable: const [_p11, _b21, _p12, _b22],
+        ),
+      );
+      expect(_refs(tasks.learning), [_b21, _b22]);
+    });
+
+    test('without a current unit the position\'s unit is used', () {
+      final state = FakeCurriculumState(
+        curriculumId: _c.storageKey,
+        mainTrackPosition: _p11,
+        schedulableRefs: const [_p11, _p12, _s11],
+        paceRate: 3,
+      );
+      expect(_refs(_plan(state).learning), [_p11, _p12, _s11]);
+    });
+
+    test('mainTrackBatch with a zero quantity or no corpus', () {
+      final state = _midBerakhot(dailyTarget: 2);
+      expect(
+        mainTrackBatch(state: state, corpus: _corpus, quantity: 0),
+        isEmpty,
+      );
+      expect(mainTrackBatch(state: state, corpus: null, quantity: 3), [
+        _b21,
+        _b22,
+        _p11,
+      ]);
+    });
+  });
+
+  group('AC-1: calendar program = assignments ∪ backlog', () {
+    const label = (he: 'ברכות א', en: 'Berakhot 1');
+
+    FakeCurriculumState calendarState() => FakeCurriculumState(
+      curriculumId: _c.storageKey,
+      learntLeaves: const {_b13},
+      // A main track and a target exist too; a calendar program ignores
+      // them.
+      schedulableRefs: const [_s11, _s12],
+      mainTrackPosition: _s11,
+      dailyTarget: 4,
+      backlog: {
+        _today: const [_b11, _b21],
+      },
+      assignments: {
+        _today: const [_b21, _b13, _b22],
+      },
+    );
+
+    test('backlog days are overdue, today\'s day is today, deduplicated by '
+        'leaf and less what is learnt', () {
+      final tasks = _plan(
+        calendarState(),
+        presentation: _presentation(labels: {_b11: label}),
+      );
+      expect(
+        [
+          for (final t in tasks.learning)
+            (t.contentItemSefariaRef, t.priority, t.isOverdue, t.reason),
+        ],
+        [
+          (
+            _b11,
+            DailyTaskPriority.overdueProgram,
+            true,
+            'Program day pending from previous days',
+          ),
+          (
+            _b21,
+            DailyTaskPriority.overdueProgram,
+            true,
+            'Program day pending from previous days',
+          ),
+          (
+            _b22,
+            DailyTaskPriority.todayProgram,
+            false,
+            'Program assignment for today',
+          ),
+        ],
+      );
+      expect(tasks.learning.first.unitDisplayHe, label.he);
+      expect(tasks.learning.first.unitDisplayEn, label.en);
+      expect(tasks.learning.last.unitDisplayEn, isNull);
+    });
+
+    test('calendar days show on a review-only day too', () {
+      final tasks = _plan(
+        calendarState(),
+        presentation: _presentation(labels: const {}, studyDay: false),
+      );
+      expect(tasks.learning, hasLength(3));
+    });
+
+    test('an empty union is an empty plan, never the main track', () {
+      final tasks = _plan(
+        FakeCurriculumState(
+          curriculumId: _c.storageKey,
+          schedulableRefs: const [_s11],
+          dailyTarget: 1,
+        ),
+        presentation: _presentation(labels: const {}),
+      );
+      expect(tasks.learning, isEmpty);
+    });
+  });
+
+  group('AC-1: chazara from reviewsDue(date)', () {
+    test('stage order and due date come from the engine', () {
+      final tasks = _plan(
+        _midBerakhot(
+          reviews: {
+            _today: [
+              const ReviewDue(_b11, 2, dueFrom: '2026-09-03'),
+              const ReviewDue(_b13, 3, dueFrom: _today),
+              const ReviewDue(_b21, 2, dueFrom: '2026-09-06'),
+            ],
+          },
+        ),
+      );
+      expect(
+        [
+          for (final t in tasks.reviews)
+            (
+              t.contentItemSefariaRef,
+              t.stageOrder,
+              t.stageName,
+              t.priority,
+              t.isOverdue,
+              t.reason,
+              t.estimatedEffortMinutes,
+            ),
+        ],
+        [
+          (
+            _b11,
+            2,
+            'Chazara A',
+            DailyTaskPriority.overdueChazara,
+            true,
+            'Chazara A overdue by 4 day(s)',
+            3,
+          ),
+          (
+            _b21,
+            2,
+            'Chazara A',
+            DailyTaskPriority.overdueChazara,
+            true,
+            'Chazara A overdue by 1 day(s)',
+            3,
+          ),
+          (
+            _b13,
+            3,
+            'Chazara B',
+            DailyTaskPriority.scheduledChazara,
+            false,
+            'Chazara B due today',
+            3,
+          ),
+        ],
+      );
+    });
+
+    test('a review done on the date is not a task', () {
+      final tasks = _plan(
+        _midBerakhot(
+          reviews: {
+            _today: [
+              const ReviewDue(_b11, 2, dueFrom: _today, completedOn: _today),
+            ],
+          },
+        ),
+      );
+      expect(tasks.reviews, isEmpty);
+    });
+
+    test('every due review shows: the planner caps nothing', () {
+      final due = [
+        for (var i = 0; i < 25; i++)
+          ReviewDue('Mishnah Berakhot 9:$i', 2, dueFrom: '2026-09-01'),
+      ];
+      expect(
+        _plan(_midBerakhot(reviews: {_today: due})).reviews,
+        hasLength(25),
+      );
+    });
+
+    test('a review at a stage the presentation does not name keeps the '
+        'engine\'s stage order', () {
+      final task = _plan(
+        _midBerakhot(
+          reviews: {
+            _today: [const ReviewDue(_b11, 7, dueFrom: _today)],
+          },
+        ),
+      ).reviews.single;
+      expect(task.stageOrder, 7);
+      expect(task.stageName, '');
+    });
+
+    test('a later date reads the engine at that date (erev planned list)', () {
+      final state = _midBerakhot(
+        dailyTarget: 1,
+        reviews: {
+          '2026-09-09': [const ReviewDue(_b11, 2, dueFrom: '2026-09-09')],
+        },
+      );
+      expect(_plan(state).reviews, isEmpty);
+      final later = _plan(state, date: '2026-09-09');
+      expect(_refs(later.reviews), [_b11]);
+      expect(_refs(later.learning), [_b21]);
+    });
+  });
+
+  group('buildPlannedTasks', () {
+    test('plans only tracked, evaluated curricula, in order', () async {
+      final state = fakeLearnerState(
+        curricula: {
+          _c.storageKey: _midBerakhot(dailyTarget: 1),
+          CurriculumId.bavli.storageKey: FakeCurriculumState(
+            curriculumId: CurriculumId.bavli.storageKey,
+            schedulableRefs: const ['Berakhot 2a'],
+            dailyTarget: 1,
+          ),
+          CurriculumId.chumash.storageKey: FakeCurriculumState(
+            curriculumId: CurriculumId.chumash.storageKey,
+            evaluated: false,
+          ),
+        },
+      );
+      final tasks = await buildPlannedTasks(
+        state: state,
+        corpora: {_c.storageKey: _corpus},
+        date: _today,
+        activeCurricula: const [
+          CurriculumId.chumash,
+          _c,
+          CurriculumId.bavli,
+          CurriculumId.tanach,
+        ],
+        activeTracks: [
+          for (final c in [_c, CurriculumId.chumash, CurriculumId.tanach])
+            CurriculumTrackEntity(
+              curriculumId: c,
+              state: 'active',
+              stateChangedAt: DateTime.utc(2026),
+              activatedAt: DateTime.utc(2026),
+            ),
+        ],
+        presentationFor: (_) async => _presentation(),
+      );
+      expect(_refs(tasks.learning), [_b21]);
+    });
+  });
+
+  group('loadCurriculumTaskPresentation', () {
+    Future<CurriculumTaskPresentation> load({
+      List<StudyDayConfigEntry> configs = const [],
+      ProfileProgramEntity? program,
+      String date = _today,
+    }) => loadCurriculumTaskPresentation(
+      curriculum: _c,
+      date: date,
+      trackLabel: 'Mishnayos',
+      stageRepository: _StageDefinitions(),
+      studyDayConfigs: (_) async => configs,
+      profileProgramRepository: _Programs(program),
+      programRepository: LearningProgramRepository.instance,
+      calendarService: CalendarProgramService(_Calendar()),
+      getScopedContent: (_) async => const <ContentItem>[],
+    );
+
+    test('stage names by stage order', () async {
+      expect((await load()).stageNames, {1: 'Learn', 2: 'Chazara A'});
+    });
+
+    test('no study-day config: every day is a study day', () async {
+      expect((await load()).studyDay, isTrue);
+    });
+
+    test('the date\'s weekday decides the study day', () async {
+      final configs = [
+        const StudyDayConfigEntry(dayOfWeek: 1, dayType: DayType.review),
+        const StudyDayConfigEntry(dayOfWeek: 2, dayType: DayType.study),
+      ];
+      expect((await load(configs: configs)).studyDay, isFalse); // Monday
+      expect(
+        (await load(configs: configs, date: '2026-09-08')).studyDay, // Tue
+        isTrue,
+      );
+    });
+
+    test('no calendar enrollment: not a calendar program', () async {
+      expect((await load()).programDayLabels, isNull);
+    });
+
+    test(
+      'a calendar enrollment labels each assigned leaf with its day',
+      () async {
+        final dafYomi = LearningProgramRepository.instance
+            .getAllPrograms()
+            .firstWhere((p) => p.apiProgramKey == 'daf_yomi');
+        final labels = (await load(
+          program: ProfileProgramEntity(
+            curriculumId: _c,
+            programId: dafYomi.id,
+            trackingStartDate: DateTime(2026, 9, 6),
+            updatedAt: DateTime.utc(2026),
+          ),
+        )).programDayLabels;
+        expect(labels, {
+          'Day 6': (he: 'יום ו', en: 'Day 6'),
+          'Day 7': (he: 'יום ז', en: 'Day 7'),
+        });
+      },
+    );
+
+    test('a calendar enrollment starting later labels nothing yet', () async {
+      final dafYomi = LearningProgramRepository.instance
+          .getAllPrograms()
+          .firstWhere((p) => p.apiProgramKey == 'daf_yomi');
+      final labels = (await load(
+        program: ProfileProgramEntity(
+          curriculumId: _c,
+          programId: dafYomi.id,
+          trackingStartDate: DateTime(2026, 9, 10),
+          updatedAt: DateTime.utc(2026),
+        ),
+      )).programDayLabels;
+      expect(labels, isEmpty);
+    });
+  });
 }
 
 class _StageDefinitions implements StageDefinitionRepository {
@@ -66,88 +569,66 @@ class _StageDefinitions implements StageDefinitionRepository {
   Future<List<StageDefinition>> getStagesForCurriculum(
     CurriculumId curriculumId,
   ) async => [
-    StageDefinition(
-      curriculumId: curriculumId,
-      stageOrder: 1,
-      stageName: 'Learn',
-      delayDays: 0,
-      isDefault: true,
-    ),
+    for (final (order, name) in [(1, 'Learn'), (2, 'Chazara A')])
+      StageDefinition(
+        curriculumId: curriculumId,
+        stageOrder: order,
+        stageName: name,
+        delayDays: order - 1,
+        isDefault: true,
+      ),
   ];
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-    'Only getStagesForCurriculum is used by this projection test double.',
-  );
-}
-
-class _Goals implements GoalRepository {
-  final Map<CurriculumId, GoalEntity> values;
-
-  _Goals(this.values);
-
-  @override
-  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async => [
-    if (values[curriculumId] case final goal?) goal,
-  ];
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-    'Only getGoals is used by this projection test double.',
-  );
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('Only getStagesForCurriculum is used.');
 }
 
 class _Programs implements ProfileProgramRepository {
-  final Map<CurriculumId, ProfileProgramEntity> values;
+  _Programs(this.program);
 
-  _Programs(this.values);
+  final ProfileProgramEntity? program;
 
   @override
   Future<ProfileProgramEntity?> getProgram(CurriculumId curriculumId) async =>
-      values[curriculumId];
+      program;
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-    'Only getProgram is used by this projection test double.',
-  );
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('Only getProgram is used.');
 }
 
+/// A calendar whose day `d` assigns `Day d` (Hebrew label `יום` + letter).
 class _Calendar implements LocalCalendarEngine {
-  _Calendar(this.programId);
+  static const _letters = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
 
-  final String programId;
+  CalendarProgramEntry _entry(String id, DateTime date) => CalendarProgramEntry(
+    programId: id,
+    displayNameEn: 'Test program',
+    displayNameHe: '',
+    todayRef: 'Day ${date.day}',
+    todayRefHe: 'יום ${_letters[date.day % 10]}',
+    apiSource: 'test',
+    date: DateTime.utc(date.year, date.month, date.day),
+  );
 
   @override
-  Future<CalendarProgramEntry?> getEntry(String id, DateTime date) async {
-    if (id != programId) return null;
-    return CalendarProgramEntry(
-      programId: id,
-      displayNameEn: 'Test program',
-      displayNameHe: '',
-      todayRef: 'program-${date.day}',
-      apiSource: 'test',
-      date: DateTime.utc(date.year, date.month, date.day),
-    );
-  }
+  Future<CalendarProgramEntry?> getEntry(String id, DateTime date) async =>
+      _entry(id, date);
 
   @override
   Future<List<CalendarProgramEntry>> getEntriesForRange(
     String id,
     DateTime startDate,
     DateTime endDate,
-  ) async {
-    if (id != programId) return const [];
-    final start = DateTime.utc(startDate.year, startDate.month, startDate.day);
-    final end = DateTime.utc(endDate.year, endDate.month, endDate.day);
-    return [
-      for (
-        var date = start;
-        !date.isAfter(end);
-        date = date.add(const Duration(days: 1))
-      )
-        (await getEntry(id, date))!,
-    ];
-  }
+  ) async => [
+    for (
+      var date = DateTime.utc(startDate.year, startDate.month, startDate.day);
+      !date.isAfter(DateTime.utc(endDate.year, endDate.month, endDate.day));
+      date = date.add(const Duration(days: 1))
+    )
+      _entry(id, date),
+  ];
 
   @override
   Future<List<CalendarProgramEntry>> getTodayPrograms([DateTime? date]) async =>
@@ -158,231 +639,4 @@ class _Calendar implements LocalCalendarEngine {
     String programKey,
     DateTime date,
   ) => getEntry(programKey, date);
-}
-
-GoalEntity _paceGoal(CurriculumId curriculum, DateTime now) => GoalEntity(
-  curriculumId: curriculum,
-  goalType: 'pace',
-  paceValue: 1,
-  pacePeriod: 'day',
-  createdAt: now,
-  updatedAt: now,
-);
-
-CurriculumTrackEntity _track(
-  CurriculumId curriculum,
-  DateTime activatedAt, {
-  DateTime? lastReorderAt,
-}) => CurriculumTrackEntity(
-  curriculumId: curriculum,
-  state: 'active',
-  stateChangedAt: activatedAt,
-  activatedAt: activatedAt,
-  lastReorderAt: lastReorderAt,
-);
-
-ProfileProgramEntity _program(
-  CurriculumId curriculum,
-  int programId,
-  DateTime anchor,
-) => ProfileProgramEntity(
-  curriculumId: curriculum,
-  programId: programId,
-  trackingStartDate: anchor,
-  updatedAt: anchor,
-);
-
-Future<List<DailyTask>> _build({
-  required DateTime now,
-  required List<CurriculumId> activeCurricula,
-  required List<CurriculumTrackEntity> activeTracks,
-  required _Goals goals,
-  required _Programs programs,
-  required CalendarProgramService calendarService,
-  _Completions? completions,
-}) async {
-  final completionRepo = completions ?? _Completions();
-  final stages = _StageDefinitions();
-  final reader = _StudyDays();
-  when(
-    () => reader.getConfigsForCurriculum(any()),
-  ).thenAnswer((_) async => const []);
-  final engine = SchedulerEngine(
-    contentRepository: _Content(),
-    completionRepository: completionRepo,
-    stageRepository: _Stages(),
-    learningOrderRepository: _Order(),
-  );
-  return buildProjectionTasks(
-    trackLabelFor: (curriculum) => curriculum.storageKey,
-    activeCurricula: activeCurricula,
-    activeTracks: activeTracks,
-    completionRepository: completionRepo,
-    profileProgramRepository: programs,
-    goalRepository: goals,
-    studyDayReader: reader,
-    stageRepository: stages,
-    engine: engine,
-    now: now,
-    calendarService: calendarService,
-    getScopedContent: (curriculum) async => [
-      if (curriculum == CurriculumId.mishnayos)
-        for (var i = 0; i < 20; i++)
-          ContentItem(
-            curriculumId: curriculum.storageKey,
-            level1: 'Seder',
-            level2: 'Masechta',
-            level3: 'Perek 1',
-            level4: 'Mishna $i',
-            displayNameHe: 'משנה',
-            displayNameEn: 'Mishna',
-            sefariaRef: 'mishnayos-$i',
-            sortOrder: i,
-            isLeaf: true,
-          ),
-    ],
-    programRepository: LearningProgramRepository.instance,
-  );
-}
-
-void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
-
-  test(
-    'self-paced amnesty keeps only work on or after the reorder day',
-    () async {
-      final today = DateTime.utc(2026, 5, 27);
-      final anchor = today.subtract(const Duration(days: 5));
-      final tasks = await _build(
-        now: today,
-        activeCurricula: const [CurriculumId.mishnayos],
-        activeTracks: [
-          _track(
-            CurriculumId.mishnayos,
-            anchor,
-            lastReorderAt: anchor.add(const Duration(days: 3, hours: 15)),
-          ),
-        ],
-        goals: _Goals({
-          CurriculumId.mishnayos: _paceGoal(CurriculumId.mishnayos, today),
-        }),
-        programs: _Programs({}),
-        calendarService: CalendarProgramService(_Calendar('unused')),
-      );
-
-      expect(tasks.where((task) => task.isOverdue), hasLength(2));
-      expect(tasks.where((task) => !task.isOverdue), hasLength(1));
-      expect(
-        tasks
-            .where((task) => task.isOverdue)
-            .every((task) => task.reason == 'Behind pace'),
-        isTrue,
-      );
-      expect(tasks.where((task) => !task.isOverdue).single.reason, 'Due today');
-    },
-  );
-
-  test(
-    'one call routes enrolled and unenrolled curricula through their branches',
-    () async {
-      final today = DateTime.utc(2026, 5, 27);
-      final program = LearningProgramRepository.instance
-          .getAllPrograms()
-          .firstWhere((candidate) => candidate.apiProgramKey == 'daf_yomi');
-      final programCurriculum = CurriculumId.values.firstWhere(
-        (curriculum) => curriculum.storageKey == program.curriculumType,
-      );
-      final programAnchor = today.subtract(const Duration(days: 2));
-      final tasks = await _build(
-        now: today,
-        activeCurricula: [CurriculumId.mishnayos, programCurriculum],
-        activeTracks: [
-          _track(CurriculumId.mishnayos, today),
-          _track(programCurriculum, programAnchor),
-        ],
-        goals: _Goals({
-          CurriculumId.mishnayos: _paceGoal(CurriculumId.mishnayos, today),
-        }),
-        programs: _Programs({
-          programCurriculum: _program(
-            programCurriculum,
-            program.id,
-            programAnchor,
-          ),
-        }),
-        calendarService: CalendarProgramService(
-          _Calendar(program.apiProgramKey!),
-        ),
-      );
-
-      final selfPaced = tasks
-          .where((task) => task.curriculumId == CurriculumId.mishnayos)
-          .toList();
-      final programmed = tasks
-          .where((task) => task.curriculumId == programCurriculum)
-          .toList();
-      expect(selfPaced, hasLength(1));
-      expect(selfPaced.single.priority, DailyTaskPriority.newLearning);
-      expect(programmed, hasLength(3));
-      expect(
-        programmed.where(
-          (task) => task.priority == DailyTaskPriority.overdueProgram,
-        ),
-        hasLength(2),
-      );
-      expect(
-        programmed
-            .where((task) => task.priority == DailyTaskPriority.overdueProgram)
-            .every(
-              (task) => task.reason == 'Program day pending from previous days',
-            ),
-        isTrue,
-      );
-      expect(
-        programmed.where(
-          (task) => task.priority == DailyTaskPriority.todayProgram,
-        ),
-        hasLength(1),
-      );
-      expect(
-        programmed
-            .singleWhere(
-              (task) => task.priority == DailyTaskPriority.todayProgram,
-            )
-            .reason,
-        'Program assignment for today',
-      );
-    },
-  );
-
-  test(
-    'back-dated program enrollment is protected by the anchor clamp',
-    () async {
-      final today = DateTime.utc(2026, 5, 27);
-      final program = LearningProgramRepository.instance
-          .getAllPrograms()
-          .firstWhere((candidate) => candidate.apiProgramKey == 'daf_yomi');
-      final programCurriculum = CurriculumId.values.firstWhere(
-        (curriculum) => curriculum.storageKey == program.curriculumType,
-      );
-      final anchor = today.subtract(const Duration(days: 4));
-      final tasks = await _build(
-        now: today,
-        activeCurricula: [programCurriculum],
-        activeTracks: [_track(programCurriculum, today, lastReorderAt: today)],
-        goals: _Goals({}),
-        programs: _Programs({
-          programCurriculum: _program(programCurriculum, program.id, anchor),
-        }),
-        calendarService: CalendarProgramService(
-          _Calendar(program.apiProgramKey!),
-        ),
-      );
-
-      expect(tasks.where((task) => task.isOverdue), hasLength(4));
-      expect(tasks.where((task) => !task.isOverdue), hasLength(1));
-    },
-  );
 }
