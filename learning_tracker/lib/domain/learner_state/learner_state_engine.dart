@@ -12,12 +12,18 @@
 ///    by DNI-467);
 /// 4. completed units (DNI-465);
 /// 5. streak (`streak.dart`, DNI-466: per curriculum, evaluated
-///    curricula only); planning and points (DNI-467, 468).
+///    curricula only);
+/// 6. planning (DNI-467, evaluated curricula only): calendar plan
+///    (`calendar_plan.dart`), reviews (`review_schedule.dart` over
+///    `main_track_config_history.dart`), goal target and pace
+///    (`goal_target.dart`) and projection (`projection.dart`);
+/// 7. points (DNI-468).
 ///
 /// No I/O, clock read or global state: every input is in
 /// [LearnerStateInputs], and identical inputs give equal outputs.
 library;
 
+import 'package:learning_tracker/domain/learner_state/calendar_plan.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/completed_units.dart';
@@ -25,6 +31,7 @@ import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/counted_events.dart';
 import 'package:learning_tracker/domain/learner_state/derived_curriculum_state.dart';
 import 'package:learning_tracker/domain/learner_state/expand_ground.dart';
+import 'package:learning_tracker/domain/learner_state/goal_target.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -32,11 +39,14 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
 import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_config_history.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_position.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ordered_leaves.dart';
 import 'package:learning_tracker/domain/learner_state/predicates.dart';
+import 'package:learning_tracker/domain/learner_state/projection.dart';
+import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -180,12 +190,30 @@ final class LearnerStateEngine {
       scopedLeaves: scoped,
       learntLeaves: learntLeaves(learns, corpus, scopedSet.contains),
     );
+    final mainTrack = evaluated
+        ? _mainTrack(
+            curriculumId,
+            inputs,
+            intent,
+            corpus,
+            learnt,
+            learns,
+            firstStage,
+          )
+        : const MainTrackRecord.none();
     return DerivedCurriculumState(
       curriculumId: curriculumId,
       evaluated: evaluated,
       learnt: learnt,
-      mainTrack: evaluated
-          ? _mainTrack(
+      mainTrack: mainTrack,
+      completedUnits: completedUnits(
+        corpus: corpus,
+        inScope: learnt.inScope,
+        countedLearns: learns,
+        firstStage: firstStage,
+      ),
+      plan: evaluated
+          ? _plan(
               curriculumId,
               inputs,
               intent,
@@ -193,14 +221,9 @@ final class LearnerStateEngine {
               learnt,
               learns,
               firstStage,
+              mainTrack,
             )
-          : const MainTrackRecord.none(),
-      completedUnits: completedUnits(
-        corpus: corpus,
-        inScope: learnt.inScope,
-        countedLearns: learns,
-        firstStage: firstStage,
-      ),
+          : const PlanRecord.none(),
       streak: evaluated
           ? curriculumStreak(
               learns,
@@ -222,17 +245,10 @@ final class LearnerStateEngine {
     List<LearningEvent> learns,
     int? firstStage,
   ) {
-    final liveOrder = [
-      for (final doc in intent.order)
-        if (doc.endedAt == null) doc,
-    ];
-    // With no live order doc, `orderedLeaves` is the ContentIndex order by
-    // definition (AD-33), so the corpus order is used directly.
+    // `O` (AD-33): the only order function, restricted to the learner's
+    // corpus. It ignores ended order docs itself.
     final order = [
-      for (final leaf
-          in liveOrder.isEmpty
-              ? corpus.leaves
-              : orderedLeaves(corpus, liveOrder))
+      for (final leaf in orderedLeaves(corpus, intent.order))
         if (learnt.inScope(leaf)) leaf,
     ];
     final program = intent.program;
@@ -248,9 +264,109 @@ final class LearnerStateEngine {
     );
   }
 
+  /// The planning stage of an evaluated curriculum (DNI-467).
+  ///
+  /// A calendar-program curriculum plans from its calendar: assignments,
+  /// backlog, and `dailyTarget` / shortfall = assigned through today minus
+  /// learnt. AD-44 is not computed for it.
+  PlanRecord _plan(
+    String curriculumId,
+    LearnerStateInputs inputs,
+    MainTrackIntent intent,
+    Corpus corpus,
+    LearntRecord learnt,
+    List<LearningEvent> learns,
+    int? firstStage,
+    MainTrackRecord mainTrack,
+  ) {
+    final today = civilDate(inputs.nowUtc, inputs.settingsHistory);
+    final configHistory = MainTrackConfigHistory.build(
+      curriculumId: curriculumId,
+      intent: intent,
+      intentHistory: inputs.intentHistory,
+    );
+    final reviews = deriveReviewSchedule(
+      countedLearns: learns,
+      corpus: corpus,
+      inScope: learnt.inScope,
+      configHistory: configHistory,
+      settingsHistory: inputs.settingsHistory,
+      fallbackFirstStage: firstStage,
+    );
+    final errors = <CurriculumValidationError>{};
+    final calendar = deriveCalendarPlan(
+      curriculumId: curriculumId,
+      intent: intent,
+      calendars: inputs.calendars,
+      corpus: corpus,
+      inScope: learnt.inScope,
+      learnt: learnt.learntLeaves,
+      intentHistory: inputs.intentHistory,
+      settingsHistory: inputs.settingsHistory,
+      errors: errors,
+    );
+    final goals = inputs.goals[curriculumId];
+    final deadline = calendar == null ? liveDeadline(goals) : null;
+    final program = intent.program;
+    final projection = deriveProjection(
+      newlyLearnt: newlyLearntOn(
+        countedLearns: learns,
+        corpus: corpus,
+        inScope: learnt.inScope,
+        firstStage: firstStage,
+      ),
+      historyStart: trackedHistoryStart(
+        program?.endedAt == null ? program?.trackingStartDate : null,
+        learns,
+      ),
+      today: today,
+      remaining: learnt.scopedLeaves.length - learnt.learntLeaves.length,
+      deadline: deadline,
+    );
+    if (calendar != null) {
+      return PlanRecord(
+        calendar: calendar,
+        reviews: reviews,
+        projection: projection,
+        dailyTarget: calendar.dailyTarget(today),
+        shortfall: calendar.amnestyFrom == null
+            ? null
+            : calendar.backlog(today).length,
+        validationErrors: errors,
+      );
+    }
+    // AD-43/AD-44: a deadline gives `dailyTarget`, a pace gives `paceRate`
+    // (it also feeds FR-20 with a deadline); neither gives nulls. The
+    // numerator is the no-sub-track case (DNI-494 adds the sub-track
+    // terms).
+    final pace = livePace(goals);
+    final studyDays = configHistory.current.studyDays;
+    return PlanRecord(
+      reviews: reviews,
+      dailyTarget: deadline == null
+          ? null
+          : deadlineDailyTarget(
+              numerator: mainTrack.schedulableRefs.length,
+              deadline: deadline,
+              studyDays: studyDays,
+              today: today,
+            ),
+      paceRate: pace == null
+          ? null
+          : paceRateOf(
+              pace: pace,
+              corpus: corpus,
+              inScope: learnt.inScope,
+              studyDays: studyDays,
+            ),
+      projection: projection,
+      validationErrors: errors,
+    );
+  }
+
   /// The ground of [curriculumId]'s `holdsGround` sub-tracks (AD-34), which
-  /// leaves the main track. `holdsGround` and `civilDate` are filled by
-  /// DNI-467 and DNI-466; with no sub-track neither is called.
+  /// leaves the main track. A leaf held by several sub-tracks is excluded
+  /// once (a set).
   Set<LeafRef> _heldGround(
     String curriculumId,
     LearnerStateInputs inputs,

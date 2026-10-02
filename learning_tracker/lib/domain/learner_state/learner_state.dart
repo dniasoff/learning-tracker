@@ -245,10 +245,20 @@ final class SubTrackState {
   String toString() => 'SubTrackState($subTrackId)';
 }
 
+/// An invalid intent the engine found while deriving one curriculum's plan.
+/// The engine never substitutes a default for it; the affected outputs
+/// stay empty or null and the error is reported here.
+enum CurriculumValidationError {
+  /// A calendar-program curriculum has no `tracking_start_date` (AD-35):
+  /// `programBacklog` and the calendar `dailyTarget` are not derived.
+  missingTrackingStartDate,
+}
+
 /// The engine's view of one curriculum.
 ///
 /// DNI-465 provides the real implementation; DNI-466, 467 and 468 fill the
-/// lock, planning and points members.
+/// lock, planning and points members. Planning members are derived only
+/// for an evaluated curriculum; otherwise they are empty or null.
 abstract interface class CurriculumState {
   /// The curriculum.
   String get curriculumId;
@@ -265,40 +275,67 @@ abstract interface class CurriculumState {
   /// How much of [node] is learnt.
   TriState triState(NodeEntry node);
 
-  /// The unit the learner is in.
+  /// The FR-12a unit (Mishnayos: masechta) the learner is in: the unit of
+  /// the later of the latest counted main-track capture and
+  /// `tracking_start_ref`, only while it still has a schedulable leaf
+  /// (AD-33).
   NodeEntry? get currentUnit;
 
-  /// The next main-track leaf.
+  /// The next main-track leaf: the first schedulable leaf of [currentUnit],
+  /// else the first of [schedulableRefs] (AD-33).
   LeafRef? get mainTrackPosition;
 
   /// Sub-track states by sub-track ULID.
   Map<String, SubTrackState> get subTracks;
 
-  /// The leaves the planner may schedule.
+  /// The leaves the planner may schedule (AD-33): the leaves of
+  /// `O = orderedLeaves(corpus, mainTrackOrder)` within the learner's
+  /// corpus that have no counted learn event and are not in the ground of
+  /// any `holdsGround` sub-track, ordered as the leaves at or after
+  /// `tracking_start_ref`, then the leaves before it.
   List<LeafRef> get schedulableRefs;
 
-  /// Main-track leaves still to learn.
+  /// `schedulableRefs.length`.
   int get mainTrackRemaining;
 
-  /// The program's assignments on [date].
+  /// Calendar-program curricula only: the leaves assigned on [date], each
+  /// assigned node expanded by `expandGround` within the learner's corpus
+  /// (learnt leaves included). Empty for any other curriculum.
   List<LeafRef> programAssignments(CivilDate date);
 
-  /// Program assignments before [today] still unlearnt.
+  /// Calendar-program curricula only: the leaves assigned before [today]
+  /// and on or after `amnestyFrom` with no counted learn event, in date
+  /// order. Empty when `tracking_start_date` is missing (see
+  /// [validationErrors]).
   List<LeafRef> programBacklog(CivilDate today);
 
-  /// Reviews due on [date].
+  /// The (leaf, `stage_order`) reviews due on [date] from AD-32 cycles,
+  /// each step under the stages and study days in force at the event that
+  /// completed the previous step. An overdue delay review stays due until
+  /// done; a review done on [date] was due on [date]. The only review
+  /// scheduler (AD-35).
   List<ReviewDue> reviewsDue(CivilDate date);
 
-  /// Today's target in leaves, if a goal sets one.
+  /// Today's target in leaves. Calendar program: assigned through today
+  /// minus learnt. Otherwise, with a live `goals/{c}_deadline`:
+  /// `max(0, ceil(numerator ÷ studyDaysToDeadline))`, or the numerator
+  /// when no study day is left (AD-44). Null with no deadline.
   int? get dailyTarget;
 
-  /// The goal pace in leaves per day, if any.
+  /// Leaves per study day from a live `goals/{c}_pace` doc (AD-43); null
+  /// without one and on a calendar-program curriculum.
   double? get paceRate;
 
-  /// Leaves behind the goal, if any.
+  /// Leaves behind: the calendar backlog size on a calendar-program
+  /// curriculum; the AD-44 sub-track shortfall is DNI-494's. Null when not
+  /// derived.
   int? get shortfall;
 
-  /// The deadline projection, if computed.
+  /// The finish projection of an evaluated curriculum (AD-35): velocity =
+  /// distinct leaves newly learnt per `learned_on` day from dated/catch_up
+  /// non-chazara events over the trailing 28 days (all history at 14–27
+  /// days); [ProjectionStatus.tooEarly] under 14 days. Null when not
+  /// evaluated.
   Projection? get projection;
 
   /// Completed units in completion order.
@@ -306,6 +343,9 @@ abstract interface class CurriculumState {
 
   /// The curriculum streak, if computed.
   CurriculumStreak? get streak;
+
+  /// Invalid intent found while planning (DNI-467); empty when valid.
+  Set<CurriculumValidationError> get validationErrors;
 }
 
 /// The whole learner's state at [nowUtc] (AD-35).

@@ -17,11 +17,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// The Stub map of DNI-524, one row per call site: `(owner, what)`.
 const _inventory = <(String, String)>[
-  // DNI-467 (1.5)
-  ('DNI-467', 'holdsGround'),
-  ('DNI-467', 'inForecast'),
-  ('DNI-467', 'onHome'),
-  ('DNI-467', 'orderedLeaves'),
   // DNI-468 (1.6)
   ('DNI-468', 'newlyCrossedAchievements'),
   ('DNI-468', 'pointsTotals'),
