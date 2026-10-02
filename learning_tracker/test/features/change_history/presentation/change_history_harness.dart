@@ -70,6 +70,7 @@ Future<void> pumpChangeHistory(
   Brightness brightness = Brightness.light,
   ProviderContainer? container,
   bool settle = true,
+  Locale locale = const Locale('en'),
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -78,6 +79,7 @@ Future<void> pumpChangeHistory(
       child: const ChangeHistoryScreen(),
       overrides: overrides,
       container: container,
+      locale: locale,
       theme: AppTheme.themeFor(brightness: brightness),
     ),
   );
