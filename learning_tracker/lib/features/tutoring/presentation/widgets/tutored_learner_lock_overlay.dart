@@ -3,9 +3,10 @@
 ///
 /// Learners viewed through a tutor grant do not drive the device overlay
 /// (`SacredTimeLockOverlay`, the union over the account's OWN profiles).
-/// While the talmid in view is locked, this cover hides every screen of the
-/// tutored context — no data, no controls, visually or to assistive
-/// technology — in the same full-screen style.
+/// Until the talmid in view is known to be unlocked (while his lock loads,
+/// while he is locked, or when his lock cannot be read), a full-screen
+/// cover hides every screen of the tutored context — no data, no
+/// controls, visually or to assistive technology.
 /// Its one action exits the tutored context, so the tutor's own app and
 /// other learners stay usable.
 library;
@@ -30,9 +31,17 @@ class TutoredLearnerLockOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lock = ref.watch(tutoredLearnerLockProvider);
-    // Covered while locked, and when the talmid's lock cannot be read (fail
-    // closed). While it loads, writes are still refused by the preflight.
-    final covered = lock.hasError || lock.value == true;
+    // Fail closed: the learner's screens show only on an explicit "not
+    // locked". While the talmid's lock is loading they sit under a neutral
+    // pending cover; when it is locked or cannot be read, under the lock
+    // cover. Outside a tutored session the provider answers "not locked"
+    // at once, so the tutor's own app is never covered.
+    final open = switch (lock) {
+      AsyncData(value: false) => true,
+      _ => false,
+    };
+    final pending = !open && lock is AsyncLoading<bool>;
+    final covered = !open;
     // The cover is not just visual: while covered, the learner's screens
     // leave the semantics tree (a screen reader reads nothing of them), take
     // no pointer input and no keyboard focus. The wrappers stay in the tree
@@ -46,8 +55,55 @@ class TutoredLearnerLockOverlay extends ConsumerWidget {
             child: ExcludeFocus(excluding: covered, child: child),
           ),
         ),
-        if (covered) const _TutoredLearnerLockScreen(),
+        if (pending)
+          const _TutoredLearnerPendingScreen()
+        else if (covered)
+          const _TutoredLearnerLockScreen(),
       ],
+    );
+  }
+}
+
+/// The cover while the talmid's lock is still being read: no learner data
+/// or controls, no claim that the learner is locked, and the same exit.
+/// Static (no progress animation), so it never keeps frames scheduled.
+class _TutoredLearnerPendingScreen extends ConsumerWidget {
+  const _TutoredLearnerPendingScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return PopScope(
+      canPop: false,
+      child: Material(
+        key: const Key('tutoredLearnerLockPending'),
+        color: Theme.of(context).colorScheme.surface,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: ScrollableFillBody(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    l10n.loading,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 24),
+                  OutlinedButton(
+                    key: const Key('tutoredLearnerLockExit'),
+                    onPressed: () => ref
+                        .read(activeTutoredProfileSelectionProvider.notifier)
+                        .exit(),
+                    child: Text(l10n.tutorModeExit),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
-// Story 1.24 (DNI-486) AC-6 — the tutored-learner lock cover: shown while
-// the tutored learner is locked or its lock cannot be read (fail closed),
-// never for the tutor's own app.
+// Story 1.24 (DNI-486) AC-6 — the tutored-learner lock cover: the learner's
+// screens show only on an explicit "not locked"; while the lock loads, is
+// locked or cannot be read they are covered (fail closed), never for the
+// tutor's own app.
 
 @Tags(['tutor_mode'])
 library;
@@ -14,6 +15,20 @@ import 'package:learning_tracker/features/tutoring/presentation/widgets/tutored_
 import '../../../../helpers/pump_app.dart';
 
 const _cover = Key('tutoredLearnerLockOverlay');
+const _pending = Key('tutoredLearnerLockPending');
+
+/// A lock state the test can change while the overlay is mounted.
+final class _LockState extends Notifier<AsyncValue<bool>> {
+  @override
+  AsyncValue<bool> build() => const AsyncLoading<bool>();
+
+  // ignore: use_setters_to_change_properties — a test hook.
+  void emit(AsyncValue<bool> value) => state = value;
+}
+
+final _lockState = NotifierProvider<_LockState, AsyncValue<bool>>(
+  _LockState.new,
+);
 
 Widget _host(AsyncValue<bool> lock, {VoidCallback? onTap}) => pumpApp(
   overrides: [tutoredLearnerLockProvider.overrideWithValue(lock)],
@@ -28,6 +43,59 @@ Widget _host(AsyncValue<bool> lock, {VoidCallback? onTap}) => pumpApp(
 );
 
 void main() {
+  testWidgets('covered while the lock is still loading: no data, no '
+      'controls, no lock claim (AC-6, fail closed)', (tester) async {
+    final semantics = tester.ensureSemantics();
+    var taps = 0;
+    await tester.pumpWidget(
+      _host(const AsyncLoading<bool>(), onTap: () => taps++),
+    );
+
+    expect(find.byKey(_pending), findsOneWidget);
+    expect(find.byKey(_cover), findsNothing);
+    expect(find.text('Talmid data').hitTestable(), findsNothing);
+    expect(find.bySemanticsLabel('Talmid data'), findsNothing);
+    expect(find.bySemanticsLabel('Talmid control'), findsNothing);
+    expect(find.byKey(const Key('tutoredLearnerLockExit')), findsOneWidget);
+    await tester.tap(find.text('Talmid control'), warnIfMissed: false);
+    expect(taps, 0);
+    semantics.dispose();
+  });
+
+  testWidgets('follows the lock as it changes: loading, unlocked, locked, '
+      'unlocked', (tester) async {
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: [
+          tutoredLearnerLockProvider.overrideWith(
+            (ref) => ref.watch(_lockState),
+          ),
+        ],
+        child: const TutoredLearnerLockOverlay(child: Text('Talmid data')),
+      ),
+    );
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(TutoredLearnerLockOverlay)),
+    );
+    expect(find.byKey(_pending), findsOneWidget);
+
+    container.read(_lockState.notifier).emit(const AsyncData(false));
+    await tester.pump();
+    expect(find.byKey(_pending), findsNothing);
+    expect(find.byKey(_cover), findsNothing);
+    expect(find.text('Talmid data').hitTestable(), findsOneWidget);
+
+    container.read(_lockState.notifier).emit(const AsyncData(true));
+    await tester.pump();
+    expect(find.byKey(_cover), findsOneWidget);
+    expect(find.text('Talmid data').hitTestable(), findsNothing);
+
+    container.read(_lockState.notifier).emit(const AsyncData(false));
+    await tester.pump();
+    expect(find.byKey(_cover), findsNothing);
+    expect(find.text('Talmid data').hitTestable(), findsOneWidget);
+  });
+
   testWidgets('covered while locked', (tester) async {
     await tester.pumpWidget(_host(const AsyncData(true)));
     expect(find.byKey(_cover), findsOneWidget);

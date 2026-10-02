@@ -12,7 +12,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
@@ -131,10 +134,54 @@ Future<TutorGovernedWrites> requireTutorGovernedWrites(Ref ref) async {
   return writes;
 }
 
-/// How often [tutoredLearnerLockProvider] re-judges the lock against the
-/// clock, so the cover appears when the learner's lock starts and leaves
-/// when it ends. Same resolution as the device lock.
-const tutoredLearnerLockRecheck = Duration(seconds: 30);
+/// The longest [tutoredLearnerLockProvider] waits before re-judging the
+/// lock. The provider re-judges exactly at the next lock boundary (the
+/// start of the next window, or just after the end of the current one);
+/// this backstop only bounds how long a wall-clock jump or a suspended
+/// timer can go unnoticed.
+const tutoredLearnerLockBackstop = Duration(seconds: 30);
+
+/// How far ahead [tutoredLearnerLockProvider] looks for the next lock
+/// start. Anything further away is reached through the backstop.
+const Duration _nextLockLookahead = Duration(days: 8);
+
+/// The delay until the tutored learner's lock state can next change after
+/// [nowUtc] under [decision]: the instant just after the current lock ends,
+/// or the start of the next lock, capped by [tutoredLearnerLockBackstop].
+/// A lock that cannot be bounded (an unknown, zero-length lock or a window
+/// computation that throws) is re-judged at the backstop.
+Duration tutoredLearnerLockRecheckDelay(
+  LearnerSettingsHistory settingsHistory,
+  DateTime nowUtc,
+  GateDecision decision,
+) {
+  final now = nowUtc.toUtc();
+  DateTime? boundary;
+  if (decision case GateLocked(:final window)) {
+    if (window.endUtc.isAfter(now)) boundary = window.endUtc.add(civilTick);
+  } else {
+    try {
+      for (final w in lockWindows(
+        settingsHistory,
+        now,
+        now.add(_nextLockLookahead),
+      )) {
+        if (w.startUtc.isAfter(now)) {
+          boundary = w.startUtc;
+          break;
+        }
+      }
+    } on Object {
+      boundary = null;
+    }
+  }
+  if (boundary == null) return tutoredLearnerLockBackstop;
+  final delay = boundary.difference(now);
+  if (delay <= Duration.zero) return tutoredLearnerLockBackstop;
+  return delay < tutoredLearnerLockBackstop
+      ? delay
+      : tutoredLearnerLockBackstop;
+}
 
 /// Whether the TUTORED learner is inside a lock window now (AD-36
 /// multi-learner rule): `AsyncData(false)` outside a tutored session.
@@ -161,12 +208,16 @@ final tutoredLearnerLockProvider = Provider.autoDispose<AsyncValue<bool>>((
     return AsyncError<bool>(error, stackTrace);
   }
   if (!settings.hasValue) return const AsyncLoading<bool>();
-  final timer = Timer(tutoredLearnerLockRecheck, ref.invalidateSelf);
+  final now = ref.watch(learningCommandClockProvider)().toUtc();
+  final history = settings.requireValue;
+  final decision = ref.watch(captureGateProvider).check(history, now);
+  // Re-judge at the next lock boundary, so the cover appears the instant
+  // the learner's lock starts and leaves the instant it ends.
+  final timer = Timer(
+    tutoredLearnerLockRecheckDelay(history, now, decision),
+    ref.invalidateSelf,
+  );
   ref.onDispose(timer.cancel);
-  final now = ref.watch(learningCommandClockProvider)();
-  final decision = ref
-      .watch(captureGateProvider)
-      .check(settings.requireValue, now.toUtc());
   return AsyncData(decision is GateLocked);
 });
 
