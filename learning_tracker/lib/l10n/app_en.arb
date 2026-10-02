@@ -1565,6 +1565,55 @@
     }
   },
   "allDoneForToday": "All done for today!",
+  "mishnaHistoryActionChangeDate": "Change date",
+  "mishnaHistoryActionChangePlace": "Change place",
+  "mishnaHistoryActionChangeSource": "Change source",
+  "mishnaHistoryActionRemove": "Remove",
+  "mishnaHistoryActionsHint": "Change or remove",
+  "mishnaHistoryActionsTitle": "Change this entry",
+  "mishnaHistoryBeforeTracking": "Before tracking",
+  "mishnaHistoryChoosePlace": "Move to",
+  "mishnaHistoryChooseSource": "Choose source",
+  "mishnaHistoryCorrectionChildLimit": "Only a parent can change this. You can remove it instead.",
+  "mishnaHistoryCorrectionRolledBack": "Couldn't save that change — the entry is back as it was.",
+  "mishnaHistoryEventCount": "Learning events: {count}",
+  "@mishnaHistoryEventCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mishnaHistoryEventNumber": "#{number}",
+  "@mishnaHistoryEventNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "mishnaHistoryFooter": "Repeats never add to goal progress — they're kept here as your record.",
+  "mishnaHistoryLearnt": "Learnt",
+  "mishnaHistoryLockIgnored": "kept, not counted — recorded during Shabbos/Yom Tov",
+  "mishnaHistoryNewestFirst": "Every time · newest first",
+  "mishnaHistoryNotLearntYet": "Not learnt yet",
+  "mishnaHistoryOpenText": "Open text",
+  "mishnaHistoryRemoved": "Removed",
+  "mishnaHistorySaving": "Saving…",
+  "mishnaHistorySourceEnded": "{name} (ended)",
+  "@mishnaHistorySourceEnded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mishnaHistorySourceHome": "Home",
+  "mishnaHistorySourceUnknown": "Ended sub-track",
+  "mishnaHistoryTagCatchUp": "catch-up",
+  "mishnaHistoryTagChazara": "chazara",
+  "mishnaHistoryTitle": "Mishna history",
+  "mishnaHistoryUnreadableRows": "Some records couldn't be read.",
   "missedReview": "Missed review ({count})",
   "@missedReview": {
     "placeholders": {
