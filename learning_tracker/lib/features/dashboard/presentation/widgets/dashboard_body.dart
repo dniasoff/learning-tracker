@@ -22,6 +22,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboa
 import 'package:learning_tracker/features/dashboard/presentation/widgets/empty_dashboard.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/main_focus_mission_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/shortfall_warning_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_recovery_banner.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
@@ -414,9 +415,12 @@ class DashboardBody extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 18),
-        // DNI-502: the parent on-track card (FR-18 to FR-20); it takes no
-        // space outside a parent session (NFR-9).
-        const ParentForecastSection(),
+        // DNI-502: the parent on-track card (FR-18 to FR-20) with one
+        // shortfall warning per short sub-track directly under it (FR-21);
+        // it takes no space outside a parent session (NFR-9).
+        ParentForecastSection(
+          belowCard: (forecast) => ShortfallWarningList(forecast: forecast),
+        ),
         // Tier counter row (engagement / achievement / lifetime [/ ⭐ points]).
         // Shared with Progress hub — same widget, same providers.
         // Child mode renders the fourth ⭐ points counter (see Task #14 brief).

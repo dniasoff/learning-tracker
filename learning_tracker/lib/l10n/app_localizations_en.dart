@@ -388,6 +388,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hiddenUntilEarned => 'Hidden until earned (surprise)';
 
   @override
+  String get shortfallCardGroundFallback => 'all its ground';
+
+  @override
+  String shortfallCardMessage(
+    String name,
+    String ground,
+    String month,
+    String count,
+    String unit,
+  ) {
+    return '$name may not reach $ground before $month. About $count $unit will return to home learning.';
+  }
+
+  @override
+  String shortfallCardView(String name) {
+    return 'View $name';
+  }
+
+  @override
   String get onTrackBehindPace => 'Behind pace';
 
   @override
