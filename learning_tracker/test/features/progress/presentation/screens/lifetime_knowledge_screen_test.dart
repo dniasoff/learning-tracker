@@ -25,6 +25,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -41,6 +42,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/curriculum_breakdown_list.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -737,6 +739,68 @@ void main() {
     });
   });
 
+  // ─── Story 1.13 (DNI-475) AC-1 — a tree leaf opens Mishna history ──────
+  group('a lifetime-tree leaf opens Mishna history', () {
+    testWidgets('the rendered tree pushes MishnaHistoryRoute with the '
+        "leaf's curriculum and ref", (tester) async {
+      await _seedLive(
+        firestore,
+        ref: leaves[0].sefariaRef,
+        stageId: 1,
+        at: DateTime.utc(2026, 5, 1, 10),
+      );
+      final routes = <PageRouteInfo>[];
+      final router = _RecordingRouter(<String>[], routes: routes);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeAccountFirebaseProvider.overrideWith(
+              (ref) async => _handles(firestore),
+            ),
+            activeProfileDocIdProvider.overrideWith(
+              () => _ActiveProfileDocIdOverride(),
+            ),
+            contentRepositoryProvider.overrideWithValue(fakeRepo),
+            activeProfileIdProvider.overrideWith(() => _ProfileIdOverride()),
+            activeProfileProvider.overrideWith(
+              (ref) async => _profileEntity(mode: ProfileMode.adult),
+            ),
+            useHebrewTermsProvider.overrideWith(
+              () => _UseHebrewTermsOverride(useHebrew: false),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const LifetimeKnowledgeScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The row-level tap → onLeafTap contract is covered by the
+      // CurriculumBreakdownTreeNode test in mishna_history_screen_test.dart;
+      // this proves the screen wires that callback to the shared route.
+      final list = tester.widget<CurriculumBreakdownList>(
+        find.byType(CurriculumBreakdownList),
+      );
+      expect(list.onLeafTap, isNotNull);
+      list.onLeafTap!(CurriculumId.mishnayos, leaves[0].sefariaRef);
+      await tester.pumpAndSettle();
+
+      final pushed = routes.single;
+      expect(pushed, isA<MishnaHistoryRoute>());
+      final args = pushed.args! as MishnaHistoryRouteArgs;
+      expect(args.curriculumId, CurriculumId.mishnayos.storageKey);
+      expect(args.leafRef, leaves[0].sefariaRef);
+    });
+  });
+
   // ─── Test 5 — CTA hidden when active profile cannot pass childModeGuard ──
   //
   // BUG-lifetime-cta-dead-tap (sweep-fix/lifetime-cta): two independent
@@ -855,9 +919,13 @@ List<LifetimeTreeNode> _collectTerminalNodes(List<LifetimeTreeNode> tree) {
 // ---------------------------------------------------------------------------
 
 class _RecordingRouter extends Fake implements StackRouter {
-  _RecordingRouter(this.pushed);
+  _RecordingRouter(this.pushed, {List<PageRouteInfo>? routes})
+    : routes = routes ?? <PageRouteInfo>[];
 
   final List<String> pushed;
+
+  /// Every pushed route, with its args.
+  final List<PageRouteInfo> routes;
 
   @override
   Future<T?> push<T extends Object?>(
@@ -865,6 +933,7 @@ class _RecordingRouter extends Fake implements StackRouter {
     OnNavigationFailure? onFailure,
   }) async {
     pushed.add(route.routeName);
+    routes.add(route);
     return null;
   }
 }

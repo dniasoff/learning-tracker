@@ -147,6 +147,16 @@ class _LifetimeKnowledgeScreenState
                   return CurriculumBreakdownList(
                     summaries: withProgress,
                     showProvenance: true,
+                    // Story 1.13 (AC-1, UX-DR-60): a leaf opens the shared
+                    // Mishna history route. History reads the engine; this
+                    // tree moves onto LearnerState in DNI-474, and both ship
+                    // together in the DNI-490 cutover release (AD-49 hold).
+                    onLeafTap: (curriculumId, leafRef) => context.router.push(
+                      MishnaHistoryRoute(
+                        curriculumId: curriculumId.storageKey,
+                        leafRef: leafRef,
+                      ),
+                    ),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),

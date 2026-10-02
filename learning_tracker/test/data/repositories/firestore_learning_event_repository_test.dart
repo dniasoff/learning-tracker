@@ -227,6 +227,44 @@ void main() {
     }
   });
 
+  group('DNI-475 Mishna history: a repeat and the void that explains it '
+      'on later pages are part of the one complete read', () {
+    test('learn on page 1, its repeat and a void of it on page 2 → every '
+        'id preserved, nothing published before page 2', () async {
+      final h = _Harness();
+      await seedLearningEvents(h.firestore, _owner, profileUlid, 520);
+      final events = profileCollection(
+        h.firestore,
+        _owner,
+        profileUlid,
+        'learning_events',
+      );
+      // A repeat of event 0's ref, recorded later (page 2).
+      await events.doc(seqUlid(520)).set({
+        ...storedLearnEvent(0),
+        'recorded_at': Timestamp.fromDate(t1),
+      });
+      // A void of event 0, also on page 2.
+      await events.doc(seqUlid(521)).set({
+        'kind': 'void',
+        'target_id': seqUlid(0),
+        'recorded_at': Timestamp.fromDate(t1),
+        'actor': Map<String, Object?>.of(parentActorMap),
+      });
+
+      final emissions = await _firstComplete(h.repository.watchAll(h.scope));
+
+      expect(emissions, hasLength(2));
+      final ready = emissions.last as CompleteReadReady<LearningEvent>;
+      expect(ready.items, hasLength(522));
+      final byId = {for (final e in ready.items) e.id: e};
+      expect(byId[seqUlid(0)]!.ref, byId[seqUlid(520)]!.ref);
+      expect(byId[seqUlid(521)]!.isVoid, isTrue);
+      expect(byId[seqUlid(521)]!.targetId, seqUlid(0));
+      expect(h.deliveredCounts, [500, 22]);
+    });
+  });
+
   group('create (AC-6 storage side)', () {
     test(
       'writes at the event ULID with Timestamps and no FieldValue',
