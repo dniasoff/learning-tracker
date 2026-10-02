@@ -766,8 +766,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               if (result != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Marked ${result.itemCount} items as completed '
-                  '(${result.eventCount} records)',
+                  AppLocalizations.of(
+                    context,
+                  )!.bulkMarkedComplete(result.itemCount),
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),

@@ -4823,6 +4823,24 @@ abstract class AppLocalizations {
   /// **'Loading text...'**
   String get loadingText;
 
+  /// Subtitle of the Before tracking source in the Browse free-tick sheet (UX-DR-74). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Learnt before I started tracking'**
+  String get captureBeforeTrackingHint;
+
+  /// Button to edit the date in the Browse free-tick sheet. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get captureChangeDate;
+
+  /// Label of the editable date (defaults to today) in the Browse free-tick sheet (UX-DR-20). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Date learnt'**
+  String get captureDateLabel;
+
   /// Snackbar when a capture is refused because a Shabbos/Yom Tov lock is in force; nothing was written (AD-36). DRAFT copy, pending zc4.
   ///
   /// In en, this message translates to:
@@ -4834,6 +4852,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not saved — your learning was not recorded.'**
   String get captureNotSaved;
+
+  /// Confirm button of the Browse free-tick sheet; {count} is how many items the batch records (UX-DR-20). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Record {count}'**
+  String captureRecordCount(int count);
+
+  /// Snackbar after a Browse free-tick batch is recorded, shown with Undo (UX-DR-154). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} recorded'**
+  String captureRecordedCount(int count);
+
+  /// The main-track source in the Browse free-tick sheet; selected by default (UX-DR-74). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get captureSourceHome;
+
+  /// Heading of the source choice in the Browse free-tick sheet, asked once per batch (UX-DR-74). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Where did you learn this?'**
+  String get captureSourceQuestion;
+
+  /// Screen-reader state of a fully learnt Browse row (UX-DR-157: status not by colour alone). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Learnt'**
+  String get captureStateLearnt;
+
+  /// Screen-reader state of a Browse row with nothing learnt (UX-DR-157). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Not learnt yet'**
+  String get captureStateNotLearnt;
+
+  /// Screen-reader state of a partly learnt Browse row (UX-DR-157). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Partly learnt'**
+  String get captureStatePartial;
+
+  /// Title of the Browse free-tick sheet opened by long-pressing a row: records that item and every earlier one of its masechta (UX-DR-20). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick up to here'**
+  String get captureTickUpToHere;
 
   /// No description provided for @markedComplete.
   ///

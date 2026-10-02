@@ -10,13 +10,11 @@
 /// mark is `LearningCommands.unlearn` (AD-31).
 library;
 
-import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_index_corpus.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/counted_events.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
@@ -27,34 +25,6 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 
 export 'package:learning_tracker/core/content/hierarchy_selection.dart';
-
-/// The ContentIndex node depth of [item]: its deepest non-null level.
-int contentDepthOf(ContentItem item) => item.level4 != null
-    ? 4
-    : item.level3 != null
-    ? 3
-    : item.level2 != null
-    ? 2
-    : 1;
-
-/// The [NodeEntry] of a container [item] of [curriculumId], with the level
-/// name the engine's corpus uses (`contentIndexCorpus`).
-NodeEntry nodeEntryOf(CurriculumId curriculumId, ContentItem item) => NodeEntry(
-  level: contentLevelName(
-    CurriculumLabels.labelsEn(curriculumId),
-    contentDepthOf(item),
-  ),
-  ref: item.sefariaRef,
-);
-
-/// The unscoped [Corpus] of [curriculumId] built from its ContentIndex
-/// [items] (the same adapter `corporaProvider` uses).
-Corpus corpusOf(CurriculumId curriculumId, List<ContentItem> items) =>
-    contentIndexCorpus(
-      curriculumId: curriculumId.storageKey,
-      items: items,
-      levelLabels: CurriculumLabels.labelsEn(curriculumId),
-    );
 
 /// One `before_tracking` capture: whole-node events, leaf events, and every
 /// leaf they cover in corpus order.

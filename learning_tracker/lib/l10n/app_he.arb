@@ -1423,8 +1423,33 @@
   "searchTitle": "חיפוש",
   "searchHintEnterTerm": "הזינו מונח חיפוש למעלה",
   "loadingText": "טוען טקסט...",
+  "captureBeforeTrackingHint": "נלמד לפני שהתחלתי לעקוב",
+  "captureChangeDate": "שינוי",
+  "captureDateLabel": "תאריך הלימוד",
   "captureLockedNotice": "לא נרשם — האפליקציה סגורה בשבת וביום טוב.",
   "captureNotSaved": "לא נשמר — הלימוד לא נרשם.",
+  "captureRecordCount": "רישום {count}",
+  "@captureRecordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "captureRecordedCount": "נרשמו {count}",
+  "@captureRecordedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "captureSourceHome": "בית",
+  "captureSourceQuestion": "איפה למדת את זה?",
+  "captureStateLearnt": "נלמד",
+  "captureStateNotLearnt": "טרם נלמד",
+  "captureStatePartial": "נלמד בחלקו",
+  "captureTickUpToHere": "סימון עד כאן",
   "markedComplete": "סומן כהושלם",
   "couldNotSave": "לא ניתן לשמור: {error}",
   "@couldNotSave": {
