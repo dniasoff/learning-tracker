@@ -18,6 +18,7 @@
 /// [LearnerStateInputs], and identical inputs give equal outputs.
 library;
 
+import 'package:learning_tracker/domain/learner_state/calendar_plan.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/completed_units.dart';
@@ -201,6 +202,9 @@ final class LearnerStateEngine {
         countedLearns: learns,
         firstStage: firstStage,
       ),
+      plan: evaluated
+          ? _plan(curriculumId, inputs, intent, corpus, learnt)
+          : const PlanRecord.none(),
       streak: evaluated
           ? curriculumStreak(
               learns,
@@ -239,6 +243,44 @@ final class LearnerStateEngine {
       startAt: trackingStartAt(inputs.intentHistory, curriculumId),
       firstStage: firstStage,
     );
+  }
+
+  /// The planning stage of an evaluated curriculum (DNI-467).
+  ///
+  /// A calendar-program curriculum plans from its calendar: assignments,
+  /// backlog, and `dailyTarget` / shortfall = assigned through today minus
+  /// learnt. AD-44 is not computed for it.
+  PlanRecord _plan(
+    String curriculumId,
+    LearnerStateInputs inputs,
+    MainTrackIntent intent,
+    Corpus corpus,
+    LearntRecord learnt,
+  ) {
+    final today = civilDate(inputs.nowUtc, inputs.settingsHistory);
+    final errors = <CurriculumValidationError>{};
+    final calendar = deriveCalendarPlan(
+      curriculumId: curriculumId,
+      intent: intent,
+      calendars: inputs.calendars,
+      corpus: corpus,
+      inScope: learnt.inScope,
+      learnt: learnt.learntLeaves,
+      intentHistory: inputs.intentHistory,
+      settingsHistory: inputs.settingsHistory,
+      errors: errors,
+    );
+    if (calendar != null) {
+      return PlanRecord(
+        calendar: calendar,
+        dailyTarget: calendar.dailyTarget(today),
+        shortfall: calendar.amnestyFrom == null
+            ? null
+            : calendar.backlog(today).length,
+        validationErrors: errors,
+      );
+    }
+    return PlanRecord(validationErrors: errors);
   }
 
   /// The ground of [curriculumId]'s `holdsGround` sub-tracks (AD-34), which

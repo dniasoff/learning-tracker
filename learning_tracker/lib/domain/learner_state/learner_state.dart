@@ -245,6 +245,15 @@ final class SubTrackState {
   String toString() => 'SubTrackState($subTrackId)';
 }
 
+/// An invalid intent the engine found while deriving one curriculum's plan.
+/// The engine never substitutes a default for it; the affected outputs
+/// stay empty or null and the error is reported here.
+enum CurriculumValidationError {
+  /// A calendar-program curriculum has no `tracking_start_date` (AD-35):
+  /// `programBacklog` and the calendar `dailyTarget` are not derived.
+  missingTrackingStartDate,
+}
+
 /// The engine's view of one curriculum.
 ///
 /// DNI-465 provides the real implementation; DNI-466, 467 and 468 fill the
@@ -306,6 +315,9 @@ abstract interface class CurriculumState {
 
   /// The curriculum streak, if computed.
   CurriculumStreak? get streak;
+
+  /// Invalid intent found while planning (DNI-467); empty when valid.
+  Set<CurriculumValidationError> get validationErrors;
 }
 
 /// The whole learner's state at [nowUtc] (AD-35).
