@@ -25,7 +25,29 @@ abstract interface class SubTrackRepository {
   /// `sub_tracks/{id}`, and the create of `change_log/{entry.id}`
   /// (AD-38 "an entity's docs and its entry are always in one batch").
   /// Never deletes.
+  ///
+  /// The change log is append-only (AD-6, AD-38, AD-46): an identical
+  /// replay of an entry that already exists is a no-op (the sub-track is
+  /// not re-patched), and a NON-identical entry at an existing id throws
+  /// [ChangeLogConflictException] without writing either document.
   Future<void> applyGovernedChange(LearnerScope scope, SubTrackChange change);
+}
+
+/// A governed change whose `change_log/{entryId}` already holds a DIFFERENT
+/// entry — a retry whose entry was rebuilt instead of reused, or an id
+/// collision. Neither the audit row nor the sub-track is written (AD-38
+/// append-only, AD-46 create-only plus identical replay).
+final class ChangeLogConflictException implements Exception {
+  /// Creates the exception for [entryId].
+  const ChangeLogConflictException(this.entryId);
+
+  /// The contested `change_log/{ulid}` id.
+  final String entryId;
+
+  @override
+  String toString() =>
+      'ChangeLogConflictException: change_log/$entryId already holds a '
+      'different entry';
 }
 
 /// One governed change to one sub-track, paired with its change-log entry.
