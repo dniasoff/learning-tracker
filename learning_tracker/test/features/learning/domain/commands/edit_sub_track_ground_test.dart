@@ -12,6 +12,7 @@ import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -21,6 +22,7 @@ import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
+import '../../../../helpers/sub_tracks/latest_write_sub_track_repository.dart';
 
 const _today = '2026-10-01';
 final _now = DateTime.utc(2026, 10, 1, 9);
@@ -52,9 +54,9 @@ SubTrack _school({
   endReason: ended ? SubTrackEndReason.ended : null,
 );
 
-String Function() _ids() {
+String Function() _ids({String prefix = '01JTEST0000000000000'}) {
   var n = 0;
-  return () => '01JTEST000000000000000${(++n).toString().padLeft(4, '0')}';
+  return () => '${prefix}00${(++n).toString().padLeft(4, '0')}';
 }
 
 LearnerIntent _intent() => LearnerIntent(
@@ -81,14 +83,16 @@ void main() {
   SubTrackCommands build({
     Actor actor = parentActor,
     Future<Corpus?> Function(String)? corpusOf,
+    SubTrackRepository? subTracks,
+    String Function()? newId,
   }) => SubTrackCommands(
     scope: scope,
     actor: actor,
-    subTracks: repo,
+    subTracks: subTracks ?? repo,
     intent: intent,
     today: () => _today,
     nowUtc: () => _now,
-    newId: _ids(),
+    newId: newId ?? _ids(),
     corpusOf: corpusOf ?? (id) async => id == engineCurriculum ? corpus : null,
     ackTimeout: const Duration(milliseconds: 50),
     readTimeout: const Duration(seconds: 2),
@@ -281,6 +285,85 @@ void main() {
       repo.seed(scope, [_school()]);
       expect(await add(const []), const CaptureResult.success());
       expect(repo.calls, isEmpty);
+    });
+  });
+
+  group('edge: two devices append at once (latest-row write)', () {
+    // Both devices opened the picker on the same groundless School; each
+    // device's cache still shows it groundless when it confirms. The
+    // append is derived from the row the server holds at commit time, so
+    // neither device's nodes are lost.
+    late LatestWriteSubTrackRepository phone;
+    late LatestWriteSubTrackRepository tablet;
+    late SubTrackCommands onPhone;
+    late SubTrackCommands onTablet;
+
+    setUp(() {
+      repo.seed(scope, [_school()]);
+      phone = LatestWriteSubTrackRepository(repo)..freezeCache(scope);
+      tablet = LatestWriteSubTrackRepository(repo)..freezeCache(scope);
+      onPhone = build(subTracks: phone);
+      // Each device mints its own ULIDs.
+      onTablet = build(
+        subTracks: tablet,
+        newId: _ids(prefix: '01JTAB00000000000000'),
+      );
+    });
+
+    tearDown(() async {
+      await onPhone.dispose();
+      await onTablet.dispose();
+    });
+
+    test('both appends survive, each with its own change-log entry whose '
+        'before is the ground the server held', () async {
+      final first = await add(const [berakhot1], via: onPhone);
+      final second = await add(const [_peah1], via: onTablet);
+      expect(first, isA<CaptureSuccess>());
+      expect(second, isA<CaptureSuccess>());
+      expect((second as CaptureSuccess).queued, isFalse);
+      expect(storedGround(), const [berakhot1, _peah1]);
+      expect(repo.entries, hasLength(2));
+      const key = 'sub_tracks/$ulidA.ground';
+      expect(repo.entries.first.$2.before[key], <Object?>[]);
+      expect(repo.entries.last.$2.before[key], stored(const [berakhot1]));
+      expect(
+        repo.entries.last.$2.after[key],
+        stored(const [berakhot1, _peah1]),
+      );
+      expect(repo.tracksOf(scope).single.lastChangeId, second.changeIds.single);
+    });
+
+    test('nodes the other device already added are not added twice; '
+        'nothing left to add writes nothing', () async {
+      await add(const [berakhot1, _peah1], via: onPhone);
+      final overlap = await add(const [_peah1, _shabbat1], via: onTablet);
+      expect(overlap, isA<CaptureSuccess>());
+      expect(storedGround(), const [berakhot1, _peah1, _shabbat1]);
+      final none = await add(const [berakhot1], via: onTablet);
+      expect(none, const CaptureResult.success());
+      expect(repo.entries, hasLength(2));
+    });
+
+    test('a sub-track the other device ended meanwhile is refused and '
+        'nothing is written', () async {
+      expect(await onPhone.endSubTrack(ulidA), isA<CaptureSuccess>());
+      final result = await add(const [berakhot1], via: onTablet);
+      expect(result, const CaptureResult.rejected(CaptureRejection.invalid));
+      expect(storedGround(), isEmpty);
+      expect(repo.entries, hasLength(1));
+    });
+
+    test('offline the append is queued as the ordinary batch from the '
+        'cached row', () async {
+      repo.offline = true;
+      final result = await add(const [berakhot1], via: onTablet);
+      expect(result, isA<CaptureSuccess>());
+      expect((result as CaptureSuccess).queued, isTrue);
+      expect(tablet.builds, 0);
+      expect(repo.heldCount, 1);
+      expect(storedGround(), const [berakhot1]);
+      repo.settleHeld();
     });
   });
 }
