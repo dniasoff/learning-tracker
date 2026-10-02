@@ -274,6 +274,15 @@ jobs:
         working-directory: learning_tracker
         run: dart run tool/check_profile_path_keying.dart
 
+      # AD-49 retired-symbols gate (DNI-521). Belt-and-suspenders with
+      # `make audit`'s 105/105 check and the `ci:` Makefile target's
+      # check-retired-symbols prerequisite. Later Epic 1 stories only edit
+      # tool/retired_symbols/R<n>.json; the cutover (DNI-490) fills the
+      # allowlist and adds --enforce here.
+      - name: Assert no retired symbol survives outside the AD-49 allowlist
+        working-directory: learning_tracker
+        run: dart run tool/check_retired_symbols.dart
+
       - name: Upload golden test failures (diffs)
         if: failure()
         uses: actions/upload-artifact@v7

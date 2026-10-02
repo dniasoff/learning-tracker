@@ -1,0 +1,10 @@
+{
+  "group": "R4",
+  "title": "Planner",
+  "description": "Action: rewire daily_task_projection_service and scheduler_engine to LearnerState; delete the review and amnesty computations. The owner adds the scheduler_engine due-review symbols once they are split out.",
+  "entries": [
+    {"symbol": "amnestyDayCutoffUtc", "kind": "service", "state": "pending", "owner": "DNI-477"},
+    {"symbol": "clampAmnestyCutoffToAnchor", "kind": "service", "state": "pending", "owner": "DNI-477"},
+    {"symbol": "amnesty_cutoff", "kind": "service", "state": "pending", "owner": "DNI-477", "note": "module import path"}
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "description": "AD-49 cutover allowlist: exactly the deny-all match blocks for the retired collections in firestore.rules and their entries in functions/src/deletes.ts and firestore.indexes.json. DNI-490 fills it and switches CI to --enforce; DNI-491 empties it. Each entry is {symbol, path, count, reason, owner?}; count is the exact number of hits allowed.",
+  "entries": []
+}

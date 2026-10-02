@@ -1,0 +1,10 @@
+{
+  "group": "R11",
+  "title": "Notifications and backup",
+  "description": "Action: rewire to LearnerState; backup per AD-49. DataExportImportService is rewired, not deleted.",
+  "entries": [
+    {"symbol": "FirestoreNotificationsCompletionAdapter", "kind": "service", "state": "pending", "owner": "DNI-482"},
+    {"symbol": "NotificationCompletionsNotReadyException", "kind": "type", "state": "pending", "owner": "DNI-482"},
+    {"symbol": "NotificationCompletionsDataNotHydratedException", "kind": "type", "state": "pending", "owner": "DNI-482"}
+  ]
+}

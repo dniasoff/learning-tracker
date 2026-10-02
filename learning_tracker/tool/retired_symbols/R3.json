@@ -1,0 +1,17 @@
+{
+  "group": "R3",
+  "title": "Completion, ledger and pace readers",
+  "description": "Action: rewire readers to LearnerState. The readers themselves stay; listed are the deleted calculators and the old-store history providers they stop using.",
+  "entries": [
+    {"symbol": "ProgressPaceCalculator", "kind": "service", "state": "pending", "owner": "DNI-474", "note": "progress pace_calculator"},
+    {"symbol": "ProgressPaceStatus", "kind": "type", "state": "pending", "owner": "DNI-474"},
+    {"symbol": "PaceCalculator", "kind": "service", "state": "pending", "owner": "DNI-474", "note": "scheduler pace_calculator"},
+    {"symbol": "CompletionDetectionService", "kind": "service", "state": "pending", "owner": "DNI-474"},
+    {"symbol": "completionHistoryForCurriculumProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
+    {"symbol": "allCompletionHistoryProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
+    {"symbol": "completionsByProfileForLifetimeProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
+    {"symbol": "trackCompletionsByProfileProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
+    {"symbol": "trackLedgerEntriesByProfileProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
+    {"symbol": "ledgerEntriesByCurriculumForProfileProvider", "kind": "service", "state": "pending", "owner": "DNI-474"}
+  ]
+}
