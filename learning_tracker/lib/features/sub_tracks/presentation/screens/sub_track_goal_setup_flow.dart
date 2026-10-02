@@ -86,7 +86,7 @@ Future<SubTrackGoalSetupOutcome> openSubTrackGoalSetup(
   );
   if (result == null) return SubTrackGoalSetupOutcome.cancelled;
 
-  final choice = goalChoiceOf(result);
+  final choice = goalChoiceOf(result, prefilledPace: prefilledPaceOf(current));
   if (choice == null) return SubTrackGoalSetupOutcome.failed;
   final action = governedGoalAction(
     curriculumId: curriculumKey,
@@ -139,8 +139,21 @@ Future<CurriculumGoals?> _currentGoals(
   return intent.goals[curriculumKey];
 }
 
+/// The live pace goal [goalEntityOf] prefills the goal screen with: the
+/// live pace goal when there is no live deadline, else null.
+PaceGoal? prefilledPaceOf(CurriculumGoals? goals) {
+  final deadline = goals?.deadline;
+  if (deadline != null && deadline.endedAt == null) return null;
+  final pace = goals?.pace;
+  return pace != null && pace.endedAt == null ? pace : null;
+}
+
 /// The goal screen's prefill for [goals]: the live deadline, else the live
 /// pace goal, else none.
+///
+/// The goal screen edits whole numbers only, so a fractional stored pace
+/// (e.g. 1.5) shows rounded; [goalChoiceOf] maps an untouched pace back to
+/// the stored value, so the rounding never reaches a save.
 GoalEntity? goalEntityOf(CurriculumId curriculum, CurriculumGoals? goals) {
   final now = DateTime.now().toUtc();
   final deadline = goals?.deadline;
@@ -153,8 +166,8 @@ GoalEntity? goalEntityOf(CurriculumId curriculum, CurriculumGoals? goals) {
       updatedAt: now,
     );
   }
-  final pace = goals?.pace;
-  if (pace != null && pace.endedAt == null) {
+  final pace = prefilledPaceOf(goals);
+  if (pace != null) {
     final granularity = PaceGranularity.fromStorageKey(pace.paceGranularity);
     return GoalEntity(
       curriculumId: curriculum,
@@ -174,23 +187,49 @@ GoalEntity? goalEntityOf(CurriculumId curriculum, CurriculumGoals? goals) {
 /// incomplete result (a deadline without a date, a pace without a value).
 /// A pace without a granularity counts in leaf units
 /// ([kLeafPaceGranularity]).
-GoalChoice? goalChoiceOf(GoalEntity result) => switch (result.goalType) {
-  'deadline' => switch (result.targetDate) {
-    final date? => DeadlineGoalChoice(
-      civilDateOf(date.year, date.month, date.day),
-    ),
-    null => null,
-  },
-  'pace' => switch ((result.paceValue, result.pacePeriod)) {
-    (final value?, final unit?) => PaceGoalChoice(
-      value: value,
-      unit: unit,
-      // A curriculum without a unit picker (e.g. Mishnayos) returns no
-      // granularity: it counts in leaf units, which a governed pace goal
-      // must still name (AD-43).
-      granularity: result.paceGranularityKey ?? kLeafPaceGranularity,
-    ),
-    _ => null,
-  },
-  _ => const NoGoalChoice(),
-};
+///
+/// [prefilledPace] is the live pace goal the screen was prefilled with
+/// ([prefilledPaceOf]). When the result keeps its unit and granularity and
+/// its value is the prefill's rounded value, the parent did not change the
+/// pace: the stored value (e.g. 1.5) is kept exactly, so an unrelated save
+/// never rewrites the learner's target.
+GoalChoice? goalChoiceOf(GoalEntity result, {PaceGoal? prefilledPace}) =>
+    switch (result.goalType) {
+      'deadline' => switch (result.targetDate) {
+        final date? => DeadlineGoalChoice(
+          civilDateOf(date.year, date.month, date.day),
+        ),
+        null => null,
+      },
+      'pace' => switch ((result.paceValue, result.pacePeriod)) {
+        (final value?, final unit?) => _paceChoice(
+          value: value,
+          unit: unit,
+          // A curriculum without a unit picker (e.g. Mishnayos) returns no
+          // granularity: it counts in leaf units, which a governed pace goal
+          // must still name (AD-43).
+          granularity: result.paceGranularityKey ?? kLeafPaceGranularity,
+          prefilled: prefilledPace,
+        ),
+        _ => null,
+      },
+      _ => const NoGoalChoice(),
+    };
+
+PaceGoalChoice _paceChoice({
+  required int value,
+  required String unit,
+  required String granularity,
+  required PaceGoal? prefilled,
+}) {
+  final untouched =
+      prefilled != null &&
+      prefilled.paceUnit == unit &&
+      prefilled.paceGranularity == granularity &&
+      prefilled.paceValue.round() == value;
+  return PaceGoalChoice(
+    value: untouched ? prefilled.paceValue : value,
+    unit: unit,
+    granularity: granularity,
+  );
+}

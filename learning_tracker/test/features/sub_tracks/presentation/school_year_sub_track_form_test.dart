@@ -11,9 +11,12 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
@@ -29,8 +32,17 @@ final _launches = <CurriculumId>[];
 /// What the stubbed goal setup flow reports (AC-6).
 var _goalOutcome = SubTrackGoalSetupOutcome.cancelled;
 
-List<Override> _overrides(SubTrackHarness h, {bool parentSession = true}) => [
-  ...h.overrides(parentSession: parentSession),
+List<Override> _overrides(
+  SubTrackHarness h, {
+  bool parentSession = true,
+  bool commands = true,
+  bool subTrackRepository = true,
+}) => [
+  ...h.overrides(
+    parentSession: parentSession,
+    commands: commands,
+    subTrackRepository: subTrackRepository,
+  ),
   subTrackGoalSetupLauncherProvider.overrideWithValue((
     context,
     ref,
@@ -47,6 +59,9 @@ Future<void> _pumpForm(
   SubTrackHarness h, {
   String? subTrackId,
   bool parentSession = true,
+  List<Override> extra = const [],
+  bool commands = true,
+  bool subTrackRepository = true,
   Locale locale = const Locale('en'),
   ThemeData? theme,
   Size size = const Size(430, 1800),
@@ -57,7 +72,15 @@ Future<void> _pumpForm(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     pumpApp(
-      overrides: _overrides(h, parentSession: parentSession),
+      overrides: [
+        ..._overrides(
+          h,
+          parentSession: parentSession,
+          commands: commands,
+          subTrackRepository: subTrackRepository,
+        ),
+        ...extra,
+      ],
       retry: (_, _) => null,
       locale: locale,
       theme: theme,
@@ -567,6 +590,50 @@ void main() {
       await _pumpForm(tester, h, parentSession: false);
       expect(find.byType(SchoolYearSubTrackForm), findsNothing);
       expect(find.text('Save sub-track'), findsNothing);
+    });
+  });
+
+  group('inert until the Story 2.1 commands are live', () {
+    testWidgets('a parent deep link with the C0 stub commands opens no form', (
+      tester,
+    ) async {
+      h = SubTrackHarness();
+      // commands: false leaves learningCommandsProvider on its C0 stub,
+      // which fails (DNI-469 not filled yet).
+      await _pumpForm(tester, h, commands: false);
+      expect(find.byType(SchoolYearSubTrackForm), findsNothing);
+      expect(find.text('Save sub-track'), findsNothing);
+      expect(find.byKey(const ValueKey('subTrackFormInert')), findsOneWidget);
+    });
+
+    testWidgets('a parent deep link with no commands opens no form', (
+      tester,
+    ) async {
+      h = SubTrackHarness(seed: [storedSchoolYear(_existingId)]);
+      await _pumpForm(
+        tester,
+        h,
+        subTrackId: _existingId,
+        commands: false,
+        extra: [learningCommandsProvider.overrideWith((ref) async => null)],
+      );
+      expect(find.byType(SchoolYearSubTrackForm), findsNothing);
+      expect(find.text('Save sub-track'), findsNothing);
+      expect(h.commands.edits, isEmpty);
+    });
+
+    testWidgets('an unavailable sub-track read shows an error, no form', (
+      tester,
+    ) async {
+      h = SubTrackHarness();
+      await _pumpForm(
+        tester,
+        h,
+        subTrackRepository: false,
+        extra: [subTrackRepositoryProvider.overrideWith((ref) async => null)],
+      );
+      expect(find.byType(SchoolYearSubTrackForm), findsNothing);
+      expect(find.byType(AppErrorView), findsOneWidget);
     });
   });
 

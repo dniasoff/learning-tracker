@@ -257,6 +257,7 @@ final class SubTrackHarness {
     this.today = subTrackTestToday,
     this.deadline,
     this.calendarProgramId,
+    this.pace,
     this.studyDaysPerWeek = 5,
     Iterable<SubTrack> seed = const [],
   }) {
@@ -288,6 +289,9 @@ final class SubTrackHarness {
 
   /// The curriculum's calendar program, if any.
   final String? calendarProgramId;
+
+  /// The curriculum's live pace goal, if any.
+  final PaceGoal? pace;
 
   /// The curriculum's study days per week (per-school-day helper).
   final int studyDaysPerWeek;
@@ -328,29 +332,34 @@ final class SubTrackHarness {
       ),
     },
     goals: {
-      if (deadline case final target?)
+      if (deadline != null || pace != null)
         subTrackTestCurriculum: CurriculumGoals(
-          deadline: DeadlineGoal(
-            curriculumId: subTrackTestCurriculum,
-            targetDate: target,
-          ),
+          deadline: deadline == null
+              ? null
+              : DeadlineGoal(
+                  curriculumId: subTrackTestCurriculum,
+                  targetDate: deadline!,
+                ),
+          pace: pace,
         ),
     },
   );
 
   /// The provider overrides for this rig. [parentSession] is the AC-3
   /// session answer (null leaves the session provider to the caller);
-  /// [commands] and [subTrackRepository] false leave those providers to the
-  /// caller too (a container may override a provider only once).
+  /// [commands], [subTrackRepository] and [governedIntentRepository] false
+  /// leave those providers to the caller too (a container may override a provider only once).
   List<Override> overrides({
     bool? parentSession = true,
     bool commands = true,
     bool subTrackRepository = true,
+    bool governedIntentRepository = true,
   }) => [
     activeLearnerScopeProvider.overrideWith((ref) async => scope),
     if (subTrackRepository)
       subTrackRepositoryProvider.overrideWith((ref) async => repo),
-    governedIntentRepositoryProvider.overrideWith((ref) async => intent),
+    if (governedIntentRepository)
+      governedIntentRepositoryProvider.overrideWith((ref) async => intent),
     if (commands)
       learningCommandsProvider.overrideWith((ref) async => this.commands),
     learnerStateProvider.overrideWith(
