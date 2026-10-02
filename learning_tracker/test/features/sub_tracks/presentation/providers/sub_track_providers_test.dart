@@ -5,6 +5,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_home_projection.dart';
@@ -14,6 +19,23 @@ import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../../helpers/sub_tracks/sub_track_home_fixtures.dart';
+
+/// A [SubTrackRepository] whose complete reads the test scripts, so a read
+/// with rejected rows can be emitted. Single-subscription: events added
+/// before the provider listens are buffered.
+final class _ScriptedSubTrackRepository implements SubTrackRepository {
+  final reads = StreamController<CompleteRead<SubTrack>>();
+
+  /// Closes the scripted read stream.
+  Future<void> close() => reads.close();
+
+  @override
+  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) => reads.stream;
+
+  @override
+  Future<void> applyGovernedChange(LearnerScope scope, SubTrackChange change) =>
+      throw UnimplementedError();
+}
 
 Future<AsyncValue<List<SubTrackHomeItem>>> _settle(
   ProviderContainer container,
@@ -147,5 +169,79 @@ void main() {
     );
     addTearDown(container.dispose);
     expect((await _settle(container)).isLoading, isTrue);
+  });
+
+  group('rejected sub-track rows are surfaced, never dropped', () {
+    const badRow = RejectedRow(
+      'bad-row',
+      StorageFormatException('SubTrack', 'kind', 'unknown value'),
+    );
+
+    ProviderContainer containerFor(_ScriptedSubTrackRepository repo) {
+      final container = ProviderContainer(
+        overrides: [
+          ...learnerStateOverrides(
+            scope: scope,
+            state: homeLearnerState([homeState(schoolId)]),
+          ),
+          subTrackRepositoryProvider.overrideWith((ref) async => repo),
+        ],
+      );
+      addTearDown(container.dispose);
+      addTearDown(repo.close);
+      return container;
+    }
+
+    test('valid rows alongside a rejected row: an error, not a clean '
+        'projection', () async {
+      final repo = _ScriptedSubTrackRepository();
+      final container = containerFor(repo);
+      repo.reads
+        ..add(const CompleteReadLoading())
+        ..add(
+          CompleteReadReady(
+            [homeSubTrack(id: schoolId)],
+            rejected: const [badRow],
+          ),
+        );
+      final value = await _settle(container);
+      expect(value.hasError, isTrue);
+      expect(value.hasValue, isFalse);
+      final error = value.error;
+      expect(error, isA<SubTrackRowsRejectedException>());
+      expect(
+        (error! as SubTrackRowsRejectedException).rejected.map((r) => r.docId),
+        ['bad-row'],
+      );
+    });
+
+    test('only rejected rows: an error, not an absent section', () async {
+      final repo = _ScriptedSubTrackRepository();
+      final container = containerFor(repo);
+      repo.reads.add(CompleteReadReady(const [], rejected: const [badRow]));
+      final value = await _settle(container);
+      expect(value.hasError, isTrue);
+      expect(value.error, isA<SubTrackRowsRejectedException>());
+    });
+
+    test('a later clean read recovers the projection', () async {
+      final repo = _ScriptedSubTrackRepository();
+      final container = containerFor(repo);
+      final sub = container.listen(homeSubTracksProvider, (_, __) {});
+      addTearDown(sub.close);
+      repo.reads.add(
+        CompleteReadReady(
+          [homeSubTrack(id: schoolId)],
+          rejected: const [badRow],
+        ),
+      );
+      await _settle(container);
+      expect(sub.read().hasError, isTrue);
+
+      repo.reads.add(CompleteReadReady([homeSubTrack(id: schoolId)]));
+      final value = await _settle(container);
+      expect(value.hasError, isFalse);
+      expect(value.requireValue.map((i) => i.name), ['School']);
+    });
   });
 }
