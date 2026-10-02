@@ -184,16 +184,17 @@ void main() {
     late InMemorySubTrackRepository subTracks;
     late InMemoryGovernedIntentRepository intent;
 
-    List<Override> ready({bool lockSettings = true, bool corpora = true}) => [
+    List<Override> ready({
+      bool lockSettings = true,
+      bool corpora = true,
+      Override? subTrackRepo,
+    }) => [
       learningCommandClockProvider.overrideWithValue(() => engineAt(600)),
       activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
       activeAuthUidProvider.overrideWith((ref) async => 'auth-uid'),
       learningWritePortProvider.overrideWith((ref) async => port),
       changeLogRepositoryProvider.overrideWith((ref) async => changeLog),
       governedDocReaderProvider.overrideWith((ref) async => changeLog),
-      subTrackRepositoryProvider.overrideWith(
-        (ref) async => subTracks,
-      ),
       governedIntentRepositoryProvider.overrideWith((ref) async => intent),
       oversizedGovernedWritePortProvider.overrideWith(
         (ref) async => FakeOversizedGovernedWritePort(),
@@ -202,7 +203,8 @@ void main() {
       learningEventRepositoryProvider.overrideWith(
         (ref) async => InMemoryLearningEventRepository(),
       ),
-      subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
+      subTrackRepo ??
+          subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
       governedIntentRepositoryProvider.overrideWith((ref) async => intent),
       activeProfileProvider.overrideWith(
         (ref) async => _profile(ProfileMode.adult),
@@ -434,6 +436,49 @@ void main() {
       expect(saved.ratePerWeek, 7);
       expect(subTracks.entries, hasLength(2));
     });
+    for (final (label, unavailable) in <(String, Override)>[
+      (
+        'not ready',
+        subTrackRepositoryProvider.overrideWith((ref) async => null),
+      ),
+      (
+        'failed',
+        subTrackRepositoryProvider.overrideWith(
+          (ref) async => throw StateError('sub-track repository down'),
+        ),
+      ),
+    ]) {
+      test('a sub-track repository that is $label leaves ordinary captures '
+          'working; only the sub-track commands answer onlineRequired '
+          '(DNI-497)', () async {
+        final container = ProviderContainer.test(
+          overrides: ready(subTrackRepo: unavailable),
+        );
+        final commands = (await settledAsync(
+          container,
+          learningCommandsProvider,
+        )).value;
+        expect(commands, isA<DefaultLearningCommands>());
+        expect(
+          await commands!.capture(
+            curriculumId: engineCurriculum,
+            refs: const ['Mishnah Berakhot 1:1'],
+            source: LearningEvent.sourceMain,
+            dateState: DateState.dated,
+          ),
+          isA<CaptureSuccess>(),
+        );
+        expect(port.commits, hasLength(1));
+        expect(
+          await commands.editSubTrack(
+            ulidD,
+            const SubTrackEdit(ground: [peah, berakhot1]),
+          ),
+          const CaptureResult.onlineRequired(),
+        );
+      });
+    }
+
   });
   group('ownerGovernedWriterProvider (DNI-476)', () {
     test('writes through the current LearningCommands', () async {

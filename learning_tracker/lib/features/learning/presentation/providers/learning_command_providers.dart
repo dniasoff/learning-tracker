@@ -27,6 +27,8 @@ import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/achievement_latch_adapter.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
@@ -166,9 +168,61 @@ final class _DeferredGovernedIntentRepository
 
   @override
   Stream<LearnerIntent> watch(LearnerScope scope) async* {
-    final repository = await _resolve();
-    if (repository == null) return;
+    final GovernedIntentRepository? repository;
+    try {
+      repository = await _resolve();
+    } on Object {
+      throw TimeoutException('governed intent repository unavailable');
+    }
+    // Not ready: the read fails as a timeout, so the command answers
+    // onlineRequired (a closed stream would surface as a StateError).
+    if (repository == null) {
+      throw TimeoutException('governed intent repository unavailable');
+    }
     yield* repository.watch(scope);
+  }
+}
+
+/// A [SubTrackRepository] that resolves the real one only when a sub-track
+/// command first reads it, so ordinary captures never wait on, or fail
+/// with, the sub-track repository (DNI-497). While it is unavailable (not
+/// ready, or its provider failed) [watchAll] fails as a timeout, so the
+/// command answers onlineRequired; every other command is unaffected.
+final class _DeferredSubTrackRepository implements SubTrackRepository {
+  _DeferredSubTrackRepository(this._resolve);
+
+  final Future<SubTrackRepository?> Function() _resolve;
+
+  Future<SubTrackRepository?> _repository() async {
+    try {
+      return await _resolve();
+    } on Object {
+      return null;
+    }
+  }
+
+  @override
+  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) async* {
+    final repository = await _repository();
+    if (repository == null) {
+      throw TimeoutException('sub-track repository unavailable');
+    }
+    yield* repository.watchAll(scope);
+  }
+
+  @override
+  Future<void> applyGovernedChange(
+    LearnerScope scope,
+    SubTrackChange change,
+  ) async {
+    // Reached only after watchAll delivered a complete read, so the
+    // repository has resolved; a null here is the account going away
+    // between the read and the write.
+    final repository = await _repository();
+    if (repository == null) {
+      throw StateError('sub-track repository unavailable');
+    }
+    return repository.applyGovernedChange(scope, change);
   }
 }
 
@@ -189,7 +243,6 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   final points = await ref.watch(pointsAmountReaderProvider.future);
   final events = await ref.watch(learningEventRepositoryProvider.future);
   final changeLog = await ref.watch(changeLogRepositoryProvider.future);
-  final subTracks = await ref.watch(subTrackRepositoryProvider.future);
   final docReader = await ref.watch(governedDocReaderProvider.future);
   final oversized = await ref.watch(oversizedGovernedWritePortProvider.future);
   if (uid == null ||
@@ -197,7 +250,6 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       points == null ||
       events == null ||
       changeLog == null ||
-      subTracks == null ||
       docReader == null ||
       oversized == null) {
     return null;
@@ -214,6 +266,11 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   final settingsNow = ref.listen(learnerLockSettingsProvider(scope), (_, _) {});
   final corpora = ref.listen(corporaProvider.future, (_, _) {});
   final intent = ref.listen(governedIntentRepositoryProvider.future, (_, _) {});
+  final subTrackRepository = ref.listen(
+    subTrackRepositoryProvider.future,
+    (_, _) {},
+  );
+  final subTracks = _DeferredSubTrackRepository(subTrackRepository.read);
   final clock = ref.watch(learningCommandClockProvider);
   Future<Corpus?> corpusOf(String curriculumId) async =>
       (await corpora.read())[curriculumId];
