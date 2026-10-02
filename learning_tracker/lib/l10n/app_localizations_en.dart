@@ -2708,6 +2708,77 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mishnaHistoryTitle => 'Mishna history';
 
   @override
+  String get reportBySource => 'By source';
+
+  @override
+  String reportCountWithUnit(String count, String unit) {
+    return '$count $unit';
+  }
+
+  @override
+  String get reportCurriculumLabel => 'Curriculum';
+
+  @override
+  String get reportDistinctLabel => 'Distinct';
+
+  @override
+  String reportDistinctSemantics(String count, String unit) {
+    return 'Distinct · $count $unit';
+  }
+
+  @override
+  String get reportEntry => 'Report';
+
+  @override
+  String get reportEntryTooltip => 'Open the lifetime report';
+
+  @override
+  String get reportGroupCollapseHint => 'Hide years';
+
+  @override
+  String get reportGroupExpandHint => 'Show years';
+
+  @override
+  String get reportGroupOngoing => 'ongoing';
+
+  @override
+  String get reportLearningEventsLabel => 'Learning events';
+
+  @override
+  String reportLearningEventsSemantics(String count) {
+    return 'Learning events · $count';
+  }
+
+  @override
+  String get reportLineEnded => 'Ended';
+
+  @override
+  String get reportLineInProgress => 'In progress';
+
+  @override
+  String get reportSchoolYears => 'School years';
+
+  @override
+  String get reportSourceBeforeTracking => 'Before tracking';
+
+  @override
+  String reportSourceCounts(String events, String distinct, String unit) {
+    return '$events learning events · $distinct $unit';
+  }
+
+  @override
+  String get reportSourceHome => 'Home';
+
+  @override
+  String get reportSourceUnknown => 'Ended sub-track';
+
+  @override
+  String get reportTitle => 'Lifetime report';
+
+  @override
+  String get reportUnitFallback => 'items';
+
+  @override
   String missedReview(int count) {
     return 'Missed review ($count)';
   }

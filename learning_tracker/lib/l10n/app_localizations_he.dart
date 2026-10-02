@@ -2677,6 +2677,77 @@ class AppLocalizationsHe extends AppLocalizations {
   String get mishnaHistoryTitle => 'היסטוריית משנה';
 
   @override
+  String get reportBySource => 'לפי מקור';
+
+  @override
+  String reportCountWithUnit(String count, String unit) {
+    return '$count $unit';
+  }
+
+  @override
+  String get reportCurriculumLabel => 'תוכנית לימוד';
+
+  @override
+  String get reportDistinctLabel => 'ייחודיים';
+
+  @override
+  String reportDistinctSemantics(String count, String unit) {
+    return 'ייחודיים · $count $unit';
+  }
+
+  @override
+  String get reportEntry => 'דוח';
+
+  @override
+  String get reportEntryTooltip => 'פתיחת הדוח המצטבר';
+
+  @override
+  String get reportGroupCollapseHint => 'הסתרת השנים';
+
+  @override
+  String get reportGroupExpandHint => 'הצגת השנים';
+
+  @override
+  String get reportGroupOngoing => 'מתמשך';
+
+  @override
+  String get reportLearningEventsLabel => 'אירועי לימוד';
+
+  @override
+  String reportLearningEventsSemantics(String count) {
+    return 'אירועי לימוד · $count';
+  }
+
+  @override
+  String get reportLineEnded => 'הסתיים';
+
+  @override
+  String get reportLineInProgress => 'בתהליך';
+
+  @override
+  String get reportSchoolYears => 'שנות לימודים';
+
+  @override
+  String get reportSourceBeforeTracking => 'לפני המעקב';
+
+  @override
+  String reportSourceCounts(String events, String distinct, String unit) {
+    return '$events אירועי לימוד · $distinct $unit';
+  }
+
+  @override
+  String get reportSourceHome => 'בית';
+
+  @override
+  String get reportSourceUnknown => 'תת-מסלול שהסתיים';
+
+  @override
+  String get reportTitle => 'דוח לימוד מצטבר';
+
+  @override
+  String get reportUnitFallback => 'פריטים';
+
+  @override
   String missedReview(int count) {
     return 'חזרה שהוחמצה ($count)';
   }
