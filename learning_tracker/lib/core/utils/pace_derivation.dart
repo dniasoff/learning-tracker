@@ -33,3 +33,9 @@
   final perWeek = (perStudyDay * studyDaysPerWeek.clamp(1, 7)).clamp(1, 999999);
   return (paceValue: perWeek, pacePeriod: 'per_week');
 }
+
+/// A pace goal's stored rate as leaves per day: `per_week` divides by 7,
+/// anything else is already per day. A goal-unit conversion only — the
+/// learner's pace and projection come from the learner-state engine.
+double paceGoalPerDay(int paceValue, String pacePeriod) =>
+    pacePeriod == 'per_week' ? paceValue / 7.0 : paceValue.toDouble();

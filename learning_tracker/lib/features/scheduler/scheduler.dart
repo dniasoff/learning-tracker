@@ -34,7 +34,6 @@ export 'domain/services/calendar_program_service.dart';
 export 'domain/services/cross_curriculum_aggregator.dart';
 export 'domain/services/learning_program_service.dart';
 export 'domain/services/local_calendar_engine.dart';
-export 'domain/services/pace_calculator.dart';
 
 // ── Presentation providers ─────────────────────────────────────────────
 export 'presentation/providers/scheduler_providers.dart';

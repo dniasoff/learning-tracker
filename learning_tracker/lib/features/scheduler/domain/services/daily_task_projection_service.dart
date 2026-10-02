@@ -39,7 +39,6 @@ import 'package:learning_tracker/features/scheduler/domain/services/calendar_pro
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/sefaria_ref_matcher.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -528,10 +527,7 @@ Future<List<DailyTask>> buildFreshPlan({
       if (goal.goalType == 'pace' &&
           goal.paceValue != null &&
           goal.pacePeriod != null) {
-        final dailyRate = PaceCalculator.paceToDaily(
-          goal.paceValue!,
-          goal.pacePeriod!,
-        );
+        final dailyRate = paceGoalPerDay(goal.paceValue!, goal.pacePeriod!);
         final existing = pacePerDayMap[curriculum];
         if (existing == null || dailyRate > existing) {
           pacePerDayMap[curriculum] = dailyRate;

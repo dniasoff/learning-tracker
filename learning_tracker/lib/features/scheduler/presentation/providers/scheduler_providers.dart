@@ -21,13 +21,11 @@ import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_projection_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -283,66 +281,6 @@ Future<Set<String>> previouslySkippedRefs(Ref ref) async {
   final prefs = await SharedPreferences.getInstance();
   final refs = prefs.getStringList(_previouslySkippedRefsKey) ?? [];
   return refs.toSet();
-}
-
-/// Pace status for a curriculum goal.
-///
-/// Calculates pace using personal-track completions only and a rolling
-/// 7-day average for projected completion.
-/// Supports both deadline-based and pace-based goals.
-@riverpod
-Future<PaceStatus?> paceStatus(
-  Ref ref, {
-  required CurriculumId curriculumId,
-  required DateTime goalStartDate,
-  DateTime? goalDeadline,
-  required int totalItems,
-  String goalType = 'deadline',
-  double? pacePerDay,
-}) async {
-  final now = ref.watch(clockProvider);
-
-  // Rule-7 (no track types): all tracks are implicitly personal now, so the
-  // `trackType == personal` filter was a no-op that could wrongly drop rows.
-  // Use every completion for the rolling-average daily counts.
-  final completionRepository = SchedulerFirestoreCompletionRepositoryAdapter(
-    ref: ref,
-  );
-  final allCompletions = await completionRepository.getCompletions(
-    curriculumId,
-  );
-
-  // Build daily completion counts for rolling average
-  final dailyCounts = <DateTime, int>{};
-  for (final c in allCompletions) {
-    final date = DateTime.utc(
-      c.completedAt.year,
-      c.completedAt.month,
-      c.completedAt.day,
-    );
-    dailyCounts[date] = (dailyCounts[date] ?? 0) + 1;
-  }
-
-  if (goalType == 'pace' && pacePerDay != null) {
-    return PaceCalculator.calculateForPaceGoal(
-      targetPacePerDay: pacePerDay,
-      totalItems: totalItems,
-      completedItems: allCompletions.length,
-      dailyCompletionCounts: dailyCounts,
-      today: now,
-    );
-  }
-
-  if (goalDeadline == null) return null;
-
-  return PaceCalculator.calculate(
-    goalStartDate: goalStartDate,
-    goalDeadline: goalDeadline,
-    totalItems: totalItems,
-    completedItems: allCompletions.length,
-    dailyCompletionCounts: dailyCounts,
-    today: now,
-  );
 }
 
 /// Repository that snapshots today's plan to DB so completions don't

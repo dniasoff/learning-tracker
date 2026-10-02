@@ -1,26 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_profile_program_reader_adapter.dart';
-import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/next_reward_selector.dart';
-import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
 import 'package:learning_tracker/features/gamification/gamification.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-// Cross-feature deep import (Rule 2, DNI-386) — warn-only per
-// learning_tracker/CLAUDE.md ("pending legacy cleanup"), and progress.dart's
-// own barrel doc comment restricts its exports to types already demonstrably
-// consumed elsewhere. FirestoreChartDataRepositoryAdapter/ChartDataRepository
-// have exactly one other cross-feature consumer today
-// (features/tracks/presentation/providers/track_progress_providers.dart),
-// which reaches them the same deep way.
-import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
 import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -315,96 +303,6 @@ Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
 
   final streakService = ref.watch(streakServiceProvider);
   return streakService.getRecoveryInfo();
-}
-
-/// Per-curriculum pace status for the dashboard.
-///
-/// Fetches goal data and computes pace internally so the dashboard
-/// doesn't need to know goal details.
-///
-/// Delegates computation to [ComputePaceStatusUseCase].
-@riverpod
-Future<PaceStatus?> dashboardPaceStatus(
-  Ref ref,
-  CurriculumId curriculum,
-) async {
-  ref.watch<int>(completionCommittedProvider);
-  final now = ref.watch(clockProvider);
-
-  final goalRepo = FirestoreGoalRepositoryAdapter(ref: ref);
-  final List<GoalEntity> goals;
-  try {
-    goals = await goalRepo.getGoals(curriculum);
-  } on GoalRepositoryNotReadyException {
-    // Not-ready is not an error for this best-effort display projection —
-    // treat it the same as every other "nothing to show yet" branch below,
-    // including the ordinary case where this happens because the autoDispose
-    // provider was torn down mid-read (SM-4, AUD-dashboard-06 — see the
-    // ref.mounted guard further down in this same function).
-    return null;
-  }
-  if (goals.isEmpty) return null;
-
-  // Pick the most recently created goal — defends against a stale row from
-  // an earlier track setup outliving a re-add (the projection must reflect
-  // the goal the user just set, not whichever row the repository returns
-  // first).
-  final goal = goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
-
-  final chartData = FirestoreChartDataRepositoryAdapter(ref: ref);
-  final allCompletions = await chartData.getCompletionsByTier(
-    tier: CompletionTierFilter.trackAchievement,
-    curriculumId: curriculum,
-  );
-
-  final dailyCounts = ComputePaceStatusUseCase.buildDailyCounts(
-    allCompletions.map((c) => c.completedAt),
-  );
-
-  // Guard: this autoDispose provider may have been disposed during the async
-  // gap above (e.g. the user navigated away from the dashboard mid-load) —
-  // see dashboardChildNextReward's identical guard (SM-4, AUD-dashboard-06).
-  if (!ref.mounted) return null;
-
-  // Real total-item count from the scoped content tree (DNI-345).
-  final totalItems = await ref.watch(
-    scopedItemCountProvider(curriculum).future,
-  );
-
-  // GoalEntity.paceTarget already reconstructs DeadlineTarget/PacePeriodTarget
-  // from the raw goal fields — no need to hand-roll that here.
-  final paceTarget = goal.paceTarget;
-
-  // Resolve study-day counts for deadline goals (pace always derived from
-  // scope + study-day density — see ComputePaceStatusUseCase).
-  int? studyDaysInWindow;
-  int? studyDaysPerWeek;
-  if (paceTarget is DeadlineTarget) {
-    final studyDayReader = FirestoreStudyDayReaderAdapter(ref: ref);
-    final start = LocalDayUtils.extractLocalDate(now);
-    final end = LocalDayUtils.extractLocalDate(paceTarget.dueDate.toLocal());
-    studyDaysInWindow = end.isBefore(start)
-        ? 0
-        : await studyDayReader.countStudyDaysInInclusiveDateRange(
-            curriculumId: curriculum,
-            startInclusive: start,
-            endInclusive: end,
-          );
-    studyDaysPerWeek = await studyDayReader.studyDaysPerWeek(curriculum);
-  }
-
-  const useCase = ComputePaceStatusUseCase();
-  return useCase.execute(
-    PaceStatusInput(
-      paceTarget: paceTarget,
-      completedItems: allCompletions.length,
-      dailyCompletionCounts: dailyCounts,
-      totalItems: totalItems,
-      today: now,
-      studyDaysInWindow: studyDaysInWindow,
-      studyDaysPerWeek: studyDaysPerWeek,
-    ),
-  );
 }
 
 /// Whether the active profile has a programmed enrollment for a curriculum.
