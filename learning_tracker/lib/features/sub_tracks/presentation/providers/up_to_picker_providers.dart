@@ -9,9 +9,9 @@
 ///   from the engine's [LearnerState] and this device's pending captures.
 ///
 /// The engine output is [activeLearnerStateProvider] (C0 DNI-524, filled by
-/// DNI-474). While that is a stub the picker shows its inline error with
-/// retry and Record stays disabled (AC-7); nothing is computed here that
-/// the engine owns (AD-33).
+/// DNI-474). When it fails the picker shows its inline error with retry and
+/// Record stays disabled (AC-7); nothing is computed here that the engine
+/// owns (AD-33).
 ///
 /// Plain Riverpod providers (no codegen), matching the C0 provider style.
 library;
