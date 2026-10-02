@@ -166,6 +166,26 @@ final class SubTrackEdit {
   final List<NodeEntry>? ground;
 }
 
+/// The result of recomputing SM-5 from the creation change-log entry and
+/// tick events. This value is ephemeral and is never persisted.
+final class SubTrackForecastComparison {
+  /// Creates a count-only comparison.
+  const SubTrackForecastComparison({
+    required this.forecast,
+    required this.actual,
+    required this.windowWeeks,
+  });
+
+  /// Capacity forecast when this track was created.
+  final int forecast;
+
+  /// Distinct leaves ticked inside the original track window.
+  final int actual;
+
+  /// Original window length in weeks.
+  final int windowWeeks;
+}
+
 /// The sub-track lifecycle commands for one learner and actor.
 final class SubTrackCommands {
   /// Creates the commands.
@@ -186,6 +206,8 @@ final class SubTrackCommands {
     Future<Corpus?> Function(String curriculumId)? corpusOf,
     LearningAnalytics? analytics,
     SubTrackWriteLedger? ledger,
+    Future<SubTrackForecastComparison?> Function(SubTrack track)?
+    forecastComparison,
     this.ackTimeout = const Duration(seconds: 3),
     this.readTimeout = const Duration(seconds: 10),
   }) : _ledger = ledger ?? SubTrackWriteLedger(),
@@ -196,7 +218,8 @@ final class SubTrackCommands {
        _nowUtc = nowUtc,
        _newId = newId,
        _corpusOf = corpusOf,
-       _analytics = analytics;
+       _analytics = analytics,
+       _forecastComparison = forecastComparison;
 
   /// The learner the commands write for.
   final LearnerScope scope;
@@ -219,6 +242,8 @@ final class SubTrackCommands {
   final String Function() _newId;
   final Future<Corpus?> Function(String curriculumId)? _corpusOf;
   final LearningAnalytics? _analytics;
+  final Future<SubTrackForecastComparison?> Function(SubTrack track)?
+  _forecastComparison;
 
   final SubTrackWriteLedger _ledger;
   final bool _ownsLedger;
@@ -480,6 +505,24 @@ final class SubTrackCommands {
       groundEntries: track.ground.length,
       leaves: leaves,
     );
+    if (_forecastComparison != null &&
+        (action == SubTrackLifecycleAction.end ||
+            action == SubTrackLifecycleAction.delete ||
+            action == SubTrackLifecycleAction.addNextYear)) {
+      try {
+        final comparison = await _forecastComparison(track);
+        if (comparison != null) {
+          _analytics?.subTrackForecastVsActual(
+            type: track.type,
+            forecast: comparison.forecast,
+            actual: comparison.actual,
+            windowWeeks: comparison.windowWeeks,
+          );
+        }
+      } on Object {
+        // A missing history page cannot fail an already durable close.
+      }
+    }
   }
 
   /// The complete sub-track read of [scope] (live and ended), or a refusal:
@@ -509,6 +552,24 @@ final class SubTrackCommands {
         items: const <SubTrack>[],
         refusal: const CaptureResult.onlineRequired(),
       );
+      if (_forecastComparison != null &&
+          (action == SubTrackLifecycleAction.end ||
+              action == SubTrackLifecycleAction.delete ||
+              action == SubTrackLifecycleAction.addNextYear)) {
+        try {
+          final comparison = await _forecastComparison(track);
+          if (comparison != null) {
+            _analytics?.subTrackForecastVsActual(
+              type: track.type,
+              forecast: comparison.forecast,
+              actual: comparison.actual,
+              windowWeeks: comparison.windowWeeks,
+            );
+          }
+        } on Object {
+          // A missing history page cannot fail an already durable close.
+        }
+      }
     }
   }
 

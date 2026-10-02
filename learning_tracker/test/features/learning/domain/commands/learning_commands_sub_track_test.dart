@@ -688,6 +688,11 @@ void main() {
         nowUtc: () => _now,
         newId: _ids(),
         analytics: analytics,
+        forecastComparison: (_) async => const SubTrackForecastComparison(
+          forecast: 40,
+          actual: 12,
+          windowWeeks: 8,
+        ),
         ackTimeout: const Duration(milliseconds: 50),
       );
       await tracked.createSubTrack(
@@ -757,6 +762,9 @@ void main() {
           'ground_entries': 2,
           'leaves': 0,
         },
+      ]);
+      expect(analytics.forecastComparisons, [
+        {'type': 'ongoing', 'forecast': 40, 'actual': 12, 'window_weeks': 8},
       ]);
       await tracked.dispose();
     });
