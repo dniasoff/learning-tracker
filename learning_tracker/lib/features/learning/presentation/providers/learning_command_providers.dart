@@ -158,6 +158,18 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     (_, _) {},
   );
   final corpora = ref.listen(corporaProvider.future, (_, _) {});
+  final failureReporter = ref.watch(learningFailureReporterProvider);
+  final governed = DefaultGovernedLearningCommands(
+    scope: scope,
+    actor: actor,
+    changeLog: changeLog,
+    subTracks: subTracks,
+    reader: docReader,
+    oversized: oversized,
+    clock: ref.watch(learningCommandClockProvider),
+    newUlid: newUlid,
+    failureReporter: failureReporter,
+  );
   final commands = DefaultLearningCommands(
     scope: scope,
     actor: actor,
@@ -175,20 +187,12 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     writePort: port,
     gate: ref.watch(captureGateProvider),
     analytics: ref.watch(learningAnalyticsProvider),
-    failureReporter: ref.watch(learningFailureReporterProvider),
+    failureReporter: failureReporter,
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
-    governed: DefaultGovernedLearningCommands(
-      scope: scope,
-      actor: actor,
-      changeLog: changeLog,
-      subTracks: subTracks,
-      reader: docReader,
-      oversized: oversized,
-      clock: ref.watch(learningCommandClockProvider),
-      newUlid: newUlid,
-    ),
+    governed: governed,
   );
   ref.onDispose(commands.dispose);
+  ref.onDispose(governed.dispose);
   return commands;
 }, retry: (retryCount, error) => null);

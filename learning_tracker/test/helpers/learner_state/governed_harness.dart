@@ -13,6 +13,7 @@ import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/commands/governed_action_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 
 import '../learner_state_fixtures.dart';
 import 'c0_fixtures.dart';
@@ -51,6 +52,11 @@ final class ScriptedChangeLog implements ChangeLogRepository {
 
   /// Acknowledges the held commit of [entryId].
   void release(String entryId) => _held.remove(entryId)!.complete();
+
+  /// Fails the held commit of [entryId] with [error] (a queued batch the
+  /// server refuses later).
+  void rejectHeld(String entryId, Exception error) =>
+      _held.remove(entryId)!.completeError(error);
 
   @override
   Future<void> commitGoverned(LearnerScope scope, GovernedBatch batch) async {
@@ -130,6 +136,7 @@ final class GovernedHarness {
     InMemoryChangeLogRepository? store,
     InMemorySubTrackRepository? subTracks,
     OversizedGovernedWritePort? oversizedPort,
+    this.failureReporter,
     this.ackWait = const Duration(milliseconds: 20),
   }) : _next = firstId,
        store = store ?? InMemoryChangeLogRepository(),
@@ -148,9 +155,13 @@ final class GovernedHarness {
         assert(at == governedNow, 'ids are minted at the command instant');
         return engineUlid(_next++);
       },
+      failureReporter: failureReporter,
       ackWait: ackWait,
     );
   }
+
+  /// Receives the governed write rejections, when set.
+  final LearningFailureReporter? failureReporter;
 
   int _next;
 

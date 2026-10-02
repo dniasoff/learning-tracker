@@ -11,6 +11,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.
 import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
@@ -366,28 +367,15 @@ void main() {
       h.changeLog.release(engineUlid(100));
     });
 
-    test('a permanently rejected batch is not saved; the other batches of '
-        'the action still land with the same action id', () async {
-      final h = GovernedHarness();
+    test('a permanently rejected batch is not saved: it becomes a pending '
+        'failure (reported), the other batches still land, and its retry '
+        're-sends the identical entry', () async {
+      final reporter = _Reporter();
+      final h = GovernedHarness(failureReporter: reporter);
       h.changeLog.fail[engineUlid(100)] = const PermanentWriteRejection(
         'permission-denied',
       );
-      final result = await h.commands.applyGovernedChange(
-        GovernedAction([
-          GovernedEntityChange(
-            entity: _order,
-            entityId: _cid,
-            docs: _orderDocs(1),
-          ),
-          GovernedEntityChange(
-            entity: _program,
-            entityId: _cid,
-            docs: [
-              patch(_program, _cid, {'program_id': 'daf'}),
-            ],
-          ),
-        ]),
-      );
+      final result = await h.commands.applyGovernedChange(_orderThenProgram());
       expect(
         result,
         CaptureResult.success(
@@ -396,9 +384,86 @@ void main() {
         ),
       );
       expect(h.batches.single.entry.actionId, engineUlid(100));
+      expect(await h.commands.watchPendingFailures().first, [
+        PendingFailure(
+          id: engineUlid(100),
+          eventIds: const [],
+          changeIds: [engineUlid(100)],
+          reason: PendingFailureReason.permissionDenied,
+        ),
+      ]);
+      expect(reporter.reports, [
+        (
+          LearningCommandKind.governedChange,
+          PendingFailureReason.permissionDenied,
+          2,
+        ),
+      ]);
+
+      h.changeLog.fail.clear();
+      final retried = await h.commands.retry(engineUlid(100));
+      expect(
+        retried,
+        CaptureResult.success(
+          changeIds: [engineUlid(100)],
+          actionId: engineUlid(100),
+        ),
+      );
+      final resent = h.batches.last.entry;
+      expect(resent.id, engineUlid(100));
+      expect(resent.actionId, engineUlid(100));
+      expect(resent.at, governedNow);
+      expect(resent.actor, parentActor);
+      expect(h.changeLog.issued, [
+        engineUlid(100),
+        engineUlid(101),
+        engineUlid(100),
+      ]);
+      expect(await h.commands.watchPendingFailures().first, isEmpty);
     });
 
-    test('every batch rejected is notSaved', () async {
+    test('a queued batch the server refuses later becomes a pending '
+        'failure', () async {
+      final h = GovernedHarness();
+      h.changeLog.hold.add(engineUlid(100));
+      final result = await h.commands.applyGovernedChange(_orderThenProgram());
+      expect(result, isA<CaptureSuccess>().having((r) => r.queued, 'q', true));
+      expect(await h.commands.watchPendingFailures().first, isEmpty);
+
+      h.changeLog.rejectHeld(
+        engineUlid(100),
+        const PermanentWriteRejection('failed-precondition'),
+      );
+      await pumpEventQueue();
+      expect(await h.commands.watchPendingFailures().first, [
+        PendingFailure(
+          id: engineUlid(100),
+          eventIds: const [],
+          changeIds: [engineUlid(100)],
+          reason: PendingFailureReason.failedPrecondition,
+        ),
+      ]);
+    });
+
+    test('a failed retry keeps the failure pending', () async {
+      final h = GovernedHarness();
+      const rejection = PermanentWriteRejection('permission-denied');
+      h.changeLog.fail[engineUlid(100)] = rejection;
+      await h.commands.applyGovernedChange(
+        oneEntity(_order, _cid, _orderDocs(1)),
+      );
+      expect(
+        await h.commands.retry(engineUlid(100)),
+        const CaptureResult.rejected(CaptureRejection.notSaved),
+      );
+      expect(
+        (await h.commands.watchPendingFailures().first).single.id,
+        engineUlid(100),
+      );
+      expect(await h.commands.retry('not-a-failure'), isNull);
+    });
+
+    test('every batch rejected is notSaved, each one pending', () async {
       final h = GovernedHarness();
       h.changeLog.fail[engineUlid(100)] = const ChangeLogConflictException('x');
       expect(
@@ -406,6 +471,10 @@ void main() {
           oneEntity(_order, _cid, _orderDocs(1)),
         ),
         const CaptureResult.rejected(CaptureRejection.notSaved),
+      );
+      expect(
+        (await h.commands.watchPendingFailures().first).single.reason,
+        PendingFailureReason.other,
       );
     });
   });
@@ -473,14 +542,59 @@ void main() {
       );
     });
 
-    test('a callable rejection is notSaved', () async {
-      final h = GovernedHarness(oversizedPort: _RejectingPort());
+    test('a callable rejection is notSaved and pending; the retry re-sends '
+        'the identical request (same actionId and entry ids)', () async {
+      final port = _RejectingPort();
+      final h = GovernedHarness(oversizedPort: port);
       expect(
         await h.commands.applyGovernedChange(
           oneEntity(_order, _cid, _orderDocs(11)),
         ),
         const CaptureResult.rejected(CaptureRejection.notSaved),
       );
+      expect(await h.commands.watchPendingFailures().first, [
+        PendingFailure(
+          id: engineUlid(100),
+          eventIds: const [],
+          changeIds: [engineUlid(100)],
+          reason: PendingFailureReason.failedPrecondition,
+        ),
+      ]);
+
+      port.rejects = false;
+      expect(
+        await h.commands.retry(engineUlid(100)),
+        CaptureResult.success(
+          changeIds: [engineUlid(100)],
+          actionId: engineUlid(100),
+        ),
+      );
+      expect(port.requests, hasLength(2));
+      expect(identical(port.requests[0], port.requests[1]), isTrue);
+      expect(await h.commands.watchPendingFailures().first, isEmpty);
+    });
+
+    test('an unknown callable outcome is pending with the same request; an '
+        'offline retry is onlineRequired and stays pending', () async {
+      final port = _RejectingPort()..error = const _UnknownOutcome();
+      final h = GovernedHarness(oversizedPort: port);
+      await h.commands.applyGovernedChange(
+        oneEntity(_order, _cid, _orderDocs(11)),
+      );
+      expect(
+        (await h.commands.watchPendingFailures().first).single.reason,
+        PendingFailureReason.other,
+      );
+      port.error = const OnlineRequiredException();
+      expect(
+        await h.commands.retry(engineUlid(100)),
+        const CaptureResult.onlineRequired(),
+      );
+      expect(
+        (await h.commands.watchPendingFailures().first).single.id,
+        engineUlid(100),
+      );
+      expect(port.requests.map((r) => r.actionId).toSet(), {engineUlid(100)});
     });
   });
 
@@ -540,11 +654,52 @@ void main() {
   });
 }
 
-/// A callable that rejects every request for good.
+/// An order change then a program change of [_cid] (two batches).
+GovernedAction _orderThenProgram() => GovernedAction([
+  GovernedEntityChange(entity: _order, entityId: _cid, docs: _orderDocs(1)),
+  GovernedEntityChange(
+    entity: _program,
+    entityId: _cid,
+    docs: [
+      patch(_program, _cid, {'program_id': 'daf'}),
+    ],
+  ),
+]);
+
+/// A callable that throws [error] while [rejects], recording requests.
 final class _RejectingPort implements OversizedGovernedWritePort {
+  bool rejects = true;
+  Exception error = const PermanentWriteRejection('failed-precondition');
+  final List<OversizedGovernedWrite> requests = [];
+
   @override
   Future<GovernedWriteReceipt> write(
     LearnerScope scope,
     OversizedGovernedWrite request,
-  ) async => throw const PermanentWriteRejection('failed-precondition');
+  ) async {
+    requests.add(request);
+    if (rejects) throw error;
+    return GovernedWriteReceipt(
+      actionId: request.actionId,
+      changeIds: [for (final e in request.entries) e.entryId],
+    );
+  }
+}
+
+/// A callable failure whose outcome is unknown (the server may have
+/// committed).
+final class _UnknownOutcome implements Exception {
+  const _UnknownOutcome();
+}
+
+/// Records every reported rejection.
+final class _Reporter implements LearningFailureReporter {
+  final List<(LearningCommandKind, PendingFailureReason, int)> reports = [];
+
+  @override
+  void writeRejected({
+    required LearningCommandKind command,
+    required PendingFailureReason reason,
+    required int writeCount,
+  }) => reports.add((command, reason, writeCount));
 }

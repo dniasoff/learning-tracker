@@ -27,8 +27,18 @@
 ///    [ChangeLogRepository.commitGoverned], or
 ///    [SubTrackRepository.applyGovernedChange] for `subTrack`), committed in
 ///    action order. A batch not acknowledged within the ack wait is queued
-///    (the SDK owns the offline queue); a batch rejected within it is not
-///    saved, and the command reports `notSaved` only when every batch was.
+///    (the SDK owns the offline queue). Batches are independent (each holds
+///    one entity's docs and its entry), so a queued batch does not hold
+///    back the next.
+/// 5. AD-54 Recovery ([GovernedPendingFailures]): a batch the server does
+///    not save, within the ack wait or after it was queued, and an
+///    oversized request rejected or left with an unknown outcome, become
+///    one "not saved — retry" [PendingFailure] each, whose retry re-sends
+///    the identical batch or request (same entry ids, `at`, actor and
+///    `actionId`). The command reports the other batches as saved, or
+///    `notSaved` when no batch was. Only a one-batch action refused for a
+///    caller error (unknown sub-track, invalid payload or baseline) is
+///    reported as that rejection and is not retryable.
 ///
 /// ## undoAction (AC-4, AC-5)
 ///
@@ -65,7 +75,9 @@ import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/governed_pending_failures.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_dispatcher.dart';
 
 /// The actor reported for a "changed since" field whose latest change-log
@@ -108,8 +120,13 @@ final class DefaultGovernedLearningCommands
     required OversizedGovernedWritePort oversized,
     required UtcClock clock,
     required UlidSource newUlid,
+    LearningFailureReporter? failureReporter,
     this.ackWait = defaultLearningAckWait,
-  }) : _scope = scope,
+  }) : _failures = GovernedPendingFailures(
+         reporter: failureReporter,
+         ackWait: ackWait,
+       ),
+       _scope = scope,
        _actor = actor,
        _changeLog = changeLog,
        _subTracks = subTracks,
@@ -126,6 +143,7 @@ final class DefaultGovernedLearningCommands
   final OversizedGovernedWritePort _oversized;
   final UtcClock _clock;
   final UlidSource _newUlid;
+  final GovernedPendingFailures _failures;
 
   /// How long a batch waits for the server before it counts as queued.
   final Duration ackWait;
@@ -136,6 +154,17 @@ final class DefaultGovernedLearningCommands
   @override
   Future<CaptureResult> applyGovernedChange(GovernedAction action) =>
       _run(action.changes, now: _clock().toUtc());
+
+  @override
+  Stream<List<PendingFailure>> watchPendingFailures() =>
+      _failures.watchPendingFailures();
+
+  @override
+  Future<CaptureResult?> retry(String pendingFailureId) =>
+      _failures.retry(pendingFailureId);
+
+  /// Closes the pending-failure stream.
+  Future<void> dispose() => _failures.dispose();
 
   @override
   Future<CaptureResult> undoAction(String actionId) async {
@@ -345,7 +374,7 @@ final class DefaultGovernedLearningCommands
     // Fix every id, time and payload before the first write (AC-2, T2).
     final ids = [for (final _ in plans) _newUlid(now)];
     final actionId = ids.first;
-    final units = <(String, Future<void> Function())>[];
+    final units = <GovernedWriteUnit>[];
     try {
       for (var i = 0; i < plans.length; i++) {
         final plan = plans[i];
@@ -367,13 +396,24 @@ final class DefaultGovernedLearningCommands
             changedFields: merge.fields,
             entry: entry,
           );
-          units.add((
-            entry.id,
-            () => _subTracks.applyGovernedChange(_scope, change),
-          ));
+          units.add(
+            _unit(
+              entry,
+              actionId,
+              docs: 1,
+              send: () => _subTracks.applyGovernedChange(_scope, change),
+            ),
+          );
         } else {
           final batch = GovernedBatch(entry: entry, merges: plan.merges);
-          units.add((entry.id, () => _changeLog.commitGoverned(_scope, batch)));
+          units.add(
+            _unit(
+              entry,
+              actionId,
+              docs: batch.merges.length,
+              send: () => _changeLog.commitGoverned(_scope, batch),
+            ),
+          );
         }
       }
     } on StorageFormatException {
@@ -381,44 +421,74 @@ final class DefaultGovernedLearningCommands
     } on ArgumentError {
       return _invalid;
     }
-    return _dispatch(units, actionId, changedSince);
+    return _dispatch(units, actionId, changedSince, _kindOf(revertsActionId));
   }
 
-  /// Commits [units] in action order, each waiting at most [ackWait].
+  static LearningCommandKind _kindOf(String? revertsActionId) =>
+      revertsActionId == null
+      ? LearningCommandKind.governedChange
+      : LearningCommandKind.undoAction;
+
+  /// The entity batch of [entry]: its [docs] docs plus the entry itself.
+  static GovernedWriteUnit _unit(
+    ChangeLogEntry entry,
+    String actionId, {
+    required int docs,
+    required Future<void> Function() send,
+  }) => GovernedWriteUnit(
+    id: entry.id,
+    actionId: actionId,
+    changeIds: [entry.id],
+    writeCount: docs + 1,
+    queueable: true,
+    send: send,
+  );
+
+  /// The rejection of a one-batch action refused for a caller error, which
+  /// a retry of the identical batch could never fix; null otherwise.
+  static CaptureResult? _callerError(Object error) => switch (error) {
+    SubTrackNotFoundException() => const CaptureResult.rejected(
+      CaptureRejection.targetNotFound,
+    ),
+    StorageFormatException() || ChangeBaselineMismatchException() => _invalid,
+    _ => null,
+  };
+
+  /// Commits [units] in action order, each waiting at most [ackWait]; every
+  /// unit not saved, then or later, becomes a pending failure.
   Future<CaptureResult> _dispatch(
-    List<(String, Future<void> Function())> units,
+    List<GovernedWriteUnit> units,
     String actionId,
     List<ChangedSinceField> changedSince,
+    LearningCommandKind kind,
   ) async {
     final saved = <String>[];
-    Object? onlyError;
     var queued = false;
-    for (final (id, commit) in units) {
-      final pending = commit();
+    for (final unit in units) {
+      final pending = unit.send();
       try {
         final acked = await pending
             .then((_) => true)
             .timeout(ackWait, onTimeout: () => false);
         if (!acked) {
           queued = true;
-          // Keep a late outcome observed; the SDK retries transient errors.
-          unawaited(pending.then<void>((_) {}, onError: (Object _) {}));
+          // A queued batch the server later refuses is not saved: it
+          // surfaces as a pending failure (AD-54 Recovery).
+          unawaited(
+            pending.then<void>(
+              (_) {},
+              onError: (Object error) => _failures.record(kind, unit, error),
+            ),
+          );
         }
-        saved.add(id);
+        saved.addAll(unit.changeIds);
       } on Object catch (error) {
-        onlyError = error;
+        final refused = units.length == 1 ? _callerError(error) : null;
+        if (refused != null) return refused;
+        _failures.record(kind, unit, error);
       }
     }
-    if (saved.isEmpty) {
-      return switch (units.length == 1 ? onlyError : null) {
-        SubTrackNotFoundException() => const CaptureResult.rejected(
-          CaptureRejection.targetNotFound,
-        ),
-        StorageFormatException() ||
-        ChangeBaselineMismatchException() => _invalid,
-        _ => _notSaved,
-      };
-    }
+    if (saved.isEmpty) return _notSaved;
     return CaptureResult.success(
       changeIds: saved,
       actionId: actionId,
@@ -448,9 +518,26 @@ final class DefaultGovernedLearningCommands
     try {
       receipt = await _oversized.write(_scope, request);
     } on OnlineRequiredException {
-      return const CaptureResult.onlineRequired();
-    } on Object {
-      return _notSaved; // rejected; the callable is idempotent on actionId
+      return const CaptureResult.onlineRequired(); // nothing sent or applied
+    } on Object catch (error) {
+      // Rejected, or the outcome is unknown: the retry re-sends this exact
+      // request, and the callable is idempotent on its actionId.
+      _failures.record(
+        _kindOf(revertsActionId),
+        GovernedWriteUnit(
+          id: request.actionId,
+          actionId: request.actionId,
+          changeIds: [for (final e in entries) e.entryId],
+          writeCount: entries.fold(
+            entries.length,
+            (n, e) => n + e.change.docs.length,
+          ),
+          queueable: false,
+          send: () => _oversized.write(_scope, request),
+        ),
+        error,
+      );
+      return _notSaved;
     }
     return CaptureResult.success(
       changeIds: receipt.changeIds,
