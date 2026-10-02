@@ -649,10 +649,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get subTrackDetailEdit => 'עריכה';
 
   @override
-  String get subTrackDetailSelectPrompt =>
-      'יש לבחור תת-מסלול כדי לראות את פרטיו';
-
-  @override
   String get subTrackDetailMoveUp => 'הזזה למעלה';
 
   @override

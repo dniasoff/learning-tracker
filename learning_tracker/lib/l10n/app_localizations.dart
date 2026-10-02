@@ -1244,12 +1244,6 @@ abstract class AppLocalizations {
   /// **'Edit'**
   String get subTrackDetailEdit;
 
-  /// Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4.
-  ///
-  /// In en, this message translates to:
-  /// **'Select a sub-track to see its details'**
-  String get subTrackDetailSelectPrompt;
-
   /// Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging up (DNI-497 AC-5, UX-DR-155).
   ///
   /// In en, this message translates to:

@@ -329,7 +329,6 @@
   "subTrackDetailTicked": "{count} סומנו",
   "subTrackDetailMoreOptions": "אפשרויות נוספות",
   "subTrackDetailEdit": "עריכה",
-  "subTrackDetailSelectPrompt": "יש לבחור תת-מסלול כדי לראות את פרטיו",
   "subTrackDetailMoveUp": "הזזה למעלה",
   "subTrackDetailMoveDown": "הזזה למטה",
   "subTrackDetailRemoveFrom": "הסרה מ{name}",
