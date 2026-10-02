@@ -94,14 +94,34 @@ void main() {
 
     test('the latest main event anchors the unit', () {
       final learns = [
-        engineLearn(1, 'Mishnah Shabbat 1:1', minutes: 1),
-        engineLearn(2, 'Mishnah Peah 1:1', minutes: 2),
+        engineLearn(1, 'Mishnah Shabbat 1:1', stage: 1, minutes: 1),
+        engineLearn(2, 'Mishnah Peah 1:1', stage: 1, minutes: 2),
       ];
       final record = deriveMainTrack(
         corpus: corpus,
         order: corpus.leaves,
         learnt: {'Mishnah Shabbat 1:1', 'Mishnah Peah 1:1'},
         countedLearns: learns,
+      );
+      expect(record.currentUnit, peah);
+      expect(record.position, 'Mishnah Peah 1:2');
+    });
+
+    test('free ticks (no stage) and chazara (stage > first) never anchor', () {
+      final record = deriveMainTrack(
+        corpus: corpus,
+        order: corpus.leaves,
+        learnt: {
+          'Mishnah Peah 1:1',
+          'Mishnah Shabbat 1:1',
+          'Mishnah Berakhot 1:1',
+        },
+        countedLearns: [
+          engineLearn(1, 'Mishnah Peah 1:1', stage: 1, minutes: 1),
+          engineLearn(2, 'Mishnah Shabbat 1:1', minutes: 2),
+          engineLearn(3, 'Mishnah Berakhot 1:1', stage: 2, minutes: 3),
+        ],
+        firstStage: 1,
       );
       expect(record.currentUnit, peah);
       expect(record.position, 'Mishnah Peah 1:2');

@@ -87,10 +87,14 @@ DateTime? trackingStartAt(
 ///
 /// * `schedulableRefs` per [schedulableRefs].
 /// * The anchor is the later, by time, of the leaf of the latest counted
-///   `source = main` `dated`/`catch_up` leaf event in [countedLearns]
-///   (event order: `effectiveAt`, then id) and [start] (at [startAt]).
-///   [start] wins a tie, and loses to any such event when [startAt] is
-///   unknown. A [start] outside [order] is not an anchor.
+///   main-track capture in [countedLearns] (event order: `effectiveAt`,
+///   then id) and [start] (at [startAt]). [start] wins a tie, and loses to
+///   any capture when [startAt] is unknown. A [start] outside [order] is
+///   not an anchor.
+/// * A main-track capture is a `source = main` `dated`/`catch_up` leaf
+///   event carrying a `stage` no later than [firstStage]. A free tick (a
+///   main event with no stage, AD-32) and chazara (`stage` > first) are not
+///   captures of new main-track learning and never anchor.
 /// * The current unit is [unitOf] the anchor, only while it still has a
 ///   schedulable leaf. Position = its first schedulable leaf, else the
 ///   first of `schedulableRefs`.
@@ -104,6 +108,7 @@ MainTrackRecord deriveMainTrack({
   Set<LeafRef> heldGround = const {},
   LeafRef? start,
   DateTime? startAt,
+  int? firstStage,
 }) {
   final validStart = start != null && order.contains(start) ? start : null;
   final schedulable = schedulableRefs(
@@ -114,8 +119,11 @@ MainTrackRecord deriveMainTrack({
   );
   LearningEvent? latestMain;
   for (final e in countedLearns.reversed) {
+    final stage = e.stage;
     if (e.source == LearningEvent.sourceMain &&
         (e.dateState == DateState.dated || e.dateState == DateState.catchUp) &&
+        stage != null &&
+        (firstStage == null || stage <= firstStage) &&
         coveredLeaves(e, corpus).isNotEmpty) {
       latestMain = e;
       break;
