@@ -2143,3 +2143,88 @@ describe('DNI-471 AC-5 — AD-38 access-call budget (10 governed docs per owner 
     await assertFails(governedBatch(owner(), 21));
   });
 });
+
+// ── DNI-476 (Story 1.14) — the owner governed writers' doc shapes ─────────────
+// The owner repositories now write through LearningCommands.applyGovernedChange:
+// the AD-52 `track_learning_order/{c}_{level}_{ref}` order doc, reset and
+// "Remove track" as `ended_at` tombstones, "Re-add" clearing it, and goals at
+// the AD-43 fixed ids. No rules change: these pin that the shapes the
+// client writes pass the existing AD-38 owner rule, and its denials hold.
+describe('DNI-476 — owner governed order docs, tombstones and fixed goal ids', () => {
+  const ORDER = `${LP}/track_learning_order/c1_masechta_Berakhot`;
+  const orderDoc = {
+    curriculum_id: 'c1',
+    level: 'masechta',
+    ref: 'Berakhot',
+    user_sort_order: 0,
+  };
+  const TRACK = `${LP}/curriculum_tracks/c1`;
+  const trackDoc = {
+    curriculum_id: 'c1',
+    state: 'active',
+    state_changed_at: '2026-09-01T00:00:00.000Z',
+    activated_at: '2026-09-01T00:00:00.000Z',
+  };
+
+  test('a reorder doc with its matching mainTrackOrder entry is accepted', async () => {
+    await assertSucceeds(
+      governedWrite(owner(), ORDER, orderDoc, 'mainTrackOrder', 'c1'),
+    );
+  });
+
+  test('reset: an ended_at tombstone with a fresh entry is accepted and the doc remains', async () => {
+    await governedWrite(owner(), ORDER, orderDoc, 'mainTrackOrder', 'c1');
+    await assertSucceeds(
+      governedWrite(owner(), ORDER, { ended_at: Timestamp.now() }, 'mainTrackOrder', 'c1'),
+    );
+    const snap = await getDoc(doc(owner(), ORDER));
+    assert.ok(snap.exists());
+    assert.ok(snap.data().ended_at);
+  });
+
+  test('a missing or mismatched entry is denied', async () => {
+    await assertFails(
+      governedWrite(owner(), ORDER, orderDoc, 'mainTrackOrder', 'c1', { withEntry: false }),
+    );
+    await assertFails(
+      governedWrite(owner(), ORDER, orderDoc, 'mainTrackStages', 'c1'),
+    );
+    await assertFails(
+      governedWrite(owner(), ORDER, orderDoc, 'mainTrackOrder', 'c2'),
+    );
+  });
+
+  test('a client hard delete of an order doc is denied', async () => {
+    await seed(ORDER, { ...orderDoc, last_change_id: nextUlid() });
+    await assertFails(deleteDoc(doc(owner(), ORDER)));
+  });
+
+  test('remove track sets ended_at with a mainTrack entry; re-add clears it', async () => {
+    await governedWrite(owner(), TRACK, trackDoc, 'mainTrack', 'c1');
+    await assertSucceeds(
+      governedWrite(owner(), TRACK, { ended_at: Timestamp.now() }, 'mainTrack', 'c1'),
+    );
+    await assertSucceeds(
+      governedWrite(owner(), TRACK, { ended_at: null }, 'mainTrack', 'c1'),
+    );
+    await assertFails(deleteDoc(doc(owner(), TRACK)));
+  });
+
+  test('an AD-43 deadline goal at its fixed id with a goal entry is accepted; delete denied', async () => {
+    const GOAL = `${LP}/goals/c1_deadline`;
+    await assertSucceeds(
+      governedWrite(owner(), GOAL, {
+        curriculum_id: 'c1',
+        goal_type: 'deadline',
+        target_date: '2027-06-01',
+        description: 'Siyum',
+        date_type: 'gregorian',
+        created_at: '2026-09-01T00:00:00.000Z',
+      }, 'goal', 'c1_deadline'),
+    );
+    await assertFails(
+      governedWrite(owner(), GOAL, { description: 'x' }, 'goal', 'c1_pace'),
+    );
+    await assertFails(deleteDoc(doc(owner(), GOAL)));
+  });
+});

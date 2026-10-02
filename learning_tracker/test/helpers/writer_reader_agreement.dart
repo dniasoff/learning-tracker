@@ -41,18 +41,20 @@
 ///
 /// **Shape B — a Ref-taking feature adapter that itself re-resolves a
 /// `repository_providers.dart` provider internally at call time** (the
-/// `FirestoreLearningOrderRepositoryAdapter` pattern). Worked example, from
+/// `FirestoreTrackLearningOrderRepositoryAdapter` pattern). Worked example, from
 /// the one existing precedent,
 /// `test/features/scheduler/data/repositories/
 /// scheduler_learning_order_repository_impl_test.dart`:
 /// ```dart
-/// SchedulerFirestoreLearningOrderRepositoryAdapter buildReader(
+/// SchedulerTrackOrderRepositoryAdapter buildReader(
 ///   ProviderContainer container,
 /// ) {
-///   final readerProvider =
-///       Provider<SchedulerFirestoreLearningOrderRepositoryAdapter>(
-///         (ref) => SchedulerFirestoreLearningOrderRepositoryAdapter(ref: ref),
-///       );
+///   final readerProvider = Provider<SchedulerTrackOrderRepositoryAdapter>(
+///     (ref) => SchedulerTrackOrderRepositoryAdapter(
+///       ref: ref,
+///       content: (_) async => items,
+///     ),
+///   );
 ///   return container.read(readerProvider);
 /// }
 /// // ...

@@ -1005,4 +1005,55 @@ void dni476OwnerGovernedGroups() {
       );
     },
   );
+
+  group(
+    'DNI-476 AC-6: tutor-only and rewards writers are not governed here',
+    () {
+      test('the governed entity set is exactly the AD-38 one (no rewards or '
+          'tutor-only entity was added)', () {
+        expect(GovernedEntity.values.map((e) => e.storage).toSet(), {
+          'subTrack',
+          'goal',
+          'mainTrack',
+          'mainTrackOrder',
+          'mainTrackProgram',
+          'mainTrackStudyDays',
+          'mainTrackStages',
+          'mainTrackScope',
+          'learnerSettings',
+        });
+        expect(mainTrackEntities.map((e) => e.collection).toSet(), {
+          'curriculum_tracks',
+          'track_learning_order',
+          'profile_programs',
+          'study_day_configs',
+          'stage_definitions',
+          'curriculum_scopes',
+        });
+      });
+
+      test('a rewards doc cannot ride a governed action: invalid, nothing read '
+          'or written', () async {
+        final h = GovernedHarness();
+        final result = await h.commands.applyGovernedChange(
+          GovernedAction([
+            const GovernedEntityChange(
+              entity: GovernedEntity.mainTrack,
+              entityId: _cid,
+              docs: [
+                GovernedDocPatch(
+                  collection: 'reward_redemptions',
+                  docId: 'r1',
+                  fields: {'amount': 5},
+                ),
+              ],
+            ),
+          ]),
+        );
+        expect(result, const CaptureResult.rejected(CaptureRejection.invalid));
+        expect(h.reader.reads, isEmpty);
+        expect(h.batches, isEmpty);
+      });
+    },
+  );
 }
