@@ -1,46 +1,29 @@
-// TrackCreationService regressions for the Firestore migration.
+// TrackCreationService: Add track is ONE named governed action (DNI-476
+// AC-5), plus the program-track regressions of the Firestore migration.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
+import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
-import 'package:learning_tracker/features/scheduler/scheduler.dart';
-import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
-import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
-import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
-import 'package:learning_tracker/features/tracks/setup/domain/repositories/curriculum_scope_write_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/profile_program_repository.dart';
-import 'package:learning_tracker/features/tracks/setup/domain/repositories/study_day_write_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../../helpers/fake_clock.dart';
-
-class _MockActivation extends Mock implements CurriculumActivationService {}
-
-class _MockTrackRepository extends Mock
-    implements FirestoreCurriculumTrackRepositoryAdapter {}
+import '../../../../../helpers/recording_add_track_actions.dart';
 
 class _MockStageRepository extends Mock implements StageDefinitionRepository {}
 
-class _MockGoalRepository extends Mock implements GoalRepository {}
-
-class _MockStudyDays extends Mock implements StudyDayWriteRepository {}
-
-class _MockScopes extends Mock implements CurriculumScopeWriteRepository {}
-
-class _MockBookmarkRepository extends Mock implements BookmarkRepository {}
-
-class _RecordingProfilePrograms implements ProfileProgramRepository {
-  ({CurriculumId curriculum, int programId, DateTime? date, String? ref})?
-  lastSet;
-
+class _NoPrograms implements ProfileProgramRepository {
   @override
   Future<ProfileProgramEntity?> getProgram(CurriculumId curriculumId) async =>
       null;
@@ -51,21 +34,16 @@ class _RecordingProfilePrograms implements ProfileProgramRepository {
     required int programId,
     DateTime? trackingStartDate,
     String? trackingStartRef,
-  }) async {
-    lastSet = (
-      curriculum: curriculumId,
-      programId: programId,
-      date: trackingStartDate,
-      ref: trackingStartRef,
-    );
-  }
+  }) async => fail('Add track writes the program inside its action');
 
   @override
-  Future<void> removeProgram(CurriculumId curriculumId) async {}
+  Future<void> removeProgram(CurriculumId curriculumId) async =>
+      fail('Add track writes the program inside its action');
 }
 
 class _MemoryBookmarks implements BookmarkRepository {
   BookmarkEntity? value;
+  var writes = 0;
 
   @override
   Future<BookmarkEntity?> getBookmark({
@@ -77,6 +55,7 @@ class _MemoryBookmarks implements BookmarkRepository {
     required CurriculumId curriculumId,
     required String sefariaRef,
   }) async {
+    writes++;
     return value = BookmarkEntity(
       curriculumId: curriculumId,
       sefariaRef: sefariaRef,
@@ -97,108 +76,84 @@ class _MemoryBookmarks implements BookmarkRepository {
 }
 
 TrackCreationService _buildService({
-  required _MockStageRepository stageRepository,
-  required _RecordingProfilePrograms profilePrograms,
-  required BookmarkRepository bookmarkRepository,
-}) {
-  final activation = _MockActivation();
-  when(
-    () => activation.activateForProfile(any(), any()),
-  ).thenAnswer((_) async {});
-  final trackRepository = _MockTrackRepository();
-  when(() => trackRepository.activateTrack(any())).thenAnswer(
-    (_) async => CurriculumTrackEntity(
-      curriculumId: CurriculumId.mishnayos,
-      state: 'active',
-      stateChangedAt: DateTime.utc(2026, 1, 1),
-      activatedAt: DateTime.utc(2026, 1, 1),
-    ),
-  );
-  final studyDays = _MockStudyDays();
-  when(
-    () => studyDays.replaceAllForCurriculum(
-      curriculumId: any(named: 'curriculumId'),
-      studyDays: any(named: 'studyDays'),
-    ),
-  ).thenAnswer((_) async {});
-  final scopes = _MockScopes();
-  when(() => scopes.clearScopes(any())).thenAnswer((_) async {});
-  final goals = _MockGoalRepository();
-  when(() => goals.getGoals(any())).thenAnswer((_) async => const []);
-  final wizard = LearningProcessWizardService(
-    stageRepository: stageRepository,
+  required RecordingAddTrackActions actions,
+  BookmarkRepository? bookmarkRepository,
+}) => TrackCreationService(
+  actionRepository: actions,
+  wizardService: LearningProcessWizardService(
+    stageRepository: _MockStageRepository(),
     learningProgramRepo: LearningProgramRepository.instance,
-    profileProgramRepository: profilePrograms,
-  );
-  return TrackCreationService(
-    activationService: activation,
-    wizardService: wizard,
-    goalRepository: goals,
-    trackRepository: trackRepository,
-    studyDayRepository: studyDays,
-    scopeRepository: scopes,
-    profileProgramRepository: profilePrograms,
-    bookmarkRepository: bookmarkRepository,
-  );
-}
-
-BookmarkRepository _stubbedBookmarks() {
-  final bookmarks = _MockBookmarkRepository();
-  when(
-    () => bookmarks.setBookmark(
-      curriculumId: any(named: 'curriculumId'),
-      sefariaRef: any(named: 'sefariaRef'),
-    ),
-  ).thenAnswer(
-    (invocation) async => BookmarkEntity(
-      curriculumId: invocation.namedArguments[#curriculumId] as CurriculumId,
-      sefariaRef: invocation.namedArguments[#sefariaRef] as String,
-      updatedAt: DateTimeFactory.nowUtc(),
-    ),
-  );
-  return bookmarks;
-}
+    profileProgramRepository: _NoPrograms(),
+  ),
+  bookmarkRepository: bookmarkRepository ?? _MemoryBookmarks(),
+);
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.bavli);
-    registerFallbackValue(<int, DayType>{});
-    registerFallbackValue(
-      const WizardResult(
+  test('Add track is ONE action holding the track, stages, study days, '
+      'scope, program and goal', () async {
+    final actions = RecordingAddTrackActions();
+    await _buildService(actions: actions).createTrack(
+      result: AddTrackResult(
         curriculumId: CurriculumId.bavli,
-        choice: WizardChoice.noReview,
+        label: 'Bavli',
+        studyDays: const {1: 'study', 6: 'rest'},
+        scopeSelections: const [ScopeEntry(level: 1, value: 'Seder Moed')],
+        goalResult: GoalEntity(
+          curriculumId: CurriculumId.bavli,
+          goalType: 'deadline',
+          targetDate: DateTime.utc(2027, 6, 1),
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        ),
       ),
+    );
+
+    final plan = actions.plans.single;
+    expect(plan.curriculumId, CurriculumId.bavli);
+    expect(plan.stages.map((s) => s.stageName), ['לימוד']);
+    expect(plan.studyDays, {1: DayType.study, 6: DayType.review});
+    expect(plan.scopes, [(level: 1, value: 'Seder Moed')]);
+    expect(plan.program, isNull);
+    expect(plan.goal?.goalType, 'deadline');
+    expect(
+      plan.goal?.description,
+      'Bavli',
+      reason: 'an empty goal description falls back to the track label',
     );
   });
 
-  test(
-    'D7: cross-collection rollback is not portable through repository calls',
-    skip:
-        'Firestore repositories used by TrackCreationService do not expose a cross-collection transaction; the production service documents this migration gap explicitly.',
-    () async {},
-  );
+  test('a failed action writes no bookmark and propagates', () async {
+    final actions = RecordingAddTrackActions()..failWith = Exception('x');
+    final bookmarks = _MemoryBookmarks();
+    await expectLater(
+      _buildService(
+        actions: actions,
+        bookmarkRepository: bookmarks,
+      ).createTrack(
+        result: const AddTrackResult(
+          curriculumId: CurriculumId.bavli,
+          label: 'Bavli',
+          programId: 99,
+          studyDays: {1: 'study'},
+          startingRef: 'Berakhot 2a',
+        ),
+      ),
+      throwsException,
+    );
+    expect(bookmarks.writes, 0);
+  });
 
   for (final (label, startingRef) in [
     ('positive', 'offset:5'),
     ('negative', 'offset:-5'),
   ]) {
     test('B3: $label back-date offset resolves to the past', () async {
-      final stages = _MockStageRepository();
-      when(
-        () => stages.replaceStagesForCurriculum(any(), any()),
-      ).thenAnswer((_) async {});
-      final programs = _RecordingProfilePrograms();
-      final service = _buildService(
-        stageRepository: stages,
-        profilePrograms: programs,
-        bookmarkRepository: _stubbedBookmarks(),
-      );
-
+      final actions = RecordingAddTrackActions();
       final fixedNow = DateTime.utc(2026, 6, 15, 12);
       installFakeClock(fixedNow);
       final before = DateTimeFactory.nowUtc();
 
-      await service.createTrack(
+      await _buildService(actions: actions).createTrack(
         result: AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
@@ -208,7 +163,9 @@ void main() {
         ),
       );
 
-      final date = programs.lastSet?.date;
+      final program = actions.plans.single.program!;
+      expect(program.programId, 99);
+      final date = program.trackingStartDate;
       expect(date, isNotNull);
       expect(date!.isBefore(before), isTrue);
       expect(before.difference(date).inDays, 5);
@@ -218,19 +175,12 @@ void main() {
   test(
     'F1: program creation writes the starting bookmark through the repository',
     () async {
-      final stages = _MockStageRepository();
-      when(
-        () => stages.replaceStagesForCurriculum(any(), any()),
-      ).thenAnswer((_) async {});
-      final programs = _RecordingProfilePrograms();
+      final actions = RecordingAddTrackActions();
       final bookmarks = _MemoryBookmarks();
-      final service = _buildService(
-        stageRepository: stages,
-        profilePrograms: programs,
+      await _buildService(
+        actions: actions,
         bookmarkRepository: bookmarks,
-      );
-
-      await service.createTrack(
+      ).createTrack(
         result: const AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
@@ -241,11 +191,38 @@ void main() {
       );
 
       expect(
+        actions.plans.single.program?.trackingStartRef,
+        'Mishnah Berakhot 2:1',
+      );
+      expect(
         (await bookmarks.getBookmark(
           curriculumId: CurriculumId.bavli,
         ))?.sefariaRef,
         'Mishnah Berakhot 2:1',
       );
+    },
+  );
+
+  test(
+    'stages come from the wizard result when the flow supplies one',
+    () async {
+      final actions = RecordingAddTrackActions();
+      await _buildService(actions: actions).createTrack(
+        result: const AddTrackResult(
+          curriculumId: CurriculumId.mishnayos,
+          label: 'Mishnayos',
+          studyDays: {1: 'study'},
+          wizardResult: LearningProcessWizardResult(
+            wizardResult: WizardResult(
+              curriculumId: CurriculumId.mishnayos,
+              choice: WizardChoice.custom,
+              customRounds: [],
+            ),
+          ),
+        ),
+      );
+      final stages = actions.plans.single.stages;
+      expect(stages.map((s) => s.stageOrder), [1]);
     },
   );
 }

@@ -84,31 +84,41 @@ class LearningProcessWizardService {
   /// here — see the module doc comment); the two run sequentially, program
   /// association first.
   Future<void> applyWizardResult(WizardResult result) async {
-    final stages = switch (result.choice) {
-      WizardChoice.preset => await _buildPresetStages(result),
-      WizardChoice.custom => _buildCustomStages(result),
-      WizardChoice.noReview => _buildNoReviewStages(result),
-    };
+    if (result.choice == WizardChoice.preset) {
+      final program = _learningProgramRepo.getProgramById(result.programId!);
+      if (program != null) {
+        await _profileProgramRepository.setProgram(
+          curriculumId: result.curriculumId,
+          programId: program.id,
+        );
+      }
+    }
 
+    // An unknown preset yields no stage rows: write nothing rather than
+    // ending the curriculum's existing stages.
+    final stages = buildStages(result);
+    if (stages.isEmpty) return;
     await _stageRepository.replaceStagesForCurriculum(
       result.curriculumId,
       stages,
     );
   }
 
-  /// Stores the preset-program association (if [result.programId] resolves
-  /// to a real program) and returns the stage rows to write.
-  ///
-  /// Returns an empty list (writing nothing) when [result.programId] does
+  /// The stage rows [result] describes, without writing anything (no
+  /// preset-program association either). The one-action Add track flow
+  /// (DNI-476) writes them inside its governed action.
+  List<StageDefinition> buildStages(WizardResult result) =>
+      switch (result.choice) {
+        WizardChoice.preset => _buildPresetStages(result),
+        WizardChoice.custom => _buildCustomStages(result),
+        WizardChoice.noReview => _buildNoReviewStages(result),
+      };
+
+  /// The preset program's stage rows; empty when [result.programId] does
   /// not resolve to a known program.
-  Future<List<StageDefinition>> _buildPresetStages(WizardResult result) async {
+  List<StageDefinition> _buildPresetStages(WizardResult result) {
     final program = _learningProgramRepo.getProgramById(result.programId!);
     if (program == null) return const [];
-
-    await _profileProgramRepository.setProgram(
-      curriculumId: result.curriculumId,
-      programId: program.id,
-    );
 
     // Parse stages_config JSON and build stage definitions.
     final stages = (jsonDecode(program.stagesConfig) as List)

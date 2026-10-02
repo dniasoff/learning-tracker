@@ -38,9 +38,9 @@ import 'package:learning_tracker/data/repositories/learner_state_firestore_value
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_governed_writer.dart';
 import '../../helpers/learner_state/c0_fixtures.dart';
 import '../../helpers/learner_state/engine_fixtures.dart';
-import '../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'uid-1';
 const _profileId = governedTestProfileId;

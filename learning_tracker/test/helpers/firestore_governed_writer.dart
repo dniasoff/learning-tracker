@@ -20,7 +20,10 @@ import 'package:learning_tracker/data/repositories/learner_state_firestore_value
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/governed_action_commands.dart';
@@ -72,6 +75,47 @@ final class ApplyingOversizedPort implements OversizedGovernedWritePort {
   }
 }
 
+/// A [ChangeLogRepository] whose next commit of an entity in [failOnce]
+/// throws [error] (a batch the server refuses), then behaves normally — the
+/// AD-54 "not saved, retry" path.
+final class FailOnceChangeLog implements ChangeLogRepository {
+  /// Wraps [inner].
+  FailOnceChangeLog(this.inner);
+
+  /// The real repository.
+  final ChangeLogRepository inner;
+
+  /// Entities whose next commit fails.
+  final Set<GovernedEntity> failOnce = {};
+
+  /// The error a failing commit throws.
+  Exception error = const PermanentWriteRejection('unavailable');
+
+  /// Every committed entry id, in commit order (failed attempts included).
+  final List<String> attempts = [];
+
+  @override
+  Future<void> commitGoverned(LearnerScope scope, GovernedBatch batch) async {
+    attempts.add(batch.entry.id);
+    if (failOnce.remove(batch.entry.entity)) throw error;
+    await inner.commitGoverned(scope, batch);
+  }
+
+  @override
+  Future<List<ChangeLogEntry>> entriesOfAction(
+    LearnerScope scope,
+    String actionId,
+  ) => inner.entriesOfAction(scope, actionId);
+
+  @override
+  Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>
+      inner.watchIntentHistory(scope);
+
+  @override
+  Stream<bool> watchIsReverted(LearnerScope scope, String actionId) =>
+      inner.watchIsReverted(scope, actionId);
+}
+
 /// The owner governed writer under test (see the library doc comment).
 final class FirestoreGovernedWriter implements OwnerGovernedWriter {
   /// Creates the writer for `users/[uid]/learner_profiles/[profileId]`.
@@ -83,11 +127,12 @@ final class FirestoreGovernedWriter implements OwnerGovernedWriter {
   }) : scope = LearnerScope(ownerUid: uid, profileId: profileId),
        oversized = ApplyingOversizedPort(firestore) {
     final changeLog = FirestoreChangeLogRepository(firestore: firestore);
+    this.changeLog = FailOnceChangeLog(changeLog);
     final at = now ?? governedTestNow;
     commands = DefaultGovernedLearningCommands(
       scope: scope,
       actor: Actor(uid: uid, role: ActorRole.parent, displayName: ''),
-      changeLog: changeLog,
+      changeLog: this.changeLog,
       subTracks: FirestoreSubTrackRepository(firestore: firestore),
       reader: changeLog,
       oversized: oversized,
@@ -104,6 +149,9 @@ final class FirestoreGovernedWriter implements OwnerGovernedWriter {
 
   /// The oversized-callable fake.
   final ApplyingOversizedPort oversized;
+
+  /// The change log the commands commit through (failure injection).
+  late final FailOnceChangeLog changeLog;
 
   /// The commands every write goes through.
   late final DefaultGovernedLearningCommands commands;
