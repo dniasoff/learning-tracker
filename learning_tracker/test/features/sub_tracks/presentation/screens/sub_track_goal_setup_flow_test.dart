@@ -33,11 +33,16 @@ void main() {
   });
   tearDown(() async => h.dispose());
 
-  Future<void> pumpFlow(WidgetTester tester, {bool withCommands = true}) async {
+  Future<void> pumpFlow(
+    WidgetTester tester, {
+    bool withCommands = true,
+    bool sessionLive = true,
+  }) async {
     await tester.pumpWidget(
       pumpApp(
         overrides: [
-          ...h.overrides(commands: withCommands),
+          ...h.overrides(commands: withCommands, parentSession: null),
+          switchableParentSessionOverride(),
           if (!withCommands)
             learningCommandsProvider.overrideWith((ref) async => null),
           scopedItemCountProvider(
@@ -56,6 +61,7 @@ void main() {
         ),
       ),
     );
+    if (!sessionLive) setParentSession(tester, find.text('go'), live: false);
     await tester.tap(find.text('go'));
     // The in-memory intent store answers in the root zone.
     await settleCommands(tester);
@@ -160,6 +166,80 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(GoalSetupScreen, skipOffstage: false), findsNothing);
     expect(outcome, SubTrackGoalSetupOutcome.failed);
+  });
+
+  group('AC-3: a governed goal write needs a live parent session', () {
+    testWidgets('without a parent session the goal screen never opens', (
+      tester,
+    ) async {
+      h = SubTrackHarness();
+      await pumpFlow(tester, sessionLive: false);
+      expect(find.byType(GoalSetupScreen, skipOffstage: false), findsNothing);
+      expect(outcome, SubTrackGoalSetupOutcome.failed);
+      expect(h.commands.governed, isEmpty);
+    });
+
+    testWidgets('a session that expires between render and save refuses the '
+        'save', (tester) async {
+      h = SubTrackHarness();
+      await pumpFlow(tester);
+      expect(find.byType(GoalSetupScreen), findsOneWidget);
+      // The PIN session locks while the goal screen is open; the save
+      // arrives before the next frame.
+      setParentSession(tester, find.byType(GoalSetupScreen), live: false);
+      await complete(tester, deadline(DateTime(2028, 6, 1)));
+      expect(outcome, SubTrackGoalSetupOutcome.failed);
+      expect(h.commands.governed, isEmpty);
+    });
+
+    testWidgets('a locked session hides the goal screen and keeps its values', (
+      tester,
+    ) async {
+      h = SubTrackHarness();
+      await pumpFlow(tester);
+      await tester.tap(find.text('Pace'));
+      await tester.pumpAndSettle();
+      final before = tester.element(find.byType(GoalSetupScreen));
+
+      setParentSession(tester, find.byType(GoalSetupScreen), live: false);
+      await tester.pumpAndSettle();
+      // Not usable: nothing on it can be seen, tapped or submitted...
+      expect(find.byType(GoalSetupScreen), findsNothing);
+      expect(find.byType(FilledButton), findsNothing);
+      expect(
+        find.byKey(const ValueKey('subTrackParentSessionLocked')),
+        findsOneWidget,
+      );
+      // ...but it stays mounted with what the parent entered.
+      expect(find.byType(GoalSetupScreen, skipOffstage: false), findsOneWidget);
+
+      setParentSession(
+        tester,
+        find.byType(GoalSetupScreen, skipOffstage: false),
+        live: true,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.element(find.byType(GoalSetupScreen)), same(before));
+
+      // A save while the session is live again goes through.
+      await tester.tap(find.byType(FilledButton));
+      await settleCommands(tester);
+      await tester.pumpAndSettle();
+      expect(outcome, SubTrackGoalSetupOutcome.saved);
+      expect(h.commands.governed, hasLength(1));
+      expect(
+        h
+            .commands
+            .governed
+            .single
+            .changes
+            .single
+            .docs
+            .single
+            .fields['goal_type'],
+        'pace',
+      );
+    });
   });
 
   test('a live pace goal prefills the goal screen', () {

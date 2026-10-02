@@ -64,6 +64,26 @@ Future<bool> readSubTrackParentSession(WidgetRef ref) async {
   }
 }
 
+/// The live answer of [subTrackParentSessionProvider], read fresh at a
+/// command boundary: every sub-track and governed-goal write asks again
+/// just before it submits, because the parent session can end (PIN lock)
+/// after the screen was opened (DNI-495 AC-3).
+///
+/// Holds a subscription until the future resolves, so the auto-dispose
+/// provider is not torn down mid-read. Fails closed: a disposed [ref] or
+/// any read error is `false`.
+Future<bool> readSubTrackParentSession(WidgetRef ref) async {
+  ProviderSubscription<Future<bool>>? sub;
+  try {
+    sub = ref.listenManual(subTrackParentSessionProvider.future, (_, _) {});
+    return await sub.read();
+  } on Object {
+    return false;
+  } finally {
+    sub?.close();
+  }
+}
+
 /// The learner's civil "today" (AD-41) for the academic-year picker and the
 /// AD-45 checks. Overridden in tests.
 final subTrackTodayProvider = Provider.autoDispose<CivilDate>((ref) {
