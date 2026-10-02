@@ -349,18 +349,29 @@ final class RecordingLearningAnalytics implements LearningAnalytics {
   void captureSummary({
     required String curriculumId,
     required CaptureSourceType sourceType,
+    required DateState dateState,
     required CaptureGesture gesture,
     required int eventCount,
     required int skippedCount,
     required int taps,
-  }) => captureSummaries.add({
-    'curriculum_id': curriculumId,
-    'source_type': sourceType.storage,
-    'gesture': gesture.storage,
-    'event_count': eventCount,
-    'skipped_count': skippedCount,
-    'taps': taps,
-  });
+  }) {
+    captureSummaries.add({
+      'curriculum_id': curriculumId,
+      'source_type': sourceType.storage,
+      'gesture': gesture.storage,
+      'event_count': eventCount,
+      'skipped_count': skippedCount,
+      'taps': taps,
+    });
+    capture(
+      curriculumId: curriculumId,
+      sourceKind: sourceType == CaptureSourceType.main
+          ? CaptureSourceKind.main
+          : CaptureSourceKind.subTrack,
+      dateState: dateState,
+      count: eventCount,
+    );
+  }
 
   @override
   void subTrackLifecycleSummary({
@@ -369,13 +380,21 @@ final class RecordingLearningAnalytics implements LearningAnalytics {
     required SubTrackLifecycleAction action,
     required int groundEntries,
     required int leaves,
-  }) => lifecycleSummaries.add({
-    'curriculum_id': curriculumId,
-    'type': type.storage,
-    'action': action.storage,
-    'ground_entries': groundEntries,
-    'leaves': leaves,
-  });
+  }) {
+    lifecycleSummaries.add({
+      'curriculum_id': curriculumId,
+      'type': type.storage,
+      'action': action.storage,
+      'ground_entries': groundEntries,
+      'leaves': leaves,
+    });
+    lifecycles.add((
+      curriculumId: curriculumId,
+      type: type,
+      action: action,
+      groundEntries: groundEntries,
+    ));
+  }
 
   @override
   void subTrackForecastVsActual({

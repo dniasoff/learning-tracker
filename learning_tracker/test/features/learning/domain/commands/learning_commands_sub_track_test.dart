@@ -696,6 +696,10 @@ void main() {
       );
       await tracked.editSubTrack(ulidD, const SubTrackEdit(ratePerWeek: 9));
       await tracked.editSubTrack(ulidD, const SubTrackEdit(ratePerWeek: 9));
+      await tracked.editSubTrack(
+        ulidD,
+        const SubTrackEdit(ground: [_shabbat, _berakhot]),
+      );
       await tracked.endSubTrack(ulidD);
       await tracked.deleteSubTrack(ulidD); // already ended: nothing written
       expect(analytics.lifecycles, [
@@ -714,9 +718,45 @@ void main() {
         (
           curriculumId: 'shas',
           type: SubTrackType.ongoing,
+          action: SubTrackLifecycleAction.reorder,
+          groundEntries: 2,
+        ),
+        (
+          curriculumId: 'shas',
+          type: SubTrackType.ongoing,
           action: SubTrackLifecycleAction.end,
           groundEntries: 2,
         ),
+      ]);
+      expect(analytics.lifecycleSummaries, [
+        {
+          'curriculum_id': 'shas',
+          'type': 'ongoing',
+          'action': 'create',
+          'ground_entries': 2,
+          'leaves': 0,
+        },
+        {
+          'curriculum_id': 'shas',
+          'type': 'ongoing',
+          'action': 'edit',
+          'ground_entries': 2,
+          'leaves': 0,
+        },
+        {
+          'curriculum_id': 'shas',
+          'type': 'ongoing',
+          'action': 'reorder',
+          'ground_entries': 2,
+          'leaves': 0,
+        },
+        {
+          'curriculum_id': 'shas',
+          'type': 'ongoing',
+          'action': 'end',
+          'ground_entries': 2,
+          'leaves': 0,
+        },
       ]);
       await tracked.dispose();
     });

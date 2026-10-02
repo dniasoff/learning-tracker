@@ -346,7 +346,10 @@ final class SubTrackCommands {
         changedFields: after,
         entry: entry,
       ),
-      onConfirmed: _emitter(candidate, SubTrackLifecycleAction.edit),
+      onConfirmed: _emitter(
+        candidate,
+        _groundAction(current.ground, candidate.ground),
+      ),
     );
   }
 
@@ -453,15 +456,31 @@ final class SubTrackCommands {
     );
   }
 
-  /// The AD-47 `subtrack_lifecycle` emission — enums and counts only —
-  /// that [_commit] runs once the server has accepted the write.
+  /// The AD-47 lifecycle summary runs once the server accepts the write.
   void Function() _emitter(SubTrack track, SubTrackLifecycleAction action) =>
-      () => _analytics?.subTrackLifecycle(
-        curriculumId: track.curriculumId,
-        type: track.type,
-        action: action,
-        groundEntries: track.ground.length,
-      );
+      () => unawaited(_emitLifecycleSummary(track, action));
+
+  Future<void> _emitLifecycleSummary(
+    SubTrack track,
+    SubTrackLifecycleAction action,
+  ) async {
+    var leaves = 0;
+    if (_analytics != null && _corpusOf != null) {
+      try {
+        final corpus = await _corpusOf(track.curriculumId);
+        if (corpus != null) leaves = expandGround(track.ground, corpus).length;
+      } on Object {
+        // Analytics is best-effort and must never fail a durable command.
+      }
+    }
+    _analytics?.subTrackLifecycleSummary(
+      curriculumId: track.curriculumId,
+      type: track.type,
+      action: action,
+      groundEntries: track.ground.length,
+      leaves: leaves,
+    );
+  }
 
   /// The complete sub-track read of [scope] (live and ended), or a refusal:
   /// - `onlineRequired` when it is not available within [readTimeout]
@@ -491,6 +510,25 @@ final class SubTrackCommands {
         refusal: const CaptureResult.onlineRequired(),
       );
     }
+  }
+
+  static SubTrackLifecycleAction _groundAction(
+    List<NodeEntry> before,
+    List<NodeEntry> after,
+  ) {
+    if (after.length > before.length && after.toSet().containsAll(before)) {
+      return SubTrackLifecycleAction.groundAdd;
+    }
+    if (after.length < before.length && before.toSet().containsAll(after)) {
+      return SubTrackLifecycleAction.remove;
+    }
+    if (after.length == before.length &&
+        after.toSet().length == before.toSet().length &&
+        after.toSet().containsAll(before) &&
+        after.indexed.any((entry) => entry.$2 != before[entry.$1])) {
+      return SubTrackLifecycleAction.reorder;
+    }
+    return SubTrackLifecycleAction.edit;
   }
 
   /// The main track of [curriculumId] in the complete governed intent:

@@ -41,6 +41,7 @@ void main() {
     SinkLearningAnalytics((e, p) => sent.add((e, p))).captureSummary(
       curriculumId: 'mishnayos',
       sourceType: CaptureSourceType.schoolYear,
+      dateState: DateState.dated,
       gesture: CaptureGesture.upTo,
       eventCount: 4,
       skippedCount: 1,
