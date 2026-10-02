@@ -33,11 +33,13 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
 import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_config_history.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_position.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ordered_leaves.dart';
 import 'package:learning_tracker/domain/learner_state/predicates.dart';
+import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -203,7 +205,15 @@ final class LearnerStateEngine {
         firstStage: firstStage,
       ),
       plan: evaluated
-          ? _plan(curriculumId, inputs, intent, corpus, learnt)
+          ? _plan(
+              curriculumId,
+              inputs,
+              intent,
+              corpus,
+              learnt,
+              learns,
+              firstStage,
+            )
           : const PlanRecord.none(),
       streak: evaluated
           ? curriculumStreak(
@@ -256,8 +266,23 @@ final class LearnerStateEngine {
     MainTrackIntent intent,
     Corpus corpus,
     LearntRecord learnt,
+    List<LearningEvent> learns,
+    int? firstStage,
   ) {
     final today = civilDate(inputs.nowUtc, inputs.settingsHistory);
+    final configHistory = MainTrackConfigHistory.build(
+      curriculumId: curriculumId,
+      intent: intent,
+      intentHistory: inputs.intentHistory,
+    );
+    final reviews = deriveReviewSchedule(
+      countedLearns: learns,
+      corpus: corpus,
+      inScope: learnt.inScope,
+      configHistory: configHistory,
+      settingsHistory: inputs.settingsHistory,
+      fallbackFirstStage: firstStage,
+    );
     final errors = <CurriculumValidationError>{};
     final calendar = deriveCalendarPlan(
       curriculumId: curriculumId,
@@ -273,6 +298,7 @@ final class LearnerStateEngine {
     if (calendar != null) {
       return PlanRecord(
         calendar: calendar,
+        reviews: reviews,
         dailyTarget: calendar.dailyTarget(today),
         shortfall: calendar.amnestyFrom == null
             ? null
@@ -280,7 +306,7 @@ final class LearnerStateEngine {
         validationErrors: errors,
       );
     }
-    return PlanRecord(validationErrors: errors);
+    return PlanRecord(reviews: reviews, validationErrors: errors);
   }
 
   /// The ground of [curriculumId]'s `holdsGround` sub-tracks (AD-34), which

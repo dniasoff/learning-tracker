@@ -16,6 +16,7 @@ import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/tri_state.dart';
 
 bool _listEquals<T>(List<T> a, List<T> b) {
@@ -132,7 +133,7 @@ final class PlanRecord {
   PlanRecord({
     this.subTracks = const {},
     this.calendar,
-    this.reviewsDue = const {},
+    this.reviews,
     this.dailyTarget,
     this.paceRate,
     this.shortfall,
@@ -144,7 +145,7 @@ final class PlanRecord {
   const PlanRecord.none()
     : subTracks = const {},
       calendar = null,
-      reviewsDue = const {},
+      reviews = null,
       dailyTarget = null,
       paceRate = null,
       shortfall = null,
@@ -157,8 +158,8 @@ final class PlanRecord {
   /// The calendar plan, for a calendar-program curriculum only.
   final CalendarPlan? calendar;
 
-  /// Reviews due by civil date.
-  final Map<CivilDate, List<ReviewDue>> reviewsDue;
+  /// The AD-32 review schedule.
+  final ReviewSchedule? reviews;
 
   /// Today's target in leaves.
   final int? dailyTarget;
@@ -180,30 +181,18 @@ final class PlanRecord {
       other is PlanRecord &&
       _mapEquals(other.subTracks, subTracks) &&
       other.calendar == calendar &&
-      _listMapEquals(other.reviewsDue, reviewsDue) &&
+      other.reviews == reviews &&
       other.dailyTarget == dailyTarget &&
       other.paceRate == paceRate &&
       other.shortfall == shortfall &&
       other.projection == projection &&
       _setEquals(other.validationErrors, validationErrors);
 
-  static bool _listMapEquals<T>(
-    Map<CivilDate, List<T>> a,
-    Map<CivilDate, List<T>> b,
-  ) {
-    if (a.length != b.length) return false;
-    for (final MapEntry(:key, :value) in a.entries) {
-      final other = b[key];
-      if (other == null || !_listEquals(value, other)) return false;
-    }
-    return true;
-  }
-
   @override
   int get hashCode => Object.hash(
     subTracks.length,
     calendar,
-    reviewsDue.length,
+    reviews,
     dailyTarget,
     paceRate,
     shortfall,
@@ -287,7 +276,7 @@ final class DerivedCurriculumState implements CurriculumState {
 
   @override
   List<ReviewDue> reviewsDue(CivilDate date) =>
-      plan.reviewsDue[date] ?? const [];
+      plan.reviews?.dueOn(date) ?? const [];
 
   @override
   int? get dailyTarget => plan.dailyTarget;
