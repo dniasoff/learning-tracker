@@ -16,8 +16,9 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Absent (zero size) while loading, when no learner is active and when no
 /// sub-track is `onHome` (UX-DR-114); a load error stays inside it as an
 /// [InlineAsyncError] with retry (UX-DR-115). *Manage* opens the hub and is
-/// shown to the parent only. [topSpacing] is added above it only when it
-/// renders.
+/// shown to the parent only (not the child, and not a tutor device, whose
+/// sub-track surfaces are read-only with one note, AC-9). [topSpacing] is
+/// added above it only when it renders.
 class DashboardSubTracksSection extends ConsumerWidget {
   /// Creates the section.
   const DashboardSubTracksSection({super.key, this.topSpacing = 0});
@@ -82,6 +83,10 @@ class DashboardSubTracksSection extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
+          if (role == SubTrackViewerRole.tutor) ...[
+            const SubTrackTutorReadOnlyNote(),
+            const SizedBox(height: 12),
+          ],
           for (final item in items) ...[
             DashboardSubTrackCard(
               key: ValueKey('dashboardSubTrack-${item.subTrackId}'),

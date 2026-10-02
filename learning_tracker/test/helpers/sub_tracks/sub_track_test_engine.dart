@@ -195,22 +195,29 @@ final class EngineBackedCommands implements LearningCommands {
 
 /// Overrides wiring [engine] and [commands] for the active learner, with
 /// School and Rebbe stored as live sub-tracks and the viewer as [role].
-/// [states] replaces the engine's state stream (e.g. an error).
+/// [states] replaces the engine's state stream (e.g. an error);
+/// [groundOf] replaces a track's stored ground (e.g. none).
 List<Override> subTrackEngineOverrides({
   required SubTrackTestEngine engine,
   required LearningCommands commands,
   SubTrackViewerRole role = SubTrackViewerRole.child,
   LearnerScope? scope,
   Stream<LearnerState> Function()? states,
+  Map<String, List<NodeEntry>> groundOf = const {},
 }) {
   final activeScope = scope ?? c0Scope();
   final repo = InMemorySubTrackRepository()
     ..seed(activeScope, [
-      homeSubTrack(id: schoolId),
+      if (groundOf[schoolId] case final ground?)
+        homeSubTrack(id: schoolId, ground: ground)
+      else
+        homeSubTrack(id: schoolId),
       homeSubTrack(
         id: rebbeId,
         name: 'Rebbe',
-        ground: const [NodeEntry(level: 'perek', ref: 'Mishnah_Peah_2')],
+        ground:
+            groundOf[rebbeId] ??
+            const [NodeEntry(level: 'perek', ref: 'Mishnah_Peah_2')],
       ),
     ]);
   return [

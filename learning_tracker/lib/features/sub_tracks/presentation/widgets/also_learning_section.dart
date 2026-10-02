@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/sub_tracks/presentation/controllers/su
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_home_row.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_read_only.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The Learn tab's sub-track section.
@@ -92,6 +93,10 @@ class AlsoLearningSection extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
+          if (role == SubTrackViewerRole.tutor) ...[
+            const SubTrackTutorReadOnlyNote(),
+            const SizedBox(height: 12),
+          ],
           for (final item in items) ...[
             SubTrackHomeRow(
               key: ValueKey('alsoLearning-${item.subTrackId}'),
