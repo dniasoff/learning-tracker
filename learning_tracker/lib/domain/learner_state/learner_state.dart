@@ -205,6 +205,7 @@ final class SubTrackState {
     this.groundExhausted = false,
     this.ticked = 0,
     this.remainingPath = const [],
+    this.recordedAhead = const {},
     this.capacity,
     this.expectedNewGround = 0,
     this.shortfall = 0,
@@ -243,6 +244,12 @@ final class SubTrackState {
   /// empty with no [position] (DNI-493). The AD-44 `path` is this list
   /// restricted to the learner's scoped corpus (AD-42).
   final List<LeafRef> remainingPath;
+
+  /// The leaves of [remainingPath] that already have a counted `learn`
+  /// event from this sub-track (ticked out of order). The position never
+  /// is one; the Up to… picker shows them as already recorded and never
+  /// writes them again (DNI-501).
+  final Set<LeafRef> recordedAhead;
 
   /// AD-44 capacity in leaves: `floor(rate_per_week × activeWeeksLeft)`
   /// up to the deadline, 0 when the capacity interval is empty. Null when
@@ -289,6 +296,8 @@ final class SubTrackState {
       other.groundExhausted == groundExhausted &&
       other.ticked == ticked &&
       _sameLeaves(other.remainingPath, remainingPath) &&
+      other.recordedAhead.length == recordedAhead.length &&
+      other.recordedAhead.containsAll(recordedAhead) &&
       other.capacity == capacity &&
       other.expectedNewGround == expectedNewGround &&
       other.shortfall == shortfall &&
@@ -306,6 +315,7 @@ final class SubTrackState {
     groundExhausted,
     ticked,
     Object.hashAll(remainingPath),
+    Object.hashAllUnordered(recordedAhead),
     capacity,
     expectedNewGround,
     shortfall,

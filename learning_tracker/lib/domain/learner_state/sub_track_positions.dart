@@ -74,6 +74,7 @@ Map<String, SubTrackState> subTrackStates({
 /// * Ticked = the distinct ground leaves in [tickedInSource].
 /// * Remaining path = [ground] from the position to the end, learnt or
 ///   not; empty when there is no position.
+/// * Recorded ahead = the remaining-path leaves in [tickedInSource].
 SubTrackState subTrackState(
   SubTrack s, {
   required List<LeafRef> ground,
@@ -90,6 +91,7 @@ SubTrackState subTrackState(
       at = i;
     }
   }
+  final remaining = at < 0 ? const <LeafRef>[] : ground.sublist(at);
   return SubTrackState(
     subTrackId: s.id,
     holdsGround: holdsGround(s, today),
@@ -98,7 +100,8 @@ SubTrackState subTrackState(
     position: at < 0 ? null : ground[at],
     groundExhausted: ground.isNotEmpty && at < 0,
     ticked: ticked,
-    remainingPath: at < 0 ? const [] : List.unmodifiable(ground.sublist(at)),
+    remainingPath: List.unmodifiable(remaining),
+    recordedAhead: Set.unmodifiable(remaining.where(tickedInSource.contains)),
     windowEnd: s.windowEnd,
   );
 }
