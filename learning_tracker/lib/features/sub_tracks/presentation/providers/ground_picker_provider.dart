@@ -88,7 +88,28 @@ final class GroundPickerInputs {
   final ContentIndex index;
 }
 
-/// The learner's complete sub-track read (live and ended), as it changes.
+/// The learner's sub-track read holds rows that failed strict decode
+/// (AD-35). A rejected row may be a live sibling holding ground, so the
+/// picker fails closed instead of drawing (and letting the parent confirm)
+/// from the decoded rows alone: its "In use" tags would be missing.
+final class UnreadableSubTracksException implements Exception {
+  /// Creates the exception for the [rows] that did not decode.
+  UnreadableSubTracksException(List<RejectedRow> rows)
+    : rows = List.unmodifiable(rows);
+
+  /// The undecodable rows.
+  final List<RejectedRow> rows;
+
+  /// Only document ids, never row contents (PV-1).
+  @override
+  String toString() =>
+      'UnreadableSubTracksException(${rows.map((r) => r.docId)})';
+}
+
+/// The learner's complete, clean sub-track read (live and ended), as it
+/// changes. A complete read with undecodable rows is an
+/// [UnreadableSubTracksException] error (shown with a retry), never a
+/// partial list; a later clean read recovers.
 final groundPickerSubTracksProvider = StreamProvider.autoDispose
     .family<List<SubTrack>, LearnerScope>((ref, scope) async* {
       final repo = await ref.watch(subTrackRepositoryProvider.future);
@@ -98,7 +119,13 @@ final groundPickerSubTracksProvider = StreamProvider.autoDispose
       yield* repo
           .watchAll(scope)
           .where((read) => read is CompleteReadReady<SubTrack>)
-          .map((read) => (read as CompleteReadReady<SubTrack>).items);
+          .map((read) {
+            final ready = read as CompleteReadReady<SubTrack>;
+            if (!ready.isClean) {
+              throw UnreadableSubTracksException(ready.rejected);
+            }
+            return ready.items;
+          });
     }, retry: (retryCount, error) => null);
 
 /// Whether the main track of a curriculum follows a live calendar program

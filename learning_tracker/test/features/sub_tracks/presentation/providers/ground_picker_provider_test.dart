@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ground_selection.dart';
@@ -96,6 +97,32 @@ void main() {
         (await access() as GroundPickerUnavailable).reason,
         GroundPickerBlock.ended,
       );
+    });
+
+    test('a sub-track read with an undecodable row fails closed: no inputs '
+        'drawn from the decoded rows alone, until the read is clean', () async {
+      final w = GroundPickerWorld(
+        corpus: mishnayosCorpus(),
+        tracks: [_school()],
+      );
+      // A malformed live sibling: it may hold ground the picker must tag.
+      w.subTracks.seedRejected(w.scope, [
+        const RejectedRow(rebbeId, FormatException('bad ground')),
+      ]);
+      start(w);
+      await expectLater(
+        access(),
+        throwsA(
+          isA<UnreadableSubTracksException>().having(
+            (e) => e.rows.map((r) => r.docId),
+            'rows',
+            [rebbeId],
+          ),
+        ),
+      );
+      world.subTracks.seedRejected(world.scope, const []);
+      await Future<void>.delayed(Duration.zero);
+      expect(await access(), isA<GroundPickerReady>());
     });
   });
 
