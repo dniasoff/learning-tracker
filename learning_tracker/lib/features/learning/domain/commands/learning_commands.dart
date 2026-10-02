@@ -856,6 +856,9 @@ final class DefaultLearningCommands implements LearningCommands {
         return commands.deleteSubTrack(subTrackId);
       });
 
+  /// The event failures, then the queued sub-track batches the server
+  /// refused for good (DNI-497: a reorder or removal queued offline and
+  /// later refused must reach its caller, which rolls it back).
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {
     final events = _dispatcher.watchPendingFailures();
