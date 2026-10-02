@@ -113,6 +113,46 @@ void main() {
       expect(st.remainingPath, isEmpty);
       expect(st.expectedNewGround, 0);
       expect(st.shortfall, 0);
+      expect(st.ticked, 0);
+      expect(st.remainingPath, isEmpty);
+      // DNI-500 additive C0 change: ticked and remainingPath take part in
+      // value equality.
+      expect(
+        const SubTrackState(
+          subTrackId: 's',
+          holdsGround: true,
+          inForecast: false,
+          onHome: true,
+          ticked: 2,
+          remainingPath: ['a', 'b'],
+        ),
+        const SubTrackState(
+          subTrackId: 's',
+          holdsGround: true,
+          inForecast: false,
+          onHome: true,
+          ticked: 2,
+          remainingPath: ['a', 'b'],
+        ),
+      );
+      expect(
+        const SubTrackState(
+          subTrackId: 's',
+          holdsGround: true,
+          inForecast: false,
+          onHome: true,
+          remainingPath: ['a'],
+        ),
+        isNot(
+          const SubTrackState(
+            subTrackId: 's',
+            holdsGround: true,
+            inForecast: false,
+            onHome: true,
+            remainingPath: ['b'],
+          ),
+        ),
+      );
       expect(
         st,
         const SubTrackState(
