@@ -129,8 +129,8 @@ final class ChangeLogEntry {
     required this.actor,
     this.revertsActionId,
     DateTime? originalAt,
-  }) : before = Map.unmodifiable(before),
-       after = Map.unmodifiable(after),
+  }) : before = freezeStorageMap(before),
+       after = freezeStorageMap(after),
        at = at.toUtc(),
        originalAt = originalAt?.toUtc();
 

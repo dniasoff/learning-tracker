@@ -106,7 +106,7 @@ final class SubTrackChange {
     required this.subTrackId,
     required Map<String, Object?> changedFields,
     required this.entry,
-  }) : changedFields = Map.unmodifiable(changedFields) {
+  }) : changedFields = freezeStorageMap(changedFields) {
     _validate();
   }
 
