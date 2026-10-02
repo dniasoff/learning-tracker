@@ -25,12 +25,6 @@ const kGoalsCollection = 'goals';
 /// granularity (AD-43; `writeWithChangeLog` rejects one without it).
 const kLeafPaceGranularity = 'item';
 
-/// The `pace_granularity` of a pace goal counted in the curriculum's leaf
-/// units: what the goal setup screen counts in for a curriculum without a
-/// unit picker (e.g. Mishnayos). A governed pace goal always carries a
-/// granularity (AD-43; `writeWithChangeLog` rejects one without it).
-const kLeafPaceGranularity = 'item';
-
 /// What the parent chose on the goal setup screen.
 sealed class GoalChoice {
   const GoalChoice();
