@@ -59,15 +59,8 @@ lib/features/sacred_time/domain/models/sacred_window.dart
 lib/features/sacred_time/sacred_time.dart
 lib/features/scheduler/domain/models/daily_task.dart
 lib/features/scheduler/domain/models/pace_status.dart
-lib/features/scheduler/domain/models/schedule_config.dart
-lib/features/scheduler/domain/models/scheduler_analysis.dart
-lib/features/scheduler/domain/models/scheduler_input.dart
-lib/features/scheduler/domain/models/task_assembly.dart
-lib/features/scheduler/domain/projection/projection.dart
 lib/features/scheduler/domain/repositories/goal_repository.dart
 lib/features/scheduler/domain/repositories/scheduler_completion_repository.dart
-lib/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart
-lib/features/scheduler/domain/repositories/scheduler_stage_repository.dart
 lib/features/scheduler/scheduler.dart
 lib/features/settings/settings.dart
 lib/features/tracks/setup/domain/entities/add_track_result.dart

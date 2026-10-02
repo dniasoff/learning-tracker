@@ -177,7 +177,7 @@ feature_name/
 | Theme definition | `lib/core/theme/app_theme.dart` |
 | Core providers | `lib/core/providers/` |
 | Completion recording | `lib/features/learning/data/repositories/completion_repository_impl.dart` |
-| Schedule generation | `lib/features/scheduler/domain/services/scheduler_engine.dart` |
+| Schedule generation | `lib/features/scheduler/domain/services/daily_task_projection_service.dart` (planner over `LearnerState`, DNI-477) |
 | Gamification engine | `lib/features/gamification/domain/services/points_service.dart` |
 | Onboarding wizard | `lib/features/onboarding/presentation/screens/onboarding_screen.dart` |
 | Content hierarchy | `lib/features/content_browsing/presentation/screens/` |

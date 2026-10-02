@@ -8,6 +8,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -27,6 +28,35 @@ void main() {
 
   CurriculumState stateOf(LearnerStateInputs inputs) =>
       engine.run(inputs)[engineCurriculum]!;
+
+  test('today is the learner\'s civil date in the time_zone in force, not '
+      'UTC or the device date (AD-41; DNI-477)', () {
+    // nowUtc is Mon 2026-09-07 22:40Z: still the 7th in New York and
+    // already the 8th in Jerusalem.
+    expect(engine.run(engineInputs()).today, '2026-09-07');
+    expect(
+      engine
+          .run(
+            engineInputs(
+              settingsHistory: LearnerSettingsHistory.constant(jerusalem),
+            ),
+          )
+          .today,
+      '2026-09-08',
+    );
+    expect(
+      engine
+          .run(
+            engineInputs(
+              settingsHistory: LearnerSettingsHistory.constant(
+                lockSettings(timeZone: 'America/New_York'),
+              ),
+            ),
+          )
+          .today,
+      '2026-09-07',
+    );
+  });
 
   group('AC-1', () {
     test('is pure and limits plan evaluation to active tracks', () {

@@ -6,27 +6,16 @@ import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_content_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
-import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_projection_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
@@ -119,60 +108,6 @@ List<DailyTask> collapseDafTasks(
     if (seen.add('${t.curriculumId}|$dafKey|${t.stageOrder}')) out.add(t);
   }
   return out;
-}
-
-@riverpod
-SchedulerEngine schedulerEngine(Ref ref) {
-  // Use scope-aware content: returns scoped content if scopes are set,
-  // otherwise returns full curriculum content.
-  Future<List<ContentItem>> getScopedContent(CurriculumId curriculumId) async {
-    return ref.read(scopedCurriculumContentProvider(curriculumId).future);
-  }
-
-  return SchedulerEngine(
-    contentRepository: SchedulerContentRepositoryImpl(
-      getContent: getScopedContent,
-    ),
-    completionRepository: SchedulerFirestoreCompletionRepositoryAdapter(
-      ref: ref,
-    ),
-    stageRepository: SchedulerStageRepositoryImpl(
-      stageRepository: ref.watch(globalStageRepositoryProvider),
-    ),
-    // AD-33 / DNI-476: the main-track order is `orderedLeaves` over the
-    // curriculum's corpus (full, unscoped content tree) and its live
-    // `track_learning_order` docs; the engine filters it to the scoped
-    // leaves it schedules.
-    learningOrderRepository: SchedulerTrackOrderRepositoryAdapter(
-      ref: ref,
-      content: (curriculumId) => ref
-          .read(contentRepositoryProvider)
-          .getContentForCurriculum(curriculumId),
-    ),
-  );
-}
-
-@riverpod
-DailyTaskGenerator dailyTaskGenerator(Ref ref) {
-  final engine = ref.watch(schedulerEngineProvider);
-  return DailyTaskGenerator(engine: engine);
-}
-
-@riverpod
-Future<List<DailyTask>> dailyTasks(
-  Ref ref, {
-  required CurriculumId curriculumId,
-  required String trackLabel,
-  DateTime? goalDeadline,
-}) async {
-  final engine = ref.watch(schedulerEngineProvider);
-  final config = ScheduleConfig(
-    curriculumId: curriculumId,
-    trackLabel: trackLabel,
-    goalDeadline: goalDeadline,
-    currentDate: ref.watch(clockProvider),
-  );
-  return engine.generateDailyTasks(config);
 }
 
 /// Storage key constants for skipped-task persistence.
@@ -283,27 +218,6 @@ Future<Set<String>> previouslySkippedRefs(Ref ref) async {
   return refs.toSet();
 }
 
-/// Repository that snapshots today's plan to DB so completions don't
-/// trigger regeneration.
-@riverpod
-DailyPlanRepository dailyPlanRepository(Ref ref) {
-  return DailyPlanRepository();
-}
-
-/// All daily tasks across active curricula.
-///
-/// The projection (pure overdue/today computation from synced inputs) is
-/// authoritative.  Every self-paced track is required by the setup UI to
-/// carry an explicit pace; the projection's API enforces it
-/// (`MissingPaceError`).
-///
-/// daily_plans is used as a write-through cache for chazara tasks produced
-/// by the engine (review items that require stage-completion timing data the
-/// pure projection does not compute).  The overdue/today buckets are NEVER
-/// read from daily_plans.isOverdue — they come solely from the projection.
-///
-/// Skipped-task filtering and previously-skipped priority boosting are
-/// applied at read time.
 /// Thrown by [allDailyTasksProvider] when there is no active profile.
 ///
 /// The daily task list is achievement-shaped (D-E): an empty list would
@@ -321,139 +235,93 @@ class SchedulerNoActiveProfileException implements Exception {
       'profile and there is nothing to compute without one.';
 }
 
+/// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+/// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+/// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+/// them out. Never persisted; it recomputes whenever the learner state
+/// changes. The erev planned list of an upcoming locked day is this
+/// provider for that date.
 @riverpod
-Future<List<DailyTask>> allDailyTasks(Ref ref) async {
-  ref.watch<int>(completionCommittedProvider);
-  final generator = ref.watch(dailyTaskGeneratorProvider);
-  final planRepo = ref.watch(dailyPlanRepositoryProvider);
-  // Capture future synchronously (before first await) to satisfy the
-  // "all ref reads before first await" rule; await below after all deps.
+Future<List<DailyTask>> plannedTasksForDate(Ref ref, String date) async {
+  // Capture every dependency synchronously (before the first await).
+  final stateFuture = watchActiveLearnerState(ref);
+  final corporaFuture = watchCorpora(ref);
   final calendarServiceFuture = ref.watch(
     calendarProgramServiceProvider.future,
   );
-  final skipped = ref.watch(skippedTasksProvider);
-  final previouslySkipped = await ref.watch(
-    previouslySkippedRefsProvider.future,
-  );
+  final activeTracksFuture = ref.watch(activeTracksProvider.future);
+  final activation = ref.watch(curriculumActivationServiceProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final programRepository = ref.watch(learningProgramRepositoryProvider);
+  if (profileId == null) {
+    throw const SchedulerNoActiveProfileException();
+  }
   // Await calendarService before reading globalStageRepositoryProvider so
   // that if the calendar service is in error state (content DB not yet
   // extracted, or not overridden in tests) we fail fast here and never
   // evaluate globalStageRepositoryProvider — which transitively reaches
-  // syncWriteFacadeProvider → authStateProvider → Firebase.  Deferring
-  // this read past an await is intentional: we accept no reactive
-  // re-run on stageRepository changes (its value is stable per session).
+  // Firebase. Its value is stable per session.
   final calendarService = await calendarServiceFuture;
-
-  final profileId = ref.watch(activeProfileIdProvider);
-  if (profileId == null) {
-    throw const SchedulerNoActiveProfileException();
-  }
-  final now = ref.watch(clockProvider);
-
-  final engine = ref.watch(schedulerEngineProvider);
+  final state = await stateFuture;
+  if (state == null) throw const SchedulerNoActiveProfileException();
+  final corpora = await corporaFuture;
+  final activeTracks = await activeTracksFuture;
+  final activeCurricula = await activation.getActiveCurricula();
   final stageRepository = ref.watch(globalStageRepositoryProvider);
-  final activeCurricula = await ref
-      .watch(curriculumActivationServiceProvider)
-      .getActiveCurricula();
-  final activeTracks = await ref.watch(activeTracksProvider.future);
-  final completionRepository = SchedulerFirestoreCompletionRepositoryAdapter(
-    ref: ref,
-  );
-  final profileProgramRepository = FirestoreProfileProgramRepositoryAdapter(
-    ref: ref,
-  );
-  final goalRepository = ref.watch(goalRepositoryProvider);
-  final studyDayReader = FirestoreStudyDayReaderAdapter(ref: ref);
+  final studyDays = FirestoreStudyDayReaderAdapter(ref: ref);
+  final programs = FirestoreProfileProgramRepositoryAdapter(ref: ref);
 
-  // ── Step 1: derive overdue/today via the pure projection ─────────────────
-  //
-  // The projection is the authoritative source of truth for the overdue and
-  // today buckets (architecture §4).  It is re-derived on demand from
-  // synced inputs and is never persisted as a flag.
-  // AUD-scheduler-12: buildProjectionTasks/buildFreshPlan take no Ref — their
-  // one Riverpod dependency (the track display label) is injected as a plain
-  // callback, matching getScopedContent/programRepository below.
-  String trackLabelFor(CurriculumId curriculum) =>
-      curriculumLabelTextFromRef(ref, curriculum: curriculum);
-
-  final projectionTasks = await buildProjectionTasks(
-    trackLabelFor: trackLabelFor,
+  final tasks = await buildPlannedTasks(
+    state: state,
+    corpora: corpora,
+    date: date,
     activeCurricula: activeCurricula,
     activeTracks: activeTracks,
-    completionRepository: completionRepository,
-    profileProgramRepository: profileProgramRepository,
-    goalRepository: goalRepository,
-    studyDayReader: studyDayReader,
-    stageRepository: stageRepository,
-    engine: engine,
-    now: now,
-    calendarService: calendarService,
-    getScopedContent: (curriculumId) =>
-        ref.read(scopedCurriculumContentProvider(curriculumId).future),
-    programRepository: ref.read(learningProgramRepositoryProvider),
-  );
-
-  // ── Step 2: engine-generated chazara/review tasks ─────────────────────
-  //
-  // The pure projection leaves review empty (it requires stage-completion
-  // timing).  Continue generating those via the engine's snapshot path and
-  // merge them with the projection output.  The snapshot is still used as
-  // a cache so chazara items are not recomputed on every read within a day.
-  final planResult = await planRepo.getOrSnapshotPlan(
-    profileId: profileId,
-    now: now,
-    buildPlan: () => buildFreshPlan(
-      trackLabelFor: trackLabelFor,
-      activeCurricula: activeCurricula,
-      activeTracks: activeTracks,
-      goalRepository: goalRepository,
-      profileProgramRepository: profileProgramRepository,
-      studyDayReader: studyDayReader,
+    presentationFor: (curriculum) => loadCurriculumTaskPresentation(
+      curriculum: curriculum,
+      date: date,
+      trackLabel: curriculumLabelTextFromRef(ref, curriculum: curriculum),
       stageRepository: stageRepository,
-      generator: generator,
-      engine: engine,
-      now: now,
+      studyDayConfigs: studyDays.getConfigsForCurriculum,
+      profileProgramRepository: programs,
+      programRepository: programRepository,
       calendarService: calendarService,
       getScopedContent: (curriculumId) =>
           ref.read(scopedCurriculumContentProvider(curriculumId).future),
-      programRepository: ref.read(learningProgramRepositoryProvider),
     ),
   );
+  return [...tasks.learning, ...tasks.reviews];
+}
 
-  // Extract only the chazara/review tasks from the snapshot — the
-  // overdue/today tasks from the snapshot are discarded; the projection
-  // owns those buckets.
-  final chazaraTasks = planResult.tasks
-      .where(
-        (t) =>
-            t.priority == DailyTaskPriority.overdueChazara ||
-            t.priority == DailyTaskPriority.scheduledChazara,
-      )
-      .toList();
+/// All daily tasks across active curricula: today's [plannedTasksForDate],
+/// with read-time skip handling — skipped-today refs removed, refs skipped
+/// yesterday boosted — sorted by priority.
+///
+/// "Today" is the learner's civil date the live `LearnerState` was derived
+/// for (`LearnerState.today`: AD-41, the learner's configured `time_zone`
+/// per the settings history), never the device date, so the plan, its
+/// reviews and its study-day decision are the engine's day.
+///
+/// The planner's list already excludes what is learnt or reviewed (AD-49:
+/// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
+/// so), so there is no completion filter here.
+@riverpod
+Future<List<DailyTask>> allDailyTasks(Ref ref) async {
+  final skipped = ref.watch(skippedTasksProvider);
+  final previouslySkippedFuture = ref.watch(
+    previouslySkippedRefsProvider.future,
+  );
+  final stateFuture = watchActiveLearnerState(ref);
+  final state = await stateFuture;
+  if (state == null) throw const SchedulerNoActiveProfileException();
+  final tasksFuture = ref.watch(
+    plannedTasksForDateProvider(state.today).future,
+  );
+  final previouslySkipped = await previouslySkippedFuture;
+  final tasks = await tasksFuture;
 
-  // Merge: projection tasks (overdue + today) + chazara from engine.
-  final effectiveTasks = [...projectionTasks, ...chazaraTasks];
-
-  // ── Step 3: completion filtering ─────────────────────────────────────────
-  final taskCurricula = effectiveTasks.map((t) => t.curriculumId).toSet();
-  final completionsByCurriculum = <CurriculumId, List<SchedulerCompletion>>{
-    for (final curriculum in taskCurricula)
-      curriculum: await completionRepository.getCompletions(curriculum),
-  };
-  bool isTaskCompleted(DailyTask task) {
-    final completions = completionsByCurriculum[task.curriculumId] ?? const [];
-    return completions.any((c) {
-      if (c.sefariaRef != task.contentItemSefariaRef) return false;
-      return c.stageOrder == task.stageOrder;
-    });
-  }
-
-  // Apply read-time filters: skipped-today removed, previously-skipped boosted.
-  final filtered = effectiveTasks
-      .where(
-        (t) =>
-            !skipped.contains(t.contentItemSefariaRef) && !isTaskCompleted(t),
-      )
+  final filtered = tasks
+      .where((t) => !skipped.contains(t.contentItemSefariaRef))
       .toList();
 
   if (previouslySkipped.isEmpty) {

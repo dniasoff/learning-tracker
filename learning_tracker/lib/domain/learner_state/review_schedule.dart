@@ -204,7 +204,18 @@ final class ReviewSchedule {
         StageScheduleType.weekly => s.daysOfWeek.contains(weekday),
         StageScheduleType.rolling => rollingDue.contains(s),
       };
-      if (due) out.add(ReviewDue(s.leaf, s.stageOrder));
+      if (due) {
+        out.add(
+          ReviewDue(
+            s.leaf,
+            s.stageOrder,
+            dueFrom: s.scheduleType == StageScheduleType.delay
+                ? s.dueFrom
+                : date,
+            completedOn: s.completedOn == date ? date : null,
+          ),
+        );
+      }
     }
     return List.unmodifiable(out);
   }

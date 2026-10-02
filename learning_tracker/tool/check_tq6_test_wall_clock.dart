@@ -94,7 +94,6 @@ const _baseline = <String>{
   'test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart',
   'test/features/tutoring/firestore_tutor_grant_repository_test.dart',
   'test/integration/stage_sync_test.dart',
-  'test/scheduler/overdue_projection_test.dart',
   'test/story_acceptance/epic_01_foundation_test.dart',
   'test/story_acceptance/epic_02_content_test.dart',
   'test/story_acceptance/epic_03_learning_cycle_test.dart',
@@ -112,7 +111,6 @@ const _baseline = <String>{
   'test/story_acceptance/regression_invariants_test.dart',
   'test/sync/tutored_listener_supervisor_test.dart',
   'test/sync/tutored_pull_isolation_test.dart',
-  'test/track_setup/clear_overdue_button_test.dart',
 };
 
 const _wallClockCall = 'DateTime.now(';

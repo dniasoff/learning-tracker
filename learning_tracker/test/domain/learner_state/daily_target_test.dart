@@ -97,6 +97,39 @@ void main() {
       expect(state.dailyTarget, 3);
     });
 
+    test('the numerator is taken at the start of today: leaves learnt today '
+        'do not shrink today\'s target (DNI-477)', () {
+      LearningEvent learn(int id, String ref, String learnedOn) => engineLearn(
+        id,
+        ref,
+        minutes: 9000 + id,
+        stage: 1,
+        learnedOn: learnedOn,
+      );
+      // Three learnt today: 6 remain now, 9 at the start of today;
+      // ceil(9 / 3) = 3, not ceil(6 / 3) = 2.
+      final today = _run(
+        deadline: _deadline('2026-09-09'),
+        events: [
+          learn(1, 'Mishnah Berakhot 1:1', '2026-09-07'),
+          learn(2, 'Mishnah Berakhot 1:2', '2026-09-07'),
+          learn(3, 'Mishnah Berakhot 1:3', '2026-09-07'),
+        ],
+      );
+      expect(today.mainTrackRemaining, 6);
+      expect(today.dailyTarget, 3);
+      // The same three learnt yesterday: ceil(6 / 3) = 2.
+      final yesterday = _run(
+        deadline: _deadline('2026-09-09'),
+        events: [
+          learn(1, 'Mishnah Berakhot 1:1', '2026-09-06'),
+          learn(2, 'Mishnah Berakhot 1:2', '2026-09-06'),
+          learn(3, 'Mishnah Berakhot 1:3', '2026-09-06'),
+        ],
+      );
+      expect(yesterday.dailyTarget, 2);
+    });
+
     test('the ceiling rounds up', () {
       // [Mon 7th, Thu 10th] = 4 days; ceil(9 / 4) = 3.
       expect(_run(deadline: _deadline('2026-09-10')).dailyTarget, 3);

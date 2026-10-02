@@ -10,6 +10,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
@@ -73,15 +74,32 @@ final class CompletedUnit {
 }
 
 /// A leaf due for review at stage [stageOrder].
+///
+/// A review is identified by `(leaf, stageOrder)`: equality and hash read
+/// only those two. [dueFrom] and [completedOn] describe the review on the
+/// date it was queried for (DNI-477, additive to the C0 contract) so the
+/// planner takes the due date from `reviewsDue(date)` and never schedules
+/// a review itself (AD-49).
 final class ReviewDue {
   /// Creates a review item.
-  const ReviewDue(this.leaf, this.stageOrder);
+  const ReviewDue(this.leaf, this.stageOrder, {this.dueFrom, this.completedOn});
 
   /// The leaf.
   final LeafRef leaf;
 
   /// The review stage order.
   final int stageOrder;
+
+  /// The first civil date the review was due. Earlier than the queried
+  /// date only for an overdue delay review (it stays due until done); the
+  /// queried date for a weekly or rolling review. Null when the source did
+  /// not say.
+  final CivilDate? dueFrom;
+
+  /// The civil date the review was done, when it was done on the queried
+  /// date (a review done on a date still counts as due that day); null
+  /// while it is still to do.
+  final CivilDate? completedOn;
 
   @override
   bool operator ==(Object other) =>
@@ -309,6 +327,53 @@ bool _sameLeaves(List<LeafRef> a, List<LeafRef> b) {
   return true;
 }
 
+/// The main track as it stood at the start of one civil day (DNI-477,
+/// additive to the C0 contract): the AD-33 [schedulableRefs], FR-12a
+/// [currentUnit] and [position] derived from only the learning recorded as
+/// learnt before that day. A leaf learnt on the day is still in it, so a
+/// day's main-track batch laid out from it does not refill as the learner
+/// works through it (AD-49 planner).
+final class MainTrackDayStart {
+  /// Creates the view.
+  MainTrackDayStart({
+    required List<LeafRef> schedulableRefs,
+    this.currentUnit,
+    this.position,
+  }) : schedulableRefs = List.unmodifiable(schedulableRefs);
+
+  /// The leaves the planner could schedule at the start of the day, in
+  /// AD-33 order.
+  final List<LeafRef> schedulableRefs;
+
+  /// The FR-12a unit the learner was in at the start of the day.
+  final NodeEntry? currentUnit;
+
+  /// The next main-track leaf at the start of the day.
+  final LeafRef? position;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! MainTrackDayStart ||
+        other.currentUnit != currentUnit ||
+        other.position != position ||
+        other.schedulableRefs.length != schedulableRefs.length) {
+      return false;
+    }
+    for (var i = 0; i < schedulableRefs.length; i++) {
+      if (other.schedulableRefs[i] != schedulableRefs[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(Object.hashAll(schedulableRefs), currentUnit, position);
+
+  @override
+  String toString() =>
+      'MainTrackDayStart($position, ${schedulableRefs.length} schedulable)';
+}
+
 /// An invalid intent the engine found while deriving one curriculum's plan.
 /// The engine never substitutes a default for it; the affected outputs
 /// stay empty or null and the error is reported here.
@@ -362,6 +427,19 @@ abstract interface class CurriculumState {
   /// `schedulableRefs.length`.
   int get mainTrackRemaining;
 
+  /// The main track at the start of civil [date] (DNI-477, additive to the
+  /// C0 contract): [schedulableRefs], [currentUnit] and
+  /// [mainTrackPosition] derived as above from only the counted `learn`
+  /// events whose `learned_on` is before [date] (undated before-tracking
+  /// events are earlier), under the current order, scope, held ground and
+  /// tracking start. A leaf learnt on [date] is still schedulable in it.
+  ///
+  /// The planner lays out [date]'s main-track batch from it, so learning a
+  /// leaf on [date] never pulls the next leaf into that day's batch. On a
+  /// date after every `learned_on` it is the live main track. Empty for a
+  /// curriculum that is not evaluated.
+  MainTrackDayStart mainTrackAtStartOf(CivilDate date);
+
   /// Calendar-program curricula only: the leaves assigned on [date], each
   /// assigned node expanded by `expandGround` within the learner's corpus
   /// (learnt leaves included). Empty for any other curriculum.
@@ -383,9 +461,11 @@ abstract interface class CurriculumState {
   /// Today's target in leaves. Calendar program: assigned through today
   /// minus learnt. Otherwise, with a live `goals/{c}_deadline`:
   /// `max(0, ceil(numerator ÷ studyDaysToDeadline))`, or
-  /// `max(0, numerator)` when no study day is left (AD-44, B13), where
-  /// `numerator = mainTrackRemaining − Σ expectedNewGround + Σ shortfall`
-  /// over the `holdsGround` sub-tracks (DNI-494). Null with no deadline.
+  /// `max(0, numerator)` when no study day is left (AD-44, B13). The
+  /// numerator is `mainTrackRemaining − Σ expectedNewGround +
+  /// Σ shortfall` over the `holdsGround` sub-tracks (DNI-494), where the
+  /// main-track remaining is measured at the start of today (DNI-477).
+  /// Null with no deadline.
   int? get dailyTarget;
 
   /// Leaves per study day from a live `goals/{c}_pace` doc (AD-43); null
@@ -428,13 +508,15 @@ final class LearnerState {
   /// Creates a state.
   LearnerState({
     required this.nowUtc,
+    CivilDate? today,
     required Map<String, CurriculumState> curricula,
     Set<String> countedEventIds = const {},
     Set<String> earningEventIds = const {},
     Set<String> lockIgnoredEventIds = const {},
     List<RejectedRow> rejectedRows = const [],
     List<LearningEvent> countedLearns = const [],
-  }) : curricula = Map.unmodifiable(curricula),
+  }) : today = today ?? formatCivilDay(nowUtc.toUtc()),
+       curricula = Map.unmodifiable(curricula),
        countedLearns = List.unmodifiable(countedLearns),
        countedEventIds = Set.unmodifiable(countedEventIds),
        earningEventIds = Set.unmodifiable(earningEventIds),
@@ -447,6 +529,15 @@ final class LearnerState {
 
   /// The instant the state was computed for (UTC).
   final DateTime nowUtc;
+
+  /// The learner's civil date at [nowUtc] (AD-41: `civilDate(nowUtc)` in
+  /// the `time_zone` in force per the settings history, never the device
+  /// offset): the `today` every date-keyed output was derived for
+  /// (DNI-477, additive to the C0 contract). Surfaces that ask for
+  /// "today's" plan read it instead of the device date. A state built
+  /// without one (tests, [LearnerState.empty]) uses the UTC date of
+  /// [nowUtc].
+  final CivilDate today;
 
   /// Curriculum states by curriculum id.
   final Map<String, CurriculumState> curricula;
@@ -478,6 +569,6 @@ final class LearnerState {
 
   @override
   String toString() =>
-      'LearnerState(${nowUtc.toIso8601String()}, '
+      'LearnerState(${nowUtc.toIso8601String()}, $today, '
       '${curricula.length} curricula)';
 }

@@ -94,18 +94,38 @@ final class LearntRecord {
 /// The main-track stage of one curriculum (AD-33). Empty for a curriculum
 /// that is not evaluated.
 final class MainTrackRecord {
-  /// Creates the record.
+  /// Creates the record. [startOf] derives the record at the start of a
+  /// civil date (see [atStartOf]); without it the record is its own.
   MainTrackRecord({
     required List<LeafRef> schedulableRefs,
     this.currentUnit,
     this.position,
-  }) : schedulableRefs = List.unmodifiable(schedulableRefs);
+    MainTrackRecord Function(CivilDate date)? startOf,
+  }) : schedulableRefs = List.unmodifiable(schedulableRefs),
+       _startOf = startOf;
 
   /// No position, nothing schedulable.
   const MainTrackRecord.none()
     : schedulableRefs = const [],
       currentUnit = null,
-      position = null;
+      position = null,
+      _startOf = null;
+
+  final MainTrackRecord Function(CivilDate date)? _startOf;
+
+  /// This record with [startOf] as its start-of-day derivation.
+  MainTrackRecord withStartOf(MainTrackRecord Function(CivilDate) startOf) =>
+      MainTrackRecord(
+        schedulableRefs: schedulableRefs,
+        currentUnit: currentUnit,
+        position: position,
+        startOf: startOf,
+      );
+
+  /// The record at the start of civil [date] (DNI-477): derived from only
+  /// the learning dated before [date]. Without a start-of-day derivation
+  /// (or for a date after all learning) it is this record.
+  MainTrackRecord atStartOf(CivilDate date) => _startOf?.call(date) ?? this;
 
   /// The leaves the planner may schedule, in AD-33 order.
   final List<LeafRef> schedulableRefs;
@@ -116,6 +136,8 @@ final class MainTrackRecord {
   /// The next main-track leaf.
   final LeafRef? position;
 
+  /// Equality reads the derived values only: the start-of-day derivation
+  /// is a pure function of the same inputs.
   @override
   bool operator ==(Object other) =>
       other is MainTrackRecord &&
@@ -269,6 +291,19 @@ final class DerivedCurriculumState implements CurriculumState {
 
   @override
   int get mainTrackRemaining => mainTrack.schedulableRefs.length;
+
+  final Map<CivilDate, MainTrackDayStart> _dayStarts = {};
+
+  @override
+  MainTrackDayStart mainTrackAtStartOf(CivilDate date) =>
+      _dayStarts.putIfAbsent(date, () {
+        final start = mainTrack.atStartOf(date);
+        return MainTrackDayStart(
+          schedulableRefs: start.schedulableRefs,
+          currentUnit: start.currentUnit,
+          position: start.position,
+        );
+      });
 
   @override
   Map<String, SubTrackState> get subTracks => plan.subTracks;

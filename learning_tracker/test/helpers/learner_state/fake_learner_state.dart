@@ -39,6 +39,7 @@ final class FakeCurriculumState implements CurriculumState {
     this.subTracks = const {},
     this.schedulableRefs = const [],
     this.mainTrackRemaining = 0,
+    this.dayStarts = const {},
     this.assignments = const {},
     this.backlog = const {},
     this.reviews = const {},
@@ -83,6 +84,11 @@ final class FakeCurriculumState implements CurriculumState {
   @override
   final int mainTrackRemaining;
 
+  /// [mainTrackAtStartOf] answers, by date; a missing date answers the live
+  /// main track ([schedulableRefs], [currentUnit], [mainTrackPosition]), as
+  /// the engine does for a date after all learning.
+  final Map<CivilDate, MainTrackDayStart> dayStarts;
+
   /// [programAssignments] answers, by date.
   final Map<CivilDate, List<LeafRef>> assignments;
 
@@ -120,6 +126,15 @@ final class FakeCurriculumState implements CurriculumState {
   TriState triState(NodeEntry node) => triStates[node] ?? TriState.empty;
 
   @override
+  MainTrackDayStart mainTrackAtStartOf(CivilDate date) =>
+      dayStarts[date] ??
+      MainTrackDayStart(
+        schedulableRefs: schedulableRefs,
+        currentUnit: currentUnit,
+        position: mainTrackPosition,
+      );
+
+  @override
   List<LeafRef> programAssignments(CivilDate date) =>
       assignments[date] ?? const [];
 
@@ -130,7 +145,8 @@ final class FakeCurriculumState implements CurriculumState {
   List<ReviewDue> reviewsDue(CivilDate date) => reviews[date] ?? const [];
 }
 
-/// A [LearnerState] with empty defaults at [fakeLearnerStateNow].
+/// A [LearnerState] with empty defaults at [fakeLearnerStateNow]; its
+/// `today` is [today], else the UTC date of the instant.
 LearnerState fakeLearnerState({
   Map<String, CurriculumState> curricula = const {},
   Set<String> countedEventIds = const {},
@@ -139,8 +155,10 @@ LearnerState fakeLearnerState({
   List<RejectedRow> rejectedRows = const [],
   List<LearningEvent> countedLearns = const [],
   DateTime? nowUtc,
+  CivilDate? today,
 }) => LearnerState(
   nowUtc: nowUtc ?? fakeLearnerStateNow,
+  today: today,
   curricula: curricula,
   countedEventIds: countedEventIds,
   earningEventIds: earningEventIds,

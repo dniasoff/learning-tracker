@@ -171,205 +171,6 @@ final class CoarsePacedTrackIdsProvider
 String _$coarsePacedTrackIdsHash() =>
     r'715791953077265e809f32b7d8128008613816bd';
 
-@ProviderFor(schedulerEngine)
-final schedulerEngineProvider = SchedulerEngineProvider._();
-
-final class SchedulerEngineProvider
-    extends
-        $FunctionalProvider<SchedulerEngine, SchedulerEngine, SchedulerEngine>
-    with $Provider<SchedulerEngine> {
-  SchedulerEngineProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'schedulerEngineProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$schedulerEngineHash();
-
-  @$internal
-  @override
-  $ProviderElement<SchedulerEngine> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  SchedulerEngine create(Ref ref) {
-    return schedulerEngine(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SchedulerEngine value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SchedulerEngine>(value),
-    );
-  }
-}
-
-String _$schedulerEngineHash() => r'beb25b1ead2bf6af9bfb2b127caee049bb9ed9f0';
-
-@ProviderFor(dailyTaskGenerator)
-final dailyTaskGeneratorProvider = DailyTaskGeneratorProvider._();
-
-final class DailyTaskGeneratorProvider
-    extends
-        $FunctionalProvider<
-          DailyTaskGenerator,
-          DailyTaskGenerator,
-          DailyTaskGenerator
-        >
-    with $Provider<DailyTaskGenerator> {
-  DailyTaskGeneratorProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'dailyTaskGeneratorProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$dailyTaskGeneratorHash();
-
-  @$internal
-  @override
-  $ProviderElement<DailyTaskGenerator> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  DailyTaskGenerator create(Ref ref) {
-    return dailyTaskGenerator(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(DailyTaskGenerator value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<DailyTaskGenerator>(value),
-    );
-  }
-}
-
-String _$dailyTaskGeneratorHash() =>
-    r'2aa2d867a3b1192685f0e3859c1e99ef457f4774';
-
-@ProviderFor(dailyTasks)
-final dailyTasksProvider = DailyTasksFamily._();
-
-final class DailyTasksProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<DailyTask>>,
-          List<DailyTask>,
-          FutureOr<List<DailyTask>>
-        >
-    with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
-  DailyTasksProvider._({
-    required DailyTasksFamily super.from,
-    required ({
-      CurriculumId curriculumId,
-      String trackLabel,
-      DateTime? goalDeadline,
-    })
-    super.argument,
-  }) : super(
-         retry: null,
-         name: r'dailyTasksProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$dailyTasksHash();
-
-  @override
-  String toString() {
-    return r'dailyTasksProvider'
-        ''
-        '$argument';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<List<DailyTask>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<List<DailyTask>> create(Ref ref) {
-    final argument =
-        this.argument
-            as ({
-              CurriculumId curriculumId,
-              String trackLabel,
-              DateTime? goalDeadline,
-            });
-    return dailyTasks(
-      ref,
-      curriculumId: argument.curriculumId,
-      trackLabel: argument.trackLabel,
-      goalDeadline: argument.goalDeadline,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is DailyTasksProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$dailyTasksHash() => r'81462e468cc5c49491febfdc4e658b4547eda94e';
-
-final class DailyTasksFamily extends $Family
-    with
-        $FunctionalFamilyOverride<
-          FutureOr<List<DailyTask>>,
-          ({
-            CurriculumId curriculumId,
-            String trackLabel,
-            DateTime? goalDeadline,
-          })
-        > {
-  DailyTasksFamily._()
-    : super(
-        retry: null,
-        name: r'dailyTasksProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  DailyTasksProvider call({
-    required CurriculumId curriculumId,
-    required String trackLabel,
-    DateTime? goalDeadline,
-  }) => DailyTasksProvider._(
-    argument: (
-      curriculumId: curriculumId,
-      trackLabel: trackLabel,
-      goalDeadline: goalDeadline,
-    ),
-    from: this,
-  );
-
-  @override
-  String toString() => r'dailyTasksProvider';
-}
-
 /// Holds the set of sefaria refs skipped (dismissed) today.
 ///
 /// Persisted via SharedPreferences. Resets automatically when the date
@@ -489,64 +290,144 @@ final class PreviouslySkippedRefsProvider
 String _$previouslySkippedRefsHash() =>
     r'6d3c8d4e63cb0ba61df49d9b829a305bfe2c6a82';
 
-/// Repository that snapshots today's plan to DB so completions don't
-/// trigger regeneration.
+/// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+/// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+/// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+/// them out. Never persisted; it recomputes whenever the learner state
+/// changes. The erev planned list of an upcoming locked day is this
+/// provider for that date.
 
-@ProviderFor(dailyPlanRepository)
-final dailyPlanRepositoryProvider = DailyPlanRepositoryProvider._();
+@ProviderFor(plannedTasksForDate)
+final plannedTasksForDateProvider = PlannedTasksForDateFamily._();
 
-/// Repository that snapshots today's plan to DB so completions don't
-/// trigger regeneration.
+/// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+/// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+/// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+/// them out. Never persisted; it recomputes whenever the learner state
+/// changes. The erev planned list of an upcoming locked day is this
+/// provider for that date.
 
-final class DailyPlanRepositoryProvider
+final class PlannedTasksForDateProvider
     extends
         $FunctionalProvider<
-          DailyPlanRepository,
-          DailyPlanRepository,
-          DailyPlanRepository
+          AsyncValue<List<DailyTask>>,
+          List<DailyTask>,
+          FutureOr<List<DailyTask>>
         >
-    with $Provider<DailyPlanRepository> {
-  /// Repository that snapshots today's plan to DB so completions don't
-  /// trigger regeneration.
-  DailyPlanRepositoryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'dailyPlanRepositoryProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+    with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
+  /// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+  /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+  /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+  /// them out. Never persisted; it recomputes whenever the learner state
+  /// changes. The erev planned list of an upcoming locked day is this
+  /// provider for that date.
+  PlannedTasksForDateProvider._({
+    required PlannedTasksForDateFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'plannedTasksForDateProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
-  String debugGetCreateSourceHash() => _$dailyPlanRepositoryHash();
+  String debugGetCreateSourceHash() => _$plannedTasksForDateHash();
+
+  @override
+  String toString() {
+    return r'plannedTasksForDateProvider'
+        ''
+        '($argument)';
+  }
 
   @$internal
   @override
-  $ProviderElement<DailyPlanRepository> $createElement(
+  $FutureProviderElement<List<DailyTask>> $createElement(
     $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
+  ) => $FutureProviderElement(pointer);
 
   @override
-  DailyPlanRepository create(Ref ref) {
-    return dailyPlanRepository(ref);
+  FutureOr<List<DailyTask>> create(Ref ref) {
+    final argument = this.argument as String;
+    return plannedTasksForDate(ref, argument);
   }
 
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(DailyPlanRepository value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<DailyPlanRepository>(value),
-    );
+  @override
+  bool operator ==(Object other) {
+    return other is PlannedTasksForDateProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
   }
 }
 
-String _$dailyPlanRepositoryHash() =>
-    r'92ea79f7e36c0ab80617f82c349e9a2c4649246f';
+String _$plannedTasksForDateHash() =>
+    r'76d916a3f3357159b40262a1ba9818f0a8b88d75';
+
+/// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+/// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+/// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+/// them out. Never persisted; it recomputes whenever the learner state
+/// changes. The erev planned list of an upcoming locked day is this
+/// provider for that date.
+
+final class PlannedTasksForDateFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<DailyTask>>, String> {
+  PlannedTasksForDateFamily._()
+    : super(
+        retry: null,
+        name: r'plannedTasksForDateProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
+  /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
+  /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
+  /// them out. Never persisted; it recomputes whenever the learner state
+  /// changes. The erev planned list of an upcoming locked day is this
+  /// provider for that date.
+
+  PlannedTasksForDateProvider call(String date) =>
+      PlannedTasksForDateProvider._(argument: date, from: this);
+
+  @override
+  String toString() => r'plannedTasksForDateProvider';
+}
+
+/// All daily tasks across active curricula: today's [plannedTasksForDate],
+/// with read-time skip handling — skipped-today refs removed, refs skipped
+/// yesterday boosted — sorted by priority.
+///
+/// "Today" is the learner's civil date the live `LearnerState` was derived
+/// for (`LearnerState.today`: AD-41, the learner's configured `time_zone`
+/// per the settings history), never the device date, so the plan, its
+/// reviews and its study-day decision are the engine's day.
+///
+/// The planner's list already excludes what is learnt or reviewed (AD-49:
+/// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
+/// so), so there is no completion filter here.
 
 @ProviderFor(allDailyTasks)
 final allDailyTasksProvider = AllDailyTasksProvider._();
+
+/// All daily tasks across active curricula: today's [plannedTasksForDate],
+/// with read-time skip handling — skipped-today refs removed, refs skipped
+/// yesterday boosted — sorted by priority.
+///
+/// "Today" is the learner's civil date the live `LearnerState` was derived
+/// for (`LearnerState.today`: AD-41, the learner's configured `time_zone`
+/// per the settings history), never the device date, so the plan, its
+/// reviews and its study-day decision are the engine's day.
+///
+/// The planner's list already excludes what is learnt or reviewed (AD-49:
+/// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
+/// so), so there is no completion filter here.
 
 final class AllDailyTasksProvider
     extends
@@ -556,6 +437,18 @@ final class AllDailyTasksProvider
           FutureOr<List<DailyTask>>
         >
     with $FutureModifier<List<DailyTask>>, $FutureProvider<List<DailyTask>> {
+  /// All daily tasks across active curricula: today's [plannedTasksForDate],
+  /// with read-time skip handling — skipped-today refs removed, refs skipped
+  /// yesterday boosted — sorted by priority.
+  ///
+  /// "Today" is the learner's civil date the live `LearnerState` was derived
+  /// for (`LearnerState.today`: AD-41, the learner's configured `time_zone`
+  /// per the settings history), never the device date, so the plan, its
+  /// reviews and its study-day decision are the engine's day.
+  ///
+  /// The planner's list already excludes what is learnt or reviewed (AD-49:
+  /// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
+  /// so), so there is no completion filter here.
   AllDailyTasksProvider._()
     : super(
         from: null,
@@ -582,7 +475,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'08534f5c91ab38e387ad80e3c5365d0128eff3c7';
+String _$allDailyTasksHash() => r'ebadb03c54d3af4e5d2883af861e1dc7325a6aea';
 
 /// Overdue task count for a single curriculum.
 ///

@@ -137,6 +137,7 @@ Stream<LearnerState> composeLearnerState({
               ? state
               : LearnerState(
                   nowUtc: state.nowUtc,
+                  today: state.today,
                   curricula: state.curricula,
                   countedEventIds: state.countedEventIds,
                   earningEventIds: state.earningEventIds,

@@ -3,8 +3,21 @@
   "title": "Planner",
   "description": "Action: rewire daily_task_projection_service and scheduler_engine to LearnerState; delete the review and amnesty computations. The owner adds the scheduler_engine due-review symbols once they are split out.",
   "entries": [
-    {"symbol": "amnestyDayCutoffUtc", "kind": "service", "state": "pending", "owner": "DNI-477"},
-    {"symbol": "clampAmnestyCutoffToAnchor", "kind": "service", "state": "pending", "owner": "DNI-477"},
-    {"symbol": "amnesty_cutoff", "kind": "service", "state": "pending", "owner": "DNI-477", "note": "module import path"}
+    {"symbol": "amnestyDayCutoffUtc", "kind": "service", "state": "retired", "owner": "DNI-477"},
+    {"symbol": "clampAmnestyCutoffToAnchor", "kind": "service", "state": "retired", "owner": "DNI-477"},
+    {"symbol": "amnesty_cutoff", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "module import path"},
+    {"symbol": "SchedulerEngine", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "order build, adaptive pacing and due-review computation; the engine's reviewsDue is the only review scheduler (AD-35)"},
+    {"symbol": "generateDailyTasks", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "SchedulerEngine due-review and new-learning quantity"},
+    {"symbol": "kMaxOverdueChazarahPerDay", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "planner-side overdue-chazara cap"},
+    {"symbol": "DailyTaskGenerator", "kind": "service", "state": "retired", "owner": "DNI-477"},
+    {"symbol": "ScheduleConfig", "kind": "type", "state": "retired", "owner": "DNI-477"},
+    {"symbol": "selfPacedSchedule", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "planner \"Behind pace\" accrual"},
+    {"symbol": "programSchedule", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "planner calendar schedule; the engine's programAssignments/programBacklog replace it"},
+    {"symbol": "MissingPaceError", "kind": "type", "state": "retired", "owner": "DNI-477"},
+    {"symbol": "paceGoalPerDay", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "planner pace derivation; the engine's paceRate replaces it"},
+    {"symbol": "buildFreshPlan", "kind": "service", "state": "retired", "owner": "DNI-477"},
+    {"symbol": "buildProjectionTasks", "kind": "service", "state": "retired", "owner": "DNI-477"},
+    {"symbol": "DailyPlanRepository", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "daily_plans snapshot; the planned list is live (AD-49)"},
+    {"symbol": "SchedulerTrackOrderRepositoryAdapter", "kind": "service", "state": "retired", "owner": "DNI-477", "note": "the scheduler's order build; the engine's orderedLeaves/schedulableRefs replace it (AD-33)"}
   ]
 }
