@@ -782,6 +782,30 @@ abstract class AppLocalizations {
   /// **'Hidden until earned (surprise)'**
   String get hiddenUntilEarned;
 
+  /// No description provided for @shortfallCardGroundFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'all its ground'**
+  String get shortfallCardGroundFallback;
+
+  /// No description provided for @shortfallCardMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} may not reach {ground} before {month}. About {count} {unit} will return to home learning.'**
+  String shortfallCardMessage(
+    String name,
+    String ground,
+    String month,
+    String count,
+    String unit,
+  );
+
+  /// No description provided for @shortfallCardView.
+  ///
+  /// In en, this message translates to:
+  /// **'View {name}'**
+  String shortfallCardView(String name);
+
   /// No description provided for @onTrackBehindPace.
   ///
   /// In en, this message translates to:

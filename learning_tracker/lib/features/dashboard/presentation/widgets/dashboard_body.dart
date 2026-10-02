@@ -23,6 +23,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/empty_d
 import 'package:learning_tracker/features/dashboard/presentation/widgets/learner_today_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/main_focus_mission_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/shortfall_warning_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_recovery_banner.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
@@ -421,12 +422,8 @@ class DashboardBody extends ConsumerWidget {
         ParentForecastSection(
           belowCard: (forecast) => ShortfallWarningList(forecast: forecast),
         ),
-        // DNI-502: everyone else (a child without the parent PIN, a tutor)
-        // sees today against the target with encouragement only.
+        // DNI-502: everyone else sees today's target and encouragement.
         const NonParentTodaySection(),
-        // DNI-502: the parent on-track card (FR-18 to FR-20); it takes no
-        // space outside a parent session (NFR-9).
-        const ParentForecastSection(),
         // Tier counter row (engagement / achievement / lifetime [/ ⭐ points]).
         // Shared with Progress hub — same widget, same providers.
         // Child mode renders the fourth ⭐ points counter (see Task #14 brief).

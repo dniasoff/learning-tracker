@@ -386,6 +386,25 @@ class AppLocalizationsHe extends AppLocalizations {
   String get hiddenUntilEarned => 'מוסתר עד שנצבר (הפתעה)';
 
   @override
+  String get shortfallCardGroundFallback => 'כל החומר שלו';
+
+  @override
+  String shortfallCardMessage(
+    String name,
+    String ground,
+    String month,
+    String count,
+    String unit,
+  ) {
+    return 'ייתכן ש־$name לא יגיע ל־$ground לפני $month. כ־$count $unit יחזרו ללימוד בבית.';
+  }
+
+  @override
+  String shortfallCardView(String name) {
+    return 'לצפייה ב־$name';
+  }
+
+  @override
   String get onTrackBehindPace => 'מאחורי הקצב';
 
   @override

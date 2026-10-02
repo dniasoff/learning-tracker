@@ -248,6 +248,35 @@
   "visibleToChild": "Visible to child",
   "childCanSee": "Child can see this reward",
   "hiddenUntilEarned": "Hidden until earned (surprise)",
+  "shortfallCardGroundFallback": "all its ground",
+  "shortfallCardMessage": "{name} may not reach {ground} before {month}. About {count} {unit} will return to home learning.",
+  "@shortfallCardMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "ground": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "shortfallCardView": "View {name}",
+  "@shortfallCardView": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "onTrackBehindPace": "Behind pace",
   "onTrackDailyTarget": "Daily target: {count} {unit}/day",
   "@onTrackDailyTarget": {
