@@ -46,6 +46,7 @@ final class FakeCurriculumState implements CurriculumState {
     this.projection,
     this.completedUnits = const [],
     this.streak,
+    this.validationErrors = const {},
   }) : distinctLearnt = distinctLearnt ?? learntLeaves.length;
 
   @override
@@ -104,6 +105,9 @@ final class FakeCurriculumState implements CurriculumState {
 
   @override
   final CurriculumStreak? streak;
+
+  @override
+  final Set<CurriculumValidationError> validationErrors;
 
   @override
   TriState triState(NodeEntry node) => triStates[node] ?? TriState.empty;
