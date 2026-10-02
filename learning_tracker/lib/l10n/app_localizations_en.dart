@@ -559,6 +559,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
+  String get subTrackDetailCapacityTitle => 'Capacity vs Path';
+
+  @override
+  String subTrackDetailCapacityValue(int path, int capacity) {
+    return '$path / $capacity';
+  }
+
+  @override
+  String subTrackDetailCapacityCaption(int path, int capacity) {
+    return 'Remaining path: $path · Total capacity: $capacity';
+  }
+
+  @override
+  String get subTrackDetailNoShortfall => 'No shortfall';
+
+  @override
+  String subTrackDetailShortfall(int count) {
+    return 'Shortfall: $count';
+  }
+
+  @override
+  String get subTrackDetailNoDeadlineNote =>
+      'Without a deadline, a sub-track can\'t lower the daily target.';
+
+  @override
+  String get subTrackDetailNoDeadlineLink => 'Set a deadline';
+
+  @override
   String get switchProfile => 'Switch profile';
 
   @override

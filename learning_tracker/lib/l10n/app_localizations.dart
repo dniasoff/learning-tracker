@@ -1100,6 +1100,48 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
+  /// Sub-track detail: capacity bar label (DNI-497 AC-2, UX-DR-26).
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity vs Path'**
+  String get subTrackDetailCapacityTitle;
+
+  /// Sub-track detail: remaining path over total capacity, in leaves (DNI-497 AC-2).
+  ///
+  /// In en, this message translates to:
+  /// **'{path} / {capacity}'**
+  String subTrackDetailCapacityValue(int path, int capacity);
+
+  /// Sub-track detail: caption under the capacity bar (DNI-497 AC-2, UX-DR-26).
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining path: {path} · Total capacity: {capacity}'**
+  String subTrackDetailCapacityCaption(int path, int capacity);
+
+  /// Sub-track detail: success tag when the engine shortfall is 0 (DNI-497 AC-2).
+  ///
+  /// In en, this message translates to:
+  /// **'No shortfall'**
+  String get subTrackDetailNoShortfall;
+
+  /// Sub-track detail: parent/tutor-only warning tag with the engine shortfall count; never shown to the child (DNI-497 AC-2, UX-DR-97). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortfall: {count}'**
+  String subTrackDetailShortfall(int count);
+
+  /// Sub-track detail: parent note when the curriculum has no deadline; Story 2.4 (DNI-495) wording, reused verbatim (DNI-497 AC-2). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Without a deadline, a sub-track can\'t lower the daily target.'**
+  String get subTrackDetailNoDeadlineNote;
+
+  /// Sub-track detail: link from the no-deadline note to the curriculum's goal setup; Story 2.4 (DNI-495) wording (DNI-497 AC-2). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a deadline'**
+  String get subTrackDetailNoDeadlineLink;
+
   /// No description provided for @switchProfile.
   ///
   /// In en, this message translates to:
