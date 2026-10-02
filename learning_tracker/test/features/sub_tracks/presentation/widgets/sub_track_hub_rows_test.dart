@@ -6,21 +6,30 @@
 // detail beside the hub.
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/data/firestore/tutor_scope_grant_providers.dart';
+import 'package:learning_tracker/domain/learner_state/ports/tutor_scope_grant_source.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_rows.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_list_detail_layout.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_tutor_scope_grant_source.dart';
 import '../../../../helpers/pump_app.dart';
 import '../../sub_track_detail_harness.dart';
 
@@ -147,5 +156,97 @@ void main() {
     expect(isSelected(tester, rebbe.id), isTrue);
     expect(isSelected(tester, school.id), isFalse);
     verifyNever(() => router.push<Object?>(any()));
+  });
+
+  group('tutored session (grant-gated read, DNI-523 / B10)', () {
+    late FakeTutorScopeGrantSource grants;
+    setUp(() => grants = FakeTutorScopeGrantSource());
+
+    ProviderContainer tutored() {
+      final c = ProviderContainer(
+        overrides: [
+          ...h.overrides(role: SubTrackDetailRole.tutor),
+          tutorScopeGrantSourceProvider.overrideWith((ref) async => grants),
+          activeTutoredProfileSelectionProvider.overrideWithValue(
+            TutoredProfileSelection(
+              profileId: h.scope.profileId,
+              ownerUid: h.scope.ownerUid,
+              grantId: 'grant',
+              permissions: TutorPermissions.readOnly(),
+            ),
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    Future<void> settle() async {
+      for (var i = 0; i < 20; i++) {
+        await pumpEventQueue();
+      }
+    }
+
+    test('reads no sub-track of the learner until an active grant '
+        'authorizes the tutor', () async {
+      final c = tutored();
+      final sub = c.listen(subTrackHubRowsProvider, (_, _) {});
+      addTearDown(sub.close);
+      await settle();
+      expect(sub.read(), isA<AsyncLoading<List<SubTrack>>>());
+      expect(sub.read().hasValue, isFalse);
+      expect(c.exists(subTrackDetailTracksProvider(h.scope)), isFalse);
+    });
+
+    test('a granted tutor sees the rows; once the grant is revoked no hub '
+        'row remains and the sub-track read is released', () async {
+      grants.grant(h.scope);
+      final c = tutored();
+      final sub = c.listen(subTrackHubRowsProvider, (_, _) {});
+      addTearDown(sub.close);
+      await settle();
+      expect(sub.read().requireValue.map((t) => t.id), [school.id, rebbe.id]);
+      expect(c.exists(subTrackDetailTracksProvider(h.scope)), isTrue);
+
+      grants.deny(h.scope, TutorScopeDenialReason.grantNotActive);
+      await settle();
+      final denied = sub.read();
+      expect(denied.error, isA<TutorScopeAccessDeniedException>());
+      expect(denied.hasValue, isFalse);
+      expect(denied.value, isNull, reason: 'no cached rows survive');
+      expect(c.exists(subTrackDetailTracksProvider(h.scope)), isFalse);
+    });
+
+    testWidgets('a revoked grant removes the rendered hub rows', (
+      tester,
+    ) async {
+      grants.grant(h.scope);
+      await tester.pumpWidget(
+        pumpApp(
+          retry: (_, _) => null,
+          overrides: [
+            ...h.overrides(role: SubTrackDetailRole.tutor),
+            tutorScopeGrantSourceProvider.overrideWith((ref) async => grants),
+            activeTutoredProfileSelectionProvider.overrideWithValue(
+              TutoredProfileSelection(
+                profileId: h.scope.profileId,
+                ownerUid: h.scope.ownerUid,
+                grantId: 'grant',
+                permissions: TutorPermissions.readOnly(),
+              ),
+            ),
+          ],
+          child: const SingleChildScrollView(child: SubTrackHubRows()),
+        ),
+      );
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      expect(row(school.id), findsOneWidget);
+
+      grants.deny(h.scope, TutorScopeDenialReason.grantNotActive);
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      expect(row(school.id), findsNothing);
+      expect(row(rebbe.id), findsNothing);
+      expect(find.byKey(const ValueKey('subTrackHubRows')), findsNothing);
+    });
   });
 }
