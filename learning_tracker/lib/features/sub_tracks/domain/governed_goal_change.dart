@@ -19,6 +19,18 @@ import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 /// The governed goal collection.
 const kGoalsCollection = 'goals';
 
+/// `goals/{curriculumId}_deadline` (AD-43).
+String deadlineGoalDocId(String curriculumId) => '${curriculumId}_deadline';
+
+/// `goals/{curriculumId}_pace` (AD-43).
+String paceGoalDocId(String curriculumId) => '${curriculumId}_pace';
+
+/// The `pace_granularity` of a pace goal counted in the curriculum's leaf
+/// units: what the goal setup screen counts in for a curriculum without a
+/// unit picker (e.g. Mishnayos). A governed pace goal always carries a
+/// granularity (AD-43; `writeWithChangeLog` rejects one without it).
+const kLeafPaceGranularity = 'item';
+
 /// The `pace_granularity` of a pace goal counted in the curriculum's leaf
 /// units: what the goal setup screen counts in for a curriculum without a
 /// unit picker (e.g. Mishnayos). A governed pace goal always carries a
