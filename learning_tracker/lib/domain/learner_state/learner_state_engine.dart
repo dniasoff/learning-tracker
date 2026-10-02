@@ -218,9 +218,34 @@ final class LearnerStateEngine {
             firstStage,
           )
         : const MainTrackRecord.none();
+    // The AD-35 review schedule over the reconstructed config history. It
+    // is built for every curriculum with a main track, evaluated or not,
+    // so ending or pausing a track never takes back past review earning.
+    final configHistory = intent == null
+        ? null
+        : MainTrackConfigHistory.build(
+            curriculumId: curriculumId,
+            intent: intent,
+            intentHistory: inputs.intentHistory,
+          );
+    final reviews = configHistory == null
+        ? null
+        : deriveReviewSchedule(
+            countedLearns: learns,
+            corpus: corpus,
+            inScope: learnt.inScope,
+            configHistory: configHistory,
+            settingsHistory: inputs.settingsHistory,
+            fallbackFirstStage: firstStage,
+          );
     final earners = curriculumEarningEventIds(
       countedLearns: learns,
       corpus: corpus,
+      settingsHistory: inputs.settingsHistory,
+      reviews: reviews,
+      firstStageAt: configHistory == null
+          ? null
+          : (t) => configHistory.at(t).firstStageOrder ?? firstStage,
     );
     final state = DerivedCurriculumState(
       curriculumId: curriculumId,
@@ -243,6 +268,8 @@ final class LearnerStateEngine {
               learns,
               firstStage,
               mainTrack,
+              configHistory!,
+              reviews!,
             )
           : const PlanRecord.none(),
       streak: evaluated
@@ -286,7 +313,8 @@ final class LearnerStateEngine {
     );
   }
 
-  /// The planning stage of an evaluated curriculum (DNI-467).
+  /// The planning stage of an evaluated curriculum (DNI-467). [reviews]
+  /// is its review schedule over [configHistory], shared with stage 7.
   ///
   /// A calendar-program curriculum plans from its calendar: assignments,
   /// backlog, and `dailyTarget` / shortfall = assigned through today minus
@@ -300,21 +328,10 @@ final class LearnerStateEngine {
     List<LearningEvent> learns,
     int? firstStage,
     MainTrackRecord mainTrack,
+    MainTrackConfigHistory configHistory,
+    ReviewSchedule reviews,
   ) {
     final today = civilDate(inputs.nowUtc, inputs.settingsHistory);
-    final configHistory = MainTrackConfigHistory.build(
-      curriculumId: curriculumId,
-      intent: intent,
-      intentHistory: inputs.intentHistory,
-    );
-    final reviews = deriveReviewSchedule(
-      countedLearns: learns,
-      corpus: corpus,
-      inScope: learnt.inScope,
-      configHistory: configHistory,
-      settingsHistory: inputs.settingsHistory,
-      fallbackFirstStage: firstStage,
-    );
     final errors = <CurriculumValidationError>{};
     final calendar = deriveCalendarPlan(
       curriculumId: curriculumId,

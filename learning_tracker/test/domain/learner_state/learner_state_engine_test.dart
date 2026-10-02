@@ -6,6 +6,7 @@
 // DNI-468 (Story 1.6) adds the points groups: AC-1 counted events, AC-2
 // first-learning earning and AC-3 review earning.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
@@ -829,6 +830,221 @@ void main() {
       );
       // A curriculum without a corpus resolves no leaf, so nothing earns.
       expect(state.earningEventIds, {engineUlid(1), engineUlid(2)});
+    });
+  });
+
+  group('DNI-468 AC-3: review earning', () {
+    // September 2026: the 1st is a Tuesday. The fixture learner's Shabbos
+    // lock runs Fri 4th 12:00Z → Sun 6th 01:00Z, so these days avoid it.
+    int on(int day, {int hour = 10}) => (day - 1) * 1440 + hour * 60;
+    String sep(int day) => '2026-09-${day.toString().padLeft(2, '0')}';
+
+    MainTrackConfigDoc stageDoc(int order, {int delay = 0}) =>
+        MainTrackConfigDoc(
+          collection: MainTrackConfigDoc.stages,
+          docId: '${engineCurriculum}_$order',
+          curriculumId: engineCurriculum,
+          fields: {
+            'stage_order': order,
+            'schedule_type': 'delay',
+            'delay_days': delay,
+          },
+        );
+
+    // Stage 1 learns; stage 2 is due a day later; stage 3 a week after.
+    final threeStages = [
+      stageDoc(1),
+      stageDoc(2, delay: 1),
+      stageDoc(3, delay: 7),
+    ];
+
+    LearningEvent review(
+      int id,
+      int stage,
+      int day, {
+      int hour = 10,
+      String ref = b11,
+      DateState dateState = DateState.dated,
+      String? learnedOn,
+    }) => engineLearn(
+      id,
+      ref,
+      stage: stage,
+      minutes: on(day, hour: hour),
+      learnedOn: learnedOn ?? sep(day),
+      dateState: dateState,
+    );
+
+    /// A stage-2 `delay_days` change from [from] to [to] at [minutes].
+    ChangeLogEntry delayChange(int from, int to, {required int minutes}) =>
+        ChangeLogEntry(
+          id: engineUlid(800),
+          entity: GovernedEntity.mainTrackStages,
+          entityId: engineCurriculum,
+          actionId: engineUlid(801),
+          before: {'stage_definitions/${engineCurriculum}_2.delay_days': from},
+          after: {'stage_definitions/${engineCurriculum}_2.delay_days': to},
+          at: engineAt(minutes),
+          actor: parentActor,
+        );
+
+    Set<String> earning(
+      List<LearningEvent> events, {
+      List<MainTrackConfigDoc>? stages,
+      List<ChangeLogEntry> history = const [],
+      DateTime? endedAt,
+    }) => engine
+        .run(
+          engineInputs(
+            events: events,
+            intents: {
+              engineCurriculum: engineIntent(
+                stages: stages ?? threeStages,
+                endedAt: endedAt,
+              ),
+            },
+            intentHistory: history,
+            nowUtc: engineAt(on(20)),
+          ),
+        )
+        .earningEventIds;
+
+    Set<String> ids(List<int> ns) => {for (final n in ns) engineUlid(n)};
+
+    test('a review earns when due on its civil date, through the steps', () {
+      expect(
+        earning([review(1, 1, 1), review(2, 2, 2), review(3, 3, 9)]),
+        ids([1, 2, 3]),
+      );
+    });
+
+    test('an overdue review is still due and earns', () {
+      expect(earning([review(1, 1, 1), review(2, 2, 3)]), ids([1, 2]));
+    });
+
+    test('a review done before it is due does not earn', () {
+      // Stage 2 is due from the 2nd; doing it on the 1st completes the step
+      // early, and stage 3 (due from the 8th) is not due on the 7th.
+      expect(
+        earning([review(1, 1, 1), review(2, 2, 1, hour: 12), review(3, 3, 7)]),
+        ids([1]),
+      );
+    });
+
+    test('only the earliest due event of a (leaf, stage) pair earns', () {
+      expect(
+        earning([
+          review(1, 1, 1),
+          review(2, 2, 2),
+          review(3, 2, 2, hour: 14),
+          review(4, 2, 3),
+        ]),
+        ids([1, 2]),
+      );
+    });
+
+    test('a first-stage repeat and a stage without a cycle do not earn', () {
+      // A sub-track tick learns 1:2 first, so its main stage-1 learn earns
+      // nothing; 1:2 still starts a cycle and its stage-2 review earns. A
+      // stage-2 event on 1:3 with no stage-1 learn opens no step.
+      expect(
+        earning([
+          review(1, 1, 1),
+          review(2, 1, 2),
+          engineLearn(
+            3,
+            b12,
+            source: subTrack,
+            minutes: on(1, hour: 9),
+            learnedOn: sep(1),
+          ),
+          review(4, 1, 1, ref: b12),
+          review(5, 2, 2, ref: b12),
+          review(6, 2, 2, ref: 'Mishnah Berakhot 1:3'),
+        ]),
+        // 6 is the first event on 1:3, so it earns as first learning.
+        ids([1, 5, 6]),
+      );
+    });
+
+    test('an attempt that is not due does not use up the pair', () {
+      // Before 1:2 has a cycle (the sub-track tick comes first and the
+      // main learn later), a stage-2 event is not due; the due one on the
+      // 2nd still earns.
+      expect(
+        earning([
+          engineLearn(
+            1,
+            b12,
+            source: subTrack,
+            minutes: on(1, hour: 8),
+            learnedOn: sep(1),
+          ),
+          review(2, 2, 1, hour: 9, ref: b12),
+          review(3, 1, 1, hour: 10, ref: b12),
+          review(4, 2, 2, ref: b12),
+        ]),
+        ids([4]),
+      );
+    });
+
+    test('a voided or lock-ignored review does not earn or block', () {
+      expect(
+        earning([
+          review(1, 1, 1),
+          review(2, 2, 2),
+          engineVoid(3, 2, minutes: on(2, hour: 11)),
+          review(4, 2, 3),
+        ]),
+        ids([1, 4]),
+      );
+      // Stage 3 is due from the 4th; the Shabbos event on the 5th is
+      // lock-ignored and the one on the 6th earns.
+      expect(
+        earning(
+          [review(1, 1, 1), review(2, 2, 2), review(3, 3, 5), review(4, 3, 6)],
+          stages: [stageDoc(1), stageDoc(2, delay: 1), stageDoc(3, delay: 2)],
+        ),
+        ids([1, 2, 4]),
+      );
+    });
+
+    test('a catch_up review is judged on its learned_on day', () {
+      expect(
+        earning([
+          review(1, 1, 1),
+          review(2, 2, 3, dateState: DateState.catchUp, learnedOn: sep(2)),
+        ]),
+        ids([1, 2]),
+      );
+    });
+
+    test('earning uses the settings in force then, not today', () {
+      // Today stage 2 is delay 5, but it was delay 1 until the 3rd: the
+      // review on the 2nd was due then and keeps its points.
+      expect(
+        earning(
+          [review(1, 1, 1), review(2, 2, 2)],
+          stages: [stageDoc(1), stageDoc(2, delay: 5), stageDoc(3, delay: 7)],
+          history: [delayChange(1, 5, minutes: on(3, hour: 12))],
+        ),
+        ids([1, 2]),
+      );
+      // Today stage 2 is delay 1, but it was delay 5 until the 3rd: the
+      // review on the 2nd was not due then and does not earn.
+      expect(
+        earning(
+          [review(1, 1, 1), review(2, 2, 2)],
+          history: [delayChange(5, 1, minutes: on(3, hour: 12))],
+        ),
+        ids([1]),
+      );
+    });
+
+    test('ending the main track keeps past review earning', () {
+      final events = [review(1, 1, 1), review(2, 2, 2)];
+      expect(earning(events, endedAt: engineAt(on(10))), earning(events));
+      expect(earning(events, endedAt: engineAt(on(10))), ids([1, 2]));
     });
   });
 
