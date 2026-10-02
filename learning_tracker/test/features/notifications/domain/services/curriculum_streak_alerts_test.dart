@@ -20,7 +20,7 @@ void main() {
   setUpAll(() {
     tz_data.initializeTimeZones();
     registerFallbackValue(const NotificationDetails());
-    registerFallbackValue(tz.TZDateTime.now(tz.UTC));
+    registerFallbackValue(tz.TZDateTime(tz.UTC, 2026));
     registerFallbackValue(AndroidScheduleMode.exactAllowWhileIdle);
     registerFallbackValue(DateTimeComponents.time);
   });
