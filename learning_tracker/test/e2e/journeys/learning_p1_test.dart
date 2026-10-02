@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -186,8 +187,8 @@ void main() {
     });
 
     testWidgets(
-      'typing a query shows matching results; tapping a leaf navigates to '
-      'TextDisplayScreen',
+      'typing a query shows matching results; tapping a leaf opens Mishna '
+      'history, whose Open text action navigates to TextDisplayScreen',
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Avi');
         final h = E2EHarness(tester, identity: identity);
@@ -222,6 +223,9 @@ void main() {
             anyActiveTrackHasChazaraProvider.overrideWith(
               (ref) => Future.value(false),
             ),
+            // The learner's lock settings are a C0 stub until DNI-470;
+            // this journey covers navigation, so the lock is open here.
+            mishnaHistoryLockProvider.overrideWithValue(const AsyncData(false)),
             // Stub adjacent refs to avoid curriculum content scan in reader.
             adjacentContentRefsProvider(
               matchRef,
@@ -254,10 +258,16 @@ void main() {
           reason: 'search result list must show at least one item after query',
         );
 
-        // Tap the first ListTile result (the onTap opens TextDisplayRoute for
-        // a leaf item).
+        // Tap the first ListTile result. Story 1.13 (DNI-475, UX-DR-60): a
+        // leaf opens its Mishna history; the reader is its Open text action.
         await h.tapWidget(
           find.byType(ListTile).first,
+          settle: const Duration(milliseconds: 500),
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        h.expectOnScreen('Mishna history');
+        await h.tapWidget(
+          find.byKey(const Key('mishnaHistoryOpenText')),
           settle: const Duration(milliseconds: 500),
         );
         await tester.pump(const Duration(milliseconds: 300));

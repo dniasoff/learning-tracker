@@ -20,6 +20,11 @@ export 'package:learning_tracker/features/learning/domain/commands/sub_track_com
 
 /// The replacement fields of `LearningCommands.replace`; null keeps the
 /// target's value.
+///
+/// One exception: a [dateState] of [DateState.beforeTracking] clears
+/// `learned_on` (schema: a `before_tracking` learn has `learned_on = null`),
+/// so [learnedOn] must then be null and the target's date is not kept.
+/// [resolveLearnedOn] is the single rule every implementation applies.
 final class EventReplacement {
   /// Creates a replacement.
   const EventReplacement({
@@ -28,7 +33,10 @@ final class EventReplacement {
     this.learnedOn,
     this.dateState,
     this.stage,
-  });
+  }) : assert(
+         dateState != DateState.beforeTracking || learnedOn == null,
+         'a before_tracking replacement has no learned_on',
+       );
 
   /// The new leaf.
   final LeafRef? ref;
@@ -45,6 +53,14 @@ final class EventReplacement {
   /// The new review stage.
   final int? stage;
 
+  /// The replacement's `learned_on`, given the target's [targetLearnedOn]:
+  /// null for a move to Before tracking, else [learnedOn] when set, else
+  /// the target's value.
+  CivilDate? resolveLearnedOn(CivilDate? targetLearnedOn) =>
+      dateState == DateState.beforeTracking
+      ? null
+      : learnedOn ?? targetLearnedOn;
+
   @override
   bool operator ==(Object other) =>
       other is EventReplacement &&
@@ -58,7 +74,8 @@ final class EventReplacement {
   int get hashCode => Object.hash(ref, source, learnedOn, dateState, stage);
 
   @override
-  String toString() => 'EventReplacement($ref, $source, $learnedOn)';
+  String toString() =>
+      'EventReplacement($ref, $source, $learnedOn, ${dateState?.name})';
 }
 
 /// Every learning write: events (AD-31) and governed changes (AD-38).

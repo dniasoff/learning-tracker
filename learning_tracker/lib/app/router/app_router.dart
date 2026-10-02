@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/gamification/presentation/screens/pare
 import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/reward_configuration_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
+import 'package:learning_tracker/features/learning/presentation/screens/mishna_history_screen.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/empty_login_screen.dart';
@@ -168,6 +169,14 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/curriculum/:curriculumId/settings',
       page: CurriculumSettingsRoute.page,
+      guards: [authGuard],
+    ),
+
+    // Mishna history (Story 1.13, DNI-475): any leaf of any curriculum, from
+    // Browse, the lifetime tree and later sub-track detail / ground rows.
+    AutoRoute(
+      path: '/curriculum/:curriculumId/history/:leafRef',
+      page: MishnaHistoryRoute.page,
       guards: [authGuard],
     ),
 
