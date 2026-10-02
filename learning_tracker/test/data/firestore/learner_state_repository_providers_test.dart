@@ -21,6 +21,7 @@ import 'package:learning_tracker/data/firestore/learner_state_repository_provide
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/callable_oversized_governed_write_port.dart';
 import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learner_settings_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
@@ -108,6 +109,10 @@ void main() {
       expect(await container.read(pointsAmountReaderProvider.future), isNull);
       expect(await container.read(changeLogRepositoryProvider.future), isNull);
       expect(await container.read(governedDocReaderProvider.future), isNull);
+      expect(
+        await container.read(learnerSettingsReaderProvider.future),
+        isNull,
+      );
       expect(
         await container.read(oversizedGovernedWritePortProvider.future),
         isNull,
@@ -203,6 +208,10 @@ void main() {
     expect(
       await container.read(oversizedGovernedWritePortProvider.future),
       isA<CallableOversizedGovernedWritePort>(),
+    );
+    expect(
+      await container.read(learnerSettingsReaderProvider.future),
+      isA<FirestoreLearnerSettingsReader>(),
     );
     expect(await container.read(activeLearnerScopeProvider.future), isNull);
 

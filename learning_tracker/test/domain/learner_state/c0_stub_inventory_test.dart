@@ -18,9 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// The Stub map of DNI-524, one row per call site: `(owner, what)`.
 const _inventory = <(String, String)>[
   // DNI-470 (1.8)
-  ('DNI-470', 'LearnerSettingsHistory.reconstruct'),
   ('DNI-470', 'governedIntentRepositoryProvider'),
-  ('DNI-470', 'learnerLockSettingsProvider'),
   // DNI-474 (1.12)
   ('DNI-474', 'corporaProvider'),
   ('DNI-474', 'learnerStateProvider'),
