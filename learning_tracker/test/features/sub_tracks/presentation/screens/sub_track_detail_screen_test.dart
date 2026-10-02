@@ -75,8 +75,10 @@ void main() {
           engineLearn(3, 'Mishnah Berakhot 1:2'),
         ],
       )
-      ..capacities[school.id] = (capacity: 12, shortfall: 0);
+      ..deadline = '2026-12-31';
     await pump(tester);
+    final engine = h.curriculum.subTracks[school.id]!;
+    expect(engine.capacity, isNotNull, reason: 'DNI-494 capacity');
 
     expect(find.text('School 2026–27'), findsOneWidget);
     expect(find.text('Sep 2026 – Jul 2027'), findsOneWidget);
@@ -88,7 +90,18 @@ void main() {
     expect(find.text('Mishnah Berakhot 1:2'), findsOneWidget);
     expect(find.text('1 ticked'), findsOneWidget, reason: 'distinct leaves');
     expect(find.text('Capacity vs Path'), findsOneWidget);
-    expect(find.text('4 / 12'), findsOneWidget, reason: 'engine path length');
+    expect(
+      find.text('${engine.remainingPath.length} / ${engine.capacity}'),
+      findsOneWidget,
+      reason: 'the engine values, not recomputed',
+    );
+    expect(
+      find.text(
+        'Remaining path: ${engine.remainingPath.length} · '
+        'Total capacity: ${engine.capacity}',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Ground (in order)'), findsOneWidget);
     final berakhotRow = tester.getTopLeft(
       find.byKey(const ValueKey('subTrackGroundRow:0:Mishnah Berakhot 1')),

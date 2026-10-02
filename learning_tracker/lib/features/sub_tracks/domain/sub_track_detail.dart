@@ -37,6 +37,7 @@ final class SubTrackDetail {
     required this.state,
     required this.ground,
     required this.role,
+    required this.noDeadline,
   });
 
   /// The stored intent.
@@ -51,6 +52,11 @@ final class SubTrackDetail {
   /// The viewer.
   final SubTrackDetailRole role;
 
+  /// Whether the curriculum has no live deadline (the engine derives no
+  /// `dailyTarget` for it). Only then does the parent see the Story 2.4
+  /// no-deadline note.
+  final bool noDeadline;
+
   /// Whether the viewer may reorder or remove ground: the parent, on a
   /// sub-track that is not ended.
   bool get canEdit => role == SubTrackDetailRole.parent && !track.isEnded;
@@ -64,11 +70,12 @@ final class SubTrackDetail {
   /// Distinct ground leaves ticked in this sub-track.
   int get ticked => state.ticked;
 
-  /// Whether the capacity bar renders: capacity is computed only with a
-  /// deadline (AD-44), so a null engine capacity means no deadline.
-  bool get hasDeadline => state.capacity != null;
+  /// Whether the capacity bar renders: the engine computed a capacity
+  /// (a live deadline, a non-calendar curriculum and a sub-track that
+  /// holds ground; AD-44).
+  bool get hasCapacity => state.capacity != null;
 
-  /// AD-44 `capacity` in leaves; null with no deadline.
+  /// AD-44 `capacity` in leaves; null when not computed.
   int? get capacity => state.capacity;
 
   /// AD-44 `path`: the remaining path length in leaves.

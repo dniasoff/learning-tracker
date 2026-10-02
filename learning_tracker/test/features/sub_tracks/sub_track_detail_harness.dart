@@ -7,8 +7,8 @@
 /// and the main-track schedule exactly as production will once DNI-474
 /// fills the seam.
 ///
-/// Capacity and shortfall (Story 2.3 / DNI-494) are not yet on this
-/// branch: [DetailHarness.capacities] stands in for those engine outputs.
+/// [DetailHarness.deadline] gives the curriculum a live deadline so the
+/// engine computes capacity and shortfall (Story 2.3 / DNI-494).
 library;
 
 import 'dart:async';
@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -36,7 +37,18 @@ import '../../helpers/learner_state/c0_fixtures.dart';
 import '../../helpers/learner_state/engine_fixtures.dart';
 import '../../helpers/learner_state/in_memory_ports.dart';
 
-/// The engine's AD-44 capacity outputs for one sub-track (DNI-494 stand-in).
+/// Goals with a live deadline on [deadline], or none.
+Map<String, CurriculumGoals> _goals(CivilDate? deadline) => {
+  if (deadline != null)
+    engineCurriculum: CurriculumGoals(
+      deadline: DeadlineGoal(
+        curriculumId: engineCurriculum,
+        targetDate: deadline,
+      ),
+    ),
+};
+
+/// Forced AD-44 capacity outputs for one sub-track.
 typedef CapacityValues = ({int capacity, int shortfall});
 
 /// A sub-track over the fixture Mishnayos corpus.
@@ -80,7 +92,12 @@ final class DetailHarness {
   final InMemoryLearningEventRepository events =
       InMemoryLearningEventRepository();
 
-  /// DNI-494 stand-in: engine capacity/shortfall per sub-track id.
+  /// A live `goals/{c}_deadline` target date for the fixture curriculum,
+  /// so the real engine (DNI-494) computes capacity and shortfall.
+  CivilDate? deadline;
+
+  /// Forced capacity/shortfall per sub-track id, over the engine's values
+  /// (for audience cases the fixture's numbers do not reach).
   final Map<String, CapacityValues> capacities = {};
 
   /// The latest engine output, for assertions.
@@ -109,7 +126,7 @@ final class DetailHarness {
       final e = latestEvents;
       if (t == null || e == null) return;
       final state = const LearnerStateEngine().run(
-        engineInputs(events: e, subTracks: t),
+        engineInputs(events: e, subTracks: t, goals: _goals(deadline)),
       );
       lastState = _withCapacities(state);
       out.add(lastState!);
@@ -275,6 +292,7 @@ SubTrackDetail engineDetail(
   return SubTrackDetail(
     track: track,
     role: role,
+    noDeadline: c.dailyTarget == null,
     state: c.subTracks[track.id]!,
     ground: SubTrackGroundProjection.project(
       track: track,

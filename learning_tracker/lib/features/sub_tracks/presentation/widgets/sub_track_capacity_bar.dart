@@ -17,9 +17,11 @@ const double subTrackCapacityBarHeight = 6;
 ///   shortfall shows the "No shortfall" success tag; a positive shortfall
 ///   shows its count in a warning tag to the parent (and tutor) only. The
 ///   child sees the bar and caption with no tag or count (NFR-9).
-/// * Without a deadline (engine capacity null, AD-44): no bar. The parent
-///   sees the Story 2.4 no-deadline note; its link calls
-///   [onSetDeadline], and is left out while that is null.
+/// * Without a deadline (AD-44: no capacity is computed): no bar. The
+///   parent sees the Story 2.4 no-deadline note; its link calls
+///   [onSetDeadline], and is left out while that is null. A capacity the
+///   engine leaves null for another reason (a sub-track that no longer
+///   holds ground, a calendar-program curriculum) shows nothing.
 ///
 /// The bar's fill is display only (`path / capacity`, clamped); every
 /// number shown is the engine's.
@@ -41,10 +43,10 @@ class SubTrackCapacityBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final capacity = detail.capacity;
     if (capacity == null) {
-      if (detail.role != SubTrackDetailRole.parent) {
-        return const SizedBox.shrink();
+      if (detail.noDeadline && detail.role == SubTrackDetailRole.parent) {
+        return _NoDeadlineNote(onSetDeadline: onSetDeadline);
       }
-      return _NoDeadlineNote(onSetDeadline: onSetDeadline);
+      return const SizedBox.shrink();
     }
     final l10n = AppLocalizations.of(context)!;
     final colors = context.colors;
