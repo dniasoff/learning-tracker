@@ -172,6 +172,7 @@ final class LearnerStateEngine {
       countedEventIds: counted.countedIds,
       earningEventIds: earning,
       lockIgnoredEventIds: counted.lockIgnoredIds,
+      countedLearns: counted.learns,
     );
   }
 

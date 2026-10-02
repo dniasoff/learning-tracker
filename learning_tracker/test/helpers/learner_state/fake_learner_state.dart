@@ -9,6 +9,7 @@ library;
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 
@@ -130,6 +131,7 @@ LearnerState fakeLearnerState({
   Set<String> earningEventIds = const {},
   Set<String> lockIgnoredEventIds = const {},
   List<RejectedRow> rejectedRows = const [],
+  List<LearningEvent> countedLearns = const [],
   DateTime? nowUtc,
 }) => LearnerState(
   nowUtc: nowUtc ?? fakeLearnerStateNow,
@@ -138,4 +140,5 @@ LearnerState fakeLearnerState({
   earningEventIds: earningEventIds,
   lockIgnoredEventIds: lockIgnoredEventIds,
   rejectedRows: rejectedRows,
+  countedLearns: countedLearns,
 );

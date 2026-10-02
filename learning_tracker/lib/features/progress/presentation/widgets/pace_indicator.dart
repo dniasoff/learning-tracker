@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
-import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Shows behind/on-track/ahead/graceWindow status badge for a curriculum goal.
-///
-/// Accepts a [ProgressPaceCalculator] from the progress domain so that the grace-window
-/// state (day 0 / day 1) can be surfaced correctly without showing a phantom
-/// "Ahead by 0 days" or "Behind by 0 days" on the first day.
+/// Shows the engine's finish projection for a curriculum goal (AD-35,
+/// DNI-474): on pace, behind pace, or too early to tell (under 14 days of
+/// tracked history). The status is text, never colour alone.
 ///
 /// Optional [subtitleCaption] renders a small disambiguating line under the
-/// badge — used by the Curriculum Progress screen to clarify that pace only
-/// reflects live (engagement-tier) learning, not bulk-mark / lifetime imports.
+/// badge.
 class ProgressPaceIndicator extends StatelessWidget {
   const ProgressPaceIndicator({
     super.key,
-    required this.pace,
+    required this.projection,
     this.subtitleCaption,
   });
 
-  final ProgressPaceCalculator pace;
+  final Projection projection;
   final String? subtitleCaption;
 
   @override
@@ -27,31 +24,27 @@ class ProgressPaceIndicator extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    // Derive label and visual style from the canonical ProgressPaceStatus enum.
-    final String label;
-    final Color color;
-    final IconData icon;
-
-    switch (pace.paceStatus) {
-      case ProgressPaceStatus.graceWindow:
-        label = l10n.paceOnTrack;
-        color = context.colors.brandBlue;
-        icon = Icons.check_circle_outline_rounded;
-      case ProgressPaceStatus.onTrack:
-        label = l10n.paceOnTrack;
-        color = context.colors.brandBlue;
-        icon = Icons.check_circle_outline_rounded;
-      case ProgressPaceStatus.ahead:
-        final days = pace.paceVarianceInDays.abs().round();
-        label = l10n.paceAheadByDays(days);
-        color = context.colors.brandGold;
-        icon = Icons.trending_up_rounded;
-      case ProgressPaceStatus.behind:
-        final days = pace.paceVarianceInDays.abs().round();
-        label = l10n.paceBehindByDays(days);
-        color = context.colors.brandCoralDeep;
-        icon = Icons.trending_down_rounded;
-    }
+    final (
+      String label,
+      Color color,
+      IconData icon,
+    ) = switch (projection.status) {
+      ProjectionStatus.onTrack || ProjectionStatus.noDeadline => (
+        l10n.paceOnTrack,
+        context.colors.brandBlue,
+        Icons.check_circle_outline_rounded,
+      ),
+      ProjectionStatus.behindPace => (
+        l10n.learnerProgressPaceBehind,
+        context.colors.brandCoralDeep,
+        Icons.trending_down_rounded,
+      ),
+      ProjectionStatus.tooEarly => (
+        l10n.learnerProgressPaceTooEarly,
+        context.colors.brandBlue,
+        Icons.hourglass_empty_rounded,
+      ),
+    };
 
     return Container(
       width: double.infinity,

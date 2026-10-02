@@ -2849,6 +2849,94 @@
       }
     }
   },
+  "learnerProgressCount": "{learnt} of {total} learnt",
+  "@learnerProgressCount": {
+    "description": "DNI-474 (FR-15): count label on a tri-state corpus node row, e.g. '3 of 12 learnt'.",
+    "placeholders": {
+      "learnt": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "learnerProgressCountShort": "{learnt}/{total}",
+  "@learnerProgressCountShort": {
+    "description": "DNI-474 (FR-15): compact count on a tri-state corpus node row, e.g. '3/12'.",
+    "placeholders": {
+      "learnt": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "learnerProgressNodeSemantics": "{name}, {state}, {learnt} of {total} learnt",
+  "@learnerProgressNodeSemantics": {
+    "description": "DNI-474 (FR-15, UX-DR-19): screen-reader label of a tri-state corpus node, e.g. 'Berakhot, partial, 3 of 12 learnt'. {state} is one of learnerProgressStateComplete / Partial / Empty.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      },
+      "learnt": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "learnerProgressPaceBehind": "Behind pace",
+  "@learnerProgressPaceBehind": {
+    "description": "DNI-474 (AD-35): the engine projects the learner will miss the deadline."
+  },
+  "learnerProgressPaceTooEarly": "Too early to tell",
+  "@learnerProgressPaceTooEarly": {
+    "description": "DNI-474 (AD-35): under 14 days of tracked history, so no pace projection yet."
+  },
+  "learnerProgressStateComplete": "complete",
+  "@learnerProgressStateComplete": {
+    "description": "DNI-474 (FR-15): state word of a corpus node whose every leaf is learnt."
+  },
+  "learnerProgressStateEmpty": "not learnt",
+  "@learnerProgressStateEmpty": {
+    "description": "DNI-474 (FR-15): state word of a corpus node with no learnt leaf."
+  },
+  "learnerProgressStatePartial": "partial",
+  "@learnerProgressStatePartial": {
+    "description": "DNI-474 (FR-15): state word of a corpus node with some, not all, leaves learnt."
+  },
+  "siyumCelebrationBody": "You completed {unit}!",
+  "@siyumCelebrationBody": {
+    "description": "DNI-474 (FR-17): siyum celebration message. {unit} is the completed masechta / sefer / seder name.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "siyumCelebrationDismiss": "Mazal tov!",
+  "@siyumCelebrationDismiss": {
+    "description": "DNI-474 (FR-17): button that closes the siyum celebration."
+  },
+  "siyumCelebrationMore": "{count, plural, =1{and 1 more} other{and {count} more}}",
+  "@siyumCelebrationMore": {
+    "description": "DNI-474 (FR-17): when one capture completes several units, the count of the others.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "siyumCelebrationTitle": "Siyum!",
+  "@siyumCelebrationTitle": {
+    "description": "DNI-474 (FR-17): siyum celebration title."
+  },
   "siyumHaShas": "Siyum HaShas",
   "@siyumHaShas": {
     "description": "Top-level curriculum-complete celebration — Talmud Bavli."

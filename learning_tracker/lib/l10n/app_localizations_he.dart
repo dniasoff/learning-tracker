@@ -4363,6 +4363,63 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String learnerProgressCount(int learnt, int total) {
+    return '$learnt מתוך $total נלמדו';
+  }
+
+  @override
+  String learnerProgressCountShort(int learnt, int total) {
+    return '$learnt/$total';
+  }
+
+  @override
+  String learnerProgressNodeSemantics(
+    String name,
+    String state,
+    int learnt,
+    int total,
+  ) {
+    return '$name, $state, $learnt מתוך $total נלמדו';
+  }
+
+  @override
+  String get learnerProgressPaceBehind => 'מאחור בקצב';
+
+  @override
+  String get learnerProgressPaceTooEarly => 'מוקדם מדי לדעת';
+
+  @override
+  String get learnerProgressStateComplete => 'הושלם';
+
+  @override
+  String get learnerProgressStateEmpty => 'לא נלמד';
+
+  @override
+  String get learnerProgressStatePartial => 'חלקי';
+
+  @override
+  String siyumCelebrationBody(String unit) {
+    return 'סיימת את $unit!';
+  }
+
+  @override
+  String get siyumCelebrationDismiss => 'מזל טוב!';
+
+  @override
+  String siyumCelebrationMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ועוד $count',
+      one: 'ועוד אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get siyumCelebrationTitle => 'סיום!';
+
+  @override
   String get siyumHaShas => 'סיום הש״ס';
 
   @override

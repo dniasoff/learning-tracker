@@ -7,16 +7,14 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
-import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
-import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
@@ -104,55 +102,13 @@ final _trackGoalProvider = FutureProvider.autoDispose
       return goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
     });
 
-/// Computes a [ProgressPaceCalculator] for the given [CurriculumTrackEntity].
-///
-/// Live completions: `completedAt >= track.activatedAt`.
-/// Baseline: completions before the track started (R10, DNI-473: no
-/// sentinel rows are written any more; prior learning is a
-/// `before_tracking` learning event read by the R3 story).
-/// Total items: from [scopedItemCountProvider].
-/// targetDate: deadline-goal date when available; otherwise today (so
-///   requiredVelocity returns 0 — not meaningful for pace goals).
-final _trackPaceCalcProvider = FutureProvider.autoDispose
-    .family<ProgressPaceCalculator, CurriculumTrackEntity>((ref, track) async {
-      final curriculum = track.curriculumId;
-      final chartData = FirestoreChartDataRepositoryAdapter(ref: ref);
-      final allCompletions = await chartData.getCompletionsByTier(
-        tier: CompletionTierFilter.trackAchievement,
-        curriculumId: curriculum,
-      );
-
-      final trackStart = track.activatedAt.toLocal();
-
-      final liveCount = allCompletions
-          .where((c) => !c.completedAt.isBefore(trackStart))
-          .length;
-
-      final bulkBaseline = allCompletions
-          .where((c) => c.completedAt.isBefore(trackStart))
-          .length;
-
-      final totalItems = await ref.watch(
-        scopedItemCountProvider(curriculum).future,
-      );
-
-      final goal = await ref.watch(_trackGoalProvider(curriculum).future);
-      final clock = ref.watch(localDayClockProvider);
-      final targetDate =
-          (goal?.goalType == 'deadline' && goal?.targetDate != null)
-          ? goal!.targetDate!.toLocal()
-          : clock.today();
-
-      final today = clock.today();
-
-      return ProgressPaceCalculator.compute(
-        totalItems: totalItems,
-        bulkBaseline: bulkBaseline,
-        liveProgress: liveCount,
-        trackStartDate: trackStart,
-        targetDate: targetDate,
-        today: today,
-      );
+/// The engine's state of the track's curriculum (DNI-474): its pace
+/// (`dailyTarget`, projection velocity) on the Track Detail info card comes
+/// from `LearnerState`, never from a screen-side calculator.
+final _trackLearnerStateProvider = FutureProvider.autoDispose
+    .family<CurriculumState?, CurriculumTrackEntity>((ref, track) async {
+      final state = await watchActiveLearnerState(ref);
+      return state?[track.curriculumId.storageKey];
     });
 
 /// Adapter providers -- constructed here (top-level `Provider`) rather than
@@ -301,7 +257,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       locale: locale,
       useHebrewCalendar: useHebrewCalendar,
     );
-    final paceCalc = ref.watch(_trackPaceCalcProvider(track)).asData?.value;
+    final learnerState = ref
+        .watch(_trackLearnerStateProvider(track))
+        .asData
+        ?.value;
 
     return Scaffold(
       backgroundColor: context.colors.surfaceF5,
@@ -322,7 +281,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           TrackInfoCard(
             track: track,
             goal: goal,
-            paceCalc: paceCalc,
+            learnerState: learnerState,
             useHebrewCalendar: useHebrewCalendar,
           ),
           const SizedBox(height: 16),
@@ -829,7 +788,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 );
                 if (mounted) {
                   ref.invalidate(_trackGoalProvider(track.curriculumId));
-                  ref.invalidate(_trackPaceCalcProvider(track));
+                  ref.invalidate(_trackLearnerStateProvider(track));
                   // B-EDIT-NAME: refresh the resolved title so an edited name
                   // surfaces immediately in the header on return.
                   ref.invalidate(trackCustomNameProvider(track.curriculumId));
@@ -926,7 +885,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
 
     await onTrackChanged(ref);
     ref.invalidate(_trackGoalProvider(track.curriculumId));
-    ref.invalidate(_trackPaceCalcProvider(track));
+    ref.invalidate(_trackLearnerStateProvider(track));
 
     if (mounted) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.goalSavedSnack)));
@@ -983,8 +942,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     }
     if (!mounted) return;
 
-    // 'archive' = retire (keep showing as archived); 'wipe' = AD-38 remove
-    // (ended_at tombstone, history kept); null = cancel
+    // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1040,18 +998,12 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       return;
     }
 
-    // AD-38 "Remove track" (DNI-476): one governed action setting
-    // ended_at on the track and tombstoning its live sub-tracks. Nothing is
-    // deleted (no Cloud Function sweep): learning events and points stay,
-    // and re-adding the curriculum brings the track back.
+    // Cloud Function sweep — confirmed (functions/src/deletes.ts) to
+    // delete completions/learning_ledger/streak_events/points_ledger/
+    // preferences alongside the track doc itself, a superset of Drift's
+    // purgeHistory, not a narrower stand-in.
     final trackRepo = ref.read(curriculumTrackDetailRepositoryProvider);
-    try {
-      await trackRepo.removeTrack(track.curriculumId);
-    } on StateError {
-      if (!mounted) return;
-      _showLastCurriculumError(AppLocalizations.of(context)!);
-      return;
-    }
+    await trackRepo.deleteTrackPermanently(track.curriculumId);
     await onTrackChanged(ref);
     if (mounted) context.router.pop();
   }

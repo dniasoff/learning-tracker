@@ -1,98 +1,34 @@
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
-    as domain_stage;
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 
-/// Pure computation service for track and curriculum completion percentages.
+/// Pure track and curriculum completion percentages over the engine's
+/// learner state (DNI-474).
 ///
-/// Accepts pre-loaded data (completion rows, stage definitions, total item
-/// counts) and performs no IO itself — fully unit-testable.
-///
-/// ## Formula (track)
-/// An item (sefariaRef) is "done" when ALL non-superseded stages for the
-/// track have a completion record (matched by stageOrder). Percentage =
-/// `(done items) / totalItems`.
-///
-/// ## Formula (curriculum)
-/// An item is "done" when it is fully done in ANY of its tracks.
-/// Percentage = `(distinct fully-done sefariaRefs) / totalItems`.
+/// Goal progress is the distinct learnt count (FR-14): every source and
+/// date state counts, a repeat or chazara counts once, and a voided or
+/// lock-ignored event never counts — all decided by the engine. This
+/// service only divides.
 class TrackCompletionService {
   const TrackCompletionService();
 
-  /// Computes item-based completion percentage for a single track.
-  ///
-  /// [stages] — stage definitions for the track (requiredStageIds = stageOrders).
-  /// [completions] — all completion rows for the track + profile.
-  /// [totalItems] — total leaf items in scope (denominator).
-  ///
-  /// Returns 0.0 when [stages] or [totalItems] is zero.
+  /// The engine's distinct learnt leaves of [state] over [totalItems].
   double computeTrackPercentage({
-    required List<domain_stage.StageDefinition> stages,
-    required List<CompletionEntity> completions,
+    required CurriculumState? state,
     required int totalItems,
   }) {
-    if (stages.isEmpty || totalItems == 0) return 0.0;
-    // Use stageOrder (1 = learn, 2 = chazara 1, …) — the value stored in
-    // completion_events.stageId — NOT the stage definition's database primary key.
-    final requiredStageIds = stages.map((s) => s.stageOrder).toSet();
-
-    // Build a map of sefariaRef → set of completed stageIds for this track.
-    final completedStagesByRef = <String, Set<int>>{};
-    for (final c in completions) {
-      completedStagesByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
-    }
-
-    // Count items where every required stage has a completion record.
-    final doneItems = completedStagesByRef.values
-        .where((doneStages) => requiredStageIds.every(doneStages.contains))
-        .length;
-
-    return (doneItems / totalItems).clamp(0.0, 1.0);
+    if (totalItems <= 0) return 0.0;
+    return ((state?.distinctLearnt ?? 0) / totalItems).clamp(0.0, 1.0);
   }
 
-  /// Computes item-based completion percentage for a curriculum across all tracks.
-  ///
-  /// [byTrack] — map of `trackId → (stageDefinitions, completionRows)` for each
-  ///   track that has completions in this curriculum.
-  /// [totalItems] — total leaf items in scope (denominator).
-  ///
-  /// Returns 0.0 when [totalItems] is zero.
+  /// The union of [states]' learnt leaves (a leaf learnt in two curricula
+  /// counts once) over [totalItems].
   double computeCurriculumPercentage({
-    required Map<int, TrackEntry> byTrack,
+    required Iterable<CurriculumState?> states,
     required int totalItems,
   }) {
-    if (totalItems == 0) return 0.0;
-
-    final doneRefs = <String>{};
-    for (final entry in byTrack.entries) {
-      final stages = entry.value.stages;
-      final completions = entry.value.completions;
-      if (stages.isEmpty) continue;
-
-      // Use stageOrder (1 = learn, 2 = chazara 1, …) as in computeTrackPercentage.
-      final requiredStageIds = stages.map((s) => s.stageOrder).toSet();
-
-      // Group completions by sefariaRef → set of stageIds for this track.
-      final stagesByRef = <String, Set<int>>{};
-      for (final c in completions) {
-        stagesByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
-      }
-
-      for (final refEntry in stagesByRef.entries) {
-        if (requiredStageIds.every(refEntry.value.contains)) {
-          doneRefs.add(refEntry.key);
-        }
-      }
-    }
-
-    return (doneRefs.length / totalItems).clamp(0.0, 1.0);
+    if (totalItems <= 0) return 0.0;
+    final learnt = <String>{
+      for (final state in states) ...?state?.learntLeaves,
+    };
+    return (learnt.length / totalItems).clamp(0.0, 1.0);
   }
-}
-
-/// Bundle of stage definitions + completion rows for a single track,
-/// used as input to [TrackCompletionService.computeCurriculumPercentage].
-class TrackEntry {
-  const TrackEntry({required this.stages, required this.completions});
-
-  final List<domain_stage.StageDefinition> stages;
-  final List<CompletionEntity> completions;
 }

@@ -92,6 +92,8 @@ class LifetimeTreeNode {
     required this.children,
     this.provenance,
     this.leafRef,
+    this.learntCount = 0,
+    this.totalCount = 0,
   });
 
   final CurriculumId curriculumId;
@@ -125,6 +127,12 @@ class LifetimeTreeNode {
   /// stands for — the Mishna-history target of a tree leaf tap (Story 1.13,
   /// UX-DR-60). Null on aggregating nodes.
   final String? leafRef;
+
+  /// Learnt leaves under this node (from the engine's learnt set).
+  final int learntCount;
+
+  /// All leaves under this node.
+  final int totalCount;
 }
 
 /// Aggregated lifetime progress summary for one curriculum.

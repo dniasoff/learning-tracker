@@ -165,6 +165,11 @@ abstract class MilestoneAchievement with _$MilestoneAchievement {
     @Default(<String>[]) List<String> containedUnitKeys,
 
     required DateTime achievedAt,
+
+    /// The engine's completion number k of this siyum (DNI-474 AC-4): 1 for
+    /// the first completion, 2 and up for each later full completion, which
+    /// appear only in the siyumim timeline.
+    @Default(1) int completionNumber,
   }) = _MilestoneAchievement;
 }
 

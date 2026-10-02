@@ -8,270 +8,18 @@ part of 'progress_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provider for the progress repository instance.
-///
-/// **Firestore-backed** via [FirestoreProgressRepositoryAdapter] (wired
-/// Phase 3, T-20). The Drift-backed [ProgressRepositoryImpl] is
-/// deprecated and will be removed in Phase 4.
-
-@ProviderFor(progressRepository)
-final progressRepositoryProvider = ProgressRepositoryProvider._();
-
-/// Provider for the progress repository instance.
-///
-/// **Firestore-backed** via [FirestoreProgressRepositoryAdapter] (wired
-/// Phase 3, T-20). The Drift-backed [ProgressRepositoryImpl] is
-/// deprecated and will be removed in Phase 4.
-
-final class ProgressRepositoryProvider
-    extends
-        $FunctionalProvider<
-          ProgressRepository,
-          ProgressRepository,
-          ProgressRepository
-        >
-    with $Provider<ProgressRepository> {
-  /// Provider for the progress repository instance.
-  ///
-  /// **Firestore-backed** via [FirestoreProgressRepositoryAdapter] (wired
-  /// Phase 3, T-20). The Drift-backed [ProgressRepositoryImpl] is
-  /// deprecated and will be removed in Phase 4.
-  ProgressRepositoryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'progressRepositoryProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$progressRepositoryHash();
-
-  @$internal
-  @override
-  $ProviderElement<ProgressRepository> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  ProgressRepository create(Ref ref) {
-    return progressRepository(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(ProgressRepository value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<ProgressRepository>(value),
-    );
-  }
-}
-
-String _$progressRepositoryHash() =>
-    r'055688a02ec1e97d52503b1efb00f5fd993e5fe2';
-
-/// Provider for completion counts by curriculum, scoped to the active profile.
-///
-/// Returns a map keyed by the internal track storage key. One track per
-/// curriculum, so this is a single-entry map — not a user-facing concept.
-
-@ProviderFor(trackBreakdown)
-final trackBreakdownProvider = TrackBreakdownFamily._();
-
-/// Provider for completion counts by curriculum, scoped to the active profile.
-///
-/// Returns a map keyed by the internal track storage key. One track per
-/// curriculum, so this is a single-entry map — not a user-facing concept.
-
-final class TrackBreakdownProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<Map<String, int>>,
-          Map<String, int>,
-          FutureOr<Map<String, int>>
-        >
-    with $FutureModifier<Map<String, int>>, $FutureProvider<Map<String, int>> {
-  /// Provider for completion counts by curriculum, scoped to the active profile.
-  ///
-  /// Returns a map keyed by the internal track storage key. One track per
-  /// curriculum, so this is a single-entry map — not a user-facing concept.
-  TrackBreakdownProvider._({
-    required TrackBreakdownFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'trackBreakdownProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$trackBreakdownHash();
-
-  @override
-  String toString() {
-    return r'trackBreakdownProvider'
-        ''
-        '($argument)';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<Map<String, int>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<Map<String, int>> create(Ref ref) {
-    final argument = this.argument as String;
-    return trackBreakdown(ref, argument);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is TrackBreakdownProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$trackBreakdownHash() => r'56dfd4093d42bfd51c6e9d8425aa2aa0128e8956';
-
-/// Provider for completion counts by curriculum, scoped to the active profile.
-///
-/// Returns a map keyed by the internal track storage key. One track per
-/// curriculum, so this is a single-entry map — not a user-facing concept.
-
-final class TrackBreakdownFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<Map<String, int>>, String> {
-  TrackBreakdownFamily._()
-    : super(
-        retry: null,
-        name: r'trackBreakdownProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  /// Provider for completion counts by curriculum, scoped to the active profile.
-  ///
-  /// Returns a map keyed by the internal track storage key. One track per
-  /// curriculum, so this is a single-entry map — not a user-facing concept.
-
-  TrackBreakdownProvider call(String curriculumId) =>
-      TrackBreakdownProvider._(argument: curriculumId, from: this);
-
-  @override
-  String toString() => r'trackBreakdownProvider';
-}
-
-/// Provider for aggregate completion count by curriculum, scoped to the active profile.
-///
-/// Returns the total completion count across all tracks for the given curriculum.
-
-@ProviderFor(aggregateCount)
-final aggregateCountProvider = AggregateCountFamily._();
-
-/// Provider for aggregate completion count by curriculum, scoped to the active profile.
-///
-/// Returns the total completion count across all tracks for the given curriculum.
-
-final class AggregateCountProvider
-    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
-    with $FutureModifier<int>, $FutureProvider<int> {
-  /// Provider for aggregate completion count by curriculum, scoped to the active profile.
-  ///
-  /// Returns the total completion count across all tracks for the given curriculum.
-  AggregateCountProvider._({
-    required AggregateCountFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'aggregateCountProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$aggregateCountHash();
-
-  @override
-  String toString() {
-    return r'aggregateCountProvider'
-        ''
-        '($argument)';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<int> create(Ref ref) {
-    final argument = this.argument as String;
-    return aggregateCount(ref, argument);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is AggregateCountProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$aggregateCountHash() => r'7a82d1f97ac19100861ddcc097013ddb2fa36933';
-
-/// Provider for aggregate completion count by curriculum, scoped to the active profile.
-///
-/// Returns the total completion count across all tracks for the given curriculum.
-
-final class AggregateCountFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<int>, String> {
-  AggregateCountFamily._()
-    : super(
-        retry: null,
-        name: r'aggregateCountProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  /// Provider for aggregate completion count by curriculum, scoped to the active profile.
-  ///
-  /// Returns the total completion count across all tracks for the given curriculum.
-
-  AggregateCountProvider call(String curriculumId) =>
-      AggregateCountProvider._(argument: curriculumId, from: this);
-
-  @override
-  String toString() => r'aggregateCountProvider';
-}
-
-/// Live progress snapshot derived directly from completion rows.
-///
-/// Unlike journey milestones, this updates on every completion and is used
-/// for immediate progress feedback in the Progress screen.
+/// Live progress snapshot from the active learner's [LearnerState]
+/// (DNI-474): tracked learning only (the old live-completions filter is
+/// now the `dated` / `catch_up` date states), distinct per curriculum and
+/// leaf. Before-tracking backfill is not "live" activity.
 
 @ProviderFor(progressOverviewStats)
 final progressOverviewStatsProvider = ProgressOverviewStatsProvider._();
 
-/// Live progress snapshot derived directly from completion rows.
-///
-/// Unlike journey milestones, this updates on every completion and is used
-/// for immediate progress feedback in the Progress screen.
+/// Live progress snapshot from the active learner's [LearnerState]
+/// (DNI-474): tracked learning only (the old live-completions filter is
+/// now the `dated` / `catch_up` date states), distinct per curriculum and
+/// leaf. Before-tracking backfill is not "live" activity.
 
 final class ProgressOverviewStatsProvider
     extends
@@ -283,10 +31,10 @@ final class ProgressOverviewStatsProvider
     with
         $FutureModifier<ProgressOverviewStats>,
         $FutureProvider<ProgressOverviewStats> {
-  /// Live progress snapshot derived directly from completion rows.
-  ///
-  /// Unlike journey milestones, this updates on every completion and is used
-  /// for immediate progress feedback in the Progress screen.
+  /// Live progress snapshot from the active learner's [LearnerState]
+  /// (DNI-474): tracked learning only (the old live-completions filter is
+  /// now the `dated` / `catch_up` date states), distinct per curriculum and
+  /// leaf. Before-tracking backfill is not "live" activity.
   ProgressOverviewStatsProvider._()
     : super(
         from: null,
@@ -314,22 +62,22 @@ final class ProgressOverviewStatsProvider
 }
 
 String _$progressOverviewStatsHash() =>
-    r'abc41225d6a03d50383baaf946509edce453c4bb';
+    r'e3b8a65dbb0ea30f095e53bfe540f3333c78758e';
 
 /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
 ///
-/// Aggregates content hierarchy, completions, and stage definitions into
-/// a [CurriculumProgressData] with hierarchy breakdowns, stage breakdowns,
-/// track breakdowns, and overall stats.
+/// The learner's scoped leaves and stage definitions, marked with the
+/// engine's learnt set and counted learning (DNI-474): goal progress is the
+/// distinct learnt count (FR-14), so repeats never inflate it.
 
 @ProviderFor(curriculumProgress)
 final curriculumProgressProvider = CurriculumProgressFamily._();
 
 /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
 ///
-/// Aggregates content hierarchy, completions, and stage definitions into
-/// a [CurriculumProgressData] with hierarchy breakdowns, stage breakdowns,
-/// track breakdowns, and overall stats.
+/// The learner's scoped leaves and stage definitions, marked with the
+/// engine's learnt set and counted learning (DNI-474): goal progress is the
+/// distinct learnt count (FR-14), so repeats never inflate it.
 
 final class CurriculumProgressProvider
     extends
@@ -343,9 +91,9 @@ final class CurriculumProgressProvider
         $FutureProvider<CurriculumProgressData> {
   /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
   ///
-  /// Aggregates content hierarchy, completions, and stage definitions into
-  /// a [CurriculumProgressData] with hierarchy breakdowns, stage breakdowns,
-  /// track breakdowns, and overall stats.
+  /// The learner's scoped leaves and stage definitions, marked with the
+  /// engine's learnt set and counted learning (DNI-474): goal progress is the
+  /// distinct learnt count (FR-14), so repeats never inflate it.
   CurriculumProgressProvider._({
     required CurriculumProgressFamily super.from,
     required String super.argument,
@@ -391,13 +139,13 @@ final class CurriculumProgressProvider
 }
 
 String _$curriculumProgressHash() =>
-    r'c5cb7304f3e1e42975c8d3b3e57df03ec82313d0';
+    r'f1d62081b0d5633e8acd20ad18b7297981ead952';
 
 /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
 ///
-/// Aggregates content hierarchy, completions, and stage definitions into
-/// a [CurriculumProgressData] with hierarchy breakdowns, stage breakdowns,
-/// track breakdowns, and overall stats.
+/// The learner's scoped leaves and stage definitions, marked with the
+/// engine's learnt set and counted learning (DNI-474): goal progress is the
+/// distinct learnt count (FR-14), so repeats never inflate it.
 
 final class CurriculumProgressFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<CurriculumProgressData>, String> {
@@ -412,9 +160,9 @@ final class CurriculumProgressFamily extends $Family
 
   /// Per-curriculum progress data provider (family keyed by curriculumId per P3).
   ///
-  /// Aggregates content hierarchy, completions, and stage definitions into
-  /// a [CurriculumProgressData] with hierarchy breakdowns, stage breakdowns,
-  /// track breakdowns, and overall stats.
+  /// The learner's scoped leaves and stage definitions, marked with the
+  /// engine's learnt set and counted learning (DNI-474): goal progress is the
+  /// distinct learnt count (FR-14), so repeats never inflate it.
 
   CurriculumProgressProvider call(String curriculumId) =>
       CurriculumProgressProvider._(argument: curriculumId, from: this);
@@ -423,48 +171,28 @@ final class CurriculumProgressFamily extends $Family
   String toString() => r'curriculumProgressProvider';
 }
 
-/// Pace status for a curriculum (null if no goal exists).
-///
-/// Family provider keyed by curriculumId per P3.
-///
-/// F2 fix: uses [ProgressPaceCalculator.compute] from the progress domain so that
-/// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
-/// velocity via the [trackStartDate] filter. Previously the scheduler's
-/// [ProgressPaceCalculator.calculate] received ALL personal completions including
-/// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
+/// The engine's finish projection of a curriculum (AD-35): null without an
+/// active learner, when the curriculum is not evaluated, or with no
+/// deadline goal ([ProjectionStatus.noDeadline]).
 
 @ProviderFor(curriculumPaceStatus)
 final curriculumPaceStatusProvider = CurriculumPaceStatusFamily._();
 
-/// Pace status for a curriculum (null if no goal exists).
-///
-/// Family provider keyed by curriculumId per P3.
-///
-/// F2 fix: uses [ProgressPaceCalculator.compute] from the progress domain so that
-/// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
-/// velocity via the [trackStartDate] filter. Previously the scheduler's
-/// [ProgressPaceCalculator.calculate] received ALL personal completions including
-/// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
+/// The engine's finish projection of a curriculum (AD-35): null without an
+/// active learner, when the curriculum is not evaluated, or with no
+/// deadline goal ([ProjectionStatus.noDeadline]).
 
 final class CurriculumPaceStatusProvider
     extends
         $FunctionalProvider<
-          AsyncValue<ProgressPaceCalculator?>,
-          ProgressPaceCalculator?,
-          FutureOr<ProgressPaceCalculator?>
+          AsyncValue<Projection?>,
+          Projection?,
+          FutureOr<Projection?>
         >
-    with
-        $FutureModifier<ProgressPaceCalculator?>,
-        $FutureProvider<ProgressPaceCalculator?> {
-  /// Pace status for a curriculum (null if no goal exists).
-  ///
-  /// Family provider keyed by curriculumId per P3.
-  ///
-  /// F2 fix: uses [ProgressPaceCalculator.compute] from the progress domain so that
-  /// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
-  /// velocity via the [trackStartDate] filter. Previously the scheduler's
-  /// [ProgressPaceCalculator.calculate] received ALL personal completions including
-  /// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
+    with $FutureModifier<Projection?>, $FutureProvider<Projection?> {
+  /// The engine's finish projection of a curriculum (AD-35): null without an
+  /// active learner, when the curriculum is not evaluated, or with no
+  /// deadline goal ([ProjectionStatus.noDeadline]).
   CurriculumPaceStatusProvider._({
     required CurriculumPaceStatusFamily super.from,
     required String super.argument,
@@ -488,12 +216,12 @@ final class CurriculumPaceStatusProvider
 
   @$internal
   @override
-  $FutureProviderElement<ProgressPaceCalculator?> $createElement(
+  $FutureProviderElement<Projection?> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<ProgressPaceCalculator?> create(Ref ref) {
+  FutureOr<Projection?> create(Ref ref) {
     final argument = this.argument as String;
     return curriculumPaceStatus(ref, argument);
   }
@@ -510,20 +238,14 @@ final class CurriculumPaceStatusProvider
 }
 
 String _$curriculumPaceStatusHash() =>
-    r'3e19644a619eda033e911a3bb7a97d1434c0c728';
+    r'90fd6322a7cf87ef1ccf0e768fbfab464962e213';
 
-/// Pace status for a curriculum (null if no goal exists).
-///
-/// Family provider keyed by curriculumId per P3.
-///
-/// F2 fix: uses [ProgressPaceCalculator.compute] from the progress domain so that
-/// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
-/// velocity via the [trackStartDate] filter. Previously the scheduler's
-/// [ProgressPaceCalculator.calculate] received ALL personal completions including
-/// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
+/// The engine's finish projection of a curriculum (AD-35): null without an
+/// active learner, when the curriculum is not evaluated, or with no
+/// deadline goal ([ProjectionStatus.noDeadline]).
 
 final class CurriculumPaceStatusFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<ProgressPaceCalculator?>, String> {
+    with $FunctionalFamilyOverride<FutureOr<Projection?>, String> {
   CurriculumPaceStatusFamily._()
     : super(
         retry: null,
@@ -533,15 +255,9 @@ final class CurriculumPaceStatusFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Pace status for a curriculum (null if no goal exists).
-  ///
-  /// Family provider keyed by curriculumId per P3.
-  ///
-  /// F2 fix: uses [ProgressPaceCalculator.compute] from the progress domain so that
-  /// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
-  /// velocity via the [trackStartDate] filter. Previously the scheduler's
-  /// [ProgressPaceCalculator.calculate] received ALL personal completions including
-  /// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
+  /// The engine's finish projection of a curriculum (AD-35): null without an
+  /// active learner, when the curriculum is not evaluated, or with no
+  /// deadline goal ([ProjectionStatus.noDeadline]).
 
   CurriculumPaceStatusProvider call(String curriculumId) =>
       CurriculumPaceStatusProvider._(argument: curriculumId, from: this);

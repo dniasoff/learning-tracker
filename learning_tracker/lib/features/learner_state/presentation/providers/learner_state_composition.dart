@@ -142,6 +142,7 @@ Stream<LearnerState> composeLearnerState({
                   earningEventIds: state.earningEventIds,
                   lockIgnoredEventIds: state.lockIgnoredEventIds,
                   rejectedRows: [...state.rejectedRows, ...rejected],
+                  countedLearns: state.countedLearns,
                 ),
         );
       }
