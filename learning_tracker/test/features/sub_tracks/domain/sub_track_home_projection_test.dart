@@ -157,4 +157,27 @@ void main() {
       expect(a.toString(), contains(schoolId));
     });
   });
+
+  group('window boundaries are the engine\'s onHome (AD-34, DNI-467)', () {
+    // window_start ≤ today ≤ window_end is inclusive at both ends; the day
+    // after window_end, a future start and an ended track are not on home.
+    // The projection never re-derives this: it follows the engine flag.
+    for (final (label, onHome) in [
+      ('today == window_start', true),
+      ('today == window_end', true),
+      ('day after window_end', false),
+      ('window_start in the future', false),
+      ('ended (tombstoned) track', false),
+    ]) {
+      test('$label → ${onHome ? 'row' : 'no row'}', () {
+        final items = projectHomeSubTracks(
+          subTracks: [homeSubTrack(id: schoolId)],
+          learnerState: homeLearnerState([
+            homeState(schoolId, onHome: onHome, position: berachos14),
+          ]),
+        );
+        expect(items, hasLength(onHome ? 1 : 0));
+      });
+    }
+  });
 }

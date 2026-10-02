@@ -165,4 +165,29 @@ void main() {
       isEmpty,
     );
   });
+
+  test(
+    'a replayed capture (same event id) is tracked and reported once',
+    () async {
+      final commands = FakeLearningCommands();
+      final c = _container(commands: commands);
+      commands.nextResult = const CaptureResult.success(
+        eventIds: ['01FAKE0000000000000000REPL'],
+      );
+      await _controller(c).plusOne(_item);
+      commands.nextResult = const CaptureResult.success(
+        eventIds: ['01FAKE0000000000000000REPL'],
+      );
+      await _controller(c).plusOne(_item);
+      expect(c.read(subTrackCaptureControllerProvider).awaitingEngine, {
+        '01FAKE0000000000000000REPL',
+      });
+      final state = homeLearnerState(
+        const [],
+        lockIgnoredEventIds: {'01FAKE0000000000000000REPL'},
+      );
+      expect(_controller(c).reconcile(state), ['01FAKE0000000000000000REPL']);
+      expect(_controller(c).reconcile(state), isEmpty);
+    },
+  );
 }
