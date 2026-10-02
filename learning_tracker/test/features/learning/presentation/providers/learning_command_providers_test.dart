@@ -11,7 +11,9 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
@@ -154,12 +156,21 @@ void main() {
 
   group('learningCommandsProvider', () {
     late InMemoryLearningWritePort port;
+    late InMemoryChangeLogRepository changeLog;
 
     List<Override> ready({bool lockSettings = true}) => [
       learningCommandClockProvider.overrideWithValue(() => engineAt(600)),
       activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
       activeAuthUidProvider.overrideWith((ref) async => 'auth-uid'),
       learningWritePortProvider.overrideWith((ref) async => port),
+      changeLogRepositoryProvider.overrideWith((ref) async => changeLog),
+      governedDocReaderProvider.overrideWith((ref) async => changeLog),
+      subTrackRepositoryProvider.overrideWith(
+        (ref) async => InMemorySubTrackRepository(),
+      ),
+      oversizedGovernedWritePortProvider.overrideWith(
+        (ref) async => FakeOversizedGovernedWritePort(),
+      ),
       pointsAmountReaderProvider.overrideWith((ref) async => _FixedPoints()),
       learningEventRepositoryProvider.overrideWith(
         (ref) async => InMemoryLearningEventRepository(),
@@ -176,7 +187,10 @@ void main() {
         ),
     ];
 
-    setUp(() => port = InMemoryLearningWritePort());
+    setUp(() {
+      port = InMemoryLearningWritePort();
+      changeLog = InMemoryChangeLogRepository();
+    });
 
     test('null while no learner is active', () async {
       final container = ProviderContainer.test(
@@ -210,6 +224,39 @@ void main() {
       expect(chunk.events.single.actor.uid, 'auth-uid');
       expect(chunk.events.single.actor.role, ActorRole.parent);
       expect(chunk.awards.single.amount, 7);
+    });
+
+    test('wires the governed half (DNI-470): a governed change lands in '
+        'the change log as the session actor', () async {
+      final container = ProviderContainer.test(overrides: ready());
+      final commands = (await settledAsync(
+        container,
+        learningCommandsProvider,
+      )).value!;
+      final result = await commands.applyGovernedChange(
+        GovernedAction(const [
+          GovernedEntityChange(
+            entity: GovernedEntity.mainTrackProgram,
+            entityId: engineCurriculum,
+            docs: [
+              GovernedDocPatch(
+                collection: 'profile_programs',
+                docId: engineCurriculum,
+                fields: {
+                  'curriculum_id': engineCurriculum,
+                  'program_id': 'daf',
+                },
+              ),
+            ],
+          ),
+        ]),
+      );
+      expect(result, isA<CaptureSuccess>());
+      final (scope, batch) = changeLog.batches.single;
+      expect(scope, c0Scope());
+      expect(batch.entry.actor.uid, 'auth-uid');
+      expect(batch.entry.actor.role, ActorRole.parent);
+      expect(batch.entry.at, engineAt(600));
     });
 
     test('fails closed (locked, nothing written) while the settings '

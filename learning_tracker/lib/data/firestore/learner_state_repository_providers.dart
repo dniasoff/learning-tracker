@@ -34,6 +34,7 @@
 /// `PathUidResolver.reconcileLiveUid`), not this file.
 library;
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/registry/path_uid_resolver.dart';
@@ -41,6 +42,7 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/callable_oversized_governed_write_port.dart';
 import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
@@ -245,11 +247,13 @@ final pointsAmountReaderProvider = FutureProvider<PointsAmountReader?>((
 }, retry: (retryCount, error) => null);
 
 /// [OversizedGovernedWritePort] over the active account's callable
-/// handle, or null while not ready.
-///
-/// C0 stub, filled by DNI-470 (1.8).
+/// handle (the `ownerOversizedGovernedWrite` callable on the account's
+/// named app, parent AD-1), or null while not ready (DNI-470).
 final oversizedGovernedWritePortProvider =
-    FutureProvider<OversizedGovernedWritePort?>(
-      (ref) => c0Stub('DNI-470', 'oversizedGovernedWritePortProvider'),
-      retry: (retryCount, error) => null,
-    );
+    FutureProvider<OversizedGovernedWritePort?>((ref) async {
+      final handles = await _readyHandles(ref);
+      if (handles == null) return null;
+      return CallableOversizedGovernedWritePort(
+        () => FirebaseFunctions.instanceFor(app: handles.app),
+      );
+    }, retry: (retryCount, error) => null);
