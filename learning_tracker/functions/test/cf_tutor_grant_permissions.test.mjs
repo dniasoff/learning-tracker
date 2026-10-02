@@ -364,8 +364,6 @@ describe('updateTutorGrantPermissions — AC-6 legacy completion callables', () 
 // (or never opens one) lands the write after the turn-off and fails here.
 describe('updateTutorGrantPermissions — AC-6 a turn-off between check and write', () => {
   const owner = { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE };
-  const bookmarkId = 'talmud_bavli_standard';
-  const bookmarkRef = () => profileRef().collection('bookmarks').doc(bookmarkId);
   const settingsRef = () =>
     profileRef().collection('preferences').doc('gamification_settings');
   const originalRunTransaction = db.runTransaction;
@@ -390,26 +388,6 @@ describe('updateTutorGrantPermissions — AC-6 a turn-off between check and writ
 
   afterEach(() => {
     db.runTransaction = originalRunTransaction;
-  });
-
-  test('tutorUpsertBookmark: a turn-off that commits first → denied, no bookmark', async () => {
-    interleaveBeforeNextTransaction(() =>
-      call(fns.updateTutorGrantPermissions, { grantId: GRANT, canEditLearning: false }, parentAuth));
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, {
-        ...owner, bookmarkId, bookmarkData: { sefaria_ref: 'Berakhot.2a', stage_id: 'stage-1' },
-      }),
-      'permission-denied',
-    );
-    assert.ok(interleaved, 'the turn-off ran inside the check-to-write window');
-    assert.equal((await bookmarkRef().get()).exists, false, 'no bookmark after turn-off');
-  });
-
-  test('tutorUpsertBookmark: with editing on, the bookmark is written', async () => {
-    await call(fns.tutorUpsertBookmark, {
-      ...owner, bookmarkId, bookmarkData: { sefaria_ref: 'Berakhot.2a', stage_id: 'stage-1' },
-    });
-    assert.equal((await bookmarkRef().get()).data().sefaria_ref, 'Berakhot.2a');
   });
 
   test('tutorUpdateGamificationSettings: a revoke that commits first → denied, nothing written', async () => {

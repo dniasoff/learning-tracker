@@ -53,7 +53,6 @@ export {
   tutorUpsertStudyDayConfig,
   tutorDeleteStudyDayConfig,
   tutorUpdateGamificationSettings,
-  tutorUpsertBookmark,
   tutorSetProfileProgram,
   tutorUpsertCurriculumScope,
   tutorEditProfile,

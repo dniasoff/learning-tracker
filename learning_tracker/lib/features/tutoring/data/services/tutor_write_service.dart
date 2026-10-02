@@ -260,23 +260,6 @@ class TutorWriteService {
     'settingsData': settingsData,
   });
 
-  // ── Bookmark (canEditLearning, AD-53) ─────────────────────────────────────────────────
-
-  /// Creates or updates a bookmark document in the child's profile.
-  Future<TutorWriteResult> upsertBookmark({
-    required String grantId,
-    required String ownerUid,
-    required String profileId,
-    required String bookmarkId,
-    required Map<String, dynamic> bookmarkData,
-  }) => _call('tutorUpsertBookmark', {
-    'grantId': grantId,
-    'ownerUid': ownerUid,
-    'profileId': profileId,
-    'bookmarkId': bookmarkId,
-    'bookmarkData': bookmarkData,
-  });
-
   // ── Profile program (canEditLearning, AD-53) ──────────────────────────────────────────
 
   /// Creates or updates a profile_programs document in the child's profile.

@@ -36,8 +36,8 @@ import {
 //    idempotent replay. None of these callables checks a permission itself.
 //
 // B. LEGACY callables not governed by AD-38 — tutorResetCompletion,
-//    tutorUpdateGamificationSettings, tutorUpsertBookmark (retired at the
-//    cutover) and tutorEditProfile. They keep the per-call grant contract:
+//    tutorUpdateGamificationSettings and tutorEditProfile. They keep the
+//    per-call grant contract:
 //      1. Caller must be authenticated.
 //      2. Grant must be active and grant.tutor_uid must equal the caller uid.
 //      3. grant.parent_uid must equal the supplied ownerUid.
@@ -50,47 +50,12 @@ import {
 // Admin SDK bypasses Firestore Security Rules — these checks are the sole
 // enforcement layer for these write paths.
 
-// ── AUD-firebase-10: field whitelist for the legacy bookmark CF ──────────────
-//
-// Admin SDK writes bypass firestore.rules entirely, so `assertAllowedFields`
-// below is the only server-side gate on WHICH fields a legacy caller may write
-// and how large they may be. The governed callables are validated against the
-// AD-52 storage schema by `writeWithChangeLog` instead. preferences
-// (gamification_settings) has no rules `.hasOnly()` counterpart, so only the
-// size cap applies there (the `null` allowedKeys call site below).
-
-const BOOKMARK_ALLOWED_FIELDS = [
-  "profile_id", "curriculum_id", "content_item_id", "sefaria_ref",
-  "stage_id", "updated_at", "synced_at",
-] as const;
-
-/**
- * Throws HttpsError('invalid-argument') if `data` contains a key outside
- * `allowedKeys`, or if any string value exceeds `maxStringLength`.
- *
- * @param data            the caller-supplied payload object (e.g. goalData).
- * @param fieldParamName  its request.data field name, used in error messages.
- * @param allowedKeys     null means the collection has no field whitelist
- *                        (no rules `.hasOnly()` counterpart) — only the size
- *                        cap is enforced.
- */
-function assertAllowedFields(
+/** Reject oversized string values in tutor-supplied settings. */
+function assertSettingsStringValues(
   data: Record<string, unknown>,
   fieldParamName: string,
-  allowedKeys: readonly string[] | null,
   maxStringLength = 5000,
 ): void {
-  if (allowedKeys !== null) {
-    const allowed = new Set<string>(allowedKeys);
-    for (const key of Object.keys(data)) {
-      if (!allowed.has(key)) {
-        throw new HttpsError(
-          "invalid-argument",
-          `${fieldParamName} contains an unexpected field: ${key}`,
-        );
-      }
-    }
-  }
   for (const [key, value] of Object.entries(data)) {
     if (typeof value === "string" && value.length > maxStringLength) {
       throw new HttpsError(
@@ -561,7 +526,7 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
   // No firestore.rules `.hasOnly()` counterpart for preferences/{scope} — it's
   // intentionally an open-ended bag even for the owner's own direct writes,
   // so only the size cap applies here (null = no key whitelist).
-  assertAllowedFields(settingsData, "settingsData", null);
+  assertSettingsStringValues(settingsData, "settingsData");
 
   // Grant check and write in ONE transaction, so a revocation or permission
   // change that commits first aborts the write (DNI-487 review).
@@ -590,71 +555,6 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
   logger.info(
     `tutorUpdateGamificationSettings: tutor=${callerUid} grant=${grantId} ` +
       `ownerUid=${ownerUid} profileId=${profileId} permKey=${permKey}`,
-  );
-
-  return { success: true };
-});
-
-// ── tutorUpsertBookmark ───────────────────────────────────────────────────────
-//
-// Creates or updates a bookmark document in the child's profile.
-// Requires can_edit_learning (AD-53, DNI-487): bookmarks are part of the
-// learning position. Retired by Story 1.16 (DNI-478).
-//
-// Expects:
-//   {
-//     grantId, ownerUid, profileId,
-//     bookmarkId: string,       // bookmarks doc-id ("{curriculum_id}_{track_type}")
-//     bookmarkData: object,
-//   }
-// Returns: { success: true }
-
-export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, bookmarkId, bookmarkData } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof bookmarkId !== "string" || !bookmarkId)
-    throw new HttpsError("invalid-argument", "bookmarkId must be a non-empty string");
-  if (!bookmarkData || typeof bookmarkData !== "object" || Array.isArray(bookmarkData))
-    throw new HttpsError("invalid-argument", "bookmarkData must be an object");
-  assertAllowedFields(bookmarkData, "bookmarkData", BOOKMARK_ALLOWED_FIELDS);
-
-  // The grant check, the bookmark read and the write run in ONE transaction
-  // (AD-53, DNI-487 AC-6): a turn-off or revocation that commits first aborts
-  // the write (the grant is re-read on retry and denied), so a tutor whose
-  // editing was turned off can never land a bookmark.
-  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
-    const verified = await verifyTutorGrant(
-      callerUid, grantId, ownerUid, profileId, "can_edit_learning", txn,
-    );
-    const bookmarkRef = verified.profilePath.collection("bookmarks").doc(bookmarkId);
-    const beforeSnap = await txn.get(bookmarkRef);
-    txn.set(
-      bookmarkRef,
-      { ...bookmarkData, synced_at: verified.writtenAt },
-      { merge: true },
-    );
-    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
-  });
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "bookmark_upserted",
-    `profile/${profileId}/bookmarks/${bookmarkId}`,
-    beforeValue, bookmarkData, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorUpsertBookmark: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} bookmarkId=${bookmarkId}`,
   );
 
   return { success: true };
