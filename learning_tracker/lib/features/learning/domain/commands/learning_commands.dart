@@ -108,6 +108,10 @@ abstract interface class LearningCommands {
   ///
   /// [nodes] is allowed only with [DateState.beforeTracking]; [source] is
   /// `'main'` or a sub-track ULID.
+  ///
+  /// One event is planned per ref, then per node, in the given order and
+  /// with ascending ids, so the sorted union of a success's `eventIds` and
+  /// `rejectedEventIds` lines up with [refs] followed by [nodes].
   Future<CaptureResult> capture({
     required String curriculumId,
     List<LeafRef> refs = const [],
@@ -302,6 +306,7 @@ final class DefaultLearningCommands implements LearningCommands {
     return CaptureResult.success(
       eventIds: outcome.eventIds,
       queued: outcome.queued,
+      rejectedEventIds: outcome.rejectedEventIds,
     );
   }
 

@@ -10,9 +10,10 @@
 /// * [pendingCapturesProvider] is this device's optimistic overlay: the
 ///   leaves are marked recorded before the command returns, so the row and
 ///   the next picker move on in the same frame (UX-DR-154). Undo, a refused
-///   capture, or a queued chunk the server later rejects (the Learn rollback
-///   snackbar, UX-DR-110) removes them again; an entry is pruned once the
-///   engine counts (or lock-ignores) its events.
+///   capture, or a chunk the server rejects — within the ack window or
+///   later (the Learn rollback listener, UX-DR-110) — removes exactly its
+///   leaves again; an entry is pruned once the engine counts (or
+///   lock-ignores) its events.
 library;
 
 import 'package:flutter/material.dart';
@@ -115,6 +116,7 @@ final class PendingCaptures {
 /// See [pendingCapturesProvider].
 class PendingCapturesNotifier extends Notifier<PendingCaptures> {
   int _next = 0;
+  final _failed = <String>{};
 
   @override
   PendingCaptures build() {
@@ -145,24 +147,36 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
     return token;
   }
 
-  /// Binds the capture [token] to the [eventIds] it wrote, one per leaf in
-  /// order (AD-31 capture plans one event per leaf).
-  void bind(int token, List<String> eventIds) {
-    state = PendingCaptures([
-      for (final e in state.entries)
-        if (e.token != token)
-          e
-        else
-          PendingCapture(
-            token: token,
-            curriculumId: e.curriculumId,
-            source: e.source,
-            refs: {
-              for (final (i, r) in e.refs.values.indexed)
-                i < eventIds.length ? eventIds[i] : '#$token/$i': r,
-            },
-          ),
-    ]);
+  /// Binds the capture [token] to [plannedIds], the ids of every event the
+  /// capture planned, one per leaf in leaf order (AD-31; see
+  /// `LearningCommands.capture`). A leaf whose event is in [notSaved] — a
+  /// chunk the server rejected within the ack window — or was already
+  /// reported failed ([rollBack]) is dropped, so only saved or queued
+  /// leaves stay recorded. A plan that does not match the leaves one to
+  /// one drops the whole capture (the engine then shows what was saved).
+  void bind(
+    int token,
+    List<String> plannedIds, {
+    Iterable<String> notSaved = const [],
+  }) {
+    final gone = {...notSaved, ..._failed};
+    state = PendingCaptures(
+      [
+        for (final e in state.entries)
+          if (e.token != token)
+            e
+          else if (e.refs.length == plannedIds.length)
+            PendingCapture(
+              token: token,
+              curriculumId: e.curriculumId,
+              source: e.source,
+              refs: {
+                for (final (i, r) in e.refs.values.indexed)
+                  if (!gone.contains(plannedIds[i])) plannedIds[i]: r,
+              },
+            ),
+      ].where((e) => e.refs.isNotEmpty).toList(),
+    );
   }
 
   /// Drops the capture [token] (nothing was written).
@@ -171,12 +185,23 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
       if (e.token != token) e,
   ]);
 
-  /// Drops the leaves of [eventIds] (undone, or rejected by the server).
+  /// Drops the leaves of [eventIds] (undone).
   void dropEvents(Iterable<String> eventIds) {
     final gone = eventIds.toSet();
     if (gone.isEmpty) return;
     _rebuild((id) => gone.contains(id));
   }
+
+  /// Rolls back the leaves of [eventIds], which the server rejected for
+  /// good (a pending failure, AD-54 Recovery). The ids are remembered, so
+  /// a capture still awaiting its result never binds them as recorded.
+  void rollBack(Iterable<String> eventIds) {
+    _failed.addAll(eventIds);
+    dropEvents(eventIds);
+  }
+
+  /// Forgets the failure of [eventIds]: a retry saved them.
+  void retried(Iterable<String> eventIds) => _failed.removeAll(eventIds);
 
   void _prune(LearnerState s) => _rebuild(
     (id) =>
@@ -265,8 +290,17 @@ Future<CaptureResult?> captureLeaves(
     notSaved();
     return null;
   }
-  if (result case CaptureSuccess(:final eventIds) when eventIds.isNotEmpty) {
-    pending.bind(token, eventIds);
+  if (result case CaptureSuccess(
+    :final eventIds,
+    :final rejectedEventIds,
+  ) when eventIds.isNotEmpty) {
+    // A partly rejected capture omits the rejected chunks from `eventIds`:
+    // the sorted union is the plan, one id per leaf in leaf order.
+    pending.bind(
+      token,
+      [...eventIds, ...rejectedEventIds]..sort(),
+      notSaved: rejectedEventIds,
+    );
   } else {
     pending.dropToken(token);
   }
@@ -275,7 +309,10 @@ Future<CaptureResult?> captureLeaves(
     context,
     result: result,
     commands: commands,
-    message: l10n.upToPickerRecorded(refs.length),
+    // Never claim the leaves of a rejected chunk (AD-54).
+    message: l10n.upToPickerRecorded(
+      result is CaptureSuccess ? result.eventIds.length : refs.length,
+    ),
     messenger: messenger,
     onUndone: () {
       if (result case CaptureSuccess(:final eventIds)) {
