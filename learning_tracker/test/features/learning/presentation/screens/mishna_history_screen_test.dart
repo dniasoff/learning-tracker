@@ -424,6 +424,9 @@ void main() {
       expect(find.byType(AppErrorView), findsOneWidget);
       expect(_row(1), findsNothing);
       expect(find.text('Learnt'), findsNothing);
+      // The route stays leavable: the app bar shows only the title.
+      expect(find.text('Mishna history'), findsOneWidget);
+      expect(find.byKey(const Key('mishnaHistoryOpenText')), findsNothing);
     });
   });
 

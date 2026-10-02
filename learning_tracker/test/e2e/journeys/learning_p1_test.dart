@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -222,6 +223,9 @@ void main() {
             anyActiveTrackHasChazaraProvider.overrideWith(
               (ref) => Future.value(false),
             ),
+            // The learner's lock settings are a C0 stub until DNI-470;
+            // this journey covers navigation, so the lock is open here.
+            mishnaHistoryLockProvider.overrideWithValue(const AsyncData(false)),
             // Stub adjacent refs to avoid curriculum content scan in reader.
             adjacentContentRefsProvider(
               matchRef,

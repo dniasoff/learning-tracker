@@ -76,8 +76,14 @@ class MishnaHistoryScreen extends ConsumerWidget {
     // up, or while it is still unknown (fail closed).
     final lock = ref.watch(mishnaHistoryLockProvider);
     if (lock case AsyncError(:final error, :final stackTrace)) {
+      // The title and back affordance carry no event content, so the
+      // learner can leave a route whose lock could not be read.
       return Scaffold(
         backgroundColor: context.colors.surfaceF4,
+        appBar: AppBar(
+          foregroundColor: context.colors.brandInk,
+          title: Text(l10n.mishnaHistoryTitle),
+        ),
         body: SafeArea(
           child: AppErrorView(
             error: error,
