@@ -17,9 +17,11 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -57,6 +59,13 @@ void main() {
         overrides: [
           activeAccountFirebaseProvider.overrideWith(
             (ref) async => handles(firestore),
+          ),
+          ownerGovernedWriterProvider.overrideWithValue(
+            FirestoreGovernedWriter(
+              firestore,
+              uid: uid,
+              profileId: profileDocId,
+            ),
           ),
         ],
       );

@@ -84,24 +84,33 @@ class LearningProcessWizardService {
   /// here — see the module doc comment); the two run sequentially, program
   /// association first.
   Future<void> applyWizardResult(WizardResult result) async {
-    if (result.choice == WizardChoice.preset) {
-      final program = _learningProgramRepo.getProgramById(result.programId!);
-      if (program != null) {
-        await _profileProgramRepository.setProgram(
-          curriculumId: result.curriculumId,
-          programId: program.id,
-        );
-      }
-    }
-
-    // An unknown preset yields no stage rows: write nothing rather than
-    // ending the curriculum's existing stages.
-    final stages = buildStages(result);
+    // Keep the legacy association write inside the preset builder. The
+    // Add Track action uses the pure [buildStages] method and commits its
+    // full configuration as one governed action.
+    final stages = switch (result.choice) {
+      WizardChoice.preset => await _buildAndPersistPresetStages(result),
+      WizardChoice.custom => _buildCustomStages(result),
+      WizardChoice.noReview => _buildNoReviewStages(result),
+    };
     if (stages.isEmpty) return;
     await _stageRepository.replaceStagesForCurriculum(
       result.curriculumId,
       stages,
     );
+  }
+
+  /// Stores the preset association (when it resolves) and returns its stages.
+  /// An unknown preset yields no rows and performs no write.
+  Future<List<StageDefinition>> _buildAndPersistPresetStages(
+    WizardResult result,
+  ) async {
+    final program = _learningProgramRepo.getProgramById(result.programId!);
+    if (program == null) return const [];
+    await _profileProgramRepository.setProgram(
+      curriculumId: result.curriculumId,
+      programId: program.id,
+    );
+    return _buildPresetStages(result);
   }
 
   /// The stage rows [result] describes, without writing anything (no
