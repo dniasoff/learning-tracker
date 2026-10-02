@@ -2,6 +2,9 @@
 // (DNI-465): AC-1, AC-2, AC-4, AC-5 and AC-6 of Story 1.3, plus the
 // story's edge coverage. AC-3 is in expand_ground_test.dart and AC-7 in
 // completed_units_test.dart.
+//
+// DNI-468 (Story 1.6) adds the points groups: AC-1 counted events, AC-2
+// first-learning earning and AC-3 review earning.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -668,11 +671,173 @@ void main() {
     });
   });
 
+  group('DNI-468 AC-1: countedEventIds', () {
+    // Inside the fixture learner's fail-closed Shabbos lock (see the
+    // DNI-466 group below).
+    const inLock = 6000;
+
+    test('profile-wide learn events not voided and not lock-ignored', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineLearn(2, b12, stage: 1, minutes: 10),
+            engineVoid(3, 2, minutes: 20),
+            engineLearn(4, 'Mishnah Peah 1:1', minutes: inLock),
+            engineLearn(5, 'R 1', curriculumId: 'retired'),
+            engineVoid(6, 1, minutes: inLock),
+          ],
+        ),
+      );
+      // 2 is voided, 4 is lock-ignored, the lock-ignored void 6 cancels
+      // nothing, and void events (3, 6) are never counted.
+      expect(state.countedEventIds, {engineUlid(1), engineUlid(5)});
+      expect(state.lockIgnoredEventIds, {engineUlid(4), engineUlid(6)});
+    });
+
+    test('a voided or lock-ignored event never earns', () {
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineVoid(2, 1, minutes: 5),
+            engineLearn(3, b12, stage: 1, minutes: inLock),
+          ],
+        ),
+      );
+      expect(state.countedEventIds, isEmpty);
+      expect(state.earningEventIds, isEmpty);
+    });
+  });
+
+  group('DNI-468 AC-2: first-learning earning', () {
+    const nine = 9 * 60;
+    const six = 18 * 60;
+
+    Set<String> earning(List<LearningEvent> events) =>
+        engine.run(engineInputs(events: events)).earningEventIds;
+
+    test('a sub-track event at 09:00 blocks a main dated event at 18:00', () {
+      expect(
+        earning([
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('a before_tracking node event blocks every leaf under it', () {
+      expect(
+        earning([
+          engineGround(1, berakhot1, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six),
+          engineLearn(3, 'Mishnah Berakhot 1:3', stage: 1, minutes: six),
+          engineLearn(4, 'Mishnah Berakhot 2:1', stage: 1, minutes: six),
+        ]),
+        {engineUlid(4)},
+      );
+    });
+
+    test('a before_tracking leaf event blocks that leaf', () {
+      expect(
+        earning([
+          engineLearn(1, b11, dateState: DateState.beforeTracking),
+          engineLearn(2, b11, stage: 1, minutes: six),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('an eligible main first event earns and its repeats do not', () {
+      expect(
+        earning([
+          engineLearn(1, b11, stage: 1, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six),
+          engineLearn(3, b11, source: subTrack, minutes: six + 1),
+          engineLearn(4, b12, minutes: nine),
+          engineLearn(5, 'Mishnah Peah 1:1', dateState: DateState.catchUp),
+        ]),
+        // A free tick (no stage) and a catch_up event are main events too.
+        {engineUlid(1), engineUlid(4), engineUlid(5)},
+      );
+    });
+
+    test('equal effective instants are ordered by event id', () {
+      expect(
+        earning([
+          engineLearn(1, b11, stage: 1, minutes: nine),
+          engineLearn(2, b11, source: subTrack, minutes: nine),
+        ]),
+        {engineUlid(1)},
+      );
+      expect(
+        earning([
+          engineLearn(2, b11, stage: 1, minutes: nine),
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('a replacement or import is ordered by original_recorded_at', () {
+      // Recorded at 18:00 as a copy of an 08:00 event: it is earlier than
+      // the 09:00 sub-track tick.
+      expect(
+        earning([
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six, originalMinutes: 480),
+        ]),
+        {engineUlid(2)},
+      );
+      // A copy of a 10:00 event stays behind the 09:00 tick.
+      expect(
+        earning([
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+          engineLearn(2, b11, stage: 1, minutes: six, originalMinutes: 600),
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('voiding the first event lets the next counted event decide', () {
+      expect(
+        earning([
+          engineLearn(1, b11, source: subTrack, minutes: nine),
+          engineVoid(2, 1, minutes: nine + 1),
+          engineLearn(3, b11, stage: 1, minutes: six),
+        ]),
+        {engineUlid(3)},
+      );
+    });
+
+    test('earning is profile-wide across curricula', () {
+      final otherCorpus = InMemoryCorpus('other', const [
+        CorpusNode(NodeEntry(level: 'sefer', ref: 'O'), [
+          CorpusNode(NodeEntry(level: 'chapter', ref: 'O 1')),
+        ]),
+      ]);
+      final state = engine.run(
+        engineInputs(
+          events: [
+            engineLearn(1, b11, stage: 1),
+            engineLearn(2, 'O 1', curriculumId: 'other'),
+            engineLearn(3, 'Unknown 1', curriculumId: 'nocorpus'),
+          ],
+          corpora: {engineCurriculum: mishnayosCorpus(), 'other': otherCorpus},
+        ),
+      );
+      // A curriculum without a corpus resolves no leaf, so nothing earns.
+      expect(state.earningEventIds, {engineUlid(1), engineUlid(2)});
+    });
+  });
+
   test('no inputs give no curricula', () {
     final state = engine.run(
       engineInputs(intents: const {}, corpora: const {}),
     );
     expect(state.curricula, isEmpty);
     expect(state.countedEventIds, isEmpty);
+    expect(state.earningEventIds, isEmpty);
   });
 }

@@ -17,7 +17,8 @@
 ///    (`calendar_plan.dart`), reviews (`review_schedule.dart` over
 ///    `main_track_config_history.dart`), goal target and pace
 ///    (`goal_target.dart`) and projection (`projection.dart`);
-/// 7. points (DNI-468).
+/// 7. points (`earning_events.dart`, DNI-468): the profile-wide
+///    `earningEventIds`, from every curriculum with a corpus.
 ///
 /// No I/O, clock read or global state: every input is in
 /// [LearnerStateInputs], and identical inputs give equal outputs.
@@ -30,6 +31,7 @@ import 'package:learning_tracker/domain/learner_state/completed_units.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/counted_events.dart';
 import 'package:learning_tracker/domain/learner_state/derived_curriculum_state.dart';
+import 'package:learning_tracker/domain/learner_state/earning_events.dart';
 import 'package:learning_tracker/domain/learner_state/expand_ground.dart';
 import 'package:learning_tracker/domain/learner_state/goal_target.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
@@ -152,20 +154,30 @@ final class LearnerStateEngine {
       ...inputs.mainTrackIntent.keys,
       ...learnsByCurriculum.keys,
     }.toList()..sort();
+    final states = <String, CurriculumState>{};
+    final earning = <String>{};
+    for (final c in curricula) {
+      final (state, earners) = _curriculum(
+        c,
+        inputs,
+        learnsByCurriculum[c] ?? const [],
+        locks,
+      );
+      states[c] = state;
+      earning.addAll(earners);
+    }
     return LearnerState(
       nowUtc: inputs.nowUtc,
-      curricula: {
-        for (final c in curricula)
-          c: _curriculum(c, inputs, learnsByCurriculum[c] ?? const [], locks),
-      },
+      curricula: states,
       countedEventIds: counted.countedIds,
+      earningEventIds: earning,
       lockIgnoredEventIds: counted.lockIgnoredIds,
     );
   }
 
-  /// One curriculum. [learns] are its counted `learn` events, in event
-  /// order.
-  DerivedCurriculumState _curriculum(
+  /// One curriculum and its earning event ids (stage 7). [learns] are its
+  /// counted `learn` events, in event order.
+  (DerivedCurriculumState, Set<String>) _curriculum(
     String curriculumId,
     LearnerStateInputs inputs,
     List<LearningEvent> learns,
@@ -175,10 +187,15 @@ final class LearnerStateEngine {
     final intent = inputs.mainTrackIntent[curriculumId];
     final evaluated = corpus != null && intent != null && intent.isEvaluated;
     if (corpus == null) {
-      return DerivedCurriculumState(
-        curriculumId: curriculumId,
-        evaluated: false,
-        learnt: LearntRecord.none(),
+      // Without a corpus no event resolves to a leaf: nothing is learnt
+      // and nothing earns.
+      return (
+        DerivedCurriculumState(
+          curriculumId: curriculumId,
+          evaluated: false,
+          learnt: LearntRecord.none(),
+        ),
+        const <String>{},
       );
     }
     final live = _liveDocs(intent);
@@ -201,7 +218,11 @@ final class LearnerStateEngine {
             firstStage,
           )
         : const MainTrackRecord.none();
-    return DerivedCurriculumState(
+    final earners = curriculumEarningEventIds(
+      countedLearns: learns,
+      corpus: corpus,
+    );
+    final state = DerivedCurriculumState(
       curriculumId: curriculumId,
       evaluated: evaluated,
       learnt: learnt,
@@ -233,6 +254,7 @@ final class LearnerStateEngine {
             )
           : null,
     );
+    return (state, earners);
   }
 
   /// The AD-33 main-track stage of an evaluated curriculum.
