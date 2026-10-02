@@ -4,7 +4,6 @@ import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
 import '../../helpers/learner_state/c0_fixtures.dart';
-import '../../helpers/learner_state/c0_stub_matcher.dart';
 import '../../helpers/learner_state_fixtures.dart';
 
 void main() {
@@ -14,8 +13,7 @@ void main() {
     expect(valid('2026-9-1'), isFalse);
   });
 
-  test('civilDate is a C0 stub owned by DNI-466', () {
-    final history = c0SettingsHistory();
-    expect(() => civilDate(t0, history), throwsC0Stub('DNI-466', 'civilDate'));
+  test('civilDate reads the time_zone in force (UTC fixture)', () {
+    expect(civilDate(t0, c0SettingsHistory()), '2026-09-01');
   });
 }
