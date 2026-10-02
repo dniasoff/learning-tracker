@@ -372,6 +372,95 @@ void main() {
       expect(edit.learnsOnShabbos, isNull);
     });
 
+    test('a no-op edit of an open-ended row writes nothing (AC-8)', () {
+      final current = storedSchoolYear(
+        '01JHARN0000000000000000001',
+        openEnd: true,
+      );
+      final values = SchoolYearFormValues.of(current);
+      expect(values.endMonth, isNull);
+      expect(values.windowEnd, isNull);
+      expect(_validate(values, editingId: current.id), isEmpty);
+      expect(schoolYearEdit(current, values), isNull);
+    });
+
+    test('an open-ended row keeps its open end when another field changes', () {
+      final current = storedSchoolYear(
+        '01JHARN0000000000000000001',
+        openEnd: true,
+      );
+      final values = SchoolYearFormValues.of(current);
+      final edit = schoolYearEdit(
+        current,
+        SchoolYearFormValues(
+          name: values.name,
+          academicYear: values.academicYear,
+          startMonth: values.startMonth,
+          endMonth: values.endMonth,
+          rateText: '12',
+          weeksText: values.weeksText,
+          learnsOnShabbos: values.learnsOnShabbos,
+        ),
+      )!;
+      expect(edit.ratePerWeek, 12);
+      expect(edit.windowEnd, isNull);
+      expect(edit.clearWindowEnd, isFalse);
+    });
+
+    test('choosing an end month on an open-ended row bounds it', () {
+      final current = storedSchoolYear(
+        '01JHARN0000000000000000001',
+        openEnd: true,
+      );
+      final values = SchoolYearFormValues.of(current);
+      final edit = schoolYearEdit(
+        current,
+        SchoolYearFormValues(
+          name: values.name,
+          academicYear: values.academicYear,
+          startMonth: values.startMonth,
+          endMonth: 6,
+          rateText: values.rateText,
+          weeksText: values.weeksText,
+          learnsOnShabbos: values.learnsOnShabbos,
+        ),
+      )!;
+      expect(edit.windowEnd, '2027-06-30');
+      expect(edit.clearWindowEnd, isFalse);
+      expect(edit.ratePerWeek, isNull);
+    });
+
+    test('clearing the end month of a bounded row opens it explicitly', () {
+      final current = storedSchoolYear('01JHARN0000000000000000001');
+      final values = SchoolYearFormValues.of(current);
+      final edit = schoolYearEdit(
+        current,
+        SchoolYearFormValues(
+          name: values.name,
+          academicYear: values.academicYear,
+          startMonth: values.startMonth,
+          endMonth: null,
+          rateText: values.rateText,
+          weeksText: values.weeksText,
+          learnsOnShabbos: values.learnsOnShabbos,
+        ),
+      )!;
+      expect(edit.clearWindowEnd, isTrue);
+      expect(edit.windowEnd, isNull);
+    });
+
+    test('an open-ended window overlaps every later school window', () {
+      final open = storedSchoolYear(
+        '01JHARN0000000000000000002',
+        academicYear: 2025,
+        openEnd: true,
+      );
+      expect(
+        _validate(_values(academicYear: 2028), subTracks: [open]),
+        {SchoolYearFormField.window: SchoolYearFormError.windowOverlap},
+      );
+    });
+
     test('values of a stored track round-trip its months and numbers', () {
       final v = SchoolYearFormValues.of(
         storedSchoolYear(

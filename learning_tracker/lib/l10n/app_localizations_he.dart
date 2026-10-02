@@ -3999,6 +3999,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get subTrackFormEndMonthLabel => 'חודש סיום';
 
   @override
+  String get subTrackFormEndMonthOpen => 'ללא חודש סיום';
+
+  @override
   String subTrackFormRateLabel(String unit) {
     return '$unit בשבוע';
   }

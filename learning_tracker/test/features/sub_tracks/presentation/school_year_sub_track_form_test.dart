@@ -485,6 +485,25 @@ void main() {
       expect(h.repo.entries, isEmpty);
       expect(_formOpen(), isFalse);
     });
+
+    testWidgets('an open-ended row stays open on an unchanged save', (
+      tester,
+    ) async {
+      h = SubTrackHarness(seed: [storedSchoolYear(_existingId, openEnd: true)]);
+      await _pumpForm(tester, h, subTrackId: _existingId);
+      expect(find.text('No end month'), findsOneWidget);
+      await _save(tester);
+      expect(h.commands.edits, isEmpty);
+      expect(h.repo.entries, isEmpty);
+      expect((await tester.runAsync(h.stored))!.single.windowEnd, isNull);
+      expect(_formOpen(), isFalse);
+    });
+
+    testWidgets('a bounded row offers no open end month', (tester) async {
+      h = SubTrackHarness(seed: [storedSchoolYear(_existingId)]);
+      await _pumpForm(tester, h, subTrackId: _existingId);
+      expect(find.text('No end month'), findsNothing);
+    });
   });
 
   group('AC-3 parent session', () {

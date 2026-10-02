@@ -154,7 +154,11 @@ class _SchoolYearSubTrackFormState
 
   int? _academicYear;
   late int _startMonth;
-  late int _endMonth;
+  int? _endMonth;
+
+  /// The edited row is open-ended: the end-month field offers "No end
+  /// month" so an untouched open end stays open (AC-8).
+  late final bool _openEndAllowed;
   late bool _learnsOnShabbos;
 
   /// Fields validated so far (blurred or changed); all are after a save.
@@ -187,6 +191,7 @@ class _SchoolYearSubTrackFormState
     _academicYear = initial.academicYear;
     _startMonth = initial.startMonth;
     _endMonth = initial.endMonth;
+    _openEndAllowed = existing != null && existing.windowEnd == null;
     _learnsOnShabbos = initial.learnsOnShabbos;
     _blurValidates(_nameFocus, SchoolYearFormField.name);
     _blurValidates(_rateFocus, SchoolYearFormField.rate);
@@ -433,29 +438,38 @@ class _SchoolYearSubTrackFormState
           ),
         );
 
-    Widget monthField(String label, int value, ValueChanged<int> onChanged) =>
-        DropdownButtonFormField<int>(
-          initialValue: value,
-          isExpanded: true,
-          decoration: filled(label),
-          items: [
-            for (var m = 1; m <= 12; m++)
-              DropdownMenuItem(value: m, child: Text(monthName(m))),
-          ],
-          onChanged: (m) {
-            if (m != null) onChanged(m);
-          },
-        );
+    Widget monthField(
+      String label,
+      int? value,
+      ValueChanged<int?> onChanged, {
+      bool allowOpen = false,
+    }) => DropdownButtonFormField<int?>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: filled(label),
+      items: [
+        if (allowOpen)
+          DropdownMenuItem<int?>(
+            child: Text(l10n.subTrackFormEndMonthOpen),
+          ),
+        for (var m = 1; m <= 12; m++)
+          DropdownMenuItem<int?>(value: m, child: Text(monthName(m))),
+      ],
+      onChanged: (m) {
+        if (m != null || allowOpen) onChanged(m);
+      },
+    );
 
     final startField = monthField(
       l10n.subTrackFormStartMonthLabel,
       _startMonth,
-      (m) => _changed(SchoolYearFormField.window, () => _startMonth = m),
+      (m) => _changed(SchoolYearFormField.window, () => _startMonth = m!),
     );
     final endField = monthField(
       l10n.subTrackFormEndMonthLabel,
       _endMonth,
       (m) => _changed(SchoolYearFormField.window, () => _endMonth = m),
+      allowOpen: _openEndAllowed,
     );
     final windowError = _errorText(l10n, errors, SchoolYearFormField.window);
 

@@ -219,7 +219,9 @@ final class SchoolYearFormValues {
       name: track.name,
       academicYear: track.academicYear ?? academicYearOf(track.windowStart),
       startMonth: _monthOf(track.windowStart),
-      endMonth: end == null ? kDefaultSchoolYearEndMonth : _monthOf(end),
+      // An open-ended row stays open: no default end month is invented, so
+      // a no-op edit writes nothing (AC-8).
+      endMonth: end == null ? null : _monthOf(end),
       rateText: formatFormNumber(track.ratePerWeek),
       weeksText: formatFormNumber(track.weeksPerYear),
       learnsOnShabbos: track.learnsOnShabbos,
@@ -235,8 +237,9 @@ final class SchoolYearFormValues {
   /// The start month, 1–12.
   final int startMonth;
 
-  /// The end month, 1–12.
-  final int endMonth;
+  /// The end month, 1–12, or null for an open end (`window_end` = null).
+  /// Only an edited row that is already open-ended starts with null.
+  final int? endMonth;
 
   /// The rate field's text.
   final String rateText;
@@ -253,10 +256,13 @@ final class SchoolYearFormValues {
     return year == null ? null : schoolYearWindowStart(year, startMonth);
   }
 
-  /// The window end, or null without an academic year.
+  /// The window end, or null without an academic year or with an open end.
   CivilDate? get windowEnd {
     final year = academicYear;
-    return year == null ? null : schoolYearWindowEnd(year, endMonth);
+    final month = endMonth;
+    return year == null || month == null
+        ? null
+        : schoolYearWindowEnd(year, month);
   }
 }
 
@@ -287,8 +293,8 @@ Map<SchoolYearFormField, SchoolYearFormError> validateSchoolYearForm(
       errors[SchoolYearFormField.academicYear] = SchoolYearFormError.yearUsed;
     }
     final start = values.windowStart!;
-    final end = values.windowEnd!;
-    if (start.compareTo(end) > 0) {
+    final end = values.windowEnd;
+    if (end != null && start.compareTo(end) > 0) {
       errors[SchoolYearFormField.window] = SchoolYearFormError.windowReversed;
     } else if (subTracks.any(
       (s) =>
@@ -307,14 +313,18 @@ Map<SchoolYearFormField, SchoolYearFormError> validateSchoolYearForm(
   return errors;
 }
 
-/// Inclusive civil-date overlap; a null [bEnd] is open-ended. Windows that
+/// Inclusive civil-date overlap; a null end is open-ended. Windows that
 /// touch on one day overlap (AD-45, inclusive bounds).
 bool _overlaps(
   CivilDate aStart,
-  CivilDate aEnd,
+  CivilDate? aEnd,
   CivilDate bStart,
   CivilDate? bEnd,
-) => aStart.compareTo(bEnd ?? '9999-12-31') <= 0 && bStart.compareTo(aEnd) <= 0;
+) =>
+    aStart.compareTo(bEnd ?? _openEnd) <= 0 &&
+    bStart.compareTo(aEnd ?? _openEnd) <= 0;
+
+const _openEnd = '9999-12-31';
 
 /// The create intent for valid [values] (AC-7): `type = school_year`,
 /// month-bounded window dates, `ground = []`. Only call it after
@@ -336,13 +346,15 @@ SubTrackDraft schoolYearDraft(
 );
 
 /// The edit of [current] to valid [values] carrying only the changed fields
-/// (AC-8), or null when nothing changed.
+/// (AC-8), or null when nothing changed. An open end that stays open writes
+/// nothing; opening a bounded window is an explicit `clearWindowEnd`.
 SubTrackEdit? schoolYearEdit(SubTrack current, SchoolYearFormValues values) {
   final name = values.name.trim();
   final rate = parsePositiveNumber(values.rateText)!;
   final weeks = parsePositiveNumber(values.weeksText)!;
   final start = values.windowStart!;
-  final end = values.windowEnd!;
+  final end = values.windowEnd;
+  final clearEnd = end == null && current.windowEnd != null;
   final edit = SubTrackEdit(
     name: name == current.name ? null : name,
     academicYear: values.academicYear == current.academicYear
@@ -350,6 +362,7 @@ SubTrackEdit? schoolYearEdit(SubTrack current, SchoolYearFormValues values) {
         : values.academicYear,
     windowStart: start == current.windowStart ? null : start,
     windowEnd: end == current.windowEnd ? null : end,
+    clearWindowEnd: clearEnd,
     ratePerWeek: rate == current.ratePerWeek ? null : rate,
     weeksPerYear: weeks == current.weeksPerYear ? null : weeks,
     learnsOnShabbos: values.learnsOnShabbos == current.learnsOnShabbos
@@ -365,7 +378,7 @@ SubTrackEdit? schoolYearEdit(SubTrack current, SchoolYearFormValues values) {
     edit.weeksPerYear,
     edit.learnsOnShabbos,
   ].any((v) => v != null);
-  return changed ? edit : null;
+  return changed || clearEnd ? edit : null;
 }
 
 /// The inline field errors for the AD-45 [violations] a command returned

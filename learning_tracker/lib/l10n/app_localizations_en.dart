@@ -4050,6 +4050,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subTrackFormEndMonthLabel => 'End month';
 
   @override
+  String get subTrackFormEndMonthOpen => 'No end month';
+
+  @override
   String subTrackFormRateLabel(String unit) {
     return '$unit per week';
   }
