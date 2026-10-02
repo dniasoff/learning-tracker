@@ -6,6 +6,8 @@ import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
 
+import '../../../helpers/sub_track_limit_fixtures.dart';
+
 const _today = '2026-09-07';
 const _curriculum = 'mishnayos';
 
@@ -287,6 +289,63 @@ void main() {
         isFalse,
       );
     });
+  });
+
+  group('AC-5: parity with the shared AD-45 fixture suite', () {
+    Map<String, Object?> merge(
+      Map<String, Object?> into,
+      Map<String, Object?> fields,
+    ) {
+      final out = {...into};
+      fields.forEach((k, v) => v == null ? out.remove(k) : out[k] = v);
+      return out;
+    }
+
+    // Every ongoing create whose new row would count: the form's disabled
+    // state must match the validator's ongoing_limit verdict exactly.
+    final cases = [
+      for (final c in loadSubTrackLimitCases())
+        if (c.file == 'ongoing_limit.json' &&
+            (c.json['op']! as Map<String, Object?>)['kind'] == 'create')
+          c,
+    ];
+
+    test('the suite has ongoing create cases', () {
+      expect(cases, isNotEmpty);
+    });
+
+    for (final c in cases) {
+      test(c.json['name']! as String, () {
+        final base = c.json['_base']! as Map<String, Object?>;
+        final today = c.json['today']! as String;
+        final op = c.json['op']! as Map<String, Object?>;
+        final candidate = subTrackFromFixtureRow(
+          op['id']! as String,
+          merge(base, op['fields']! as Map<String, Object?>),
+        );
+        if (candidate.type != SubTrackType.ongoing ||
+            !countsTowardSubTrackLimits(candidate, today)) {
+          return; // the form never creates a non-counting ongoing row
+        }
+        final existing = [
+          for (final e
+              in (c.json['existing']! as List<Object?>)
+                  .cast<Map<String, Object?>>())
+            subTrackFromFixtureRow(
+              e['id']! as String,
+              merge(base, e['doc']! as Map<String, Object?>),
+            ),
+        ];
+        final allowed = ongoingCreateAllowed(
+          ongoingSubTracksInUse(
+            existing,
+            curriculumId: candidate.curriculumId,
+            today: today,
+          ),
+        );
+        expect(allowed, !runSubTrackLimitCase(c).contains('ongoing_limit'));
+      });
+    }
   });
 
   test('command violations map to their form fields', () {

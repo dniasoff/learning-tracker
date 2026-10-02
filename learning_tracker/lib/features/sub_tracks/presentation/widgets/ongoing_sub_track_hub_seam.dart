@@ -60,7 +60,10 @@ class _OngoingSubTrackHubSeamState
   }
 
   Future<void> _add(OngoingSubTrackContext data) async {
-    final choice = await showAddSubTrackChooser(context);
+    final choice = await showAddSubTrackChooser(
+      context,
+      ongoingInUse: data.ongoingInUse(),
+    );
     if (choice != AddSubTrackChoice.ongoing || !mounted) return;
     _afterSave(
       await openOngoingSubTrackForm(context, curriculumId: widget.curriculumId),
