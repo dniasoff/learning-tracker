@@ -688,7 +688,7 @@ match /completions/{id} { allow write: if false; }
       expect(result.exitCode, 2, reason: out(result));
       final stderr = result.stderr.toString();
       expect(stderr, contains('entries[0]: "symbol" "NotInInventory"'));
-      expect(stderr, contains('entries[1]: "path" must be a scanned file'));
+      expect(stderr, contains('entries[1]: "path" must be one of the AD-49'));
       expect(stderr, contains('entries[2]: "count" must be an integer >= 1'));
       expect(stderr, contains('entries[3]: "reason" must be'));
       expect(stderr, contains('entries[4]: unknown key "line"'));
@@ -718,13 +718,124 @@ match /completions/{id} { allow write: if false; }
       expect(result.exitCode, 2, reason: out(result));
       final stderr = result.stderr.toString();
       expect(stderr, contains('entries[1]: duplicate allowlist entry'));
-      expect(stderr, contains('entries[2]: no inventory entry'));
+      expect(
+        stderr,
+        contains('entries[2]: no R14 "collection" inventory entry'),
+      );
+    });
+
+    test('allowlist: only R14 collection remnants in the three AD-49 files '
+        'can be allowlisted, in every mode', () async {
+      final root = await fixtureRoot(
+        files: {
+          'lib/a.dart': 'class CompletionEntity {}\n',
+          'firestore.rules':
+              'match /completions/{id} { allow write: if false; }\n'
+              '// tutorResetCompletion\n',
+        },
+        groups: {
+          'R1': [
+            _entry('CompletionEntity'),
+            _entry('completions', kind: 'collection', owner: 'DNI-483'),
+          ],
+          'R7': [_entry('tutorResetCompletion', kind: 'callable')],
+          'R14': [
+            _entry(
+              'learning_order',
+              kind: 'field',
+              owner: 'DNI-490',
+              paths: {
+                'include': ['firestore.rules'],
+              },
+            ),
+          ],
+        },
+        allow: [
+          // A retired type in lib/: not R14, not a remnant file.
+          _allow('CompletionEntity', 'lib/a.dart', 1),
+          // A retired callable in a remnant file: not R14.
+          _allow('tutorResetCompletion', 'firestore.rules', 1),
+          // A collection in a remnant file, but owned by R1, not R14.
+          _allow('completions', 'firestore.rules', 1),
+          // An R14 entry that is not a collection.
+          _allow('learning_order', 'firestore.rules', 1),
+        ],
+      );
+      for (final args in [
+        const <String>[],
+        const ['--enforce'],
+      ]) {
+        final result = await run(root, args);
+        expect(result.exitCode, 2, reason: out(result));
+        final stderr = result.stderr.toString();
+        expect(
+          stderr,
+          contains('entries[0]: "symbol" "CompletionEntity" is not an R14'),
+        );
+        expect(stderr, contains('entries[0]: "path" must be one of the AD-49'));
+        expect(
+          stderr,
+          contains('entries[1]: "symbol" "tutorResetCompletion" is not an R14'),
+        );
+        expect(
+          stderr,
+          contains('entries[2]: "symbol" "completions" is not an R14'),
+        );
+        expect(
+          stderr,
+          contains('entries[3]: "symbol" "learning_order" is not an R14'),
+        );
+      }
     });
 
     test('allowlist: malformed top level', () async {
       await expectMalformed(
         await fixtureRoot(rawAllowlist: '[]'),
         'allowlist.json: top level must be an object',
+      );
+    });
+
+    test('an undecodable scanned file fails closed with exit 2', () async {
+      final root = await fixtureRoot(
+        groups: {
+          'R1': [_entry('CompletionEntity')],
+        },
+      );
+      File('$root/lib/bad.dart')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync([0x63, 0x6C, 0xFF, 0xFE, 0x0A]);
+      final result = await run(root);
+      expect(result.exitCode, 2, reason: out(result));
+      expect(result.stderr.toString(), contains('could not read lib/bad.dart'));
+    });
+
+    test('an unreadable scanned file fails closed with exit 2', () async {
+      final root = await fixtureRoot(
+        files: {'functions/src/a.ts': 'export const CompletionEntity = 1;\n'},
+        groups: {
+          'R1': [_entry('CompletionEntity')],
+        },
+      );
+      final file = File('$root/functions/src/a.ts');
+      final chmod = await Process.run('chmod', ['000', file.path]);
+      addTearDown(() => Process.runSync('chmod', ['644', file.path]));
+      var readable = true;
+      try {
+        file.readAsStringSync();
+      } on FileSystemException {
+        readable = false;
+      }
+      if (chmod.exitCode != 0 || readable) {
+        markTestSkipped(
+          'cannot make a file unreadable here (root or no chmod)',
+        );
+        return;
+      }
+      final result = await run(root);
+      expect(result.exitCode, 2, reason: out(result));
+      expect(
+        result.stderr.toString(),
+        contains('could not read functions/src/a.ts'),
       );
     });
 

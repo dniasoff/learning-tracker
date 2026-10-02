@@ -55,6 +55,10 @@
 /// ```
 ///
 /// `count` is the exact number of hits of `symbol` in `path` it permits.
+/// Per AD-49 an entry is valid only when `symbol` is an R14 `collection`
+/// entry whose scope covers `path`, and `path` is `firestore.rules`,
+/// `firestore.indexes.json` or `functions/src/deletes.ts`; anything else
+/// is malformed (exit 2), in every mode.
 ///
 /// ## Behaviour
 ///
@@ -76,8 +80,8 @@
 ///   dart run tool/check_retired_symbols.dart --root DIR   # fixture root
 ///
 /// Exit codes: 0 pass, 1 retired symbol outside the allowlist (or, under
-/// `--enforce`, an inexact allowlist), 2 malformed inventory/allowlist or
-/// bad usage.
+/// `--enforce`, an inexact allowlist), 2 malformed inventory/allowlist,
+/// an unreadable scanned file or directory (fails closed), or bad usage.
 library;
 
 import 'dart:convert';
@@ -104,6 +108,18 @@ const _entryKeys = {
 const _groupKeys = {'group', 'title', 'description', 'entries'};
 const _allowlistKeys = {'description', 'entries'};
 const _allowEntryKeys = {'symbol', 'path', 'count', 'reason', 'owner'};
+
+/// AD-49: the allowlist holds exactly the cutover remnants of the retired
+/// collections, i.e. R14 `collection` entries, and only in these files.
+/// Nothing else (no type, service, callable, field or ui symbol, no other
+/// group, no other path) can ever be allowlisted.
+const _allowGroup = 'R14';
+const _allowKind = 'collection';
+const _allowPaths = [
+  'firestore.rules',
+  'firestore.indexes.json',
+  'functions/src/deletes.ts',
+];
 final _ownerPattern = RegExp(r'^DNI-[0-9]+$');
 
 // ---------------------------------------------------------------------------
@@ -242,13 +258,6 @@ List<String>? _globList(Object? v, String where, List<String> errors) {
   }
   return out;
 }
-
-/// True when [path] is a file this checker scans.
-bool _isScannable(String path) =>
-    path == 'firestore.rules' ||
-    path == 'firestore.indexes.json' ||
-    (path.startsWith('lib/') && path.endsWith('.dart')) ||
-    (path.startsWith('functions/src/') && path.endsWith('.ts'));
 
 _Inventory _loadInventory(String root) {
   final inv = _Inventory();
@@ -456,12 +465,17 @@ void _loadAllowlist(File file, _Inventory inv) {
       bad('"symbol" must be a non-empty string');
     } else if (!inv.entries.any((e) => e.symbol == symbol)) {
       bad('"symbol" "$symbol" is not in any R<n>.json inventory file');
-    }
-    if (path is! String || !_isScannable(path)) {
+    } else if (!inv.entries.any(_isAllowable(symbol))) {
       bad(
-        '"path" must be a scanned file relative to learning_tracker/ '
-        '(lib/**.dart, functions/src/**.ts, firestore.rules or '
-        'firestore.indexes.json)',
+        '"symbol" "$symbol" is not an $_allowGroup "$_allowKind" entry; '
+        'AD-49 allowlists only the cutover remnants of the retired '
+        'collections (delete every other retired reference instead)',
+      );
+    }
+    if (path is! String || !_allowPaths.contains(path)) {
+      bad(
+        '"path" must be one of the AD-49 remnant files '
+        '(${_allowPaths.join(', ')})',
       );
     }
     if (count is! int || count < 1) bad('"count" must be an integer >= 1');
@@ -475,10 +489,10 @@ void _loadAllowlist(File file, _Inventory inv) {
     if (!ok) continue;
     final s = symbol as String;
     final p = path as String;
-    if (!inv.entries.any((e) => e.symbol == s && e.appliesTo(p))) {
+    if (!inv.entries.any((e) => _isAllowable(s)(e) && e.appliesTo(p))) {
       errors.add(
-        '$at: no inventory entry for "$s" covers "$p", so this '
-        'allowlist entry could never apply',
+        '$at: no $_allowGroup "$_allowKind" inventory entry for "$s" covers '
+        '"$p", so this allowlist entry could never apply',
       );
       continue;
     }
@@ -489,6 +503,9 @@ void _loadAllowlist(File file, _Inventory inv) {
     inv.allow.add(_AllowEntry(s, p, count as int));
   }
 }
+
+bool Function(_Entry) _isAllowable(String symbol) =>
+    (e) => e.symbol == symbol && e.group == _allowGroup && e.kind == _allowKind;
 
 // ---------------------------------------------------------------------------
 // Lexing: classify every character as code, string literal or comment
@@ -663,12 +680,26 @@ Uint8List _classify(String s, _Lang lang) {
 // Scanning
 // ---------------------------------------------------------------------------
 
+/// A scanned file or directory could not be read. The gate fails closed
+/// (exit 2): an unread file could hide a retired symbol.
+class _ScanFailure implements Exception {
+  _ScanFailure(this.path, this.error);
+  final String path;
+  final Object error;
+}
+
 List<String> _scanPaths(String root) {
   final out = <String>[];
   void walk(String rel, String ext) {
     final dir = Directory('$root/$rel');
     if (!dir.existsSync()) return;
-    for (final f in dir.listSync(recursive: true).whereType<File>()) {
+    final List<FileSystemEntity> listing;
+    try {
+      listing = dir.listSync(recursive: true);
+    } on FileSystemException catch (e) {
+      throw _ScanFailure(rel, e);
+    }
+    for (final f in listing.whereType<File>()) {
       final p = f.path.replaceAll(r'\', '/');
       if (!p.endsWith(ext)) continue;
       final relPath = p.substring(root.length + 1);
@@ -734,8 +765,11 @@ Map<int, List<_Hit>> _scan(String root, List<_Entry> entries) {
     final String content;
     try {
       content = File('$root/$path').readAsStringSync();
-    } on FileSystemException {
-      continue; // vanished mid-scan (concurrent fixture) — never a real site
+    } on FileSystemException catch (e) {
+      // Unreadable, undecodable or vanished mid-scan: fail closed.
+      throw _ScanFailure(path, e);
+    } on FormatException catch (e) {
+      throw _ScanFailure(path, e);
     }
     final lang = _langFor(path);
     final codeFile = lang != _Lang.plain;
@@ -861,7 +895,16 @@ void main(List<String> args) {
   }
 
   final entries = inv.entries;
-  final hits = _scan(root, entries);
+  final Map<int, List<_Hit>> hits;
+  try {
+    hits = _scan(root, entries);
+  } on _ScanFailure catch (f) {
+    stderr.writeln(
+      'Retired-symbols check FAILED (AD-49): could not read ${f.path} '
+      '(the gate fails closed on any unread file): ${f.error}',
+    );
+    exit(2);
+  }
   bool isRetired(_Entry e) => enforce || e.state == 'retired';
 
   // Retired hits per symbol, then per path (deduplicated across entries
