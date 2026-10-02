@@ -290,7 +290,6 @@ final class LearnerStateEngine {
             learns,
             firstStage,
             mainTrack,
-            locks,
             configHistory!,
             reviews!,
             velocity!,
