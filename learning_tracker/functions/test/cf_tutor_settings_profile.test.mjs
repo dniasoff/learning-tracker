@@ -403,6 +403,81 @@ describe('tutorEditProfile', () => {
     assert.equal(after.display_name, 'New Name', 'tutorEditProfile\'s own edit must also land');
   });
 
+  // Repair round 1 (codex HIGH): the grant check and the profile update run in
+  // ONE transaction, so a revocation racing the edit is fail-closed: either
+  // the edit is denied, or it committed no later than the revocation. A
+  // standalone grant read followed by a separate update (the old shape) lets
+  // the edit land AFTER the revocation — the DocumentReference.get hook below
+  // revokes right after such a read and waits for it, which reproduces that.
+  test('revocation racing a profile edit: the edit never commits after the revocation', async () => {
+    await seedActiveGrant({});
+    const ref = profileRef();
+    await ref.set({ display_name: 'Old Name', mode: 'child' });
+    const grantRef = db.collection('tutor_grants').doc(GRANT);
+
+    const originalDocGet = admin.firestore.DocumentReference.prototype.get;
+    const originalTxnGet = admin.firestore.Transaction.prototype.get;
+    let injected = false;
+    let revokeDone = Promise.resolve(null);
+    const fireRevoke = () => {
+      if (injected) return;
+      injected = true;
+      revokeDone = grantRef.update({ state: 'revoked_by_parent' });
+    };
+    admin.firestore.DocumentReference.prototype.get = async function (...args) {
+      const result = await originalDocGet.apply(this, args);
+      if (this.path === grantRef.path) {
+        fireRevoke();
+        await revokeDone; // no open transaction here — safe to await
+      }
+      return result;
+    };
+    admin.firestore.Transaction.prototype.get = async function (docRef, ...rest) {
+      const result = await originalTxnGet.call(this, docRef, ...rest);
+      if (docRef?.path === grantRef.path) {
+        fireRevoke(); // NOT awaited — would deadlock the open transaction
+        await Promise.resolve();
+      }
+      return result;
+    };
+
+    let outcome;
+    try {
+      outcome = await call(fns.tutorEditProfile, {
+        grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, displayName: 'New Name',
+      }).then((r) => ({ ok: r }), (e) => ({ err: e }));
+    } finally {
+      admin.firestore.DocumentReference.prototype.get = originalDocGet;
+      admin.firestore.Transaction.prototype.get = originalTxnGet;
+    }
+    const revokeResult = await revokeDone;
+    assert.equal(injected, true, 'test setup sanity: the revocation must have been injected');
+
+    const profile = await ref.get();
+    if (outcome.err) {
+      assert.equal(outcome.err.code, 'permission-denied');
+      assert.equal(profile.get('display_name'), 'Old Name', 'a denied edit writes nothing');
+    } else {
+      assert.equal(profile.get('display_name'), 'New Name');
+      assert.ok(
+        profile.updateTime.toMillis() <= revokeResult.writeTime.toMillis(),
+        'an edit that succeeded must have committed no later than the revocation',
+      );
+    }
+    assert.equal((await grantRef.get()).get('state'), 'revoked_by_parent');
+  });
+
+  test('a revoked grant denies the profile edit and writes nothing', async () => {
+    await seedActiveGrant({}, { state: 'revoked_by_parent' });
+    const ref = profileRef();
+    await ref.set({ display_name: 'Old Name' });
+    await expectHttpsError(
+      call(fns.tutorEditProfile, { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, displayName: 'X' }),
+      'permission-denied',
+    );
+    assert.equal((await ref.get()).get('display_name'), 'Old Name');
+  });
+
   // ── Story 1.10 / DNI-472 AC-4: restricted three-field merge ────────────────
 
   test('AC-4: writes only display_name, avatar and mode as a field-level merge', async () => {

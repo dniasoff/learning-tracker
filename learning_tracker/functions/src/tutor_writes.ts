@@ -120,6 +120,9 @@ interface GrantVerification {
  * @param profileId   Expected child profile ULID (AD-24 string doc-id).
  * @param permKey     The permissions map key to check (e.g. 'can_edit_goals').
  *                    Pass null to skip the permission check (for always-allowed ops).
+ * @param txn         When given, the grant is read inside this transaction, so
+ *                    a revocation committed before the transaction's write
+ *                    aborts it (fail closed) instead of racing a standalone read.
  */
 async function verifyTutorGrant(
   callerUid: string,
@@ -127,9 +130,10 @@ async function verifyTutorGrant(
   ownerUid: string,
   profileId: string,
   permKey: string | null,
+  txn?: FirebaseFirestore.Transaction,
 ): Promise<GrantVerification> {
   const grantRef = db.collection("tutor_grants").doc(grantId);
-  const grantSnap = await grantRef.get();
+  const grantSnap = txn ? await txn.get(grantRef) : await grantRef.get();
 
   if (!grantSnap.exists) {
     throw new HttpsError("not-found", `Grant not found: ${grantId}`);
@@ -686,31 +690,28 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
     );
   }
 
-  // tutorEditProfile is parent-equivalent — no specific permission flag (null).
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, null,
-  );
-
   const updates: Record<string, unknown> = {};
   if (typeof displayName === "string") updates["display_name"] = displayName.trim();
   if (typeof avatar === "string") updates["avatar"] = avatar;
   if (typeof mode === "string") updates["mode"] = mode;
 
+  // The grant check, the profile read and the update run in ONE transaction:
+  // a revocation that commits first aborts this write (the grant is re-read
+  // on retry and denied), so a revoked tutor can never land an edit.
+  // tutorEditProfile is parent-equivalent — no specific permission flag (null).
+  //
   // Field-level merge (AD-37 / AD-38): only the three fields are written, so a
   // concurrent writer's unrelated fields (including governed learner settings
-  // and last_change_id) are never read-modify-written or clobbered. update()
-  // also refuses to conjure a profile doc that does not exist.
-  // The before-values are read only for the security audit entry; the write
-  // itself never depends on them.
-  const beforeSnap = await profilePath.get();
-  try {
-    await profilePath.update(updates);
-  } catch (err) {
-    if ((err as { code?: number }).code === 5) {
-      throw new HttpsError("not-found", "Learner profile not found");
-    }
-    throw err;
-  }
+  // and last_change_id) are never read-modify-written or clobbered. A missing
+  // profile is not-found (never conjured). The before-values are read only
+  // for the security audit entry; the write itself never depends on them.
+  const { grant, writtenAt, beforeSnap } = await db.runTransaction(async (txn) => {
+    const verified = await verifyTutorGrant(callerUid, grantId, ownerUid, profileId, null, txn);
+    const snap = await txn.get(verified.profilePath);
+    if (!snap.exists) throw new HttpsError("not-found", "Learner profile not found");
+    txn.update(verified.profilePath, updates);
+    return { ...verified, beforeSnap: snap };
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,

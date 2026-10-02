@@ -200,6 +200,51 @@ describe('writeWithChangeLog — payload validation (AD-52, AD-38 mapping, AD-43
     ['client-written last_change_id', { ...DEADLINE, last_change_id: ulid(9) }],
     ['ended_at as a client timestamp', { ...DEADLINE, ended_at: '2026-01-01T00:00:00Z' }],
   ];
+  // Repair round 1 (codex HIGH): nullability is per field — null can never
+  // remove required data from a live doc (AD-52).
+  const nullRequiredPatches = [
+    ['curriculum_tracks.state', 'tutorUpsertTrack', 'trackId', C, 'trackData', 'curriculum_tracks', C,
+      { state: 'active', curriculum_id: C }, { state: null }],
+    ['track_learning_order.user_sort_order', null, null, `${C}_perek_1`, null, 'track_learning_order',
+      `${C}_perek_1`, { curriculum_id: C, level: 'perek', ref: '1', user_sort_order: 0 },
+      { user_sort_order: null }],
+    ['track_learning_order.ref', null, null, `${C}_perek_1`, null, 'track_learning_order',
+      `${C}_perek_1`, { curriculum_id: C, level: 'perek', ref: '1', user_sort_order: 0 }, { ref: null }],
+    ['goals.goal_type', 'tutorUpsertGoal', 'goalId', `${C}_deadline`, 'goalData', 'goals', `${C}_deadline`,
+      DEADLINE, { goal_type: null }],
+  ];
+  for (const [name, fn, idParam, id, dataParam, collection, docId, seed, patch] of nullRequiredPatches) {
+    test(`null for required field ${name} on an existing doc → invalid-argument, data kept`, async () => {
+      const ref = profileRef().collection(collection).doc(docId);
+      await ref.set({ ...seed, last_change_id: ulid(0) });
+      const request = fn
+        ? call(fns[fn], { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, [idParam]: id, [dataParam]: patch })
+        : call(fns.ownerOversizedGovernedWrite, ownerAction(ulid(1), 'mainTrackOrder', C,
+          [{ collection, docId, fields: patch, mode: 'update' }]), parentAuth);
+      await expectHttpsError(request, 'invalid-argument');
+      assert.deepEqual((await ref.get()).data(), { ...seed, last_change_id: ulid(0) });
+      assert.deepEqual(await changeLog(), []);
+    });
+  }
+
+  test('a re-add of a live-required-field-less track is rejected until state is supplied', async () => {
+    const ref = profileRef().collection('curriculum_tracks').doc(C);
+    await ref.set({ curriculum_id: C, ended_at: new Date('2026-01-01') });
+    const base = { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, trackId: C };
+    await expectHttpsError(call(fns.tutorUpsertTrack, { ...base, trackData: { ended_at: null } }), 'invalid-argument');
+    await call(fns.tutorUpsertTrack, { ...base, trackData: { ended_at: null, state: 'active' } });
+    assert.equal((await ref.get()).data().state, 'active');
+  });
+
+  test('null is still accepted for nullable fields (clears them)', async () => {
+    const ref = profileRef().collection('profile_programs').doc(C);
+    await ref.set({ curriculum_id: C, program_id: 'daf_yomi', tracking_start_date: '2026-01-01' });
+    await call(fns.tutorSetProfileProgram, {
+      grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, programId: C, programData: { program_id: null },
+    });
+    assert.equal((await ref.get()).data().program_id, undefined);
+  });
+
   for (const [name, goalData] of badGoalPayloads) {
     test(`bad payload (${name}) → invalid-argument, nothing written`, async () => {
       const { error, logs } = await captureLogs(() => call(fns.tutorUpsertGoal, goalArgs(goalData)));
@@ -348,10 +393,13 @@ describe('writeWithChangeLog — AD-31 void targets', () => {
     await expectHttpsError(helper.writeWithChangeLog(null, tutorReq([learn(ulid(1))])), 'unauthenticated');
   });
 
-  test('an event id replayed by the same actor is a no-op; by another actor → already-exists', async () => {
-    await helper.writeWithChangeLog(tutorAuth, tutorReq([learn(ulid(1))]));
+  test('an event id replayed by the same actor returns the stored result; by another actor → already-exists', async () => {
+    const first = await helper.writeWithChangeLog(tutorAuth, tutorReq([learn(ulid(1))]));
     const replay = await helper.writeWithChangeLog(tutorAuth, tutorReq([learn(ulid(1))]));
-    assert.deepEqual(replay.event_ids, []);
+    assert.equal(replay.replayed, true);
+    assert.equal(replay.noop, false, 'a replay is not a false noop');
+    assert.deepEqual(replay.event_ids, [ulid(1)]);
+    assert.equal(replay.recorded_at, first.recorded_at);
     await expectHttpsError(
       helper.writeWithChangeLog(parentAuth, { ownerUid: PARENT, profileId: PROFILE, events: [learn(ulid(1))] }),
       'already-exists',
@@ -412,6 +460,76 @@ describe('writeWithChangeLog — idempotent replay', () => {
     );
     const goal = (await profileRef().collection('goals').doc(`${C}_deadline`).get()).data();
     assert.equal(goal.target_date, '2027-06-01');
+  });
+
+  // Repair round 1 (codex HIGH): the replay key is the ACTION id, not the
+  // first static entry's id, so retries are recognised whichever entry ids
+  // were assigned and whichever entries were no-ops.
+
+  test('owner action whose first entry was a no-op: the retry is a replay, not a false noop', async () => {
+    await profileRef().collection('curriculum_tracks').doc(C).set({ state: 'active', curriculum_id: C });
+    const action = {
+      profileId: PROFILE,
+      entries: [
+        { id: ulid(1), entity: 'mainTrack', entityId: C,
+          docs: [{ collection: 'curriculum_tracks', docId: C, fields: { state: 'active' } }] },
+        { id: ulid(2), entity: 'goal', entityId: `${C}_deadline`, docs: [goalDoc(DEADLINE)] },
+      ],
+    };
+    const first = await call(fns.ownerOversizedGovernedWrite, action, parentAuth);
+    assert.equal(first.action_id, ulid(1));
+    assert.deepEqual(first.change_ids, [ulid(2)], 'only the goal changed');
+    const retry = await call(fns.ownerOversizedGovernedWrite, action, parentAuth);
+    assert.equal(retry.replayed, true);
+    assert.equal(retry.noop, false);
+    assert.equal(retry.action_id, first.action_id);
+    assert.deepEqual(retry.change_ids, first.change_ids);
+    assert.equal(retry.at, first.at);
+    assert.equal((await changeLog()).length, 1);
+  });
+
+  test('owner action with a separate actionId: the retry is a replay keyed on the actionId', async () => {
+    const action = ownerAction(ulid(2), 'goal', `${C}_deadline`, [goalDoc(DEADLINE)], { actionId: ulid(1) });
+    const first = await call(fns.ownerOversizedGovernedWrite, action, parentAuth);
+    assert.equal(first.action_id, ulid(1));
+    const retry = await call(fns.ownerOversizedGovernedWrite, action, parentAuth);
+    assert.equal(retry.replayed, true);
+    assert.deepEqual(retry.change_ids, first.change_ids);
+    assert.equal((await changeLog()).length, 1);
+  });
+
+  test('a tutor retry by actionId after the change landed is a replay with the stored result', async () => {
+    const first = await call(fns.tutorUpsertGoal, goalArgs(DEADLINE, { actionId: ulid(1) }));
+    const retry = await call(fns.tutorUpsertGoal, goalArgs(DEADLINE, { actionId: ulid(1) }));
+    assert.equal(retry.replayed, true);
+    assert.equal(retry.noop, false);
+    assert.deepEqual(retry.change_ids, first.change_ids);
+    assert.equal(retry.at, first.at);
+  });
+
+  test('an entry ULID already used by a different action → already-exists, not an internal error', async () => {
+    await call(fns.ownerOversizedGovernedWrite,
+      ownerAction(ulid(2), 'goal', `${C}_deadline`, [goalDoc(DEADLINE)], { actionId: ulid(1) }), parentAuth);
+    const { error, logs } = await captureLogs(() => call(fns.ownerOversizedGovernedWrite,
+      ownerAction(ulid(2), 'mainTrack', C,
+        [{ collection: 'curriculum_tracks', docId: C, fields: { state: 'active' } }], { actionId: ulid(3) }),
+      parentAuth));
+    await expectHttpsError(Promise.reject(error), 'already-exists');
+    assertPrivacySafeRejectionLog(logs, { entity: 'mainTrack', code: 'already-exists' });
+    assert.equal((await profileRef().collection('curriculum_tracks').doc(C).get()).exists, false);
+  });
+
+  test('a tutor actionId equal to another action\'s entry id → already-exists, not an internal error', async () => {
+    await call(fns.ownerOversizedGovernedWrite,
+      ownerAction(ulid(2), 'goal', `${C}_deadline`, [goalDoc(DEADLINE)], { actionId: ulid(1) }), parentAuth);
+    await expectHttpsError(
+      call(fns.tutorUpsertTrack, {
+        grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, trackId: C,
+        trackData: { state: 'active', curriculum_id: C }, actionId: ulid(2),
+      }),
+      'already-exists',
+    );
+    assert.equal((await profileRef().collection('curriculum_tracks').doc(C).get()).exists, false);
   });
 
   test('a malformed client ULID → invalid-argument', async () => {
