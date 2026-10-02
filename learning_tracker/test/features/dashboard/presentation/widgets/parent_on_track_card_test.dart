@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -453,6 +454,150 @@ void main() {
       expect(builds, 2);
       expect(find.byType(InlineAsyncError), findsNothing);
       expect(_text('On track'), findsOneWidget);
+    });
+  });
+
+  group('AC-9: dark mode and tablet', () {
+    final state = forecastState([
+      forecastCurriculumState(
+        projection: const Projection(
+          status: ProjectionStatus.onTrack,
+          projectedFinish: '2029-03-14',
+          deadline: '2029-09-10',
+        ),
+        dailyTarget: 3,
+        subTracks: {
+          schoolSubTrackId: shortfallSubTrack(
+            id: schoolSubTrackId,
+            name: 'School',
+            shortfall: 40,
+            lastNode: const NodeEntry(
+              level: 'chapter',
+              ref: 'Mishnah Berakhot 3',
+            ),
+            windowEnd: '2027-07-31',
+          ),
+        },
+      ),
+    ]);
+
+    Future<void> pumpAt(
+      WidgetTester tester,
+      Size size, {
+      ThemeData? theme,
+      double textScale = 1,
+    }) async {
+      tester.view
+        ..physicalSize = size
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        pumpApp(
+          theme: theme ?? AppTheme.lightTheme(),
+          overrides: forecastOverrides(state: state),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
+          child: Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: ParentForecastSection(
+                belowCard: (f) => ShortfallWarningList(forecast: f),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    }
+
+    testWidgets('dark mode reads the dark success and warning tokens', (
+      tester,
+    ) async {
+      await pumpAt(tester, const Size(400, 900), theme: AppTheme.darkTheme());
+      const dark = AppPalette.dark;
+      final chip = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byKey(const Key('onTrackStatus')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect(
+        (chip.decoration! as BoxDecoration).color,
+        dark.statusSuccessSoftBg,
+      );
+      final frame = tester.widget<ForecastCardFrame>(
+        find.byKey(const Key('shortfallCard-$schoolSubTrackId')),
+      );
+      expect(frame.color, dark.brandWarningSoft);
+      final message = tester.widget<Text>(
+        find.byKey(const Key('shortfallCardMessage')),
+      );
+      expect(message.style?.color, dark.brandWarningDeep);
+    });
+
+    testWidgets('tablet: one status row and a full-width shortfall card', (
+      tester,
+    ) async {
+      await pumpAt(tester, const Size(1024, 1366));
+      expect(find.byKey(const Key('onTrackStatusRow')), findsOneWidget);
+      final status = tester.getCenter(find.byKey(const Key('onTrackStatus')));
+      final projection = tester.getCenter(
+        find.byKey(const Key('onTrackProjection')),
+      );
+      final target = tester.getCenter(
+        find.byKey(const Key('onTrackDailyTarget')),
+      );
+      expect((projection.dy - status.dy).abs(), lessThan(4));
+      expect((target.dy - status.dy).abs(), lessThan(4));
+      expect(
+        tester
+            .getRect(find.byKey(const Key('shortfallCard-$schoolSubTrackId')))
+            .width,
+        tester.getRect(find.byKey(const Key('onTrackCard-mishnayos'))).width,
+      );
+    });
+
+    testWidgets('phone at large text: lines stack and nothing overflows', (
+      tester,
+    ) async {
+      await pumpAt(tester, const Size(360, 1600), textScale: 2);
+      expect(find.byKey(const Key('onTrackStatusRow')), findsNothing);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('onTrackProjection'))).dy,
+        greaterThan(
+          tester.getBottomLeft(find.byKey(const Key('onTrackStatus'))).dy,
+        ),
+      );
+    });
+
+    testWidgets('the tablet Dashboard lays out without overflow', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(1024, 1366)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final router = _router();
+      await tester.pumpWidget(
+        dashboardSurface(
+          router: router,
+          parent: true,
+          mode: ProfileMode.adult,
+          state: state,
+          theme: AppTheme.darkTheme(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(OnTrackCard), findsOneWidget);
+      expect(find.byType(ShortfallWarningCard), findsOneWidget);
     });
   });
 
