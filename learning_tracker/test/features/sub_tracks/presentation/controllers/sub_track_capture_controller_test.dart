@@ -4,7 +4,11 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -310,6 +314,194 @@ void main() {
     });
   });
 
+  group('learner scope (bound to the active commands)', () {
+    const captured = '01FAKE0000000000000000QUE1';
+    const voided = '01FAKE0000000000000000QUV1';
+
+    PendingFailure failure(String id, List<String> eventIds) => PendingFailure(
+      id: id,
+      eventIds: eventIds,
+      changeIds: const [],
+      reason: PendingFailureReason.permissionDenied,
+    );
+
+    /// A container whose active commands can be switched, like a learner
+    /// (or tutored session) change re-binding `learningCommandsProvider`.
+    (ProviderContainer, void Function(LearningCommands?)) switchable(
+      LearningCommands? initial,
+    ) {
+      final container = ProviderContainer(
+        overrides: [
+          subTrackViewerRoleProvider.overrideWithValue(
+            SubTrackViewerRole.child,
+          ),
+          _activeCommandsProvider.overrideWith(() => _ActiveCommands(initial)),
+          learningCommandsProvider.overrideWith(
+            (ref) async => ref.watch(_activeCommandsProvider),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      // The Learn section watches the controller, keeping it active.
+      container.listen(subTrackCaptureControllerProvider, (_, _) {});
+      return (
+        container,
+        (next) => container.read(_activeCommandsProvider.notifier).set(next),
+      );
+    }
+
+    FakeLearningCommands fake() {
+      final commands = FakeLearningCommands();
+      addTearDown(commands.dispose);
+      return commands;
+    }
+
+    test('a learner switch drops the previous learner\'s not-saved +1 and '
+        'Undo entries, awaited captures and failure feed', () async {
+      final learnerA = fake();
+      final learnerB = fake();
+      final (c, switchTo) = switchable(learnerA);
+      // Two queued +1s; the second is undone (queued too).
+      learnerA.nextResult = const CaptureResult.success(
+        eventIds: [captured],
+        queued: true,
+      );
+      expect(await _controller(c).plusOne(_item), isA<PlusOneRecorded>());
+      learnerA.nextResult = const CaptureResult.success(
+        eventIds: ['01FAKE0000000000000000QUE2'],
+        queued: true,
+      );
+      await _controller(c).plusOne(_item);
+      learnerA.nextResult = const CaptureResult.success(
+        eventIds: [voided],
+        queued: true,
+      );
+      expect(
+        await _controller(c).undo(_item, const ['01FAKE0000000000000000QUE2']),
+        UndoOutcome.undone,
+      );
+      learnerA.pendingFailures.add([
+        failure('fa', const [captured]),
+        failure('fv', const [voided]),
+      ]);
+      await pumpEventQueue();
+      expect(c.read(subTrackCaptureControllerProvider).notSaved, hasLength(2));
+
+      switchTo(learnerB);
+      await pumpEventQueue();
+      var state = c.read(subTrackCaptureControllerProvider);
+      expect(state.notSaved, isEmpty);
+      expect(state.awaitingEngine, isEmpty);
+      expect(state.inFlight, isEmpty);
+
+      // The previous learner's feed no longer reaches this session.
+      learnerA.pendingFailures.add([
+        failure('fa2', const [captured]),
+      ]);
+      await pumpEventQueue();
+      expect(c.read(subTrackCaptureControllerProvider).notSaved, isEmpty);
+
+      // Retry of a stale entry and Undo of the previous learner's capture
+      // write nothing under the new learner.
+      expect(await _controller(c).retryNotSaved('fa'), isFalse);
+      expect(
+        await _controller(c).undo(_item, const [captured]),
+        UndoOutcome.refused,
+      );
+      expect(learnerB.calls, isEmpty);
+
+      // The new learner's own writes work as before.
+      learnerB.nextResult = const CaptureResult.success(
+        eventIds: ['01FAKE0000000000000000BBB1'],
+      );
+      expect(await _controller(c).plusOne(_item), isA<PlusOneRecorded>());
+      state = c.read(subTrackCaptureControllerProvider);
+      expect(state.awaitingEngine, {'01FAKE0000000000000000BBB1'});
+
+      // Leaving to no learner clears it too.
+      switchTo(null);
+      await pumpEventQueue();
+      expect(c.read(subTrackCaptureControllerProvider).awaitingEngine, isEmpty);
+    });
+
+    test('a capture that settles after the switch is not tracked or '
+        'offered for Undo', () async {
+      final learnerA = _SlowCommands();
+      final learnerB = fake();
+      final (c, switchTo) = switchable(learnerA);
+      final pending = _controller(c).plusOne(_item);
+      await pumpEventQueue();
+      expect(c.read(subTrackCaptureControllerProvider).inFlight, {schoolId});
+
+      switchTo(learnerB);
+      await pumpEventQueue();
+      learnerA.release.complete(
+        const CaptureResult.success(eventIds: [captured], queued: true),
+      );
+      expect(await pending, isA<PlusOneIgnored>());
+      final state = c.read(subTrackCaptureControllerProvider);
+      expect(state.awaitingEngine, isEmpty);
+      expect(state.inFlight, isEmpty);
+      expect(learnerA.calls, ['capture']);
+    });
+
+    test('a refused retry made under the old learner is not resent after '
+        'the switch', () async {
+      final learnerA = fake();
+      final learnerB = fake();
+      final (c, switchTo) = switchable(learnerA);
+      learnerA.nextResult = const CaptureResult.success(
+        eventIds: [captured],
+        queued: true,
+      );
+      await _controller(c).plusOne(_item);
+      learnerA.pendingFailures.add([
+        failure('fa', const [captured]),
+      ]);
+      await pumpEventQueue();
+      final entry = c.read(subTrackCaptureControllerProvider).notSaved.single;
+      switchTo(learnerB);
+      await pumpEventQueue();
+      expect(await _controller(c).retryNotSaved(entry.failureId), isFalse);
+      expect(learnerA.calls.map((call) => call.name), isNot(contains('retry')));
+      expect(learnerB.calls, isEmpty);
+    });
+  });
+
+  test('a refused Undo or retry under several queued writes keeps every '
+      'other capture awaited', () async {
+    final commands = FakeLearningCommands();
+    addTearDown(commands.dispose);
+    final c = _container(commands: commands);
+    const first = '01FAKE0000000000000000MUL1';
+    const second = '01FAKE0000000000000000MUL2';
+    const voided = '01FAKE0000000000000000MULV';
+    for (final id in const [first, second]) {
+      commands.nextResult = CaptureResult.success(eventIds: [id], queued: true);
+      await _controller(c).plusOne(_item);
+    }
+    commands.nextResult = const CaptureResult.success(
+      eventIds: [voided],
+      queued: true,
+    );
+    expect(
+      await _controller(c).undo(_item, const [second]),
+      UndoOutcome.undone,
+    );
+    commands.pendingFailures.add([
+      const PendingFailure(
+        id: 'fv',
+        eventIds: [voided],
+        changeIds: [],
+        reason: PendingFailureReason.permissionDenied,
+      ),
+    ]);
+    await pumpEventQueue();
+    expect(c.read(subTrackCaptureControllerProvider).awaitingEngine, {first});
+    expect(await _controller(c).retryNotSaved('fv'), isTrue);
+    expect(c.read(subTrackCaptureControllerProvider).awaitingEngine, {first});
+  });
+
   test('reconcile returns lock-ignored captures once and settles counted '
       'ones', () async {
     final commands = FakeLearningCommands();
@@ -362,4 +554,52 @@ void main() {
       expect(_controller(c).reconcile(state), isEmpty);
     },
   );
+}
+
+/// The active learner's commands, switchable in a test.
+final _activeCommandsProvider =
+    NotifierProvider<_ActiveCommands, LearningCommands?>(
+      () => _ActiveCommands(null),
+    );
+
+class _ActiveCommands extends Notifier<LearningCommands?> {
+  _ActiveCommands(this._initial);
+
+  final LearningCommands? _initial;
+
+  @override
+  LearningCommands? build() => _initial;
+
+  void set(LearningCommands? next) => state = next;
+}
+
+/// Commands whose capture settles only when [release] completes.
+class _SlowCommands implements LearningCommands {
+  final release = Completer<CaptureResult>();
+
+  /// The method names called, in order.
+  final List<String> calls = [];
+
+  @override
+  Future<CaptureResult> capture({
+    required String curriculumId,
+    List<LeafRef> refs = const [],
+    List<NodeEntry> nodes = const [],
+    required String source,
+    required DateState dateState,
+    CivilDate? learnedOn,
+    int? stage,
+  }) {
+    calls.add('capture');
+    return release.future;
+  }
+
+  @override
+  Stream<List<PendingFailure>> watchPendingFailures() {
+    calls.add('watchPendingFailures');
+    return const Stream.empty();
+  }
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }

@@ -24,6 +24,17 @@
 /// write back) and [SubTrackCaptureController.retryNotSaved] re-sends it.
 /// *Undo* clears its tracking only after the void is confirmed or queued; a
 /// refused or failed undo leaves the capture tracked and says so.
+///
+/// Learner scope: `learningCommandsProvider` yields commands bound to one
+/// `LearnerScope` and session actor, so the controller is bound to the
+/// commands instance it first used. When that instance is replaced (another
+/// learner, a tutored session entered or left, or no learner) every piece
+/// of session state is dropped: in-flight and awaited captures, queued
+/// writes, "not saved" entries and the pending-failure subscription. A
+/// write that settles after the switch, an *Undo* of a capture this binding
+/// did not make, and a *Retry* whose commands are not the ones that
+/// reported the failure are refused, so nothing of one learner is shown to,
+/// or re-sent under, another.
 library;
 
 import 'dart:async';
@@ -66,7 +77,9 @@ final class PlusOneFailed extends PlusOneOutcome {
 }
 
 /// The tap was not acted on: a *+1* for the row is already in flight, the
-/// row cannot capture, or the viewer is a tutor.
+/// row cannot capture, the viewer is a tutor, or the learner changed before
+/// it settled (the write then belongs to the previous learner and this
+/// session offers no *Undo* for it).
 final class PlusOneIgnored extends PlusOneOutcome {
   /// Creates the outcome.
   const PlusOneIgnored();
@@ -80,8 +93,9 @@ enum UndoOutcome {
   /// The capture gate refused it; the lock overlay covers the app.
   locked,
 
-  /// The command refused it for good (e.g. a lock-ignored target): the
-  /// capture stands and retrying would not help.
+  /// The command refused it for good (e.g. a lock-ignored target), or the
+  /// capture was not made under the current learner: the capture stands
+  /// and retrying would not help.
   refused,
 
   /// It did not go through (no commands, a throw, offline-only refusal):
@@ -201,13 +215,57 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
   /// Queued event ids of this session, until confirmed or voided.
   final Map<String, _QueuedWrite> _queued = {};
 
+  /// Event ids captured under [_bound] and not yet undone: the only ones
+  /// *Undo* may void.
+  final Set<String> _captured = {};
+
+  /// The commands (one learner scope and session actor) this session's
+  /// state belongs to; null until first used.
+  LearningCommands? _bound;
+
+  /// Bumped whenever [_bound] is replaced; an operation that started under
+  /// an older binding never touches the new state.
+  int _binding = 0;
+
   LearningCommands? _watched;
   StreamSubscription<List<PendingFailure>>? _failures;
 
   @override
   SubTrackCaptureState build() {
-    ref.onDispose(_stopWatching);
+    ref
+      ..onDispose(_stopWatching)
+      ..listen(learningCommandsProvider, (_, next) {
+        // A reload keeps the previous value; only a different instance (or
+        // no learner) is a scope change.
+        final commands = next.value;
+        if (next.hasValue && _bound != null && !identical(commands, _bound)) {
+          _rebind(commands);
+        }
+      });
     return const SubTrackCaptureState();
+  }
+
+  /// Drops every piece of state of the previous binding and binds to
+  /// [commands].
+  void _rebind(LearningCommands? commands) {
+    AppLogger.instance.info(event: 'sub_track_capture_scope_changed');
+    _binding++;
+    _stopWatching();
+    _queued.clear();
+    _captured.clear();
+    _bound = commands;
+    state = const SubTrackCaptureState();
+  }
+
+  /// Binds to [commands] (first use) or rebinds when they replaced the
+  /// bound ones, then reports whether [binding] is still current.
+  bool _stillBound(LearningCommands commands, int binding) {
+    if (_bound == null) {
+      _bound = commands;
+    } else if (!identical(_bound, commands)) {
+      _rebind(commands);
+    }
+    return binding == _binding;
   }
 
   void _stopWatching() {
@@ -288,18 +346,28 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
         ref.read(subTrackViewerRoleProvider) == SubTrackViewerRole.tutor) {
       return const PlusOneIgnored();
     }
+    final binding = _binding;
     state = state._copy(inFlight: {...state.inFlight, item.subTrackId});
     try {
       final commands = await ref.read(learningCommandsProvider.future);
       if (commands == null) return const PlusOneFailed();
+      // The row was another learner's: never write it under this one.
+      if (!_stillBound(commands, binding)) return const PlusOneIgnored();
       final result = await commands.capture(
         curriculumId: item.curriculumId,
         refs: [position],
         source: item.subTrackId,
         dateState: DateState.dated,
       );
+      if (binding != _binding) {
+        AppLogger.instance.warning(
+          event: 'sub_track_plus_one_settled_after_scope_change',
+        );
+        return const PlusOneIgnored();
+      }
       switch (result) {
         case CaptureSuccess(:final eventIds, :final queued):
+          _captured.addAll(eventIds);
           state = state._copy(
             awaitingEngine: {...state.awaitingEngine, ...eventIds},
           );
@@ -334,22 +402,36 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
       );
       return const PlusOneFailed();
     } finally {
-      state = state._copy(
-        inFlight: {...state.inFlight}..remove(item.subTrackId),
-      );
+      if (binding == _binding) {
+        state = state._copy(
+          inFlight: {...state.inFlight}..remove(item.subTrackId),
+        );
+      }
     }
   }
 
   /// Voids the events of [item]'s *+1* (the snackbar's *Undo*,
   /// UX-DR-154). The capture stays tracked unless the void is confirmed or
   /// queued, so a refused or failed undo can be reported and retried.
+  /// Only captures made under the current learner are voided; any other
+  /// *Undo* is [UndoOutcome.refused] without a write.
   Future<UndoOutcome> undo(SubTrackHomeItem item, List<String> eventIds) async {
+    final binding = _binding;
     try {
       final commands = await ref.read(learningCommandsProvider.future);
       if (commands == null) return UndoOutcome.failed;
+      if (!_stillBound(commands, binding) ||
+          !eventIds.every(_captured.contains)) {
+        AppLogger.instance.warning(
+          event: 'sub_track_plus_one_undo_out_of_scope',
+        );
+        return UndoOutcome.refused;
+      }
       final result = await commands.undoEvents(eventIds);
+      if (binding != _binding) return UndoOutcome.refused;
       switch (result) {
         case CaptureSuccess(eventIds: final voidIds, :final queued):
+          _captured.removeAll(eventIds);
           for (final id in eventIds) {
             _queued.remove(id);
           }
@@ -402,10 +484,19 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
         .where((n) => n.failureId == failureId)
         .firstOrNull;
     if (entry == null) return false;
+    final binding = _binding;
     try {
       final commands = await ref.read(learningCommandsProvider.future);
       if (commands == null) return false;
+      // Only the commands that reported the failure may re-send it.
+      if (!_stillBound(commands, binding) || !identical(commands, _watched)) {
+        AppLogger.instance.warning(
+          event: 'sub_track_not_saved_retry_out_of_scope',
+        );
+        return false;
+      }
       final result = await commands.retry(failureId);
+      if (binding != _binding) return false;
       if (result is! CaptureSuccess) {
         AppLogger.instance.warning(
           event: 'sub_track_not_saved_retry_refused',
@@ -457,7 +548,8 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
 }
 
 /// The app-wide *+1* controller (kept alive so a capture in flight, and its
-/// lock check after sync, outlive the Learn tab's rebuilds).
+/// lock check after sync, outlive the Learn tab's rebuilds). Its state is
+/// bound to the active learner's commands and reset when they change.
 final subTrackCaptureControllerProvider =
     NotifierProvider<SubTrackCaptureController, SubTrackCaptureState>(
       SubTrackCaptureController.new,
