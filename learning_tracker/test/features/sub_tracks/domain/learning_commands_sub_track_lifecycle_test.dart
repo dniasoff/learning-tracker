@@ -10,6 +10,7 @@ import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart'
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -248,6 +249,37 @@ void main() {
       expect(result, isA<CaptureRejected>());
       expect(repo.calls, isEmpty);
       expect(repo.entries, isEmpty);
+    });
+
+    test('a complete read with an undecodable row (AD-35) refuses Add next '
+        'year, end, delete and edit before any write', () async {
+      // The rejected row may be the 2027 sibling that would refuse Y+1.
+      repo.seedRejected(scope, const [
+        RejectedRow(ulidB, FormatException('bad academic_year')),
+      ]);
+      final results = [
+        await commands.createSubTrack(
+          nextYearSubTrackDraft(_school()),
+          addNextYear: true,
+        ),
+        await commands.endSubTrack(ulidA),
+        await commands.deleteSubTrack(ulidA),
+        await commands.editSubTrack(ulidA, const SubTrackEdit(name: 'Shiur')),
+      ];
+      expect(results, everyElement(isA<CaptureOnlineRequired>()));
+      expect(repo.calls, isEmpty);
+      expect(repo.entries, isEmpty);
+      expect(analytics.lifecycles, isEmpty);
+
+      // Once the read is clean again the same Add next year saves.
+      repo.seedRejected(scope, const []);
+      expect(
+        await commands.createSubTrack(
+          nextYearSubTrackDraft(_school()),
+          addNextYear: true,
+        ),
+        isA<CaptureSuccess>(),
+      );
     });
 
     test('two offline Add next year creates that both synced (AD-45 '

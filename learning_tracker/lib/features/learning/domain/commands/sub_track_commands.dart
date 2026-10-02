@@ -611,15 +611,23 @@ final class SubTrackCommands {
     return result;
   }
 
-  /// The complete sub-track read of [scope] (live and ended), or null when
-  /// it is not available within [readTimeout] (offline with no cache).
+  /// The complete, clean sub-track read of [scope] (live and ended), or
+  /// null when there is none to validate against: it is not available
+  /// within [readTimeout] (offline with no cache), or the complete read has
+  /// rows that failed strict decode (AD-35). A rejected row may be a live
+  /// sibling, so validating against the decoded rows alone could let a
+  /// write past the AD-45 academic-year and overlap limits; the caller
+  /// refuses before any write and the user can try again
+  /// (`CaptureResult.onlineRequired`, the existing read-failure result).
   Future<List<SubTrack>?> _readSubTracks() async {
     try {
-      final ready = await _subTracks
-          .watchAll(scope)
-          .firstWhere((r) => r is CompleteReadReady<SubTrack>)
-          .timeout(readTimeout);
-      return (ready as CompleteReadReady<SubTrack>).items;
+      final ready =
+          await _subTracks
+                  .watchAll(scope)
+                  .firstWhere((r) => r is CompleteReadReady<SubTrack>)
+                  .timeout(readTimeout)
+              as CompleteReadReady<SubTrack>;
+      return ready.isClean ? ready.items : null;
     } on TimeoutException {
       return null;
     }
