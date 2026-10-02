@@ -40,6 +40,24 @@ enum GovernedEntity {
 
   const GovernedEntity(this.storage, this.collection);
 
+  /// Whether every changed doc of this entity IS the entity, i.e. its doc
+  /// id equals `entity_id` (AD-38 owner rule: the doc id for `subTrack` and
+  /// `goal`, the profileId for `learnerSettings`, whose doc is
+  /// `learner_profiles/{profileId}`). False for the `mainTrack*` entities,
+  /// whose `entity_id` is the curriculumId while one entry may cover
+  /// several docs with other ids (e.g. per-node `track_learning_order`
+  /// docs); their link is each doc's immutable `curriculum_id` field, which
+  /// the AD-38 rules and `writeWithChangeLog` check against the stored doc.
+  bool get docIdIsEntityId => switch (this) {
+    subTrack || goal || learnerSettings => true,
+    mainTrack ||
+    mainTrackOrder ||
+    mainTrackProgram ||
+    mainTrackStudyDays ||
+    mainTrackStages ||
+    mainTrackScope => false,
+  };
+
   /// The exact storage string.
   final String storage;
 
@@ -247,6 +265,12 @@ final class ChangeLogEntry {
       if (parsed == null) _fail(kAfter, 'malformed changed-field key');
       if (parsed.collection != entity.collection) {
         _fail(kAfter, 'changed field outside the entity collection');
+      }
+      // AD-38 entity ↔ doc mapping: an entry may not claim entity A while
+      // its changed fields address document B (audit and undo would then
+      // describe, and revert, the wrong doc).
+      if (entity.docIdIsEntityId && parsed.docId != entityId) {
+        _fail(kAfter, 'changed field on a document other than entity_id');
       }
     }
   }
