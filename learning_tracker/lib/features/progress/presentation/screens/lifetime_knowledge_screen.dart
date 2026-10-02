@@ -147,6 +147,13 @@ class _LifetimeKnowledgeScreenState
                   return CurriculumBreakdownList(
                     summaries: withProgress,
                     showProvenance: true,
+                    // Story 1.13 (UX-DR-60): a leaf opens Mishna history.
+                    onLeafTap: (curriculumId, leafRef) => context.router.push(
+                      MishnaHistoryRoute(
+                        curriculumId: curriculumId.storageKey,
+                        leafRef: leafRef,
+                      ),
+                    ),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),

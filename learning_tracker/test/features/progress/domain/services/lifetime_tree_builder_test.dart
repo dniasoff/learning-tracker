@@ -89,6 +89,28 @@ void main() {
         expect(tree, isEmpty);
       });
 
+      test('DNI-475: a terminal node of one leaf carries its leafRef (the '
+          'Mishna-history target); aggregating nodes do not', () {
+        final leaves = [
+          leaf('Berakhot 1:1', level2: 'Berakhot', level3: '1', level4: '1'),
+          leaf(
+            'Berakhot 1:2',
+            level2: 'Berakhot',
+            level3: '1',
+            level4: '2',
+            sortOrder: 1,
+          ),
+        ];
+        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});
+        final perek = tree.single.children.single.children.single;
+        expect(tree.single.leafRef, isNull);
+        expect(perek.leafRef, isNull);
+        expect(perek.children.map((n) => n.leafRef), [
+          'Berakhot 1:1',
+          'Berakhot 1:2',
+        ]);
+      });
+
       test('single leaf creates single root node', () {
         final leaves = [leaf('Berakhot 1:1', level1: 'Zeraim')];
         final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});

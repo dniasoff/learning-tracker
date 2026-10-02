@@ -302,6 +302,9 @@ class LifetimeTreeBuilder {
             state: nodeState,
             children: children,
             provenance: provenance,
+            leafRef: children.isEmpty && entry.value.length == 1
+                ? entry.value.first.sefariaRef
+                : null,
           ),
         );
       }

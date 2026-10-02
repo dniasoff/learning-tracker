@@ -205,7 +205,10 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
               showReviewBadge: showReviewBadge,
               showBreadcrumb: true,
               onTap: () {
-                if (item.isLeaf || _isChapterLevelRef(curriculum, item)) {
+                if (item.isLeaf) {
+                  // Story 1.13 (UX-DR-60): a leaf opens its Mishna history.
+                  openLeafHistory(context, curriculum, item);
+                } else if (_isChapterLevelRef(curriculum, item)) {
                   context.router.push(
                     TextDisplayRoute(sefariaRef: item.sefariaRef),
                   );

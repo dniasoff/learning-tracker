@@ -1,5 +1,7 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -13,11 +15,26 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// Opens Mishna history for the leaf [item] of [curriculum] (Story 1.13,
+/// UX-DR-60): the leaf-tap destination of every [ContentItemTile] caller.
+/// The history screen keeps the text reader one tap away.
+Future<void> openLeafHistory(
+  BuildContext context,
+  CurriculumId curriculum,
+  ContentItem item,
+) => context.router.push(
+  MishnaHistoryRoute(
+    curriculumId: curriculum.storageKey,
+    leafRef: item.sefariaRef,
+  ),
+);
+
 /// Displays a single content item in the hierarchy browser.
 ///
 /// When the Hebrew Terms toggle is on (default), shows only the Hebrew name.
 /// When off, shows the Hebrew name with the English transliteration as a
 /// subtitle. Leaf items show a review count badge that updates reactively.
+/// Callers route a leaf tap to [openLeafHistory].
 ///
 /// [showReviewBadge] guards the [ReviewCountBadge] per the chazara product
 /// rule: the badge is review/chazara-specific and MUST NOT render when the

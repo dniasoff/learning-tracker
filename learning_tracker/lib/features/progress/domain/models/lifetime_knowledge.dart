@@ -91,6 +91,7 @@ class LifetimeTreeNode {
     required this.state,
     required this.children,
     this.provenance,
+    this.leafRef,
   });
 
   final CurriculumId curriculumId;
@@ -119,6 +120,11 @@ class LifetimeTreeNode {
   /// available. Used by the Lifetime Knowledge screen to show how a leaf was
   /// learned ("Live · N chazaros" / "Bulk-marked" / "Lifetime · imported").
   final LifetimeLeafProvenance? provenance;
+
+  /// The `sefariaRef` of the single [ContentItem] leaf a terminal node
+  /// stands for — the Mishna-history target of a tree leaf tap (Story 1.13,
+  /// UX-DR-60). Null on aggregating nodes.
+  final String? leafRef;
 }
 
 /// Aggregated lifetime progress summary for one curriculum.

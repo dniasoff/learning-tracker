@@ -9,6 +9,10 @@ import 'package:learning_tracker/features/progress/presentation/providers/items_
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// A leaf-row tap: the curriculum and the leaf's `sefariaRef`.
+typedef LeafTapCallback =
+    void Function(CurriculumId curriculumId, String leafRef);
+
 /// Scrollable list of [CurriculumCompletionSummary] rows with expandable
 /// per-curriculum tree views. Consumed by [LifetimeKnowledgeScreen].
 ///
@@ -27,10 +31,16 @@ class CurriculumBreakdownList extends StatefulWidget {
     this.shrinkWrap = false,
     this.physics,
     this.padding,
+    this.onLeafTap,
   });
 
   final List<CurriculumCompletionSummary> summaries;
   final bool showProvenance;
+
+  /// Called when a terminal leaf row (a node with a [LifetimeTreeNode.leafRef])
+  /// is tapped — the Mishna-history entry point (Story 1.13). Null keeps
+  /// leaf rows inert.
+  final LeafTapCallback? onLeafTap;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
   final EdgeInsetsGeometry? padding;
@@ -61,6 +71,7 @@ class _CurriculumBreakdownListState extends State<CurriculumBreakdownList> {
           treeExpanded: _treeExpanded,
           l10n: l10n,
           showProvenance: widget.showProvenance,
+          onLeafTap: widget.onLeafTap,
           onExpandToggle: () => setState(() {
             if (_expanded.contains(summary.curriculumId)) {
               _expanded.remove(summary.curriculumId);
@@ -86,8 +97,10 @@ class _CurriculumCard extends ConsumerWidget {
     required this.showProvenance,
     required this.onExpandToggle,
     required this.onTreeExpandToggle,
+    this.onLeafTap,
   });
 
+  final LeafTapCallback? onLeafTap;
   final CurriculumCompletionSummary summary;
   final bool isExpanded;
   final Map<String, bool> treeExpanded;
@@ -239,6 +252,7 @@ class _CurriculumCard extends ConsumerWidget {
         expandedNodes: treeExpanded,
         onExpandToggle: onTreeExpandToggle,
         showProvenance: showProvenance,
+        onLeafTap: onLeafTap,
       );
     }).toList();
   }
@@ -260,7 +274,12 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
     required this.expandedNodes,
     required this.onExpandToggle,
     this.showProvenance = false,
+    this.onLeafTap,
   });
+
+  /// Called when this node is a terminal leaf with a [LifetimeTreeNode.leafRef]
+  /// and is tapped (Story 1.13: opens Mishna history).
+  final LeafTapCallback? onLeafTap;
 
   final LifetimeTreeNode node;
   final int depth;
@@ -294,6 +313,12 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
       ),
     );
 
+    final leafRef = node.leafRef;
+    final onLeaf = onLeafTap;
+    final leafTap = !hasChildren && leafRef != null && onLeaf != null
+        ? () => onLeaf(node.curriculumId, leafRef)
+        : null;
+
     final provenanceLabel =
         showProvenance && !hasChildren && node.provenance != null
         ? provenanceText(node.provenance!, l10n: l10n, terms: terms)
@@ -306,7 +331,7 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
           borderRadius: BorderRadius.circular(6),
           onTap: hasChildren
               ? () => onExpandToggle(nodeKey, !isExpanded)
-              : null,
+              : leafTap,
           child: Padding(
             padding: EdgeInsetsDirectional.only(
               start: depth * 16.0,
@@ -359,6 +384,7 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
               expandedNodes: expandedNodes,
               onExpandToggle: onExpandToggle,
               showProvenance: showProvenance,
+              onLeafTap: onLeafTap,
             );
           }),
       ],

@@ -186,8 +186,8 @@ void main() {
     });
 
     testWidgets(
-      'typing a query shows matching results; tapping a leaf navigates to '
-      'TextDisplayScreen',
+      'typing a query shows matching results; tapping a leaf opens Mishna '
+      'history, whose Open text action navigates to TextDisplayScreen',
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Avi');
         final h = E2EHarness(tester, identity: identity);
@@ -254,10 +254,16 @@ void main() {
           reason: 'search result list must show at least one item after query',
         );
 
-        // Tap the first ListTile result (the onTap opens TextDisplayRoute for
-        // a leaf item).
+        // Tap the first ListTile result. Story 1.13 (DNI-475, UX-DR-60): a
+        // leaf opens its Mishna history; the reader is its Open text action.
         await h.tapWidget(
           find.byType(ListTile).first,
+          settle: const Duration(milliseconds: 500),
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        h.expectOnScreen('Mishna history');
+        await h.tapWidget(
+          find.byKey(const Key('mishnaHistoryOpenText')),
           settle: const Duration(milliseconds: 500),
         );
         await tester.pump(const Duration(milliseconds: 300));

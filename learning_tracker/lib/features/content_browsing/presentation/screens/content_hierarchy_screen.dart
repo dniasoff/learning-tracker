@@ -363,7 +363,11 @@ class _ContentHierarchyScreenState
   }
 
   void _handleItemTap(ContentItem item) {
-    if (item.isLeaf || _isChapterLevelRef(item)) {
+    final curriculum = _curriculumOrNull;
+    if (item.isLeaf && curriculum != null) {
+      // Story 1.13 (UX-DR-60): a leaf opens its Mishna history.
+      openLeafHistory(context, curriculum, item);
+    } else if (item.isLeaf || _isChapterLevelRef(item)) {
       context.router.push(TextDisplayRoute(sefariaRef: item.sefariaRef));
     } else {
       _drillDown(item);
