@@ -36,6 +36,21 @@ final class SubTrackReadRejectedException implements Exception {
   String toString() => 'SubTrackReadRejectedException($count rows)';
 }
 
+/// The sub-track read cannot start: no learner scope is resolved yet, or
+/// the sub-track repository is not ready (no active or authenticated
+/// account, ruling B1). The lifecycle surfaces show it as a read failure
+/// with retry, never as an empty list: nothing has been read, so "no
+/// sub-tracks" would be a false empty state that hides live and ended
+/// sub-tracks (and would offer an academic year another sub-track holds).
+/// The read restarts by itself once the scope and repository resolve.
+final class SubTrackReadNotReadyException implements Exception {
+  /// Creates the failure.
+  const SubTrackReadNotReadyException();
+
+  @override
+  String toString() => 'SubTrackReadNotReadyException';
+}
+
 /// A learner's sub-tracks split into the hub's active and ended groups.
 final class SubTrackLifecycleGroups {
   /// Creates the groups.

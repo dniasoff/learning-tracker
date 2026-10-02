@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_lifecycle_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 
 import '../../../helpers/learner_state/c0_fixtures.dart';
@@ -48,6 +49,13 @@ LearnerProfileEntity _profile(ProfileMode mode) => LearnerProfileEntity(
   createdAt: t2,
   updatedAt: t2,
 );
+
+class _Ready extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set() => state = true;
+}
 
 void main() {
   final scope = c0Scope();
@@ -120,16 +128,58 @@ void main() {
     expect(stored.endReason, isNull);
   });
 
-  test('no learner: no sub-tracks', () async {
-    final c = ProviderContainer.test(
-      overrides: [
-        localDayClockProvider.overrideWithValue(clock),
-        activeLearnerScopeProvider.overrideWith((ref) async => null),
-        subTrackRepositoryProvider.overrideWith((ref) async => repo),
-      ],
-    );
-    c.listen(subTrackLifecycleTracksProvider, (_, _) {});
-    expect(await c.read(subTrackLifecycleTracksProvider.future), isEmpty);
+  group('not ready is a read failure, never a false empty list', () {
+    Future<void> expectNotReady(ProviderContainer c) async {
+      c.listen(subTrackLifecycleGroupsProvider, (_, _) {});
+      await expectLater(
+        c.read(subTrackLifecycleTracksProvider.future),
+        throwsA(isA<SubTrackReadNotReadyException>()),
+      );
+      final groups = c.read(subTrackLifecycleGroupsProvider);
+      expect(groups.hasError, isTrue);
+      expect(groups.value, isNull);
+    }
+
+    test('no learner scope yet', () async {
+      await expectNotReady(
+        ProviderContainer.test(
+          overrides: [
+            localDayClockProvider.overrideWithValue(clock),
+            activeLearnerScopeProvider.overrideWith((ref) async => null),
+            subTrackRepositoryProvider.overrideWith((ref) async => repo),
+          ],
+        ),
+      );
+    });
+
+    test('sub-track repository not ready (account degraded)', () async {
+      await expectNotReady(
+        ProviderContainer.test(
+          overrides: [
+            localDayClockProvider.overrideWithValue(clock),
+            activeLearnerScopeProvider.overrideWith((ref) async => scope),
+            subTrackRepositoryProvider.overrideWith((ref) async => null),
+          ],
+        ),
+      );
+    });
+
+    test('the read starts by itself once the repository is ready', () async {
+      final ready = NotifierProvider<_Ready, bool>(_Ready.new);
+      final c = ProviderContainer.test(
+        overrides: [
+          localDayClockProvider.overrideWithValue(clock),
+          activeLearnerScopeProvider.overrideWith((ref) async => scope),
+          subTrackRepositoryProvider.overrideWith(
+            (ref) async => ref.watch(ready) ? repo : null,
+          ),
+        ],
+      );
+      await expectNotReady(c);
+      c.read(ready.notifier).set();
+      final tracks = await c.read(subTrackLifecycleTracksProvider.future);
+      expect([for (final t in tracks) t.id], [ulidA, ulidB, ulidC]);
+    });
   });
 
   test('the deadline is the live deadline goal of the curriculum', () async {

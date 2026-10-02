@@ -23,17 +23,18 @@ import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// Every sub-track of the active learner, live and ended, from the
-/// complete read (loading until it is complete, never partial). Empty
-/// while no learner is active or the sub-track repository is not ready.
-/// A read failure is an error, never an empty list; so is a complete read
-/// with undecodable rows ([SubTrackReadRejectedException], AD-35).
+/// complete read (loading until it is complete, never partial). Empty only
+/// when a complete, clean repository read says so. While no learner scope
+/// is resolved or the sub-track repository is not ready it is an error
+/// ([SubTrackReadNotReadyException]) that clears itself once both resolve,
+/// never an empty list; so is a read failure, and a complete read with
+/// undecodable rows ([SubTrackReadRejectedException], AD-35).
 final subTrackLifecycleTracksProvider =
     StreamProvider.autoDispose<List<SubTrack>>((ref) async* {
       final scope = await ref.watch(activeLearnerScopeProvider.future);
       final repository = await ref.watch(subTrackRepositoryProvider.future);
       if (scope == null || repository == null) {
-        yield const [];
-        return;
+        throw const SubTrackReadNotReadyException();
       }
       yield* repository
           .watchAll(scope)
