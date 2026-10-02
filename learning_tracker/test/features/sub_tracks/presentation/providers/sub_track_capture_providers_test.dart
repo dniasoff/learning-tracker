@@ -155,7 +155,7 @@ void main() {
 
   test('leaves the log already recorded (a stale picker, DNI-501 AC-2) '
       'leave the capture before the plan is lined up', () {
-    final token = pending.add(_c, _school, [_a, _b, _d]);
+    final token = pending.add(_scope, _c, _school, [_a, _b, _d]);
     // Another device recorded _b while the picker was open: the command
     // planned events for _a and _d only.
     pending.bind(token, [_e1, _e3], alreadyRecorded: [_b]);
