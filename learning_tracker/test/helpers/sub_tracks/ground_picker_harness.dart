@@ -4,11 +4,17 @@
 /// the session, labels and preferences it reads.
 library;
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
@@ -22,7 +28,9 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../learner_state/c0_fixtures.dart';
 import '../learner_state/fake_learner_state.dart';
@@ -208,3 +216,72 @@ const Size phoneSize = Size(412, 915);
 
 /// A tablet-sized surface (≥ 840dp wide).
 const Size tabletSize = Size(1280, 800);
+
+class _AllowAll extends AutoRouteGuard {
+  @override
+  void onNavigation(NavigationResolver resolver, StackRouter router) =>
+      resolver.next(true);
+}
+
+class _PinService extends Mock implements PinService {}
+
+final class _AllowProfile extends ProfileGuard {
+  _AllowProfile()
+    : super(
+        getProfiles: () async => const [],
+        getSelectedProfileId: () => null,
+        setSelectedProfileId: (_) {},
+        isTutoredSession: () => false,
+        profilePickerRoute: () => const SettingsRoute(),
+      );
+
+  @override
+  Future<void> onNavigation(
+    NavigationResolver resolver,
+    StackRouter router,
+  ) async => resolver.next(true);
+}
+
+final class _AllowChildMode extends ChildModeGuard {
+  _AllowChildMode()
+    : super(
+        getProfileById: (_) async => null,
+        getSelectedProfileId: () => null,
+      );
+
+  @override
+  Future<void> onNavigation(
+    NavigationResolver resolver,
+    StackRouter router,
+  ) async => resolver.next(true);
+}
+
+final class _AllowPin extends PinGuard {
+  _AllowPin()
+    : super(
+        pinService: _PinService(),
+        promptForPin: () async => true,
+        getScope: () => null,
+        pinSetupRoute: () => const SettingsRoute(),
+      );
+
+  @override
+  Future<void> onNavigation(
+    NavigationResolver resolver,
+    StackRouter router,
+  ) async => resolver.next(true);
+}
+
+/// A real [AppRouter] whose other guards let everything through, so a
+/// test exercises exactly the picker route's parent-session guard, asking
+/// [isParent].
+AppRouter groundPickerTestRouter({required bool Function() isParent}) =>
+    AppRouter(
+      authGuard: _AllowAll(),
+      profileGuard: _AllowProfile(),
+      childModeGuard: _AllowChildMode(),
+      pinGuard: _AllowPin(),
+      parentSessionGuard: ParentSessionGuard(
+        isParentSession: () async => isParent(),
+      ),
+    );
