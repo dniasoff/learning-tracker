@@ -36,6 +36,7 @@ import {
   getDocs,
   setDoc,
   deleteDoc,
+  deleteField,
   collection,
   query,
   limit,
@@ -2279,6 +2280,59 @@ describe('DNI-484 — R16 retired fields are denied on governed docs', () => {
           governedWrite(owner(), `${LP}/${col}/${id}`, { ...live, [key]: pastTs }, entity, 'c1'),
         );
       }
+    });
+  }
+
+  // A governed doc written before R16 may still hold retired keys (the codecs
+  // ignore them and AD-13 forbids a data migration). Field-level merges keep
+  // those keys in the post-write doc, so the whitelist only constrains the
+  // keys a write adds or changes: the owner can still update and tombstone
+  // the doc, may drop a retired key, but can never (re)write one.
+  const LEGACY_TRACK = Object.fromEntries(TRACK_RETIRED.map(
+    (k) => [k, k === 'purged' ? false : pastTs],
+  ));
+  const LEGACY_DOCS = [
+    ['curriculum_tracks', 'c1', { profile_id: PROFILE, track_id: 1, ...liveTrack, ...LEGACY_TRACK },
+      'mainTrack', 'c1', { state: 'paused' }, 'pace_reset_date'],
+    ['goals', 'c1_deadline', {
+      ...liveDeadline, target_percent: 80, targetPercent: 80,
+      updated_at: pastTs, updatedAt: pastTs, synced_at: pastTs,
+    }, 'goal', 'c1_deadline', { target_date: '2027-09-01' }, 'target_percent'],
+    ...OTHER_GOVERNED.map(([col, id, live, entity]) => [
+      col, id, { ...live, updated_at: pastTs, synced_at: pastTs }, entity, 'c1',
+      col === 'track_learning_order' ? { user_sort_order: 1 } : { profile_id: PROFILE },
+      'updated_at',
+    ]),
+  ];
+  for (const [col, id, legacy, entity, entityId, patch, retiredKey] of LEGACY_DOCS) {
+    const path = col === 'goals' ? `${GOALS}/${id}` : `${LP}/${col}/${id}`;
+    const seedLegacy = () => env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), path), legacy);
+    });
+
+    test(`${col}: a pre-R16 doc holding retired keys can still be updated and tombstoned`, async () => {
+      await seedLegacy();
+      await assertSucceeds(governedWrite(owner(), path, patch, entity, entityId));
+      await assertSucceeds(
+        governedWrite(owner(), path, { ended_at: pastTs }, entity, entityId),
+      );
+      // The retired keys are untouched, not cleaned up by the rules.
+      let stored;
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        stored = (await getDoc(doc(ctx.firestore(), path))).data();
+      });
+      assert.ok(retiredKey in stored);
+    });
+
+    test(`${col}: a pre-R16 doc may drop a retired key but never rewrite one`, async () => {
+      await seedLegacy();
+      const changed = typeof legacy[retiredKey] === 'number' ? 90 : futureTs;
+      await assertFails(
+        governedWrite(owner(), path, { [retiredKey]: changed }, entity, entityId),
+      );
+      await assertSucceeds(
+        governedWrite(owner(), path, { [retiredKey]: deleteField() }, entity, entityId),
+      );
     });
   }
 

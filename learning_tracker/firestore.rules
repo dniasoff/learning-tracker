@@ -135,6 +135,22 @@ service cloud.firestore {
       return !(key in d) || d[key] == null;
     }
 
+    // R16 (DNI-484) governed-doc key whitelist. A write passes when the whole
+    // post-write doc holds only `live` keys, or, on an update of an existing
+    // doc, when every key the write ADDS or CHANGES is live. A retired key
+    // already stored on a pre-R16 doc may therefore stay untouched or be
+    // removed, but can never be written. Without the second branch, a
+    // field-level merge (AD-38) of such a doc would be denied on every later
+    // update or `ended_at` tombstone, and AD-13 rules out a data migration.
+    // No document-access call (`resource` is free): AD-54's budget holds.
+    function writesOnlyLiveKeys(live) {
+      return request.resource.data.keys().hasOnly(live)
+          || (resource != null
+              && request.resource.data.diff(resource.data).addedKeys()
+                   .union(request.resource.data.diff(resource.data).changedKeys())
+                   .hasOnly(live));
+    }
+
     // AD-54 clock-skew rule: every client timestamp in a learning or
     // governed batch (`recorded_at`, `at`, `ended_at`,
     // `points_ledger.created_at`) must be a real Firestore Timestamp no later
@@ -698,7 +714,7 @@ service cloud.firestore {
         match /stage_definitions/{stageId} {
           function hasStageDefinitionFields() {
             // R16 (DNI-484): the governed updated_at / synced_at are retired.
-            return request.resource.data.keys().hasOnly([
+            return writesOnlyLiveKeys([
               'profile_id', 'curriculum_id', 'track_id', 'stage_order',
               'stage_name', 'schedule', 'delay_days', 'schedule_type',
               'is_default', 'days_of_week', 'rolling_window_size',
@@ -761,7 +777,7 @@ service cloud.firestore {
             // and the governed updated_at / synced_at are retired.
             // activated_at stays for the "Started" display only (never an
             // engine anchor, AD-35).
-            return request.resource.data.keys().hasOnly([
+            return writesOnlyLiveKeys([
               'profile_id', 'track_id', 'curriculum_id', 'state',
               'activated_at',
               // AD-38 governed-doc fields.
@@ -829,7 +845,7 @@ service cloud.firestore {
         match /track_learning_order/{orderId} {
           function hasTrackLearningOrderFields() {
             // R16 (DNI-484): the governed updated_at / synced_at are retired.
-            return request.resource.data.keys().hasOnly([
+            return writesOnlyLiveKeys([
               'curriculum_id', 'sefaria_ref', 'user_sort_order',
               'level', 'ref', 'last_change_id', 'ended_at'
             ]);
@@ -875,7 +891,7 @@ service cloud.firestore {
             // R16 (DNI-484): target_percent / targetPercent (AD-43: a
             // deadline covers the whole corpus) and the governed
             // updated_at / updatedAt / synced_at are retired.
-            return request.resource.data.keys().hasOnly([
+            return writesOnlyLiveKeys([
               'id', 'goal_id', 'profile_id', 'track_id', 'curriculum_id',
               'curriculumId', 'description', 'target_date', 'targetDate',
               'date_type', 'dateType', 'goal_type', 'goalType', 'pace_value',
@@ -916,7 +932,7 @@ service cloud.firestore {
           function hasProfileProgramFields() {
             // R16 (DNI-484): the governed updated_at / synced_at are retired
             // (AD-38: last_change_id replaces the old LWW stamp).
-            return request.resource.data.keys().hasOnly([
+            return writesOnlyLiveKeys([
               'profile_id', 'curriculum_id', 'program_id',
               'tracking_start_date', 'tracking_start_ref',
               // AD-38 governed-doc fields.
@@ -947,7 +963,7 @@ service cloud.firestore {
         match /study_day_configs/{configId} {
           function hasStudyDayConfigFields() {
             // R16 (DNI-484): the governed updated_at / synced_at are retired.
-            return request.resource.data.keys().hasOnly([
+            return writesOnlyLiveKeys([
               'profile_id', 'curriculum_id', 'track_id',
               'day_of_week', 'day_type',
               'last_change_id', 'ended_at'
