@@ -9,7 +9,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
-import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -75,7 +75,7 @@ class TrackInfoCard extends ConsumerWidget {
     super.key,
     required this.track,
     required this.goal,
-    required this.paceCalc,
+    required this.learnerState,
     required this.useHebrewCalendar,
   });
 
@@ -84,8 +84,9 @@ class TrackInfoCard extends ConsumerWidget {
   /// Nullable — no goal has been set for this track yet.
   final GoalEntity? goal;
 
-  /// Pre-computed pace metrics for the track.
-  final ProgressPaceCalculator? paceCalc;
+  /// The engine's state of the track's curriculum (DNI-474): required pace
+  /// is its `dailyTarget`, actual pace its projection velocity.
+  final CurriculumState? learnerState;
 
   /// When true, dates are rendered using the Hebrew calendar formatter.
   final bool useHebrewCalendar;
@@ -120,7 +121,7 @@ class TrackInfoCard extends ConsumerWidget {
     final targetDate = goal?.targetDate?.toLocal();
     final remainingDays = targetDate?.difference(today).inDays;
 
-    // 2c — pace velocity in the track's unit. ProgressPaceCalculator velocities are in
+    // 2c — pace velocity in the track's unit. Engine velocities are in
     // LEAF units (amudim). For a daf-paced track, convert to daf/day using the
     // daf-per-amud ratio (coarse count ÷ leaf count) and label it "daf/day".
     final curriculum = track.curriculumId;
@@ -198,7 +199,7 @@ class TrackInfoCard extends ConsumerWidget {
               value: _requiredPaceLabel(
                 l10n,
                 goal!,
-                paceCalc,
+                learnerState,
                 today,
                 unitPerLeaf: unitPerLeaf,
                 paceUnit: paceUnit,
@@ -213,7 +214,7 @@ class TrackInfoCard extends ConsumerWidget {
             label: l10n.trackInfoActualPace,
             value: _actualPaceLabel(
               l10n,
-              paceCalc,
+              learnerState,
               unitPerLeaf: unitPerLeaf,
               paceUnit: paceUnit,
             ),
@@ -239,19 +240,20 @@ class TrackInfoCard extends ConsumerWidget {
   String _requiredPaceLabel(
     AppLocalizations l10n,
     GoalEntity goal,
-    ProgressPaceCalculator? paceCalc,
+    CurriculumState? learnerState,
     DateTime today, {
     required double unitPerLeaf,
     required String paceUnit,
     required String? paceGoalUnitNoun,
   }) {
     if (goal.goalType == 'deadline') {
-      if (paceCalc == null ||
-          paceCalc.requiredVelocity == 0 ||
+      final target = learnerState?.dailyTarget;
+      if (target == null ||
+          target == 0 ||
           (goal.targetDate != null && goal.targetDate!.isBefore(today))) {
         return '—';
       }
-      final v = paceCalc.requiredVelocity * unitPerLeaf;
+      final v = target * unitPerLeaf;
       return '${v.toStringAsFixed(1)} $paceUnit';
     }
     // Pace goal — show the user's stated target (already in the chosen unit).
@@ -272,12 +274,13 @@ class TrackInfoCard extends ConsumerWidget {
 
   String _actualPaceLabel(
     AppLocalizations l10n,
-    ProgressPaceCalculator? paceCalc, {
+    CurriculumState? learnerState, {
     required double unitPerLeaf,
     required String paceUnit,
   }) {
-    if (paceCalc == null || paceCalc.actualVelocity == 0) return '—';
-    final v = paceCalc.actualVelocity * unitPerLeaf;
+    final velocity = learnerState?.projection?.velocityPerDay;
+    if (velocity == null || velocity == 0) return '—';
+    final v = velocity * unitPerLeaf;
     return '${v.toStringAsFixed(1)} $paceUnit';
   }
 

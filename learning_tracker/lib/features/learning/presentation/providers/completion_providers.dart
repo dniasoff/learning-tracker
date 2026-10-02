@@ -1,13 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';
-import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_providers.g.dart';
@@ -59,29 +55,6 @@ final isStageCompletedProvider = FutureProvider.autoDispose
 @riverpod
 CompletionRepository completionRepository(Ref ref) {
   return FirestoreCompletionRepositoryAdapter(ref: ref);
-}
-
-/// Provides the [CompletionDetectionService] — the legacy "is this unit
-/// covered" + siyum-crediting service (an R3 reader, retired by its own
-/// story).
-///
-/// This provider participates in a completion write that awaits an async
-/// Firestore gap before using the service again. It must survive when the last
-/// listener drops to zero; autoDispose would tear down its [Ref] during that
-/// gap and make later detection work fail.
-@Riverpod(keepAlive: true)
-CompletionDetectionService completionDetectionService(Ref ref) {
-  final contentRepository = ref.watch(contentRepositoryProvider);
-  final stageRepository = ref.watch(globalStageRepositoryProvider);
-  final ledgerRepository = ref.watch(learningLedgerRepositoryProvider);
-  final completionRepository = ref.watch(completionRepositoryProvider);
-
-  return CompletionDetectionService(
-    completionRepository: completionRepository,
-    contentRepository: contentRepository,
-    ledgerRepository: ledgerRepository,
-    stageRepository: stageRepository,
-  );
 }
 
 /// Resolves a persisted curriculum-id storage key, throwing on an

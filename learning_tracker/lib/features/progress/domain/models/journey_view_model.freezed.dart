@@ -878,7 +878,10 @@ mixin _$MilestoneAchievement {
  String? get aggregateKey;/// The set of unit keys this aggregate-level milestone contains. Used
 /// by the expandable row to list "All N masechtos complete" with the
 /// contained masechtos shown when expanded.
- List<String> get containedUnitKeys; DateTime get achievedAt;
+ List<String> get containedUnitKeys; DateTime get achievedAt;/// The engine's completion number k of this siyum (DNI-474 AC-4): 1 for
+/// the first completion, 2 and up for each later full completion, which
+/// appear only in the siyumim timeline.
+ int get completionNumber;
 /// Create a copy of MilestoneAchievement
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -889,16 +892,16 @@ $MilestoneAchievementCopyWith<MilestoneAchievement> get copyWith => _$MilestoneA
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MilestoneAchievement&&(identical(other.type, type) || other.type == type)&&(identical(other.level, level) || other.level == level)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.unitKey, unitKey) || other.unitKey == unitKey)&&(identical(other.unitScope, unitScope) || other.unitScope == unitScope)&&(identical(other.parentAggregateKey, parentAggregateKey) || other.parentAggregateKey == parentAggregateKey)&&(identical(other.aggregateKey, aggregateKey) || other.aggregateKey == aggregateKey)&&const DeepCollectionEquality().equals(other.containedUnitKeys, containedUnitKeys)&&(identical(other.achievedAt, achievedAt) || other.achievedAt == achievedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MilestoneAchievement&&(identical(other.type, type) || other.type == type)&&(identical(other.level, level) || other.level == level)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.unitKey, unitKey) || other.unitKey == unitKey)&&(identical(other.unitScope, unitScope) || other.unitScope == unitScope)&&(identical(other.parentAggregateKey, parentAggregateKey) || other.parentAggregateKey == parentAggregateKey)&&(identical(other.aggregateKey, aggregateKey) || other.aggregateKey == aggregateKey)&&const DeepCollectionEquality().equals(other.containedUnitKeys, containedUnitKeys)&&(identical(other.achievedAt, achievedAt) || other.achievedAt == achievedAt)&&(identical(other.completionNumber, completionNumber) || other.completionNumber == completionNumber));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,type,level,curriculumId,displayName,unitKey,unitScope,parentAggregateKey,aggregateKey,const DeepCollectionEquality().hash(containedUnitKeys),achievedAt);
+int get hashCode => Object.hash(runtimeType,type,level,curriculumId,displayName,unitKey,unitScope,parentAggregateKey,aggregateKey,const DeepCollectionEquality().hash(containedUnitKeys),achievedAt,completionNumber);
 
 @override
 String toString() {
-  return 'MilestoneAchievement(type: $type, level: $level, curriculumId: $curriculumId, displayName: $displayName, unitKey: $unitKey, unitScope: $unitScope, parentAggregateKey: $parentAggregateKey, aggregateKey: $aggregateKey, containedUnitKeys: $containedUnitKeys, achievedAt: $achievedAt)';
+  return 'MilestoneAchievement(type: $type, level: $level, curriculumId: $curriculumId, displayName: $displayName, unitKey: $unitKey, unitScope: $unitScope, parentAggregateKey: $parentAggregateKey, aggregateKey: $aggregateKey, containedUnitKeys: $containedUnitKeys, achievedAt: $achievedAt, completionNumber: $completionNumber)';
 }
 
 
@@ -909,7 +912,7 @@ abstract mixin class $MilestoneAchievementCopyWith<$Res>  {
   factory $MilestoneAchievementCopyWith(MilestoneAchievement value, $Res Function(MilestoneAchievement) _then) = _$MilestoneAchievementCopyWithImpl;
 @useResult
 $Res call({
- String type, MilestoneLevel level, CurriculumId curriculumId, String displayName, String? unitKey, String? unitScope, String? parentAggregateKey, String? aggregateKey, List<String> containedUnitKeys, DateTime achievedAt
+ String type, MilestoneLevel level, CurriculumId curriculumId, String displayName, String? unitKey, String? unitScope, String? parentAggregateKey, String? aggregateKey, List<String> containedUnitKeys, DateTime achievedAt, int completionNumber
 });
 
 
@@ -926,7 +929,7 @@ class _$MilestoneAchievementCopyWithImpl<$Res>
 
 /// Create a copy of MilestoneAchievement
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? level = null,Object? curriculumId = null,Object? displayName = null,Object? unitKey = freezed,Object? unitScope = freezed,Object? parentAggregateKey = freezed,Object? aggregateKey = freezed,Object? containedUnitKeys = null,Object? achievedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? level = null,Object? curriculumId = null,Object? displayName = null,Object? unitKey = freezed,Object? unitScope = freezed,Object? parentAggregateKey = freezed,Object? aggregateKey = freezed,Object? containedUnitKeys = null,Object? achievedAt = null,Object? completionNumber = null,}) {
   return _then(_self.copyWith(
 type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
@@ -938,7 +941,8 @@ as String?,parentAggregateKey: freezed == parentAggregateKey ? _self.parentAggre
 as String?,aggregateKey: freezed == aggregateKey ? _self.aggregateKey : aggregateKey // ignore: cast_nullable_to_non_nullable
 as String?,containedUnitKeys: null == containedUnitKeys ? _self.containedUnitKeys : containedUnitKeys // ignore: cast_nullable_to_non_nullable
 as List<String>,achievedAt: null == achievedAt ? _self.achievedAt : achievedAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,completionNumber: null == completionNumber ? _self.completionNumber : completionNumber // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 
@@ -1023,10 +1027,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String type,  MilestoneLevel level,  CurriculumId curriculumId,  String displayName,  String? unitKey,  String? unitScope,  String? parentAggregateKey,  String? aggregateKey,  List<String> containedUnitKeys,  DateTime achievedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String type,  MilestoneLevel level,  CurriculumId curriculumId,  String displayName,  String? unitKey,  String? unitScope,  String? parentAggregateKey,  String? aggregateKey,  List<String> containedUnitKeys,  DateTime achievedAt,  int completionNumber)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MilestoneAchievement() when $default != null:
-return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_that.unitKey,_that.unitScope,_that.parentAggregateKey,_that.aggregateKey,_that.containedUnitKeys,_that.achievedAt);case _:
+return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_that.unitKey,_that.unitScope,_that.parentAggregateKey,_that.aggregateKey,_that.containedUnitKeys,_that.achievedAt,_that.completionNumber);case _:
   return orElse();
 
 }
@@ -1044,10 +1048,10 @@ return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String type,  MilestoneLevel level,  CurriculumId curriculumId,  String displayName,  String? unitKey,  String? unitScope,  String? parentAggregateKey,  String? aggregateKey,  List<String> containedUnitKeys,  DateTime achievedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String type,  MilestoneLevel level,  CurriculumId curriculumId,  String displayName,  String? unitKey,  String? unitScope,  String? parentAggregateKey,  String? aggregateKey,  List<String> containedUnitKeys,  DateTime achievedAt,  int completionNumber)  $default,) {final _that = this;
 switch (_that) {
 case _MilestoneAchievement():
-return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_that.unitKey,_that.unitScope,_that.parentAggregateKey,_that.aggregateKey,_that.containedUnitKeys,_that.achievedAt);case _:
+return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_that.unitKey,_that.unitScope,_that.parentAggregateKey,_that.aggregateKey,_that.containedUnitKeys,_that.achievedAt,_that.completionNumber);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1064,10 +1068,10 @@ return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String type,  MilestoneLevel level,  CurriculumId curriculumId,  String displayName,  String? unitKey,  String? unitScope,  String? parentAggregateKey,  String? aggregateKey,  List<String> containedUnitKeys,  DateTime achievedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String type,  MilestoneLevel level,  CurriculumId curriculumId,  String displayName,  String? unitKey,  String? unitScope,  String? parentAggregateKey,  String? aggregateKey,  List<String> containedUnitKeys,  DateTime achievedAt,  int completionNumber)?  $default,) {final _that = this;
 switch (_that) {
 case _MilestoneAchievement() when $default != null:
-return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_that.unitKey,_that.unitScope,_that.parentAggregateKey,_that.aggregateKey,_that.containedUnitKeys,_that.achievedAt);case _:
+return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_that.unitKey,_that.unitScope,_that.parentAggregateKey,_that.aggregateKey,_that.containedUnitKeys,_that.achievedAt,_that.completionNumber);case _:
   return null;
 
 }
@@ -1079,7 +1083,7 @@ return $default(_that.type,_that.level,_that.curriculumId,_that.displayName,_tha
 
 
 class _MilestoneAchievement implements MilestoneAchievement {
-  const _MilestoneAchievement({required this.type, required this.level, required this.curriculumId, required this.displayName, this.unitKey, this.unitScope, this.parentAggregateKey, this.aggregateKey, final  List<String> containedUnitKeys = const <String>[], required this.achievedAt}): _containedUnitKeys = containedUnitKeys;
+  const _MilestoneAchievement({required this.type, required this.level, required this.curriculumId, required this.displayName, this.unitKey, this.unitScope, this.parentAggregateKey, this.aggregateKey, final  List<String> containedUnitKeys = const <String>[], required this.achievedAt, this.completionNumber = 1}): _containedUnitKeys = containedUnitKeys;
   
 
 /// Legacy string discriminator kept for backwards compatibility with
@@ -1131,6 +1135,10 @@ class _MilestoneAchievement implements MilestoneAchievement {
 }
 
 @override final  DateTime achievedAt;
+/// The engine's completion number k of this siyum (DNI-474 AC-4): 1 for
+/// the first completion, 2 and up for each later full completion, which
+/// appear only in the siyumim timeline.
+@override@JsonKey() final  int completionNumber;
 
 /// Create a copy of MilestoneAchievement
 /// with the given fields replaced by the non-null parameter values.
@@ -1142,16 +1150,16 @@ _$MilestoneAchievementCopyWith<_MilestoneAchievement> get copyWith => __$Milesto
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MilestoneAchievement&&(identical(other.type, type) || other.type == type)&&(identical(other.level, level) || other.level == level)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.unitKey, unitKey) || other.unitKey == unitKey)&&(identical(other.unitScope, unitScope) || other.unitScope == unitScope)&&(identical(other.parentAggregateKey, parentAggregateKey) || other.parentAggregateKey == parentAggregateKey)&&(identical(other.aggregateKey, aggregateKey) || other.aggregateKey == aggregateKey)&&const DeepCollectionEquality().equals(other._containedUnitKeys, _containedUnitKeys)&&(identical(other.achievedAt, achievedAt) || other.achievedAt == achievedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MilestoneAchievement&&(identical(other.type, type) || other.type == type)&&(identical(other.level, level) || other.level == level)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.unitKey, unitKey) || other.unitKey == unitKey)&&(identical(other.unitScope, unitScope) || other.unitScope == unitScope)&&(identical(other.parentAggregateKey, parentAggregateKey) || other.parentAggregateKey == parentAggregateKey)&&(identical(other.aggregateKey, aggregateKey) || other.aggregateKey == aggregateKey)&&const DeepCollectionEquality().equals(other._containedUnitKeys, _containedUnitKeys)&&(identical(other.achievedAt, achievedAt) || other.achievedAt == achievedAt)&&(identical(other.completionNumber, completionNumber) || other.completionNumber == completionNumber));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,type,level,curriculumId,displayName,unitKey,unitScope,parentAggregateKey,aggregateKey,const DeepCollectionEquality().hash(_containedUnitKeys),achievedAt);
+int get hashCode => Object.hash(runtimeType,type,level,curriculumId,displayName,unitKey,unitScope,parentAggregateKey,aggregateKey,const DeepCollectionEquality().hash(_containedUnitKeys),achievedAt,completionNumber);
 
 @override
 String toString() {
-  return 'MilestoneAchievement(type: $type, level: $level, curriculumId: $curriculumId, displayName: $displayName, unitKey: $unitKey, unitScope: $unitScope, parentAggregateKey: $parentAggregateKey, aggregateKey: $aggregateKey, containedUnitKeys: $containedUnitKeys, achievedAt: $achievedAt)';
+  return 'MilestoneAchievement(type: $type, level: $level, curriculumId: $curriculumId, displayName: $displayName, unitKey: $unitKey, unitScope: $unitScope, parentAggregateKey: $parentAggregateKey, aggregateKey: $aggregateKey, containedUnitKeys: $containedUnitKeys, achievedAt: $achievedAt, completionNumber: $completionNumber)';
 }
 
 
@@ -1162,7 +1170,7 @@ abstract mixin class _$MilestoneAchievementCopyWith<$Res> implements $MilestoneA
   factory _$MilestoneAchievementCopyWith(_MilestoneAchievement value, $Res Function(_MilestoneAchievement) _then) = __$MilestoneAchievementCopyWithImpl;
 @override @useResult
 $Res call({
- String type, MilestoneLevel level, CurriculumId curriculumId, String displayName, String? unitKey, String? unitScope, String? parentAggregateKey, String? aggregateKey, List<String> containedUnitKeys, DateTime achievedAt
+ String type, MilestoneLevel level, CurriculumId curriculumId, String displayName, String? unitKey, String? unitScope, String? parentAggregateKey, String? aggregateKey, List<String> containedUnitKeys, DateTime achievedAt, int completionNumber
 });
 
 
@@ -1179,7 +1187,7 @@ class __$MilestoneAchievementCopyWithImpl<$Res>
 
 /// Create a copy of MilestoneAchievement
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? level = null,Object? curriculumId = null,Object? displayName = null,Object? unitKey = freezed,Object? unitScope = freezed,Object? parentAggregateKey = freezed,Object? aggregateKey = freezed,Object? containedUnitKeys = null,Object? achievedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? level = null,Object? curriculumId = null,Object? displayName = null,Object? unitKey = freezed,Object? unitScope = freezed,Object? parentAggregateKey = freezed,Object? aggregateKey = freezed,Object? containedUnitKeys = null,Object? achievedAt = null,Object? completionNumber = null,}) {
   return _then(_MilestoneAchievement(
 type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
@@ -1191,7 +1199,8 @@ as String?,parentAggregateKey: freezed == parentAggregateKey ? _self.parentAggre
 as String?,aggregateKey: freezed == aggregateKey ? _self.aggregateKey : aggregateKey // ignore: cast_nullable_to_non_nullable
 as String?,containedUnitKeys: null == containedUnitKeys ? _self._containedUnitKeys : containedUnitKeys // ignore: cast_nullable_to_non_nullable
 as List<String>,achievedAt: null == achievedAt ? _self.achievedAt : achievedAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+as DateTime,completionNumber: null == completionNumber ? _self.completionNumber : completionNumber // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 

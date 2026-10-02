@@ -1,74 +1,60 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
+import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 
-/// Pure computation service for curriculum progress aggregation.
+/// Lays a curriculum's scoped hierarchy out with the engine's learnt state
+/// for the Curriculum Progress screen (DNI-474).
 ///
-/// Takes raw data (content items, completions, stage definitions) and
-/// computes hierarchy-level breakdowns, stage breakdowns, track breakdowns,
-/// and overall curriculum statistics.
+/// It derives no learnt state: [learnt] is the engine's learnt-leaf set
+/// (distinct, every source and date state, FR-14) and [activity] the
+/// engine's counted learning per leaf. Per hierarchy level it counts learnt
+/// leaves (repeats once) and, per stage, the counted main-track events of
+/// that stage.
 class CurriculumProgressService {
-  /// Compute full progress data for a curriculum.
+  /// Computes [CurriculumProgressData].
   ///
-  /// [contentItems] — all content items (leaf + container) for the curriculum
-  /// [completions] — all completion records for the curriculum
-  /// [stageDefinitions] — stage definitions for this curriculum, ordered by stageOrder
-  /// [levelLabels] — hierarchy level labels (e.g., ['Seder', 'Masechta', 'Perek', 'Mishna'])
+  /// [contentItems] — the learner's scoped content items (leaves and
+  ///   containers).
+  /// [learnt] — the engine's learnt leaves of the curriculum.
+  /// [activity] — the engine's counted learning per leaf.
+  /// [stageDefinitions] — the track's stages, in order.
+  /// [levelLabels] — hierarchy level labels (e.g. ['Seder', 'Masechta']).
   static CurriculumProgressData compute({
     required String curriculumId,
     required List<ContentItem> contentItems,
-    required List<CompletionEntity> completions,
+    required Set<String> learnt,
+    required Map<String, LeafActivity> activity,
     required List<domain_stage.StageDefinition> stageDefinitions,
     required List<String> levelLabels,
   }) {
     final leafItems = contentItems.where((c) => c.isLeaf).toList();
-    final totalLeafCount = leafItems.length;
+    final stageOrders = stageDefinitions.map((s) => s.stageOrder).toSet();
 
-    // Build a set of completed refs per stage
-    // Key: sefariaRef, Value: set of completed stageIds
-    final completedStagesPerRef = <String, Set<int>>{};
-    for (final c in completions) {
-      completedStagesPerRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
-    }
-
-    final totalStageCount = stageDefinitions.length;
-
-    // Overall stats
     var completedAllStages = 0;
     var inProgressCount = 0;
     var notStartedCount = 0;
     for (final leaf in leafItems) {
-      final stages = completedStagesPerRef[leaf.sefariaRef];
-      if (stages == null || stages.isEmpty) {
+      if (!learnt.contains(leaf.sefariaRef)) {
         notStartedCount++;
-      } else if (stages.length >= totalStageCount) {
+        continue;
+      }
+      final stages = activity[leaf.sefariaRef]?.stages ?? const <int>{};
+      if (stageOrders.length <= 1 || stageOrders.every(stages.contains)) {
         completedAllStages++;
       } else {
         inProgressCount++;
       }
     }
 
-    final overallStats = OverallCurriculumStats(
-      totalItems: totalLeafCount,
-      completedAllStages: completedAllStages,
-      inProgress: inProgressCount,
-      notStarted: notStartedCount,
-    );
-
-    // Resolve the storage key to its CurriculumId once so every hierarchy
-    // level can carry it for variant-aware name rendering in the UI. Unknown
-    // keys (should not happen for real curricula) fall back to mishnayos so
-    // the renderer still produces a sensible transliteration.
     final curriculumEnum = _resolveCurriculumId(curriculumId);
-
-    // Build hierarchy levels (level 1 grouping)
     final hierarchyLevels = _buildLevel1Progress(
       curriculumEnum: curriculumEnum,
       leafItems: leafItems,
-      completions: completions,
+      learnt: learnt,
+      activity: activity,
       stageDefinitions: stageDefinitions,
       levelLabels: levelLabels,
     );
@@ -76,146 +62,88 @@ class CurriculumProgressService {
     return CurriculumProgressData(
       curriculumId: curriculumId,
       hierarchyLevels: hierarchyLevels,
-      overallStats: overallStats,
+      overallStats: OverallCurriculumStats(
+        totalItems: leafItems.length,
+        completedAllStages: completedAllStages,
+        inProgress: inProgressCount,
+        notStarted: notStartedCount,
+      ),
     );
   }
 
-  /// Compute completion percentage for a set of items based on completions.
-  ///
-  /// An item is "completed" if it has at least one completion record.
-  ///
-  /// ### Layer 3 migration note
-  ///
-  /// Callers MUST pass tier-filtered completions. For Manage Tracks / achievement
-  /// displays pass [CompletionTierFilter.trackAchievement] rows (live +
-  /// bulkInTrack); for lifetime views pass [CompletionTierFilter.lifetime].
-  /// Passing unfiltered all-tiers completions violates the B1 credit policy.
-  ///
-  /// See [TrackProgressService.completionPercent] for the canonical aggregator.
+  /// The distinct learnt share of [leafItems] (FR-14): repeats count once.
   static double computeCompletionPercentage({
     required List<ContentItem> leafItems,
-    required List<CompletionEntity> completions,
+    required Set<String> learnt,
   }) {
     if (leafItems.isEmpty) return 0.0;
-    final completedRefs = completions.map((c) => c.sefariaRef).toSet();
-    final completedCount = leafItems
-        .where((item) => completedRefs.contains(item.sefariaRef))
+    final learntCount = leafItems
+        .where((item) => learnt.contains(item.sefariaRef))
         .length;
-    return completedCount / leafItems.length;
+    return learntCount / leafItems.length;
   }
 
-  /// Map a curriculum storage key to its [CurriculumId]. Falls back to
-  /// [CurriculumId.mishnayos] for unrecognised keys so callers always get a
-  /// non-null enum to thread into the label renderer.
   static CurriculumId _resolveCurriculumId(String storageKey) =>
       CurriculumId.fromStorageKey(storageKey) ?? CurriculumId.mishnayos;
 
   static List<HierarchyLevelProgress> _buildLevel1Progress({
     required CurriculumId curriculumEnum,
     required List<ContentItem> leafItems,
-    required List<CompletionEntity> completions,
+    required Set<String> learnt,
+    required Map<String, LeafActivity> activity,
     required List<domain_stage.StageDefinition> stageDefinitions,
     required List<String> levelLabels,
   }) {
-    // Group leaf items by level1
-    final groupedByLevel1 = <String, List<ContentItem>>{};
+    final grouped = <String, List<ContentItem>>{};
     for (final item in leafItems) {
-      groupedByLevel1.putIfAbsent(item.level1, () => []).add(item);
+      grouped.putIfAbsent(item.level1, () => []).add(item);
     }
-
-    // Group completions by level1 via sefariaRef lookup
-    final refToLevel1 = <String, String>{};
-    for (final item in leafItems) {
-      refToLevel1[item.sefariaRef] = item.level1;
-    }
-    final completionsByLevel1 = <String, List<CompletionEntity>>{};
-    for (final c in completions) {
-      final l1 = refToLevel1[c.sefariaRef];
-      if (l1 != null) {
-        completionsByLevel1.putIfAbsent(l1, () => []).add(c);
-      }
-    }
-
-    // Maintain order by first occurrence
-    final orderedKeys = <String>[];
-    for (final item in leafItems) {
-      if (!orderedKeys.contains(item.level1)) {
-        orderedKeys.add(item.level1);
-      }
-    }
-
-    return orderedKeys.map((level1Name) {
-      final items = groupedByLevel1[level1Name]!;
-      final levelCompletions = completionsByLevel1[level1Name] ?? [];
-
-      // Build sub-levels (level2)
-      List<HierarchyLevelProgress>? subLevels;
-      if (levelLabels.length > 1) {
-        subLevels = _buildLevel2Progress(
+    return [
+      for (final MapEntry(key: level1Name, value: items) in grouped.entries)
+        _buildLevelProgress(
           curriculumEnum: curriculumEnum,
+          level: 1,
+          levelName: level1Name,
           leafItems: items,
-          completions: levelCompletions,
+          learnt: learnt,
+          activity: activity,
           stageDefinitions: stageDefinitions,
-        );
-      }
-
-      return _buildLevelProgress(
-        curriculumEnum: curriculumEnum,
-        level: 1,
-        levelName: level1Name,
-        leafItems: items,
-        completions: levelCompletions,
-        stageDefinitions: stageDefinitions,
-        subLevels: subLevels,
-      );
-    }).toList();
+          subLevels: levelLabels.length > 1
+              ? _buildLevel2Progress(
+                  curriculumEnum: curriculumEnum,
+                  leafItems: items,
+                  learnt: learnt,
+                  activity: activity,
+                  stageDefinitions: stageDefinitions,
+                )
+              : null,
+        ),
+    ];
   }
 
   static List<HierarchyLevelProgress> _buildLevel2Progress({
     required CurriculumId curriculumEnum,
     required List<ContentItem> leafItems,
-    required List<CompletionEntity> completions,
+    required Set<String> learnt,
+    required Map<String, LeafActivity> activity,
     required List<domain_stage.StageDefinition> stageDefinitions,
   }) {
     final grouped = <String, List<ContentItem>>{};
     for (final item in leafItems) {
-      final key = item.level2 ?? 'Unknown';
-      grouped.putIfAbsent(key, () => []).add(item);
+      grouped.putIfAbsent(item.level2 ?? 'Unknown', () => []).add(item);
     }
-
-    final refToLevel2 = <String, String>{};
-    for (final item in leafItems) {
-      refToLevel2[item.sefariaRef] = item.level2 ?? 'Unknown';
-    }
-    final completionsByLevel2 = <String, List<CompletionEntity>>{};
-    for (final c in completions) {
-      final l2 = refToLevel2[c.sefariaRef];
-      if (l2 != null) {
-        completionsByLevel2.putIfAbsent(l2, () => []).add(c);
-      }
-    }
-
-    final orderedKeys = <String>[];
-    for (final item in leafItems) {
-      final key = item.level2 ?? 'Unknown';
-      if (!orderedKeys.contains(key)) {
-        orderedKeys.add(key);
-      }
-    }
-
-    return orderedKeys.map((level2Name) {
-      final items = grouped[level2Name]!;
-      final levelCompletions = completionsByLevel2[level2Name] ?? [];
-
-      return _buildLevelProgress(
-        curriculumEnum: curriculumEnum,
-        level: 2,
-        levelName: level2Name,
-        leafItems: items,
-        completions: levelCompletions,
-        stageDefinitions: stageDefinitions,
-      );
-    }).toList();
+    return [
+      for (final MapEntry(key: level2Name, value: items) in grouped.entries)
+        _buildLevelProgress(
+          curriculumEnum: curriculumEnum,
+          level: 2,
+          levelName: level2Name,
+          leafItems: items,
+          learnt: learnt,
+          activity: activity,
+          stageDefinitions: stageDefinitions,
+        ),
+    ];
   }
 
   static HierarchyLevelProgress _buildLevelProgress({
@@ -223,47 +151,34 @@ class CurriculumProgressService {
     required int level,
     required String levelName,
     required List<ContentItem> leafItems,
-    required List<CompletionEntity> completions,
+    required Set<String> learnt,
+    required Map<String, LeafActivity> activity,
     required List<domain_stage.StageDefinition> stageDefinitions,
     List<HierarchyLevelProgress>? subLevels,
   }) {
-    final completedRefs = completions.map((c) => c.sefariaRef).toSet();
-    final completedCount = leafItems
-        .where((item) => completedRefs.contains(item.sefariaRef))
+    final learntCount = leafItems
+        .where((item) => learnt.contains(item.sefariaRef))
         .length;
-
-    // Stage breakdown
     final stageCounts = <int, int>{};
-    for (final c in completions) {
-      stageCounts[c.stageId] = (stageCounts[c.stageId] ?? 0) + 1;
+    for (final item in leafItems) {
+      for (final stage in activity[item.sefariaRef]?.stages ?? const <int>{}) {
+        stageCounts[stage] = (stageCounts[stage] ?? 0) + 1;
+      }
     }
-    final stageBreakdown = stageDefinitions.map((sd) {
-      return StageBreakdownEntry(
-        stageName: sd.stageName,
-        // D12: completions store stageId = the stage ORDER (1=Learn, 2=Chazara1
-        // …), NOT the StageDefinition auto-increment PK. Keying the read by
-        // sd.id returned 0 for every track whose stage rows didn't get PKs
-        // equal to their order (i.e. every track after the first). Read by
-        // stageOrder to match how completions are recorded.
-        count: stageCounts[sd.stageOrder] ?? 0,
-      );
-    }).toList();
-
-    // Completion count keyed by the internal track storage key (one track per
-    // curriculum, so this is a single-entry map).
-    final trackBreakdown = <String, int>{};
-    for (final c in completions) {
-      trackBreakdown[c.trackType] = (trackBreakdown[c.trackType] ?? 0) + 1;
-    }
-
     return HierarchyLevelProgress(
       curriculumId: curriculumEnum,
       level: level,
       levelName: levelName,
       totalItems: leafItems.length,
-      completedItems: completedCount,
-      stageBreakdown: stageBreakdown,
-      trackBreakdown: trackBreakdown,
+      completedItems: learntCount,
+      stageBreakdown: [
+        for (final sd in stageDefinitions)
+          StageBreakdownEntry(
+            stageName: sd.stageName,
+            count: stageCounts[sd.stageOrder] ?? 0,
+          ),
+      ],
+      trackBreakdown: const {},
       subLevels: subLevels,
     );
   }

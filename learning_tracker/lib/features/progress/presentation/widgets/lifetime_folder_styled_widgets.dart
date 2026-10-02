@@ -5,7 +5,9 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
+import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/learnt_tri_state.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Gradients for Learning lifetime on Progress (blue) and Settings (warm, no blue).
@@ -401,6 +403,8 @@ class _LifetimeFolderTreeNodeState
       LifetimeNodeState.partial => context.colors.progressLifetimePartial,
       LifetimeNodeState.none => Colors.white.withValues(alpha: 0.5),
     };
+    final triState = triStateOfNode(widget.node.state);
+    final l10n = AppLocalizations.of(context);
     final indent = widget.depth * 20.0;
     final hasChildren = widget.node.children.isNotEmpty;
     final isExpanded = widget.expandedNodes[widget.nodeKey] ?? false;
@@ -408,70 +412,92 @@ class _LifetimeFolderTreeNodeState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: EdgeInsetsDirectional.only(start: indent),
-          child: GestureDetector(
-            onTap: hasChildren
-                ? () => widget.onExpandToggle(widget.nodeKey, !isExpanded)
-                : null,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: color.withValues(alpha: 0.3),
-                  width: 1,
+        Semantics(
+          // FR-15 (DNI-474): state as text, never colour alone.
+          label: l10n == null
+              ? null
+              : learntTriStateSemantics(
+                  l10n,
+                  name: widget.node.hebrewName ?? widget.node.rawValue,
+                  state: triState,
+                  learnt: widget.node.learntCount,
+                  total: widget.node.totalCount,
                 ),
-              ),
-              child: Row(
-                children: [
-                  if (hasChildren)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 6),
-                      child: Icon(
-                        isExpanded
-                            ? Icons.expand_less_rounded
-                            : Icons.chevron_right_rounded,
-                        size: 18,
-                        color: color,
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 6),
-                      child: Icon(
-                        Icons.description_outlined,
-                        size: 16,
-                        color: color,
-                      ),
-                    ),
-                  Container(
-                    width: 6,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+          button: hasChildren,
+          expanded: hasChildren ? isExpanded : null,
+          onTap: hasChildren
+              ? () => widget.onExpandToggle(widget.nodeKey, !isExpanded)
+              : null,
+          excludeSemantics: true,
+          child: Padding(
+            padding: EdgeInsetsDirectional.only(start: indent),
+            child: GestureDetector(
+              onTap: hasChildren
+                  ? () => widget.onExpandToggle(widget.nodeKey, !isExpanded)
+                  : null,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.3),
+                    width: 1,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: CurriculumLabel.level(
-                      curriculumId: widget.node.curriculumId,
-                      level: widget.node.level,
-                      rawValue: widget.node.rawValue,
-                      parentL1Value: widget.node.parentL1Value,
-                      hebrewName: widget.node.hebrewName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.95),
-                        fontWeight: FontWeight.w600,
+                ),
+                child: Row(
+                  children: [
+                    if (hasChildren)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 6),
+                        child: Icon(
+                          isExpanded
+                              ? Icons.expand_less_rounded
+                              : Icons.chevron_right_rounded,
+                          size: 18,
+                          color: color,
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 6),
+                        child: Icon(
+                          Icons.description_outlined,
+                          size: 16,
+                          color: color,
+                        ),
+                      ),
+                    LearntTriStateBox(state: triState, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: CurriculumLabel.level(
+                        curriculumId: widget.node.curriculumId,
+                        level: widget.node.level,
+                        rawValue: widget.node.rawValue,
+                        parentL1Value: widget.node.parentL1Value,
+                        hebrewName: widget.node.hebrewName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    if (widget.node.totalCount > 0)
+                      LearntCountLabel(
+                        learnt: widget.node.learntCount,
+                        total: widget.node.totalCount,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

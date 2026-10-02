@@ -7,7 +7,7 @@ library;
 
 /// Calendar days the user is ahead (+) or behind (−) their deadline schedule.
 ///
-/// Produced by [PaceCalculator.calculate] for deadline-based goals.
+/// The schedule delta of a deadline-based goal.
 /// A positive value means the user is ahead; negative means behind.
 ///
 /// Display: "+5 days ahead" or "3 days behind".
@@ -29,7 +29,7 @@ final class DateDelta {
 
 /// Weekly item surplus (+) or deficit (−) relative to a pace goal.
 ///
-/// Produced by [PaceCalculator.calculateForPaceGoal] for pace-based goals.
+/// The schedule delta of a pace-based goal.
 /// Value = `((rollingAverage − targetPacePerDay) * 7).round()`.
 /// A positive value means the user is completing more items per week than
 /// the target; negative means they are completing fewer.

@@ -1052,6 +1052,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
   Color get progressLifetimeNoneOnLight =>
       _dark ? const Color(0xFF36425A) : const Color(0xFFB8C0CC);
 
+  /// Tri-state (FR-15) "partial" accent on the indeterminate-dash checkbox
+  /// of a corpus node row (DESIGN.md § Colors, `tristate-partial-accent`).
+  Color get tristatePartialAccent =>
+      _dark ? const Color(0xFFE6B96A) : const Color(0xFFFFD26A);
+
   /// Points-over-time bar-chart fill.
   ///
   /// Run-11 progress-area sweep: this bar is drawn directly on

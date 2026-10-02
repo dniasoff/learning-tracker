@@ -6,9 +6,9 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
-import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/pace_indicator.dart';
@@ -49,9 +49,6 @@ Widget _wrap(Widget child) {
     ),
   );
 }
-
-// Reference date for ProgressPaceCalculator fixtures.
-final _today = DateTime(2026, 5, 20);
 
 void main() {
   group('StageBreakdownRow', () {
@@ -110,49 +107,31 @@ void main() {
   });
 
   group('ProgressPaceIndicator', () {
-    // -----------------------------------------------------------------------
-    // Helper: create a ProgressPaceCalculator for a track started N days ago
-    // with the given liveProgress.
-    // totalItems=200, bulkBaseline=0, targetDate= trackStart+100 days.
-    // -----------------------------------------------------------------------
-    ProgressPaceCalculator makePace({
-      required int elapsedDays,
-      required int liveProgress,
-      int bulkBaseline = 0,
-    }) {
-      final trackStart = _today.subtract(Duration(days: elapsedDays));
-      return ProgressPaceCalculator.compute(
-        totalItems: 200,
-        bulkBaseline: bulkBaseline,
-        liveProgress: liveProgress,
-        trackStartDate: trackStart,
-        targetDate: trackStart.add(const Duration(days: 100)),
-        today: _today,
-      );
-    }
-
-    testWidgets('shows behind status', (tester) async {
-      // elapsed=10, requiredVelocity=2/day, expected=20, live=0 → variance=-20
-      // paceVarianceInDays = -20/2 = -10 → behind by 10 days
+    // DNI-474: the indicator renders the engine's finish projection (AD-35);
+    // status is text, never colour alone.
+    testWidgets('behind pace', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          ProgressPaceIndicator(
-            pace: makePace(elapsedDays: 10, liveProgress: 0),
+          const ProgressPaceIndicator(
+            projection: Projection(status: ProjectionStatus.behindPace),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Behind by 10 days'), findsOneWidget);
+      expect(find.text('Behind pace'), findsOneWidget);
       expect(find.byIcon(Icons.trending_down_rounded), findsOneWidget);
     });
 
-    testWidgets('shows on-track status', (tester) async {
-      // elapsed=10, requiredVelocity=2/day, expected=20, live=20 → variance=0 → onTrack
+    testWidgets('on track', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          ProgressPaceIndicator(
-            pace: makePace(elapsedDays: 10, liveProgress: 20),
+          const ProgressPaceIndicator(
+            projection: Projection(
+              status: ProjectionStatus.onTrack,
+              velocityPerDay: 2,
+              projectedFinish: '2026-12-01',
+            ),
           ),
         ),
       );
@@ -162,45 +141,21 @@ void main() {
       expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
     });
 
-    testWidgets('shows ahead status', (tester) async {
-      // elapsed=10, requiredVelocity=2/day, expected=20, live=40
-      // paceVariance=20, paceVarianceInDays=20/2=10 → ahead by 10 days
-      await tester.pumpWidget(
-        _wrap(
-          ProgressPaceIndicator(
-            pace: makePace(elapsedDays: 10, liveProgress: 40),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Ahead by 10 days'), findsOneWidget);
-      expect(find.byIcon(Icons.trending_up_rounded), findsOneWidget);
-    });
-
-    testWidgets('grace window shows "On track" (not "Ahead by 0 days")', (
+    testWidgets('too early to project (under 14 days of history)', (
       tester,
     ) async {
-      // Day 1 (elapsed=1 == kPaceGraceWindowDays) → graceWindow → "On pace"
       await tester.pumpWidget(
         _wrap(
-          ProgressPaceIndicator(
-            // 1336 bulk baseline, 0 live → Mishnayos-bug fixture
-            pace: ProgressPaceCalculator.compute(
-              totalItems: 1336,
-              bulkBaseline: 1336,
-              liveProgress: 0,
-              trackStartDate: _today,
-              targetDate: _today.add(const Duration(days: 365)),
-              today: _today,
-            ),
+          const ProgressPaceIndicator(
+            projection: Projection(status: ProjectionStatus.tooEarly),
+            subtitleCaption: 'caption',
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Must show "On pace" from the graceWindow branch — NOT "Ahead by 0 days"
-      expect(find.text('On pace'), findsOneWidget);
+      expect(find.text('Too early to tell'), findsOneWidget);
+      expect(find.text('caption'), findsOneWidget);
       expect(find.textContaining('Ahead'), findsNothing);
       expect(find.textContaining('Behind'), findsNothing);
     });

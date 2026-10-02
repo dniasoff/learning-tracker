@@ -6,7 +6,9 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/learnt_tri_state.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/stage_breakdown_row.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Expandable card showing progress for a hierarchy level.
 ///
@@ -79,64 +81,79 @@ class _ExpandableHierarchyCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return _HierarchySurfaceCard(
-      child: Theme(
-        data: theme.copyWith(
-          dividerTheme: DividerThemeData(
-            color: context.colors.brandOutline.withValues(alpha: 0.4),
+      child: _TriStateNode(
+        level: level,
+        child: Theme(
+          data: theme.copyWith(
+            dividerTheme: DividerThemeData(
+              color: context.colors.brandOutline.withValues(alpha: 0.4),
+            ),
           ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: ExpansionTile(
-            tilePadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 4,
-            ),
-            childrenPadding: EdgeInsets.zero,
-            shape: const Border(),
-            collapsedShape: const Border(),
-            title: Text(
-              renderCurriculumLevelName(
-                ref,
-                curriculumId: level.curriculumId,
-                level: level.level,
-                rawValue: level.levelName,
+          child: Material(
+            color: Colors.transparent,
+            child: ExpansionTile(
+              tilePadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 4,
               ),
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: context.colors.brandInk,
-              ),
-            ),
-            subtitle: _ProgressSummaryLine(level: level),
-            leading: _ProgressCircle(
-              percentage: level.completionPercentage,
-              color: color,
-            ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    StageBreakdownRow(stageBreakdown: level.stageBreakdown),
-                    if (level.subLevels != null) ...[
-                      Divider(
-                        height: 20,
-                        color: context.colors.brandOutline.withValues(
-                          alpha: 0.45,
-                        ),
-                      ),
-                      ...level.subLevels!.map(
-                        (sub) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _LevelContent(level: sub, color: color),
-                        ),
-                      ),
-                    ],
-                  ],
+              childrenPadding: EdgeInsets.zero,
+              shape: const Border(),
+              collapsedShape: const Border(),
+              title: Text(
+                renderCurriculumLevelName(
+                  ref,
+                  curriculumId: level.curriculumId,
+                  level: level.level,
+                  rawValue: level.levelName,
+                ),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: context.colors.brandInk,
                 ),
               ),
-            ],
+              subtitle: _ProgressSummaryLine(level: level),
+              leading: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ProgressCircle(
+                    percentage: level.completionPercentage,
+                    color: color,
+                  ),
+                  const SizedBox(width: 8),
+                  LearntTriStateBox(
+                    state: triStateFromCounts(
+                      level.completedItems,
+                      level.totalItems,
+                    ),
+                  ),
+                ],
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      StageBreakdownRow(stageBreakdown: level.stageBreakdown),
+                      if (level.subLevels != null) ...[
+                        Divider(
+                          height: 20,
+                          color: context.colors.brandOutline.withValues(
+                            alpha: 0.45,
+                          ),
+                        ),
+                        ...level.subLevels!.map(
+                          (sub) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _LevelContent(level: sub, color: color),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -153,51 +170,101 @@ class _LevelContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _ProgressCircle(
-              percentage: level.completionPercentage,
-              color: color,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    renderCurriculumLevelName(
-                      ref,
-                      curriculumId: level.curriculumId,
-                      level: level.level,
-                      rawValue: level.levelName,
-                    ),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: context.colors.brandInk,
-                    ),
-                  ),
-                  _ProgressSummaryLine(level: level),
-                ],
+    final state = triStateFromCounts(level.completedItems, level.totalItems);
+    return _TriStateNode(
+      level: level,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _ProgressCircle(
+                percentage: level.completionPercentage,
+                color: color,
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: level.completionPercentage,
-            backgroundColor: context.colors.brandCreamSoft,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 8,
+              const SizedBox(width: 12),
+              LearntTriStateBox(state: state),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      renderCurriculumLevelName(
+                        ref,
+                        curriculumId: level.curriculumId,
+                        level: level.level,
+                        rawValue: level.levelName,
+                      ),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: context.colors.brandInk,
+                      ),
+                    ),
+                    _ProgressSummaryLine(level: level),
+                  ],
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: level.completionPercentage,
+              backgroundColor: context.colors.brandCreamSoft,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          StageBreakdownRow(stageBreakdown: level.stageBreakdown),
+        ],
+      ),
+    );
+  }
+}
+
+/// The FR-15 tri-state frame of one hierarchy node (DNI-474): a decorative
+/// 12% state tint behind the node and a semantics label carrying the
+/// state, count and name as text ("Berakhot, partial, 3 of 12 learnt").
+class _TriStateNode extends ConsumerWidget {
+  const _TriStateNode({required this.level, required this.child});
+
+  final HierarchyLevelProgress level;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final state = triStateFromCounts(level.completedItems, level.totalItems);
+    final tinted = DecoratedBox(
+      decoration: BoxDecoration(
+        color: learntTriStateColor(
+          context,
+          state,
+        ).withValues(alpha: learntTriStateTintAlpha),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(padding: const EdgeInsets.all(6), child: child),
+    );
+    // Hosts without app localizations get the tint alone.
+    if (l10n == null) return tinted;
+    return Semantics(
+      container: true,
+      label: learntTriStateSemantics(
+        l10n,
+        name: renderCurriculumLevelName(
+          ref,
+          curriculumId: level.curriculumId,
+          level: level.level,
+          rawValue: level.levelName,
         ),
-        const SizedBox(height: 8),
-        StageBreakdownRow(stageBreakdown: level.stageBreakdown),
-      ],
+        state: state,
+        learnt: level.completedItems,
+        total: level.totalItems,
+      ),
+      child: tinted,
     );
   }
 }

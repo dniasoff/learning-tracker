@@ -33,27 +33,19 @@ library;
 
 import 'dart:io';
 
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/data/firestore/repository_providers.dart'
-    show
-        firestoreCompletionRepositoryProvider,
-        firestoreLearningLedgerRepositoryProvider;
-import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/content_repository_impl.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
-import '../../../../helpers/firestore_fake.dart';
-import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learner_state.dart';
+import '../../../../helpers/learner_state/learner_state_overrides.dart';
 
 /// Real repository backed by the on-disk bundled assets (rootBundle is empty
 /// in the test environment).
@@ -138,48 +130,27 @@ class _CountingUnionRepository
 }
 
 void main() {
-  late FakeFirebaseFirestore firestore;
   late _CountingUnionRepository repo;
-  const uid = 'r8-header-uid';
-  const profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
   // A genuine Mussar leaf ref so the total reflects a real learned count (not
   // just a materialization count) — mirrors the Part A red-demo fixture.
   const mussarLeafRef = 'Mesillat Yesharim 1:1';
 
-  setUp(() async {
-    firestore = createFakeFirestore(authenticatedUid: uid);
-    await seedCompletion(
-      firestore,
-      uid: uid,
-      profileId: profileId,
-      curriculumId: CurriculumId.mussar,
-      sefariaRef: mussarLeafRef,
-      source: CompletionSource.live,
-      completedAt: DateTime.utc(2026, 3, 15),
-    );
-    repo = _CountingUnionRepository(_DiskContentRepository());
-  });
+  setUp(() => repo = _CountingUnionRepository(_DiskContentRepository()));
 
   test('lifetimeTotalsAcrossAllCurriculaProvider computes the header total '
       'WITHOUT permanently caching any curriculum (getContentForCurriculum is '
       'called ZERO times) — reverting to the lifetimeSummariesProvider-based '
       'implementation makes every one of the 9 curricula go through it instead '
       '(the R8 OOM path)', () async {
+    // DNI-474: the learnt set is the engine's (one Mussar leaf learnt).
     final container = ProviderContainer(
       overrides: [
-        activeProfileIdProvider.overrideWithValue(profileId),
-        firestoreCompletionRepositoryProvider.overrideWith(
-          (ref) async => FirestoreCompletionRepository(
-            firestore: firestore,
-            uid: uid,
-            profileId: profileId,
-          ),
-        ),
-        firestoreLearningLedgerRepositoryProvider.overrideWith(
-          (ref) async => FirestoreLearningLedgerRepository(
-            firestore: firestore,
-            uid: uid,
-            profileId: profileId,
+        ...learnerStateOverrides(
+          scope: c0Scope(),
+          state: fakeLearnerState(
+            curricula: {
+              'mussar': FakeCurriculumState(learntLeaves: {mussarLeafRef}),
+            },
           ),
         ),
         contentRepositoryProvider.overrideWithValue(repo),

@@ -47,7 +47,6 @@ library;
 
 import 'dart:async';
 
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,30 +56,25 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/points.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/data/repositories/progress_points_awards_source.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/firestore_fake.dart';
-import '../../helpers/firestore_fixtures.dart';
+import '../../helpers/learner_state/progress_fixtures.dart';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const _uid = 'recent-activity-hierarchy-user';
 const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 // ── Provider notifier overrides ────────────────────────────────────────────
@@ -103,170 +97,95 @@ class _FixedTransliteration extends CurrentTransliterationVariant {
 }
 
 // ── Stub chart services ────────────────────────────────────────────────────
+//
+// DNI-474: the service is pure over LearnerState; stubs override its
+// synchronous series. Loading is a learner state that never arrives.
 
-class _NoopChartRepository implements ChartDataRepository {
-  @override
-  Future<List<CompletionEntity>> getCompletionsByTier({
-    required CompletionTierFilter tier,
-    CurriculumId? curriculumId,
-    DateTime? since,
-    DateTime? until,
-  }) async => const [];
-
-  @override
-  Future<List<CompletionEntity>> getCompletionsByCurriculum(
-    CurriculumId curriculumId,
-  ) async => const [];
-
-  @override
-  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async =>
-      const [];
-}
-
-/// Immediately-returning stub — no disk access.
+/// Immediately-returning stub.
 class _StubChartDataService extends ChartDataService {
-  _StubChartDataService() : super(repository: _NoopChartRepository());
+  _StubChartDataService();
 
   var limudChazaraCalls = 0;
 
   @override
-  Future<List<DailyLimudChazaraData>> getDailyLimudimAndChazaros({
+  List<DailyLimudChazaraData> getDailyLimudimAndChazaros(
+    LearnerState? state, {
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
-  }) async {
+    Corpus? Function(String curriculumId)? corpusFor,
+  }) {
     limudChazaraCalls++;
     return [];
   }
 
   @override
-  Future<List<CumulativeProgressPoint>> getCumulativeProgressLive({
+  List<CumulativeProgressPoint> getCumulativeProgress(
+    LearnerState? state, {
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
-  }) async => [];
+    Corpus? Function(String curriculumId)? corpusFor,
+  }) => [];
 
   @override
-  Future<Set<DateTime>> getStreakCalendarLive({
+  Set<DateTime> getStreakCalendar(
+    LearnerState? state, {
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
-  }) async => {};
+  }) => {};
 
   @override
-  Future<List<DailyPointsData>?> getDailyPoints({
+  List<DailyPointsData>? getDailyPoints(
+    LearnerState? state, {
+    required List<PointsLedgerRow> awards,
     required DateTime startDate,
     required DateTime endDate,
     required ProfileMode userMode,
     String? curriculumId,
-  }) async => userMode.isAdult ? null : [];
-}
-
-/// Never-completing chart service — simulates the loading state.
-class _HangingChartDataService extends ChartDataService {
-  _HangingChartDataService() : super(repository: _NoopChartRepository());
-
-  @override
-  Future<List<DailyLimudChazaraData>> getDailyLimudimAndChazaros({
-    required DateTime startDate,
-    required DateTime endDate,
-    String? curriculumId,
-  }) => Completer<List<DailyLimudChazaraData>>().future;
-
-  @override
-  Future<List<CumulativeProgressPoint>> getCumulativeProgressLive({
-    required DateTime startDate,
-    required DateTime endDate,
-    String? curriculumId,
-  }) => Completer<List<CumulativeProgressPoint>>().future;
-
-  @override
-  Future<Set<DateTime>> getStreakCalendarLive({
-    required DateTime startDate,
-    required DateTime endDate,
-    String? curriculumId,
-  }) => Completer<Set<DateTime>>().future;
-
-  @override
-  Future<List<DailyPointsData>?> getDailyPoints({
-    required DateTime startDate,
-    required DateTime endDate,
-    required ProfileMode userMode,
-    String? curriculumId,
-  }) => Completer<List<DailyPointsData>?>().future;
+  }) => userMode.isAdult ? null : [];
 }
 
 /// Always-erroring chart service.
 class _ErrorChartDataService extends ChartDataService {
-  _ErrorChartDataService() : super(repository: _NoopChartRepository());
+  _ErrorChartDataService();
 
   @override
-  Future<List<DailyLimudChazaraData>> getDailyLimudimAndChazaros({
+  List<DailyLimudChazaraData> getDailyLimudimAndChazaros(
+    LearnerState? state, {
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
-  }) => Future.error(Exception('chart error'));
+    Corpus? Function(String curriculumId)? corpusFor,
+  }) => throw Exception('chart error');
 
   @override
-  Future<List<CumulativeProgressPoint>> getCumulativeProgressLive({
+  List<CumulativeProgressPoint> getCumulativeProgress(
+    LearnerState? state, {
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
-  }) => Future.error(Exception('chart error'));
+    Corpus? Function(String curriculumId)? corpusFor,
+  }) => throw Exception('chart error');
 
   @override
-  Future<Set<DateTime>> getStreakCalendarLive({
+  Set<DateTime> getStreakCalendar(
+    LearnerState? state, {
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
-  }) => Future.error(Exception('chart error'));
+  }) => throw Exception('chart error');
 
   @override
-  Future<List<DailyPointsData>?> getDailyPoints({
+  List<DailyPointsData>? getDailyPoints(
+    LearnerState? state, {
+    required List<PointsLedgerRow> awards,
     required DateTime startDate,
     required DateTime endDate,
     required ProfileMode userMode,
     String? curriculumId,
-  }) => Future.error(Exception('chart error'));
-}
-
-class _FirestoreChartRepository implements ChartDataRepository {
-  _FirestoreChartRepository(FakeFirebaseFirestore firestore)
-    : _completions = FirestoreCompletionRepository(
-        firestore: firestore,
-        uid: _uid,
-        profileId: _profileId,
-      ),
-      _goals = FirestoreGoalRepository(
-        firestore: firestore,
-        uid: _uid,
-        profileId: _profileId,
-      );
-
-  final FirestoreCompletionRepository _completions;
-  final FirestoreGoalRepository _goals;
-
-  @override
-  Future<List<CompletionEntity>> getCompletionsByTier({
-    required CompletionTierFilter tier,
-    CurriculumId? curriculumId,
-    DateTime? since,
-    DateTime? until,
-  }) => _completions.getCompletionsByTier(
-    tier: tier,
-    curriculumId: curriculumId,
-    since: since,
-    until: until,
-  );
-
-  @override
-  Future<List<CompletionEntity>> getCompletionsByCurriculum(
-    CurriculumId curriculumId,
-  ) => _completions.getCompletionsForCurriculum(curriculumId);
-
-  @override
-  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) =>
-      _goals.getGoals(curriculumId);
+  }) => throw Exception('chart error');
 }
 
 // ── Settling helper ────────────────────────────────────────────────────────
@@ -285,6 +204,7 @@ Future<void> _settle(WidgetTester tester) async {
 
 Widget _buildScreen({
   ChartDataService? chartService,
+  bool learnerLoading = false,
   ProfileMode mode = ProfileMode.adult,
   bool hasChazara = true,
   bool useHebrewTerms = false,
@@ -298,6 +218,8 @@ Widget _buildScreen({
       useHebrewTermsProvider.overrideWith(
         () => _FixedUseHebrewTerms(useHebrew: useHebrewTerms),
       ),
+      ...progressOverrides(learnerLoading ? null : progressState(const [])),
+      progressPointsAwardsProvider.overrideWith((ref) async => const []),
       chartDataServiceProvider.overrideWith((ref) => svc),
       dashboardUserModeProvider.overrideWith((ref) => Future.value(mode)),
       dashboardStreakProvider.overrideWith(
@@ -423,42 +345,6 @@ List<ContentItem> _leafOnlyItems() => [
   ),
 ];
 
-// ── Firestore seeding ──────────────────────────────────────────────────────
-
-Future<void> _seedLive(
-  FakeFirebaseFirestore firestore, {
-  required String ref,
-  int stageId = 1,
-  required DateTime at,
-}) => seedCompletion(
-  firestore,
-  uid: _uid,
-  profileId: _profileId,
-  curriculumId: CurriculumId.mishnayos,
-  sefariaRef: ref,
-  stageId: stageId,
-  source: CompletionSource.live,
-  completedAt: at,
-);
-
-Future<void> _seedBulkInTrack(
-  FakeFirebaseFirestore firestore, {
-  required String ref,
-  int stageId = 1,
-  required DateTime at,
-}) async {
-  await seedCompletion(
-    firestore,
-    uid: _uid,
-    profileId: _profileId,
-    curriculumId: CurriculumId.mishnayos,
-    sefariaRef: ref,
-    stageId: stageId,
-    source: CompletionSource.bulkInTrack,
-    completedAt: at,
-  );
-}
-
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 void main() {
@@ -473,9 +359,7 @@ void main() {
   group('RecentActivityScreen', () {
     // A1 — loading state: spinner shown while providers are loading
     testWidgets('A1: loading state — loading indicator shown', (tester) async {
-      await tester.pumpWidget(
-        _buildScreen(chartService: _HangingChartDataService()),
-      );
+      await tester.pumpWidget(_buildScreen(learnerLoading: true));
       await tester.pump(); // one frame to trigger providers
 
       // While loading, spinner appears (from loading branch of chart providers).
@@ -621,67 +505,6 @@ void main() {
     });
 
     // A9 — sentinel-date bulk-marks excluded from finite window
-    testWidgets(
-      'A9: sentinel-date bulk-marks (1/1/2000) excluded from Last-7-Days '
-      'window (completion-credit policy)',
-      (tester) async {
-        final firestore = createFakeFirestore(authenticatedUid: _uid);
-
-        // Seed a bulk-mark at the sentinel date (year 2000 = "all-time floor").
-        final sentinelDate = DateTime.utc(2000, 1, 1);
-        await _seedBulkInTrack(
-          firestore,
-          ref: 'bulk_sentinel',
-          at: sentinelDate,
-        );
-
-        // Seed one live completion today.
-        final today = DateTimeFactory.nowLocal();
-        final todayMorning = DateTime(today.year, today.month, today.day, 9);
-        await _seedLive(firestore, ref: 'live_today', at: todayMorning);
-
-        // Verify directly through the service:
-        // - Last-7-Days window should contain today's live row but NOT year-2000.
-        final svc = ChartDataService(
-          repository: _FirestoreChartRepository(firestore),
-        );
-        final end = DateTime(today.year, today.month, today.day);
-        final start = end.subtract(const Duration(days: 6));
-        final data = await svc.getDailyLimudimAndChazaros(
-          startDate: start,
-          endDate: end,
-        );
-
-        final todayBucket = data.firstWhere(
-          (d) =>
-              d.date.year == today.year &&
-              d.date.month == today.month &&
-              d.date.day == today.day,
-          orElse: () => DailyLimudChazaraData(
-            date: today,
-            limudCount: 0,
-            chazaraCount: 0,
-          ),
-        );
-        expect(
-          todayBucket.limudCount,
-          1,
-          reason: 'only the live completion is in the Last-7-Days window',
-        );
-
-        // Sentinel year bucket must not appear at all.
-        final sentinelBucket = data.where((d) => d.date.year == 2000);
-        expect(
-          sentinelBucket,
-          isEmpty,
-          reason:
-              'sentinel-date bulk-mark (1/1/2000) must not appear in the '
-              'Last-7-Days window — completion-credit policy',
-        );
-
-        await _teardown(tester);
-      },
-    );
 
     // A10 — switching time-range pill triggers refetch
     testWidgets('A10: switching time-range pill triggers refetch', (

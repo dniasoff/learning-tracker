@@ -1,198 +1,102 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
-import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart'
-    show ChartDataRepository;
-import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
+import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
 
-/// Single source of truth for all track and curriculum progress aggregation.
+/// Track and curriculum progress over the engine's learner state — the one
+/// aggregation every progress card shares (DNI-474).
 ///
-/// Replaces the four divergent aggregators that previously answered
-/// "how much has the user learned?" with inconsistent semantics:
+/// * [completionPercent] is goal progress (FR-14): the engine's distinct
+///   learnt leaves over the track's scoped leaf count. With `since`, only
+///   leaves first learnt at or after that instant by tracked learning
+///   (`dated` / `catch_up`) count.
+/// * [dailyCounts] and [cumulativeProgress] bucket the engine's counted
+///   learn events by their `learned_on` day.
 ///
-/// - `dashboardTrackCompletionPercentageProvider` (all-time, multi-stage)
-/// - `trackDualProgressMetricsProvider.currentCyclePercentage` (time-gated)
-/// - `CurriculumProgressService.computeCompletionPercentage` (no stage gate)
-/// - `ParentDashboardAggregator.computeCompletionPercentage` (wrong formula)
-///
-/// Every public method accepts an explicit [CompletionTierFilter] so callers
-/// declare their intent rather than accidentally inheriting the wrong rows.
-///
-/// ### Tier semantics
-///
-/// | Tier              | Includes                   | Used for                      |
-/// |────────────────── |────────────────────────────|───────────────────────────── |
-/// | [liveOnly]        | live only                  | streak, points, charts        |
-/// | [trackAchievement]| live + bulkInTrack         | Manage Tracks, siyumim        |
-/// | [lifetime]        | live + bulkInTrack + etc.  | lifetime views                |
-///
-/// ## Firestore read seam
-///
-/// Takes [ChartDataRepository] rather than resolving Firestore itself —
-/// AD-23/AD-28 forbid `lib/features/**/domain/**` from importing the data
-/// ring at all. Reuses the SAME interface [ChartDataService] already reads
-/// through (`chart_data_service.dart`) rather than declaring a second,
-/// near-identical one: its `getCompletionsByTier` already carries exactly
-/// the D-E contract this service needs (achievement-shaped — throws when
-/// the backend is not ready, so a not-ready read can never masquerade as
-/// "zero progress"). See `features/tracks/presentation/providers/
-/// track_progress_providers.dart` for where the concrete
-/// `FirestoreChartDataRepositoryAdapter` is constructed.
+/// It reads only `LearnerState`; voids, lock-ignored events and repeats are
+/// already resolved by the engine.
 class TrackProgressService {
-  const TrackProgressService({
-    required ChartDataRepository repository,
-    required StageDefinitionRepository stageRepo,
-  }) : _repository = repository,
-       _stageRepo = stageRepo;
+  const TrackProgressService();
 
-  final ChartDataRepository _repository;
-  final StageDefinitionRepository _stageRepo;
-
-  // ── Completion-percent ────────────────────────────────────────────────────
-
-  /// Fraction of track items where ALL required stages are complete,
-  /// filtered to [tier].
-  ///
-  /// - [requireAllStages] `true` (default) — "fully done" means every required
-  ///   stage has a completion. Set to `false` for a distinct-refs-only count
-  ///   (any completion at any stage counts the item).
-  /// - [since] — optional lower bound on `completedAt`; pass
-  ///   `track.activatedAt` for a cycle-aware calculation.
-  /// - [totalItems] — denominator. Pass the scoped leaf-item count for the
-  ///   curriculum; if omitted or 0 the method returns 0.0.
-  Future<double> completionPercent({
+  /// The learnt share of [curriculumId]'s [totalItems] scoped leaves.
+  double completionPercent({
+    required LearnerState? state,
     required CurriculumId curriculumId,
-    required CompletionTierFilter tier,
     required int totalItems,
-    bool requireAllStages = true,
     DateTime? since,
-  }) async {
-    if (totalItems == 0) return 0.0;
-
-    final stages = await _stageRepo.getStagesForCurriculum(curriculumId);
-    if (stages.isEmpty) return 0.0;
-
-    final completions = await _repository.getCompletionsByTier(
-      tier: tier,
-      curriculumId: curriculumId,
-      since: since,
-    );
-
-    if (completions.isEmpty) return 0.0;
-
-    if (!requireAllStages) {
-      // Distinct-refs only: count any item that appears at least once.
-      final doneRefs = completions.map((c) => c.sefariaRef).toSet();
-      return (doneRefs.length / totalItems).clamp(0.0, 1.0);
+  }) {
+    if (totalItems <= 0 || state == null) return 0.0;
+    final curriculum = state[curriculumId.storageKey];
+    if (curriculum == null) return 0.0;
+    if (since == null) {
+      return (curriculum.distinctLearnt / totalItems).clamp(0.0, 1.0);
     }
-
-    // Multi-stage gate: item "done" iff every required stageOrder is present.
-    final requiredStageOrders = stages.map((s) => s.stageOrder).toSet();
-    final completedStagesByRef = <String, Set<int>>{};
-    final lifetimeOnlyRefs = <String>{};
-    for (final c in completions) {
-      completedStagesByRef.putIfAbsent(c.sefariaRef, () => {}).add(c.stageId);
-      if (c.source == CompletionSource.lifetimeOnly) {
-        lifetimeOnlyRefs.add(c.sefariaRef);
-      }
+    final first = <String, DateTime>{};
+    for (final e in countedLearnsOf(
+      state,
+      curricula: {curriculumId.storageKey},
+    )) {
+      if (e.dateState == DateState.beforeTracking) continue;
+      final ref = e.ref;
+      if (ref == null || !curriculum.learntLeaves.contains(ref)) continue;
+      first.putIfAbsent(ref, () => effectiveAt(e));
     }
-
-    final doneItems = completedStagesByRef.entries
-        .where(
-          (entry) =>
-              lifetimeOnlyRefs.contains(entry.key) ||
-              requiredStageOrders.every(entry.value.contains),
-        )
-        .length;
-
-    return (doneItems / totalItems).clamp(0.0, 1.0);
+    final count = first.values.where((at) => !at.isBefore(since)).length;
+    return (count / totalItems).clamp(0.0, 1.0);
   }
 
-  // ── Daily counts ──────────────────────────────────────────────────────────
-
-  /// Per-day completion counts within [startDate, endDate] inclusive,
-  /// filtered to [tier].
-  ///
-  /// Returns one [DailyCompletionData] per calendar day in the range,
-  /// even if the count is zero.
-  Future<List<DailyCompletionData>> dailyCounts({
-    required CompletionTierFilter tier,
+  /// Counted learn events per local day in `[startDate, endDate]`.
+  List<DailyCompletionData> dailyCounts({
+    required LearnerState? state,
     required DateTime startDate,
     required DateTime endDate,
     CurriculumId? curriculumId,
-  }) async {
-    final completions = await _repository.getCompletionsByTier(
-      tier: tier,
-      curriculumId: curriculumId,
+  }) {
+    final days = dailyActivityOf(
+      state,
+      curricula: curriculumId == null ? null : {curriculumId.storageKey},
     );
-
-    final counts = <DateTime, int>{};
-    for (final c in completions) {
-      final localDate = _extractLocalDate(c.completedAt);
-      if (!localDate.isBefore(startDate) && !localDate.isAfter(endDate)) {
-        counts[localDate] = (counts[localDate] ?? 0) + 1;
-      }
-    }
-
     final result = <DailyCompletionData>[];
-    var current = startDate;
-    while (!current.isAfter(endDate)) {
+    var current = _day(startDate);
+    final end = _day(endDate);
+    while (!current.isAfter(end)) {
       result.add(
-        DailyCompletionData(date: current, count: counts[current] ?? 0),
+        DailyCompletionData(date: current, count: days[current]?.events ?? 0),
       );
-      current = current.add(const Duration(days: 1));
+      current = DateTime(current.year, current.month, current.day + 1);
     }
     return result;
   }
 
-  // ── Cumulative progress ───────────────────────────────────────────────────
-
-  /// Running total of completions up to each day in [startDate, endDate],
-  /// filtered to [tier].
-  ///
-  /// The running total starts from 0 at [startDate] (completions before the
-  /// range are NOT included in the baseline — the chart plots live activity
-  /// only in the chosen window).
-  Future<List<CumulativeDataPoint>> cumulativeProgress({
-    required CompletionTierFilter tier,
+  /// Distinct leaves newly learnt per day, cumulative over
+  /// `[startDate, endDate]`.
+  List<CumulativeDataPoint> cumulativeProgress({
+    required LearnerState? state,
     required DateTime startDate,
     required DateTime endDate,
     CurriculumId? curriculumId,
-  }) async {
-    final completions = await _repository.getCompletionsByTier(
-      tier: tier,
-      curriculumId: curriculumId,
+  }) {
+    final days = dailyActivityOf(
+      state,
+      curricula: curriculumId == null ? null : {curriculumId.storageKey},
     );
-
-    final dailyCounts = <DateTime, int>{};
-    for (final c in completions) {
-      final localDate = _extractLocalDate(c.completedAt);
-      if (!localDate.isBefore(startDate) && !localDate.isAfter(endDate)) {
-        dailyCounts[localDate] = (dailyCounts[localDate] ?? 0) + 1;
-      }
-    }
-
     final result = <CumulativeDataPoint>[];
     var runningTotal = 0;
-    var current = startDate;
-    while (!current.isAfter(endDate)) {
-      runningTotal += dailyCounts[current] ?? 0;
+    var current = _day(startDate);
+    final end = _day(endDate);
+    while (!current.isAfter(end)) {
+      runningTotal += days[current]?.newLeaves ?? 0;
       result.add(CumulativeDataPoint(date: current, total: runningTotal));
-      current = current.add(const Duration(days: 1));
+      current = DateTime(current.year, current.month, current.day + 1);
     }
     return result;
   }
 
-  // ── Private helpers ───────────────────────────────────────────────────────
-
-  static DateTime _extractLocalDate(DateTime dt) {
-    final local = dt.toLocal();
-    return DateTime(local.year, local.month, local.day);
-  }
+  static DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 }
 
-/// A point on the cumulative-progress curve.
+/// One point of a cumulative series.
 class CumulativeDataPoint {
   const CumulativeDataPoint({required this.date, required this.total});
 

@@ -178,6 +178,16 @@ class _TimelineCard extends ConsumerWidget {
           label,
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
+        // DNI-474 AC-4: the engine's completion number of this siyum.
+        trailing: m.level == MilestoneLevel.curriculum
+            ? null
+            : Text(
+                AppLocalizations.of(
+                  context,
+                )!.siyumimCompletionNumber(m.completionNumber),
+                key: ValueKey('siyum-completion-number-${m.completionNumber}'),
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
         subtitle: Row(
           children: [
             Flexible(

@@ -12,7 +12,6 @@ import 'package:learning_tracker/features/scheduler/domain/models/delta_value.da
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 
 void main() {
   group('Story 16.1 — pace-based goals', () {
@@ -31,24 +30,6 @@ void main() {
       expect(goal.toFirestore(), containsPair('goal_type', 'pace'));
       expect(goal.toFirestore(), containsPair('pace_value', 5));
       expect(goal.toFirestore(), containsPair('pace_unit', 'per_day'));
-    });
-
-    test('PaceCalculator projects completion from the target pace', () {
-      final today = DateTime.utc(2026, 8, 12);
-      final status = PaceCalculator.calculateForPaceGoal(
-        targetPacePerDay: 5,
-        totalItems: 100,
-        completedItems: 40,
-        dailyCompletionCounts: const {},
-        today: today,
-      );
-      expect(status.projectedCompletionDate, DateTime.utc(2026, 8, 24));
-      expect(status.status, PaceStatusType.behind);
-    });
-
-    test('weekly pace values convert to a daily rate', () {
-      expect(PaceCalculator.paceToDaily(14, 'per_week'), closeTo(2, 0.001));
-      expect(PaceCalculator.paceToDaily(2, 'per_day'), 2);
     });
   });
 

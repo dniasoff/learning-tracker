@@ -3,24 +3,14 @@ library;
 
 import 'dart:async';
 
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/data/firestore/repository_providers.dart';
-import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
-
-import '../../../../helpers/firestore_fake.dart';
-import '../../../../helpers/firestore_fixtures.dart';
-
-const _uid = 'scheduler-provider-test-uid';
-const _profileId = '01J9V8J5Q2K7M3N6P4R8T1WXYZ';
 
 class _GatedSkippedTasksStore extends InMemorySharedPreferencesStore {
   _GatedSkippedTasksStore(super.data) : super.withData();
@@ -291,110 +281,4 @@ void main() {
       },
     );
   });
-
-  group('paceStatusProvider', () {
-    ProviderContainer containerFor(FakeFirebaseFirestore firestore) =>
-        ProviderContainer(
-          overrides: [
-            firestoreCompletionRepositoryProvider.overrideWith(
-              (ref) async => FirestoreCompletionRepository(
-                firestore: firestore,
-                uid: _uid,
-                profileId: _profileId,
-              ),
-            ),
-            clockProvider.overrideWith((ref) => DateTime.utc(2026, 5, 29)),
-          ],
-        );
-
-    test(
-      'reports behind when the seeded rolling average is below pace',
-      () async {
-        final firestore = createFakeFirestore(authenticatedUid: _uid);
-        final container = containerFor(firestore);
-        addTearDown(container.dispose);
-
-        final status = await container.read(
-          paceStatusProvider(
-            curriculumId: CurriculumId.mishnayos,
-            goalStartDate: DateTime.utc(2026, 1, 1),
-            totalItems: 200,
-            goalType: 'pace',
-            pacePerDay: 1,
-          ).future,
-        );
-
-        expect(status, isNotNull);
-        expect(status!.status, PaceStatusType.behind);
-        expect(status.rollingAverage, 0);
-      },
-    );
-
-    test('seeded completions drive an ahead pace result', () async {
-      final firestore = createFakeFirestore(authenticatedUid: _uid);
-      for (var i = 1; i <= 7; i++) {
-        await seedCompletion(
-          firestore,
-          uid: _uid,
-          profileId: _profileId,
-          curriculumId: CurriculumId.mishnayos,
-          sefariaRef: 'mish-$i',
-          completedAt: DateTime.utc(2026, 5, 29 - i, 10),
-        );
-      }
-      final container = containerFor(firestore);
-      addTearDown(container.dispose);
-
-      final status = await container.read(
-        paceStatusProvider(
-          curriculumId: CurriculumId.mishnayos,
-          goalStartDate: DateTime.utc(2026, 1, 1),
-          totalItems: 200,
-          goalType: 'pace',
-          pacePerDay: .5,
-        ).future,
-      );
-
-      expect(status, isNotNull);
-      expect(status!.status, PaceStatusType.ahead);
-      expect(status.rollingAverage, closeTo(1, .01));
-    });
-  });
-
-  test(
-    'provider error branches propagate instead of becoming empty values',
-    () async {
-      final container = ProviderContainer(
-        retry: (_, __) => null,
-        overrides: [
-          paceStatusProvider(
-            curriculumId: CurriculumId.mishnayos,
-            goalStartDate: DateTime.utc(2026, 1, 1),
-            totalItems: 100,
-          ).overrideWith(
-            (ref) => Future<PaceStatus?>.error(StateError('scheduler gone')),
-          ),
-          allDailyTasksProvider.overrideWith(
-            (ref) => Future<List<DailyTask>>.error(StateError('tasks gone')),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await expectLater(
-        container.read(
-          paceStatusProvider(
-            curriculumId: CurriculumId.mishnayos,
-            goalStartDate: DateTime.utc(2026, 1, 1),
-            totalItems: 100,
-          ).future,
-        ),
-        throwsA(isA<StateError>()),
-      );
-      await expectLater(
-        container.read(allDailyTasksProvider.future),
-        throwsA(isA<StateError>()),
-      );
-    },
-  );
 }

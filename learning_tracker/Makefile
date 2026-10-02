@@ -104,6 +104,9 @@ check-retired-symbols: ## Run the AD-49 retired-symbols gate standalone (DNI-521
 check-dependency-direction: ## Run the AD-23 dependency-direction + AD-35 pure-domain gate standalone (hard gate, no baseline)
 	dart run tool/check_dependency_direction.dart
 
+check-learning-event-read-boundary: ## Run the AD-35 "Reads" learning-event read-boundary gate standalone (DNI-474; only lib/data/repositories/ queries learning_events)
+	dart run tool/check_learning_event_read_boundary.dart
+
 test-functions: ## Run Cloud Functions tests (real handlers vs firestore emulator) (L5)
 	npm --prefix functions run build
 	firebase emulators:exec --only firestore,auth --project demo-cf "npm --prefix functions test"
@@ -303,7 +306,7 @@ test-story-i4: ## Run Story I-4 (Curriculum overlap deduplication) acceptance te
 test-epic-28: ## Run all Epic 28 (Curriculum overlap) acceptance tests
 	flutter test test/story_acceptance/epic_28_curriculum_overlap_test.dart
 
-ci: analyze check-dependency-direction validate-calendar lint-rules-test test test-serial-tools test-rules test-functions check-profile-path-keying check-retired-symbols check-profile-id-int-sites ## Run full CI pipeline (analyze + dependency-direction/pure-domain gate + seed validation + lint-rules-test + all tests + rules tests + Cloud Functions tests + profile-path-keying gate + retired-symbols gate + profile-id-int-sites gate)
+ci: analyze check-dependency-direction check-learning-event-read-boundary validate-calendar lint-rules-test test test-serial-tools test-rules test-functions check-profile-path-keying check-retired-symbols check-profile-id-int-sites ## Run full CI pipeline (analyze + dependency-direction/pure-domain gate + learning-event read boundary + seed validation + lint-rules-test + all tests + rules tests + Cloud Functions tests + profile-path-keying gate + retired-symbols gate + profile-id-int-sites gate)
 
 analyze: ## Run dart analyze (matches CI --fatal-infos flag)
 	dart analyze --fatal-infos
@@ -1266,6 +1269,14 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	else \
 	  cat /tmp/retired_symbols_check.$$$$.log; \
 	  rm -f /tmp/retired_symbols_check.$$$$.log; \
+	fi; \
+	echo "106/106 — AD-35 READS (DNI-474): no lib/** file outside lib/data/repositories/ queries learning_events (collection literal, path segment or kLearningEventsCollection), and nothing outside lib/data/ imports the Firestore learning-event implementation — screens, planner and reports read LearnerState; hard gate, zero tolerated"; \
+	if ! dart run tool/check_learning_event_read_boundary.dart > /tmp/learning_event_read_boundary.$$$$.log 2>&1; then \
+	  cat /tmp/learning_event_read_boundary.$$$$.log; \
+	  rm -f /tmp/learning_event_read_boundary.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/learning_event_read_boundary.$$$$.log; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \

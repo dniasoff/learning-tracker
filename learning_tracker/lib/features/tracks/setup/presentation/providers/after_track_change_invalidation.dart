@@ -48,7 +48,6 @@ Future<void> onTrackChanged(WidgetRef ref) async {
   for (final c in CurriculumId.all) {
     ref.invalidate(dashboardCompletionPercentageProvider(c));
     ref.invalidate(dashboardLastCompletionProvider(c));
-    ref.invalidate(dashboardPaceStatusProvider(c));
     ref.invalidate(dashboardHasProgramEnrollmentProvider(c));
     ref.invalidate(scopedCurriculumContentProvider(c));
     ref.invalidate(scopedItemCountProvider(c));

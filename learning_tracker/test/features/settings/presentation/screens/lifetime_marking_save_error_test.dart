@@ -29,6 +29,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
@@ -40,6 +41,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../../helpers/pump_app.dart';
 
 // ── mocks / fakes ────────────────────────────────────────────────────────────
@@ -138,6 +141,10 @@ Widget _buildScreen({Locale locale = const Locale('en')}) {
         (ref, id) async => const <LearningLedgerEntry>[],
       ),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
+      ...learnerStateOverrides(
+        scope: c0Scope(),
+        state: LearnerState.empty(DateTime.utc(2026)),
+      ),
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
           contentRepository: content,
@@ -163,6 +170,8 @@ final _selectAllButton = find.byWidgetPredicate(
 Future<void> _selectAllAndSave(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 100));
+  await tester.pump(const Duration(seconds: 1));
+  await tester.pumpAndSettle();
 
   await tester.tap(_selectAllButton);
   await tester.pump();

@@ -4481,6 +4481,68 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String learnerProgressCount(int learnt, int total) {
+    return '$learnt of $total learnt';
+  }
+
+  @override
+  String learnerProgressCountShort(int learnt, int total) {
+    return '$learnt/$total';
+  }
+
+  @override
+  String learnerProgressNodeSemantics(
+    String name,
+    String state,
+    int learnt,
+    int total,
+  ) {
+    return '$name, $state, $learnt of $total learnt';
+  }
+
+  @override
+  String get learnerProgressPaceBehind => 'Behind pace';
+
+  @override
+  String get learnerProgressPaceTooEarly => 'Too early to tell';
+
+  @override
+  String get learnerProgressStateComplete => 'complete';
+
+  @override
+  String get learnerProgressStateEmpty => 'not learnt';
+
+  @override
+  String get learnerProgressStatePartial => 'partial';
+
+  @override
+  String siyumCelebrationBody(String unit) {
+    return 'You completed $unit!';
+  }
+
+  @override
+  String get siyumCelebrationDismiss => 'Mazal tov!';
+
+  @override
+  String siyumCelebrationMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'and $count more',
+      one: 'and 1 more',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get siyumCelebrationTitle => 'Siyum!';
+
+  @override
+  String siyumimCompletionNumber(int number) {
+    return '#$number';
+  }
+
+  @override
   String get siyumHaShas => 'Siyum HaShas';
 
   @override

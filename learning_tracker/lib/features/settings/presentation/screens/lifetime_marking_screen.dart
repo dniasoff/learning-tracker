@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
@@ -9,18 +10,15 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/core/widgets/error_display.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
-import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -434,63 +432,74 @@ class _LifetimeCurriculumMarkingScreenState
     });
   }
 
+  /// The leaves under the row [value] at [currentPath] (level1-first
+  /// ancestors), in [allLeaves].
+  List<ContentItem> _leavesUnderRow(
+    List<ContentItem> allLeaves,
+    String value,
+    List<String> currentPath,
+  ) {
+    final path = <String>[...currentPath, value];
+    return [
+      for (final leaf in allLeaves)
+        if (Iterable<int>.generate(
+          path.length,
+        ).every((i) => levelValueAt(leaf, i + 1) == path[i]))
+          leaf,
+    ];
+  }
+
+  /// Whether a session selection covers [leaf]: some selection names the
+  /// qualified id of one of the leaf's levels.
+  bool _leafSessionSelected(ContentItem leaf) {
+    for (final s in _selections) {
+      final own = levelValueAt(leaf, s.level);
+      if (own == null || own.isEmpty) continue;
+      final ancestors = <String>[
+        for (var lvl = 1; lvl < s.level; lvl++) levelValueAt(leaf, lvl) ?? '',
+      ];
+      if (s.value == _qid(s.level, own, ancestors)) return true;
+    }
+    return false;
+  }
+
+  /// Whether the engine already counts the row as learnt (DNI-474): every
+  /// leaf under it is in the learner's learnt set (AD-32, from
+  /// `LearnerState`), so it renders as saved and cannot be re-marked.
+  bool _rowLearnt(
+    List<ContentItem> allLeaves,
+    Set<String> learnt,
+    String value,
+    List<String> currentPath,
+  ) {
+    final leaves = _leavesUnderRow(allLeaves, value, currentPath);
+    return leaves.isNotEmpty &&
+        leaves.every((leaf) => learnt.contains(leaf.sefariaRef));
+  }
+
   /// Returns `true` when SOME-but-not-all leaves beneath the non-leaf row at
-  /// [currentLevel]/[value] (under [currentPath]) are credited (by a current
-  /// session selection OR a persisted ledger mark), and the row is not itself
-  /// directly/implicitly fully selected.
+  /// [value] (under [currentPath]) are credited — learnt per the engine
+  /// ([learnt]) or covered by a current session selection — and the row is
+  /// not itself fully selected.
   ///
-  /// Drives the indeterminate ([MarkingRowVisual.partial]) checkbox so a parent
-  /// container (e.g. Tanach→Torah) renders a dash — never a full check — when
-  /// only some children (e.g. Bereishis) are marked. Without this a 1-of-N
-  /// parent looked fully complete, which is what led users to (over-)mark the
-  /// synthetic container directly.
+  /// Drives the indeterminate ([MarkingRowVisual.partial]) checkbox so a
+  /// parent container renders a dash — never a full check — when only some
+  /// children are marked.
   bool _isPartial(
     List<ContentItem> allLeaves,
     String value,
-    int currentLevel,
     List<String> currentPath,
-    List<LearningLedgerEntry> ledger,
+    Set<String> learnt,
   ) {
-    if (allLeaves.isEmpty) return false;
-    // Full ancestor path of this row (level1-first), including the row itself.
-    final path = <String>[...currentPath, value];
-    bool underRow(ContentItem leaf) {
-      for (var i = 0; i < path.length; i++) {
-        if (levelValueAt(leaf, i + 1) != path[i]) return false;
-      }
-      return true;
-    }
-
-    final descendants = allLeaves.where(underRow).toList();
+    final descendants = _leavesUnderRow(allLeaves, value, currentPath);
     if (descendants.isEmpty) return false;
-
-    // Build a learned-leaf set under this row from BOTH the persisted ledger and
-    // the current session selections (modelled as ledger rows so the same
-    // qualified-id matching logic applies).
-    final sessionEntries = _selections.map((s) {
-      return LearningLedgerEntry(
-        ulid: '',
-        curriculumId: _curriculum,
-        entryScope: 'level${s.level}',
-        unitIdentifier: s.value,
-        unitDisplayNameHe: '',
-        unitDisplayNameEn: '',
-        trackType: 'personal',
-        completedAt: DateTime.utc(2000),
-        completionNumber: 1,
-        markedBy: '',
-        isManual: true,
-        source: CompletionSource.lifetimeOnly,
-      );
-    }).toList();
-
-    const builder = LifetimeTreeBuilder();
-    final learned = builder.computeLearnedLeafRefs(
-      leaves: descendants,
-      completedRefs: const {},
-      ledgerEntries: [...ledger, ...sessionEntries],
-    );
-    return learned.isNotEmpty && learned.length < descendants.length;
+    final credited = descendants
+        .where(
+          (leaf) =>
+              learnt.contains(leaf.sefariaRef) || _leafSessionSelected(leaf),
+        )
+        .length;
+    return credited > 0 && credited < descendants.length;
   }
 
   // PP-10 / IL-LEVEL fix: returns the hierarchy level the current panel is
@@ -546,37 +555,18 @@ class _LifetimeCurriculumMarkingScreenState
     });
   }
 
-  bool _ledgerHasUnit(
-    List<LearningLedgerEntry> ledger,
-    int level,
-    String value,
-    List<String> currentPath,
-  ) {
-    // Persisted level2/level3/level4 marks store the QUALIFIED path id
-    // (collision fix), so compare against the qualified id; only level1 stays
-    // bare via _qid.
-    final id = _qid(level, value, currentPath);
-    return ledger.any(
-      (e) => e.entryScope == 'level$level' && e.unitIdentifier == id,
-    );
-  }
-
-  /// Records the marked units as ONE `before_tracking` capture (Story 1.11,
-  /// DNI-473; R10): a whole unit is one node event carrying its `level`, a
-  /// single leaf a leaf event, none with a `learned_on`.
   Future<void> _markSelections(List<ScopeEntry> selections) async {
     if (_saving) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _saving = true);
     try {
+      final unique = <String>{};
       final scopes = <({int level, String unitId})>[];
       for (final selection in selections) {
-        // P0 over-credit guard: never persist a blanket mark on a composite
-        // curriculum's SYNTHETIC level1 container (e.g. Tanach→'Torah'). Such
-        // a row credits every leaf beneath the synthetic section (the whole
-        // Torah from a single mark). The real learning belongs in the source
-        // curriculum (Chumash). Drilling in and marking the concrete books
-        // still works.
+        final key = '${selection.level}:${selection.value}';
+        if (!unique.add(key)) continue;
+        // Never persist a blanket mark on a composite curriculum's synthetic
+        // level-one container; source-curriculum leaves provide that progress.
         if (selection.level == 1 &&
             CompositeCurriculumStrategy.isSyntheticContainerLevel1(
               _curriculum.storageKey,
@@ -587,34 +577,17 @@ class _LifetimeCurriculumMarkingScreenState
         scopes.add((level: selection.level, unitId: selection.value));
       }
 
-      final result = await ref
+      await ref
           .read(beforeTrackingRecorderProvider)
           .recordScopes(curriculumId: _curriculum, scopes: scopes);
 
       _invalidateComputedViews();
       if (!mounted) return;
-      switch (result.capture) {
-        case CaptureSuccess():
-          // PP-3 fix: clear the session selection after a successful save.
-          setState(() => _selections.clear());
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.lifetimeMarkSavedCount(scopes.length))),
-          );
-        case CaptureLocked():
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.captureLockedNotice)));
-        case _:
-          // A batch the server rejected for good is announced with Retry by
-          // the PendingCaptureFailureListener; anything else failed here.
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.lifetimeMarkSaveError)));
-      }
-    } on Exception catch (e, stackTrace) {
-      // EH-5/ST-4: never surface the raw exception's toString() in the UI —
-      // log it for diagnostics and show only the fixed, localized fallback
-      // copy instead.
+      setState(() => _selections.clear());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.lifetimeMarkSavedCount(scopes.length))),
+      );
+    } catch (e, stackTrace) {
       AppLogger.instance.error(
         event: 'lifetime_mark_save_failed',
         fields: {'curriculumId': _curriculum.storageKey},
@@ -653,21 +626,14 @@ class _LifetimeCurriculumMarkingScreenState
   }
 
   @override
-  Widget build(BuildContext context) =>
-      PendingCaptureFailureListener(child: _buildScreen(context));
-
-  Widget _buildScreen(BuildContext context) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final ledgerAsync = ref.watch(
-      curriculumLedgerProvider(widget.curriculumId),
-    );
-    // D-E: the ledger is achievement-shaped (the user's real completion
-    // history) — curriculumLedgerProvider throws rather than fabricating an
-    // empty list when the backend isn't ready. Falling back to `?? []` here
-    // would render every already-marked unit as unmarked, letting the user
-    // re-mark it and double-count a completion. Bail to an error view before
-    // touching the ledger at all.
-    if (ledgerAsync.hasError) {
+    // DNI-474: the saved state of every row is the engine's learnt set
+    // (`LearnerState`, AD-32) — never the old ledger. A learner-state error
+    // must not render saved rows as unmarked (a re-mark would double-count),
+    // so it bails to the shared retryable error view.
+    final learnerAsync = ref.watch(activeLearnerStateProvider);
+    if (learnerAsync.hasError) {
       return Scaffold(
         backgroundColor: context.colors.brandCreamCard,
         appBar: AppBar(
@@ -679,30 +645,22 @@ class _LifetimeCurriculumMarkingScreenState
             text: curriculumLabelText(ref, curriculum: _curriculum),
           ),
         ),
-        body: ErrorDisplay(
-          message: l10n.lifetimeMarkLoadError,
-          onRetry: () =>
-              ref.invalidate(curriculumLedgerProvider(widget.curriculumId)),
+        body: AppErrorView(
+          error: learnerAsync.error!,
+          stackTrace: learnerAsync.stackTrace,
+          onRetry: () => retryLearnerState(ref),
         ),
       );
     }
-    // Drop any stray SYNTHETIC-container level1 rows (e.g. a composite's
-    // Tanach→'Torah') so a parent never reads as fully-checked off a blanket
-    // container mark — the row's true state must come from its real descendant
-    // marks (rendered as indeterminate via [_isPartial]). Mirrors the read-time
-    // guard in lifetime_knowledge_providers; independent of the v32 migration.
-    final ledger = (ledgerAsync.asData?.value ?? const <LearningLedgerEntry>[])
-        .where((e) {
-          final scope = e.entryScope.startsWith('unmark_')
-              ? e.entryScope.substring('unmark_'.length)
-              : e.entryScope;
-          if (scope != 'level1') return true;
-          return !CompositeCurriculumStrategy.isSyntheticContainerLevel1(
-            _curriculum.storageKey,
-            e.unitIdentifier,
-          );
-        })
-        .toList();
+    if (!learnerAsync.hasValue) {
+      return Scaffold(
+        backgroundColor: context.colors.brandCreamCard,
+        body: const LoadingIndicator(),
+      );
+    }
+    final learnt =
+        learnerAsync.value?[_curriculum.storageKey]?.learntLeaves ??
+        const <String>{};
     // All leaves for the active curriculum — used to derive the indeterminate
     // (partial) parent state. Falls back to empty until the content asset loads
     // (rows then simply render non-partial, never wrongly fully-checked).
@@ -922,19 +880,19 @@ class _LifetimeCurriculumMarkingScreenState
                               // panel is displaying.
                               _navPathLength = path.length;
                             }),
-                            onDisplayItemsChanged: (items) =>
-                                // PP-10 fix: call setState so the select-all
-                                // toggle re-evaluates _allCurrentSelected when
-                                // the displayed item list changes (e.g. drilled
-                                // into a folder).
-                                setState(() => _currentDisplayItems = items),
+                            onDisplayItemsChanged: (items) {
+                              if (listEquals(_currentDisplayItems, items)) {
+                                return;
+                              }
+                              setState(() => _currentDisplayItems = items);
+                            },
                             tileBuilder: (item, currentPath, onDrill) {
                               final currentLevel = currentPath.length + 1;
                               final rawValue =
                                   levelValueAt(item, currentLevel) ?? '';
-                              final persisted = _ledgerHasUnit(
-                                ledger,
-                                currentLevel,
+                              final persisted = _rowLearnt(
+                                allLeaves,
+                                learnt,
                                 rawValue,
                                 currentPath,
                               );
@@ -958,9 +916,8 @@ class _LifetimeCurriculumMarkingScreenState
                                   _isPartial(
                                     allLeaves,
                                     rawValue,
-                                    currentLevel,
                                     currentPath,
-                                    ledger,
+                                    learnt,
                                   );
                               return LifetimeMarkingScopeRow(
                                 primary: itemDisplayName(
@@ -1079,4 +1036,23 @@ class _LifetimeCurriculumMarkingScreenState
       ),
     );
   }
+}
+
+/// Thrown by [_LifetimeCurriculumMarkingScreenState._markSelections] when the
+/// save is attempted with no active profile.
+///
+/// D-E: a lifetime mark is ACHIEVEMENT-shaped (a real learning-progress
+/// record) — `markedBy` (AD-24: a learner-profile ULID) has no honest
+/// placeholder value, so a missing active profile must fail loudly rather
+/// than stamping the batch with an empty/fake marker. Mirrors
+/// `ItemsLearnedNoActiveProfileException` (`items_learned_providers.dart`)
+/// and its siblings across this migration.
+class LifetimeMarkingNoActiveProfileException implements Exception {
+  const LifetimeMarkingNoActiveProfileException();
+
+  @override
+  String toString() =>
+      'LifetimeMarkingNoActiveProfileException: lifetime marks were saved '
+      'with no active profile — the learning ledger is scoped to the active '
+      'profile and there is no ULID to stamp `markedBy` with.';
 }

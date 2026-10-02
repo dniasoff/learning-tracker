@@ -7,9 +7,11 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
-import 'package:learning_tracker/core/widgets/error_display.dart';
+import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -133,6 +135,7 @@ class _LifetimeKnowledgeScreenState
               child: _LifetimeHeaderCard(
                 headerAsync: headerAsync,
                 onRetry: () {
+                  retryLearnerState(ref);
                   if (_filter == _LifetimeSourceFilter.allSources) {
                     ref.invalidate(lifetimeHeaderCountersProvider);
                   } else {
@@ -185,18 +188,19 @@ class _LifetimeKnowledgeScreenState
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: ErrorDisplay(
-                    message: l10n.lifetimeKnowledgeLoadError,
-                    onRetry: () {
-                      if (_filter == _LifetimeSourceFilter.allSources) {
-                        ref.invalidate(lifetimeViewSummariesProvider);
-                      } else {
-                        ref.invalidate(itemsLearnedSummariesProvider);
-                      }
-                    },
-                  ),
+                // DNI-474 AC-1: the shared retryable error view; retry
+                // re-reads the learner state's failed dependencies.
+                error: (error, stackTrace) => AppErrorView(
+                  error: error,
+                  stackTrace: stackTrace,
+                  onRetry: () {
+                    retryLearnerState(ref);
+                    if (_filter == _LifetimeSourceFilter.allSources) {
+                      ref.invalidate(lifetimeViewSummariesProvider);
+                    } else {
+                      ref.invalidate(itemsLearnedSummariesProvider);
+                    }
+                  },
                 ),
               ),
             ),
@@ -237,7 +241,6 @@ class _LifetimeHeaderCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final terms = domainTermLabels(ref);
-    final l10n = AppLocalizations.of(context)!;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -293,20 +296,7 @@ class _LifetimeHeaderCard extends ConsumerWidget {
             height: 48,
             child: Center(child: LoadingIndicator(size: 24)),
           ),
-          error: (error, _) => Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.lifetimeKnowledgeCounterError,
-                  style: theme.textTheme.bodySmall,
-                ),
-              ),
-              TextButton(
-                onPressed: onRetry,
-                child: Text(l10n.lifetimeKnowledgeRetry),
-              ),
-            ],
-          ),
+          error: (error, _) => InlineAsyncError(error: error, onRetry: onRetry),
         ),
       ),
     );

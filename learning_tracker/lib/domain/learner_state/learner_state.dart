@@ -10,6 +10,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/report_projection.dart';
@@ -432,7 +433,9 @@ final class LearnerState {
     Set<String> earningEventIds = const {},
     Set<String> lockIgnoredEventIds = const {},
     List<RejectedRow> rejectedRows = const [],
+    List<LearningEvent> countedLearns = const [],
   }) : curricula = Map.unmodifiable(curricula),
+       countedLearns = List.unmodifiable(countedLearns),
        countedEventIds = Set.unmodifiable(countedEventIds),
        earningEventIds = Set.unmodifiable(earningEventIds),
        lockIgnoredEventIds = Set.unmodifiable(lockIgnoredEventIds),
@@ -459,6 +462,16 @@ final class LearnerState {
 
   /// Rows the complete reads could not decode; surfaced, never dropped.
   final List<RejectedRow> rejectedRows;
+
+  /// The counted `learn` events of every curriculum (not voided, not
+  /// lock-ignored), in the engine's event order (`effectiveAt`, then id):
+  /// the `[countedEventIds]` events themselves.
+  ///
+  /// Surfaces that show activity over time (charts, the PRD "chazara"
+  /// derived count, per-leaf provenance) bucket these instead of reading
+  /// `learning_events` (AD-35 "Reads"; DNI-474, additive to the C0
+  /// contract).
+  final List<LearningEvent> countedLearns;
 
   /// The state of [curriculumId], or null when it has none.
   CurriculumState? operator [](String curriculumId) => curricula[curriculumId];

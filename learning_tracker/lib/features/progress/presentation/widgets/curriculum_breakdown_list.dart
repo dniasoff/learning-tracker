@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_level_name.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
+import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/learnt_tri_state.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// A leaf-row tap: the curriculum and the leaf's `sefariaRef`.
@@ -308,7 +311,6 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
     final theme = Theme.of(context);
     final isExpanded = expandedNodes[nodeKey] ?? false;
     final hasChildren = node.children.isNotEmpty;
-    final stateColor = _stateColor(context, node.state);
     final l10n = AppLocalizations.of(context)!;
     final terms = domainTermLabels(ref);
 
@@ -335,53 +337,98 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
         ? provenanceText(node.provenance!, l10n: l10n, terms: terms)
         : null;
 
+    final triState = triStateOfNode(node.state);
+    final rowTap = hasChildren
+        ? () => onExpandToggle(nodeKey, !isExpanded)
+        : leafTap;
+    // FR-15 (DNI-474): the engine's state carried by the tristate box, the
+    // count and the semantics label; the 12% tint is decorative only.
+    final semanticsLabel = learntTriStateSemantics(
+      l10n,
+      name: renderCurriculumLevelName(
+        ref,
+        curriculumId: node.curriculumId,
+        level: node.level,
+        rawValue: node.rawValue,
+      ),
+      state: triState,
+      learnt: node.learntCount,
+      total: node.totalCount,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(6),
-          onTap: hasChildren
-              ? () => onExpandToggle(nodeKey, !isExpanded)
-              : leafTap,
+        Semantics(
+          label: semanticsLabel,
+          button: rowTap != null,
+          expanded: hasChildren ? isExpanded : null,
+          onTap: rowTap,
+          excludeSemantics: true,
           child: Padding(
             padding: EdgeInsetsDirectional.only(
               start: depth * 16.0,
-              top: 4,
-              bottom: 4,
-              end: 4,
+              top: 2,
+              bottom: 2,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: stateColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: label),
-                if (provenanceLabel != null) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    provenanceLabel,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: context.colors.brandInkMuted,
-                      fontWeight: FontWeight.w500,
-                      fontStyle: FontStyle.italic,
+            child: Material(
+              color: learntTriStateColor(
+                context,
+                triState,
+              ).withValues(alpha: learntTriStateTintAlpha),
+              borderRadius: BorderRadius.circular(6),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: rowTap,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 4,
+                      top: 4,
+                      bottom: 4,
+                      end: 4,
+                    ),
+                    child: Row(
+                      children: [
+                        LearntTriStateBox(state: triState, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(child: label),
+                        if (provenanceLabel != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            provenanceLabel,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: context.colors.brandInkMuted,
+                              fontWeight: FontWeight.w500,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                        if (node.totalCount > 0) ...[
+                          const SizedBox(width: 6),
+                          LearntCountLabel(
+                            learnt: node.learntCount,
+                            total: node.totalCount,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: context.colors.brandInkMuted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        if (hasChildren)
+                          Icon(
+                            isExpanded
+                                ? Icons.keyboard_arrow_up_rounded
+                                : Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: context.colors.brandInkMuted,
+                          ),
+                      ],
                     ),
                   ),
-                ],
-                if (hasChildren)
-                  Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    size: 16,
-                    color: context.colors.brandInkMuted,
-                  ),
-              ],
+                ),
+              ),
             ),
           ),
         ),
@@ -400,17 +447,6 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
           }),
       ],
     );
-  }
-
-  Color _stateColor(BuildContext context, LifetimeNodeState state) {
-    switch (state) {
-      case LifetimeNodeState.full:
-        return context.colors.brandGold;
-      case LifetimeNodeState.partial:
-        return context.colors.brandBlue.withValues(alpha: 0.5);
-      case LifetimeNodeState.none:
-        return context.colors.brandOutline;
-    }
   }
 
   /// Renders a provenance label for the lifetime tier:

@@ -7619,6 +7619,89 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{1 total chazara} other{{count} total Chazaros}}'**
   String totalChazaros(int count);
 
+  /// DNI-474 (FR-15): count label on a tri-state corpus node row, e.g. '3 of 12 learnt'.
+  ///
+  /// In en, this message translates to:
+  /// **'{learnt} of {total} learnt'**
+  String learnerProgressCount(int learnt, int total);
+
+  /// DNI-474 (FR-15): compact count on a tri-state corpus node row, e.g. '3/12'.
+  ///
+  /// In en, this message translates to:
+  /// **'{learnt}/{total}'**
+  String learnerProgressCountShort(int learnt, int total);
+
+  /// DNI-474 (FR-15, UX-DR-19): screen-reader label of a tri-state corpus node, e.g. 'Berakhot, partial, 3 of 12 learnt'. {state} is one of learnerProgressStateComplete / Partial / Empty.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, {state}, {learnt} of {total} learnt'**
+  String learnerProgressNodeSemantics(
+    String name,
+    String state,
+    int learnt,
+    int total,
+  );
+
+  /// DNI-474 (AD-35): the engine projects the learner will miss the deadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Behind pace'**
+  String get learnerProgressPaceBehind;
+
+  /// DNI-474 (AD-35): under 14 days of tracked history, so no pace projection yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Too early to tell'**
+  String get learnerProgressPaceTooEarly;
+
+  /// DNI-474 (FR-15): state word of a corpus node whose every leaf is learnt.
+  ///
+  /// In en, this message translates to:
+  /// **'complete'**
+  String get learnerProgressStateComplete;
+
+  /// DNI-474 (FR-15): state word of a corpus node with no learnt leaf.
+  ///
+  /// In en, this message translates to:
+  /// **'not learnt'**
+  String get learnerProgressStateEmpty;
+
+  /// DNI-474 (FR-15): state word of a corpus node with some, not all, leaves learnt.
+  ///
+  /// In en, this message translates to:
+  /// **'partial'**
+  String get learnerProgressStatePartial;
+
+  /// DNI-474 (FR-17): siyum celebration message. {unit} is the completed masechta / sefer / seder name.
+  ///
+  /// In en, this message translates to:
+  /// **'You completed {unit}!'**
+  String siyumCelebrationBody(String unit);
+
+  /// DNI-474 (FR-17): button that closes the siyum celebration.
+  ///
+  /// In en, this message translates to:
+  /// **'Mazal tov!'**
+  String get siyumCelebrationDismiss;
+
+  /// DNI-474 (FR-17): when one capture completes several units, the count of the others.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{and 1 more} other{and {count} more}}'**
+  String siyumCelebrationMore(int count);
+
+  /// DNI-474 (FR-17): siyum celebration title.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyum!'**
+  String get siyumCelebrationTitle;
+
+  /// DNI-474 (AC-4): the engine's completion number k of a siyum on the siyumim timeline: #1 for the first full completion, #2 for the second.
+  ///
+  /// In en, this message translates to:
+  /// **'#{number}'**
+  String siyumimCompletionNumber(int number);
+
   /// Top-level curriculum-complete celebration — Talmud Bavli.
   ///
   /// In en, this message translates to:

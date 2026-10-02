@@ -221,75 +221,30 @@ final class DashboardActiveCurriculaStreamProvider
 String _$dashboardActiveCurriculaStreamHash() =>
     r'd9186fbbfa5c7e3bfe49620ba850a5517e217d91';
 
-/// Track completion percentage for the Manage Tracks card.
+/// Track completion percentage for the Manage Tracks card (DNI-474).
 ///
-/// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
-/// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
-/// are excluded because they do not represent in-track learning activity.
-///
-/// An item is "done" when ALL of the track's required stages have a
-/// completion record.  Formula: `(done items) / totalItems`.
-///
-/// Delegates computation to [TrackProgressService] (Layer 3 unification).
-///
-/// AD-25: one track per curriculum — [curriculumId] IS the track identity,
-/// there is no separate Drift track row to resolve it from any more.
-///
-/// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
-/// This answers "how complete is this track overall?" (all-time, multi-stage gate).
-/// The cycle metric answers "how many items has the user touched since the last
-/// track activation?" (time-gated, single-ref check).
-///
-/// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
+/// Goal progress (FR-14): the engine's distinct learnt leaves of the
+/// curriculum — every source and date state, repeats once — over the
+/// learner's scoped leaf count. AD-25: [curriculumId] IS the track.
 
 @ProviderFor(dashboardTrackCompletionPercentage)
 final dashboardTrackCompletionPercentageProvider =
     DashboardTrackCompletionPercentageFamily._();
 
-/// Track completion percentage for the Manage Tracks card.
+/// Track completion percentage for the Manage Tracks card (DNI-474).
 ///
-/// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
-/// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
-/// are excluded because they do not represent in-track learning activity.
-///
-/// An item is "done" when ALL of the track's required stages have a
-/// completion record.  Formula: `(done items) / totalItems`.
-///
-/// Delegates computation to [TrackProgressService] (Layer 3 unification).
-///
-/// AD-25: one track per curriculum — [curriculumId] IS the track identity,
-/// there is no separate Drift track row to resolve it from any more.
-///
-/// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
-/// This answers "how complete is this track overall?" (all-time, multi-stage gate).
-/// The cycle metric answers "how many items has the user touched since the last
-/// track activation?" (time-gated, single-ref check).
-///
-/// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
+/// Goal progress (FR-14): the engine's distinct learnt leaves of the
+/// curriculum — every source and date state, repeats once — over the
+/// learner's scoped leaf count. AD-25: [curriculumId] IS the track.
 
 final class DashboardTrackCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
     with $FutureModifier<double>, $FutureProvider<double> {
-  /// Track completion percentage for the Manage Tracks card.
+  /// Track completion percentage for the Manage Tracks card (DNI-474).
   ///
-  /// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
-  /// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
-  /// are excluded because they do not represent in-track learning activity.
-  ///
-  /// An item is "done" when ALL of the track's required stages have a
-  /// completion record.  Formula: `(done items) / totalItems`.
-  ///
-  /// Delegates computation to [TrackProgressService] (Layer 3 unification).
-  ///
-  /// AD-25: one track per curriculum — [curriculumId] IS the track identity,
-  /// there is no separate Drift track row to resolve it from any more.
-  ///
-  /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
-  /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
-  /// The cycle metric answers "how many items has the user touched since the last
-  /// track activation?" (time-gated, single-ref check).
-  ///
-  /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
+  /// Goal progress (FR-14): the engine's distinct learnt leaves of the
+  /// curriculum — every source and date state, repeats once — over the
+  /// learner's scoped leaf count. AD-25: [curriculumId] IS the track.
   DashboardTrackCompletionPercentageProvider._({
     required DashboardTrackCompletionPercentageFamily super.from,
     required CurriculumId super.argument,
@@ -336,28 +291,13 @@ final class DashboardTrackCompletionPercentageProvider
 }
 
 String _$dashboardTrackCompletionPercentageHash() =>
-    r'baeea6bceb9d42f5a6b95a6f24a1009b942e8d1f';
+    r'8514076a5a18762ed13372ab216bba2bef4ec7d5';
 
-/// Track completion percentage for the Manage Tracks card.
+/// Track completion percentage for the Manage Tracks card (DNI-474).
 ///
-/// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
-/// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
-/// are excluded because they do not represent in-track learning activity.
-///
-/// An item is "done" when ALL of the track's required stages have a
-/// completion record.  Formula: `(done items) / totalItems`.
-///
-/// Delegates computation to [TrackProgressService] (Layer 3 unification).
-///
-/// AD-25: one track per curriculum — [curriculumId] IS the track identity,
-/// there is no separate Drift track row to resolve it from any more.
-///
-/// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
-/// This answers "how complete is this track overall?" (all-time, multi-stage gate).
-/// The cycle metric answers "how many items has the user touched since the last
-/// track activation?" (time-gated, single-ref check).
-///
-/// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
+/// Goal progress (FR-14): the engine's distinct learnt leaves of the
+/// curriculum — every source and date state, repeats once — over the
+/// learner's scoped leaf count. AD-25: [curriculumId] IS the track.
 
 final class DashboardTrackCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, CurriculumId> {
@@ -370,26 +310,11 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Track completion percentage for the Manage Tracks card.
+  /// Track completion percentage for the Manage Tracks card (DNI-474).
   ///
-  /// Uses [CompletionTierFilter.trackAchievement] (live + bulkInTrack) — matching
-  /// the "I learnt it" intent of the Manage Tracks display. Lifetime-only imports
-  /// are excluded because they do not represent in-track learning activity.
-  ///
-  /// An item is "done" when ALL of the track's required stages have a
-  /// completion record.  Formula: `(done items) / totalItems`.
-  ///
-  /// Delegates computation to [TrackProgressService] (Layer 3 unification).
-  ///
-  /// AD-25: one track per curriculum — [curriculumId] IS the track identity,
-  /// there is no separate Drift track row to resolve it from any more.
-  ///
-  /// **Why this differs from [trackDualProgressMetricsProvider].currentCyclePercentage:**
-  /// This answers "how complete is this track overall?" (all-time, multi-stage gate).
-  /// The cycle metric answers "how many items has the user touched since the last
-  /// track activation?" (time-gated, single-ref check).
-  ///
-  /// See also: [trackDualProgressMetricsProvider] (lifetime_knowledge_providers.dart).
+  /// Goal progress (FR-14): the engine's distinct learnt leaves of the
+  /// curriculum — every source and date state, repeats once — over the
+  /// learner's scoped leaf count. AD-25: [curriculumId] IS the track.
 
   DashboardTrackCompletionPercentageProvider call(CurriculumId curriculumId) =>
       DashboardTrackCompletionPercentageProvider._(
@@ -401,36 +326,30 @@ final class DashboardTrackCompletionPercentageFamily extends $Family
   String toString() => r'dashboardTrackCompletionPercentageProvider';
 }
 
-/// Per-curriculum item-based completion percentage, scoped to active profile.
+/// Per-curriculum completion percentage, scoped to the active learner.
 ///
-/// AD-25: one track per curriculum, so this is now identical to
-/// [dashboardTrackCompletionPercentage] — both delegate to the same
-/// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
-/// because callers ask two conceptually different questions today even
-/// though the answer is computed the same way.
+/// AD-25: one track per curriculum, so this is the same engine number as
+/// [dashboardTrackCompletionPercentage]; kept as a separate provider
+/// because callers ask two conceptually different questions.
 
 @ProviderFor(dashboardCompletionPercentage)
 final dashboardCompletionPercentageProvider =
     DashboardCompletionPercentageFamily._();
 
-/// Per-curriculum item-based completion percentage, scoped to active profile.
+/// Per-curriculum completion percentage, scoped to the active learner.
 ///
-/// AD-25: one track per curriculum, so this is now identical to
-/// [dashboardTrackCompletionPercentage] — both delegate to the same
-/// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
-/// because callers ask two conceptually different questions today even
-/// though the answer is computed the same way.
+/// AD-25: one track per curriculum, so this is the same engine number as
+/// [dashboardTrackCompletionPercentage]; kept as a separate provider
+/// because callers ask two conceptually different questions.
 
 final class DashboardCompletionPercentageProvider
     extends $FunctionalProvider<AsyncValue<double>, double, FutureOr<double>>
     with $FutureModifier<double>, $FutureProvider<double> {
-  /// Per-curriculum item-based completion percentage, scoped to active profile.
+  /// Per-curriculum completion percentage, scoped to the active learner.
   ///
-  /// AD-25: one track per curriculum, so this is now identical to
-  /// [dashboardTrackCompletionPercentage] — both delegate to the same
-  /// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
-  /// because callers ask two conceptually different questions today even
-  /// though the answer is computed the same way.
+  /// AD-25: one track per curriculum, so this is the same engine number as
+  /// [dashboardTrackCompletionPercentage]; kept as a separate provider
+  /// because callers ask two conceptually different questions.
   DashboardCompletionPercentageProvider._({
     required DashboardCompletionPercentageFamily super.from,
     required CurriculumId super.argument,
@@ -476,15 +395,13 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'ed52dd0b9e341cc4ddd6cf534c39f896a328db91';
+    r'427e27077934806e01e509208e64c78d2022372e';
 
-/// Per-curriculum item-based completion percentage, scoped to active profile.
+/// Per-curriculum completion percentage, scoped to the active learner.
 ///
-/// AD-25: one track per curriculum, so this is now identical to
-/// [dashboardTrackCompletionPercentage] — both delegate to the same
-/// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
-/// because callers ask two conceptually different questions today even
-/// though the answer is computed the same way.
+/// AD-25: one track per curriculum, so this is the same engine number as
+/// [dashboardTrackCompletionPercentage]; kept as a separate provider
+/// because callers ask two conceptually different questions.
 
 final class DashboardCompletionPercentageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<double>, CurriculumId> {
@@ -497,13 +414,11 @@ final class DashboardCompletionPercentageFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Per-curriculum item-based completion percentage, scoped to active profile.
+  /// Per-curriculum completion percentage, scoped to the active learner.
   ///
-  /// AD-25: one track per curriculum, so this is now identical to
-  /// [dashboardTrackCompletionPercentage] — both delegate to the same
-  /// [TrackProgressService] (Layer 3 unification). Kept as a separate provider
-  /// because callers ask two conceptually different questions today even
-  /// though the answer is computed the same way.
+  /// AD-25: one track per curriculum, so this is the same engine number as
+  /// [dashboardTrackCompletionPercentage]; kept as a separate provider
+  /// because callers ask two conceptually different questions.
 
   DashboardCompletionPercentageProvider call(CurriculumId curriculum) =>
       DashboardCompletionPercentageProvider._(argument: curriculum, from: this);
@@ -512,12 +427,14 @@ final class DashboardCompletionPercentageFamily extends $Family
   String toString() => r'dashboardCompletionPercentageProvider';
 }
 
-/// Per-curriculum last completion timestamp, scoped to active profile.
+/// The `effectiveAt` of the curriculum's latest counted learn event, from
+/// the engine (DNI-474); null when nothing counts.
 
 @ProviderFor(dashboardLastCompletion)
 final dashboardLastCompletionProvider = DashboardLastCompletionFamily._();
 
-/// Per-curriculum last completion timestamp, scoped to active profile.
+/// The `effectiveAt` of the curriculum's latest counted learn event, from
+/// the engine (DNI-474); null when nothing counts.
 
 final class DashboardLastCompletionProvider
     extends
@@ -527,7 +444,8 @@ final class DashboardLastCompletionProvider
           FutureOr<DateTime?>
         >
     with $FutureModifier<DateTime?>, $FutureProvider<DateTime?> {
-  /// Per-curriculum last completion timestamp, scoped to active profile.
+  /// The `effectiveAt` of the curriculum's latest counted learn event, from
+  /// the engine (DNI-474); null when nothing counts.
   DashboardLastCompletionProvider._({
     required DashboardLastCompletionFamily super.from,
     required CurriculumId super.argument,
@@ -573,9 +491,10 @@ final class DashboardLastCompletionProvider
 }
 
 String _$dashboardLastCompletionHash() =>
-    r'8deb9f84078c084a3ac1623da8628715c1b825cc';
+    r'34593b48e10b5b9a21e4137acc34509bb747b693';
 
-/// Per-curriculum last completion timestamp, scoped to active profile.
+/// The `effectiveAt` of the curriculum's latest counted learn event, from
+/// the engine (DNI-474); null when nothing counts.
 
 final class DashboardLastCompletionFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<DateTime?>, CurriculumId> {
@@ -588,7 +507,8 @@ final class DashboardLastCompletionFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Per-curriculum last completion timestamp, scoped to active profile.
+  /// The `effectiveAt` of the curriculum's latest counted learn event, from
+  /// the engine (DNI-474); null when nothing counts.
 
   DashboardLastCompletionProvider call(CurriculumId curriculum) =>
       DashboardLastCompletionProvider._(argument: curriculum, from: this);
@@ -944,113 +864,3 @@ final class DashboardStreakRecoveryProvider
 
 String _$dashboardStreakRecoveryHash() =>
     r'c3ae9a8a5eb1fec79e4dba73fb3ee7c92fa4c0a9';
-
-/// Per-curriculum pace status for the dashboard.
-///
-/// Fetches goal data and computes pace internally so the dashboard
-/// doesn't need to know goal details.
-///
-/// Delegates computation to [ComputePaceStatusUseCase].
-
-@ProviderFor(dashboardPaceStatus)
-final dashboardPaceStatusProvider = DashboardPaceStatusFamily._();
-
-/// Per-curriculum pace status for the dashboard.
-///
-/// Fetches goal data and computes pace internally so the dashboard
-/// doesn't need to know goal details.
-///
-/// Delegates computation to [ComputePaceStatusUseCase].
-
-final class DashboardPaceStatusProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<PaceStatus?>,
-          PaceStatus?,
-          FutureOr<PaceStatus?>
-        >
-    with $FutureModifier<PaceStatus?>, $FutureProvider<PaceStatus?> {
-  /// Per-curriculum pace status for the dashboard.
-  ///
-  /// Fetches goal data and computes pace internally so the dashboard
-  /// doesn't need to know goal details.
-  ///
-  /// Delegates computation to [ComputePaceStatusUseCase].
-  DashboardPaceStatusProvider._({
-    required DashboardPaceStatusFamily super.from,
-    required CurriculumId super.argument,
-  }) : super(
-         retry: null,
-         name: r'dashboardPaceStatusProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$dashboardPaceStatusHash();
-
-  @override
-  String toString() {
-    return r'dashboardPaceStatusProvider'
-        ''
-        '($argument)';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<PaceStatus?> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<PaceStatus?> create(Ref ref) {
-    final argument = this.argument as CurriculumId;
-    return dashboardPaceStatus(ref, argument);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is DashboardPaceStatusProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$dashboardPaceStatusHash() =>
-    r'329c67002d4e9024caa2941e13b9dd4b522ef0f0';
-
-/// Per-curriculum pace status for the dashboard.
-///
-/// Fetches goal data and computes pace internally so the dashboard
-/// doesn't need to know goal details.
-///
-/// Delegates computation to [ComputePaceStatusUseCase].
-
-final class DashboardPaceStatusFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<PaceStatus?>, CurriculumId> {
-  DashboardPaceStatusFamily._()
-    : super(
-        retry: null,
-        name: r'dashboardPaceStatusProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  /// Per-curriculum pace status for the dashboard.
-  ///
-  /// Fetches goal data and computes pace internally so the dashboard
-  /// doesn't need to know goal details.
-  ///
-  /// Delegates computation to [ComputePaceStatusUseCase].
-
-  DashboardPaceStatusProvider call(CurriculumId curriculum) =>
-      DashboardPaceStatusProvider._(argument: curriculum, from: this);
-
-  @override
-  String toString() => r'dashboardPaceStatusProvider';
-}

@@ -4,7 +4,7 @@
 ///   1. Chazara-load math — _calculateNewItemsPerDay zero-floor handling
 ///   2. Classification bug — never-completed items NOT classified as overdueChazara
 ///   3. isStudyDay — snapshot path emits empty list on non-study days
-///   4. Rolling-window day-1 — PaceCalculator projection guard
+///   4. (retired with the scheduler pace calculator, DNI-474)
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -16,7 +16,6 @@ import 'package:learning_tracker/features/scheduler/domain/repositories/schedule
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 
 // ---------------------------------------------------------------------------
@@ -354,150 +353,10 @@ void main() {
   });
 
   // =========================================================================
-  // Fix 4 — Rolling-window day-1 (PaceCalculator projection guard)
-  // =========================================================================
-  group('Fix 4 — rolling-window day-1 guard (PaceCalculator)', () {
-    test(
-      'deadline goal: projectedCompletionDate is null on day-1 (no events)',
-      () {
-        final result = PaceCalculator.calculate(
-          goalStartDate: DateTime.utc(2026, 5, 13),
-          goalDeadline: DateTime.utc(2026, 12, 31),
-          totalItems: 100,
-          completedItems: 0,
-          dailyCompletionCounts: {}, // No events — day 1
-          today: DateTime.utc(2026, 5, 13),
-        );
-
-        expect(
-          result.projectedCompletionDate,
-          isNull,
-          reason:
-              'No rolling-average events — projection must be null on day-1.',
-        );
-        expect(result.rollingAverage, 0.0);
-      },
-    );
-
-    test('pace goal: projectedCompletionDate is set on day-1 using target rate '
-        '(not rolling avg — safe from NaN)', () {
-      final result = PaceCalculator.calculateForPaceGoal(
-        targetPacePerDay: 1.0,
-        totalItems: 100,
-        completedItems: 0,
-        dailyCompletionCounts: {}, // No events — day 1
-        today: DateTime.utc(2026, 5, 13),
-      );
-
-      // Pace goal projects using targetPacePerDay (not rollingAvg), so it is
-      // always available from day 1 without risk of NaN.
-      expect(
-        result.projectedCompletionDate,
-        isNotNull,
-        reason:
-            'Pace goal uses targetPacePerDay for projection — available on day-1.',
-      );
-    });
-
-    test(
-      'deadline goal: projectedCompletionDate is set once ≥1 event exists',
-      () {
-        final today = DateTime.utc(2026, 5, 13);
-        final result = PaceCalculator.calculate(
-          goalStartDate: DateTime.utc(2026, 5, 1),
-          goalDeadline: DateTime.utc(2026, 12, 31),
-          totalItems: 100,
-          completedItems: 3,
-          dailyCompletionCounts: {
-            // At least one event in the rolling window.
-            DateTime.utc(2026, 5, 12): 3,
-          },
-          today: today,
-        );
-
-        expect(
-          result.projectedCompletionDate,
-          isNotNull,
-          reason: 'Rolling average > 0 → projection should be available.',
-        );
-      },
-    );
-
-    test('pace goal: projectedCompletionDate is set once ≥1 event exists', () {
-      final today = DateTime.utc(2026, 5, 13);
-      final result = PaceCalculator.calculateForPaceGoal(
-        targetPacePerDay: 1.0,
-        totalItems: 100,
-        completedItems: 5,
-        dailyCompletionCounts: {DateTime.utc(2026, 5, 12): 5},
-        today: today,
-      );
-
-      expect(
-        result.projectedCompletionDate,
-        isNotNull,
-        reason: 'Rolling average > 0 → pace goal projection should be set.',
-      );
-    });
-  });
-
-  // =========================================================================
   // Fix 5 — Typed delta values (PaceDelta / DateDelta)
   // =========================================================================
+
   group('Fix 5 — typed delta values', () {
-    test('deadline goal produces DateScheduleDelta with correct days', () {
-      final today = DateTime.utc(2026, 5, 13);
-      final result = PaceCalculator.calculate(
-        goalStartDate: DateTime.utc(2026, 1, 24),
-        goalDeadline: DateTime.utc(2026, 5, 4),
-        totalItems: 100,
-        completedItems: 30,
-        dailyCompletionCounts: {
-          for (var i = 1; i <= 7; i++) DateTime.utc(2026, 5, 13 - i): 1,
-        },
-        today: today,
-      );
-
-      expect(
-        result.delta,
-        isA<DateScheduleDelta>(),
-        reason:
-            'Deadline goal must carry DateScheduleDelta, not PaceScheduleDelta.',
-      );
-      // daysDelta and delta.value.days must agree.
-      final dateDelta = result.delta as DateScheduleDelta;
-      expect(dateDelta.value.days, equals(result.daysDelta));
-    });
-
-    test('pace goal produces PaceScheduleDelta with correct items/week', () {
-      final today = DateTime.utc(2026, 5, 13);
-      final result = PaceCalculator.calculateForPaceGoal(
-        targetPacePerDay: 1.0,
-        totalItems: 500,
-        completedItems: 100,
-        dailyCompletionCounts: {
-          for (var i = 1; i <= 7; i++)
-            DateTime.utc(2026, 5, 13 - i): 2, // 2/day → 14/week
-        },
-        today: today,
-      );
-
-      expect(
-        result.delta,
-        isA<PaceScheduleDelta>(),
-        reason:
-            'Pace goal must carry PaceScheduleDelta, not DateScheduleDelta.',
-      );
-      // itemsPerWeek = round((rollingAvg - target) * 7) = round((2-1)*7) = 7
-      final paceDelta = result.delta as PaceScheduleDelta;
-      expect(paceDelta.value.itemsPerWeek, equals(result.daysDelta));
-      expect(
-        paceDelta.value.itemsPerWeek,
-        equals(7),
-        reason: 'Rolling avg 2/day vs target 1/day → +7 items/week.',
-      );
-    });
-
     test('UI cannot accidentally treat pace-goal itemsPerWeek as calendar days '
         '— types are distinct', () {
       // DateDelta and PaceDelta must be different runtime types.

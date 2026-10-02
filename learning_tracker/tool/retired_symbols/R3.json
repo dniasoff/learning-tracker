@@ -3,15 +3,21 @@
   "title": "Completion, ledger and pace readers",
   "description": "Action: rewire readers to LearnerState. The readers themselves stay; listed are the deleted calculators and the old-store history providers they stop using.",
   "entries": [
-    {"symbol": "ProgressPaceCalculator", "kind": "service", "state": "pending", "owner": "DNI-474", "note": "progress pace_calculator"},
-    {"symbol": "ProgressPaceStatus", "kind": "type", "state": "pending", "owner": "DNI-474"},
-    {"symbol": "PaceCalculator", "kind": "service", "state": "pending", "owner": "DNI-474", "note": "scheduler pace_calculator"},
-    {"symbol": "CompletionDetectionService", "kind": "service", "state": "pending", "owner": "DNI-474"},
-    {"symbol": "completionHistoryForCurriculumProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
-    {"symbol": "allCompletionHistoryProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
-    {"symbol": "completionsByProfileForLifetimeProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
-    {"symbol": "trackCompletionsByProfileProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
-    {"symbol": "trackLedgerEntriesByProfileProvider", "kind": "service", "state": "pending", "owner": "DNI-474"},
-    {"symbol": "ledgerEntriesByCurriculumForProfileProvider", "kind": "service", "state": "pending", "owner": "DNI-474"}
+    {"symbol": "ProgressPaceCalculator", "kind": "service", "state": "retired", "owner": "DNI-474", "note": "progress pace_calculator"},
+    {"symbol": "ProgressPaceStatus", "kind": "type", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "PaceCalculator", "kind": "service", "state": "retired", "owner": "DNI-474", "note": "scheduler pace_calculator"},
+    {"symbol": "CompletionDetectionService", "kind": "service", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "completionHistoryForCurriculumProvider", "kind": "service", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "allCompletionHistoryProvider", "kind": "service", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "completionsByProfileForLifetimeProvider", "kind": "service", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "trackCompletionsByProfileProvider", "kind": "service", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "trackLedgerEntriesByProfileProvider", "kind": "service", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "ledgerEntriesByCurriculumForProfileProvider", "kind": "service", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "completionDetectionServiceProvider", "kind": "service", "state": "retired", "owner": "DNI-474", "note": "provider of the deleted CompletionDetectionService"},
+    {"symbol": "ComputePaceStatusUseCase", "kind": "service", "state": "retired", "owner": "DNI-474", "note": "dashboard wrapper over the deleted scheduler PaceCalculator"},
+    {"symbol": "PaceStatusInput", "kind": "type", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "dashboardPaceStatusProvider", "kind": "service", "state": "retired", "owner": "DNI-474"},
+    {"symbol": "priorImportsByProfileProvider", "kind": "service", "state": "retired", "owner": "DNI-474", "note": "completions/ledger provenance partition"},
+    {"symbol": "PriorImportsForCurriculum", "kind": "type", "state": "retired", "owner": "DNI-474"}
   ]
 }

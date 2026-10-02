@@ -5,8 +5,25 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_en
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/progress/data/repositories/firestore_progress_repository_adapter.dart'
     show ProgressRepositoryNotReadyException;
-import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+
+/// The legacy completions read seam (R1). Since DNI-474 no progress reader
+/// uses it — charts read `LearnerState` — and DNI-483 deletes it with this
+/// adapter. Kept here, next to its only implementer, until then.
+abstract class ChartDataRepository {
+  Future<List<CompletionEntity>> getCompletionsByTier({
+    required CompletionTierFilter tier,
+    CurriculumId? curriculumId,
+    DateTime? since,
+    DateTime? until,
+  });
+
+  Future<List<GoalEntity>> getGoals(CurriculumId curriculumId);
+
+  Future<List<CompletionEntity>> getCompletionsByCurriculum(
+    CurriculumId curriculumId,
+  );
+}
 
 /// Firestore-backed [ChartDataRepository] — the read seam [ChartDataService]
 /// uses for every chart on the Progress / Recent Activity screens. Follows

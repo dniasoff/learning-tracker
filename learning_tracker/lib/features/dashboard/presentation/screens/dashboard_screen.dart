@@ -48,7 +48,6 @@ class DashboardScreen extends ConsumerWidget {
         dashboardTrackCompletionPercentageProvider(t.curriculumId),
       );
       ref.invalidate(dashboardLastCompletionProvider(t.curriculumId));
-      ref.invalidate(dashboardPaceStatusProvider(t.curriculumId));
     }
   }
 

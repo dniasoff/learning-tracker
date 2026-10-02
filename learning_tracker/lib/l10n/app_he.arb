@@ -2468,6 +2468,19 @@
       }
     }
   },
+  "learnerProgressCount": "{learnt} מתוך {total} נלמדו",
+  "learnerProgressCountShort": "{learnt}/{total}",
+  "learnerProgressNodeSemantics": "{name}, {state}, {learnt} מתוך {total} נלמדו",
+  "learnerProgressPaceBehind": "מאחור בקצב",
+  "learnerProgressPaceTooEarly": "מוקדם מדי לדעת",
+  "learnerProgressStateComplete": "הושלם",
+  "learnerProgressStateEmpty": "לא נלמד",
+  "learnerProgressStatePartial": "חלקי",
+  "siyumCelebrationBody": "סיימת את {unit}!",
+  "siyumCelebrationDismiss": "מזל טוב!",
+  "siyumCelebrationMore": "{count, plural, =1{ועוד אחד} other{ועוד {count}}}",
+  "siyumCelebrationTitle": "סיום!",
+  "siyumimCompletionNumber": "מס׳ {number}",
   "siyumHaShas": "סיום הש״ס",
   "@siyumHaShas": {
     "description": "Top-level curriculum-complete celebration — Talmud Bavli."

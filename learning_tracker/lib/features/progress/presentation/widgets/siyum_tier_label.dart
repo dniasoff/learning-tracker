@@ -5,8 +5,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
+import 'package:learning_tracker/features/progress/domain/siyum_unit_scope.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Resolve the localized, Hebrew-terms- and nusach-aware label for one siyum
