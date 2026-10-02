@@ -9,6 +9,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
@@ -39,12 +40,17 @@ final progressCorpusProvider = FutureProvider.family<Corpus?, CurriculumId>(
 Future<Map<String, Corpus>> watchCorpora(Ref ref) =>
     ref.watch(corporaProvider.future);
 
-/// Per-leaf counted learning of one curriculum (the Browse review badge,
-/// lifetime provenance): its own counted learn events only.
-final leafActivityProvider = FutureProvider.autoDispose
-    .family<Map<String, LeafActivity>, CurriculumId>((ref, curriculum) async {
+/// The active learner's [CurriculumProgressIndex] of one curriculum: the
+/// engine's learnt set (with subset curricula for a composite, I-4) and
+/// per-leaf counted learning, for per-node tri-state lookups.
+final curriculumProgressIndexProvider = FutureProvider.autoDispose
+    .family<CurriculumProgressIndex?, CurriculumId>((ref, curriculum) async {
       final state = await watchActiveLearnerState(ref);
       final corpus = await ref.watch(progressCorpusProvider(curriculum).future);
-      if (state == null || corpus == null) return const {};
-      return leafActivityOf(state, corpus);
+      if (corpus == null) return null;
+      return CurriculumProgressIndex.of(
+        state,
+        corpus,
+        subsetIds: [for (final s in subsetsOf(curriculum)) s.storageKey],
+      );
     });

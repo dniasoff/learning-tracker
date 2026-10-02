@@ -8,8 +8,9 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/core/widgets/error_display.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
@@ -240,14 +241,16 @@ class CurriculumProgressScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            error: (error, _) => bodyChild(
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: ErrorDisplay(
-                  message: l10n.curriculumProgressLoadFailed,
-                  onRetry: () =>
-                      ref.invalidate(curriculumProgressProvider(curriculumId)),
-                ),
+            // DNI-474 AC-1: a learner-state (or content) failure renders the
+            // shared AppErrorView; retry re-reads every failed dependency.
+            error: (error, stackTrace) => bodyChild(
+              AppErrorView(
+                error: error,
+                stackTrace: stackTrace,
+                onRetry: () {
+                  retryLearnerState(ref);
+                  ref.invalidate(curriculumProgressProvider(curriculumId));
+                },
               ),
             ),
           ),

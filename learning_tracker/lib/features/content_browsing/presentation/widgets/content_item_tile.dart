@@ -12,6 +12,9 @@ import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/learnt_tri_state.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -51,9 +54,6 @@ class ContentItemTile extends ConsumerWidget {
     this.reviewCount,
     this.showReviewBadge = true,
     this.showBreadcrumb = false,
-    this.tickState,
-    this.onTick,
-    this.onLongPress,
   });
 
   final ContentItem item;
@@ -79,42 +79,28 @@ class ContentItemTile extends ConsumerWidget {
   /// drill path already supplies parent context.
   final bool showBreadcrumb;
 
-  /// Story 1.11 (DNI-473; UX-DR-20): the row's learnt tri-state. With
-  /// [onTick] set, the leading slot is a tri-state tick box (check / dash /
-  /// empty, and a spoken state — never colour alone, UX-DR-157) that records
-  /// the row instead of the plain status icon.
-  final TriState? tickState;
-
-  /// Records this row (opens the free-tick sheet); null hides the tick box.
-  final VoidCallback? onTick;
-
-  /// Replaces the default long-press (the stage breakdown) — the Browse
-  /// "Tick up to here".
-  final VoidCallback? onLongPress;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
-    // Use batch-loaded count if available, otherwise watch per-item provider.
-    final count =
-        reviewCount ??
-        ref
-            .watch(
-              completionCountProvider(
-                curriculumId: curriculum.storageKey,
-                sefariaRef: item.sefariaRef,
-              ),
-            )
-            .value ??
-        0;
+    // DNI-474 (FR-15): the node's empty / partial / complete state, counts
+    // and the leaf's counted learning come from the engine's LearnerState.
+    final progress = ref
+        .watch(curriculumProgressIndexProvider(curriculum))
+        .value
+        ?.nodeProgress(item.sefariaRef);
+    final count = reviewCount ?? progress?.events ?? 0;
+    final state = progress?.state ?? TriState.empty;
 
-    return ListTile(
+    final tile = ListTile(
       minLeadingWidth: 48,
       minVerticalPadding: 14,
-      leading: onTick == null
-          ? _buildLeadingIcon(theme, count)
-          : _TickBox(state: tickState ?? TriState.empty, onTick: onTick!),
+      tileColor: learntTriStateColor(
+        context,
+        state,
+      ).withValues(alpha: learntTriStateTintAlpha),
+      leading: _buildLeadingIcon(theme, progress),
       title: CurriculumLabel.item(
         item,
         style: theme.textTheme.titleLarge?.copyWith(
@@ -129,14 +115,32 @@ class ContentItemTile extends ConsumerWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             )
+          : (!item.isLeaf && progress != null && progress.total > 0)
+          ? Text(
+              l10n.learnerProgressCount(progress.learnt, progress.total),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
           : null,
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
-      onLongPress:
-          onLongPress ??
-          (item.isLeaf && count > 0 && showReviewBadge
-              ? () => _showStageBreakdown(context, ref)
-              : null),
+      onLongPress: item.isLeaf && count > 0 && showReviewBadge
+          ? () => _showStageBreakdown(context, ref)
+          : null,
+    );
+    if (progress == null) return tile;
+    return Semantics(
+      label: learntTriStateSemantics(
+        l10n,
+        name: item.displayNameHe.isNotEmpty && domainTermLabels(ref).isHebrew
+            ? item.displayNameHe
+            : item.displayNameEn,
+        state: state,
+        learnt: progress.learnt,
+        total: progress.total,
+      ),
+      child: tile,
     );
   }
 
@@ -157,18 +161,17 @@ class ContentItemTile extends ConsumerWidget {
     );
   }
 
-  Widget _buildLeadingIcon(ThemeData theme, int completionCount) {
-    if (item.isLeaf) {
-      final isCompleted = completionCount > 0;
-      return Icon(
-        isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-        color: isCompleted
-            ? theme.colorScheme.primary
-            : theme.colorScheme.outline,
-      );
-    } else {
-      return Icon(Icons.folder, color: theme.colorScheme.primary, size: 32);
+  Widget _buildLeadingIcon(ThemeData theme, NodeProgress? progress) {
+    if (progress != null) {
+      return LearntTriStateBox(state: progress.state, size: 28);
     }
+    if (item.isLeaf) {
+      return Icon(
+        Icons.check_box_outline_blank_rounded,
+        color: theme.colorScheme.outline,
+      );
+    }
+    return Icon(Icons.folder, color: theme.colorScheme.primary, size: 32);
   }
 
   Widget? _buildTrailing(ThemeData theme, int completionCount) {
@@ -188,34 +191,6 @@ class ContentItemTile extends ConsumerWidget {
 }
 
 /// Widget showing per-stage completion status for a leaf item.
-/// The tri-state tick box of a free-tick row (UX-DR-20, UX-DR-157).
-class _TickBox extends StatelessWidget {
-  const _TickBox({required this.state, required this.onTick});
-
-  final TriState state;
-  final VoidCallback onTick;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final label = switch (state) {
-      TriState.complete => l10n.captureStateLearnt,
-      TriState.partial => l10n.captureStatePartial,
-      TriState.empty => l10n.captureStateNotLearnt,
-    };
-    return Checkbox(
-      tristate: true,
-      value: switch (state) {
-        TriState.complete => true,
-        TriState.partial => null,
-        TriState.empty => false,
-      },
-      semanticLabel: label,
-      onChanged: (_) => onTick(),
-    );
-  }
-}
-
 class StageCompletionIndicators extends StatelessWidget {
   const StageCompletionIndicators({super.key, required this.stages});
 

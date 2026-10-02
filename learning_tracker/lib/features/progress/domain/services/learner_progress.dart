@@ -260,3 +260,77 @@ int chazaraCount(
   }
   return count;
 }
+
+/// The learnt state of one corpus node: the engine's tri-state rule over
+/// its leaves, its learnt / total leaf counts, and (for a leaf) its counted
+/// learn events.
+final class NodeProgress {
+  /// Creates the value.
+  const NodeProgress({
+    required this.state,
+    required this.learnt,
+    required this.total,
+    this.events = 0,
+  });
+
+  /// Empty, partial or complete.
+  final TriState state;
+
+  /// Learnt leaves under the node.
+  final int learnt;
+
+  /// All leaves under the node.
+  final int total;
+
+  /// Counted learn events of a leaf node (0 for a container).
+  final int events;
+}
+
+/// One curriculum's engine learnt set and per-leaf counted learning over
+/// its unscoped corpus, for per-node lookups (the Browse tree).
+final class CurriculumProgressIndex {
+  /// Builds the index of [curriculumId] from [state] (with [subsetIds]
+  /// unioned in for a composite display curriculum).
+  factory CurriculumProgressIndex.of(
+    LearnerState? state,
+    Corpus corpus, {
+    Iterable<String> subsetIds = const [],
+  }) {
+    final curricula = {corpus.curriculumId, ...subsetIds};
+    return CurriculumProgressIndex._(
+      corpus,
+      learntLeavesFor(
+        state,
+        corpus.curriculumId,
+        subsetIds: subsetIds,
+        corpus: corpus,
+      ),
+      leafActivityOf(state, corpus, curricula: curricula),
+    );
+  }
+
+  CurriculumProgressIndex._(this.corpus, this.learnt, this.activity);
+
+  /// The unscoped corpus.
+  final Corpus corpus;
+
+  /// The engine's learnt leaves.
+  final Set<LeafRef> learnt;
+
+  /// Counted learning per leaf.
+  final Map<LeafRef, LeafActivity> activity;
+
+  /// The progress of the node whose ref is [ref], or null when the corpus
+  /// has no such node.
+  NodeProgress? nodeProgress(String ref) {
+    final node = corpus.nodeForRef(ref);
+    if (node == null) return null;
+    final counts = learntCount(node, corpus: corpus, learnt: learnt);
+    return NodeProgress(
+      state: learntTriState(node, corpus: corpus, learnt: learnt),
+      learnt: counts.learnt,
+      total: counts.total,
+      events: corpus.isLeaf(node) ? activity[ref]?.events ?? 0 : 0,
+    );
+  }
+}
