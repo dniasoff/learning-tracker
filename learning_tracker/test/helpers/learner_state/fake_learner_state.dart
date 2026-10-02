@@ -139,7 +139,8 @@ final class FakeCurriculumState implements CurriculumState {
   List<ReviewDue> reviewsDue(CivilDate date) => reviews[date] ?? const [];
 }
 
-/// A [LearnerState] with empty defaults at [fakeLearnerStateNow].
+/// A [LearnerState] with empty defaults at [fakeLearnerStateNow]; its
+/// `today` is [today], else the UTC date of the instant.
 LearnerState fakeLearnerState({
   Map<String, CurriculumState> curricula = const {},
   Set<String> countedEventIds = const {},
@@ -148,8 +149,10 @@ LearnerState fakeLearnerState({
   List<RejectedRow> rejectedRows = const [],
   List<LearningEvent> countedLearns = const [],
   DateTime? nowUtc,
+  CivilDate? today,
 }) => LearnerState(
   nowUtc: nowUtc ?? fakeLearnerStateNow,
+  today: today,
   curricula: curricula,
   countedEventIds: countedEventIds,
   earningEventIds: earningEventIds,

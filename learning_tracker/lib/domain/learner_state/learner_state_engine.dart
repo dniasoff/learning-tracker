@@ -168,6 +168,7 @@ final class LearnerStateEngine {
     }
     return LearnerState(
       nowUtc: inputs.nowUtc,
+      today: civilDate(inputs.nowUtc, inputs.settingsHistory),
       curricula: states,
       countedEventIds: counted.countedIds,
       earningEventIds: earning,

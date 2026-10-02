@@ -10,6 +10,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
@@ -436,13 +437,15 @@ final class LearnerState {
   /// Creates a state.
   LearnerState({
     required this.nowUtc,
+    CivilDate? today,
     required Map<String, CurriculumState> curricula,
     Set<String> countedEventIds = const {},
     Set<String> earningEventIds = const {},
     Set<String> lockIgnoredEventIds = const {},
     List<RejectedRow> rejectedRows = const [],
     List<LearningEvent> countedLearns = const [],
-  }) : curricula = Map.unmodifiable(curricula),
+  }) : today = today ?? formatCivilDay(nowUtc.toUtc()),
+       curricula = Map.unmodifiable(curricula),
        countedLearns = List.unmodifiable(countedLearns),
        countedEventIds = Set.unmodifiable(countedEventIds),
        earningEventIds = Set.unmodifiable(earningEventIds),
@@ -455,6 +458,15 @@ final class LearnerState {
 
   /// The instant the state was computed for (UTC).
   final DateTime nowUtc;
+
+  /// The learner's civil date at [nowUtc] (AD-41: `civilDate(nowUtc)` in
+  /// the `time_zone` in force per the settings history, never the device
+  /// offset): the `today` every date-keyed output was derived for
+  /// (DNI-477, additive to the C0 contract). Surfaces that ask for
+  /// "today's" plan read it instead of the device date. A state built
+  /// without one (tests, [LearnerState.empty]) uses the UTC date of
+  /// [nowUtc].
+  final CivilDate today;
 
   /// Curriculum states by curriculum id.
   final Map<String, CurriculumState> curricula;
@@ -486,6 +498,6 @@ final class LearnerState {
 
   @override
   String toString() =>
-      'LearnerState(${nowUtc.toIso8601String()}, '
+      'LearnerState(${nowUtc.toIso8601String()}, $today, '
       '${curricula.length} curricula)';
 }

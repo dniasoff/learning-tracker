@@ -9,7 +9,6 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
-import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
@@ -294,24 +293,29 @@ Future<List<DailyTask>> plannedTasksForDate(Ref ref, String date) async {
   return [...tasks.learning, ...tasks.reviews];
 }
 
-/// All daily tasks across active curricula: today's [plannedTasksForDate]
-/// (the device's local date), with read-time skip handling — skipped-today
-/// refs removed, refs skipped yesterday boosted — sorted by priority.
+/// All daily tasks across active curricula: today's [plannedTasksForDate],
+/// with read-time skip handling — skipped-today refs removed, refs skipped
+/// yesterday boosted — sorted by priority.
+///
+/// "Today" is the learner's civil date the live `LearnerState` was derived
+/// for (`LearnerState.today`: AD-41, the learner's configured `time_zone`
+/// per the settings history), never the device date, so the plan, its
+/// reviews and its study-day decision are the engine's day.
 ///
 /// The planner's list already excludes what is learnt or reviewed (AD-49:
 /// the engine's `schedulableRefs`, `programBacklog` and `reviewsDue` say
 /// so), so there is no completion filter here.
 @riverpod
 Future<List<DailyTask>> allDailyTasks(Ref ref) async {
-  final now = ref.watch(clockProvider);
   final skipped = ref.watch(skippedTasksProvider);
   final previouslySkippedFuture = ref.watch(
     previouslySkippedRefsProvider.future,
   );
+  final stateFuture = watchActiveLearnerState(ref);
+  final state = await stateFuture;
+  if (state == null) throw const SchedulerNoActiveProfileException();
   final tasksFuture = ref.watch(
-    plannedTasksForDateProvider(
-      formatCivilDay(LocalDayUtils.extractLocalDate(now)),
-    ).future,
+    plannedTasksForDateProvider(state.today).future,
   );
   final previouslySkipped = await previouslySkippedFuture;
   final tasks = await tasksFuture;

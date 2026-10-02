@@ -105,6 +105,7 @@ Future<ProviderContainer> _container({
   List<int> reviewDays = const [],
   List<String> skippedRefs = const [],
   List<String> previouslySkippedRefs = const [],
+  String? learnerToday,
 }) async {
   final today = clock ?? DateTime.utc(2026, 5, 27, 12);
   final dateString =
@@ -185,6 +186,8 @@ Future<ProviderContainer> _container({
       ...learnerStateOverrides(
         scope: learnerActive ? c0Scope() : null,
         state: fakeLearnerState(
+          nowUtc: today,
+          today: learnerToday,
           curricula: {
             for (final MapEntry(:key, :value) in states.entries)
               key.storageKey: value,
@@ -278,6 +281,43 @@ void main() {
     ]);
     expect(await refsAfterLearning(3, dailyTarget: 3), isEmpty);
     expect(await refsAfterLearning(4, dailyTarget: 3), isEmpty);
+  });
+
+  test('today is the learner\'s civil date (LearnerState.today), not the '
+      'device date', () async {
+    // The device clock reads 2026-05-27 12:00Z; the learner's time zone
+    // (e.g. Pacific/Kiritimati, UTC+14) is already on 2026-05-28.
+    final container = await _container(
+      learnerToday: '2026-05-28',
+      states: {
+        CurriculumId.chumash: _main(
+          CurriculumId.chumash,
+          _genesis.skip(1).toList(),
+          dailyTarget: null,
+          reviews: {
+            '2026-05-27': [
+              const ReviewDue('Genesis 1:1', 2, dueFrom: '2026-05-27'),
+            ],
+            '2026-05-28': [
+              const ReviewDue('Genesis 1:1', 2, dueFrom: '2026-05-27'),
+            ],
+          },
+        ),
+      },
+    );
+    addTearDown(container.dispose);
+
+    final tasks = await _tasks(container);
+    expect(
+      [for (final t in tasks) (t.contentItemSefariaRef, t.priority, t.reason)],
+      [
+        (
+          'Genesis 1:1',
+          DailyTaskPriority.overdueChazara,
+          'Chazara overdue by 1 day(s)',
+        ),
+      ],
+    );
   });
 
   test('empty active-curriculum set produces an empty result', () async {
