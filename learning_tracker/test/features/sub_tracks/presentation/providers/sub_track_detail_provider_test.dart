@@ -82,7 +82,7 @@ void main() {
       isA<SubTrackDetailUnavailable>(),
     );
 
-    h.tracks.seedRejected(h.scope, [RejectedRow(school.id, 'bad')]);
+    h.repository.seedRejected([RejectedRow(school.id, 'bad')]);
     await pumpEventQueue();
     expect(
       c.read(subTrackDetailProvider(school.id)).error,

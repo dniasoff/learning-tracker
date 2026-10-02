@@ -653,6 +653,47 @@ class AppLocalizationsHe extends AppLocalizations {
       'יש לבחור תת-מסלול כדי לראות את פרטיו';
 
   @override
+  String get subTrackDetailMoveUp => 'הזזה למעלה';
+
+  @override
+  String get subTrackDetailMoveDown => 'הזזה למטה';
+
+  @override
+  String subTrackDetailRemoveFrom(String name) {
+    return 'הסרה מ$name';
+  }
+
+  @override
+  String subTrackDetailRemoveTitle(String node, String name) {
+    return 'להסיר את $node מ$name?';
+  }
+
+  @override
+  String get subTrackDetailRemoveBody =>
+      'הלימוד שכבר נרשם נשמר. מה שעוד לא נלמד חוזר למסלול הראשי, אלא אם תת-מסלול אחר מחזיק בו.';
+
+  @override
+  String get subTrackDetailRemoveConfirm => 'הסרה';
+
+  @override
+  String get subTrackDetailReorderFailed =>
+      'לא ניתן היה לשמור את הסדר החדש. הוא חזר למצבו הקודם.';
+
+  @override
+  String get subTrackDetailRemoveFailed =>
+      'לא ניתן היה להסיר. החומר חזר למצבו הקודם.';
+
+  @override
+  String subTrackDetailDragHandle(String node) {
+    return 'שינוי סדר של $node';
+  }
+
+  @override
+  String subTrackDetailEntryActions(String node) {
+    return 'פעולות עבור $node';
+  }
+
+  @override
   String get switchProfile => 'החלף פרופיל';
 
   @override

@@ -1250,6 +1250,66 @@ abstract class AppLocalizations {
   /// **'Select a sub-track to see its details'**
   String get subTrackDetailSelectPrompt;
 
+  /// Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging up (DNI-497 AC-5, UX-DR-155).
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get subTrackDetailMoveUp;
+
+  /// Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging down (DNI-497 AC-5, UX-DR-155).
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get subTrackDetailMoveDown;
+
+  /// Sub-track detail: ground row ⋮ action removing the entry from this sub-track (DNI-497 AC-6).
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from {name}'**
+  String subTrackDetailRemoveFrom(String name);
+
+  /// Sub-track detail: remove-ground confirmation title (DNI-497 AC-6).
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {node} from {name}?'**
+  String subTrackDetailRemoveTitle(String node, String name);
+
+  /// Sub-track detail: remove-ground confirmation body (DNI-497 AC-6, FR-12). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning already recorded is kept. Anything not yet learnt goes back to the main track unless another sub-track holds it.'**
+  String get subTrackDetailRemoveBody;
+
+  /// Sub-track detail: confirm button of the remove-ground dialog (DNI-497 AC-6).
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get subTrackDetailRemoveConfirm;
+
+  /// Sub-track detail: snackbar when a reorder is rejected and rolled back (DNI-497 AC-6, UX-DR-124). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the new order. It\'s back as it was.'**
+  String get subTrackDetailReorderFailed;
+
+  /// Sub-track detail: snackbar when a removal is rejected and rolled back (DNI-497 AC-6, UX-DR-124). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t remove it. The ground is back as it was.'**
+  String get subTrackDetailRemoveFailed;
+
+  /// Sub-track detail: screen-reader label of a ground row's drag handle (DNI-497 AC-5, UX-DR-160).
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder {node}'**
+  String subTrackDetailDragHandle(String node);
+
+  /// Sub-track detail: tooltip and screen-reader label of a ground row's ⋮ menu (DNI-497 AC-5).
+  ///
+  /// In en, this message translates to:
+  /// **'Actions for {node}'**
+  String subTrackDetailEntryActions(String node);
+
   /// No description provided for @switchProfile.
   ///
   /// In en, this message translates to:

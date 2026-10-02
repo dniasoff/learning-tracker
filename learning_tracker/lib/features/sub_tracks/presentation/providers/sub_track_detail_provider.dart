@@ -21,6 +21,9 @@ import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_detail_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
@@ -97,9 +100,64 @@ final subTrackDetailRoleProvider = Provider.autoDispose<SubTrackDetailRole>((
 
 /// The order the detail renders instead of the stored `ground` while a
 /// reorder or removal of sub-track `id` is in flight (optimistic, AC-5);
-/// null when nothing is pending. Story 2.6 T5 fills it.
+/// null when nothing is pending.
 final subTrackGroundOverrideProvider = Provider.autoDispose
-    .family<List<NodeEntry>?, String>((ref, id) => null);
+    .family<List<NodeEntry>?, String>(
+      (ref, id) => ref.watch(subTrackGroundEditorProvider(id)),
+    );
+
+/// Commits whole-`ground` edits of one sub-track (AC-5, AC-6).
+///
+/// [commit] shows the new order at once (the state is the pending order),
+/// sends the WHOLE new list through `LearningCommands.editSubTrack` (one
+/// governed `subTrack` change and one `change_log` entry; learning events
+/// untouched), then clears the pending order: on success the stored
+/// ground (already applied to the local cache, queued offline) takes over
+/// and the engine recomputes position, held ground, forecast and today's
+/// tasks; on rejection the last confirmed order is back. No widget writes
+/// Firestore.
+final subTrackGroundEditorProvider = NotifierProvider.autoDispose
+    .family<SubTrackGroundEditor, List<NodeEntry>?, String>(
+      SubTrackGroundEditor.new,
+    );
+
+/// See [subTrackGroundEditorProvider].
+class SubTrackGroundEditor extends Notifier<List<NodeEntry>?> {
+  /// Creates the editor of sub-track [subTrackId].
+  SubTrackGroundEditor(this.subTrackId);
+
+  /// The sub-track ULID.
+  final String subTrackId;
+
+  @override
+  List<NodeEntry>? build() => null;
+
+  /// Whether an edit is in flight.
+  bool get busy => state != null;
+
+  /// Replaces the ground with [next]. Returns whether it was accepted
+  /// (saved, or queued offline); false means it was rejected and rolled
+  /// back.
+  Future<bool> commit(List<NodeEntry> next) async {
+    if (busy) return false;
+    state = List.unmodifiable(next);
+    var accepted = false;
+    try {
+      final commands = await ref.read(learningCommandsProvider.future);
+      if (commands != null) {
+        final result = await commands.editSubTrack(
+          subTrackId,
+          SubTrackEdit(ground: List.unmodifiable(next)),
+        );
+        accepted = result is CaptureSuccess;
+      }
+    } on Object {
+      accepted = false;
+    }
+    if (ref.mounted) state = null;
+    return accepted;
+  }
+}
 
 /// The [SubTrackDetail] of sub-track `id` for the active learner.
 final subTrackDetailProvider = Provider.autoDispose

@@ -552,6 +552,69 @@
   "@subTrackDetailSelectPrompt": {
     "description": "Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4."
   },
+  "subTrackDetailMoveUp": "Move up",
+  "@subTrackDetailMoveUp": {
+    "description": "Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging up (DNI-497 AC-5, UX-DR-155)."
+  },
+  "subTrackDetailMoveDown": "Move down",
+  "@subTrackDetailMoveDown": {
+    "description": "Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging down (DNI-497 AC-5, UX-DR-155)."
+  },
+  "subTrackDetailRemoveFrom": "Remove from {name}",
+  "@subTrackDetailRemoveFrom": {
+    "description": "Sub-track detail: ground row ⋮ action removing the entry from this sub-track (DNI-497 AC-6).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailRemoveTitle": "Remove {node} from {name}?",
+  "@subTrackDetailRemoveTitle": {
+    "description": "Sub-track detail: remove-ground confirmation title (DNI-497 AC-6).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailRemoveBody": "Learning already recorded is kept. Anything not yet learnt goes back to the main track unless another sub-track holds it.",
+  "@subTrackDetailRemoveBody": {
+    "description": "Sub-track detail: remove-ground confirmation body (DNI-497 AC-6, FR-12). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailRemoveConfirm": "Remove",
+  "@subTrackDetailRemoveConfirm": {
+    "description": "Sub-track detail: confirm button of the remove-ground dialog (DNI-497 AC-6)."
+  },
+  "subTrackDetailReorderFailed": "Couldn't save the new order. It's back as it was.",
+  "@subTrackDetailReorderFailed": {
+    "description": "Sub-track detail: snackbar when a reorder is rejected and rolled back (DNI-497 AC-6, UX-DR-124). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailRemoveFailed": "Couldn't remove it. The ground is back as it was.",
+  "@subTrackDetailRemoveFailed": {
+    "description": "Sub-track detail: snackbar when a removal is rejected and rolled back (DNI-497 AC-6, UX-DR-124). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailDragHandle": "Reorder {node}",
+  "@subTrackDetailDragHandle": {
+    "description": "Sub-track detail: screen-reader label of a ground row's drag handle (DNI-497 AC-5, UX-DR-160).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailEntryActions": "Actions for {node}",
+  "@subTrackDetailEntryActions": {
+    "description": "Sub-track detail: tooltip and screen-reader label of a ground row's ⋮ menu (DNI-497 AC-5).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
   "switchProfile": "Switch profile",
   "switchProfileSubtitle": "Change to a different profile or your account",
   "manageProfiles": "Manage Profiles",
