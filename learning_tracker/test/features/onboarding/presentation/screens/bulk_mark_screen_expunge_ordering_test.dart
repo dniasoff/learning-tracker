@@ -79,8 +79,8 @@ void main() {
   });
 
   testWidgets(
-    'dashboard listener reflects the post-expunge count once the delayed '
-    'expunge write resolves, not the stale pre-expunge count '
+    'dashboard listener reflects the post-unlearn count after the selected '
+    'refs are removed, not the stale pre-unlearn count '
     '(AUD-onboarding-07)',
     (tester) async {
       final contentRepo = _MockContentRepository();
@@ -100,13 +100,12 @@ void main() {
         () => service.recordedRefs(any()),
       ).thenAnswer((_) async => {_leafA.sefariaRef});
 
-      // Stand-in "database" for the dashboard percentage: 1.0 while leafA's
-      // completion is still present, flipped to 0.0 only once the fake
-      // service's delayed expunge write actually resolves.
+      // Stand-in "database" for the dashboard percentage: 1.0 while leafA is
+      // still counted, flipped to 0.0 only once unlearn resolves.
       var dashboardValue = 1.0;
-      final expungeGate = Completer<void>();
+      final unlearnGate = Completer<void>();
       addTearDown(() {
-        if (!expungeGate.isCompleted) expungeGate.complete();
+        if (!unlearnGate.isCompleted) unlearnGate.complete();
       });
 
       when(
@@ -115,7 +114,7 @@ void main() {
           sefariaRefs: any(named: 'sefariaRefs'),
         ),
       ).thenAnswer((_) async {
-        await expungeGate.future;
+        await unlearnGate.future;
         dashboardValue = 0.0;
         return const CaptureResult.success();
       });
@@ -181,19 +180,25 @@ void main() {
       expect(find.text('pct:1.0'), findsOneWidget);
 
       // Untick the pre-ticked leaf: first tap partial->full (selects all),
-      // second tap full->none (deselects, triggers the expunge path for the
-      // pre-ticked leaf) — same sequence as the existing B8 expunge test.
+      // second tap full->none (deselects, triggering unlearn for leafA).
       final checkboxFinder = find.byType(Checkbox);
       await tester.tap(checkboxFinder.first);
       await tester.pump();
       await tester.tap(checkboxFinder.first);
       await tester.pump();
 
-      // The expunge write is still gated — nothing should have landed yet.
+      // The unlearn write is still gated — nothing should have landed yet.
       await tester.pump(const Duration(milliseconds: 50));
 
-      // Resolve the delayed expunge write.
-      expungeGate.complete();
+      verify(
+        () => service.unrecord(
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRefs: ['Mishnah Berakhot 1:1'],
+        ),
+      ).called(1);
+
+      // Resolve the delayed unlearn write.
+      unlearnGate.complete();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
@@ -201,7 +206,7 @@ void main() {
         find.text('pct:0.0'),
         findsOneWidget,
         reason:
-            'Once the expunge write actually resolves, the dashboard '
+            'Once unlearn actually resolves, the dashboard '
             'listener must reflect the post-expunge count — not remain '
             'stuck at the pre-expunge value from an invalidate() that fired '
             'before the write landed.',
