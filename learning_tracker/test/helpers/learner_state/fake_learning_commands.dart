@@ -199,6 +199,30 @@ final class FakeLearningCommands implements LearningCommands {
       BackupReplayResult(
         result: _record('importBackup', {'input': input}),
       );
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+  }) async => _record('createSubTrack', {
+    'draft': draft,
+    'subTrackId': subTrackId,
+  }, changes: 1);
+
+  @override
+  Future<CaptureResult> editSubTrack(
+    String subTrackId,
+    SubTrackEdit edit,
+  ) async => _record('editSubTrack', {
+    'subTrackId': subTrackId,
+    'edit': edit,
+  }, changes: 1);
+
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) async =>
+      _record('endSubTrack', {'subTrackId': subTrackId}, changes: 1);
+
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) async =>
+      _record('deleteSubTrack', {'subTrackId': subTrackId}, changes: 1);
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {
