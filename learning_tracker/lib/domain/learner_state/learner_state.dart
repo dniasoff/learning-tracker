@@ -263,6 +263,53 @@ final class SubTrackState {
   String toString() => 'SubTrackState($subTrackId)';
 }
 
+/// The main track as it stood at the start of one civil day (DNI-477,
+/// additive to the C0 contract): the AD-33 [schedulableRefs], FR-12a
+/// [currentUnit] and [position] derived from only the learning recorded as
+/// learnt before that day. A leaf learnt on the day is still in it, so a
+/// day's main-track batch laid out from it does not refill as the learner
+/// works through it (AD-49 planner).
+final class MainTrackDayStart {
+  /// Creates the view.
+  MainTrackDayStart({
+    required List<LeafRef> schedulableRefs,
+    this.currentUnit,
+    this.position,
+  }) : schedulableRefs = List.unmodifiable(schedulableRefs);
+
+  /// The leaves the planner could schedule at the start of the day, in
+  /// AD-33 order.
+  final List<LeafRef> schedulableRefs;
+
+  /// The FR-12a unit the learner was in at the start of the day.
+  final NodeEntry? currentUnit;
+
+  /// The next main-track leaf at the start of the day.
+  final LeafRef? position;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! MainTrackDayStart ||
+        other.currentUnit != currentUnit ||
+        other.position != position ||
+        other.schedulableRefs.length != schedulableRefs.length) {
+      return false;
+    }
+    for (var i = 0; i < schedulableRefs.length; i++) {
+      if (other.schedulableRefs[i] != schedulableRefs[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(Object.hashAll(schedulableRefs), currentUnit, position);
+
+  @override
+  String toString() =>
+      'MainTrackDayStart($position, ${schedulableRefs.length} schedulable)';
+}
+
 /// An invalid intent the engine found while deriving one curriculum's plan.
 /// The engine never substitutes a default for it; the affected outputs
 /// stay empty or null and the error is reported here.
@@ -316,6 +363,19 @@ abstract interface class CurriculumState {
   /// `schedulableRefs.length`.
   int get mainTrackRemaining;
 
+  /// The main track at the start of civil [date] (DNI-477, additive to the
+  /// C0 contract): [schedulableRefs], [currentUnit] and
+  /// [mainTrackPosition] derived as above from only the counted `learn`
+  /// events whose `learned_on` is before [date] (undated before-tracking
+  /// events are earlier), under the current order, scope, held ground and
+  /// tracking start. A leaf learnt on [date] is still schedulable in it.
+  ///
+  /// The planner lays out [date]'s main-track batch from it, so learning a
+  /// leaf on [date] never pulls the next leaf into that day's batch. On a
+  /// date after every `learned_on` it is the live main track. Empty for a
+  /// curriculum that is not evaluated.
+  MainTrackDayStart mainTrackAtStartOf(CivilDate date);
+
   /// Calendar-program curricula only: the leaves assigned on [date], each
   /// assigned node expanded by `expandGround` within the learner's corpus
   /// (learnt leaves included). Empty for any other curriculum.
@@ -338,6 +398,11 @@ abstract interface class CurriculumState {
   /// minus learnt. Otherwise, with a live `goals/{c}_deadline`:
   /// `max(0, ceil(numerator ÷ studyDaysToDeadline))`, or the numerator
   /// when no study day is left (AD-44). Null with no deadline.
+  ///
+  /// The AD-44 numerator is the main track's remaining at the start of
+  /// today (`mainTrackAtStartOf(today)`), because `studyDaysToDeadline`
+  /// still counts today: the target holds for the whole day instead of
+  /// shrinking as today's leaves are learnt (DNI-477).
   int? get dailyTarget;
 
   /// Leaves per study day from a live `goals/{c}_pace` doc (AD-43); null

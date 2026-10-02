@@ -16,6 +16,31 @@
 /// * `daily_tasks` — both, priority-sorted as `allDailyTasksProvider`
 ///   composes them (no skips).
 ///
+/// ## Two replays of the same learnt set
+///
+/// Three scenarios date every learnt row `today` (`mid_masechta_pace`,
+/// `masechta_boundary_pace`, `deadline_mid_masechta`). The legacy planner's
+/// new learning does not depend on `learned_on` within `[tracking start,
+/// today]`: at the capture SHA `buildProjectionTasks` filters the schedule
+/// by the set of learnt refs (`completionRefs`) and dates only the
+/// completions before the track anchor. The planner on LearnerState
+/// anchors a day's batch at the start of the day (`mainTrackAtStartOf`),
+/// so leaves learnt today count against today's batch and the list never
+/// refills. So each scenario is replayed twice:
+///
+/// * **as dated** — exactly the frozen rows. Chazara is compared here
+///   (it depends on the dates). New learning is the start-of-day batch
+///   less what was learnt today: for the three scenarios above every
+///   learner already learnt at least today's batch today, so none is left
+///   (asserted).
+/// * **layout** — the same learnt set with the rows dated `today` moved to
+///   the day before (no row is moved before the tracking start). The
+///   legacy output is the same frozen list; this compares the planner's
+///   order, FR-12a boundary and presentation fields with it.
+///
+/// `chazara_due` has no row dated `today`, so its two replays are the same
+/// learner.
+///
 /// ## Intentional divergence (AD-49), documented in DNI-477
 ///
 /// `masechta_boundary_pace` (FR-12a transition day) and `chazara_due`
@@ -30,11 +55,13 @@
 /// pace from the whole scope (74 leaves / 10 study days = 8). AD-49 retires
 /// that: "the planner never computes a quantity". It lays out the engine's
 /// `paceRate` (3) or `dailyTarget` (AD-44: ceil(64 remaining / 10 study
-/// days) = 7) leaves from `schedulableRefs`. What stays identical is the
-/// order and every presentation field: the new list is exactly the first N
-/// leaves of the legacy list, each shown as today's new learning. The
-/// divergence table [_kDivergence] pins N and the reason per scenario; any
-/// other difference fails.
+/// days at the start of today) = 7) leaves from `schedulableRefs`. What
+/// stays identical is the order and every presentation field: in the
+/// layout replay the new list is exactly the first N leaves of the legacy
+/// list, each shown as today's new learning. The divergence table
+/// [_kDivergence] pins N and the reason per scenario; any other difference
+/// fails. This divergence is tracked for PO/architect sign-off in bead
+/// learning-tracker-fyh.231 (AC-2 / ruling B7 wording).
 ///
 /// ## Regenerating the fixture
 ///
@@ -99,6 +126,10 @@ const _kDivergence = <String, (int, String)>{
   ),
 };
 
+/// Whether the replay moves rows dated `today` to the day before (see the
+/// library doc).
+enum _Replay { asDated, layout }
+
 /// The production track-label seam (`curriculumLabelTextFromRef`, as
 /// `plannedTasksForDateProvider` passes it), evaluated through a real Ref.
 final _trackLabelProvider = Provider.family<String, CurriculumId>(
@@ -143,11 +174,15 @@ DateTime _noon(String civilDate) {
 /// early on `today` (in fixture order), so no Shabbos lock window (AD-36)
 /// ignores a row the legacy planner counted — the legacy planner had no
 /// locks, and a Friday/Shabbos `learned_on` is ordinary catch-up recording.
-List<LearningEvent> _events(Map<String, dynamic> scenario) {
+///
+/// The [_Replay.layout] replay moves rows dated `today` to the day before.
+List<LearningEvent> _events(Map<String, dynamic> scenario, _Replay replay) {
   final learnt = (scenario['learnt'] as List).cast<Map<String, dynamic>>();
-  final recorded = _noon(
-    scenario['today'] as String,
-  ).subtract(const Duration(hours: 6));
+  final today = scenario['today'] as String;
+  final recorded = _noon(today).subtract(const Duration(hours: 6));
+  final dayBefore = DateTime.parse(
+    today,
+  ).subtract(const Duration(days: 1)).toIso8601String().substring(0, 10);
   return [
     for (final (i, row) in learnt.indexed)
       LearningEvent.learn(
@@ -156,13 +191,20 @@ List<LearningEvent> _events(Map<String, dynamic> scenario) {
         ref: row['ref'] as String,
         source: LearningEvent.sourceMain,
         dateState: DateState.dated,
-        learnedOn: row['learned_on'] as String,
+        learnedOn: replay == _Replay.layout && row['learned_on'] == today
+            ? dayBefore
+            : row['learned_on'] as String,
         stage: 1,
         recordedAt: recorded.add(Duration(seconds: i)),
         actor: parentActor,
       ),
   ];
 }
+
+/// Whether [scenario] dates any learnt row `today`.
+bool _learntToday(Map<String, dynamic> scenario) => [
+  for (final r in scenario['learnt'] as List) (r as Map)['learned_on'],
+].contains(scenario['today']);
 
 MainTrackIntent _intent(
   Map<String, dynamic> shared,
@@ -234,11 +276,18 @@ _Plan _plan(
   Map<String, dynamic> scenario,
   Corpus corpus,
   String trackLabel,
+  _Replay replay,
 ) {
   final today = scenario['today'] as String;
+  final trackingStart = scenario['tracking_start_date'] as String;
+  if (replay == _Replay.layout &&
+      _learntToday(scenario) &&
+      trackingStart.compareTo(today) >= 0) {
+    throw StateError('a layout replay never moves a row before tracking');
+  }
   final state = const LearnerStateEngine().run(
     LearnerStateInputs(
-      events: _events(scenario),
+      events: _events(scenario, replay),
       subTracks: const [],
       mainTrackIntent: {_kCurriculum.storageKey: _intent(shared, scenario)},
       goals: {
@@ -267,11 +316,17 @@ _Plan _plan(
       studyDay: true,
     ),
   );
-  // allDailyTasksProvider's composition with no skips.
-  final daily = [...tasks.learning, ...tasks.reviews]
-    ..sort((a, b) => a.priority.index.compareTo(b.priority.index));
-  return (projection: tasks.learning, chazara: tasks.reviews, daily: daily);
+  return (
+    projection: tasks.learning,
+    chazara: tasks.reviews,
+    daily: _daily(tasks.learning, tasks.reviews),
+  );
 }
+
+/// allDailyTasksProvider's composition with no skips.
+List<DailyTask> _daily(List<DailyTask> learning, List<DailyTask> reviews) =>
+    [...learning, ...reviews]
+      ..sort((a, b) => a.priority.index.compareTo(b.priority.index));
 
 // ─── Serialization (the G0 field map) ──────────────────────────────────────
 
@@ -375,23 +430,41 @@ void main() {
     final s = scenario as Map<String, dynamic>;
     final id = s['id'] as String;
     group(id, () {
+      late _Plan asDated;
       late _Plan plan;
       late Map<String, dynamic> expected;
 
       setUpAll(() {
-        plan = _plan(shared, s, corpus, trackLabel);
+        asDated = _plan(shared, s, corpus, trackLabel, _Replay.asDated);
+        plan = _plan(shared, s, corpus, trackLabel, _Replay.layout);
         expected = s['expected'] as Map<String, dynamic>;
       });
 
       test('chazara equals the frozen legacy chazara', () {
-        expect(_json(plan.chazara), expected['chazara_tasks']);
+        expect(_json(asDated.chazara), expected['chazara_tasks']);
       });
+
+      if (_learntToday(s)) {
+        test('as dated: today\'s learning already covers today\'s batch, so '
+            'no new learning is left (the batch never refills)', () {
+          expect(asDated.projection, isEmpty);
+          expect(_json(asDated.daily), _json(asDated.chazara));
+        });
+      } else {
+        test('as dated is the layout replay', () {
+          expect(_json(asDated.projection), _json(plan.projection));
+          expect(_json(asDated.chazara), _json(plan.chazara));
+        });
+      }
 
       final divergence = _kDivergence[id];
       if (divergence == null) {
         test('new learning and the daily list equal the frozen fixture', () {
           expect(_json(plan.projection), expected['projection_tasks']);
-          expect(_json(plan.daily), expected['daily_tasks']);
+          expect(
+            _json(_daily(plan.projection, asDated.chazara)),
+            expected['daily_tasks'],
+          );
         });
       } else {
         final (quantity, why) = divergence;
@@ -407,7 +480,8 @@ void main() {
           expect(_json(plan.projection), want);
           // No chazara in these scenarios: the daily list is the new
           // learning.
-          expect(_json(plan.daily), want);
+          expect(asDated.chazara, isEmpty);
+          expect(_json(_daily(plan.projection, asDated.chazara)), want);
         });
       }
 

@@ -302,16 +302,32 @@ final class LearnerStateEngine {
         if (learnt.inScope(leaf)) leaf,
     ];
     final program = intent.program;
-    return deriveMainTrack(
-      corpus: corpus,
-      order: order,
-      learnt: learnt.learntLeaves,
-      countedLearns: learns,
-      heldGround: _heldGround(curriculumId, inputs, corpus),
-      start: program?.endedAt == null ? program?.trackingStartRef : null,
-      startAt: trackingStartAt(inputs.intentHistory, curriculumId),
-      firstStage: firstStage,
-    );
+    final heldGround = _heldGround(curriculumId, inputs, corpus);
+    final start = program?.endedAt == null ? program?.trackingStartRef : null;
+    final startAt = trackingStartAt(inputs.intentHistory, curriculumId);
+    MainTrackRecord derive(Set<LeafRef> learntSet, List<LearningEvent> ls) =>
+        deriveMainTrack(
+          corpus: corpus,
+          order: order,
+          learnt: learntSet,
+          countedLearns: ls,
+          heldGround: heldGround,
+          start: start,
+          startAt: startAt,
+          firstStage: firstStage,
+        );
+    final live = derive(learnt.learntLeaves, learns);
+    // DNI-477: the main track at the start of a civil date is the same
+    // derivation over only the learning dated before it (an undated
+    // before-tracking event is earlier than any date).
+    return live.withStartOf((date) {
+      final before = [
+        for (final e in learns)
+          if (e.learnedOn == null || e.learnedOn!.compareTo(date) < 0) e,
+      ];
+      if (before.length == learns.length) return live;
+      return derive(learntLeaves(before, corpus, learnt.inScope), before);
+    });
   }
 
   /// The planning stage of an evaluated curriculum (DNI-467). [reviews]
@@ -378,7 +394,9 @@ final class LearnerStateEngine {
     // AD-43/AD-44: a deadline gives `dailyTarget`, a pace gives `paceRate`
     // (it also feeds FR-20 with a deadline); neither gives nulls. The
     // numerator is the no-sub-track case (DNI-494 adds the sub-track
-    // terms).
+    // terms), taken at the start of today: `studyDaysToDeadline` counts
+    // today, so the leaves learnt today still count against today's
+    // target and it does not shrink as they are learnt (DNI-477).
     final pace = livePace(goals);
     final studyDays = configHistory.current.studyDays;
     return PlanRecord(
@@ -386,7 +404,7 @@ final class LearnerStateEngine {
       dailyTarget: deadline == null
           ? null
           : deadlineDailyTarget(
-              numerator: mainTrack.schedulableRefs.length,
+              numerator: mainTrack.atStartOf(today).schedulableRefs.length,
               deadline: deadline,
               studyDays: studyDays,
               today: today,

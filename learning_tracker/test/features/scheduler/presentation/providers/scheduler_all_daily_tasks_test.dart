@@ -199,12 +199,15 @@ Future<ProviderContainer> _container({
   );
 }
 
-/// A main track with [refs] schedulable at [dailyTarget] per day.
+/// A main track with [refs] schedulable at [dailyTarget] per day; with
+/// [atStartOfToday], [refs] is what remains of the main track that stood at
+/// the start of 2026-05-27 after part of it was learnt that day.
 FakeCurriculumState _main(
   CurriculumId curriculum,
   List<String> refs, {
   int? dailyTarget = 1,
   Map<String, List<ReviewDue>> reviews = const {},
+  List<String>? atStartOfToday,
 }) => FakeCurriculumState(
   curriculumId: curriculum.storageKey,
   schedulableRefs: refs,
@@ -212,6 +215,13 @@ FakeCurriculumState _main(
   mainTrackRemaining: refs.length,
   dailyTarget: dailyTarget,
   reviews: reviews,
+  dayStarts: {
+    if (atStartOfToday != null)
+      '2026-05-27': MainTrackDayStart(
+        schedulableRefs: atStartOfToday,
+        position: atStartOfToday.firstOrNull,
+      ),
+  },
 );
 
 const _genesis = ['Genesis 1:1', 'Genesis 1:2', 'Genesis 1:3', 'Genesis 1:4'];
@@ -239,6 +249,35 @@ void main() {
     expect(tasks.single.priority, DailyTaskPriority.newLearning);
     expect(tasks.single.stageName, 'Learn');
     expect(tasks.single.isOverdue, isFalse);
+  });
+
+  test('learning today\'s batch leaves no new learning today: the list '
+      'shrinks and never refills (all caught up)', () async {
+    Future<List<String>> refsAfterLearning(
+      int learnt, {
+      required int dailyTarget,
+    }) async {
+      final container = await _container(
+        states: {
+          CurriculumId.chumash: _main(
+            CurriculumId.chumash,
+            _genesis.skip(learnt).toList(),
+            dailyTarget: dailyTarget,
+            atStartOfToday: _genesis,
+          ),
+        },
+      );
+      addTearDown(container.dispose);
+      return [for (final t in await _tasks(container)) t.contentItemSefariaRef];
+    }
+
+    // Today's batch is Genesis 1:1–1:3.
+    expect(await refsAfterLearning(1, dailyTarget: 3), [
+      'Genesis 1:2',
+      'Genesis 1:3',
+    ]);
+    expect(await refsAfterLearning(3, dailyTarget: 3), isEmpty);
+    expect(await refsAfterLearning(4, dailyTarget: 3), isEmpty);
   });
 
   test('empty active-curriculum set produces an empty result', () async {

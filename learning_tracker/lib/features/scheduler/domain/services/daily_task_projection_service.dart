@@ -89,11 +89,15 @@ typedef CurriculumTasks = ({List<DailyTask> learning, List<DailyTask> reviews});
 ///   days) ∪ `programAssignments(date)` (today's day) less what is learnt,
 ///   by leaf;
 /// * any other curriculum, on a study day, shows its main track: the
-///   engine's position, current unit and `schedulableRefs` up to
-///   `dailyTarget` when a deadline exists, else `paceRate` (leaves per study
-///   day, rounded up to whole leaves), else nothing — one masechta at a
-///   time except on the day one finishes and the next begins (FR-12a,
-///   [mainTrackBatch]);
+///   engine's position, current unit and `schedulableRefs` at the start of
+///   [date] (`mainTrackAtStartOf`) up to `dailyTarget` when a deadline
+///   exists, else `paceRate` (leaves per study day, rounded up to whole
+///   leaves), else nothing — one masechta at a time except on the day one
+///   finishes and the next begins (FR-12a, [mainTrackBatch]) — less the
+///   leaves no longer schedulable now. The batch is anchored at the start
+///   of the day, so it shrinks as the learner works through it and never
+///   refills: once the day's batch is learnt, there is no new learning
+///   until the next study day;
 /// * reviews are `reviewsDue(date)` with their stage order and due date,
 ///   less the ones done on [date].
 ///
@@ -163,11 +167,13 @@ CurriculumTasks planCurriculumTasks({
     }
   } else if (presentation.studyDay) {
     final quantity = state.dailyTarget ?? state.paceRate?.ceil() ?? 0;
+    final schedulableNow = state.schedulableRefs.toSet();
     for (final leaf in mainTrackBatch(
-      state: state,
+      mainTrack: state.mainTrackAtStartOf(date),
       corpus: corpus,
       quantity: quantity,
     )) {
+      if (!schedulableNow.contains(leaf)) continue;
       learning.add(
         learningTask(
           leaf,
@@ -210,24 +216,26 @@ CurriculumTasks planCurriculumTasks({
   return (learning: learning, reviews: [...overdueReviews, ...dueReviews]);
 }
 
-/// The main-track leaves to show, at most [quantity], in engine order
-/// (FR-12a): the schedulable leaves of the current unit (the unit of the
-/// engine's position when it names none); when they run out, the
-/// schedulable leaves of the next unit begin — never a third. A curriculum
-/// with no unit level shows the first [quantity] schedulable leaves.
+/// The main-track leaves of a day's batch, at most [quantity], in engine
+/// order (FR-12a): the schedulable leaves of the current unit (the unit of
+/// the position when it names none); when they run out, the schedulable
+/// leaves of the next unit begin — never a third. A curriculum with no
+/// unit level shows the first [quantity] schedulable leaves.
 ///
-/// Reads only the engine's `schedulableRefs`, `currentUnit` and
-/// `mainTrackPosition`; [corpus] only says which unit a leaf is in.
+/// Reads only the engine's [mainTrack] view (`schedulableRefs`,
+/// `currentUnit` and `position`, at the start of the planned day); [corpus]
+/// only says which unit a leaf is in.
 List<LeafRef> mainTrackBatch({
-  required CurriculumState state,
+  required MainTrackDayStart mainTrack,
   required Corpus? corpus,
   required int quantity,
 }) {
-  final refs = state.schedulableRefs;
+  final refs = mainTrack.schedulableRefs;
   if (quantity <= 0 || refs.isEmpty) return const [];
-  final position = state.mainTrackPosition ?? refs.first;
+  final position = mainTrack.position ?? refs.first;
   final unit =
-      state.currentUnit ?? (corpus == null ? null : unitOf(position, corpus));
+      mainTrack.currentUnit ??
+      (corpus == null ? null : unitOf(position, corpus));
   if (unit == null || corpus == null) return refs.take(quantity).toList();
 
   final unitLeaves = corpus.leavesUnder(unit).toSet();

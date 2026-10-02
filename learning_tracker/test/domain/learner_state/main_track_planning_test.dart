@@ -275,6 +275,86 @@ void main() {
     expect(state.mainTrackPosition, 'Mishnah Shabbat 1:2');
   });
 
+  group('mainTrackAtStartOf (DNI-477): the main track at the start of a '
+      'civil date', () {
+    // Berakhot 1:1 and 1:2 learnt before today; 1:3 and 2:1 (finishing
+    // Berakhot) learnt today.
+    final events = [
+      engineLearn(1, 'Mishnah Berakhot 1:1', minutes: 1, stage: 1),
+      engineLearn(2, 'Mishnah Berakhot 1:2', minutes: 2, stage: 1),
+      engineLearn(
+        3,
+        'Mishnah Berakhot 1:3',
+        minutes: 9990,
+        stage: 1,
+        learnedOn: _today,
+      ),
+      engineLearn(
+        4,
+        'Mishnah Berakhot 2:1',
+        minutes: 9991,
+        stage: 1,
+        learnedOn: _today,
+      ),
+      engineLearn(
+        5,
+        'Mishnah Berakhot 2:2',
+        minutes: 9992,
+        stage: 1,
+        learnedOn: _today,
+      ),
+    ];
+
+    test('leaves learnt on the date are still schedulable at its start, in '
+        'the unit the learner was in', () {
+      final state = _run(events: events);
+      // Live: Berakhot is finished, so no unit is current and the
+      // position is the first schedulable leaf.
+      expect(state.currentUnit, isNull);
+      expect(state.mainTrackPosition, 'Mishnah Peah 1:1');
+      final start = state.mainTrackAtStartOf(_today);
+      expect(start.schedulableRefs, [
+        'Mishnah Berakhot 1:3',
+        'Mishnah Berakhot 2:1',
+        'Mishnah Berakhot 2:2',
+        'Mishnah Peah 1:1',
+        'Mishnah Peah 1:2',
+        'Mishnah Shabbat 1:1',
+        'Mishnah Shabbat 1:2',
+      ]);
+      expect(start.currentUnit, berakhot);
+      expect(start.position, 'Mishnah Berakhot 1:3');
+    });
+
+    test('a date after every learned_on is the live main track; an '
+        'undated before-tracking event is earlier than any date', () {
+      final state = _run(
+        events: [...events, engineGround(6, berakhot1, minutes: 3)],
+      );
+      final later = state.mainTrackAtStartOf('2026-09-08');
+      expect(later.schedulableRefs, state.schedulableRefs);
+      expect(later.currentUnit, state.currentUnit);
+      expect(later.position, state.mainTrackPosition);
+      expect(
+        state.mainTrackAtStartOf('2026-08-01').schedulableRefs,
+        isNot(contains('Mishnah Berakhot 1:1')),
+      );
+    });
+
+    test('a curriculum that is not evaluated has an empty view', () {
+      final state = const LearnerStateEngine().run(
+        engineInputs(
+          events: events,
+          intents: {
+            engineCurriculum: engineIntent(state: MainTrackState.retired),
+          },
+        ),
+      )[engineCurriculum]!;
+      expect(state.mainTrackAtStartOf(_today).schedulableRefs, isEmpty);
+      expect(state.mainTrackAtStartOf(_today).position, isNull);
+    });
+  });
+
   test('every planning output is deterministic for identical inputs', () {
     CurriculumState run() => _run(
       start: 'Mishnah Peah 1:1',

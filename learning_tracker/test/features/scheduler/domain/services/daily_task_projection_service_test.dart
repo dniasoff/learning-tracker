@@ -245,16 +245,103 @@ void main() {
     });
 
     test('mainTrackBatch with a zero quantity or no corpus', () {
-      final state = _midBerakhot(dailyTarget: 2);
+      final mainTrack = _midBerakhot(dailyTarget: 2).mainTrackAtStartOf(_today);
       expect(
-        mainTrackBatch(state: state, corpus: _corpus, quantity: 0),
+        mainTrackBatch(mainTrack: mainTrack, corpus: _corpus, quantity: 0),
         isEmpty,
       );
-      expect(mainTrackBatch(state: state, corpus: null, quantity: 3), [
+      expect(mainTrackBatch(mainTrack: mainTrack, corpus: null, quantity: 3), [
         _b21,
         _b22,
         _p11,
       ]);
+    });
+  });
+
+  group('AC-2: the day\'s batch is anchored at the start of the day — it '
+      'shrinks as it is learnt and never refills', () {
+    /// A Berakhot learner who had [_b21] onward schedulable at the start of
+    /// [_today] and has since learnt [learntToday] of it.
+    FakeCurriculumState afterLearning(
+      List<String> learntToday, {
+      int? dailyTarget,
+      double? paceRate,
+    }) {
+      const atStart = [_b21, _b22, _p11, _p12, _s11, _s12];
+      final live = [
+        for (final leaf in atStart)
+          if (!learntToday.contains(leaf)) leaf,
+      ];
+      final peahNow = !live.contains(_b21) && !live.contains(_b22);
+      return FakeCurriculumState(
+        curriculumId: _c.storageKey,
+        learntLeaves: learntToday.toSet(),
+        currentUnit: peahNow ? peah : berakhot,
+        mainTrackPosition: live.first,
+        schedulableRefs: live,
+        mainTrackRemaining: live.length,
+        dailyTarget: dailyTarget,
+        paceRate: paceRate,
+        dayStarts: {
+          _today: MainTrackDayStart(
+            schedulableRefs: atStart,
+            currentUnit: berakhot,
+            position: _b21,
+          ),
+        },
+      );
+    }
+
+    test('learning part of the batch shows only the rest of it', () {
+      expect(_refs(_plan(afterLearning(const [_b21], paceRate: 2)).learning), [
+        _b22,
+      ]);
+    });
+
+    test('learning the whole batch leaves no new learning that day', () {
+      expect(
+        _plan(afterLearning(const [_b21, _b22], paceRate: 2)).learning,
+        isEmpty,
+      );
+      // A deadline's target is the engine's start-of-day one; it lays out
+      // no further leaves either.
+      expect(
+        _plan(afterLearning(const [_b21, _b22, _p11], dailyTarget: 3)).learning,
+        isEmpty,
+      );
+    });
+
+    test('learning ahead of the batch also finishes the day', () {
+      expect(
+        _plan(
+          afterLearning(const [_b21, _b22, _p11, _p12], paceRate: 2),
+        ).learning,
+        isEmpty,
+      );
+    });
+
+    test('FR-12a transition day: once the finishing masechta is learnt, '
+        'only the batch\'s part of the next one remains', () {
+      // Start of day: [b21, b22, p11]. Berakhot is now learnt and Peah is
+      // the live current unit; Peah 1:2 does not slide in.
+      expect(
+        _refs(
+          _plan(afterLearning(const [_b21, _b22], dailyTarget: 3)).learning,
+        ),
+        [_p11],
+      );
+    });
+
+    test('a later date (erev planned list) lays out the live main track', () {
+      expect(
+        _refs(
+          _plan(
+            afterLearning(const [_b21], paceRate: 2),
+            date: '2026-09-08',
+          ).learning,
+        ),
+        [_b22, _p11],
+      );
     });
   });
 
