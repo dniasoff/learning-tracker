@@ -63,6 +63,23 @@ void main() {
     );
   });
 
+  test('unitLevels default to the non-leaf levels of the top two depths', () {
+    expect(corpus().unitLevels, ['seder', 'masechta']);
+    expect(InMemoryCorpus('c', const [CorpusNode(b1)]).unitLevels, isEmpty);
+  });
+
+  test('explicit unitLevels win over the default', () {
+    final c = InMemoryCorpus(
+      'c',
+      const [
+        CorpusNode(seder, [CorpusNode(b1)]),
+      ],
+      unitLevels: const ['seder'],
+    );
+    expect(c.unitLevels, ['seder']);
+    expect(() => c.unitLevels.add('x'), throwsUnsupportedError);
+  });
+
   test('returned lists are unmodifiable', () {
     final c = corpus();
     expect(() => c.leaves.add('x'), throwsUnsupportedError);
