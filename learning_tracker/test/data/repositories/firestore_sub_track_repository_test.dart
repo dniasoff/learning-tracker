@@ -171,6 +171,9 @@ void main() {
       expect(ready.items.single.isEnded, isTrue);
       expect(ready.items.single.endReason, SubTrackEndReason.trackDeleted);
       expect(ready.items.single.endedAt, t1);
+      // DNI-475: an ended/deleted track keeps its stored name, the source
+      // label of the learning recorded under it (FR-30, UX-DR-21).
+      expect(ready.items.single.name, 'Shiur 0');
     });
 
     test(
