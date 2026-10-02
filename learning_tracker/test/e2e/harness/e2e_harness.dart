@@ -93,6 +93,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
@@ -698,6 +699,12 @@ class E2EHarness {
       ],
 
       // ── Profiles ─────────────────────────────────────────────────────────
+      // DNI-470 profile creation requires a valid IANA zone from the creating
+      // device. Keep headless journeys deterministic and independent of the
+      // flutter_timezone platform plugin.
+      creatingDeviceSettingsSourceProvider.overrideWithValue(
+        const _E2ECreatingDeviceSettingsSource(),
+      ),
       if (seededProfiles.isNotEmpty) ...[
         profileListStreamProvider.overrideWith(
           (ref) => Stream.value(seededProfiles),
@@ -754,4 +761,13 @@ class E2EHarness {
       supportedLocales: AppLocalizations.supportedLocales,
     );
   }
+}
+
+final class _E2ECreatingDeviceSettingsSource
+    implements CreatingDeviceSettingsSource {
+  const _E2ECreatingDeviceSettingsSource();
+
+  @override
+  Future<CreatingDeviceSettings> read() async =>
+      const CreatingDeviceSettings(timeZone: 'UTC', inIsrael: false);
 }
