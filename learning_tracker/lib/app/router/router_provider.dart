@@ -5,12 +5,14 @@ import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_time_location_access_provider.dart';
@@ -52,6 +54,18 @@ final routerProvider = Provider<AppRouter>((ref) {
       getActiveProfileId: () => ref.read(activeProfileIdProvider),
       isTutoredSession: () =>
           ref.read(activeTutoredProfileSelectionProvider) != null,
+    ),
+    parentSessionGuard: ParentSessionGuard(
+      // listen (not read) keeps the auto-dispose session provider alive
+      // until its future resolves.
+      isParentSession: () async {
+        final sub = ref.listen(parentSessionProvider.future, (_, _) {});
+        try {
+          return await sub.read();
+        } finally {
+          sub.close();
+        }
+      },
     ),
     pinGuard: PinGuard(
       pinService: pinSvc,

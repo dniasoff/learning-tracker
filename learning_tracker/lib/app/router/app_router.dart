@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/app/router/app_shell.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
@@ -32,6 +33,7 @@ import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/lifetime_report_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
@@ -65,6 +67,10 @@ class AppRouter extends RootStackRouter {
   /// settings: a child holder with a Parent PIN must have verified it
   /// (DNI-481 AC-3, AUD-sacred_time-08) — also on a direct deep link.
   final AutoRouteGuard sacredTimeLocationGuard;
+  /// Parent-only write surfaces reachable from an adult profile too
+  /// (sub-track forms, DNI-495 AC-3). Defaults to refusing every
+  /// navigation when a router is built without session wiring.
+  final ParentSessionGuard parentSessionGuard;
 
   AppRouter({
     required this.authGuard,
@@ -72,8 +78,9 @@ class AppRouter extends RootStackRouter {
     required this.childModeGuard,
     required this.pinGuard,
     required this.sacredTimeLocationGuard,
+    ParentSessionGuard? parentSessionGuard,
     super.navigatorKey,
-  });
+  }) : parentSessionGuard = parentSessionGuard ?? ParentSessionGuard.denyAll();
 
   @override
   RouteType get defaultRouteType => const RouteType.material();
@@ -153,6 +160,17 @@ class AppRouter extends RootStackRouter {
       path: '/progress/lifetime',
       page: LifetimeKnowledgeRoute.page,
       guards: [authGuard],
+    ),
+    // Lifetime report (Story 5.2, DNI-517): a parent surface. A child, a
+    // PIN-locked or a tutor session — a deep link included — lands on
+    // Lifetime instead, before any report data is read (AC-2).
+    AutoRoute(
+      path: '/progress/lifetime/report',
+      page: LifetimeReportRoute.page,
+      guards: [
+        authGuard,
+        parentSessionGuard.redirectingTo(() => const LifetimeKnowledgeRoute()),
+      ],
     ),
 
     // Content browsing routes

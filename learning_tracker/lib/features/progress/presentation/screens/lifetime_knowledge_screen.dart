@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/curriculum_breakdown_list.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_report_entry.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Source toggle for the Lifetime Knowledge tree.
@@ -100,6 +101,8 @@ class _LifetimeKnowledgeScreenState
             color: context.colors.brandInk,
           ),
         ),
+        // Story 5.2 (DNI-517): parent sessions only (AC-2).
+        actions: const [LifetimeReportEntry()],
       ),
       body: Theme(
         data: baseTheme.copyWith(textTheme: textTheme),
