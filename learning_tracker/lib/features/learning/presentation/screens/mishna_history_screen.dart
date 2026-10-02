@@ -628,6 +628,7 @@ Future<void> openMishnaCorrections(
       l10n.mishnaHistoryCorrectionChildLimit,
     MishnaCorrectionOutcome.rolledBack =>
       l10n.mishnaHistoryCorrectionRolledBack,
+    MishnaCorrectionOutcome.keptNotCounted => l10n.tutorCaptureKeptNotCounted,
   };
   if (message != null) {
     messenger.showSnackBar(SnackBar(content: Text(message)));

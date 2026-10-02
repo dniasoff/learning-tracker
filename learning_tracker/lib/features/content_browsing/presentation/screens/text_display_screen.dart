@@ -783,6 +783,8 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             trackType: trackType,
           ),
       ];
+      // A tutor capture stamped inside the learner's lock is kept but not
+      // counted (DNI-486 AC-7): it changes nothing on screen.
       final recorded = result is CaptureSuccess
           ? {
               for (
@@ -790,7 +792,8 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 i < result.eventIds.length && i < keys.length;
                 i++
               )
-                result.eventIds[i]: keys[i],
+                if (!result.keptNotCounted.contains(result.eventIds[i]))
+                  result.eventIds[i]: keys[i],
             }
           : const <String, String>{};
       if (recorded.isNotEmpty) {

@@ -482,7 +482,7 @@ class _ContentHierarchyScreenState
       );
       if (!mounted) return;
       final batch = <String, List<String>>{};
-      if (result case CaptureSuccess(:final eventIds)) {
+      if (result case CaptureSuccess(:final eventIds, :final keptNotCounted)) {
         if (eventIds.length == refs.length && !asNode) {
           for (var i = 0; i < refs.length; i++) {
             batch[eventIds[i]] = [refs[i]];
@@ -492,9 +492,12 @@ class _ContentHierarchyScreenState
             batch[id] = refs;
           }
         }
+        // A tutor capture stamped inside the learner's lock is kept but
+        // not counted (DNI-486 AC-7): it ticks nothing.
+        keptNotCounted.forEach(batch.remove);
         setState(() {
           _refsByEvent.addAll(batch);
-          _ticked.addAll(refs);
+          _ticked.addAll({for (final r in batch.values) ...r});
         });
       }
       showCaptureOutcome(
