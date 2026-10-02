@@ -774,6 +774,17 @@
   "switchIntoChildMessage": "אתה עומד להיכנס לחוויה המלאה של {name}. ניתן לצאת בכל עת מהפס שבראש המסך.",
   "switchIntoChildConfirm": "כניסה",
   "tutorCannotMarkLiveCompletion": "מדריכים אינם יכולים לסמן השלמות חיות",
+  "tutorCaptureKeptNotCounted": "נשמר, לא נספר — שבת / יום טוב כבר התחילו",
+  "tutorCaptureLearnerLocked": "שבת / יום טוב",
+  "tutorCaptureNoEditAccess": "ההורה של {learner} לא נתן לך הרשאת עריכה",
+  "@tutorCaptureNoEditAccess": {
+    "placeholders": {
+      "learner": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorCaptureOnlineRequired": "נדרש חיבור לאינטרנט",
   "tutorWriteForbiddenTitle": "פעולה לא מורשית",
   "tutorWriteForbiddenMessage": "מדריכים אינם יכולים לסמן השלמות חיות. פעולה זו מזכה את הרצף והפרסים של הילד, ושמורה להורה או לילד.",
   "tutorPermissionDenied": "אין לך הרשאה לבצע עריכה זו",
