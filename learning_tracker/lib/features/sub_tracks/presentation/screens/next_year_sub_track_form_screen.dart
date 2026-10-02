@@ -26,7 +26,6 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -127,9 +126,12 @@ class _NextYearSubTrackFormScreenState
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     CaptureResult? result;
-    LearningCommands? commands;
+    SubTrackLifecycleOrigin? origin;
     try {
-      commands = await ref.read(learningCommandsProvider.future);
+      // Captured before the save so a queued result tracks under this
+      // learner even if the parent switches learners while it awaits.
+      origin = await resolveSubTrackLifecycleOrigin(ref.read);
+      final commands = origin?.commands;
       // AD-45 limits are re-checked by the shared command against the
       // latest complete sub-track read at save time, not the render-time
       // snapshot, so a year another device took after render is refused.
@@ -147,7 +149,7 @@ class _NextYearSubTrackFormScreenState
     if (result is CaptureSuccess &&
         result.queued &&
         result.changeIds.isNotEmpty &&
-        commands != null) {
+        origin != null) {
       ref
           .read(subTrackLifecycleSyncProvider.notifier)
           .track(
@@ -157,7 +159,7 @@ class _NextYearSubTrackFormScreenState
               name: draft.name,
               yearLabel: yearLabel,
             ),
-            commands,
+            origin,
           );
       navigator.pop(true);
       messenger.showSnackBar(

@@ -59,7 +59,7 @@ class _SubTrackLifecycleSyncPanelState
             write.status != SubTrackLifecycleSyncStatus.saved) {
           continue;
         }
-        notifier.remove(id);
+        notifier.remove(write);
         // Supersedes a showing "saved on this device" notice.
         messenger
           ?..hideCurrentSnackBar()
@@ -137,15 +137,14 @@ class _SubTrackLifecycleSyncPanelState
                           children: [
                             TextButton(
                               key: ValueKey('subTrackSyncRetry:${w.changeId}'),
-                              onPressed: () =>
-                                  unawaited(notifier.retry(w.changeId)),
+                              onPressed: () => unawaited(notifier.retry(w)),
                               child: Text(l10n.actionRetry),
                             ),
                             IconButton(
                               key: ValueKey('subTrackSyncClose:${w.changeId}'),
                               tooltip: l10n.actionClose,
                               icon: const Icon(Icons.close),
-                              onPressed: () => notifier.remove(w.changeId),
+                              onPressed: () => notifier.remove(w),
                             ),
                           ],
                         )

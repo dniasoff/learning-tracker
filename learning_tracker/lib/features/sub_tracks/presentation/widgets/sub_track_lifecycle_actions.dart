@@ -27,8 +27,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -92,9 +90,13 @@ Future<bool> runSubTrackLifecycleAction(
   if (!confirmed || !context.mounted) return false;
   final messenger = ScaffoldMessenger.of(context);
   CaptureResult? result;
-  LearningCommands? commands;
+  SubTrackLifecycleOrigin? origin;
   try {
-    commands = await ref.read(learningCommandsProvider.future);
+    // The learner and its commands are captured before the command runs,
+    // so a queued result tracks under that learner even if the parent
+    // switches learners while it awaits the server.
+    origin = await resolveSubTrackLifecycleOrigin(ref.read);
+    final commands = origin?.commands;
     result = await switch (action) {
       SubTrackLifecycleMenuAction.end => commands?.endSubTrack(track.id),
       SubTrackLifecycleMenuAction.delete => commands?.deleteSubTrack(track.id),
@@ -108,7 +110,7 @@ Future<bool> runSubTrackLifecycleAction(
     );
     return false;
   }
-  if (result.queued && result.changeIds.isNotEmpty && commands != null) {
+  if (result.queued && result.changeIds.isNotEmpty && origin != null) {
     ref
         .read(subTrackLifecycleSyncProvider.notifier)
         .track(
@@ -119,7 +121,7 @@ Future<bool> runSubTrackLifecycleAction(
                 : SubTrackLifecycleWrite.end,
             name: track.name,
           ),
-          commands,
+          origin,
         );
     onReturnToHub();
     messenger.showSnackBar(
