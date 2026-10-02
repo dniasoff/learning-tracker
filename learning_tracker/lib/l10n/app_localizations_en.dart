@@ -912,6 +912,155 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statActiveTracks => 'ACTIVE TRACKS';
 
   @override
+  String get subTrackLifecycleActiveGroup => 'Sub-tracks';
+
+  @override
+  String subTrackLifecycleAddNextYear(String yearLabel) {
+    return 'Add next year ($yearLabel)';
+  }
+
+  @override
+  String subTrackLifecycleAddNextYearUsed(String yearLabel) {
+    return '$yearLabel already has a school-year sub-track';
+  }
+
+  @override
+  String subTrackLifecycleAddNextYearOutOfRange(String yearLabel) {
+    return '$yearLabel is past the years you can plan';
+  }
+
+  @override
+  String get subTrackLifecycleMoreOptions => 'More options';
+
+  @override
+  String get subTrackLifecycleEndAction => 'End sub-track now';
+
+  @override
+  String get subTrackLifecycleDeleteAction => 'Delete track';
+
+  @override
+  String subTrackLifecycleDeleteTitle(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String get subTrackLifecycleDeleteBody =>
+      'Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.';
+
+  @override
+  String get subTrackLifecycleDeleteConfirm => 'Delete';
+
+  @override
+  String subTrackLifecycleEndTitle(String name) {
+    return 'End $name now?';
+  }
+
+  @override
+  String get subTrackLifecycleEndBody =>
+      'Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.';
+
+  @override
+  String get subTrackLifecycleEndConfirm => 'End sub-track';
+
+  @override
+  String subTrackLifecycleDeleted(String name) {
+    return '$name deleted';
+  }
+
+  @override
+  String subTrackLifecycleEnded(String name) {
+    return '$name ended';
+  }
+
+  @override
+  String get subTrackLifecycleActionFailed =>
+      'Couldn\'t save the change. Try again.';
+
+  @override
+  String subTrackLifecycleEndedGroup(int count) {
+    return 'Ended sub-tracks ($count)';
+  }
+
+  @override
+  String subTrackLifecycleEndedOn(String date) {
+    return 'Ended $date';
+  }
+
+  @override
+  String subTrackLifecycleEndedRowLabel(String name) {
+    return '$name, ended';
+  }
+
+  @override
+  String get subTrackLifecycleReadOnlyNote =>
+      'This sub-track has ended. It can\'t be changed.';
+
+  @override
+  String get subTrackLifecycleNotFound =>
+      'This sub-track is no longer available.';
+
+  @override
+  String subTrackLifecycleWindow(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String subTrackLifecycleWindowOpen(String start) {
+    return 'From $start';
+  }
+
+  @override
+  String get subTrackLifecycleNextYearTitle => 'Next school year';
+
+  @override
+  String subTrackLifecycleNextYearFor(String yearLabel) {
+    return 'School year $yearLabel';
+  }
+
+  @override
+  String get subTrackLifecycleFieldName => 'Name';
+
+  @override
+  String get subTrackLifecycleFieldRate => 'Units per week';
+
+  @override
+  String get subTrackLifecycleFieldWeeks => 'Weeks per year';
+
+  @override
+  String get subTrackLifecycleFieldShabbos => 'Learns on Shabbos';
+
+  @override
+  String get subTrackLifecycleFieldStartMonth => 'Starts';
+
+  @override
+  String get subTrackLifecycleFieldEndMonth => 'Ends';
+
+  @override
+  String get subTrackLifecycleNoEndMonth => 'No end month';
+
+  @override
+  String get subTrackLifecycleSave => 'Save sub-track';
+
+  @override
+  String get subTrackLifecycleNameRequired => 'Enter a name';
+
+  @override
+  String get subTrackLifecyclePositiveNumber => 'Enter a number above 0';
+
+  @override
+  String get subTrackLifecycleWindowReversed =>
+      'The end month is before the start month';
+
+  @override
+  String subTrackLifecycleNextYearSaved(String name, String yearLabel) {
+    return '$name added for $yearLabel';
+  }
+
+  @override
+  String get subTrackLifecycleSaveFailed =>
+      'Couldn\'t save the sub-track. Try again.';
+
+  @override
   String get progressChartsTile => 'Progress Charts';
 
   @override

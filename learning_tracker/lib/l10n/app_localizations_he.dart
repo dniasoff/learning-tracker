@@ -909,6 +909,153 @@ class AppLocalizationsHe extends AppLocalizations {
   String get statActiveTracks => 'מסלולים פעילים';
 
   @override
+  String get subTrackLifecycleActiveGroup => 'מסלולי משנה';
+
+  @override
+  String subTrackLifecycleAddNextYear(String yearLabel) {
+    return 'הוספת השנה הבאה ($yearLabel)';
+  }
+
+  @override
+  String subTrackLifecycleAddNextYearUsed(String yearLabel) {
+    return 'לשנה $yearLabel כבר יש מסלול שנת לימודים';
+  }
+
+  @override
+  String subTrackLifecycleAddNextYearOutOfRange(String yearLabel) {
+    return 'שנת $yearLabel מעבר לשנים שאפשר לתכנן';
+  }
+
+  @override
+  String get subTrackLifecycleMoreOptions => 'אפשרויות נוספות';
+
+  @override
+  String get subTrackLifecycleEndAction => 'סיום מסלול המשנה עכשיו';
+
+  @override
+  String get subTrackLifecycleDeleteAction => 'מחיקת המסלול';
+
+  @override
+  String subTrackLifecycleDeleteTitle(String name) {
+    return 'למחוק את $name?';
+  }
+
+  @override
+  String get subTrackLifecycleDeleteBody =>
+      'החומר שלא הושלם יחזור ללימוד בבית. כל מה שכבר נלמד יישאר ברשומת הלימוד לכל החיים.';
+
+  @override
+  String get subTrackLifecycleDeleteConfirm => 'מחיקה';
+
+  @override
+  String subTrackLifecycleEndTitle(String name) {
+    return 'לסיים את $name עכשיו?';
+  }
+
+  @override
+  String get subTrackLifecycleEndBody =>
+      'החומר שלא הושלם יחזור ללימוד בבית. כל מה שכבר נלמד יישאר ברשומת הלימוד לכל החיים.';
+
+  @override
+  String get subTrackLifecycleEndConfirm => 'סיום מסלול המשנה';
+
+  @override
+  String subTrackLifecycleDeleted(String name) {
+    return '$name נמחק';
+  }
+
+  @override
+  String subTrackLifecycleEnded(String name) {
+    return '$name הסתיים';
+  }
+
+  @override
+  String get subTrackLifecycleActionFailed =>
+      'לא ניתן היה לשמור את השינוי. נסו שוב.';
+
+  @override
+  String subTrackLifecycleEndedGroup(int count) {
+    return 'מסלולי משנה שהסתיימו ($count)';
+  }
+
+  @override
+  String subTrackLifecycleEndedOn(String date) {
+    return 'הסתיים ב$date';
+  }
+
+  @override
+  String subTrackLifecycleEndedRowLabel(String name) {
+    return '$name, הסתיים';
+  }
+
+  @override
+  String get subTrackLifecycleReadOnlyNote =>
+      'מסלול המשנה הזה הסתיים. אי אפשר לשנות אותו.';
+
+  @override
+  String get subTrackLifecycleNotFound => 'מסלול המשנה הזה כבר לא זמין.';
+
+  @override
+  String subTrackLifecycleWindow(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String subTrackLifecycleWindowOpen(String start) {
+    return 'החל מ$start';
+  }
+
+  @override
+  String get subTrackLifecycleNextYearTitle => 'שנת הלימודים הבאה';
+
+  @override
+  String subTrackLifecycleNextYearFor(String yearLabel) {
+    return 'שנת הלימודים $yearLabel';
+  }
+
+  @override
+  String get subTrackLifecycleFieldName => 'שם';
+
+  @override
+  String get subTrackLifecycleFieldRate => 'יחידות בשבוע';
+
+  @override
+  String get subTrackLifecycleFieldWeeks => 'שבועות בשנה';
+
+  @override
+  String get subTrackLifecycleFieldShabbos => 'לומד בשבת';
+
+  @override
+  String get subTrackLifecycleFieldStartMonth => 'מתחיל';
+
+  @override
+  String get subTrackLifecycleFieldEndMonth => 'מסתיים';
+
+  @override
+  String get subTrackLifecycleNoEndMonth => 'ללא חודש סיום';
+
+  @override
+  String get subTrackLifecycleSave => 'שמירת מסלול המשנה';
+
+  @override
+  String get subTrackLifecycleNameRequired => 'יש להזין שם';
+
+  @override
+  String get subTrackLifecyclePositiveNumber => 'יש להזין מספר גדול מ-0';
+
+  @override
+  String get subTrackLifecycleWindowReversed => 'חודש הסיום לפני חודש ההתחלה';
+
+  @override
+  String subTrackLifecycleNextYearSaved(String name, String yearLabel) {
+    return '$name נוסף לשנת $yearLabel';
+  }
+
+  @override
+  String get subTrackLifecycleSaveFailed =>
+      'לא ניתן היה לשמור את מסלול המשנה. נסו שוב.';
+
+  @override
   String get progressChartsTile => 'גרפי התקדמות';
 
   @override

@@ -771,6 +771,234 @@
   "statUnitsDone": "TASKS DONE",
   "statDayStreak": "DAY STREAK",
   "statActiveTracks": "ACTIVE TRACKS",
+  "subTrackLifecycleActiveGroup": "Sub-tracks",
+  "@subTrackLifecycleActiveGroup": {
+    "description": "Header of the sub-track rows on Manage tracks (interim hub section, Story 2.8). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleAddNextYear": "Add next year ({yearLabel})",
+  "@subTrackLifecycleAddNextYear": {
+    "description": "Outlined pill on a school-year sub-track detail that rolls it into the next academic year (UX-DR-28). yearLabel is e.g. 2027–28.",
+    "placeholders": {
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleAddNextYearUsed": "{yearLabel} already has a school-year sub-track",
+  "@subTrackLifecycleAddNextYearUsed": {
+    "description": "Why Add next year is disabled: the next academic year is used (UX-DR-36). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleAddNextYearOutOfRange": "{yearLabel} is past the years you can plan",
+  "@subTrackLifecycleAddNextYearOutOfRange": {
+    "description": "Why Add next year is disabled: the next academic year is past the academic-year picker range. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleMoreOptions": "More options",
+  "@subTrackLifecycleMoreOptions": {
+    "description": "Tooltip of the sub-track detail overflow (⋮) menu. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleEndAction": "End sub-track now",
+  "@subTrackLifecycleEndAction": {
+    "description": "Overflow menu action that ends a sub-track (AC-4). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleDeleteAction": "Delete track",
+  "@subTrackLifecycleDeleteAction": {
+    "description": "Overflow menu action that deletes a sub-track (UX-DR-29)."
+  },
+  "subTrackLifecycleDeleteTitle": "Delete {name}?",
+  "@subTrackLifecycleDeleteTitle": {
+    "description": "Title of the delete sub-track confirmation. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleDeleteBody": "Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.",
+  "@subTrackLifecycleDeleteBody": {
+    "description": "Message of the delete sub-track confirmation (UX-DR-81, FR-8). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleDeleteConfirm": "Delete",
+  "@subTrackLifecycleDeleteConfirm": {
+    "description": "Destructive confirm button of the delete sub-track confirmation. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleEndTitle": "End {name} now?",
+  "@subTrackLifecycleEndTitle": {
+    "description": "Title of the end sub-track confirmation. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleEndBody": "Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.",
+  "@subTrackLifecycleEndBody": {
+    "description": "Message of the end sub-track confirmation (AC-4). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleEndConfirm": "End sub-track",
+  "@subTrackLifecycleEndConfirm": {
+    "description": "Confirm button of the end sub-track confirmation. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleDeleted": "{name} deleted",
+  "@subTrackLifecycleDeleted": {
+    "description": "Snackbar after a sub-track is deleted. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleEnded": "{name} ended",
+  "@subTrackLifecycleEnded": {
+    "description": "Snackbar after a sub-track is ended. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleActionFailed": "Couldn't save the change. Try again.",
+  "@subTrackLifecycleActionFailed": {
+    "description": "Snackbar when ending or deleting a sub-track fails. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleEndedGroup": "Ended sub-tracks ({count})",
+  "@subTrackLifecycleEndedGroup": {
+    "description": "Collapsed group of ended sub-tracks on Manage tracks (UX-DR-44, UX-DR-70). Never say Completed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackLifecycleEndedOn": "Ended {date}",
+  "@subTrackLifecycleEndedOn": {
+    "description": "Muted subtitle of an ended sub-track row, e.g. Ended Jul 2026. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleEndedRowLabel": "{name}, ended",
+  "@subTrackLifecycleEndedRowLabel": {
+    "description": "Screen-reader label of an ended sub-track row. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleReadOnlyNote": "This sub-track has ended. It can't be changed.",
+  "@subTrackLifecycleReadOnlyNote": {
+    "description": "Note on the read-only detail of an ended sub-track (UX-DR-82). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleNotFound": "This sub-track is no longer available.",
+  "@subTrackLifecycleNotFound": {
+    "description": "Detail body when the sub-track cannot be found. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleWindow": "{start} – {end}",
+  "@subTrackLifecycleWindow": {
+    "description": "Sub-track window range on the lifecycle detail. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleWindowOpen": "From {start}",
+  "@subTrackLifecycleWindowOpen": {
+    "description": "Open-ended sub-track window on the lifecycle detail. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleNextYearTitle": "Next school year",
+  "@subTrackLifecycleNextYearTitle": {
+    "description": "Title of the prefilled Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleNextYearFor": "School year {yearLabel}",
+  "@subTrackLifecycleNextYearFor": {
+    "description": "The academic year the Add next year form saves for. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleFieldName": "Name",
+  "@subTrackLifecycleFieldName": {
+    "description": "Name field of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldRate": "Units per week",
+  "@subTrackLifecycleFieldRate": {
+    "description": "Rate field of the Add next year form (curriculum leaf units). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldWeeks": "Weeks per year",
+  "@subTrackLifecycleFieldWeeks": {
+    "description": "Weeks-per-year field of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldShabbos": "Learns on Shabbos",
+  "@subTrackLifecycleFieldShabbos": {
+    "description": "Shabbos switch of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldStartMonth": "Starts",
+  "@subTrackLifecycleFieldStartMonth": {
+    "description": "Start month field of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldEndMonth": "Ends",
+  "@subTrackLifecycleFieldEndMonth": {
+    "description": "End month field of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleNoEndMonth": "No end month",
+  "@subTrackLifecycleNoEndMonth": {
+    "description": "End month choice for an open-ended school year. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleSave": "Save sub-track",
+  "@subTrackLifecycleSave": {
+    "description": "Save button of the Add next year form."
+  },
+  "subTrackLifecycleNameRequired": "Enter a name",
+  "@subTrackLifecycleNameRequired": {
+    "description": "Validation: the name is empty. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecyclePositiveNumber": "Enter a number above 0",
+  "@subTrackLifecyclePositiveNumber": {
+    "description": "Validation: rate or weeks is not a positive number. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleWindowReversed": "The end month is before the start month",
+  "@subTrackLifecycleWindowReversed": {
+    "description": "Validation: the window is reversed. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleNextYearSaved": "{name} added for {yearLabel}",
+  "@subTrackLifecycleNextYearSaved": {
+    "description": "Snackbar after Add next year saves. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSaveFailed": "Couldn't save the sub-track. Try again.",
+  "@subTrackLifecycleSaveFailed": {
+    "description": "Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4."
+  },
   "progressChartsTile": "Progress Charts",
   "progressChartsTileSubtitle": "Completions, trends, and more",
   "learningLifetime": "Learning Lifetime",

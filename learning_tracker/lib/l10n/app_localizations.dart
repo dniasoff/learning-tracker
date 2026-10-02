@@ -1643,6 +1643,234 @@ abstract class AppLocalizations {
   /// **'ACTIVE TRACKS'**
   String get statActiveTracks;
 
+  /// Header of the sub-track rows on Manage tracks (interim hub section, Story 2.8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-tracks'**
+  String get subTrackLifecycleActiveGroup;
+
+  /// Outlined pill on a school-year sub-track detail that rolls it into the next academic year (UX-DR-28). yearLabel is e.g. 2027–28.
+  ///
+  /// In en, this message translates to:
+  /// **'Add next year ({yearLabel})'**
+  String subTrackLifecycleAddNextYear(String yearLabel);
+
+  /// Why Add next year is disabled: the next academic year is used (UX-DR-36). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{yearLabel} already has a school-year sub-track'**
+  String subTrackLifecycleAddNextYearUsed(String yearLabel);
+
+  /// Why Add next year is disabled: the next academic year is past the academic-year picker range. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{yearLabel} is past the years you can plan'**
+  String subTrackLifecycleAddNextYearOutOfRange(String yearLabel);
+
+  /// Tooltip of the sub-track detail overflow (⋮) menu. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get subTrackLifecycleMoreOptions;
+
+  /// Overflow menu action that ends a sub-track (AC-4). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'End sub-track now'**
+  String get subTrackLifecycleEndAction;
+
+  /// Overflow menu action that deletes a sub-track (UX-DR-29).
+  ///
+  /// In en, this message translates to:
+  /// **'Delete track'**
+  String get subTrackLifecycleDeleteAction;
+
+  /// Title of the delete sub-track confirmation. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String subTrackLifecycleDeleteTitle(String name);
+
+  /// Message of the delete sub-track confirmation (UX-DR-81, FR-8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.'**
+  String get subTrackLifecycleDeleteBody;
+
+  /// Destructive confirm button of the delete sub-track confirmation. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get subTrackLifecycleDeleteConfirm;
+
+  /// Title of the end sub-track confirmation. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'End {name} now?'**
+  String subTrackLifecycleEndTitle(String name);
+
+  /// Message of the end sub-track confirmation (AC-4). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.'**
+  String get subTrackLifecycleEndBody;
+
+  /// Confirm button of the end sub-track confirmation. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'End sub-track'**
+  String get subTrackLifecycleEndConfirm;
+
+  /// Snackbar after a sub-track is deleted. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} deleted'**
+  String subTrackLifecycleDeleted(String name);
+
+  /// Snackbar after a sub-track is ended. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} ended'**
+  String subTrackLifecycleEnded(String name);
+
+  /// Snackbar when ending or deleting a sub-track fails. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the change. Try again.'**
+  String get subTrackLifecycleActionFailed;
+
+  /// Collapsed group of ended sub-tracks on Manage tracks (UX-DR-44, UX-DR-70). Never say Completed.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended sub-tracks ({count})'**
+  String subTrackLifecycleEndedGroup(int count);
+
+  /// Muted subtitle of an ended sub-track row, e.g. Ended Jul 2026. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended {date}'**
+  String subTrackLifecycleEndedOn(String date);
+
+  /// Screen-reader label of an ended sub-track row. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, ended'**
+  String subTrackLifecycleEndedRowLabel(String name);
+
+  /// Note on the read-only detail of an ended sub-track (UX-DR-82). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'This sub-track has ended. It can\'t be changed.'**
+  String get subTrackLifecycleReadOnlyNote;
+
+  /// Detail body when the sub-track cannot be found. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'This sub-track is no longer available.'**
+  String get subTrackLifecycleNotFound;
+
+  /// Sub-track window range on the lifecycle detail. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} – {end}'**
+  String subTrackLifecycleWindow(String start, String end);
+
+  /// Open-ended sub-track window on the lifecycle detail. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'From {start}'**
+  String subTrackLifecycleWindowOpen(String start);
+
+  /// Title of the prefilled Add next year form. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Next school year'**
+  String get subTrackLifecycleNextYearTitle;
+
+  /// The academic year the Add next year form saves for. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'School year {yearLabel}'**
+  String subTrackLifecycleNextYearFor(String yearLabel);
+
+  /// Name field of the Add next year form. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get subTrackLifecycleFieldName;
+
+  /// Rate field of the Add next year form (curriculum leaf units). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Units per week'**
+  String get subTrackLifecycleFieldRate;
+
+  /// Weeks-per-year field of the Add next year form. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Weeks per year'**
+  String get subTrackLifecycleFieldWeeks;
+
+  /// Shabbos switch of the Add next year form. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Learns on Shabbos'**
+  String get subTrackLifecycleFieldShabbos;
+
+  /// Start month field of the Add next year form. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts'**
+  String get subTrackLifecycleFieldStartMonth;
+
+  /// End month field of the Add next year form. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends'**
+  String get subTrackLifecycleFieldEndMonth;
+
+  /// End month choice for an open-ended school year. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'No end month'**
+  String get subTrackLifecycleNoEndMonth;
+
+  /// Save button of the Add next year form.
+  ///
+  /// In en, this message translates to:
+  /// **'Save sub-track'**
+  String get subTrackLifecycleSave;
+
+  /// Validation: the name is empty. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name'**
+  String get subTrackLifecycleNameRequired;
+
+  /// Validation: rate or weeks is not a positive number. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number above 0'**
+  String get subTrackLifecyclePositiveNumber;
+
+  /// Validation: the window is reversed. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'The end month is before the start month'**
+  String get subTrackLifecycleWindowReversed;
+
+  /// Snackbar after Add next year saves. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} added for {yearLabel}'**
+  String subTrackLifecycleNextYearSaved(String name, String yearLabel);
+
+  /// Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the sub-track. Try again.'**
+  String get subTrackLifecycleSaveFailed;
+
   /// No description provided for @progressChartsTile.
   ///
   /// In en, this message translates to:
