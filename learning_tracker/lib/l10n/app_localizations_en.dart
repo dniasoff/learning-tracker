@@ -4142,6 +4142,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dayNameShabbos => 'Shabbos';
 
   @override
+  String erevBannerBeginsAt(String term, String time) {
+    return '$term begins at $time — record what you can before then.';
+  }
+
+  @override
+  String get erevLockIgnoredSnackbar =>
+      'Some learning was kept, not counted — it was recorded during Shabbos.';
+
+  @override
+  String erevPlannedForDay(String day) {
+    return 'Planned for $day';
+  }
+
+  @override
+  String erevPlannedTickSemantics(String item) {
+    return 'Mark $item as learnt';
+  }
+
+  @override
+  String get erevPlannedUpTo => 'Up to…';
+
+  @override
+  String get erevUpToHint => 'Tap the last one you learnt';
+
+  @override
+  String erevUpToRecord(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Record $count',
+      one: 'Record 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String erevUpToTitle(String day) {
+    return '$day · up to…';
+  }
+
+  @override
   String get statusPendingTapToAccept => 'Pending — tap to accept';
 
   @override

@@ -17,7 +17,8 @@ part 'auth_providers.g.dart';
 /// `accountAuthGatewayProvider.overrideWithValue(fake)`.
 // keepAlive: wraps the keepAlive registry; stateless itself.
 final accountAuthGatewayProvider = Provider<AccountAuthGateway>(
-  (ref) => AccountFirebaseAuthGateway(ref.watch(accountFirebaseRegistryProvider)),
+  (ref) =>
+      AccountFirebaseAuthGateway(ref.watch(accountFirebaseRegistryProvider)),
 );
 
 /// The [FirebaseAuthGateway] bound to the ACTIVE account's named-app Auth
