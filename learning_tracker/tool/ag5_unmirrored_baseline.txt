@@ -265,7 +265,6 @@ lib/features/sacred_time/domain/models/city.dart
 lib/features/sacred_time/domain/models/sacred_location.dart
 lib/features/sacred_time/domain/models/sacred_window.dart
 lib/features/sacred_time/presentation/providers/cities_provider.dart
-lib/features/sacred_time/presentation/providers/sacred_location_provider.dart
 lib/features/sacred_time/presentation/screens/city_picker_screen.dart
 lib/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart
 lib/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart

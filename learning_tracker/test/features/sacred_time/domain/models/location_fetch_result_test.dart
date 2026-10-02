@@ -32,7 +32,7 @@ void main() {
     });
 
     test('is exhaustively switchable over exactly the four variants (sealed '
-        'contract relied on by sacred_location_provider.dart and '
+        'contract relied on by learner_settings_editor_provider.dart and '
         'sacred_time_settings_card.dart)', () {
       LocationFetchResult resultOf(int i) => switch (i) {
         0 => LocationFetchSuccess(

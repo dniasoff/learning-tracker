@@ -25,7 +25,7 @@
 /// the same method body").
 ///
 /// Scope (deliberate, Rule 0 "ship the checker when you first apply the
-/// rule"): 5 of the 6 files AUD-core-preferences-04 originally named, plus
+/// rule"): 4 of the 6 files AUD-core-preferences-04 originally named, plus
 /// (for the checker's own Rule-0 self-test — see
 /// `test/tool/check_guarded_persist_test.dart`) any `.dart` file dropped
 /// into `test/fixtures/audit/guarded_persist/` (empty in the committed
@@ -38,6 +38,13 @@
 /// wired through this Riverpod controller). Its guarded-`_persist()` fix
 /// went with it, so it is dropped from scan scope rather than left as a
 /// dangling hard-error on a file that will never exist again.
+///
+/// `lib/features/sacred_time/presentation/providers/sacred_location_provider.dart`
+/// — another originally-named file — was deleted by DNI-481 (R9): the
+/// device-global Sacred Time location / in-Israel preferences it persisted
+/// are retired, and learner settings are written only as governed
+/// `learnerSettings` changes. It is dropped from scan scope for the same
+/// reason.
 ///
 /// Usage:
 ///   dart run tool/check_guarded_persist.dart
@@ -54,7 +61,6 @@ import 'dart:io';
 const _scanFiles = [
   'lib/core/preferences/preference_providers.dart',
   'lib/features/notifications/presentation/providers/notification_providers.dart',
-  'lib/features/sacred_time/presentation/providers/sacred_location_provider.dart',
   'lib/features/scheduler/presentation/providers/scheduler_providers.dart',
   'lib/features/onboarding/presentation/providers/onboarding_controller.dart',
 ];

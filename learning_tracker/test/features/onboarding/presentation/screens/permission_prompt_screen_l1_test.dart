@@ -34,8 +34,7 @@ import 'package:learning_tracker/features/sacred_time/domain/models/location_err
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart'
-    show locationServiceProvider;
+import 'package:learning_tracker/features/sacred_time/presentation/providers/location_service_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
@@ -91,8 +90,8 @@ class _FixedVariant extends CurrentTransliterationVariant {
   TransliterationVariant build() => _variant;
 }
 
-class _FakeSacredLocationNotifier {
-  _FakeSacredLocationNotifier(this.detect);
+class _DetectStub {
+  _DetectStub(this.detect);
 
   final Future<LocationFetchResult> Function() detect;
 }
@@ -102,7 +101,7 @@ class _FakeSacredLocationNotifier {
 Widget _buildApp({
   required _MockNotificationGateway notifGateway,
   required _MockStackRouter router,
-  required _FakeSacredLocationNotifier locationNotifier,
+  required _DetectStub locationNotifier,
   bool locationPermissionGranted = false,
   bool isOnboarding = false,
   Locale locale = const Locale('en'),
@@ -176,8 +175,8 @@ _MockNotificationGateway _defaultNotifGateway({
   return gw;
 }
 
-_FakeSacredLocationNotifier _locationNotifier(LocationFetchResult result) {
-  return _FakeSacredLocationNotifier(() async => result);
+_DetectStub _locationNotifier(LocationFetchResult result) {
+  return _DetectStub(() async => result);
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -512,7 +511,7 @@ void main() {
       tester,
     ) async {
       var detectCalled = false;
-      final locationNotif = _FakeSacredLocationNotifier(() async {
+      final locationNotif = _DetectStub(() async {
         detectCalled = true;
         return const LocationFetchPermissionDenied(permanentlyDenied: false);
       });

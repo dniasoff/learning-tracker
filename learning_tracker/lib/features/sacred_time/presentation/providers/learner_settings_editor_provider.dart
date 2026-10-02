@@ -23,8 +23,7 @@ import 'package:learning_tracker/features/sacred_time/domain/learner_settings_ch
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart'
-    show locationServiceProvider;
+import 'package:learning_tracker/features/sacred_time/presentation/providers/location_service_provider.dart';
 
 /// The current settings of the active learner: `AsyncData(null)` while no
 /// learner is active, loading while the scope or the settings load, and an

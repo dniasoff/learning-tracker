@@ -13,7 +13,7 @@
 ///   The full first-run happy path requires AddTrackFlow (a multi-step track
 ///   wizard that needs the bundled content database and several native service
 ///   providers), PermissionPromptScreen (which calls
-///   NotificationGateway.requestPermission / SacredLocationNotifier.detect —
+///   NotificationGateway.requestPermission / LearnerSettingsEditor.detect —
 ///   native platform channels that the headless harness cannot exercise), and
 ///   a final routing to the AppShellRoute dashboard.  These surface-level
 ///   integrations require a physical or emulator device via integration_test.
@@ -36,7 +36,7 @@ void main() {
   group('E2E-101 — Full first-run adult happy path', () {
     // SKIP: device-test required — AddTrackFlow needs the bundled content DB
     // and a full track wizard flow; PermissionPromptScreen calls
-    // NotificationGateway.requestPermission / SacredLocationNotifier.detect
+    // NotificationGateway.requestPermission / LearnerSettingsEditor.detect
     // which are native platform channels the headless harness cannot exercise.
     // Covered by integration_test on a physical or emulator device.
     testWidgets(
