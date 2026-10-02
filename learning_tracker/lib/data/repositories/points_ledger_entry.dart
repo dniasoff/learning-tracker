@@ -201,7 +201,17 @@ extension PointsLedgerEntryFirestoreCodec on PointsLedgerEntry {
 /// field here) would make a pre-existing, perfectly valid entry invisible
 /// from every read purely because it predates this field — worse than
 /// decoding it into the safe-by-construction default.
-PointsLedgerEntry pointsLedgerEntryFromFirestore(Map<String, dynamic> data) {
+///
+/// **A `pts_` document is always an event entry (AD-50).** [docId] (the
+/// Firestore document id, defaulting to the stored `ulid`) of the form
+/// `pts_{eventId}` keys the entry to that event even when its `event_id`
+/// field is missing (a legacy or malformed row), so the filtered sums count
+/// it only while that event earns and it is never summed as a non-event
+/// row.
+PointsLedgerEntry pointsLedgerEntryFromFirestore(
+  Map<String, dynamic> data, {
+  String? docId,
+}) {
   final ulid = data['ulid'] as String?;
   final entryKind = data['entry_kind'] as String?;
   final delta = FirestoreCodec.parseInt(data['delta']);
@@ -220,8 +230,15 @@ PointsLedgerEntry pointsLedgerEntryFromFirestore(Map<String, dynamic> data) {
     redemptionUlid: data['redemption_ulid'] as String?,
     createdAt: createdAt,
     source: _parseSource(data['source']),
-    eventId: data['event_id'] as String?,
+    eventId: data['event_id'] as String? ?? _ptsEventIdOf(docId ?? ulid),
   );
+}
+
+/// The event id a `pts_{eventId}` document id names, else null.
+String? _ptsEventIdOf(String id) {
+  const prefix = 'pts_';
+  if (!id.startsWith(prefix) || id.length == prefix.length) return null;
+  return id.substring(prefix.length);
 }
 
 /// Parses `source`, defaulting to [CompletionSource.live] when [raw] is

@@ -540,6 +540,59 @@ void main() {
       expect((await repo.getLedger()).length, before);
     });
 
+    test('a legacy pts_ row with no event_id is never a non-event row: it '
+        'counts only while the event its doc id names earns', () async {
+      final repo = buildRepo();
+      // Legacy rows at pts_{eventId} written before capture wrote event_id:
+      // one whose stored ulid is the doc id, one whose ulid differs.
+      await rawDoc('pts_evLegacy').set({
+        'ulid': 'pts_evLegacy',
+        'entry_kind': 'completion',
+        'delta': 40,
+        'created_at': DateTime.utc(2026, 6, 1),
+        'source': 'live',
+      });
+      await rawDoc('pts_evOther').set({
+        'ulid': '01J0000000000000000000LEGA',
+        'entry_kind': 'completion',
+        'delta': 25,
+        'created_at': DateTime.utc(2026, 6, 1),
+        'source': 'live',
+      });
+      await repo.append(
+        entryKind: 'parent_add',
+        delta: 2,
+        createdAt: DateTime.utc(2026, 6, 2),
+      );
+
+      final ledger = await repo.getLedger();
+      expect(
+        {for (final e in ledger) e.eventId},
+        {'evLegacy', 'evOther', null},
+      );
+
+      // Neither event earns: only the adjustment counts, toward both.
+      expect(
+        await repo.getTotals(earningEventIds: const {}),
+        const PointsTotals(balance: 2, lifetimeEarned: 2),
+      );
+      // resolveTotals sees them as event rows, so it consults the engine.
+      var resolved = 0;
+      expect(
+        await repo.resolveTotals(() async {
+          resolved++;
+          return const <String>{};
+        }),
+        const PointsTotals(balance: 2, lifetimeEarned: 2),
+      );
+      expect(resolved, 1);
+      // Once the engine says evLegacy earns, it counts like any award.
+      expect(
+        await repo.getTotals(earningEventIds: {'evLegacy'}),
+        const PointsTotals(balance: 42, lifetimeEarned: 42),
+      );
+    });
+
     test('resolveTotals reads the earning set only when the ledger holds '
         'event rows', () async {
       final repo = buildRepo();

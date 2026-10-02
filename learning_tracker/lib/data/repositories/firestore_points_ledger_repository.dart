@@ -189,7 +189,10 @@ class FirestorePointsLedgerRepository {
   PointsLedgerEntry? _decode(DocumentSnapshot<Map<String, dynamic>> snapshot) {
     final data = snapshot.data();
     if (data == null) return null;
-    return pointsLedgerEntryFromFirestore(_normalizeForDecode(data));
+    return pointsLedgerEntryFromFirestore(
+      _normalizeForDecode(data),
+      docId: snapshot.id,
+    );
   }
 
   /// Decodes every document in [docs], skipping (and logging) any single
@@ -203,7 +206,10 @@ class FirestorePointsLedgerRepository {
     for (final doc in docs) {
       try {
         results.add(
-          pointsLedgerEntryFromFirestore(_normalizeForDecode(doc.data())),
+          pointsLedgerEntryFromFirestore(
+            _normalizeForDecode(doc.data()),
+            docId: doc.id,
+          ),
         );
       } catch (error, stackTrace) {
         _logger.warning(
@@ -278,7 +284,10 @@ class FirestorePointsLedgerRepository {
     final existingSnapshot = await ref.get();
     final existingData = existingSnapshot.data();
     if (existingData != null) {
-      return pointsLedgerEntryFromFirestore(_normalizeForDecode(existingData));
+      return pointsLedgerEntryFromFirestore(
+        _normalizeForDecode(existingData),
+        docId: existingSnapshot.id,
+      );
     }
 
     final entry = PointsLedgerEntry(
@@ -310,7 +319,9 @@ class FirestorePointsLedgerRepository {
   ///
   /// * A `pts_{eventId}` row counts only while its event earns; a voided,
   ///   ineligible or orphan event row counts nothing. No reversal rows
-  ///   exist, so a void lowers both totals.
+  ///   exist, so a void lowers both totals. A `pts_` row missing its
+  ///   `event_id` is keyed by its doc id (`pointsLedgerEntryFromFirestore`),
+  ///   so it too counts only while that event earns.
   /// * A non-event row (spend, refund, parent adjustment) always counts
   ///   toward the balance, and toward lifetime only when it is a positive
   ///   `completion`/`parent_add` row: spends and refunds never raise it.
@@ -392,8 +403,10 @@ class FirestorePointsLedgerRepository {
           .orderBy(FieldPath.documentId, descending: true)
           .limit(boundedLimit)
           .snapshots(),
-      decode: (doc) =>
-          pointsLedgerEntryFromFirestore(_normalizeForDecode(doc.data())),
+      decode: (doc) => pointsLedgerEntryFromFirestore(
+        _normalizeForDecode(doc.data()),
+        docId: doc.id,
+      ),
       onError: (error, stackTrace) => _logger.warning(
         event: 'firestore_points_ledger_watch_recent_error',
         exception: error,
