@@ -13,7 +13,10 @@
 ///   capture, or a chunk the server rejects — within the ack window or
 ///   later (`PendingCaptureRollback`, UX-DR-110) — removes exactly its
 ///   leaves again; an entry is pruned once the engine counts (or
-///   lock-ignores) its events.
+///   lock-ignores) its events. Each entry carries the [LearnerScope] it was
+///   captured for and is only ever read for that scope
+///   ([activePendingRefsProvider]), so a capture still queued for one
+///   profile never shows as recorded on another after a profile switch.
 library;
 
 import 'package:flutter/material.dart';
@@ -22,11 +25,13 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_capture_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -79,6 +84,7 @@ final class PendingCapture {
   /// Creates the entry.
   PendingCapture({
     required this.token,
+    required this.scope,
     required this.curriculumId,
     required this.source,
     required Map<String, LeafRef> refs,
@@ -86,6 +92,9 @@ final class PendingCapture {
 
   /// The local id of the capture while its event ids are unknown.
   final int token;
+
+  /// The learner profile the capture was made for.
+  final LearnerScope scope;
 
   /// The curriculum storage key.
   final String curriculumId;
@@ -110,10 +119,17 @@ final class PendingCaptures {
   /// The entries, oldest first.
   final List<PendingCapture> entries;
 
-  /// The leaves pending for [source] in [curriculumId].
-  Set<LeafRef> refsOf(String curriculumId, String source) => {
+  /// The leaves pending for [source] in [curriculumId] of the learner
+  /// [scope]; none when [scope] is null (no active learner).
+  Set<LeafRef> refsOf(
+    LearnerScope? scope,
+    String curriculumId,
+    String source,
+  ) => {
     for (final e in entries)
-      if (e.curriculumId == curriculumId && e.source == source)
+      if (e.scope == scope &&
+          e.curriculumId == curriculumId &&
+          e.source == source)
         ...e.refs.values,
   };
 
@@ -148,13 +164,20 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
     return PendingCaptures.empty;
   }
 
-  /// Marks [refs] of [source] pending; returns the capture's token.
-  int add(String curriculumId, String source, List<LeafRef> refs) {
+  /// Marks [refs] of [source] pending for the learner [scope]; returns the
+  /// capture's token.
+  int add(
+    LearnerScope scope,
+    String curriculumId,
+    String source,
+    List<LeafRef> refs,
+  ) {
     final token = _next++;
     state = PendingCaptures([
       ...state.entries,
       PendingCapture(
         token: token,
+        scope: scope,
         curriculumId: curriculumId,
         source: source,
         refs: {for (final (i, r) in refs.indexed) '#$token/$i': r},
@@ -189,6 +212,7 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
               when leaves.length == plannedIds.length)
             PendingCapture(
               token: token,
+              scope: e.scope,
               curriculumId: e.curriculumId,
               source: e.source,
               refs: {
@@ -229,6 +253,9 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
   /// Forgets the failure of [eventIds]: a retry saved them.
   void retried(Iterable<String> eventIds) => _failed.removeAll(eventIds);
 
+  // Event ids are client ULIDs, unique across profiles, so pruning by id
+  // against the active learner's state never touches another profile's
+  // entries.
   void _prune(LearnerState s) => _rebuild(
     (id) =>
         s.countedEventIds.contains(id) || s.lockIgnoredEventIds.contains(id),
@@ -252,6 +279,7 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
             ? e
             : PendingCapture(
                 token: e.token,
+                scope: e.scope,
                 curriculumId: e.curriculumId,
                 source: e.source,
                 refs: kept,
@@ -262,11 +290,31 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
   }
 }
 
-/// This device's pending Up to… / +1 captures.
+/// This device's pending Up to… / +1 captures, for every profile. Read
+/// the leaves through [activePendingRefsProvider], never across scopes.
 final pendingCapturesProvider =
     NotifierProvider<PendingCapturesNotifier, PendingCaptures>(
       PendingCapturesNotifier.new,
     );
+
+/// The active learner's scope as the pending overlay sees it: null while
+/// none is resolved (loading, failed or no learner), so nothing reads as
+/// pending mid-switch.
+final pendingCaptureScopeProvider = Provider.autoDispose<LearnerScope?>(
+  (ref) => ref.watch(activeLearnerScopeProvider).asData?.value,
+);
+
+/// The leaves of `source` in `curriculumId` this device captured for the
+/// ACTIVE learner and the engine has not derived yet.
+final activePendingRefsProvider = Provider.autoDispose
+    .family<Set<LeafRef>, ({String curriculumId, String source})>((ref, key) {
+      final scope = ref.watch(pendingCaptureScopeProvider);
+      return ref.watch(
+        pendingCapturesProvider.select(
+          (p) => p.refsOf(scope, key.curriculumId, key.source),
+        ),
+      );
+    });
 
 /// Records [refs] (leaves, in track order) of [curriculumId] from [source]
 /// as ONE capture: `dated`, `learned_on` = civil today, [stage] only for
@@ -288,9 +336,16 @@ Future<CaptureResult?> captureLeaves(
   // A tutor capture (once DNI-486 binds tutor commands) is shown only
   // when its callable has answered (AD-53): no optimistic overlay in a
   // tutored session.
-  final optimistic = ref.read(activeTutoredProfileSelectionProvider) == null;
+  //
+  // The overlay entry is bound to the learner the capture is for, so it
+  // never reads as recorded on another profile (cross-profile isolation).
+  final scope = ref.read(activeLearnerScopeProvider).asData?.value;
+  final optimistic =
+      scope != null && ref.read(activeTutoredProfileSelectionProvider) == null;
   final pending = ref.read(pendingCapturesProvider.notifier);
-  final token = optimistic ? pending.add(curriculumId, source, refs) : -1;
+  final token = optimistic
+      ? pending.add(scope, curriculumId, source, refs)
+      : -1;
   void notSaved() {
     if (optimistic) pending.dropToken(token);
     messenger.showSnackBar(

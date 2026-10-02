@@ -10,6 +10,7 @@ export 'presentation/providers/sub_track_session.dart';
 export 'presentation/providers/sub_track_capture_providers.dart'
     show
         SubTrackSourceChoice,
+        activePendingRefsProvider,
         captureLeaves,
         mainTrackCaptureAllowedProvider,
         pendingCapturesProvider,
