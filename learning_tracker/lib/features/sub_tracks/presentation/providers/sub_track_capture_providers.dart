@@ -33,10 +33,21 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Whether the session may write sub-track learning: false on a tutor
 /// device (tutor sub-track writes are read-only until a later epic, Story
-/// 2.9 AC-9; AC-11). Owner-device capture (`LearningCommands`) is null in
-/// a tutored session too, so the main-track Up to… follows the same flag.
+/// 2.9 AC-9; AC-11). It gates sub-track surfaces only, never main-track
+/// capture ([mainTrackCaptureAllowedProvider]).
 final subTrackWritesAllowedProvider = Provider.autoDispose<bool>(
   (ref) => ref.watch(activeTutoredProfileSelectionProvider) == null,
+);
+
+/// Whether the session can capture main-track learning (AC-5): whenever
+/// the active learner has [LearningCommands]. On a tutor device those are
+/// the talmid's tutor commands, every write a callable through
+/// `TutorWriteService` (AD-53, Story 1.24); while a session has no write
+/// path the main-track Up to… is absent rather than dead. A tutored
+/// session alone never hides it: only tutor sub-track surfaces are
+/// read-only.
+final mainTrackCaptureAllowedProvider = Provider.autoDispose<bool>(
+  (ref) => ref.watch(learningCommandsProvider).asData?.value != null,
 );
 
 /// A sub-track a capture or a source correction may name.
@@ -259,10 +270,13 @@ Future<CaptureResult?> captureLeaves(
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
   final warningFill = context.colors.warningSnackbarFill;
+  // A tutor capture is shown only once its callable has answered (AD-53):
+  // no optimistic overlay in a tutored session.
+  final optimistic = ref.read(activeTutoredProfileSelectionProvider) == null;
   final pending = ref.read(pendingCapturesProvider.notifier);
-  final token = pending.add(curriculumId, source, refs);
+  final token = optimistic ? pending.add(curriculumId, source, refs) : -1;
   void notSaved() {
-    pending.dropToken(token);
+    if (optimistic) pending.dropToken(token);
     messenger.showSnackBar(
       SnackBar(
         content: Text(l10n.captureNotSaved),
@@ -290,19 +304,22 @@ Future<CaptureResult?> captureLeaves(
     notSaved();
     return null;
   }
-  if (result case CaptureSuccess(
-    :final eventIds,
-    :final rejectedEventIds,
-  ) when eventIds.isNotEmpty) {
-    // A partly rejected capture omits the rejected chunks from `eventIds`:
-    // the sorted union is the plan, one id per leaf in leaf order.
-    pending.bind(
-      token,
-      [...eventIds, ...rejectedEventIds]..sort(),
-      notSaved: rejectedEventIds,
-    );
-  } else {
-    pending.dropToken(token);
+  if (optimistic) {
+    if (result case CaptureSuccess(
+      :final eventIds,
+      :final rejectedEventIds,
+    ) when eventIds.isNotEmpty) {
+      // A partly rejected capture omits the rejected chunks from
+      // `eventIds`: the sorted union is the plan, one id per leaf in leaf
+      // order.
+      pending.bind(
+        token,
+        [...eventIds, ...rejectedEventIds]..sort(),
+        notSaved: rejectedEventIds,
+      );
+    } else {
+      pending.dropToken(token);
+    }
   }
   if (!context.mounted) return result;
   showCaptureOutcome(
@@ -315,7 +332,7 @@ Future<CaptureResult?> captureLeaves(
     ),
     messenger: messenger,
     onUndone: () {
-      if (result case CaptureSuccess(:final eventIds)) {
+      if (result case CaptureSuccess(:final eventIds) when optimistic) {
         pending.dropEvents(eventIds);
       }
     },

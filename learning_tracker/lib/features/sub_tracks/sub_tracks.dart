@@ -11,6 +11,7 @@ export 'presentation/providers/sub_track_capture_providers.dart'
     show
         SubTrackSourceChoice,
         captureLeaves,
+        mainTrackCaptureAllowedProvider,
         pendingCapturesProvider,
         subTrackSourceChoicesProvider,
         subTrackWritesAllowedProvider;

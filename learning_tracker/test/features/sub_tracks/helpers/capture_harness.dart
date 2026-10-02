@@ -157,9 +157,14 @@ final class CaptureRig {
     yield* _states.stream;
   }
 
-  /// The provider overrides wiring the rig into a widget tree.
-  List<Override> overrides() => [
-    ...learnerStateOverrides(scope: c0Scope(), commands: commands),
+  /// The provider overrides wiring the rig into a widget tree. Without
+  /// [withCommands], `learningCommandsProvider` keeps its real body (null
+  /// in a tutored session with no tutor write path bound).
+  List<Override> overrides({bool withCommands = true}) => [
+    ...learnerStateOverrides(
+      scope: c0Scope(),
+      commands: withCommands ? commands : null,
+    ),
     learnerStateProvider.overrideWith((ref, _) => _watch()),
     activeSubTracksProvider.overrideWith((ref) => Stream.value(subTracks)),
     ...upToLabelOverrides(),

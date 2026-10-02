@@ -61,6 +61,7 @@ class _Tutored extends ActiveTutoredProfileSelection {
 Future<(CaptureRig, List<int>)> _pump(
   WidgetTester tester, {
   bool tutored = false,
+  bool withCommands = true,
 }) async {
   final rig = CaptureRig(now: _morning);
   addTearDown(rig.dispose);
@@ -69,7 +70,7 @@ Future<(CaptureRig, List<int>)> _pump(
   await tester.pumpWidget(
     pumpApp(
       overrides: [
-        ...rig.overrides(),
+        ...rig.overrides(withCommands: withCommands),
         allDailyTasksProvider.overrideWith((ref) async {
           builds[0]++;
           return _tasks;
@@ -226,8 +227,49 @@ void main() {
     expect(find.text('Berakhot 1:1'), findsOneWidget);
   });
 
-  testWidgets('absent in a tutored session', (tester) async {
-    await _pump(tester, tutored: true);
+  testWidgets('a tutored session keeps main-track Up to…: the run goes '
+      'through the session\'s learning commands (the tutor callables) as '
+      'main, dated, first-stage events, shown only once they answer', (
+    tester,
+  ) async {
+    // rig.commands stands in for the talmid's tutor commands, which
+    // learningCommandsProvider returns in a tutored session once the tutor
+    // write path (TutorWriteService, Story 1.24) is bound. Tutor sub-track
+    // rows stay read-only (AC-11, covered by the sub-track tests).
+    final (rig, _) = await _pump(tester, tutored: true);
+    expect(find.byKey(const Key('mainTrackUpTo-mishnayos')), findsOneWidget);
+
+    rig.port.holdNext();
+    await _recordThrough12(tester);
+    await tester.pump();
+    expect(
+      _pendingMain(tester),
+      isEmpty,
+      reason: 'no optimistic overlay for a tutor capture (AD-53)',
+    );
+    rig.port.release();
+    await tester.pumpAndSettle();
+    expect(
+      [for (final e in rig.written) e.ref],
+      ['Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:2'],
+    );
+    for (final e in rig.written) {
+      expect(e.source, LearningEvent.sourceMain);
+      expect(e.dateState, DateState.dated);
+      expect(e.stage, 1);
+    }
+    expect(rig.awards, hasLength(2));
+    expect(_pendingMain(tester), isEmpty);
+    expect(rig.state.curricula[engineCurriculum]!.learntLeaves, {
+      'Mishnah Berakhot 1:1',
+      'Mishnah Berakhot 1:2',
+    });
+  });
+
+  testWidgets('absent in a tutored session with no tutor write path bound', (
+    tester,
+  ) async {
+    await _pump(tester, tutored: true, withCommands: false);
     expect(find.byKey(const Key('mainTrackUpTo-mishnayos')), findsNothing);
   });
 }
