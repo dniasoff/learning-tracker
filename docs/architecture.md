@@ -308,10 +308,8 @@ flowchart TD
     M -- No --> O["Retained in Outbox (up to 5 retries)"]
     O --> N
 
-    E --> P["SchedulerEngine recalculates"]
-    P --> Q["Load stage configs"]
-    P --> R["Analyze pace (7-day rolling avg)"]
-    P --> S["Assemble daily tasks"]
+    E --> P["LearnerState recomputes (engine)"]
+    P --> S["Planner lays out daily tasks"]
     S --> K
 
     K --> T["Dashboard UI renders"]
@@ -331,11 +329,13 @@ When a user completes an item, `CompletionWriter.commit` opens a single Drift tr
 
 ### Scheduling Pipeline
 
-The `SchedulerEngine` runs three phases each time it recalculates:
+The planner (`lib/features/scheduler/domain/services/daily_task_projection_service.dart`, DNI-477, AD-49) never computes a quantity. It lays out the learner-state engine's output for a date:
 
-1. **Data loading** — Reads completions, stage configurations, and the content tree.
-2. **Analysis** — Calculates pace using a 7-day rolling average; determines what is due.
-3. **Task assembly** — Produces the daily task list based on schedule type (delay, weekly, or rolling).
+1. **Main track** — the engine's position, current unit and `schedulableRefs`, up to `dailyTarget` when a deadline exists, else `paceRate`, else nothing. A day's batch stays in one masechta except on the day it finishes and the next begins (FR-12a). A review-only day shows no new learning.
+2. **Calendar programs** — `programBacklog(date)` (overdue days) ∪ `programAssignments(date)` (today's day), less what is learnt.
+3. **Chazara** — `reviewsDue(date)`, with each review's stage order and due date from the engine (the only review scheduler, AD-35).
+
+`plannedTasksForDateProvider(date)` evaluates this live over the current `LearnerState` and never persists a plan; `allDailyTasksProvider` is today's list with skip handling. The erev planned list of an upcoming locked day is the same provider for that date.
 
 ---
 

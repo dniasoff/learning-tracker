@@ -18,7 +18,7 @@
 ///
 /// Retired here (AD-49 R4): the legacy self-paced projection and its
 /// "Behind pace" accrual, the deadline-to-pace derivation, the reorder
-/// amnesty, `SchedulerEngine`'s order build and due-review computation, and
+/// amnesty, the scheduler engine's order build and due-review computation, and
 /// the daily-plan snapshot of its chazara.
 library;
 
@@ -409,14 +409,12 @@ Future<List<CalendarProgramEntry>> programCalendarSchedule({
   );
   if (entries.isNotEmpty) return entries;
 
-  // Calendar engine returned nothing for the range — fall back to just today.
-  // F-M1: ensure the fallback entry's date field is populated with `today`
-  // so that buildProjectionTasks classifies it correctly (dueToday, not
-  // overdue) when building calendarEntries from entry.date.
+  // Calendar engine returned nothing for the range — fall back to just today,
+  // with its date field populated (F-M1).
   final todayEntry = await calendarService.getEntry(programKey, today);
   if (todayEntry == null) return const [];
   // If the engine already populated date, use it directly; otherwise stamp
-  // today explicitly so the projection path never sees a null date.
+  // today explicitly so a caller never sees a null date.
   final entryWithDate = todayEntry.date != null
       ? todayEntry
       : CalendarProgramEntry(
