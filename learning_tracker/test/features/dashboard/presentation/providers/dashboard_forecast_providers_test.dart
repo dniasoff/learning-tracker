@@ -7,11 +7,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
+import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 
 import '../../../../helpers/dashboard/forecast_fixtures.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/provider_settle.dart';
+
+/// Bumped to re-resolve the learner scope (a profile switch).
+final _epoch = NotifierProvider<_Epoch, int>(_Epoch.new);
+
+class _Epoch extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
 
 ProviderContainer _container({bool parent = true, LearnerState? state}) {
   final container = ProviderContainer(
@@ -126,6 +140,51 @@ void main() {
     addTearDown(container.dispose);
     final value = await _settledForecast(container);
     expect(value, isA<AsyncError<List<CurriculumForecast>>>());
+  });
+
+  test('a profile switch never serves the previous learner\'s forecast or '
+      'today figures (NFR-9)', () async {
+    final learnerA = c0Scope(ownerUid: 'owner-a');
+    final learnerB = c0Scope(ownerUid: 'owner-b');
+    final next = Completer<LearnerScope>();
+    var scopeBuilds = 0;
+    LearnerState stateOf(int target) => forecastState([
+      forecastCurriculumState(projection: _projection, dailyTarget: target),
+    ]);
+    final container = ProviderContainer(
+      overrides: [
+        parentSessionProvider.overrideWith((ref) async => true),
+        activeLearnerScopeProvider.overrideWith((ref) async {
+          ref.watch(_epoch);
+          return ++scopeBuilds == 1 ? learnerA : next.future;
+        }),
+        learnerStateProvider.overrideWith(
+          (ref, scope) => Stream.value(stateOf(scope == learnerA ? 4 : 9)),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    final forecast = container.listen(parentForecastProvider, (_, _) {});
+    final today = container.listen(learnerTodayProvider, (_, _) {});
+    addTearDown(forecast.close);
+    addTearDown(today.close);
+    await _settledForecast(container);
+    expect(forecast.read().requireValue.single.dailyTarget, 4);
+    expect(today.read().requireValue.single.target, 4);
+
+    container.read(_epoch.notifier).bump();
+    await pumpEventQueue();
+    // The scope re-resolves while Riverpod still retains learner A.
+    final scope = container.read(activeLearnerScopeProvider);
+    expect(scope.isLoading, isTrue);
+    expect(scope.value, learnerA);
+    expect(forecast.read().hasValue, isFalse);
+    expect(today.read().hasValue, isFalse);
+
+    next.complete(learnerB);
+    await pumpEventQueue();
+    expect(forecast.read().requireValue.single.dailyTarget, 9);
+    expect(today.read().requireValue.single.target, 9);
   });
 
   test('the detail opener is bound in production (AC-5)', () {
