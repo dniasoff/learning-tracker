@@ -5,14 +5,21 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
 
 import '../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../helpers/learner_state_fixtures.dart';
@@ -164,6 +171,206 @@ void main() {
         'action': 'add_next_year',
         'ground_entries': 0,
       });
+    });
+  });
+
+  group('AC-1 save next-year school track', () {
+    test('one new doc and one subTrack entry; the source and its ground are '
+        'unchanged; the copied values survive the codec', () async {
+      final source = repo.tracksOf(scope).single;
+      final result = await commands.createSubTrack(
+        nextYearSubTrackDraft(source),
+        addNextYear: true,
+      );
+      expect(result, isA<CaptureSuccess>());
+      final entry = repo.entries.single.$2;
+      expect(entry.entity, GovernedEntity.subTrack);
+      expect(entry.before.values, everyElement(isNull));
+      final created = repo.tracksOf(scope).firstWhere((t) => t.id != ulidA);
+      expect(entry.entityId, created.id);
+      expect(created.id, isNot(source.id));
+      expect(repo.tracksOf(scope).firstWhere((t) => t.id == ulidA), source);
+      expect(source.ground, const [_berakhot]);
+      expect(created.name, source.name);
+      expect(created.academicYear, 2027);
+      expect(created.windowStart, '2027-09-01');
+      expect(created.windowEnd, '2028-07-31');
+      expect(created.ratePerWeek, 8);
+      expect(created.weeksPerYear, 36);
+      expect(created.learnsOnShabbos, isTrue);
+      expect(created.ground, isEmpty);
+      expect(
+        SubTrack.fromStorage(created.id, created.toStorage()),
+        created,
+        reason: 'codec round-trip',
+      );
+    });
+
+    test('a leap-February end copies to the leap day and saves', () async {
+      repo.seed(scope, [
+        _school(
+          id: ulidB,
+          academicYear: 2025,
+          windowStart: '2025-09-01',
+          windowEnd: '2026-02-28',
+        ),
+      ]);
+      // A 2026–27 School already exists, so roll the 2025–26 one only into
+      // a free year: drop the live 2026 one first.
+      await commands.deleteSubTrack(ulidA);
+      final source = repo.tracksOf(scope).firstWhere((t) => t.id == ulidB);
+      final draft = nextYearSubTrackDraft(source);
+      expect(draft.windowEnd, '2027-02-28');
+      final leap = nextYearSubTrackDraft(
+        _school(academicYear: 2026, windowEnd: '2027-02-28'),
+      );
+      expect(leap.windowEnd, '2028-02-29');
+      expect(
+        await commands.createSubTrack(draft, addNextYear: true),
+        isA<CaptureSuccess>(),
+      );
+    });
+
+    test('Y+1 taken by another device after render is refused before any '
+        'write', () async {
+      repo.seed(scope, [
+        _school(
+          id: ulidB,
+          academicYear: 2027,
+          windowStart: '2027-09-01',
+          windowEnd: '2028-07-31',
+        ),
+      ]);
+      final result = await commands.createSubTrack(
+        nextYearSubTrackDraft(_school()),
+        addNextYear: true,
+      );
+      expect(result, isA<CaptureRejected>());
+      expect(repo.calls, isEmpty);
+      expect(repo.entries, isEmpty);
+    });
+  });
+
+  group('AC-3 / AC-4 tombstones only the sub-track', () {
+    for (final (name, reason) in [
+      ('delete', SubTrackEndReason.deleted),
+      ('end', SubTrackEndReason.ended),
+    ]) {
+      test('$name changes and logs only ended_at and end_reason', () async {
+        final result = reason == SubTrackEndReason.deleted
+            ? await commands.deleteSubTrack(ulidA)
+            : await commands.endSubTrack(ulidA);
+        expect(result, isA<CaptureSuccess>());
+        final change = repo.calls.single.$2;
+        expect(change.isCreate, isFalse);
+        expect(change.changedFields.keys.toSet(), {'ended_at', 'end_reason'});
+        expect(change.changedFields['end_reason'], reason.storage);
+        final entry = repo.entries.single.$2;
+        expect(entry.entityId, ulidA);
+        expect(entry.after.keys.toSet(), {
+          'sub_tracks/$ulidA.ended_at',
+          'sub_tracks/$ulidA.end_reason',
+        });
+        final stored = repo.tracksOf(scope).single;
+        expect(stored.endReason, reason);
+        expect(stored.endedAt, _now);
+        // The stored name is still the source label of its events (FR-8).
+        expect(stored.name, 'School');
+        expect(stored.ground, const [_berakhot]);
+      });
+    }
+
+    test('a retry after a refusal logs exactly once; a second delete writes '
+        'nothing', () async {
+      repo.failNextWith(const PermanentWriteRejection('permission-denied'));
+      expect(await commands.deleteSubTrack(ulidA), isA<CaptureRejected>());
+      expect(repo.entries, isEmpty);
+      expect(repo.tracksOf(scope).single.endedAt, isNull);
+      expect(analytics.lifecycles, isEmpty);
+
+      expect(await commands.deleteSubTrack(ulidA), isA<CaptureSuccess>());
+      expect(await commands.deleteSubTrack(ulidA), isA<CaptureSuccess>());
+      expect(await commands.endSubTrack(ulidA), isA<CaptureSuccess>());
+      expect(repo.entries, hasLength(1));
+      expect(analytics.lifecycles, hasLength(1));
+      expect(repo.tracksOf(scope).single.endReason, SubTrackEndReason.deleted);
+    });
+
+    test('offline: the delete is queued, applied locally and acknowledged '
+        'once', () async {
+      repo.offline = true;
+      final result = await commands.deleteSubTrack(ulidA);
+      expect(result, isA<CaptureSuccess>());
+      expect((result as CaptureSuccess).queued, isTrue);
+      expect(repo.tracksOf(scope).single.endReason, SubTrackEndReason.deleted);
+      repo.settleHeld();
+      expect(repo.entries, hasLength(1));
+    });
+
+    test(
+      'an already-ended source: a later delete writes nothing new',
+      () async {
+        repo.seed(scope, [
+          _school(
+            id: ulidB,
+            academicYear: 2027,
+            windowStart: '2027-09-01',
+            windowEnd: '2028-07-31',
+          ),
+        ]);
+        await commands.endSubTrack(ulidB);
+        repo.calls.clear();
+        expect(await commands.deleteSubTrack(ulidB), isA<CaptureSuccess>());
+        expect(repo.calls, isEmpty);
+      },
+    );
+  });
+
+  group('engine: an explicit end returns ground and keeps every event', () {
+    SubTrack sub(SubTrackEndReason? reason) => SubTrack(
+      id: engineUlid(10),
+      curriculumId: engineCurriculum,
+      name: 'School',
+      type: SubTrackType.ongoing,
+      windowStart: '2026-09-01',
+      ratePerWeek: 2,
+      weeksPerYear: 40,
+      learnsOnShabbos: false,
+      ground: const [berakhot2],
+      lastChangeId: engineUlid(11),
+      endedAt: reason == null ? null : engineAt(5),
+      endReason: reason,
+    );
+
+    test('delete/end both recompute the schedule; the event still counts', () {
+      final events = [
+        engineLearn(1, 'Mishnah Berakhot 2:1', source: engineUlid(10)),
+      ];
+      final before = List<LearningEvent>.of(events);
+      final live = const LearnerStateEngine().run(
+        engineInputs(events: events, subTracks: [sub(null)]),
+      );
+      expect(
+        live[engineCurriculum]!.schedulableRefs,
+        isNot(contains('Mishnah Berakhot 2:2')),
+      );
+      for (final reason in [
+        SubTrackEndReason.deleted,
+        SubTrackEndReason.ended,
+      ]) {
+        final ended = const LearnerStateEngine().run(
+          engineInputs(events: events, subTracks: [sub(reason)]),
+        );
+        final state = ended[engineCurriculum]!;
+        expect(state.schedulableRefs, contains('Mishnah Berakhot 2:2'));
+        expect(state.schedulableRefs, isNot(contains('Mishnah Berakhot 2:1')));
+        expect(
+          state.mainTrackRemaining,
+          live[engineCurriculum]!.mainTrackRemaining + 1,
+        );
+        expect(ended.countedEventIds, {engineUlid(1)});
+      }
+      expect(events, before);
     });
   });
 }
