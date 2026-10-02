@@ -15,6 +15,7 @@ import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/tri_state.dart';
 
 bool _listEquals<T>(List<T> a, List<T> b) {
   if (identical(a, b)) return true;
@@ -243,10 +244,10 @@ final class DerivedCurriculumState implements CurriculumState {
   TriState triState(NodeEntry node) {
     final corpus = learnt.corpus;
     if (corpus == null) return TriState.empty;
-    final leaves = corpus.leavesUnder(node).where(learnt.inScope).toList();
-    final done = leaves.where(learnt.learntLeaves.contains).length;
-    if (done == 0) return TriState.empty;
-    return done == leaves.length ? TriState.complete : TriState.partial;
+    return triStateOf(
+      corpus.leavesUnder(node).where(learnt.inScope),
+      learnt.learntLeaves,
+    );
   }
 
   @override
