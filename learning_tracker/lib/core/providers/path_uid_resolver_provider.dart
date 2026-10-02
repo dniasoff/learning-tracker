@@ -8,8 +8,6 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 /// rule 2), and the reconcile step every session-establishing flow runs
 /// after a sign-in or anonymous session (DNI-520).
 final pathUidResolverProvider = Provider<PathUidResolver>(
-  (ref) => PathUidResolver(
-    ref.watch(deviceRegistryProvider),
-    logger: AppLogger.instance,
-  ),
+  (ref) =>
+      PathUidResolver(ref.watch(deviceRegistryProvider), logger: AppLogger.instance),
 );
