@@ -5,12 +5,18 @@
 /// for a credential. No `GoogleSignInAccount` / `GoogleSignInAuthentication`
 /// types are exposed outside `lib/core/auth/`.
 class GoogleSignInResult {
-  const GoogleSignInResult({required this.idToken});
+  const GoogleSignInResult({required this.idToken, this.email});
 
   /// OAuth ID token from the Google sign-in flow. May be `null` if the
   /// platform returned no token (this is treated as an auth failure by the
   /// caller).
   final String? idToken;
+
+  /// The picked Google account's email, when the platform reports one. Used
+  /// only to choose which device account's named app to sign in on BEFORE
+  /// the single Firebase sign-in (DNI-520); the uid check after sign-in
+  /// stays authoritative.
+  final String? email;
 }
 
 /// Thin facade around `package:google_sign_in/google_sign_in.dart`.

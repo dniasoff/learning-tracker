@@ -1,5 +1,8 @@
+import 'package:learning_tracker/core/auth/account_auth_gateway.dart';
 import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
 import 'package:learning_tracker/core/auth/firebase_auth_gateway.dart';
+import 'package:learning_tracker/core/auth/firebase_auth_gateway_impl.dart'
+    show NotAuthenticatedException;
 import 'package:learning_tracker/core/auth/google_sign_in_gateway.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -9,15 +12,26 @@ import 'package:learning_tracker/features/account/domain/repositories/auth_repos
 /// Delegates to the auth gateways in `lib/core/auth/`. Per layering rule 3,
 /// this file MUST NOT import the firebase_auth SDK or the google_sign_in SDK
 /// directly — the gateways own those.
+///
+/// Bound to [accountId]: user-scoped calls go through
+/// `AccountAuthGateway.gatewayFor(accountId)` (that account's named-app
+/// Auth), and every sign-in names its target account (DNI-520).
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
-    required FirebaseAuthGateway firebaseAuthGateway,
+    required AccountAuthGateway accountAuthGateway,
     required GoogleSignInGateway googleSignInGateway,
-  }) : _auth = firebaseAuthGateway,
-       _google = googleSignInGateway;
+    this.accountId,
+    FirebaseAuthGateway? firebaseAuthGateway,
+  }) : _accounts = accountAuthGateway,
+       _google = googleSignInGateway,
+       _auth = firebaseAuthGateway ?? accountAuthGateway.gatewayFor(accountId);
 
-  final FirebaseAuthGateway _auth;
+  final AccountAuthGateway _accounts;
   final GoogleSignInGateway _google;
+  final FirebaseAuthGateway _auth;
+
+  @override
+  final String? accountId;
 
   static const _packageName = 'com.jcom.torah.learning_tracker';
   static const _linkDomain = 'https://torah-study-tracker.firebaseapp.com';
@@ -35,48 +49,101 @@ class AuthRepositoryImpl implements AuthRepository {
   AppUser? _toAppUserOrNull(AuthGatewayUser? user) =>
       user == null ? null : _toAppUser(user);
 
-  // ── AuthRepository ─────────────────────────────────────────────────────────
-
-  @override
-  Future<void> signInWithEmail(String email, String password) {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
+  String _requireAccountId() {
+    final id = accountId;
+    if (id == null) throw const NotAuthenticatedException();
+    return id;
   }
 
-  @override
-  Future<void> signInWithGoogle() async {
-    final result = await _google.authenticate();
-    await _auth.signInWithGoogleIdToken(idToken: result.idToken);
-  }
+  // ── Binding ────────────────────────────────────────────────────────────────
 
   @override
-  Future<String?> signInWithGoogleAndGetIdToken() async {
-    final result = await _google.authenticate();
-    await _auth.signInWithGoogleIdToken(idToken: result.idToken);
-    return result.idToken;
-  }
+  AuthRepository forAccount(String accountId) => AuthRepositoryImpl(
+    accountAuthGateway: _accounts,
+    googleSignInGateway: _google,
+    accountId: accountId,
+  );
+
+  // ── Sign-in on a named app ─────────────────────────────────────────────────
 
   @override
-  Future<AppUser?> reauthWithGoogleSilently() async {
-    // No-UI silent path: resolve the cached Google session, exchange its
-    // idToken into Firebase, and return the resulting user. Returns null when
-    // no silent session is available so the caller can fall back to the
-    // interactive picker. NOTE: only the last-authorized Google account can be
-    // resolved silently — a cross-account switch to a not-cached account will
-    // yield null (or the wrong uid) and require the interactive picker.
-    final result = await _google.authenticateSilently();
-    if (result?.idToken == null) return null;
-    await _auth.signInWithGoogleIdToken(idToken: result!.idToken);
-    return _toAppUserOrNull(_auth.currentUser);
-  }
-
-  @override
-  Future<void> signUp(String email, String password, String displayName) async {
-    await _auth.createUserWithEmailAndPassword(
+  Future<AppUser> signInToAccountWithEmail(
+    String accountId,
+    String email,
+    String password,
+  ) async => _toAppUser(
+    await _accounts.signInWithEmail(
+      accountId,
       email: email,
       password: password,
-    );
-    await _auth.updateDisplayName(displayName);
+    ),
+  );
+
+  @override
+  Future<GoogleAccountPick> pickGoogleAccount() async {
+    final result = await _google.authenticate();
+    return GoogleAccountPick(idToken: result.idToken, email: result.email);
   }
+
+  @override
+  Future<GoogleAccountPick?> pickGoogleAccountSilently() async {
+    // Only the last-authorized Google account can be resolved silently — a
+    // cross-account switch to a not-cached account yields null (or another
+    // account) and needs the interactive picker.
+    final result = await _google.authenticateSilently();
+    if (result?.idToken == null) return null;
+    return GoogleAccountPick(idToken: result!.idToken, email: result.email);
+  }
+
+  @override
+  Future<AppUser> signInToAccountWithGoogle(
+    String accountId,
+    String idToken,
+  ) async => _toAppUser(
+    await _accounts.signInWithGoogleIdToken(accountId, idToken: idToken),
+  );
+
+  @override
+  Future<AppUser> signInToAccountWithEmailLink(
+    String accountId,
+    String email,
+    String emailLink,
+  ) async => _toAppUser(
+    await _accounts.signInWithEmailLink(
+      accountId,
+      email: email,
+      emailLink: emailLink,
+    ),
+  );
+
+  @override
+  Future<AppUser> createAccountWithEmail(
+    String accountId,
+    String email,
+    String password,
+    String displayName,
+  ) async => _toAppUser(
+    await _accounts.createUserWithEmail(
+      accountId,
+      email: email,
+      password: password,
+      displayName: displayName,
+    ),
+  );
+
+  @override
+  Future<AppUser> ensureAnonymousSession(String accountId) async =>
+      _toAppUser(await _accounts.ensureAnonymousSession(accountId));
+
+  @override
+  Future<AppUser?> restoreSession(String accountId) async =>
+      _toAppUserOrNull(await _accounts.restoreSession(accountId));
+
+  @override
+  Future<void> discardAccountSession(String accountId) =>
+      _accounts.discard(accountId);
+
+  // ── Bound-account operations ───────────────────────────────────────────────
 
   @override
   Future<void> sendEmailVerification() {
@@ -93,15 +160,6 @@ class AuthRepositoryImpl implements AuthRepository {
       continueUrl: '$_linkDomain/sign-in',
       androidPackageName: _packageName,
     );
-  }
-
-  @override
-  Future<AppUser?> signInWithEmailLink(String email, String emailLink) async {
-    final user = await _auth.signInWithEmailLink(
-      email: email,
-      emailLink: emailLink,
-    );
-    return _toAppUserOrNull(user);
   }
 
   @override
@@ -138,13 +196,17 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> linkGoogleProvider() async {
+    final id = _requireAccountId();
     final result = await _google.authenticate();
-    await _auth.linkWithGoogleIdToken(idToken: result.idToken);
+    final idToken = result.idToken;
+    if (idToken == null) throw const NotAuthenticatedException();
+    await _accounts.linkGoogleIdToken(id, idToken: idToken);
   }
 
   @override
-  Future<void> linkEmailProvider(String email, String password) {
-    return _auth.linkWithEmailAndPassword(email: email, password: password);
+  Future<void> linkEmailProvider(String email, String password) async {
+    final id = _requireAccountId();
+    await _accounts.linkEmail(id, email: email, password: password);
   }
 
   @override
@@ -179,22 +241,6 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> applyActionCode(String oobCode) =>
       _auth.applyActionCode(oobCode);
-
-  // ── Firebase low-level pass-throughs ──────────────────────────────────────
-
-  @override
-  Future<String> createUserAccount(String email, String password) {
-    return _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-  }
-
-  @override
-  Future<AppUser?> signInAndGetUser(String email, String password) async {
-    final user = await _auth.signInAndGetUser(email: email, password: password);
-    return _toAppUserOrNull(user);
-  }
 
   @override
   Future<void> updateDisplayName(String displayName) =>

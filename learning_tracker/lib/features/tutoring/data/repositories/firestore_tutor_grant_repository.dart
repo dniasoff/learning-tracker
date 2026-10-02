@@ -15,6 +15,7 @@
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_grant_repository.dart';
@@ -25,10 +26,29 @@ import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_gra
 /// List operations use the `listTutorGrants` callable which reads from
 /// Firestore server-side and returns denormalised grant docs.
 class FirestoreTutorGrantRepository implements TutorGrantRepository {
-  FirestoreTutorGrantRepository({FirebaseFunctions? functions})
-    : _functions = functions ?? FirebaseFunctions.instance;
+  /// [functions] pins a client (tests); otherwise [resolveFunctions] builds
+  /// it per call from the active account's named app (DNI-520) — the
+  /// default app's `FirebaseFunctions.instance` carries no signed-in user.
+  FirestoreTutorGrantRepository({
+    FirebaseFunctions? functions,
+    AccountFunctionsResolver? resolveFunctions,
+  }) : _functions = functions,
+       _resolveFunctions = resolveFunctions;
 
-  final FirebaseFunctions _functions;
+  final FirebaseFunctions? _functions;
+  final AccountFunctionsResolver? _resolveFunctions;
+
+  Future<FirebaseFunctions> _client() async {
+    final pinned = _functions;
+    if (pinned != null) return pinned;
+    final resolve = _resolveFunctions;
+    if (resolve == null) {
+      throw StateError(
+        'FirestoreTutorGrantRepository needs functions or resolveFunctions',
+      );
+    }
+    return resolve();
+  }
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
@@ -41,7 +61,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
     String? parentName,
   }) async {
     try {
-      final callable = _functions.httpsCallable('inviteTutor');
+      final callable = (await _client()).httpsCallable('inviteTutor');
       await callable.call<Map<String, dynamic>>(<String, dynamic>{
         'tutorEmail': tutorEmail,
         'childProfileId': childProfileId,
@@ -64,7 +84,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   @override
   Future<TutorGrantResult> acceptInvite({required String grantId}) async {
     try {
-      final callable = _functions.httpsCallable('acceptTutorInvite');
+      final callable = (await _client()).httpsCallable('acceptTutorInvite');
       await callable.call<Map<String, dynamic>>(<String, dynamic>{
         'grantId': grantId,
       });
@@ -82,7 +102,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   @override
   Future<TutorGrantResult> declineInvite({required String grantId}) async {
     try {
-      final callable = _functions.httpsCallable('declineTutorInvite');
+      final callable = (await _client()).httpsCallable('declineTutorInvite');
       await callable.call<Map<String, dynamic>>(<String, dynamic>{
         'grantId': grantId,
       });
@@ -100,7 +120,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   @override
   Future<TutorGrantResult> rescindInvite({required String grantId}) async {
     try {
-      final callable = _functions.httpsCallable('rescindTutorInvite');
+      final callable = (await _client()).httpsCallable('rescindTutorInvite');
       await callable.call<Map<String, dynamic>>(<String, dynamic>{
         'grantId': grantId,
       });
@@ -118,7 +138,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   @override
   Future<TutorGrantResult> revokeGrant({required String grantId}) async {
     try {
-      final callable = _functions.httpsCallable('revokeTutorGrant');
+      final callable = (await _client()).httpsCallable('revokeTutorGrant');
       await callable.call<Map<String, dynamic>>(<String, dynamic>{
         'grantId': grantId,
       });
@@ -136,7 +156,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   @override
   Future<TutorGrantResult> resignGrant({required String grantId}) async {
     try {
-      final callable = _functions.httpsCallable('resignTutorGrant');
+      final callable = (await _client()).httpsCallable('resignTutorGrant');
       await callable.call<Map<String, dynamic>>(<String, dynamic>{
         'grantId': grantId,
       });
@@ -183,7 +203,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   Future<({List<TutorGrant> grants, bool ok})>
   listIncomingGrantsWithStatus() async {
     try {
-      final callable = _functions.httpsCallable('listTutorGrants');
+      final callable = (await _client()).httpsCallable('listTutorGrants');
       final result = await callable.call<Map<String, dynamic>>(
         <String, dynamic>{'mode': 'incoming'},
       );
@@ -206,7 +226,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
     required String childProfileId,
   }) async {
     try {
-      final callable = _functions.httpsCallable('listTutorGrants');
+      final callable = (await _client()).httpsCallable('listTutorGrants');
       final result = await callable.call<Map<String, dynamic>>(
         <String, dynamic>{'mode': 'outgoing', 'childProfileId': childProfileId},
       );
@@ -227,7 +247,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   @override
   Future<List<TutorGrant>> listPendingInvitesForMe() async {
     try {
-      final callable = _functions.httpsCallable('listTutorGrants');
+      final callable = (await _client()).httpsCallable('listTutorGrants');
       final result = await callable.call<Map<String, dynamic>>(
         <String, dynamic>{'mode': 'pending_for_me'},
       );

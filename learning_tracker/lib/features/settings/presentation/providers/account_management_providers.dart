@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart'
@@ -15,5 +16,6 @@ final accountManagementServiceProvider = Provider<AccountManagementService>((
     // these survive a SharedPreferences clear and must not leak into the next
     // sign-up (Bug 6).
     secureStorage: ref.watch(flutterSecureStorageProvider),
+    resolveFunctions: ref.watch(accountFunctionsProvider),
   );
 });

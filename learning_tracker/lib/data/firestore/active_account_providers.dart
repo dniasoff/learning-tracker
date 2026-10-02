@@ -19,6 +19,9 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/registry/path_uid_resolver.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/path_uid_resolver_provider.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/account_firebase_providers.dart';
 
@@ -115,6 +118,17 @@ final _activeAccountResolutionGenerationProvider =
 /// out of createProfile" test at 2 minutes instead of completing — see
 /// `docs/planning/firestore-cutover-log.md`'s `T-43` entries for the full
 /// trace.
+///
+/// **Path uid (AD-24, DNI-520).** The bundle handed out is
+/// [AccountFirebaseHandles.withPathUid]: its `uid` — the `{uid}` every
+/// repository puts in `users/{uid}/…` — is the account's PERSISTED path uid
+/// from [PathUidResolver.pathUidFor], never the live named-app user's uid
+/// (that one stays available as `authUid`, for identity checks). Session
+/// flows reconcile the persisted uid before activating an account; an
+/// account row that still has none (a legacy row activated before that
+/// existed) gets its one-time initial bind here. A persisted uid that
+/// differs from the live one is kept (never silently replaced from live
+/// auth) and logged.
 final activeAccountFirebaseProvider = FutureProvider<AccountFirebaseHandles?>((
   ref,
 ) async {
@@ -122,5 +136,38 @@ final activeAccountFirebaseProvider = FutureProvider<AccountFirebaseHandles?>((
   final accountId = ref.watch(activeAccountIdProvider);
   if (accountId == null) return null;
   final registry = ref.watch(accountFirebaseRegistryProvider);
-  return registry.resolve(accountId);
+  final pathUids = ref.watch(pathUidResolverProvider);
+  final handles = await registry.resolve(accountId);
+  final pathUid = await persistedPathUidFor(
+    pathUids,
+    accountId: accountId,
+    liveUid: handles.authUid,
+  );
+  return handles.withPathUid(pathUid);
 }, retry: (retryCount, error) => null);
+
+/// The persisted Firestore-path uid for [accountId] (AD-24 rule 2), binding
+/// it to [liveUid] only when the registry row has none yet (an initial bind,
+/// never a remap). Throws `UnknownDeviceAccountException` when the account
+/// has no registry row.
+Future<String> persistedPathUidFor(
+  PathUidResolver pathUids, {
+  required String accountId,
+  required String liveUid,
+}) async {
+  final persisted = await pathUids.pathUidFor(accountId);
+  if (persisted == null || persisted.isEmpty) {
+    final bound = await pathUids.reconcileLiveUid(
+      accountId: accountId,
+      liveUid: liveUid,
+    );
+    return bound.newUid;
+  }
+  if (persisted != liveUid) {
+    AppLogger.instance.warning(
+      event: 'active_account_path_uid_differs_from_live_uid',
+      fields: {'accountId': accountId},
+    );
+  }
+  return persisted;
+}

@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
@@ -198,9 +198,8 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
     // deleteLearnerProfile (functions/src/deletes.ts) performs a
     // server-side recursiveDelete across every subcollection. Talmid
     // profile deletion is not a tutor right, so this is never tutor-routed.
-    final callable = FirebaseFunctions.instance.httpsCallable(
-      'deleteLearnerProfile',
-    );
+    final functions = await _ref.read(accountFunctionsProvider)();
+    final callable = functions.httpsCallable('deleteLearnerProfile');
     await callable.call<Map<String, dynamic>>(<String, dynamic>{
       'profileId': profileId,
     });

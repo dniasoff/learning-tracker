@@ -5,6 +5,7 @@
 // Cloud Functions callables and reads grant lists via the listTutorGrants CF.
 
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
+import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -22,7 +23,9 @@ part 'tutor_grant_providers.g.dart';
 
 @riverpod
 TutorGrantRepository tutorGrantRepository(Ref ref) {
-  return FirestoreTutorGrantRepository();
+  return FirestoreTutorGrantRepository(
+    resolveFunctions: ref.watch(accountFunctionsProvider),
+  );
 }
 
 // ── Use case providers ──────────────────────────────────────────────────────
@@ -96,5 +99,5 @@ Future<List<TutorGrant>> pendingTutorInvites(Ref ref) {
 /// through the CF instead of the local outbox.
 @riverpod
 TutorWriteService tutorWriteService(Ref ref) {
-  return TutorWriteService();
+  return TutorWriteService(resolveFunctions: ref.watch(accountFunctionsProvider));
 }

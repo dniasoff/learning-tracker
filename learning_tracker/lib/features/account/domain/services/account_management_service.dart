@@ -12,10 +12,16 @@ class AccountManagementService {
   AccountManagementService({
     required AuthRepository authRepository,
     FlutterSecureStorage? secureStorage,
+    Future<FirebaseFunctions> Function()? resolveFunctions,
   }) : _authRepository = authRepository,
-       _secureStorage = secureStorage ?? const FlutterSecureStorage();
+       _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+       _resolveFunctions = resolveFunctions;
 
   final AuthRepository _authRepository;
+
+  /// The active account's named-app Cloud Functions client (DNI-520). `null`
+  /// only in tests that never reach the deletion callable.
+  final Future<FirebaseFunctions> Function()? _resolveFunctions;
 
   /// Device-scoped secure storage — holds parent/profile/tutor PIN hashes and
   /// lockout state. These are NOT in SharedPreferences and survive a
@@ -179,9 +185,11 @@ class AccountManagementService {
   /// primary safety net — the explicit uid is belt-and-suspenders.
   Future<void> _deleteFirestoreUserData(String uid) async {
     try {
-      final callable = FirebaseFunctions.instance.httpsCallable(
-        'deleteAccountData',
-      );
+      final resolve = _resolveFunctions;
+      if (resolve == null) {
+        throw StateError('AccountManagementService has no functions resolver');
+      }
+      final callable = (await resolve()).httpsCallable('deleteAccountData');
       await callable.call<Map<String, dynamic>>(<String, dynamic>{'uid': uid});
     } catch (e, stackTrace) {
       // Log but don't rethrow — auth deletion + local cleanup still proceed.

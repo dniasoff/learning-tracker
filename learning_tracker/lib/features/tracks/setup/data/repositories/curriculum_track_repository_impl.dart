@@ -11,6 +11,7 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -123,12 +124,11 @@ class FirestoreCurriculumTrackRepositoryAdapter {
 
   // Lazy: only deleteTrackPermanently below needs Cloud Functions at all —
   // every other method here (retire/archive/reactivate/query) is a pure
-  // Firestore operation. Resolving FirebaseFunctions.instance eagerly in the
-  // constructor made every construction of this adapter require a live
-  // default Firebase app, even for callers that only ever retire or archive
-  // a track — `late` defers that resolution to first actual access.
-  late final FirebaseFunctions _functions =
-      _functionsOverride ?? FirebaseFunctions.instance;
+  // Firestore operation, so the client is resolved at call time, from the
+  // ACTIVE account's named app (DNI-520: the default app has no signed-in
+  // user, so its FirebaseFunctions.instance would call unauthenticated).
+  Future<FirebaseFunctions> _functions() async =>
+      _functionsOverride ?? await _ref.read(accountFunctionsProvider)();
 
   /// Emits whether the active profile's Firestore track repository is ready.
   ///
@@ -337,7 +337,8 @@ class FirestoreCurriculumTrackRepositoryAdapter {
     if (profileUlid == null || profileUlid.isEmpty) {
       throw const CurriculumTrackRepositoryNotReadyException();
     }
-    await _functions
+    final functions = await _functions();
+    await functions
         .httpsCallable('deleteCurriculumTrack')
         .call<Map<String, dynamic>>({
           // Both are STRINGS on the function side (deletes.ts:214-219) — it

@@ -17,6 +17,7 @@
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 
 /// Result type for tutor write operations.
 sealed class TutorWriteResult {
@@ -34,18 +35,18 @@ class TutorWriteFailure extends TutorWriteResult {
 }
 
 /// Injectable callable: given a function name and args, calls the CF.
-/// Defaults to FirebaseFunctions.instance; overridable in tests.
+/// Production builds it from the active account's named app (DNI-520);
+/// overridable in tests.
 typedef TutorCallableInvoker =
     Future<void> Function(String functionName, Map<String, dynamic> args);
 
-Future<void> _defaultInvoker(
-  String functionName,
-  Map<String, dynamic> args,
-) async {
-  await FirebaseFunctions.instance
-      .httpsCallable(functionName)
-      .call<Map<String, dynamic>>(args);
-}
+TutorCallableInvoker _accountInvoker(AccountFunctionsResolver resolve) =>
+    (functionName, args) async {
+      final functions = await resolve();
+      await functions
+          .httpsCallable(functionName)
+          .call<Map<String, dynamic>>(args);
+    };
 
 /// Cloud-Functions-backed write proxy for tutor-originated mutations on a
 /// tutored child's profile.
@@ -54,8 +55,16 @@ Future<void> _defaultInvoker(
 /// and child_profile_id == profileId. The CFs enforce these checks server-side
 /// (Admin SDK) — a mismatched call returns permission-denied.
 class TutorWriteService {
-  TutorWriteService({TutorCallableInvoker? invoker})
-    : _invoker = invoker ?? _defaultInvoker;
+  /// Pass [invoker] (tests) or [resolveFunctions] (production: the active
+  /// account's named-app Cloud Functions client).
+  TutorWriteService({
+    TutorCallableInvoker? invoker,
+    AccountFunctionsResolver? resolveFunctions,
+  }) : assert(
+         invoker != null || resolveFunctions != null,
+         'TutorWriteService needs an invoker or a functions resolver',
+       ),
+       _invoker = invoker ?? _accountInvoker(resolveFunctions!);
 
   final TutorCallableInvoker _invoker;
 

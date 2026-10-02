@@ -1,6 +1,16 @@
+import 'package:learning_tracker/core/auth/account_auth_gateway.dart';
 import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
 
-/// Thin facade around `FirebaseAuth`.
+/// Thin facade around ONE account's named-app `FirebaseAuth` (AD-1).
+///
+/// **Sign-in is not on this interface (DNI-520).** Every sign-in, sign-up
+/// and credential link goes through [AccountAuthGateway] with an explicit
+/// device-account id, so it can only ever authenticate that account's own
+/// named app — never the default app, and never twice. An instance of this
+/// interface is bound to one account (see [AccountAuthGateway.gatewayFor])
+/// and only reads or manages the user already signed in there. With no
+/// account bound it behaves as signed out; its account-free calls (password
+/// reset, action codes) then run on the never-signed-in utility app.
 ///
 /// **This is the public seam between the rest of the app and the Firebase
 /// Auth SDK.** Production code outside `lib/core/auth/` and `lib/core/sync/`
@@ -41,30 +51,6 @@ abstract class FirebaseAuthGateway {
 
   // ── Email / password ─────────────────────────────────────────────────────
 
-  /// Sign in with an existing email/password pair.
-  Future<void> signInWithEmailAndPassword({
-    required String email,
-    required String password,
-  });
-
-  /// Sign in with email/password and return the resulting user.
-  ///
-  /// Lower-level than [signInWithEmailAndPassword] — returns the user so
-  /// callers (e.g. the upgrade-to-cloud flow) can read the UID immediately.
-  Future<AuthGatewayUser?> signInAndGetUser({
-    required String email,
-    required String password,
-  });
-
-  /// Create a new email/password account.
-  ///
-  /// Returns the UID of the newly created user (or the already-existing user,
-  /// per Firebase's "email-already-in-use" handling at the caller).
-  Future<String> createUserWithEmailAndPassword({
-    required String email,
-    required String password,
-  });
-
   /// Update the display name on the currently signed-in user.
   Future<void> updateDisplayName(String displayName);
 
@@ -86,12 +72,6 @@ abstract class FirebaseAuthGateway {
     required String androidPackageName,
   });
 
-  /// Sign in using the deep-link email link the user tapped.
-  Future<AuthGatewayUser?> signInWithEmailLink({
-    required String email,
-    required String emailLink,
-  });
-
   /// Whether [link] is a valid Firebase sign-in email link.
   bool isSignInWithEmailLink(String link);
 
@@ -108,7 +88,7 @@ abstract class FirebaseAuthGateway {
 
   // ── Account lifecycle ────────────────────────────────────────────────────
 
-  /// Sign out from Firebase Auth.
+  /// Sign this account's named app out of Firebase Auth.
   Future<void> signOut();
 
   /// Delete the currently signed-in user's account.
@@ -132,20 +112,8 @@ abstract class FirebaseAuthGateway {
 
   // ── Google credential plumbing ───────────────────────────────────────────
 
-  /// Sign in by exchanging a Google [idToken] for Firebase credentials.
-  Future<void> signInWithGoogleIdToken({required String? idToken});
-
-  /// Link the Google account represented by [idToken] to the current user.
-  Future<void> linkWithGoogleIdToken({required String? idToken});
-
   /// Re-authenticate the current user with Google [idToken] credentials.
   Future<void> reauthenticateWithGoogleIdToken({required String? idToken});
-
-  /// Link an email/password credential to the currently signed-in user.
-  Future<void> linkWithEmailAndPassword({
-    required String email,
-    required String password,
-  });
 
   /// Provider IDs linked to the current user
   /// (e.g. `['password', 'google.com']`). Empty list if signed out.

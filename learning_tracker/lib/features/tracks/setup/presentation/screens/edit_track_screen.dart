@@ -383,7 +383,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     // owner-scoped callable in a tutored session.
     final selection = ref.read(activeTutoredProfileSelectionProvider);
     if (selection != null) {
-      final result = await TutorWriteService().setProfileProgram(
+      final result = await ref
+          .read(tutorWriteServiceProvider)
+          .setProfileProgram(
         grantId: selection.grantId,
         ownerUid: selection.ownerUid,
         profileId: selection.profileId,

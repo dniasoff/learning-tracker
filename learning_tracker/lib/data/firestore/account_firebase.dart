@@ -132,6 +132,16 @@ const int kAccountFirestoreCacheSizeBytes = 20 * 1024 * 1024;
 /// sanitized account id: `'account_<deviceRegistryAccountUuid>'`.
 const String kAccountAppNamePrefix = 'account_';
 
+/// Name of the one named app this registry keeps for **account-free** Auth
+/// calls — password-reset emails, sign-in-link checks and out-of-band action
+/// codes — made while no device account is active (e.g. "forgot password"
+/// on the sign-in screen). Nothing ever signs in on it (AD-1: authentication
+/// happens on an account's own named app only), it holds no Firestore
+/// session, and it does not count against [kMaxDeviceAccounts]. It exists so
+/// the auth gateway never needs the default app's `FirebaseAuth.instance`
+/// (DNI-520).
+const String kAuthUtilityAppName = 'auth_utility';
+
 /// Characters considered safe, unescaped, inside a Firebase app name minted
 /// by this registry. `DeviceAccounts.accountId` is minted as a `Uuid().v4()`
 /// string (lowercase hex + hyphens only), which already satisfies this set;
@@ -188,7 +198,27 @@ final class AccountFirebaseHandles {
     required this.auth,
     required this.uid,
     this.appCheck,
-  });
+    String? authUid,
+  }) : authUid = authUid ?? uid,
+       _source = null;
+
+  AccountFirebaseHandles._pathView(AccountFirebaseHandles source, String uid)
+    : app = source.app,
+      firestore = source.firestore,
+      auth = source.auth,
+      appCheck = source.appCheck,
+      uid = uid,
+      authUid = source.authUid,
+      _source = source;
+
+  /// The same handles with [uid] replaced by the account's **persisted**
+  /// Firestore-path uid (AD-24 rule 2, DNI-520). [authUid] keeps the live
+  /// signed-in user's uid, and [isDisposed] still tracks this bundle's
+  /// registry-owned original.
+  AccountFirebaseHandles withPathUid(String pathUid) =>
+      AccountFirebaseHandles._pathView(_source ?? this, pathUid);
+
+  final AccountFirebaseHandles? _source;
 
   /// The named [FirebaseApp] this account's handles are scoped to. Its
   /// [FirebaseApp.name] is [AccountFirebase.appNameForAccount] applied to
@@ -204,9 +234,18 @@ final class AccountFirebaseHandles {
   /// This account's private, already-signed-in Auth instance.
   final FirebaseAuth auth;
 
-  /// The signed-in user's uid at the moment this bundle was produced — the
-  /// Firestore-path uid for this account.
+  /// The Firestore-path uid for this account — the `{uid}` in
+  /// `users/{uid}/…`. A bundle straight from [AccountFirebase] carries the
+  /// signed-in user's uid; `activeAccountFirebaseProvider` hands repositories
+  /// the [withPathUid] view, whose [uid] is the PERSISTED path uid from the
+  /// device registry (AD-24), never the live user's.
   final String uid;
+
+  /// The live signed-in user's uid (`request.auth.uid` on the server). Equal
+  /// to [uid] except on a [withPathUid] view whose persisted path uid differs
+  /// from the live identity. Use this for identity checks (e.g. a tutor
+  /// grant's `tutor_uid`), and [uid] for paths.
+  final String authUid;
 
   /// This account's private App Check instance, or `null` if resolution/
   /// activation was not possible on this run (see
@@ -222,7 +261,7 @@ final class AccountFirebaseHandles {
 
   /// Whether [AccountFirebase.dispose] has already torn this bundle's
   /// native app down.
-  bool get isDisposed => _disposed;
+  bool get isDisposed => _source?.isDisposed ?? _disposed;
 
   void _markDisposed() {
     _disposed = true;
@@ -496,21 +535,75 @@ class AccountFirebase {
 
   /// Signs in [accountId] with [credential] on **that account's own named
   /// app** (never the default app) — the cloud sign-up/sign-in path.
+  ///
+  /// **Always verifies [credential]** (DNI-520), even when [accountId]
+  /// already has a settled, signed-in bundle: this is the only sign-in a
+  /// production flow performs, so returning the cached session instead would
+  /// accept a wrong password for an account whose named app is still signed
+  /// in.
   Future<AccountFirebaseHandles> signInCloudAccount(
     String accountId,
     AuthCredential credential,
   ) {
-    return _obtain(accountId, (auth) async {
-      final userCredential = await auth.signInWithCredential(credential);
-      final user = userCredential.user;
-      if (user == null) {
-        throw StateError(
-          'signInCloudAccount($accountId): signInWithCredential() '
-          'returned a null user.',
+    return _obtain(
+      accountId,
+      (auth) async {
+        final userCredential = await auth.signInWithCredential(credential);
+        final user = userCredential.user;
+        if (user == null) {
+          throw StateError(
+            'signInCloudAccount($accountId): signInWithCredential() '
+            'returned a null user.',
+          );
+        }
+        return user;
+      },
+      authenticating: true,
+      reuseSettled: false,
+    );
+  }
+
+  /// Creates a NEW email/password Firebase user on [accountId]'s own named
+  /// app (cloud sign-up, DNI-520). `createUserWithEmailAndPassword` signs
+  /// the new user in on that app as a side effect, so no second sign-in
+  /// follows.
+  Future<AccountFirebaseHandles> createCloudAccountWithEmail(
+    String accountId, {
+    required String email,
+    required String password,
+  }) {
+    return _obtain(
+      accountId,
+      (auth) async {
+        final userCredential = await auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
         );
-      }
-      return user;
-    }, authenticating: true);
+        final user = userCredential.user;
+        if (user == null) {
+          throw StateError(
+            'createCloudAccountWithEmail($accountId): '
+            'createUserWithEmailAndPassword() returned a null user.',
+          );
+        }
+        return user;
+      },
+      authenticating: true,
+      reuseSettled: false,
+    );
+  }
+
+  /// Convenience wrapper for [signInCloudAccount] with an email sign-in
+  /// (magic) link — same rationale as [signInCloudAccountWithEmail].
+  Future<AccountFirebaseHandles> signInCloudAccountWithEmailLink(
+    String accountId, {
+    required String email,
+    required String emailLink,
+  }) {
+    return signInCloudAccount(
+      accountId,
+      EmailAuthProvider.credentialWithLink(email: email, emailLink: emailLink),
+    );
   }
 
   /// Convenience wrapper for [signInCloudAccount] with an email/password
@@ -586,9 +679,56 @@ class AccountFirebase {
       firestore: handles.firestore,
       auth: handles.auth,
       uid: linkedUser.uid,
+      appCheck: handles.appCheck,
     );
     _handles[accountId] = updated;
     return updated;
+  }
+
+  /// [linkCredential] with an email/password pair — the credential is built
+  /// here so callers outside this file never import `firebase_auth`
+  /// (layering Rule 3).
+  Future<AccountFirebaseHandles> linkEmailCredential(
+    String accountId, {
+    required String email,
+    required String password,
+  }) {
+    return linkCredential(
+      accountId,
+      EmailAuthProvider.credential(email: email, password: password),
+    );
+  }
+
+  /// [linkCredential] with a Google [idToken] — same rationale as
+  /// [linkEmailCredential].
+  Future<AccountFirebaseHandles> linkGoogleIdToken(
+    String accountId, {
+    required String idToken,
+  }) {
+    return linkCredential(
+      accountId,
+      GoogleAuthProvider.credential(idToken: idToken),
+    );
+  }
+
+  /// [accountId]'s named-app [FirebaseAuth], or `null` while this process
+  /// has not created that account's session yet. Synchronous and side-effect
+  /// free: the account-bound auth gateway reads the live user through it
+  /// (DNI-520).
+  FirebaseAuth? authFor(String accountId) => _sessions[accountId]?.auth;
+
+  Future<FirebaseAuth>? _utilityAuth;
+
+  /// The [FirebaseAuth] of the [kAuthUtilityAppName] app, used only for
+  /// account-free calls while no account is active. Created once (local, no
+  /// network) with App Check activated like every account app; never signed
+  /// in and never counted against [maxAccounts].
+  Future<FirebaseAuth> utilityAuth() {
+    return _utilityAuth ??= () async {
+      final app = await _findOrInitializeApp(kAuthUtilityAppName);
+      if (_enableAppCheck) await _tryResolveAndActivateAppCheck(app);
+      return _resolveAuth(app);
+    }();
   }
 
   /// Signs [accountId] out of its Auth session. The named app and its
@@ -598,8 +738,11 @@ class AccountFirebase {
   /// with no active session (a no-op).
   Future<void> signOut(String accountId) async {
     final handles = _handles.remove(accountId);
-    if (handles == null) return;
-    await handles.auth.signOut();
+    // A session can be signed in without a cached bundle (e.g. before its
+    // first re-attach in this process); sign that Auth out too.
+    final auth = handles?.auth ?? _sessions[accountId]?.auth;
+    if (auth == null) return;
+    await auth.signOut();
   }
 
   /// Shared memoized-establishment path for [resolve]/
@@ -610,13 +753,14 @@ class AccountFirebase {
     String accountId,
     Future<User> Function(FirebaseAuth auth) authenticate, {
     required bool authenticating,
+    bool reuseSettled = true,
   }) async {
     if (accountId.isEmpty) {
       throw ArgumentError.value(accountId, 'accountId', 'must not be empty');
     }
 
     final settled = _handles[accountId];
-    if (settled != null) return settled;
+    if (settled != null && reuseSettled) return settled;
 
     final pendingKey = (accountId, authenticating);
     final inFlight = _pending[pendingKey];
@@ -629,7 +773,12 @@ class AccountFirebase {
       // state — a concurrent caller may have already started a fresh
       // establishment/dispose for this same accountId while this call was
       // waiting.
-      return _obtain(accountId, authenticate, authenticating: authenticating);
+      return _obtain(
+        accountId,
+        authenticate,
+        authenticating: authenticating,
+        reuseSettled: reuseSettled,
+      );
     }
 
     // A session already exists for this account (e.g. re-authenticating

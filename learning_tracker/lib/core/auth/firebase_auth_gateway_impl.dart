@@ -26,19 +26,41 @@ class NotAuthenticatedException extends InternalException {
     : super('No authenticated user found: FirebaseAuth.currentUser is null');
 }
 
-/// The default (non-named) app's `FirebaseAuth` singleton.
-///
-/// **Phase 1 (AD-1/AD-2) status.** Same rationale as
-/// `core/sync/providers/firestore_instance_provider.dart`'s
-/// `_defaultFirestoreInstance`: this is the pre-registry, single-instance
-/// auth path the migration-plan Phase 1 rollback contract keeps present
-/// "until Phase 6". [FirebaseAuthGatewayImpl]'s injection-seam default
-/// (`firebaseAuth ?? ...`) calls this — and only this — so the AD-2/AD-28
-/// bare-instance ratchet counts exactly one `FirebaseAuth.instance` site in
-/// this file.
-FirebaseAuth _defaultFirebaseAuth() => FirebaseAuth.instance;
+/// Maps a Firebase [User] to the plain-Dart [AuthGatewayUser] — the
+/// boundary that keeps Firebase types inside `lib/core/auth/` and
+/// `lib/data/firestore/`. Shared with `AccountFirebaseAuthGateway`.
+AuthGatewayUser authGatewayUserFromFirebase(User user) => AuthGatewayUser(
+  uid: user.uid,
+  email: user.email,
+  displayName: user.displayName,
+  emailVerified: user.emailVerified,
+  providers: _providerIds(user.providerData),
+);
 
-/// Concrete [FirebaseAuthGateway].
+/// Projects Firebase [UserInfo] entries to their `providerId` strings — the
+/// single definition of "linked providers", shared by
+/// [authGatewayUserFromFirebase] and
+/// [FirebaseAuthGatewayImpl.getLinkedProviders].
+List<String> _providerIds(Iterable<UserInfo> data) =>
+    data.map((info) => info.providerId).toList();
+
+/// Same check as `FirebaseAuth.isSignInWithEmailLink` (FlutterFire's
+/// platform interface implements it as this pure string test), so it needs
+/// no `FirebaseAuth` instance at all.
+bool isFirebaseSignInEmailLink(String link) =>
+    (link.contains('mode=signIn') || link.contains('mode%3DsignIn')) &&
+    (link.contains('oobCode=') || link.contains('oobCode%3D'));
+
+/// Concrete [FirebaseAuthGateway], bound to ONE account's named-app
+/// `FirebaseAuth` (AD-1, DNI-520).
+///
+/// There is no default-app fallback: the gateway reads its `FirebaseAuth`
+/// through the injected resolver (the active account's named app, from
+/// `AccountFirebase.authFor`) and, when that is `null` (no account bound, or
+/// its session not created yet in this process), behaves as signed out.
+/// Account-free calls then use [accountFreeAuth] — the registry's
+/// never-signed-in utility app. Nothing in this class signs a user in; that
+/// is [AccountAuthGateway]'s job.
 ///
 /// **This is the only file in `lib/` outside `lib/core/sync/` permitted to
 /// import `package:firebase_auth/firebase_auth.dart`.** The layering audit
@@ -50,52 +72,68 @@ FirebaseAuth _defaultFirebaseAuth() => FirebaseAuth.instance;
 /// returned to callers — that mapping is the boundary that prevents Firebase
 /// types from leaking out of `lib/core/auth/`.
 class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
-  FirebaseAuthGatewayImpl({FirebaseAuth? firebaseAuth})
-    : _firebaseAuth = firebaseAuth ?? _defaultFirebaseAuth();
+  /// [firebaseAuth] binds a fixed instance (tests); [resolveAuth] binds a
+  /// live lookup (production: `AccountFirebase.authFor(accountId)`). With
+  /// neither, the gateway is unbound and always signed out. [onSignOut]
+  /// replaces the plain `FirebaseAuth.signOut()` so the registry can also
+  /// drop its cached handles.
+  FirebaseAuthGatewayImpl({
+    FirebaseAuth? firebaseAuth,
+    FirebaseAuth? Function()? resolveAuth,
+    Future<FirebaseAuth> Function()? accountFreeAuth,
+    Future<void> Function()? onSignOut,
+  }) : _resolveAuth = resolveAuth ?? (() => firebaseAuth),
+       _accountFreeAuth = accountFreeAuth,
+       _onSignOut = onSignOut;
 
-  final FirebaseAuth _firebaseAuth;
+  final FirebaseAuth? Function() _resolveAuth;
+  final Future<FirebaseAuth> Function()? _accountFreeAuth;
+  final Future<void> Function()? _onSignOut;
 
-  AuthGatewayUser _toAppUser(User user) => AuthGatewayUser(
-    uid: user.uid,
-    email: user.email,
-    displayName: user.displayName,
-    emailVerified: user.emailVerified,
-    providers: _providerIds(user.providerData),
-  );
+  FirebaseAuth? get _auth => _resolveAuth();
+
+  /// The bound account's Auth, else the utility app's, for calls that need
+  /// an Auth instance but no signed-in user.
+  Future<FirebaseAuth> _authForAccountFreeCall() async {
+    final bound = _auth;
+    if (bound != null) return bound;
+    final fallback = _accountFreeAuth;
+    if (fallback == null) throw const NotAuthenticatedException();
+    return fallback();
+  }
+
+  User _requireUser() {
+    final user = _auth?.currentUser;
+    if (user == null) throw const NotAuthenticatedException();
+    return user;
+  }
 
   AuthGatewayUser? _toAppUserOrNull(User? user) =>
-      user == null ? null : _toAppUser(user);
-
-  /// Projects Firebase [UserInfo] entries to their `providerId` strings.
-  ///
-  /// The single source of truth for "what does 'linked providers' mean for
-  /// this user" — shared by [_toAppUser] and [getLinkedProviders] so the two
-  /// can never independently drift on the projection.
-  List<String> _providerIds(Iterable<UserInfo> data) =>
-      data.map((info) => info.providerId).toList();
+      user == null ? null : authGatewayUserFromFirebase(user);
 
   // ── Read-only accessors ──────────────────────────────────────────────────
 
   @override
-  AuthGatewayUser? get currentUser =>
-      _toAppUserOrNull(_firebaseAuth.currentUser);
+  AuthGatewayUser? get currentUser => _toAppUserOrNull(_auth?.currentUser);
 
   @override
   Stream<AuthGatewayUser?> authStateChanges() {
-    return _firebaseAuth.authStateChanges().map(_toAppUserOrNull);
+    final auth = _auth;
+    if (auth == null) return Stream<AuthGatewayUser?>.value(null);
+    return auth.authStateChanges().map(_toAppUserOrNull);
   }
 
   @override
   Future<AuthGatewayUser?> reloadCurrentUser() async {
-    final user = _firebaseAuth.currentUser;
+    final user = _auth?.currentUser;
     if (user == null) return null;
     await user.reload();
-    return _toAppUserOrNull(_firebaseAuth.currentUser);
+    return _toAppUserOrNull(_auth?.currentUser);
   }
 
   @override
   Future<String?> getIdToken({bool forceRefresh = false}) {
-    final user = _firebaseAuth.currentUser;
+    final user = _auth?.currentUser;
     if (user == null) return Future.value(null);
     return user.getIdToken(forceRefresh);
   }
@@ -103,47 +141,8 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   // ── Email / password ─────────────────────────────────────────────────────
 
   @override
-  Future<void> signInWithEmailAndPassword({
-    required String email,
-    required String password,
-  }) {
-    return _firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-  }
-
-  @override
-  Future<AuthGatewayUser?> signInAndGetUser({
-    required String email,
-    required String password,
-  }) async {
-    final credential = await _firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    return _toAppUserOrNull(credential.user);
-  }
-
-  @override
-  Future<String> createUserWithEmailAndPassword({
-    required String email,
-    required String password,
-  }) async {
-    final credential = await _firebaseAuth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    final user = credential.user;
-    if (user == null) {
-      throw const NotAuthenticatedException();
-    }
-    return user.uid;
-  }
-
-  @override
   Future<void> updateDisplayName(String displayName) async {
-    await _firebaseAuth.currentUser?.updateDisplayName(displayName);
+    await _auth?.currentUser?.updateDisplayName(displayName);
   }
 
   // ── Magic links / verification ──────────────────────────────────────────
@@ -153,10 +152,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
     required String continueUrl,
     required String androidPackageName,
   }) async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) {
-      throw const NotAuthenticatedException();
-    }
+    final user = _requireUser();
     await user.sendEmailVerification(
       ActionCodeSettings(
         url: continueUrl,
@@ -172,8 +168,9 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
     required String email,
     required String continueUrl,
     required String androidPackageName,
-  }) {
-    return _firebaseAuth.sendSignInLinkToEmail(
+  }) async {
+    final auth = await _authForAccountFreeCall();
+    return auth.sendSignInLinkToEmail(
       email: email,
       actionCodeSettings: ActionCodeSettings(
         url: continueUrl,
@@ -185,59 +182,46 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   }
 
   @override
-  Future<AuthGatewayUser?> signInWithEmailLink({
-    required String email,
-    required String emailLink,
-  }) async {
-    final credential = await _firebaseAuth.signInWithEmailLink(
-      email: email,
-      emailLink: emailLink,
-    );
-    return _toAppUserOrNull(credential.user);
-  }
+  bool isSignInWithEmailLink(String link) => isFirebaseSignInEmailLink(link);
 
   @override
-  bool isSignInWithEmailLink(String link) {
-    return _firebaseAuth.isSignInWithEmailLink(link);
-  }
-
-  @override
-  Future<void> sendPasswordResetEmail(String email) {
-    return _firebaseAuth.sendPasswordResetEmail(email: email);
+  Future<void> sendPasswordResetEmail(String email) async {
+    final auth = await _authForAccountFreeCall();
+    return auth.sendPasswordResetEmail(email: email);
   }
 
   // ── Action codes ─────────────────────────────────────────────────────────
 
   @override
-  Future<void> checkActionCode(String oobCode) {
-    return _firebaseAuth.checkActionCode(oobCode);
+  Future<void> checkActionCode(String oobCode) async {
+    final auth = await _authForAccountFreeCall();
+    await auth.checkActionCode(oobCode);
   }
 
   @override
-  Future<void> applyActionCode(String oobCode) {
-    return _firebaseAuth.applyActionCode(oobCode);
+  Future<void> applyActionCode(String oobCode) async {
+    final auth = await _authForAccountFreeCall();
+    return auth.applyActionCode(oobCode);
   }
 
   // ── Account lifecycle ────────────────────────────────────────────────────
 
   @override
-  Future<void> signOut() => _firebaseAuth.signOut();
+  Future<void> signOut() async {
+    final onSignOut = _onSignOut;
+    if (onSignOut != null) return onSignOut();
+    await _auth?.signOut();
+  }
 
   @override
   Future<void> deleteCurrentUser() async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) {
-      throw const NotAuthenticatedException();
-    }
+    final user = _requireUser();
     await user.delete();
   }
 
   @override
   Future<void> updatePassword(String newPassword) async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) {
-      throw const NotAuthenticatedException();
-    }
+    final user = _requireUser();
     await user.updatePassword(newPassword);
   }
 
@@ -248,10 +232,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
     required String email,
     required String password,
   }) async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) {
-      throw const NotAuthenticatedException();
-    }
+    final user = _requireUser();
     final credential = EmailAuthProvider.credential(
       email: email,
       password: password,
@@ -262,52 +243,17 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   // ── Google credential plumbing ───────────────────────────────────────────
 
   @override
-  Future<void> signInWithGoogleIdToken({required String? idToken}) async {
-    final credential = GoogleAuthProvider.credential(idToken: idToken);
-    await _firebaseAuth.signInWithCredential(credential);
-  }
-
-  @override
-  Future<void> linkWithGoogleIdToken({required String? idToken}) async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) {
-      throw const NotAuthenticatedException();
-    }
-    final credential = GoogleAuthProvider.credential(idToken: idToken);
-    await user.linkWithCredential(credential);
-  }
-
-  @override
   Future<void> reauthenticateWithGoogleIdToken({
     required String? idToken,
   }) async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) {
-      throw const NotAuthenticatedException();
-    }
+    final user = _requireUser();
     final credential = GoogleAuthProvider.credential(idToken: idToken);
     await user.reauthenticateWithCredential(credential);
   }
 
   @override
-  Future<void> linkWithEmailAndPassword({
-    required String email,
-    required String password,
-  }) async {
-    final user = _firebaseAuth.currentUser;
-    if (user == null) {
-      throw const NotAuthenticatedException();
-    }
-    final credential = EmailAuthProvider.credential(
-      email: email,
-      password: password,
-    );
-    await user.linkWithCredential(credential);
-  }
-
-  @override
   List<String> getLinkedProviders() {
-    final providerData = _firebaseAuth.currentUser?.providerData;
+    final providerData = _auth?.currentUser?.providerData;
     return providerData == null ? const <String>[] : _providerIds(providerData);
   }
 }

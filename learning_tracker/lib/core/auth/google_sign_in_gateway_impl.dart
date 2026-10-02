@@ -32,7 +32,7 @@ class GoogleSignInGatewayImpl implements GoogleSignInGateway {
     await _ensureInitialized();
     final account = await _googleSignIn.authenticate();
     final auth = account.authentication;
-    return GoogleSignInResult(idToken: auth.idToken);
+    return GoogleSignInResult(idToken: auth.idToken, email: account.email);
   }
 
   @override
@@ -47,7 +47,7 @@ class GoogleSignInGatewayImpl implements GoogleSignInGateway {
     if (account == null) return null;
     final auth = account.authentication;
     if (auth.idToken == null) return null;
-    return GoogleSignInResult(idToken: auth.idToken);
+    return GoogleSignInResult(idToken: auth.idToken, email: account.email);
   }
 
   @override

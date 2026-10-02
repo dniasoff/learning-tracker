@@ -184,7 +184,7 @@ Future<(AccountFirebaseHandles, String, String)?> _watchActiveAccountAndProfile(
     final ownerUid = grant['parent_uid'];
     final profileId = grant['child_profile_id']?.toString();
     if (grant['state'] != 'active' ||
-        grant['tutor_uid'] != handles.uid ||
+        grant['tutor_uid'] != handles.authUid ||
         ownerUid is! String ||
         profileId is! String ||
         profileId != tutored.profileId ||
