@@ -123,13 +123,9 @@ class _History extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.read(
-      changeHistoryControllerProvider(scope).notifier,
-    );
-    final filter = ref.watch(
-      changeHistoryControllerProvider(scope).select((s) => s.filter),
-    );
     // AD-36: nor under the learner's own lock, nor while it is unknown.
+    // The lock is settled before the paging controller is created, so a
+    // locked (or not yet known) learner causes no history read at all.
     final locked = ref.watch(changeHistoryLockedProvider(scope));
     if (locked case AsyncError(:final error, :final stackTrace)) {
       return AppErrorView(
@@ -143,6 +139,25 @@ class _History extends ConsumerWidget {
           ? const SizedBox.shrink(key: ValueKey('changeHistoryLocked'))
           : const _Loading();
     }
+    return _UnlockedHistory(scope: scope);
+  }
+}
+
+/// The timeline of an unlocked learner: the only place that creates the
+/// paging controller (and so the only place that reads history).
+class _UnlockedHistory extends ConsumerWidget {
+  const _UnlockedHistory({required this.scope});
+
+  final LearnerScope scope;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(
+      changeHistoryControllerProvider(scope).notifier,
+    );
+    final filter = ref.watch(
+      changeHistoryControllerProvider(scope).select((s) => s.filter),
+    );
     final view = ref.watch(changeHistoryViewProvider(scope));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
