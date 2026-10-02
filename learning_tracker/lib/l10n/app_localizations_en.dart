@@ -415,7 +415,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get onTrackFinishUnknown => 'not yet known';
+  String get onTrackFinishUnknown => 'not enough recent learning to project';
 
   @override
   String get onTrackLoading => 'Loading pace status';

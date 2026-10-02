@@ -7,6 +7,10 @@
 /// recompute (a new event, a catch-up after a lock) reaches the cards by
 /// itself and no count is cached in widget state.
 ///
+/// The status, daily target and calendar shortfall go through the lifetime
+/// report's own mapping ([OnTrackView.of], Story 5.3, DNI-518), so the
+/// Dashboard and the report cannot disagree for one state (DNI-518 AC-11).
+///
 /// * [parentForecastProvider] is parent-only (NFR-9, UX-DR-48): it builds
 ///   nothing unless [parentSessionProvider] says the session is a parent's,
 ///   so a child or tutored session never holds status, projection or
@@ -29,6 +33,7 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
+import 'package:learning_tracker/features/progress/progress.dart';
 
 /// One sub-track whose ground will not all be reached before the deadline
 /// (FR-21): the engine's [SubTrackState] values for the warning copy.
@@ -90,18 +95,24 @@ final class CurriculumForecast {
   const CurriculumForecast({
     required this.curriculumId,
     required this.projection,
-    this.dailyTarget,
+    required this.onTrack,
     this.shortfalls = const [],
   });
 
   /// The curriculum (storage key).
   final String curriculumId;
 
-  /// [CurriculumState.projection], as the engine evaluated it.
+  /// [CurriculumState.projection], as the engine evaluated it: the
+  /// projected finish and the deadline.
   final Projection projection;
 
-  /// [CurriculumState.dailyTarget].
-  final int? dailyTarget;
+  /// The engine's status, daily target and calendar shortfall under the
+  /// lifetime report's mapping ([OnTrackView.of]).
+  final OnTrackView onTrack;
+
+  /// [CurriculumState.dailyTarget] as [onTrack] shows it: null with no
+  /// deadline (FR-20), whatever the engine derived.
+  int? get dailyTarget => onTrack.dailyTarget;
 
   /// One warning per sub-track with a positive shortfall, by name.
   final List<ShortfallWarning> shortfalls;
@@ -205,7 +216,8 @@ final parentForecastProvider =
             CurriculumForecast(
               curriculumId: c.curriculumId,
               projection: c.projection!,
-              dailyTarget: c.dailyTarget,
+              // Non-null: [_evaluated] keeps only projected curricula.
+              onTrack: OnTrackView.of(c, c.report)!,
               shortfalls:
                   [
                     for (final s in c.subTracks.values)

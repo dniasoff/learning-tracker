@@ -413,7 +413,7 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String get onTrackFinishUnknown => 'עדיין לא ידוע';
+  String get onTrackFinishUnknown => 'אין די לימוד לאחרונה כדי להעריך';
 
   @override
   String get onTrackLoading => 'טוען את מצב הקצב';

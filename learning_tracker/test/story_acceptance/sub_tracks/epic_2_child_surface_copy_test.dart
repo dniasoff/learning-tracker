@@ -43,6 +43,7 @@ List<String> _bannedFragments() {
     for (final templated in [
       l10n.onTrackProjectedFinish('\u0000'),
       l10n.onTrackDailyTarget('\u0000', '\u0000'),
+      l10n.reportOnTrackCalendarBehind('\u0000', '\u0000'),
       l10n.shortfallCardMessage(
         '\u0000',
         '\u0000',

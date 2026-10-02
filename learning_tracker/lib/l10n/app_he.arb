@@ -247,7 +247,7 @@
   "shortfallCardView": "לצפייה ב־{name}",
   "onTrackBehindPace": "מאחורי הקצב",
   "onTrackDailyTarget": "יעד יומי: {count} {unit} ליום",
-  "onTrackFinishUnknown": "עדיין לא ידוע",
+  "onTrackFinishUnknown": "אין די לימוד לאחרונה כדי להעריך",
   "onTrackLoading": "טוען את מצב הקצב",
   "onTrackOnTrack": "בקצב הנכון",
   "onTrackProjectedFinish": "סיום משוער: {finish}",

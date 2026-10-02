@@ -821,7 +821,7 @@ abstract class AppLocalizations {
   /// No description provided for @onTrackFinishUnknown.
   ///
   /// In en, this message translates to:
-  /// **'not yet known'**
+  /// **'not enough recent learning to project'**
   String get onTrackFinishUnknown;
 
   /// No description provided for @onTrackLoading.
