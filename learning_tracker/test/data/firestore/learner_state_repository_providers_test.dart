@@ -19,6 +19,10 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/callable_oversized_governed_write_port.dart';
+import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_governed_intent_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learner_settings_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
@@ -28,7 +32,6 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../helpers/learner_state/provider_settle.dart';
 import '../../helpers/learner_state_fixtures.dart';
 
 class _MockApp extends Mock implements FirebaseApp {}
@@ -104,6 +107,16 @@ void main() {
       expect(await container.read(subTrackRepositoryProvider.future), isNull);
       expect(await container.read(learningWritePortProvider.future), isNull);
       expect(await container.read(pointsAmountReaderProvider.future), isNull);
+      expect(await container.read(changeLogRepositoryProvider.future), isNull);
+      expect(await container.read(governedDocReaderProvider.future), isNull);
+      expect(
+        await container.read(learnerSettingsReaderProvider.future),
+        isNull,
+      );
+      expect(
+        await container.read(oversizedGovernedWritePortProvider.future),
+        isNull,
+      );
       expect(await container.read(activeLearnerScopeProvider.future), isNull);
     },
   );
@@ -182,6 +195,27 @@ void main() {
     expect(
       await container.read(pointsAmountReaderProvider.future),
       isA<FirestorePointsAmountReader>(),
+    );
+    // DNI-470: the change log and the governed-doc reads.
+    expect(
+      await container.read(changeLogRepositoryProvider.future),
+      isA<FirestoreChangeLogRepository>(),
+    );
+    expect(
+      await container.read(governedDocReaderProvider.future),
+      isA<FirestoreChangeLogRepository>(),
+    );
+    expect(
+      await container.read(oversizedGovernedWritePortProvider.future),
+      isA<CallableOversizedGovernedWritePort>(),
+    );
+    expect(
+      await container.read(learnerSettingsReaderProvider.future),
+      isA<FirestoreLearnerSettingsReader>(),
+    );
+    expect(
+      await container.read(governedIntentRepositoryProvider.future),
+      isA<FirestoreGovernedIntentRepository>(),
     );
     expect(await container.read(activeLearnerScopeProvider.future), isNull);
 
@@ -350,30 +384,5 @@ void main() {
       container.read(activeLearnerScopeProvider.future),
       throwsFormatException,
     );
-  });
-
-  group('C0 (DNI-524) contract providers are stubs resolving to '
-      'AsyncError', () {
-    for (final (provider, owner, what) in [
-      (changeLogRepositoryProvider, 'DNI-470', 'changeLogRepositoryProvider'),
-      (
-        governedIntentRepositoryProvider,
-        'DNI-470',
-        'governedIntentRepositoryProvider',
-      ),
-      (
-        oversizedGovernedWritePortProvider,
-        'DNI-470',
-        'oversizedGovernedWritePortProvider',
-      ),
-    ]) {
-      test(what, () async {
-        final container = ProviderContainer.test();
-        expect(
-          await settledAsync<Object?>(container, provider),
-          isAsyncC0Stub(owner, what),
-        );
-      });
-    }
   });
 }

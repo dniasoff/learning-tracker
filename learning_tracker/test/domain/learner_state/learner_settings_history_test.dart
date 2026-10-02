@@ -1,10 +1,11 @@
 // Mirror test for `lib/domain/learner_state/learner_settings_history.dart`
 // (C0, DNI-524 AC-6).
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
-import '../../helpers/learner_state/c0_stub_matcher.dart';
 import '../../helpers/learner_state_fixtures.dart';
 
 void main() {
@@ -100,10 +101,176 @@ void main() {
     expect(history(), isNot(LearnerSettingsHistory.constant(tlv)));
   });
 
-  test('reconstruct is a C0 stub owned by DNI-470', () {
-    expect(
-      () => LearnerSettingsHistory.reconstruct(current: tlv, entries: const []),
-      throwsC0Stub('DNI-470', 'LearnerSettingsHistory.reconstruct'),
+  group('reconstruct (DNI-470 AC-7)', () {
+    String key(String field) => 'learner_profiles/$profileUlid.$field';
+
+    ChangeLogEntry settingsEntry(
+      String id,
+      DateTime at, {
+      required Map<String, Object?> before,
+      required Map<String, Object?> after,
+      DateTime? originalAt,
+      String entityId = profileUlid,
+    }) => ChangeLogEntry(
+      id: id,
+      entity: GovernedEntity.learnerSettings,
+      entityId: entityId,
+      actionId: id,
+      before: {for (final e in before.entries) key(e.key): e.value},
+      after: {for (final e in after.entries) key(e.key): e.value},
+      at: at,
+      originalAt: originalAt,
+      actor: parentActor,
     );
+
+    final seedAt = DateTime.utc(2026);
+    ChangeLogEntry seed() => settingsEntry(
+      ulidA,
+      seedAt,
+      before: {'time_zone': null, 'in_israel': null},
+      after: {'time_zone': 'Asia/Jerusalem', 'in_israel': true},
+    );
+    ChangeLogEntry move() => settingsEntry(
+      ulidB,
+      moved,
+      before: {'time_zone': 'Asia/Jerusalem', 'in_israel': true},
+      after: {'time_zone': 'America/New_York', 'in_israel': false},
+    );
+    ChangeLogEntry locate() => settingsEntry(
+      ulidC,
+      movedAgain,
+      before: {'latitude': null, 'longitude': null},
+      after: {'latitude': 40.7, 'longitude': -74.0},
+    );
+    const current = LearnerSettings(
+      profileId: profileUlid,
+      timeZone: 'America/New_York',
+      inIsrael: false,
+      latitude: 40.7,
+      longitude: -74,
+      lastChangeId: ulidC,
+    );
+
+    test('no entries: the current values hold forever', () {
+      expect(
+        LearnerSettingsHistory.reconstruct(current: tlv, entries: const []),
+        LearnerSettingsHistory.constant(tlv),
+      );
+    });
+
+    test('spans per entry; instants before the first entry use its after; '
+        'the last span is the current doc', () {
+      final h = LearnerSettingsHistory.reconstruct(
+        current: current,
+        entries: [locate(), seed(), move()],
+      );
+      expect(h.spans.map((s) => s.fromUtc), [null, moved, movedAgain]);
+      expect(
+        h.at(DateTime.utc(2000)),
+        const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'Asia/Jerusalem',
+          inIsrael: true,
+          lastChangeId: ulidA,
+        ),
+      );
+      expect(h.at(seedAt), h.at(DateTime.utc(2000)));
+      expect(
+        h.at(moved),
+        const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'America/New_York',
+          inIsrael: false,
+          lastChangeId: ulidB,
+        ),
+      );
+      expect(h.at(movedAgain), current);
+      expect(h.current, current);
+    });
+
+    test('original_at orders an imported entry before later live ones', () {
+      final imported = settingsEntry(
+        ulidE,
+        DateTime.utc(2027), // imported late …
+        originalAt: DateTime.utc(2025, 6), // … but happened first
+        before: {'time_zone': null},
+        after: {'time_zone': 'Europe/London'},
+      );
+      final h = LearnerSettingsHistory.reconstruct(
+        current: const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'Asia/Jerusalem',
+          inIsrael: true,
+        ),
+        entries: [
+          seed(),
+          settingsEntry(
+            ulidD,
+            DateTime.utc(2026, 2),
+            before: {'time_zone': 'Europe/London'},
+            after: {'time_zone': 'Asia/Jerusalem'},
+          ),
+          imported,
+        ],
+      );
+      expect(h.spans.first.fromUtc, isNull);
+      expect(h.at(DateTime.utc(2020)).timeZone, 'Europe/London');
+      expect(h.at(DateTime.utc(2026, 1, 15)).timeZone, 'Europe/London');
+      expect(h.at(DateTime.utc(2026, 3)).timeZone, 'Asia/Jerusalem');
+    });
+
+    test('entries of other entities or profiles are ignored', () {
+      final other = ChangeLogEntry(
+        id: ulidD,
+        entity: GovernedEntity.mainTrackProgram,
+        entityId: 'mishnayos',
+        actionId: ulidD,
+        before: const {'profile_programs/mishnayos.program_id': null},
+        after: const {'profile_programs/mishnayos.program_id': 'daf'},
+        at: moved,
+        actor: parentActor,
+      );
+      final h = LearnerSettingsHistory.reconstruct(
+        current: tlv,
+        entries: [other],
+      );
+      expect(h, LearnerSettingsHistory.constant(tlv));
+    });
+
+    test('entries at the same instant collapse to the later one', () {
+      final h = LearnerSettingsHistory.reconstruct(
+        current: current,
+        entries: [
+          seed(),
+          settingsEntry(
+            ulidB,
+            seedAt,
+            before: {'time_zone': 'Asia/Jerusalem', 'in_israel': true},
+            after: {'time_zone': 'America/New_York', 'in_israel': false},
+          ),
+          locate(),
+        ],
+      );
+      expect(h.spans.map((s) => s.fromUtc), [null, movedAgain]);
+      expect(h.at(DateTime.utc(2000)).timeZone, 'America/New_York');
+    });
+
+    test('a wrong-typed settings value fails closed', () {
+      expect(
+        () => LearnerSettingsHistory.reconstruct(
+          current: current,
+          entries: [
+            seed(),
+            settingsEntry(
+              ulidB,
+              moved,
+              before: {'time_zone': 42},
+              after: {'time_zone': 'America/New_York'},
+            ),
+          ],
+        ),
+        throwsA(isA<StorageFormatException>()),
+      );
+    });
   });
 }

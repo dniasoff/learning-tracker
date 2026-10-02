@@ -24,6 +24,7 @@ import 'package:learning_tracker/features/learner_state/presentation/providers/l
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/governed_action_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
@@ -133,7 +134,18 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   final port = await ref.watch(learningWritePortProvider.future);
   final points = await ref.watch(pointsAmountReaderProvider.future);
   final events = await ref.watch(learningEventRepositoryProvider.future);
-  if (uid == null || port == null || points == null || events == null) {
+  final changeLog = await ref.watch(changeLogRepositoryProvider.future);
+  final subTracks = await ref.watch(subTrackRepositoryProvider.future);
+  final docReader = await ref.watch(governedDocReaderProvider.future);
+  final oversized = await ref.watch(oversizedGovernedWritePortProvider.future);
+  if (uid == null ||
+      port == null ||
+      points == null ||
+      events == null ||
+      changeLog == null ||
+      subTracks == null ||
+      docReader == null ||
+      oversized == null) {
     return null;
   }
   final actor = learningSessionActor(
@@ -146,6 +158,18 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     (_, _) {},
   );
   final corpora = ref.listen(corporaProvider.future, (_, _) {});
+  final failureReporter = ref.watch(learningFailureReporterProvider);
+  final governed = DefaultGovernedLearningCommands(
+    scope: scope,
+    actor: actor,
+    changeLog: changeLog,
+    subTracks: subTracks,
+    reader: docReader,
+    oversized: oversized,
+    clock: ref.watch(learningCommandClockProvider),
+    newUlid: newUlid,
+    failureReporter: failureReporter,
+  );
   final commands = DefaultLearningCommands(
     scope: scope,
     actor: actor,
@@ -163,10 +187,12 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     writePort: port,
     gate: ref.watch(captureGateProvider),
     analytics: ref.watch(learningAnalyticsProvider),
-    failureReporter: ref.watch(learningFailureReporterProvider),
+    failureReporter: failureReporter,
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
+    governed: governed,
   );
   ref.onDispose(commands.dispose);
+  ref.onDispose(governed.dispose);
   return commands;
 }, retry: (retryCount, error) => null);

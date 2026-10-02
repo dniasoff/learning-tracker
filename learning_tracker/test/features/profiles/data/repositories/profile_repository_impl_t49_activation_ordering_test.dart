@@ -14,6 +14,7 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart'
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/creating_device_settings_fakes.dart';
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 
@@ -44,6 +45,7 @@ void main() {
       final firestore = createFakeFirestore(authenticatedUid: uid);
       final container = ProviderContainer(
         overrides: [
+          creatingDeviceSettingsOverride(),
           activeAccountFirebaseProvider.overrideWith(
             (ref) async => _handles(firestore),
           ),

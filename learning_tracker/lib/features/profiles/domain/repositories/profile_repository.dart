@@ -77,3 +77,15 @@ class DuplicateProfileNameException extends ConflictException {
     : super('A profile named "$displayName" already exists');
   final String displayName;
 }
+
+/// Thrown when a profile cannot be created because the creating device's
+/// IANA time zone is missing or invalid (AD-37: `time_zone` is required and
+/// seeded from the creating device; it is never guessed). Nothing is
+/// written.
+class LearnerTimeZoneUnavailableException extends ValidationException {
+  const LearnerTimeZoneUnavailableException(this.timeZone)
+    : super('The device time zone is unavailable or not an IANA zone');
+
+  /// The zone id read from the device, or null when none could be read.
+  final String? timeZone;
+}

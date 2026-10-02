@@ -11,9 +11,18 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/data/firestore/write_ack.dart';
+import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart'
+    show kChangeLogCollection;
+import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
+import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 
 /// Firestore-backed learner-profile repository: `users/{uid}/
@@ -112,13 +121,24 @@ class FirestoreLearnerProfileRepository {
   FirestoreLearnerProfileRepository({
     required FirebaseFirestore firestore,
     required String uid,
+    String? authUid,
+    String Function(DateTime at)? newChangeId,
     AppLogger? logger,
   }) : _firestore = firestore,
        _uid = uid,
+       _authUid = authUid ?? uid,
+       _newChangeId = newChangeId ?? newUlid,
        _logger = logger ?? AppLogger.instance;
 
   final FirebaseFirestore _firestore;
   final String _uid;
+
+  /// The live signed-in uid: the AD-46 `actor.uid` of the settings seed
+  /// entry, which the owner rule requires to equal `request.auth.uid`.
+  final String _authUid;
+
+  /// Mints the seed entry's ULID (tests pin it).
+  final String Function(DateTime at) _newChangeId;
   final AppLogger _logger;
 
   CollectionReference<Map<String, dynamic>> get _profiles =>
@@ -271,12 +291,23 @@ class FirestoreLearnerProfileRepository {
   /// always written, matching the "one unconditional merge write" design
   /// `firestore-phase2-plan.md` §4 P2-2 asked for — [createdAt] is no
   /// longer a special case, it is simply always sent.
+  ///
+  /// **Creation seeds the learner settings (AD-37, DNI-470 AC-6).** When
+  /// [seed] is given — profile creation always gives it — the write is ONE
+  /// batch: the profile doc (ordinary fields plus the seed's settings keys
+  /// and `last_change_id`) and the `learnerSettings` seed entry
+  /// `change_log/{ulid}` (an ordinary entry whose `before` is all-null,
+  /// `actor` the live signed-in parent). Its id is minted here, before the
+  /// write. [seed]'s `profileId` must be [profileId] and its time zone a
+  /// valid IANA id; anything else throws [StorageFormatException] /
+  /// [ArgumentError] before any write.
   Future<LearnerProfileEntity> ensureProfile({
     required String profileId,
     required String displayName,
     required ProfileMode mode,
     required DateTime createdAt,
     String avatar = '',
+    LearnerSettings? seed,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
     final entity = LearnerProfileEntity(
@@ -287,8 +318,81 @@ class FirestoreLearnerProfileRepository {
       createdAt: createdAt,
       updatedAt: now,
     );
-    await _doc(profileId).set(entity.toFirestore(), SetOptions(merge: true));
-    return entity;
+    if (seed == null) {
+      // An ordinary (non-settings) write: the codec emits only its own
+      // keys, so the merge can never touch the governed settings.
+      await _doc(profileId).set(entity.toFirestore(), SetOptions(merge: true));
+      return entity;
+    }
+    if (seed.profileId != profileId) {
+      throw ArgumentError.value(seed.profileId, 'seed', 'another profile');
+    }
+    final entryId = _newChangeId(now);
+    final (entry, merge) = settingsSeed(
+      settings: seed,
+      entryId: entryId,
+      at: now,
+      actor: Actor(uid: _authUid, role: ActorRole.parent, displayName: ''),
+    );
+    final batch = _firestore.batch()
+      ..set(_doc(profileId), {
+        ...entity.toFirestore(),
+        ...toFirestoreMap(merge.toMergePatch(entryId)),
+      }, SetOptions(merge: true))
+      ..set(
+        _doc(profileId).collection(kChangeLogCollection).doc(entryId),
+        toFirestoreMap(entry.toStorage()),
+      );
+    await batch.commit();
+    return entity.copyWith(
+      settings: LearnerSettings(
+        profileId: profileId,
+        timeZone: seed.timeZone,
+        latitude: seed.latitude,
+        longitude: seed.longitude,
+        inIsrael: seed.inIsrael,
+        lastChangeId: entryId,
+      ),
+    );
+  }
+
+  /// The AD-37 seed of [settings]: an ordinary `learnerSettings` entry
+  /// [entryId] (`before` all-null, `after` the settings keys present) and
+  /// its validated profile-doc merge. Throws [StorageFormatException] for
+  /// invalid settings (e.g. a time zone that is not an IANA id).
+  static (ChangeLogEntry, GovernedDocMerge) settingsSeed({
+    required LearnerSettings settings,
+    required String entryId,
+    required DateTime at,
+    required Actor actor,
+  }) {
+    final fields = Map<String, Object?>.of(settings.toStorage())
+      ..remove(LearnerSettings.kLastChangeId);
+    final merge = GovernedDocMerge(
+      collection: GovernedEntity.learnerSettings.collection,
+      docId: settings.profileId,
+      fields: fields,
+    );
+    String k(String field) => ChangedFieldKey(
+      GovernedEntity.learnerSettings.collection,
+      settings.profileId,
+      field,
+    ).key;
+    final entry = ChangeLogEntry(
+      id: entryId,
+      entity: GovernedEntity.learnerSettings,
+      entityId: settings.profileId,
+      actionId: entryId,
+      before: {for (final f in fields.keys) k(f): null},
+      after: {
+        for (final MapEntry(:key, :value) in fields.entries) k(key): value,
+      },
+      at: at,
+      actor: actor,
+    );
+    // Validates entry ↔ merge agreement and the AD-54 budget.
+    GovernedBatch(entry: entry, merges: [merge]);
+    return (entry, merge);
   }
 
   /// Updates [profile] and writes the result back to the SAME document
@@ -296,6 +400,13 @@ class FirestoreLearnerProfileRepository {
   /// Omitting [displayName]/[mode]/[avatar] leaves the existing value
   /// untouched — mirrors `FirestoreGoalRepository.updateGoal`'s "current
   /// entity + optional overrides" shape.
+  ///
+  /// **Field-level `update` of the supplied fields only (AD-37, DNI-470
+  /// AC-6).** The write carries just the given fields plus `updated_at`
+  /// ([LearnerProfileEntity.ordinaryUpdate]) — never a settings key and
+  /// never `last_change_id` — so it can neither overwrite the governed
+  /// learner settings nor clobber a concurrent edit of another field (by a
+  /// tutor or another device): each field resolves by its own last write.
   Future<LearnerProfileEntity> updateProfile({
     required LearnerProfileEntity profile,
     String? displayName,
@@ -309,9 +420,14 @@ class FirestoreLearnerProfileRepository {
       avatar: avatar ?? profile.avatar,
       updatedAt: now,
     );
-    await _doc(
-      updated.profileId,
-    ).set(updated.toFirestore(), SetOptions(merge: true));
+    await _doc(updated.profileId).update(
+      LearnerProfileEntity.ordinaryUpdate(
+        updatedAt: now,
+        displayName: displayName,
+        mode: mode,
+        avatar: avatar,
+      ),
+    );
     return updated;
   }
 }
