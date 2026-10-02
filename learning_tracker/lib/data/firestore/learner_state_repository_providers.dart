@@ -43,8 +43,13 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
+import 'package:learning_tracker/domain/learner_state/c0_stub.dart';
+import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
+import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
@@ -168,3 +173,47 @@ final subTrackRepositoryProvider = FutureProvider<SubTrackRepository?>((
   if (handles == null) return null;
   return FirestoreSubTrackRepository(firestore: handles.firestore);
 }, retry: (retryCount, error) => null);
+
+// C0 (DNI-524) contract providers. Each is a stub that resolves to
+// `AsyncError(UnimplementedError)` until its owner story fills it; tests
+// override them with the fakes in `test/helpers/learner_state/`. Like the
+// repositories above, each resolves to null while the active account is
+// not ready, and scope is passed per call.
+
+/// [ChangeLogRepository] over the active account's Firestore handle, or
+/// null while not ready.
+///
+/// C0 stub, filled by DNI-470 (1.8).
+final changeLogRepositoryProvider = FutureProvider<ChangeLogRepository?>(
+  (ref) => c0Stub('DNI-470', 'changeLogRepositoryProvider'),
+  retry: (retryCount, error) => null,
+);
+
+/// [GovernedIntentRepository] over the active account's Firestore handle,
+/// or null while not ready.
+///
+/// C0 stub, filled by DNI-470 (1.8).
+final governedIntentRepositoryProvider =
+    FutureProvider<GovernedIntentRepository?>(
+      (ref) => c0Stub('DNI-470', 'governedIntentRepositoryProvider'),
+      retry: (retryCount, error) => null,
+    );
+
+/// [LearningWritePort] over the active account's Firestore handle, or null
+/// while not ready.
+///
+/// C0 stub, filled by DNI-469 (1.7).
+final learningWritePortProvider = FutureProvider<LearningWritePort?>(
+  (ref) => c0Stub('DNI-469', 'learningWritePortProvider'),
+  retry: (retryCount, error) => null,
+);
+
+/// [OversizedGovernedWritePort] over the active account's callable
+/// handle, or null while not ready.
+///
+/// C0 stub, filled by DNI-470 (1.8).
+final oversizedGovernedWritePortProvider =
+    FutureProvider<OversizedGovernedWritePort?>(
+      (ref) => c0Stub('DNI-470', 'oversizedGovernedWritePortProvider'),
+      retry: (retryCount, error) => null,
+    );
