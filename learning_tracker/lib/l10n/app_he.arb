@@ -338,6 +338,7 @@
   "subTrackDetailRemoveFailed": "לא ניתן היה להסיר. החומר חזר למצבו הקודם.",
   "subTrackDetailDragHandle": "שינוי סדר של {node}",
   "subTrackDetailEntryActions": "פעולות עבור {node}",
+  "subTrackDetailSelectPrompt": "יש לבחור תת-מסלול כדי לראות את פרטיו",
   "switchProfile": "החלף פרופיל",
   "switchProfileSubtitle": "החלף לפרופיל אחר או לחשבון שלך",
   "manageProfiles": "ניהול פרופילים",

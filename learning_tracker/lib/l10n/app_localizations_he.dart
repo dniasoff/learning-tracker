@@ -686,6 +686,10 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get subTrackDetailSelectPrompt =>
+      'יש לבחור תת-מסלול כדי לראות את פרטיו';
+
+  @override
   String get switchProfile => 'החלף פרופיל';
 
   @override

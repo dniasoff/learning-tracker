@@ -607,6 +607,10 @@
       }
     }
   },
+  "subTrackDetailSelectPrompt": "Select a sub-track to see its details",
+  "@subTrackDetailSelectPrompt": {
+    "description": "Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4."
+  },
   "switchProfile": "Switch profile",
   "switchProfileSubtitle": "Change to a different profile or your account",
   "manageProfiles": "Manage Profiles",

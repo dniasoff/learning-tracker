@@ -1298,6 +1298,12 @@ abstract class AppLocalizations {
   /// **'Actions for {node}'**
   String subTrackDetailEntryActions(String node);
 
+  /// Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a sub-track to see its details'**
+  String get subTrackDetailSelectPrompt;
+
   /// No description provided for @switchProfile.
   ///
   /// In en, this message translates to:

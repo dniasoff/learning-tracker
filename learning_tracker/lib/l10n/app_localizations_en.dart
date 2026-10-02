@@ -689,6 +689,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get subTrackDetailSelectPrompt =>
+      'Select a sub-track to see its details';
+
+  @override
   String get switchProfile => 'Switch profile';
 
   @override
