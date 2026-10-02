@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_hub_section.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
@@ -170,11 +171,11 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
                         : () => _showDeleteDialog(track),
                   ),
                 ),
-                // DNI-495: the parent-only Sub-tracks group under each
-                // main-track card (absent on calendar-program curricula).
+                // DNI-495: the parent-only group provides its count and Add action.
                 SubTrackHubSection(curriculumId: track.curriculumId.storageKey),
-                // Story 2.6 (DNI-497, AC-1): sub-track rows open their detail.
+                // DNI-497 detail navigation plus DNI-499 active/ended lifecycle rows.
                 const SubTrackHubRows(),
+                const SubTrackLifecycleHubSection(),
               ],
             ],
           );
