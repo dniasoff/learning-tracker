@@ -113,10 +113,7 @@ void main() {
         _text(tester, 'reportPaceEstimate-$school2026'),
         '10 / week estimate',
       );
-      expect(
-        _text(tester, 'reportPaceEstimate-$rebbeId'),
-        '5 / week estimate',
-      );
+      expect(_text(tester, 'reportPaceEstimate-$rebbeId'), '5 / week estimate');
     });
 
     testWidgets('the since-tracking figure is headline-small', (tester) async {

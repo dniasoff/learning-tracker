@@ -25,12 +25,10 @@ void main() {
         _view(report),
         paceCurriculumState(report),
       )!;
-      expect([for (final r in pace.rows) r.source], [
-        LearningEvent.sourceMain,
-        rebbeId,
-        school2025,
-        school2026,
-      ]);
+      expect(
+        [for (final r in pace.rows) r.source],
+        [LearningEvent.sourceMain, rebbeId, school2025, school2026],
+      );
       for (final row in pace.rows) {
         expect(
           identical(row.velocity, report.sources[row.source]!.velocity),
@@ -39,8 +37,7 @@ void main() {
       }
     });
 
-    test('active sub-tracks carry their stored estimate; Home has none',
-        () {
+    test('active sub-tracks carry their stored estimate; Home has none', () {
       final report = paceReport();
       final pace = PaceReportView.of(
         _view(report),
@@ -56,10 +53,7 @@ void main() {
     for (final deleted in [false, true]) {
       test('an ${deleted ? 'deleted' : 'ended'} sub-track is Ended with no '
           'estimate', () {
-        final report = paceReport(
-          ended2025: !deleted,
-          deleted2025: deleted,
-        );
+        final report = paceReport(ended2025: !deleted, deleted2025: deleted);
         final pace = PaceReportView.of(
           _view(report),
           paceCurriculumState(report),
@@ -90,9 +84,7 @@ void main() {
         paceCurriculumState(report, shortfall: 4, subTracks: const {}),
       )!;
       expect(pace.calendarProgram, isTrue);
-      expect([for (final r in pace.rows) r.source], [
-        LearningEvent.sourceMain,
-      ]);
+      expect([for (final r in pace.rows) r.source], [LearningEvent.sourceMain]);
     });
   });
 
@@ -113,10 +105,7 @@ void main() {
       expect(PaceReportView.of(_view(paceReport()), null), isNull);
       final noVelocity = homeOnlyReport();
       expect(
-        PaceReportView.of(
-          _view(noVelocity),
-          paceCurriculumState(noVelocity),
-        ),
+        PaceReportView.of(_view(noVelocity), paceCurriculumState(noVelocity)),
         isNull,
       );
     });
