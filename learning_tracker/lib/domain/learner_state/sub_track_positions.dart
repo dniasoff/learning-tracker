@@ -9,7 +9,8 @@
 /// and returns when the sub-track stops holding it) is in
 /// `main_track_position.dart`; the engine feeds it the ground of every
 /// `holdsGround` sub-track. The AD-44 capacity, expected new ground and
-/// shortfall fields of [SubTrackState] belong to DNI-494.
+/// shortfall fields of [SubTrackState] are filled by the deadline
+/// forecast (`sub_track_forecast.dart`, DNI-494).
 library;
 
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
