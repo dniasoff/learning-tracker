@@ -13,6 +13,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
@@ -216,3 +217,29 @@ void retrySubTrackDetail(WidgetRef ref) {
     ..invalidate(learnerStateProvider(active));
   if (ref.read(corporaProvider).hasError) ref.invalidate(corporaProvider);
 }
+
+/// The rendered label of a ground entry or position [sefariaRef]: the
+/// ContentIndex breadcrumb with its leading top-level segment dropped (the
+/// rule the main-track task card and the Learn-tab sub-track row use),
+/// falling back to the raw ref while the label loads.
+final subTrackRefLabelProvider = Provider.autoDispose.family<String, String>((
+  ref,
+  sefariaRef,
+) {
+  final rendered = ref
+      .watch(renderedDisplayForRefProvider(sefariaRef))
+      .asData
+      ?.value;
+  if (rendered == null) return sefariaRef.replaceAll('_', ' ');
+  const separator = ' › ';
+  final cut = rendered.indexOf(separator);
+  return cut == -1 ? rendered : rendered.substring(cut + separator.length);
+});
+
+/// The node's own ContentIndex name (e.g. "משנה א") for a row nested under
+/// an entry, falling back to the raw ref while it loads.
+final subTrackNodeNameProvider = Provider.autoDispose.family<String, String>(
+  (ref, sefariaRef) =>
+      ref.watch(renderedLeafForRefProvider(sefariaRef)).asData?.value ??
+      sefariaRef.replaceAll('_', ' '),
+);

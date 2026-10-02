@@ -1142,6 +1142,66 @@ abstract class AppLocalizations {
   /// **'Set a deadline'**
   String get subTrackDetailNoDeadlineLink;
 
+  /// Sub-track detail: section header over the ordered ground list (DNI-497 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Ground (in order)'**
+  String get subTrackDetailGroundTitle;
+
+  /// Sub-track detail: groundless state of the ground list (DNI-497 AC-4, UX-DR-122; EXPERIENCE.md [ASSUMPTION copy]). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'No ground yet'**
+  String get subTrackDetailGroundEmpty;
+
+  /// Sub-track detail: ground row count, all-source learning (DNI-497 AC-3, UX-DR-73).
+  ///
+  /// In en, this message translates to:
+  /// **'{learnt} of {total} learnt'**
+  String subTrackDetailLearntOf(int learnt, int total);
+
+  /// Sub-track detail: ground learnt on the main track, not in this sub-track (DNI-497 AC-3, UX-DR-91).
+  ///
+  /// In en, this message translates to:
+  /// **'learnt at home'**
+  String get subTrackDetailLearntAtHome;
+
+  /// Sub-track detail: ground learnt in another sub-track, named by the parent (DNI-497 AC-3, UX-DR-91).
+  ///
+  /// In en, this message translates to:
+  /// **'learnt at {source}'**
+  String subTrackDetailLearntAt(String source);
+
+  /// Sub-track detail: ground also held by another non-ended sub-track (DNI-497 AC-3, UX-DR-92).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · In use'**
+  String subTrackDetailInUse(String name);
+
+  /// Sub-track detail: screen-reader state of a fully learnt ground row (DNI-497 AC-8, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'complete'**
+  String get subTrackDetailTriComplete;
+
+  /// Sub-track detail: screen-reader state of a partly learnt ground row (DNI-497 AC-8, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'partially learnt, {learnt} of {total}'**
+  String subTrackDetailTriPartial(int learnt, int total);
+
+  /// Sub-track detail: screen-reader state of an unlearnt ground row (DNI-497 AC-8, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'not learnt'**
+  String get subTrackDetailTriEmpty;
+
+  /// Sub-track detail: screen-reader hint on a leaf label, which opens its Mishna history (DNI-497 AC-3).
+  ///
+  /// In en, this message translates to:
+  /// **'Open history'**
+  String get subTrackDetailOpenHistory;
+
   /// No description provided for @switchProfile.
   ///
   /// In en, this message translates to:

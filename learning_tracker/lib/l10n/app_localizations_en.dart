@@ -587,6 +587,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subTrackDetailNoDeadlineLink => 'Set a deadline';
 
   @override
+  String get subTrackDetailGroundTitle => 'Ground (in order)';
+
+  @override
+  String get subTrackDetailGroundEmpty => 'No ground yet';
+
+  @override
+  String subTrackDetailLearntOf(int learnt, int total) {
+    return '$learnt of $total learnt';
+  }
+
+  @override
+  String get subTrackDetailLearntAtHome => 'learnt at home';
+
+  @override
+  String subTrackDetailLearntAt(String source) {
+    return 'learnt at $source';
+  }
+
+  @override
+  String subTrackDetailInUse(String name) {
+    return '$name · In use';
+  }
+
+  @override
+  String get subTrackDetailTriComplete => 'complete';
+
+  @override
+  String subTrackDetailTriPartial(int learnt, int total) {
+    return 'partially learnt, $learnt of $total';
+  }
+
+  @override
+  String get subTrackDetailTriEmpty => 'not learnt';
+
+  @override
+  String get subTrackDetailOpenHistory => 'Open history';
+
+  @override
   String get switchProfile => 'Switch profile';
 
   @override
