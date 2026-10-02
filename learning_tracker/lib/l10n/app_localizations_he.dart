@@ -2701,10 +2701,47 @@ class AppLocalizationsHe extends AppLocalizations {
   String get loadingText => 'טוען טקסט...';
 
   @override
+  String get captureBeforeTrackingHint => 'נלמד לפני שהתחלתי לעקוב';
+
+  @override
+  String get captureChangeDate => 'שינוי';
+
+  @override
+  String get captureDateLabel => 'תאריך הלימוד';
+
+  @override
   String get captureLockedNotice => 'לא נרשם — האפליקציה סגורה בשבת וביום טוב.';
 
   @override
   String get captureNotSaved => 'לא נשמר — הלימוד לא נרשם.';
+
+  @override
+  String captureRecordCount(int count) {
+    return 'רישום $count';
+  }
+
+  @override
+  String captureRecordedCount(int count) {
+    return 'נרשמו $count';
+  }
+
+  @override
+  String get captureSourceHome => 'בית';
+
+  @override
+  String get captureSourceQuestion => 'איפה למדת את זה?';
+
+  @override
+  String get captureStateLearnt => 'נלמד';
+
+  @override
+  String get captureStateNotLearnt => 'טרם נלמד';
+
+  @override
+  String get captureStatePartial => 'נלמד בחלקו';
+
+  @override
+  String get captureTickUpToHere => 'סימון עד כאן';
 
   @override
   String get markedComplete => 'סומן כהושלם';

@@ -887,7 +887,7 @@ void main() {
       // Done phase
       expect(find.text('Done!'), findsOneWidget);
       expect(
-        find.textContaining('Marked 1 items as completed'),
+        find.text('Marked 1 items as complete'),
         findsOneWidget,
       );
 

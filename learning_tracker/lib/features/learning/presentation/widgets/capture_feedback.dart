@@ -223,17 +223,21 @@ class _PendingCaptureFailureListenerState
 
   void _announce(PendingFailure failure) {
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.captureNotSaved),
-        backgroundColor: context.colors.warningSnackbarFill,
-        duration: const Duration(seconds: 8),
-        action: SnackBarAction(
-          label: l10n.actionRetry,
-          onPressed: () => unawaited(_retry(failure)),
+    // The failure supersedes a showing "recorded — Undo" notice: that batch
+    // was not saved, so its Undo is moot.
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(l10n.captureNotSaved),
+          backgroundColor: context.colors.warningSnackbarFill,
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: l10n.actionRetry,
+            onPressed: () => unawaited(_retry(failure)),
+          ),
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _retry(PendingFailure failure) async {
