@@ -1390,6 +1390,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tutors cannot mark live completions';
 
   @override
+  String get tutorCaptureKeptNotCounted =>
+      'Kept, not counted — Shabbos / Yom Tov had started';
+
+  @override
+  String get tutorCaptureLearnerLocked => 'Shabbos / Yom Tov';
+
+  @override
+  String tutorCaptureNoEditAccess(String learner) {
+    return '$learner\'s parent hasn\'t given you editing access';
+  }
+
+  @override
+  String get tutorCaptureOnlineRequired => 'Online required';
+
+  @override
   String get tutorWriteForbiddenTitle => 'Action not allowed';
 
   @override

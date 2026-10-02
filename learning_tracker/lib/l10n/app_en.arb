@@ -953,6 +953,27 @@
   },
   "switchIntoChildConfirm": "Switch in",
   "tutorCannotMarkLiveCompletion": "Tutors cannot mark live completions",
+  "tutorCaptureKeptNotCounted": "Kept, not counted — Shabbos / Yom Tov had started",
+  "@tutorCaptureKeptNotCounted": {
+    "description": "DNI-486 AC-7: a tutor capture the server stamped inside the learner's lock window. The event is stored but does not count."
+  },
+  "tutorCaptureLearnerLocked": "Shabbos / Yom Tov",
+  "@tutorCaptureLearnerLocked": {
+    "description": "DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data."
+  },
+  "tutorCaptureNoEditAccess": "{learner}'s parent hasn't given you editing access",
+  "@tutorCaptureNoEditAccess": {
+    "description": "DNI-486 AC-4: note under a tutor's disabled write controls when the grant's can_edit_learning is false.",
+    "placeholders": {
+      "learner": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorCaptureOnlineRequired": "Online required",
+  "@tutorCaptureOnlineRequired": {
+    "description": "DNI-486 AC-5: tutor writes are online-only (AD-53); shown on disabled tutor write controls while offline."
+  },
   "tutorWriteForbiddenTitle": "Action not allowed",
   "tutorWriteForbiddenMessage": "Tutors cannot mark live forward completions. This action would credit the child's streak and rewards, which is reserved for the parent or child.",
   "tutorPermissionDenied": "You don't have permission to make this edit",
