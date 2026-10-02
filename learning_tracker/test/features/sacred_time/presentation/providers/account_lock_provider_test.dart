@@ -90,14 +90,15 @@ void main() {
       expect(scopes.requireValue, isEmpty);
     });
 
-    test('a tutored session adds the talmid whose screens are shown; a grant '
-        'alone does not', () async {
-      expect((await _scopes(_container(tutored: true))).requireValue, [
-        _a,
-        _b,
-        _t,
-      ]);
-      expect((await _scopes(_container())).requireValue, isNot(contains(_t)));
+    test('a tutored talmid never drives the account lock, in or out of a '
+        'tutored session (AD-36)', () async {
+      expect((await _scopes(_container(tutored: true))).requireValue, [_a, _b]);
+      expect((await _scopes(_container())).requireValue, [_a, _b]);
+    });
+
+    test('signed out in a tutored session: still no learner', () async {
+      final scopes = await _scopes(_container(uid: null, tutored: true));
+      expect(scopes.requireValue, isEmpty);
     });
 
     test('loading while the path uid loads; an error when it fails', () async {
@@ -193,6 +194,57 @@ void main() {
           failClosedSettingsHistory('x').spans.single.settings,
         ),
       );
+    });
+  });
+
+  group('tutoredLearnerLockHistoryProvider (AD-36 tutor rule)', () {
+    test('null outside a tutored session', () {
+      expect(_container().read(tutoredLearnerLockHistoryProvider), isNull);
+    });
+
+    test("the talmid's own history in a tutored session, and it stays out "
+        'of the account histories', () async {
+      final lakewoodH = constantHistory(lakewood);
+      final jerusalemH = constantHistory(jerusalem);
+      final c = _container(
+        tutored: true,
+        extra: [
+          learnerLockSettingsProvider(
+            _a,
+          ).overrideWithValue(AsyncData(jerusalemH)),
+          learnerLockSettingsProvider(
+            _b,
+          ).overrideWithValue(AsyncData(jerusalemH)),
+          learnerLockSettingsProvider(
+            _t,
+          ).overrideWithValue(AsyncData(lakewoodH)),
+        ],
+      );
+      await _scopes(c);
+      expect(c.read(tutoredLearnerLockHistoryProvider), lakewoodH);
+      expect(c.read(accountLockHistoriesProvider), [jerusalemH, jerusalemH]);
+      // Saturday 20:00Z: Lakewood (the talmid) is locked, Jerusalem (the
+      // tutor's own learners) is not — the device predicate stays open.
+      expect(
+        c.read(deviceLockPredicateProvider)(DateTime.utc(2026, 9, 5, 20)),
+        isFalse,
+      );
+    });
+
+    test("fail closed while the talmid's settings load or fail", () {
+      for (final value in <AsyncValue<LearnerSettingsHistory>>[
+        const AsyncLoading(),
+        AsyncError(StateError('unreadable'), StackTrace.empty),
+      ]) {
+        final c = _container(
+          tutored: true,
+          extra: [learnerLockSettingsProvider(_t).overrideWithValue(value)],
+        );
+        expect(
+          c.read(tutoredLearnerLockHistoryProvider),
+          failClosedSettingsHistory(_talmid),
+        );
+      }
     });
   });
 

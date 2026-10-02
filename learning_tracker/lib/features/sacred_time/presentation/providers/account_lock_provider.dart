@@ -1,11 +1,14 @@
 /// The learners whose lock drives this device's lock surfaces, and their
 /// settings histories (DNI-481 AC-1, AD-36 "Multi-learner devices").
 ///
-/// * Every learner profile of the signed-in account drives the overlay:
-///   its window is the union of their `lockWindows`.
-/// * A learner viewed through a tutor grant does NOT drive the account
-///   overlay; only while a tutored session shows that talmid's screens are
-///   they covered by the talmid's lock.
+/// * Every learner profile of the signed-in account drives the app-wide
+///   overlay, notification suppression and reminders: its window is the
+///   union of their `lockWindows`.
+/// * A learner viewed through a tutor grant NEVER drives that account
+///   lock — not even during a tutored session. While a tutored session
+///   shows a locked talmid, only the talmid's screens are covered
+///   ([tutoredLearnerLockHistoryProvider], `currentTutoredSacredWindow`),
+///   and the tutor's own way out of the session stays reachable.
 /// * Signed out (no account, or its path uid unbound): no learner, so no
 ///   lock — sign-in and onboarding stay reachable (DNI-368).
 /// * Fail closed: while the account's profiles or a learner's settings are
@@ -27,26 +30,19 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 const String unknownAccountLearner = 'account';
 
 /// The learners whose lock drives the device: every learner profile of the
-/// signed-in account (owner = the account's persisted path uid), plus the
-/// talmid of an active tutored session. `AsyncData([])` while signed out;
-/// loading / error while the account's profiles load or fail.
+/// signed-in account (owner = the account's persisted path uid). A tutored
+/// talmid is never one of them. `AsyncData([])` while signed out; loading /
+/// error while the account's profiles load or fail.
 final lockDrivingScopesProvider = Provider<AsyncValue<List<LearnerScope>>>((
   ref,
 ) {
-  final tutored = ref.watch(activeTutoredProfileSelectionProvider);
-  final talmid = tutored == null
-      ? null
-      : _scopeOrNull(tutored.ownerUid, tutored.profileId);
-
   final uid = ref.watch(ownAccountPathUidProvider);
   if (uid case AsyncError(:final error, :final stackTrace)) {
     return AsyncError(error, stackTrace);
   }
   if (!uid.hasValue) return const AsyncLoading();
   final ownerUid = uid.requireValue;
-  if (ownerUid == null) {
-    return AsyncData([?talmid]);
-  }
+  if (ownerUid == null) return const AsyncData([]);
 
   final profiles = ref.watch(profileListStreamProvider);
   if (profiles case AsyncError(:final error, :final stackTrace)) {
@@ -56,8 +52,26 @@ final lockDrivingScopesProvider = Provider<AsyncValue<List<LearnerScope>>>((
   return AsyncData([
     for (final profile in profiles.requireValue)
       ?_scopeOrNull(ownerUid, profile.profileId),
-    if (talmid != null) talmid,
   ]);
+});
+
+/// The settings history of the talmid an active tutored session shows, or
+/// null outside a tutored session (DNI-481 AC-1 tutor rule, AD-36). Drives
+/// only the cover over that talmid's screens, never the account lock.
+/// Fail closed: while the talmid's settings load or cannot be read (or
+/// the selection names no addressable learner), the talmid is judged with
+/// [failClosedSettingsHistory].
+final tutoredLearnerLockHistoryProvider = Provider<LearnerSettingsHistory?>((
+  ref,
+) {
+  final tutored = ref.watch(activeTutoredProfileSelectionProvider);
+  if (tutored == null) return null;
+  final scope = _scopeOrNull(tutored.ownerUid, tutored.profileId);
+  if (scope == null) return failClosedSettingsHistory(tutored.profileId);
+  return _historyOrFailClosed(
+    ref.watch(learnerLockSettingsProvider(scope)),
+    scope.profileId,
+  );
 });
 
 /// A scope, or null for an id pair `LearnerScope` refuses (never a

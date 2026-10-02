@@ -14,8 +14,9 @@
 //       and dialogs.
 //   (d) The union: any locked learner of the signed-in account locks the
 //       device; signed out, nothing does.
-//   (e) A tutor grant does not drive the overlay; a tutored session showing
-//       a locked talmid's screens does.
+//   (e) A tutored talmid never drives the device overlay; a tutored
+//       session showing a locked talmid covers only the talmid's screens
+//       and keeps the tutor's exit reachable.
 
 import 'dart:async';
 
@@ -123,6 +124,7 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   required List<Override> overrides,
   Widget home = const Text('DASHBOARD'),
+  VoidCallback? onExit,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -132,7 +134,12 @@ Future<void> _pumpApp(
         supportedLocales: AppLocalizations.supportedLocales,
         // As in learning_tracker_app.dart: the overlay wraps the router
         // output in the builder slot.
-        builder: (context, child) => SacredTimeLockOverlay(child: child!),
+        builder: (context, child) => SacredTimeLockOverlay(
+          child: TutoredLearnerLockOverlay(
+            onExit: onExit ?? () {},
+            child: child!,
+          ),
+        ),
         home: home,
       ),
     ),
@@ -305,15 +312,39 @@ void main() {
       expect(find.text('Good Shabbos'), findsNothing);
     });
 
-    testWidgets('(e) a tutored session showing a locked talmid is covered', (
+    testWidgets("(e) a tutored session covers the locked talmid's screens "
+        "but not the tutor's way out, and drives no device lock", (
       tester,
     ) async {
+      var exits = 0;
       await _pumpApp(
         tester,
         overrides: _account(locked: {_talmid}, tutored: true),
+        onExit: () => exits++,
       );
       expect(find.text('Good Shabbos'), findsOneWidget);
       expect(find.text('DASHBOARD'), findsNothing);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      );
+      expect(container.read(currentSacredWindowProvider), isNull);
+
+      await tester.tap(find.byKey(const Key('tutoredLearnerLockExit')));
+      expect(exits, 1);
+    });
+
+    testWidgets('(e) the device lock shows no tutor exit', (tester) async {
+      await _pumpApp(tester, overrides: _account(locked: {_sibling}));
+      expect(find.text('Good Shabbos'), findsOneWidget);
+      expect(find.byKey(const Key('tutoredLearnerLockExit')), findsNothing);
+    });
+
+    testWidgets('(e) a tutored session with an unlocked talmid is open', (
+      tester,
+    ) async {
+      await _pumpApp(tester, overrides: _account(tutored: true));
+      expect(find.text('Good Shabbos'), findsNothing);
+      expect(find.text('DASHBOARD'), findsOneWidget);
     });
   });
 }

@@ -31,8 +31,59 @@ class SacredTimeLockOverlay extends ConsumerWidget {
   final Widget child;
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      _LockCover(window: ref.watch(currentSacredWindowProvider), child: child);
+}
+
+/// The cover over a locked talmid's screens in a tutored session (DNI-481
+/// AC-1 tutor rule, AD-36 "Multi-learner devices").
+///
+/// A talmid viewed through a tutor grant never drives the device lock
+/// ([SacredTimeLockOverlay]). While an active tutored session shows a
+/// talmid inside their own lock ([currentTutoredSacredWindowProvider]),
+/// this covers what the router renders — the talmid's data and controls
+/// are offstage, exactly as under the device lock — with the same
+/// sacred-time surface, plus ONE control of the tutor's own: [onExit]
+/// leaves the tutored session, so the tutor is never trapped behind the
+/// talmid's lock. Mounted inside [SacredTimeLockOverlay], so the tutor's
+/// own account lock still covers everything.
+class TutoredLearnerLockOverlay extends ConsumerWidget {
+  const TutoredLearnerLockOverlay({
+    required this.onExit,
+    required this.child,
+    super.key,
+  });
+
+  /// Leaves the tutored session (back to the tutor's own profile).
+  final VoidCallback onExit;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => _LockCover(
+    window: ref.watch(currentTutoredSacredWindowProvider),
+    onExitTutoredSession: onExit,
+    child: child,
+  );
+}
+
+/// Shows [child] while [window] is null; otherwise keeps it in the tree
+/// but offstage (no paint, touch or semantics, tickers paused) under the
+/// opaque lock screen of [window].
+class _LockCover extends ConsumerWidget {
+  const _LockCover({
+    required this.window,
+    required this.child,
+    this.onExitTutoredSession,
+  });
+
+  final SacredWindow? window;
+  final Widget child;
+  final VoidCallback? onExitTutoredSession;
+
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeWindow = ref.watch(currentSacredWindowProvider);
+    final activeWindow = window;
     final locked = activeWindow != null;
     // Resolve the variant-aware Shabbos term once here (this is the Consumer
     // layer) and hand the composed greeting/subtitle down to the plain
@@ -52,16 +103,28 @@ class SacredTimeLockOverlay extends ConsumerWidget {
           offstage: locked,
           child: TickerMode(enabled: !locked, child: child),
         ),
-        if (locked) _LockScreen(window: activeWindow, shabbos: shabbos!),
+        if (locked)
+          _LockScreen(
+            window: activeWindow,
+            shabbos: shabbos!,
+            onExitTutoredSession: onExitTutoredSession,
+          ),
       ],
     );
   }
 }
 
 class _LockScreen extends StatelessWidget {
-  const _LockScreen({required this.window, required this.shabbos});
+  const _LockScreen({
+    required this.window,
+    required this.shabbos,
+    this.onExitTutoredSession,
+  });
 
   final SacredWindow window;
+
+  /// When set (a tutored session's cover), the tutor's exit control.
+  final VoidCallback? onExitTutoredSession;
 
   /// Variant-resolved Shabbos term ("Shabbos" / "Shabbat" / "שבת"), composed
   /// into the localized greeting and subtitle frames.
@@ -119,6 +182,32 @@ class _LockScreen extends StatelessWidget {
                               height: 1.4,
                             ),
                       ),
+                      if (onExitTutoredSession case final onExit?) ...[
+                        const SizedBox(height: 32),
+                        Text(
+                          l10n.tutorModeIndicator,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.78),
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          key: const Key('tutoredLearnerLockExit'),
+                          onPressed: onExit,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white),
+                            minimumSize: const Size(
+                              kMinInteractiveDimension,
+                              kMinInteractiveDimension,
+                            ),
+                          ),
+                          icon: const Icon(Icons.logout_rounded),
+                          label: Text(l10n.tutorModeExit),
+                        ),
+                      ],
                     ],
                   ),
                 ),

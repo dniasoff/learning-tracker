@@ -103,4 +103,53 @@ void main() {
       container.dispose();
     });
   });
+
+  group('currentTutoredSacredWindowProvider (AD-36 tutor rule)', () {
+    test('null outside a tutored session', () {
+      final c = ProviderContainer.test(
+        overrides: [
+          tutoredLearnerLockHistoryProvider.overrideWithValue(null),
+          localDayClockProvider.overrideWithValue(
+            FakeLocalDayClock(DateTime.utc(2026, 9, 5, 12)),
+          ),
+        ],
+      );
+      expect(c.read(currentTutoredSacredWindowProvider), isNull);
+    });
+
+    test("the talmid's lock, independent of the device lock", () {
+      final c = ProviderContainer.test(
+        overrides: [
+          tutoredLearnerLockHistoryProvider.overrideWithValue(lakewoodH),
+          accountLockHistoriesProvider.overrideWithValue([]),
+          localDayClockProvider.overrideWithValue(
+            FakeLocalDayClock(DateTime.utc(2026, 9, 5, 12)),
+          ),
+        ],
+      );
+      expect(c.read(currentSacredWindowProvider), isNull);
+      expect(
+        c.read(currentTutoredSacredWindowProvider)?.startUtc,
+        lock.startUtc,
+      );
+    });
+
+    test("lifts just after the talmid's lock ends", () {
+      fakeAsync((async) {
+        final container = ProviderContainer.test(
+          overrides: [
+            tutoredLearnerLockHistoryProvider.overrideWithValue(lakewoodH),
+            localDayClockProvider.overrideWithValue(
+              _FollowingClock(lock.endUtc, async),
+            ),
+          ],
+        );
+        container.listen(currentTutoredSacredWindowProvider, (_, _) {});
+        expect(container.read(currentTutoredSacredWindowProvider), isNotNull);
+        async.elapse(const Duration(seconds: 1));
+        expect(container.read(currentTutoredSacredWindowProvider), isNull);
+        container.dispose();
+      });
+    });
+  });
 }
