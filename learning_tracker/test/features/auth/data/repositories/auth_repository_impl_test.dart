@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/auth/account_auth_gateway.dart';
 import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
 import 'package:learning_tracker/core/auth/firebase_auth_gateway.dart';
 import 'package:learning_tracker/core/auth/google_sign_in_gateway.dart';
@@ -15,6 +16,8 @@ import 'package:mocktail/mocktail.dart';
 class MockFirebaseAuthGateway extends Mock implements FirebaseAuthGateway {}
 
 class MockGoogleSignInGateway extends Mock implements GoogleSignInGateway {}
+
+class MockAccountAuthGateway extends Mock implements AccountAuthGateway {}
 
 AuthGatewayUser _sampleUser({
   String uid = 'test-uid',
@@ -33,159 +36,175 @@ AuthGatewayUser _sampleUser({
 void main() {
   late MockFirebaseAuthGateway mockAuth;
   late MockGoogleSignInGateway mockGoogle;
+  late MockAccountAuthGateway mockAccounts;
   late AuthRepositoryImpl repository;
 
   setUp(() {
     mockAuth = MockFirebaseAuthGateway();
     mockGoogle = MockGoogleSignInGateway();
+    mockAccounts = MockAccountAuthGateway();
     repository = AuthRepositoryImpl(
+      accountAuthGateway: mockAccounts,
       firebaseAuthGateway: mockAuth,
       googleSignInGateway: mockGoogle,
+      accountId: 'acc-1',
     );
   });
 
-  group('signInWithEmail', () {
-    test('delegates to the gateway with the same email/password', () async {
-      when(
-        () => mockAuth.signInWithEmailAndPassword(
-          email: 'test@example.com',
-          password: 'password123',
-        ),
-      ).thenAnswer((_) async {});
-
-      await repository.signInWithEmail('test@example.com', 'password123');
-
-      verify(
-        () => mockAuth.signInWithEmailAndPassword(
-          email: 'test@example.com',
-          password: 'password123',
-        ),
-      ).called(1);
-    });
-  });
-
-  group('signUp', () {
+  // DNI-520 (AC-1/AC-2/AC-3): every sign-in names its account and runs on
+  // that account's named app through AccountAuthGateway — never the bound
+  // (active) gateway, never the default app.
+  group('named-app sign-in (DNI-520)', () {
     test(
-      'creates the user via the gateway and updates the display name',
+      'signInToAccountWithEmail signs in on the named account only',
       () async {
         when(
-          () => mockAuth.createUserWithEmailAndPassword(
-            email: 'new@example.com',
-            password: 'newpass123',
+          () => mockAccounts.signInWithEmail(
+            'acc-9',
+            email: 'a@b.c',
+            password: 'pw',
           ),
-        ).thenAnswer((_) async => 'new-uid');
-        when(
-          () => mockAuth.updateDisplayName('Test User'),
-        ).thenAnswer((_) async {});
+        ).thenAnswer((_) async => _sampleUser(uid: 'uid-9'));
 
-        await repository.signUp('new@example.com', 'newpass123', 'Test User');
+        final user = await repository.signInToAccountWithEmail(
+          'acc-9',
+          'a@b.c',
+          'pw',
+        );
 
-        verify(
-          () => mockAuth.createUserWithEmailAndPassword(
-            email: 'new@example.com',
-            password: 'newpass123',
-          ),
-        ).called(1);
-        verify(() => mockAuth.updateDisplayName('Test User')).called(1);
+        expect(user.uid, 'uid-9');
+        verifyZeroInteractions(mockAuth);
       },
     );
 
-    test('rethrows when the gateway rejects the email', () async {
-      when(
-        () => mockAuth.createUserWithEmailAndPassword(
-          email: 'not-an-email',
-          password: 'password123',
-        ),
-      ).thenThrow(StateError('invalid-email'));
-
-      expect(
-        () => repository.signUp('not-an-email', 'password123', 'Test'),
-        throwsA(isA<StateError>()),
-      );
-    });
-  });
-
-  group('signInWithGoogle', () {
     test(
-      'runs Google flow then exchanges the id-token via the gateway',
+      'pickGoogleAccount runs only the Google picker — no Firebase sign-in',
       () async {
-        when(
-          () => mockGoogle.authenticate(),
-        ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok-1'));
-        when(
-          () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-1'),
-        ).thenAnswer((_) async {});
+        when(() => mockGoogle.authenticate()).thenAnswer(
+          (_) async => const GoogleSignInResult(idToken: 'tok', email: 'g@x.y'),
+        );
 
-        await repository.signInWithGoogle();
+        final pick = await repository.pickGoogleAccount();
 
-        verify(() => mockGoogle.authenticate()).called(1);
-        verify(
-          () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-1'),
-        ).called(1);
+        expect(pick.idToken, 'tok');
+        expect(pick.email, 'g@x.y');
+        verifyZeroInteractions(mockAuth);
+        verifyZeroInteractions(mockAccounts);
       },
     );
-  });
-
-  group('reauthWithGoogleSilently', () {
-    test('silent session resolves → exchanges id-token and returns the AppUser '
-        '(no interactive authenticate)', () async {
-      when(
-        () => mockGoogle.authenticateSilently(),
-      ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok-s'));
-      when(
-        () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-s'),
-      ).thenAnswer((_) async {});
-      when(
-        () => mockAuth.currentUser,
-      ).thenReturn(_sampleUser(uid: 'fb-silent'));
-
-      final user = await repository.reauthWithGoogleSilently();
-
-      expect(user, isNotNull);
-      expect(user!.uid, 'fb-silent');
-      verify(() => mockGoogle.authenticateSilently()).called(1);
-      verify(
-        () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-s'),
-      ).called(1);
-      // Silent path must NEVER fall through to the interactive picker.
-      verifyNever(() => mockGoogle.authenticate());
-    });
 
     test(
-      'no silent session (null) → returns null, no Firebase exchange',
+      'pickGoogleAccountSilently returns null without a cached token',
       () async {
         when(
           () => mockGoogle.authenticateSilently(),
         ).thenAnswer((_) async => null);
 
-        final user = await repository.reauthWithGoogleSilently();
-
-        expect(user, isNull);
-        verify(() => mockGoogle.authenticateSilently()).called(1);
-        verifyNever(
-          () =>
-              mockAuth.signInWithGoogleIdToken(idToken: any(named: 'idToken')),
-        );
-        verifyNever(() => mockGoogle.authenticate());
+        expect(await repository.pickGoogleAccountSilently(), isNull);
       },
     );
 
     test(
-      'silent result with null id-token → returns null, no exchange',
+      'signInToAccountWithGoogle signs the named account in with the token',
       () async {
         when(
-          () => mockGoogle.authenticateSilently(),
-        ).thenAnswer((_) async => const GoogleSignInResult(idToken: null));
+          () => mockAccounts.signInWithGoogleIdToken('acc-9', idToken: 'tok'),
+        ).thenAnswer((_) async => _sampleUser(uid: 'uid-g'));
 
-        final user = await repository.reauthWithGoogleSilently();
+        final user = await repository.signInToAccountWithGoogle('acc-9', 'tok');
 
-        expect(user, isNull);
-        verifyNever(
-          () =>
-              mockAuth.signInWithGoogleIdToken(idToken: any(named: 'idToken')),
-        );
+        expect(user.uid, 'uid-g');
       },
     );
+
+    test(
+      'createAccountWithEmail signs up on the named account with the display name',
+      () async {
+        when(
+          () => mockAccounts.createUserWithEmail(
+            'acc-new',
+            email: 'n@x.y',
+            password: 'pw',
+            displayName: 'Name',
+          ),
+        ).thenAnswer((_) async => _sampleUser(uid: 'uid-new'));
+
+        final user = await repository.createAccountWithEmail(
+          'acc-new',
+          'n@x.y',
+          'pw',
+          'Name',
+        );
+
+        expect(user.uid, 'uid-new');
+      },
+    );
+
+    test(
+      'ensureAnonymousSession creates the AD-19 anonymous session',
+      () async {
+        when(
+          () => mockAccounts.ensureAnonymousSession('acc-local'),
+        ).thenAnswer((_) async => _sampleUser(uid: 'anon-uid'));
+
+        final user = await repository.ensureAnonymousSession('acc-local');
+
+        expect(user.uid, 'anon-uid');
+      },
+    );
+
+    test(
+      'restoreSession returns null when the account has no session',
+      () async {
+        when(
+          () => mockAccounts.restoreSession('acc-x'),
+        ).thenAnswer((_) async => null);
+
+        expect(await repository.restoreSession('acc-x'), isNull);
+      },
+    );
+
+    test(
+      'linkEmailProvider links on the BOUND account via linkCredential',
+      () async {
+        when(
+          () => mockAccounts.linkEmail('acc-1', email: 'a@b.c', password: 'pw'),
+        ).thenAnswer((_) async => _sampleUser(uid: 'same-uid'));
+
+        await repository.linkEmailProvider('a@b.c', 'pw');
+
+        verify(
+          () => mockAccounts.linkEmail('acc-1', email: 'a@b.c', password: 'pw'),
+        ).called(1);
+      },
+    );
+
+    test(
+      'linkGoogleProvider runs Google then links on the bound account',
+      () async {
+        when(
+          () => mockGoogle.authenticate(),
+        ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok'));
+        when(
+          () => mockAccounts.linkGoogleIdToken('acc-1', idToken: 'tok'),
+        ).thenAnswer((_) async => _sampleUser(uid: 'same-uid'));
+
+        await repository.linkGoogleProvider();
+
+        verify(
+          () => mockAccounts.linkGoogleIdToken('acc-1', idToken: 'tok'),
+        ).called(1);
+      },
+    );
+
+    test('forAccount binds the repository to another account\'s named app', () {
+      when(() => mockAccounts.gatewayFor('acc-2')).thenReturn(mockAuth);
+
+      final other = repository.forAccount('acc-2');
+
+      expect(other.accountId, 'acc-2');
+      verify(() => mockAccounts.gatewayFor('acc-2')).called(1);
+    });
   });
 
   group('sendSignInLinkToEmail', () {
@@ -210,41 +229,6 @@ void main() {
       expect(captured[0], 'user@example.com');
       expect(captured[1], contains('sign-in'));
       expect(captured[2], 'com.jcom.torah.learning_tracker');
-    });
-  });
-
-  group('signInWithEmailLink', () {
-    test('returns an AppUser converted from the gateway response', () async {
-      when(
-        () => mockAuth.signInWithEmailLink(
-          email: 'user@example.com',
-          emailLink: 'https://example.com/sign-in?oobCode=abc123',
-        ),
-      ).thenAnswer(
-        (_) async => _sampleUser(uid: 'user-uid', email: 'user@example.com'),
-      );
-
-      final result = await repository.signInWithEmailLink(
-        'user@example.com',
-        'https://example.com/sign-in?oobCode=abc123',
-      );
-
-      expect(result, isA<AppUser>());
-      expect(result?.uid, 'user-uid');
-      expect(result?.email, 'user@example.com');
-    });
-
-    test('returns null when the gateway returned null', () async {
-      when(
-        () => mockAuth.signInWithEmailLink(
-          email: any(named: 'email'),
-          emailLink: any(named: 'emailLink'),
-        ),
-      ).thenAnswer((_) async => null);
-
-      final result = await repository.signInWithEmailLink('a@b.c', 'link');
-
-      expect(result, isNull);
     });
   });
 
@@ -323,44 +307,6 @@ void main() {
     });
   });
 
-  group('linkGoogleProvider', () {
-    test('runs Google then links the id-token via the gateway', () async {
-      when(
-        () => mockGoogle.authenticate(),
-      ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok-link'));
-      when(
-        () => mockAuth.linkWithGoogleIdToken(idToken: 'tok-link'),
-      ).thenAnswer((_) async {});
-
-      await repository.linkGoogleProvider();
-
-      verify(() => mockGoogle.authenticate()).called(1);
-      verify(
-        () => mockAuth.linkWithGoogleIdToken(idToken: 'tok-link'),
-      ).called(1);
-    });
-  });
-
-  group('linkEmailProvider', () {
-    test('forwards email + password to the gateway', () async {
-      when(
-        () => mockAuth.linkWithEmailAndPassword(
-          email: 'test@example.com',
-          password: 'pass123',
-        ),
-      ).thenAnswer((_) async {});
-
-      await repository.linkEmailProvider('test@example.com', 'pass123');
-
-      verify(
-        () => mockAuth.linkWithEmailAndPassword(
-          email: 'test@example.com',
-          password: 'pass123',
-        ),
-      ).called(1);
-    });
-  });
-
   group('getLinkedProviders', () {
     test('returns whatever the gateway returns', () {
       when(
@@ -410,8 +356,8 @@ void main() {
     test('a single subscription sees the mapped user on sign-in then null on '
         'sign-out (end-to-end sequencing through the gateway)', () async {
       // Unlike the two single-emission cases above, this proves the
-      // *same* subscription tracks both transitions the gateway stream
-      // pushes as a result of separate signInWithEmail/signOut calls —
+      // *same* subscription tracks both transitions the bound account's
+      // gateway stream pushes as a result of separate sign-in/signOut calls —
       // formerly covered by the standalone auth_integration_test.dart
       // (folded in here per AUD-t-auth-04; that file re-derived this
       // exact scenario in a second file with no other collaborator
@@ -427,12 +373,14 @@ void main() {
       );
 
       when(
-        () => mockAuth.signInWithEmailAndPassword(
+        () => mockAccounts.signInWithEmail(
+          'acc-1',
           email: 'test@example.com',
           password: 'password123',
         ),
       ).thenAnswer((_) async {
         authStateController.add(fakeUser);
+        return fakeUser;
       });
 
       when(() => mockGoogle.signOut()).thenAnswer((_) async {});
@@ -451,7 +399,11 @@ void main() {
       addTearDown(subscription.cancel);
 
       // Step 1 — sign in
-      await repository.signInWithEmail('test@example.com', 'password123');
+      await repository.signInToAccountWithEmail(
+        'acc-1',
+        'test@example.com',
+        'password123',
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(authStates, contains(isA<AppUser>()));
@@ -565,42 +517,6 @@ void main() {
       await repository.applyActionCode('oob');
 
       verify(() => mockAuth.applyActionCode('oob')).called(1);
-    });
-  });
-
-  group('createUserAccount', () {
-    test('returns the UID provided by the gateway', () async {
-      when(
-        () => mockAuth.createUserWithEmailAndPassword(
-          email: 'a@b.c',
-          password: 'pw',
-        ),
-      ).thenAnswer((_) async => 'fresh-uid');
-
-      expect(await repository.createUserAccount('a@b.c', 'pw'), 'fresh-uid');
-    });
-  });
-
-  group('signInAndGetUser', () {
-    test('maps the gateway response to AppUser', () async {
-      when(
-        () => mockAuth.signInAndGetUser(email: 'a@b.c', password: 'pw'),
-      ).thenAnswer((_) async => _sampleUser(uid: 'sign-in-uid'));
-
-      final user = await repository.signInAndGetUser('a@b.c', 'pw');
-
-      expect(user?.uid, 'sign-in-uid');
-    });
-
-    test('returns null when the gateway returns null', () async {
-      when(
-        () => mockAuth.signInAndGetUser(
-          email: any(named: 'email'),
-          password: any(named: 'password'),
-        ),
-      ).thenAnswer((_) async => null);
-
-      expect(await repository.signInAndGetUser('a@b.c', 'pw'), isNull);
     });
   });
 

@@ -723,6 +723,179 @@ void main() {
     });
   });
 
+  // ── DNI-520: named-app-only Auth wiring ─────────────────────────────────
+
+  group('DNI-520 — named-app Auth wiring', () {
+    test('signInCloudAccount always verifies the credential, even for an '
+        'account whose named app is already signed in', () async {
+      final auth = _AuthHarness()
+        ..willBuild('acc-1', () {
+          final mock = MockFirebaseAuthHandle();
+          when(() => mock.currentUser).thenReturn(null);
+          when(
+            () => mock.signInWithCredential(any()),
+          ).thenAnswer((_) async => _mockCredential(_mockUser('uid-cloud')));
+          return mock;
+        });
+      final registry = buildRegistry(authHarness: auth);
+
+      await registry.signInCloudAccount('acc-1', FakeAuthCredential());
+      await registry.signInCloudAccount('acc-1', FakeAuthCredential());
+
+      verify(() => auth.mockFor('acc-1').signInWithCredential(any())).called(2);
+      expect(initializeApp.callCount, 1, reason: 'same named app reused');
+    });
+
+    test('a rejected credential on a signed-in account is NOT masked by the '
+        'cached session', () async {
+      var reject = false;
+      final auth = _AuthHarness()
+        ..willBuild('acc-1', () {
+          final mock = MockFirebaseAuthHandle();
+          when(() => mock.currentUser).thenReturn(null);
+          when(() => mock.signInWithCredential(any())).thenAnswer((_) async {
+            if (reject) {
+              throw FirebaseAuthException(code: 'invalid-credential');
+            }
+            return _mockCredential(_mockUser('uid-cloud'));
+          });
+          return mock;
+        });
+      final registry = buildRegistry(authHarness: auth);
+      await registry.signInCloudAccount('acc-1', FakeAuthCredential());
+
+      reject = true;
+      await expectLater(
+        registry.signInCloudAccount('acc-1', FakeAuthCredential()),
+        throwsA(isA<FirebaseAuthException>()),
+      );
+    });
+
+    test('createCloudAccountWithEmail creates the user on the account\'s own '
+        'named app', () async {
+      final auth = _AuthHarness()
+        ..willBuild('acc-new', () {
+          final mock = MockFirebaseAuthHandle();
+          when(() => mock.currentUser).thenReturn(null);
+          when(
+            () => mock.createUserWithEmailAndPassword(
+              email: 'n@x.y',
+              password: 'pw',
+            ),
+          ).thenAnswer((_) async => _mockCredential(_mockUser('uid-new')));
+          return mock;
+        });
+      final registry = buildRegistry(authHarness: auth);
+
+      final handles = await registry.createCloudAccountWithEmail(
+        'acc-new',
+        email: 'n@x.y',
+        password: 'pw',
+      );
+
+      expect(handles.uid, 'uid-new');
+      expect(initializeApp.names, [
+        AccountFirebase.appNameForAccount('acc-new'),
+      ]);
+    });
+
+    test('authFor is null until the account has a session, then its own '
+        'named-app Auth', () async {
+      final auth = _AuthHarness()
+        ..willBuild('acc-1', () => _anonSignInMock('uid-1'));
+      final registry = buildRegistry(authHarness: auth);
+      expect(registry.authFor('acc-1'), isNull);
+
+      await registry.createAnonymousAccount('acc-1');
+
+      expect(
+        identical(registry.authFor('acc-1'), auth.mockFor('acc-1')),
+        isTrue,
+      );
+      expect(registry.authFor('acc-2'), isNull);
+    });
+
+    test('signOut signs the session out even with no cached bundle', () async {
+      final auth = _AuthHarness()
+        ..willBuild('acc-1', () => _anonSignInMock('uid-1'));
+      final registry = buildRegistry(authHarness: auth);
+      await registry.createAnonymousAccount('acc-1');
+      await registry.signOut('acc-1'); // drops the cached bundle
+
+      await registry.signOut('acc-1');
+
+      verify(() => auth.mockFor('acc-1').signOut()).called(2);
+    });
+
+    test(
+      'AC-3: linkCredential keeps the uid AND the App Check handle',
+      () async {
+        final signedInUser = _mockUser('uid-anon');
+        when(
+          () => signedInUser.linkWithCredential(any()),
+        ).thenAnswer((_) async => _mockCredential(_mockUser('uid-anon')));
+        final appCheck = MockFirebaseAppCheckHandle();
+        final auth = _AuthHarness()
+          ..willBuild('acc-1', () {
+            final mock = MockFirebaseAuthHandle();
+            when(() => mock.currentUser).thenReturn(signedInUser);
+            return mock;
+          });
+        final registry = buildRegistry(
+          authHarness: auth,
+          enableAppCheck: true,
+          resolveAppCheck: (_) => appCheck,
+          activateAppCheck: (_) async {},
+        );
+        await registry.createAnonymousAccount('acc-1');
+
+        final linked = await registry.linkEmailCredential(
+          'acc-1',
+          email: 'a@b.c',
+          password: 'pw',
+        );
+
+        expect(linked.uid, 'uid-anon');
+        expect(identical(linked.appCheck, appCheck), isTrue);
+      },
+    );
+
+    test('withPathUid: uid is the persisted path uid, authUid the live one, '
+        'and isDisposed follows the registry-owned bundle', () async {
+      final auth = _AuthHarness()
+        ..willBuild('acc-1', () => _anonSignInMock('live-uid'));
+      final registry = buildRegistry(authHarness: auth);
+      final handles = await registry.createAnonymousAccount('acc-1');
+
+      final view = handles.withPathUid('persisted-uid');
+
+      expect(view.uid, 'persisted-uid');
+      expect(view.authUid, 'live-uid');
+      expect(view.withPathUid('again').authUid, 'live-uid');
+      expect(view.isDisposed, isFalse);
+      await registry.dispose('acc-1');
+      expect(view.isDisposed, isTrue);
+    });
+
+    test(
+      'utilityAuth is one never-signed-in app outside the account bound',
+      () async {
+        final auth = _AuthHarness();
+        final registry = buildRegistry(authHarness: auth, maxAccounts: 1);
+
+        final utility = await registry.utilityAuth();
+        final again = await registry.utilityAuth();
+
+        expect(identical(utility, again), isTrue);
+        expect(initializeApp.names, [kAuthUtilityAppName]);
+        expect(registry.activeAccountIds, isEmpty);
+        verifyNever(
+          () => (utility as MockFirebaseAuthHandle).signInAnonymously(),
+        );
+      },
+    );
+  });
+
   // ── signOut: clears the auth session, keeps the app/cache alive ─────────
 
   group('signOut — clears the Auth session without tearing the app down', () {
