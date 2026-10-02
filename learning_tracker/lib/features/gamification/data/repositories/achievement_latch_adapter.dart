@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/points.dart';
@@ -73,19 +74,32 @@ final class FirestoreAchievementLatchAdapter implements AchievementLatchPort {
     return repo;
   }
 
-  @override
-  Future<PointsTotals> totalsIncluding(
-    LearnerScope scope,
-    Set<String> learnEventIds,
-  ) async {
-    final state = await _states.including(learnEventIds, _stateWait);
+  Future<FirestorePointsLedgerRepository> _ledger() async {
     final ledger = await _ref.read(
       firestorePointsLedgerRepositoryProvider.future,
     );
     if (ledger == null) {
       throw PointsNotReadyException('no points ledger repository');
     }
-    return ledger.getTotals(earningEventIds: state.earningEventIds);
+    return ledger;
+  }
+
+  /// Bounded by the same wait as the state: offline it throws, and the
+  /// latch retries later.
+  @override
+  Future<void> pendingWritesSettled(LearnerScope scope) async =>
+      (await _ledger()).waitForPendingWrites().timeout(_stateWait);
+
+  @override
+  Future<PointsTotals> totalsIncluding(
+    LearnerScope scope,
+    Set<String> learnEventIds, {
+    Set<String> excluding = const {},
+  }) async {
+    final state = await _states.including(learnEventIds, _stateWait);
+    return (await _ledger()).getTotals(
+      earningEventIds: state.earningEventIds.difference(excluding),
+    );
   }
 
   @override

@@ -629,10 +629,23 @@ final class DefaultLearningCommands implements LearningCommands {
   /// events the write recorded (DNI-480). It runs in the background and
   /// never delays or fails the command; the latch retries its own
   /// failures.
+  ///
+  /// The latch is monotonic, so it checks only what the server accepted:
+  /// it waits for the write's acknowledgement (a queued write is checked
+  /// when it reaches the server, a rejected one never), and the totals it
+  /// reads leave out every event the server rejected.
   void _afterWrite(DispatchOutcome outcome) {
     final achievements = _achievements;
     if (achievements == null) return;
-    unawaited(achievements.afterWrite(_scope, outcome.learnEventIds.toSet()));
+    unawaited(
+      outcome.acknowledgedLearnEventIds.then(
+        (ids) => achievements.afterWrite(
+          _scope,
+          ids.toSet(),
+          unsaved: () => _dispatcher.unsavedEventIds,
+        ),
+      ),
+    );
   }
 
   /// Closes the pending-failure stream.

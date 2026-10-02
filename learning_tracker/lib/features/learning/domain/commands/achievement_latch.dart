@@ -13,9 +13,17 @@
 ///   a latched id, and the write is an array union, so a replayed write, a
 ///   repeated check, or two devices crossing the same threshold at once
 ///   leave exactly one id. Nothing is ever removed.
+/// * **Only what the server accepted.** A latch can never be taken back, so
+///   it must not latch on a write the server may still reject. The commands
+///   run the check only once the write is acknowledged (a queued write when
+///   it reaches the server, a rejected write never), and every check first
+///   waits for the client's other pending writes to settle
+///   ([AchievementLatchPort.pendingWritesSettled]) and leaves out the
+///   events the server rejected this session, so the totals it judges
+///   never include a write that is later rolled back.
 /// * **Never fails a command.** The latch runs after the write has already
-///   succeeded (or queued offline); a read or write failure never reaches
-///   the command.
+///   been acknowledged; a read or write failure never reaches the
+///   command.
 /// * **Recovers without another write.** A failed check is retried on its
 ///   own after each of [AchievementLatch.retryDelays], and the commands run
 ///   [AchievementLatch.reconcile] whenever they are created (app start,
@@ -37,13 +45,22 @@ import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 /// What the latch reads and writes. Implemented outside the domain
 /// (`lib/features/gamification/data/repositories/achievement_latch_adapter.dart`).
 abstract interface class AchievementLatchPort {
+  /// Completes once every write the client has pending for [scope] (this
+  /// session's or one persisted from an earlier session) has been
+  /// acknowledged or rejected by the server. Throws when that does not
+  /// happen in time (offline).
+  Future<void> pendingWritesSettled(LearnerScope scope);
+
   /// The AD-50 filtered totals of [scope] once its learner state includes
   /// the written learn events [learnEventIds] (the current totals when
-  /// [learnEventIds] is empty). Throws when they cannot be read in time.
+  /// [learnEventIds] is empty), never counting an event of [excluding]
+  /// (written locally but rejected by the server). Throws when they cannot
+  /// be read in time.
   Future<PointsTotals> totalsIncluding(
     LearnerScope scope,
-    Set<String> learnEventIds,
-  );
+    Set<String> learnEventIds, {
+    Set<String> excluding = const {},
+  });
 
   /// The enabled achievement thresholds of [scope] (the existing configured
   /// reward milestones; this story changes no threshold policy).
@@ -85,12 +102,17 @@ final class AchievementLatch {
   /// counted, and returns the ids it latched (empty when none, when
   /// [learnEventIds] is empty, or on a failure, which is then retried in
   /// the background).
+  ///
+  /// [learnEventIds] must be events the server acknowledged. [unsaved]
+  /// names, at each attempt, the events the server rejected and that are
+  /// not yet saved; the totals leave them out.
   Future<Set<String>> afterWrite(
     LearnerScope scope,
-    Set<String> learnEventIds,
-  ) async {
+    Set<String> learnEventIds, {
+    Set<String> Function()? unsaved,
+  }) async {
     if (learnEventIds.isEmpty) return const {};
-    return _check(scope, learnEventIds, 0);
+    return _check(scope, learnEventIds, 0, unsaved);
   }
 
   /// Latches every achievement of [scope] the current totals have crossed
@@ -98,7 +120,7 @@ final class AchievementLatch {
   /// which is then retried in the background). Recovers a latch whose
   /// check failed before the app stopped.
   Future<Set<String>> reconcile(LearnerScope scope) =>
-      _check(scope, const {}, 0);
+      _check(scope, const {}, 0, null);
 
   /// Cancels the pending retries; later checks still run once each.
   void dispose() {
@@ -113,11 +135,17 @@ final class AchievementLatch {
     LearnerScope scope,
     Set<String> learnEventIds,
     int attempt,
+    Set<String> Function()? unsaved,
   ) async {
     try {
       final thresholds = await _port.thresholds(scope);
       if (thresholds.isEmpty) return const {};
-      final totals = await _port.totalsIncluding(scope, learnEventIds);
+      await _port.pendingWritesSettled(scope);
+      final totals = await _port.totalsIncluding(
+        scope,
+        learnEventIds,
+        excluding: unsaved?.call() ?? const {},
+      );
       final unlocked = await _port.unlocked(scope);
       final crossed = newlyCrossedAchievements(totals, thresholds, unlocked);
       if (crossed.isEmpty) return const {};
@@ -130,7 +158,7 @@ final class AchievementLatch {
         late final Timer timer;
         timer = Timer(retryDelays[attempt], () {
           _retries.remove(timer);
-          unawaited(_check(scope, learnEventIds, attempt + 1));
+          unawaited(_check(scope, learnEventIds, attempt + 1, unsaved));
         });
         _retries.add(timer);
       }

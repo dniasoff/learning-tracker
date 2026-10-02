@@ -62,12 +62,28 @@ final class _EnginePort implements AchievementLatchPort {
   /// When positive, the next [failTotalsTimes] totals reads throw.
   int failTotalsTimes = 0;
 
+  /// When set, [pendingWritesSettled] waits for it (pending writes still
+  /// awaiting the server).
+  Completer<void>? holdSettled;
+  int settledCalls = 0;
+
+  /// The `excluding` set of every totals read, in order.
+  final List<Set<String>> excludedRequests = [];
+
+  @override
+  Future<void> pendingWritesSettled(LearnerScope scope) async {
+    settledCalls++;
+    await holdSettled?.future;
+  }
+
   @override
   Future<PointsTotals> totalsIncluding(
     LearnerScope scope,
-    Set<String> learnEventIds,
-  ) async {
+    Set<String> learnEventIds, {
+    Set<String> excluding = const {},
+  }) async {
     totalsRequests.add(learnEventIds);
+    excludedRequests.add(excluding);
     if (failTotals) throw StateError('ledger unreadable');
     if (failTotalsTimes > 0) {
       failTotalsTimes--;
@@ -109,10 +125,10 @@ final class _Harness {
     FakeFirebaseFirestore firestore, {
     List<Duration> retryDelays = const [],
   }) : settings = FirestoreRewardSettingsRepository(
-        firestore: firestore,
-        uid: _uid,
-        profileId: _profileId,
-      ) {
+         firestore: firestore,
+         uid: _uid,
+         profileId: _profileId,
+       ) {
     port = _EnginePort(writes, settings);
     latch = AchievementLatch(port, retryDelays: retryDelays);
     addTearDown(latch.dispose);
@@ -288,6 +304,73 @@ void main() {
     final retried = await h.commands.retry(failure.id) as CaptureSuccess;
     expect(await h.unlocked(), {'bronze'});
     expect(h.port.totalsRequests.last, retried.eventIds.toSet());
+  });
+
+  test('a queued write is latched only once the server acknowledges '
+      'it', () async {
+    final h = _Harness(firestore);
+    await h.capture([_b11]); // 10 points
+    await pumpEventQueue();
+    final requests = h.port.totalsRequests.length;
+
+    // 20 points, but the write waits for the server past the ack window:
+    // the command reports it queued, and nothing is checked yet.
+    h.writes.holdNext();
+    final queued = await h.capture([_b12]) as CaptureSuccess;
+    expect(queued.queued, isTrue);
+    expect(await h.unlocked(), isEmpty);
+    expect(h.port.totalsRequests, hasLength(requests));
+
+    // The server acknowledges it: now it is checked, and latched.
+    h.writes.release();
+    expect(await h.unlocked(), {'bronze'});
+    expect(h.port.totalsRequests.last, queued.eventIds.toSet());
+  });
+
+  test('a queued write the server later rejects for good is never '
+      'latched', () async {
+    final h = _Harness(firestore);
+    await h.capture([_b11]); // 10 points
+    await pumpEventQueue();
+    final requests = h.port.totalsRequests.length;
+
+    h.writes.holdNext();
+    final queued = await h.capture([_b12]) as CaptureSuccess;
+    expect(queued.queued, isTrue);
+
+    // Timeout, then a permanent rejection: the event rolls back and the
+    // latch, which can never be taken back, was never written.
+    h.writes.reject(const PermanentWriteRejection('permission-denied'));
+    await pumpEventQueue();
+    expect(await h.unlocked(), isEmpty);
+    expect(h.port.latchCalls, 0);
+    expect(h.port.totalsRequests, hasLength(requests));
+
+    // A later saved write's check leaves the rejected event out of the
+    // totals while it stays unsaved.
+    await h.capture([_b13]);
+    await pumpEventQueue();
+    expect(h.port.excludedRequests.last, queued.eventIds.toSet());
+    expect(await h.unlocked(), {'bronze'}, reason: 'b11 + b13 = 20 saved');
+  });
+
+  test('a check waits for the client\'s pending writes to settle before '
+      'reading totals', () async {
+    final h = _Harness(firestore);
+    await h.capture([_b11]);
+    await pumpEventQueue();
+    final requests = h.port.totalsRequests.length;
+
+    final settled = Completer<void>();
+    h.port.holdSettled = settled;
+    await h.capture([_b12]);
+    await pumpEventQueue();
+    expect(h.port.settledCalls, greaterThan(0));
+    expect(h.port.totalsRequests, hasLength(requests));
+    expect(await h.unlocked(), isEmpty);
+
+    settled.complete();
+    expect(await h.unlocked(), {'bronze'});
   });
 
   test('a failed latch check retries on its own with no follow-up '

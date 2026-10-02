@@ -370,6 +370,14 @@ class FirestorePointsLedgerRepository {
     return pointsTotals(rows, earningEventIds);
   }
 
+  /// Completes once every write this client has pending (queued in this
+  /// session or persisted from an earlier one) has been acknowledged or
+  /// rejected by the server, so a read after it no longer counts a local
+  /// write the server may roll back. Never completes while offline; callers
+  /// bound it. The achievement latch waits on it before judging totals
+  /// (DNI-480).
+  Future<void> waitForPendingWrites() => _firestore.waitForPendingWrites();
+
   /// The debitable balance of [getTotals]: what redemption affordability
   /// checks against.
   Future<int> getBalance({required Set<String> earningEventIds}) async =>

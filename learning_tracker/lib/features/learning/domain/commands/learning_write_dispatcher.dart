@@ -38,7 +38,7 @@ final class DispatchOutcome {
   /// Creates the outcome.
   const DispatchOutcome({
     required this.eventIds,
-    required this.learnEventIds,
+    required this.acknowledgedLearnEventIds,
     required this.queued,
     required this.rejectedChunks,
     required this.totalChunks,
@@ -47,9 +47,13 @@ final class DispatchOutcome {
   /// Events of chunks not rejected within the window, in write order.
   final List<String> eventIds;
 
-  /// The `learn` events among [eventIds] (what the achievement latch
-  /// checks after the write, DNI-480), in write order.
-  final List<String> learnEventIds;
+  /// The `learn` events of the chunks the server acknowledged, in write
+  /// order, once every chunk has settled (acknowledged, rejected, or failed
+  /// otherwise). A queued chunk counts only when its acknowledgement
+  /// arrives, and a chunk the server rejects never counts: what the
+  /// achievement latch checks after the write (DNI-480, AD-50). Never
+  /// completes with an error.
+  final Future<List<String>> acknowledgedLearnEventIds;
 
   /// Whether some chunk was not yet acknowledged (queued offline).
   final bool queued;
@@ -115,6 +119,13 @@ final class LearningWriteDispatcher {
     _pending.values.where((p) => !p.inFlight).map((p) => p.failure),
   );
 
+  /// The events of every chunk the server rejected and has not since
+  /// acknowledged (including a retry still in flight): written locally at
+  /// most, never saved.
+  Set<String> get unsavedEventIds => {
+    for (final p in _pending.values) ...p.chunk.events.map((e) => e.id),
+  };
+
   /// [pendingFailures] now, then after every change.
   Stream<List<PendingFailure>> watchPendingFailures() async* {
     yield pendingFailures;
@@ -158,22 +169,33 @@ final class LearningWriteDispatcher {
       // [_commit]); a late non-permanent error must not escape the zone.
       unawaited(all.then<void>((_) {}, onError: (Object _) {}));
     }
+    final acknowledged =
+        Future.wait([
+          for (final s in statuses)
+            s.then(
+              (status) => status == _ChunkStatus.acked,
+              onError: (Object _) => false,
+            ),
+        ]).then(
+          (acked) => [
+            for (var i = 0; i < chunks.length; i++)
+              if (acked[i])
+                for (final e in chunks[i].events)
+                  if (e.isLearn) e.id,
+          ],
+        );
     final ids = <String>[];
-    final learns = <String>[];
     var rejected = 0;
     for (var i = 0; i < chunks.length; i++) {
       if (settled[i] == _ChunkStatus.rejected) {
         rejected++;
       } else {
-        for (final e in chunks[i].events) {
-          ids.add(e.id);
-          if (e.isLearn) learns.add(e.id);
-        }
+        ids.addAll(chunks[i].events.map((e) => e.id));
       }
     }
     return DispatchOutcome(
       eventIds: ids,
-      learnEventIds: learns,
+      acknowledgedLearnEventIds: acknowledged,
       queued: timedOut || settled.length < chunks.length,
       rejectedChunks: rejected,
       totalChunks: chunks.length,
@@ -194,10 +216,8 @@ final class LearningWriteDispatcher {
     if (pending.inFlight) {
       return DispatchOutcome(
         eventIds: [for (final e in pending.chunk.events) e.id],
-        learnEventIds: [
-          for (final e in pending.chunk.events)
-            if (e.isLearn) e.id,
-        ],
+        // The retry in flight reports its own acknowledgement.
+        acknowledgedLearnEventIds: Future.value(const []),
         queued: true,
         rejectedChunks: 0,
         totalChunks: 1,
