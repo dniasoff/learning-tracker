@@ -783,10 +783,9 @@ String _$reminderSyncEffectHash() =>
 ///
 /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
 /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-/// not just the active one — can construct its per-profile [StreakAlertService]
+/// not just the active one — reaches its per-profile [StreakAlertService]
 /// through this same provider seam instead of hand-constructing a second
-/// instance. A test overriding this family for a specific inactive profileId
-/// now observably changes bootstrap's behavior for that profile.
+/// instance.
 
 @ProviderFor(streakAlertService)
 final streakAlertServiceProvider = StreakAlertServiceFamily._();
@@ -795,10 +794,9 @@ final streakAlertServiceProvider = StreakAlertServiceFamily._();
 ///
 /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
 /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-/// not just the active one — can construct its per-profile [StreakAlertService]
+/// not just the active one — reaches its per-profile [StreakAlertService]
 /// through this same provider seam instead of hand-constructing a second
-/// instance. A test overriding this family for a specific inactive profileId
-/// now observably changes bootstrap's behavior for that profile.
+/// instance.
 
 final class StreakAlertServiceProvider
     extends
@@ -812,10 +810,9 @@ final class StreakAlertServiceProvider
   ///
   /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
   /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-  /// not just the active one — can construct its per-profile [StreakAlertService]
+  /// not just the active one — reaches its per-profile [StreakAlertService]
   /// through this same provider seam instead of hand-constructing a second
-  /// instance. A test overriding this family for a specific inactive profileId
-  /// now observably changes bootstrap's behavior for that profile.
+  /// instance.
   StreakAlertServiceProvider._({
     required StreakAlertServiceFamily super.from,
     required String super.argument,
@@ -869,16 +866,15 @@ final class StreakAlertServiceProvider
 }
 
 String _$streakAlertServiceHash() =>
-    r'3581f9c1156dab696c25245ec594dcd3c04968c0';
+    r'22b9132d80180fb05f897157c35356f6033a7f85';
 
 /// Provides the [StreakAlertService] instance for [profileId].
 ///
 /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
 /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-/// not just the active one — can construct its per-profile [StreakAlertService]
+/// not just the active one — reaches its per-profile [StreakAlertService]
 /// through this same provider seam instead of hand-constructing a second
-/// instance. A test overriding this family for a specific inactive profileId
-/// now observably changes bootstrap's behavior for that profile.
+/// instance.
 
 final class StreakAlertServiceFamily extends $Family
     with $FunctionalFamilyOverride<StreakAlertService, String> {
@@ -895,10 +891,9 @@ final class StreakAlertServiceFamily extends $Family
   ///
   /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
   /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-  /// not just the active one — can construct its per-profile [StreakAlertService]
+  /// not just the active one — reaches its per-profile [StreakAlertService]
   /// through this same provider seam instead of hand-constructing a second
-  /// instance. A test overriding this family for a specific inactive profileId
-  /// now observably changes bootstrap's behavior for that profile.
+  /// instance.
 
   StreakAlertServiceProvider call(String profileId) =>
       StreakAlertServiceProvider._(argument: profileId, from: this);
@@ -966,12 +961,17 @@ final class AllProfilesReminderBootstrapProvider
 }
 
 String _$allProfilesReminderBootstrapHash() =>
-    r'5fad9acb7f5cae30bd8dbc2314d8f002a461e3c4';
+    r'14e5d4458b36890abbc456266c8b51531fbc5535';
 
-/// Watches streak alert settings and evaluates whether to schedule or cancel
-/// the streak protection alert.
+/// Watches the streak-alert settings and the active learner's state, and
+/// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
+/// AD-40): one alert per curriculum at risk, at most once per civil day per
+/// curriculum, none inside a lock window (the service checks
+/// `lockWindows`; a suppression is reported to analytics).
 ///
-/// Also respects sacred time mode — cancels alerts during Shabbos.
+/// Only the device's own selected profile is evaluated: in a tutored
+/// session the active learner is another profile, whose streak is not
+/// this device's to alert on.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -979,10 +979,15 @@ String _$allProfilesReminderBootstrapHash() =>
 @ProviderFor(streakAlertSyncEffect)
 final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
 
-/// Watches streak alert settings and evaluates whether to schedule or cancel
-/// the streak protection alert.
+/// Watches the streak-alert settings and the active learner's state, and
+/// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
+/// AD-40): one alert per curriculum at risk, at most once per civil day per
+/// curriculum, none inside a lock window (the service checks
+/// `lockWindows`; a suppression is reported to analytics).
 ///
-/// Also respects sacred time mode — cancels alerts during Shabbos.
+/// Only the device's own selected profile is evaluated: in a tutored
+/// session the active learner is another profile, whose streak is not
+/// this device's to alert on.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -990,10 +995,15 @@ final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
 final class StreakAlertSyncEffectProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  /// Watches streak alert settings and evaluates whether to schedule or cancel
-  /// the streak protection alert.
+  /// Watches the streak-alert settings and the active learner's state, and
+  /// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
+  /// AD-40): one alert per curriculum at risk, at most once per civil day per
+  /// curriculum, none inside a lock window (the service checks
+  /// `lockWindows`; a suppression is reported to analytics).
   ///
-  /// Also respects sacred time mode — cancels alerts during Shabbos.
+  /// Only the device's own selected profile is evaluated: in a tutored
+  /// session the active learner is another profile, whose streak is not
+  /// this device's to alert on.
   ///
   /// Kept alive so that time/enable changes always trigger a reschedule,
   /// even if no UI is watching this provider at the moment.
@@ -1023,4 +1033,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'ea3ca788ace18ce0eab403dd663a9f5c1f754e5b';
+    r'b21d03a99f980b9d4b411609d705981c6e5f2c56';
