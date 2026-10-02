@@ -127,10 +127,15 @@ final class TutorLearningCommands implements LearningCommands {
 
   // ── Dispatch ───────────────────────────────────────────────────────────
 
-  /// Sends [calls] in order. Stops at the first failure: a retryable one
-  /// (timeout, no network) parks it and every later call as ONE pending
-  /// failure with a retry; any other maps to a rejection. Returns the
-  /// result of what was written, or the refusal when nothing was.
+  /// Sends [calls] in order; the action they make up is all or nothing
+  /// on screen. Only when EVERY call has succeeded is a success returned
+  /// (and only then may a surface change). At the first failure the whole
+  /// action — every frozen call, including any already written — is parked
+  /// as ONE pending failure, so its outcome is reported explicitly and a
+  /// retry re-sends the identical calls (same ULIDs and action ids): a call
+  /// that did commit is replayed by the server, never duplicated. A
+  /// retryable failure (timeout, no network) returns the AD-54 `notSaved`
+  /// refusal; any other maps to a rejection. Nothing partial is returned.
   Future<CaptureResult> _dispatch(
     List<_PlannedCall> calls, {
     CaptureResult Function(TutorWriteFailure failure)? rejection,
@@ -139,23 +144,22 @@ final class TutorLearningCommands implements LearningCommands {
     LearnerSettingsHistory? history,
   }) async {
     final written = <(_PlannedCall, TutorLearningWritten)>[];
-    for (var i = 0; i < calls.length; i++) {
-      final result = await calls[i].send();
+    for (final call in calls) {
+      final result = await call.send();
       switch (result) {
         case TutorLearningWritten():
-          written.add((calls[i], result));
-          continue;
+          written.add((call, result));
         case TutorWriteSuccess():
-          written.add((calls[i], const TutorLearningWritten(actionId: '')));
-          continue;
+          written.add((call, const TutorLearningWritten(actionId: '')));
         case TutorWriteFailure():
-          if (result.isRetryable) _park(calls.sublist(i), result);
-          if (written.isNotEmpty) break;
+          // A single call that was refused outright wrote nothing and has
+          // nothing to retry; anything else — a lost answer, or a refusal
+          // after part of the action was written — stays pending.
+          if (result.isRetryable || written.isNotEmpty) _park(calls, result);
           return result.isRetryable
               ? const CaptureResult.rejected(CaptureRejection.notSaved)
               : (rejection ?? _rejectionOf)(result);
       }
-      break;
     }
     final ids =
         eventIdsOf?.call(written) ??

@@ -6,11 +6,13 @@
 @Tags(['tutor_mode'])
 library;
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/tutoring/data/services/tutor_learning_commands.dart';
 
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
@@ -196,6 +198,93 @@ void main() {
         [for (final r in plan['reissues'] as List) (r as Map)['ref']],
         ['Mishnah Berakhot 2:2'],
       );
+    });
+  });
+
+  group('a chunked capture is all or nothing (AC-5)', () {
+    // One more ref than a chunk holds: two tutorRecordLearning calls.
+    final refs = [
+      for (var i = 0; i <= tutorCaptureChunkSize; i++) 'Mishnah Berakhot 1:$i',
+    ];
+    Future<CaptureResult> capture(TutorHarness h) => h.commands.capture(
+      curriculumId: _curriculum,
+      refs: refs,
+      source: LearningEvent.sourceMain,
+      dateState: DateState.dated,
+    );
+    List<String> idsOf(TutorCall call) =>
+        RecordingTutorInvoker.eventIdsOf(call);
+
+    test('a later chunk that times out reports notSaved, not success, and '
+        'the retry re-sends EVERY chunk with the same ULIDs', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+      h.invoker.respond = (call) => h.invoker.calls.length == 2
+          ? throw FirebaseFunctionsException(
+              code: 'deadline-exceeded',
+              message: 'timeout',
+            )
+          : h.invoker.successFor(call);
+
+      final result = await capture(h);
+
+      expect(result, const CaptureResult.rejected(CaptureRejection.notSaved));
+      final sent = [for (final c in h.invoker.calls) ...idsOf(c)];
+      expect(sent, hasLength(refs.length));
+      final failure = (await h.commands.watchPendingFailures().first).single;
+      // The pending action is the whole capture, written prefix included.
+      expect(failure.eventIds, sent);
+
+      h.invoker.respond = null;
+      final retried = await h.commands.retry(failure.id);
+
+      final resent = h.invoker.calls.skip(2).toList();
+      expect(
+        [for (final c in resent) c.args['actionId']],
+        [for (final c in h.invoker.calls.take(2)) c.args['actionId']],
+      );
+      expect([for (final c in resent) ...idsOf(c)], sent);
+      expect(retried, CaptureResult.success(eventIds: sent));
+      expect(await h.commands.watchPendingFailures().first, isEmpty);
+    });
+
+    test('a later chunk the server refuses reports the refusal and keeps '
+        'the partly written action pending', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+      h.invoker.respond = (call) => h.invoker.calls.length == 2
+          ? throw FirebaseFunctionsException(
+              code: 'failed-precondition',
+              message: 'refused',
+            )
+          : h.invoker.successFor(call);
+
+      final result = await capture(h);
+
+      expect(result, isA<CaptureRejected>());
+      expect(result, isNot(isA<CaptureSuccess>()));
+      final failure = (await h.commands.watchPendingFailures().first).single;
+      expect(failure.reason, PendingFailureReason.failedPrecondition);
+      expect(failure.eventIds, [for (final c in h.invoker.calls) ...idsOf(c)]);
+    });
+
+    test('a single call the server refuses is not kept pending', () async {
+      final h = TutorHarness();
+      addTearDown(h.dispose);
+      h.invoker.respond = (_) => throw FirebaseFunctionsException(
+        code: 'failed-precondition',
+        message: 'refused',
+      );
+
+      final result = await h.commands.capture(
+        curriculumId: _curriculum,
+        refs: const ['Mishnah Berakhot 2:1'],
+        source: LearningEvent.sourceMain,
+        dateState: DateState.dated,
+      );
+
+      expect(result, isA<CaptureRejected>());
+      expect(await h.commands.watchPendingFailures().first, isEmpty);
     });
   });
 
