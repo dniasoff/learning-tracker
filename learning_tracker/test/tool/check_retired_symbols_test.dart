@@ -437,6 +437,123 @@ final m = {purged: 1};
     });
   });
 
+  // DNI-484 (story 1.22, R16): the real R16 inventory, run against fixture
+  // trees. A retired field or the Reset pace control anywhere in lib/,
+  // functions/src/ or firestore.rules fails; the display-only activated_at
+  // and the same-named timestamps of non-governed docs pass.
+  group('R16 retired fields (DNI-484)', () {
+    List<Object?> realR16() =>
+        (jsonDecode(
+                  File(
+                    '$packageDir/tool/retired_symbols/R16.json',
+                  ).readAsStringSync(),
+                )
+                as _Json)['entries']!
+            as List<Object?>;
+
+    test('every R16 field, alias and the Reset pace control is listed and '
+        'retired for DNI-484 (purged_at stays pending only on the retired '
+        'collections\' rules blocks)', () {
+      final mine = [
+        for (final e in realR16())
+          if ((e! as _Json)['owner'] == 'DNI-484') e as _Json,
+      ];
+      final retired = {
+        for (final e in mine)
+          if (e['state'] == 'retired') e['symbol'],
+      };
+      expect(
+        retired,
+        containsAll(<String>[
+          'state_changed_at',
+          'purged',
+          'purged_at',
+          'pace_reset_date',
+          'last_reorder_at',
+          'progress_schema_version',
+          'progress_computed_at',
+          'progress_model',
+          'program_progress',
+          'self_paced_progress',
+          'paceResetDate',
+          'stateChangedAt',
+          'lastReorderAt',
+          'target_percent',
+          'targetPercent',
+          'updated_at',
+          'synced_at',
+          'resetPace',
+        ]),
+      );
+      final pending = [
+        for (final e in mine)
+          if (e['state'] == 'pending') e,
+      ];
+      expect(pending, hasLength(1));
+      expect(pending.single['symbol'], 'purged_at');
+      expect(pending.single['paths'], {
+        'include': ['firestore.rules'],
+      });
+      expect(
+        mine.map((e) => e['symbol']),
+        isNot(contains('activated_at')),
+        reason: 'activated_at stays for the display-only Started date',
+      );
+    });
+
+    test('a retired track field, target_percent or the Reset pace control '
+        'in lib/, functions/src/ or firestore.rules fails', () async {
+      final root = await fixtureRoot(
+        groups: {'R16': realR16()},
+        files: {
+          'lib/features/tracks/setup/domain/entities/curriculum_track.dart':
+              "final m = {'pace_reset_date': 1, 'state_changed_at': 2};\n",
+          'lib/features/scheduler/domain/models/goal_entity.dart':
+              "final m = {'target_percent': 100};\n",
+          'lib/features/tracks/setup/presentation/widgets/menu.dart':
+              'void f(dynamic r) => r.resetPace();\n',
+          'functions/src/tutor_writes.ts':
+              'const F = { last_reorder_at: 1 };\n',
+          'firestore.rules': "allow write: if k.hasOnly(['targetPercent']);\n",
+        },
+      );
+      final result = await run(root);
+      expect(result.exitCode, 1, reason: out(result));
+      final stderr = result.stderr.toString();
+      for (final symbol in [
+        'pace_reset_date',
+        'state_changed_at',
+        'target_percent',
+        'resetPace',
+        'last_reorder_at',
+        'targetPercent',
+      ]) {
+        expect(stderr, contains(symbol), reason: symbol);
+      }
+    });
+
+    test('display-only activated_at and non-governed updated_at / synced_at '
+        'pass', () async {
+      final root = await fixtureRoot(
+        groups: {'R16': realR16()},
+        files: {
+          'lib/features/tracks/setup/domain/entities/curriculum_track.dart':
+              "final m = {'state': 'active', 'activated_at': 'x'};\n",
+          'lib/features/tracks/setup/presentation/widgets/track_info_card.dart':
+              'String f(dynamic t) => t.activatedAt.toString();\n',
+          'lib/features/account/domain/models/account_entity.dart':
+              "final m = {'updated_at': 1, 'synced_at': 2};\n",
+          'functions/src/tutor_writes.ts':
+              'const s = { synced_at: 1, updated_at: 2 };\n',
+          'firestore.rules':
+              "allow write: if k.hasOnly(['updated_at', 'synced_at']);\n",
+        },
+      );
+      final result = await run(root);
+      expect(result.exitCode, 0, reason: out(result));
+    });
+  });
+
   group('path scoping', () {
     test(
       'include/exclude globs confine an entry (R16 governed updated_at)',
