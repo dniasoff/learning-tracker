@@ -44,8 +44,10 @@ const kDefaultStudyDays = <int, String>{
 /// [AddTrackActionRepository.applyAddTrack].
 ///
 /// The starting bookmark of a program track is not a governed entity
-/// (bookmarks are retired by AD-49); it is written after the action, as
-/// before, and the post-success `logTrackAdded` analytics event follows.
+/// (bookmarks are retired by AD-49); it is written after the action, and
+/// the post-success `logTrackAdded` analytics event follows — both only
+/// once the track is confirmed (deferred for an action queued offline, see
+/// [createTrack]).
 class TrackCreationService {
   TrackCreationService({
     required AddTrackActionRepository actionRepository,
@@ -66,10 +68,58 @@ class TrackCreationService {
 
   /// Persist all track configuration from the AddTrackFlow result as one
   /// governed action.
+  ///
+  /// The non-governed follow-ups (the starting bookmark and the
+  /// `logTrackAdded` event) run only once the track is confirmed: right
+  /// away for a saved action, and for an action queued offline once the
+  /// server accepts it — never if it refuses it (AD-54: the refused action
+  /// is rolled back and surfaces as a pending failure), so no bookmark or
+  /// analytics event outlives a track that was never added.
   Future<void> createTrack({required AddTrackResult result}) async {
     final plan = planFor(result);
     final outcome = await _actionRepository.applyAddTrack(plan);
+    if (!outcome.queued) {
+      await _afterTrackAdded(result, plan, outcome);
+      return;
+    }
+    AppLogger.instance.info(
+      event:
+          'TrackCreationService: track for '
+          '${result.curriculumId.storageKey} queued offline',
+    );
+    unawaited(_afterConfirmed(result, plan, outcome));
+  }
 
+  Future<void> _afterConfirmed(
+    AddTrackResult result,
+    AddTrackPlan plan,
+    AddTrackOutcome outcome,
+  ) async {
+    if (!await outcome.whenConfirmed()) {
+      AppLogger.instance.warning(
+        event: 'track_creation_queued_action_not_confirmed',
+        fields: {'curriculum_id': result.curriculumId.storageKey},
+      );
+      return;
+    }
+    try {
+      await _afterTrackAdded(result, plan, outcome);
+    } on Object catch (error, stackTrace) {
+      AppLogger.instance.warning(
+        event: 'track_creation_deferred_follow_up_failed',
+        exception: error,
+        stackTrace: stackTrace,
+        fields: {'curriculum_id': result.curriculumId.storageKey},
+      );
+    }
+  }
+
+  /// The non-governed follow-ups of a confirmed Add track action.
+  Future<void> _afterTrackAdded(
+    AddTrackResult result,
+    AddTrackPlan plan,
+    AddTrackOutcome outcome,
+  ) async {
     // The bookmark is a SEPARATE, non-governed write (not part of the
     // program enrolment); `tracking_start_ref` is the durable record of the
     // chosen starting ref. A re-add keeps the prior program, so the plan's

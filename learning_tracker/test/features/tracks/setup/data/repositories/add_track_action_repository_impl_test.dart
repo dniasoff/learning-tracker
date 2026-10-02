@@ -17,7 +17,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
-    show activeProfileDocIdProvider;
+    show activeProfileDocIdProvider, firestoreCurriculumTrackRepositoryProvider;
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -258,6 +258,21 @@ void main() {
       (await writer.doc('study_day_configs', 'mishnayos_1'))?['last_change_id'],
       failed.id,
     );
+  });
+
+  test('a saved action is not queued and confirms at once; the track is '
+      'confirmed live from the server', () async {
+    final outcome = await repo.applyAddTrack(
+      AddTrackPlan(curriculumId: _c, stages: _stages(1), studyDays: _allDays),
+    );
+    expect(outcome.queued, isFalse);
+    expect(await outcome.whenConfirmed(), isTrue);
+
+    final tracks = await container.read(
+      firestoreCurriculumTrackRepositoryProvider.future,
+    );
+    expect(await tracks!.whenServerLive(_c), isTrue);
+    expect(await tracks.whenServerLive(CurriculumId.bavli), isFalse);
   });
 
   group('re-adding a removed curriculum (AD-38, ruling B13)', () {

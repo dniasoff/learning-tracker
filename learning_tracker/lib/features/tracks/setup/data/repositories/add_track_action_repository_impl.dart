@@ -113,6 +113,8 @@ final class FirestoreAddTrackActionRepository
     return AddTrackOutcome(
       actionId: success.actionId,
       reAdded: activation.reAdded,
+      queued: success.queued,
+      confirmation: () => tracks.whenServerLive(curriculumId),
     );
   }
 

@@ -121,6 +121,32 @@ class FirestoreCurriculumTrackRepository {
     );
   }
 
+  /// Resolves once the server has settled [curriculumId]'s track doc — the
+  /// first snapshot with no pending local writes that is not from the
+  /// cache: true when the server holds it live (present, no `ended_at`),
+  /// false when it is absent or ended (e.g. a queued write the server
+  /// refused was rolled back) or the listener fails. Waits while offline.
+  Future<bool> whenServerLive(CurriculumId curriculumId) async {
+    try {
+      await for (final snapshot in _doc(
+        curriculumId,
+      ).snapshots(includeMetadataChanges: true)) {
+        final meta = snapshot.metadata;
+        if (meta.hasPendingWrites || meta.isFromCache) continue;
+        final data = snapshot.data();
+        return data != null && !_isEnded(data);
+      }
+    } on Object catch (error, stackTrace) {
+      _logger.warning(
+        event: 'firestore_curriculum_track_confirm_error',
+        exception: error,
+        stackTrace: stackTrace,
+        fields: {'curriculum_id': curriculumId.storageKey},
+      );
+    }
+    return false;
+  }
+
   /// Mirrors `TrackDao.isTrackActive` / `ActiveCurriculumDao.isActiveForProfile`
   /// — both were the same query under two names.
   Future<bool> isActive(CurriculumId curriculumId) async {

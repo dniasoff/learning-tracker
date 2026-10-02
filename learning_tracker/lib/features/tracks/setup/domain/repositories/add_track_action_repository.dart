@@ -61,8 +61,13 @@ final class AddTrackPlan {
 
 /// What one Add track action did.
 final class AddTrackOutcome {
-  /// Creates the outcome.
-  const AddTrackOutcome({required this.actionId, this.reAdded = false});
+  /// Creates the outcome. A [queued] outcome must carry [confirmation].
+  const AddTrackOutcome({
+    required this.actionId,
+    this.reAdded = false,
+    this.queued = false,
+    Future<bool> Function()? confirmation,
+  }) : _confirmation = confirmation;
 
   /// The governed action id, or null when nothing changed.
   final String? actionId;
@@ -72,6 +77,27 @@ final class AddTrackOutcome {
   /// the plan's config was NOT applied (only entities the removed track
   /// never had — stages, study days — are seeded from the plan).
   final bool reAdded;
+
+  /// Whether the action is only queued offline (AD-54): the device shows
+  /// it, but the server has not confirmed it yet and may still refuse it
+  /// (it then surfaces as a pending failure and the device rolls it back).
+  final bool queued;
+
+  final Future<bool> Function()? _confirmation;
+
+  /// Resolves once the server has settled the track: true when it holds
+  /// the added track live, false when the action was refused (or cannot be
+  /// confirmed). Immediately true for an action that was not [queued].
+  Future<bool> whenConfirmed() async {
+    if (!queued) return true;
+    final confirmation = _confirmation;
+    if (confirmation == null) return false;
+    try {
+      return await confirmation();
+    } on Object {
+      return false;
+    }
+  }
 }
 
 /// Writes the Add track action.
@@ -91,6 +117,10 @@ abstract interface class AddTrackActionRepository {
   /// goal are kept as they were, and only a config entity the track never
   /// had (no live stages / no live study days) is seeded from [plan].
   /// Sub-tracks ended by the removal stay ended.
+  ///
+  /// An action queued offline returns a [AddTrackOutcome.queued] outcome
+  /// whose [AddTrackOutcome.whenConfirmed] reports whether the server
+  /// accepted the track.
   ///
   /// Throws when the backend is not ready or the commands refuse the
   /// action (e.g. a goal on a calendar-program curriculum, or online-only

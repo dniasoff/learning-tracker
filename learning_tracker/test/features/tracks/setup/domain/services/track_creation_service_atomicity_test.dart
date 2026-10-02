@@ -1,7 +1,10 @@
 // TrackCreationService: Add track is ONE named governed action (DNI-476
 // AC-5), plus the program-track regressions of the Firestore migration.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
@@ -78,6 +81,7 @@ class _MemoryBookmarks implements BookmarkRepository {
 TrackCreationService _buildService({
   required RecordingAddTrackActions actions,
   BookmarkRepository? bookmarkRepository,
+  AnalyticsService? analytics,
 }) => TrackCreationService(
   actionRepository: actions,
   wizardService: LearningProcessWizardService(
@@ -86,6 +90,7 @@ TrackCreationService _buildService({
     profileProgramRepository: _NoPrograms(),
   ),
   bookmarkRepository: bookmarkRepository ?? _MemoryBookmarks(),
+  analytics: analytics,
 );
 
 void main() {
@@ -226,6 +231,83 @@ void main() {
       expect(bookmarks.writes, 0);
     },
   );
+
+  group('an action queued offline (AD-54)', () {
+    const programResult = AddTrackResult(
+      curriculumId: CurriculumId.bavli,
+      label: 'Bavli',
+      programId: 99,
+      studyDays: {1: 'study'},
+      startingRef: 'Mishnah Berakhot 2:1',
+    );
+
+    test('defers the bookmark and track-added event until the server '
+        'confirms the track', () async {
+      final confirmation = Completer<bool>();
+      final actions = RecordingAddTrackActions()
+        ..queuedConfirmation = confirmation;
+      final bookmarks = _MemoryBookmarks();
+      final analytics = FakeAnalyticsService();
+
+      await _buildService(
+        actions: actions,
+        bookmarkRepository: bookmarks,
+        analytics: analytics,
+      ).createTrack(result: programResult);
+
+      expect(actions.plans, hasLength(1));
+      expect(bookmarks.writes, 0);
+      expect(analytics.countOf(AnalyticsEvent.trackAdded), 0);
+
+      confirmation.complete(true);
+      await pumpEventQueue();
+
+      expect(bookmarks.writes, 1);
+      expect(analytics.countOf(AnalyticsEvent.trackAdded), 1);
+    });
+
+    test('a queued action the server later refuses leaves no bookmark and '
+        'no track-added event', () async {
+      final confirmation = Completer<bool>();
+      final actions = RecordingAddTrackActions()
+        ..queuedConfirmation = confirmation;
+      final bookmarks = _MemoryBookmarks();
+      final analytics = FakeAnalyticsService();
+
+      await _buildService(
+        actions: actions,
+        bookmarkRepository: bookmarks,
+        analytics: analytics,
+      ).createTrack(result: programResult);
+      confirmation.complete(false);
+      await pumpEventQueue();
+
+      expect(bookmarks.writes, 0);
+      expect(analytics.countOf(AnalyticsEvent.trackAdded), 0);
+    });
+  });
+
+  test('a saved (not queued) action writes the bookmark and fires '
+      'track-added before createTrack returns', () async {
+    final bookmarks = _MemoryBookmarks();
+    final analytics = FakeAnalyticsService();
+    await _buildService(
+      actions: RecordingAddTrackActions(),
+      bookmarkRepository: bookmarks,
+      analytics: analytics,
+    ).createTrack(
+      result: const AddTrackResult(
+        curriculumId: CurriculumId.bavli,
+        label: 'Bavli',
+        programId: 99,
+        studyDays: {1: 'study'},
+        startingRef: 'Mishnah Berakhot 2:1',
+      ),
+    );
+    expect(bookmarks.writes, 1);
+    await pumpEventQueue();
+    expect(analytics.countOf(AnalyticsEvent.trackAdded), 1);
+  });
 
   test(
     'stages come from the wizard result when the flow supplies one',
