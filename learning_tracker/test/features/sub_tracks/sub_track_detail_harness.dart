@@ -25,6 +25,7 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
+import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -274,6 +275,8 @@ final class _CapacityCurriculumState implements CurriculumState {
   @override
   Set<CurriculumValidationError> get validationErrors =>
       _inner.validationErrors;
+  @override
+  ReportProjection get report => _inner.report;
 }
 
 /// Runs the real engine over [track], [others] and [events] and builds the
