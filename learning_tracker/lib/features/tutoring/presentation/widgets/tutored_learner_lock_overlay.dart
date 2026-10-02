@@ -4,7 +4,8 @@
 /// Learners viewed through a tutor grant do not drive the device overlay
 /// (`SacredTimeLockOverlay`, the union over the account's OWN profiles).
 /// While the talmid in view is locked, this cover hides every screen of the
-/// tutored context — no data, no controls — in the same full-screen style.
+/// tutored context — no data, no controls, visually or to assistive
+/// technology — in the same full-screen style.
 /// Its one action exits the tutored context, so the tutor's own app and
 /// other learners stay usable.
 library;
@@ -32,8 +33,21 @@ class TutoredLearnerLockOverlay extends ConsumerWidget {
     // Covered while locked, and when the talmid's lock cannot be read (fail
     // closed). While it loads, writes are still refused by the preflight.
     final covered = lock.hasError || lock.value == true;
+    // The cover is not just visual: while covered, the learner's screens
+    // leave the semantics tree (a screen reader reads nothing of them), take
+    // no pointer input and no keyboard focus. The wrappers stay in the tree
+    // either way, so the screens keep their state across a lock.
     return Stack(
-      children: [child, if (covered) const _TutoredLearnerLockScreen()],
+      children: [
+        ExcludeSemantics(
+          excluding: covered,
+          child: AbsorbPointer(
+            absorbing: covered,
+            child: ExcludeFocus(excluding: covered, child: child),
+          ),
+        ),
+        if (covered) const _TutoredLearnerLockScreen(),
+      ],
     );
   }
 }
