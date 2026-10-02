@@ -67,6 +67,7 @@ Future<void> _pump(
       (ref) async => OngoingSubTrackContext(
         curriculumId: _curriculum,
         today: _today,
+        timeZone: 'UTC',
         subTracks: tracks,
         calendarProgram: calendarProgram,
       ),

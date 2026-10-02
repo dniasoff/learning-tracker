@@ -144,10 +144,10 @@ class _OngoingSubTrackHubSeamState
       ongoingSubTrackContextProvider(widget.curriculumId),
     );
     return switch (dataAsync) {
-      AsyncData(value: final data?) when !data.calendarProgram => _section(
-        context,
-        data,
-      ),
+      // A reload (new rows, the learner's midnight) keeps the last read.
+      AsyncValue(value: final data?)
+          when !dataAsync.hasError && !data.calendarProgram =>
+        _section(context, data),
       AsyncError(:final error) => Padding(
         padding: const EdgeInsetsDirectional.only(bottom: 12),
         child: InlineAsyncError(

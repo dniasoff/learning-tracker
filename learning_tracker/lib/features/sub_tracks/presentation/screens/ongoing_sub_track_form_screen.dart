@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
@@ -213,8 +214,20 @@ class _OngoingSubTrackFormScreenState
     );
   }
 
-  Future<void> _save(OngoingSubTrackContext data) async {
+  Future<void> _save(OngoingSubTrackContext read) async {
     if (_saving) return;
+    // Judge the save on the learner's civil today now, not when the form
+    // was read: a form left open across midnight must not default the
+    // start to yesterday or count the limit on a stale day (AD-41, AC-3).
+    final data = read.atDay(
+      read.todayAt(ref.read(localDayClockProvider).nowUtc()),
+    );
+    final shared = ongoingSubTrackContextProvider(widget.curriculumId);
+    final sharedToday = ref.read(shared).value?.today;
+    if (sharedToday != null && sharedToday != data.today) {
+      // The midnight re-read was late (a suspended app): refresh the hub.
+      ref.invalidate(shared);
+    }
     final validation = _validate(data.today);
     setState(() {
       _submitted = true;
@@ -352,29 +365,37 @@ class _OngoingSubTrackFormScreenState
         ),
       ),
       body: switch (dataAsync) {
-        AsyncData(value: final data?) => LayoutBuilder(
-          builder: (context, constraints) {
-            final form = _buildForm(context, l10n, data);
-            if (constraints.maxWidth < kOngoingFormTabletBreakpoint) {
-              return form;
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: form,
-                ),
-                Expanded(
-                  child: _SubTrackSummaryPanel(
-                    subTracks: data.liveSubTracks,
-                    editingId: widget.existing?.id,
+        // A reload (new rows, the learner's midnight) keeps the form on
+        // screen with the previous read instead of flashing a spinner.
+        AsyncValue(value: final read?) when !dataAsync.hasError =>
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Every rebuild judges the form on the learner's civil today
+              // now, so validation and the limit line never lag midnight.
+              final data = read.atDay(
+                read.todayAt(ref.read(localDayClockProvider).nowUtc()),
+              );
+              final form = _buildForm(context, l10n, data);
+              if (constraints.maxWidth < kOngoingFormTabletBreakpoint) {
+                return form;
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: form,
                   ),
-                ),
-              ],
-            );
-          },
-        ),
+                  Expanded(
+                    child: _SubTrackSummaryPanel(
+                      subTracks: data.liveSubTracks,
+                      editingId: widget.existing?.id,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         AsyncError(:final error, :final stackTrace) => AppErrorView(
           error: error,
           stackTrace: stackTrace,

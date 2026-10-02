@@ -12,6 +12,8 @@
 /// follow-up bead folds them into Story 2.4's providers when it lands.
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
@@ -46,6 +48,7 @@ final class OngoingSubTrackContext {
   OngoingSubTrackContext({
     required this.curriculumId,
     required this.today,
+    required this.timeZone,
     required List<SubTrack> subTracks,
     required this.calendarProgram,
   }) : subTracks = List.unmodifiable(subTracks);
@@ -53,8 +56,13 @@ final class OngoingSubTrackContext {
   /// The curriculum's storage key.
   final String curriculumId;
 
-  /// The learner's civil today, in the profile's `time_zone` (AD-41).
+  /// The learner's civil today, in the profile's `time_zone` (AD-41), as
+  /// of when this context was read. A form re-derives it with [todayAt]
+  /// before it writes (the form may stay open across midnight).
   final CivilDate today;
+
+  /// The learner's IANA `time_zone` the context was read under (AD-41).
+  final String timeZone;
 
   /// Every sub-track of [curriculumId], live and ended.
   final List<SubTrack> subTracks;
@@ -62,6 +70,22 @@ final class OngoingSubTrackContext {
   /// Whether the main track follows a calendar program (no sub-tracks,
   /// AD-45, prd-deviations #12).
   final bool calendarProgram;
+
+  /// The learner's civil date at [nowUtc] in [timeZone] (AD-41; never the
+  /// device offset).
+  CivilDate todayAt(DateTime nowUtc) => learnerCivilToday(timeZone, nowUtc);
+
+  /// This context re-read for civil day [day]: the same rows and program,
+  /// with the limit count and statuses judged on [day].
+  OngoingSubTrackContext atDay(CivilDate day) => day == today
+      ? this
+      : OngoingSubTrackContext(
+          curriculumId: curriculumId,
+          today: day,
+          timeZone: timeZone,
+          subTracks: subTracks,
+          calendarProgram: calendarProgram,
+        );
 
   /// The non-ended sub-tracks, for the hub rows (UX-DR-82: ended ones are
   /// not listed among the active rows).
@@ -78,6 +102,19 @@ final class OngoingSubTrackContext {
     today: today,
     excludingId: excludingId,
   );
+}
+
+/// The learner's civil date at [nowUtc] in IANA zone [timeZone] (AD-41).
+CivilDate learnerCivilToday(String timeZone, DateTime nowUtc) =>
+    formatCivilDay(LearnerZone.of(timeZone).dayOf(nowUtc));
+
+/// How long from [nowUtc] until the learner's next civil day begins in
+/// [timeZone], plus one tick so the re-read lands inside the new day.
+Duration untilNextLearnerDay(String timeZone, DateTime nowUtc) {
+  final zone = LearnerZone.of(timeZone);
+  final next = zone.startOf(addCivilDays(zone.dayOf(nowUtc), 1));
+  final wait = next.difference(nowUtc.toUtc()) + civilTick;
+  return wait.isNegative ? civilTick : wait;
 }
 
 /// The learner's governed intent, live; null while no learner is active or
@@ -125,15 +162,22 @@ final ongoingSubTrackContextProvider = FutureProvider.autoDispose
         curriculumSubTracksProvider(curriculumId).future,
       );
       if (intent == null || subTracks == null) return null;
+      final timeZone = intent.settings.timeZone;
       final nowUtc = ref.watch(localDayClockProvider).nowUtc();
-      final today = formatCivilDay(
-        LearnerZone.of(intent.settings.timeZone).dayOf(nowUtc),
+      final today = learnerCivilToday(timeZone, nowUtc);
+      // Re-read at the learner's next midnight (AD-41), so a hub or form
+      // left open across it recounts the limit and the "Starts" rows.
+      final midnight = Timer(
+        untilNextLearnerDay(timeZone, nowUtc),
+        ref.invalidateSelf,
       );
+      ref.onDispose(midnight.cancel);
       // The live program only, exactly as `SubTrackCommands` reads it.
       final program = intent.mainTracks[curriculumId]?.program;
       return OngoingSubTrackContext(
         curriculumId: curriculumId,
         today: today,
+        timeZone: timeZone,
         subTracks: subTracks,
         calendarProgram:
             program != null &&

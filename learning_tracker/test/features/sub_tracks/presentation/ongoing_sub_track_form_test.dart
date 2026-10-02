@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -53,6 +54,7 @@ OngoingSubTrackContext _context(List<SubTrack> tracks) =>
     OngoingSubTrackContext(
       curriculumId: _curriculum,
       today: _today,
+      timeZone: 'UTC',
       subTracks: tracks,
       calendarProgram: false,
     );
@@ -91,6 +93,9 @@ class _HostState extends State<_Host> {
 
 late FakeLearningCommands _commands;
 
+/// The device clock: noon UTC on [_today] unless a test moves it.
+late FakeLocalDayClock _clock;
+
 /// English unit words, so the leaf-unit label is deterministic.
 class _EnglishTerms extends UseHebrewTerms {
   @override
@@ -103,6 +108,7 @@ List<Override> _overrides(List<SubTrack> tracks) => [
     _curriculum,
   ).overrideWith((ref) async => _context(tracks)),
   learningCommandsProvider.overrideWith((ref) async => _commands),
+  localDayClockProvider.overrideWithValue(_clock),
 ];
 
 Future<void> _open(
@@ -188,6 +194,7 @@ String get _leafUnit => CurriculumLabels.leaf(
 void main() {
   setUp(() {
     _commands = FakeLearningCommands();
+    _clock = FakeLocalDayClock(DateTime.utc(2026, 9, 7, 12));
     _lastResult = null;
     _closed = false;
   });
@@ -336,6 +343,50 @@ void main() {
       await _save(tester);
       expect(_lastDraft().windowStart, '2026-09-20');
       expect(_lastDraft().windowEnd, '2026-09-20');
+    });
+  });
+
+  group('AC-3: a form left open across midnight', () {
+    testWidgets('the omitted start is the civil today at save, not at open', (
+      tester,
+    ) async {
+      await _open(tester);
+      await tester.enterText(_field('ongoingSubTrackName'), 'Late night');
+      _clock.setNow(DateTime.utc(2026, 9, 8, 0, 30));
+      await _save(tester);
+      expect(_lastDraft().windowStart, '2026-09-08');
+    });
+
+    testWidgets('the limit is recounted on the new day', (tester) async {
+      // Five in use on 7 Sep; one window ends that day, so on 8 Sep only
+      // four count and a create is allowed.
+      await _open(
+        tester,
+        tracks: [
+          for (var i = 1; i <= 4; i++) _track(i),
+          _track(5, end: _today),
+        ],
+      );
+      await tester.enterText(_field('ongoingSubTrackName'), 'Fifth');
+      _clock.setNow(DateTime.utc(2026, 9, 8, 0, 30));
+      await _save(tester);
+      expect(_field('ongoingSubTrackLimitReached'), findsNothing);
+      expect(_lastDraft().windowStart, '2026-09-08');
+    });
+
+    testWidgets('a chosen end on the old today now blocks save inline', (
+      tester,
+    ) async {
+      await _open(tester);
+      await tester.enterText(_field('ongoingSubTrackName'), 'Rebbe');
+      await _pickDay(tester, 'ongoingSubTrackEnd', 7);
+      _clock.setNow(DateTime.utc(2026, 9, 8, 0, 30));
+      await _save(tester);
+      expect(_commands.calls, isEmpty);
+      expect(
+        find.text("The end date can't be before the start date"),
+        findsOneWidget,
+      );
     });
   });
 

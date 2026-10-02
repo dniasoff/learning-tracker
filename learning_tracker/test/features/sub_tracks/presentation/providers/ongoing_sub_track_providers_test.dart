@@ -157,6 +157,37 @@ void main() {
       );
     });
 
+    test('re-reads at the learner midnight in the profile zone', () async {
+      intents.emit(c0Scope(), _intent(timeZone: 'Asia/Jerusalem'));
+      // The limit reads on the old day: track 2's window ends on 7 Sep.
+      subTracks.seed(c0Scope(), [_track(1), _track(2, end: '2026-09-07')]);
+      // 20:59:59.95 UTC on 7 Sep is 50ms before midnight in Jerusalem
+      // (UTC+3 in September).
+      final clock = FakeLocalDayClock(
+        DateTime.utc(2026, 9, 7, 20, 59, 59, 950),
+      );
+      final c = ProviderContainer(
+        overrides: [
+          activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
+          subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
+          governedIntentRepositoryProvider.overrideWith((ref) async => intents),
+          localDayClockProvider.overrideWithValue(clock),
+        ],
+      );
+      addTearDown(c.dispose);
+      final before = await read(c);
+      expect(before!.today, '2026-09-07');
+      expect(before.timeZone, 'Asia/Jerusalem');
+      expect(before.ongoingInUse(), 2);
+      clock.advance(const Duration(milliseconds: 60));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      final after = await c.read(
+        ongoingSubTrackContextProvider(_curriculum).future,
+      );
+      expect(after!.today, '2026-09-08');
+      expect(after.ongoingInUse(), 1);
+    });
+
     test('null while no learner is active', () async {
       expect(await read(container(scoped: false)), isNull);
     });
@@ -172,6 +203,44 @@ void main() {
         ongoingSubTrackContextProvider(_curriculum).future,
       );
       expect(again!.ongoingInUse(), 2);
+    });
+  });
+
+  group('learner civil day helpers', () {
+    test('todayAt and atDay re-judge a read on a later instant', () {
+      final read = OngoingSubTrackContext(
+        curriculumId: _curriculum,
+        today: '2026-09-07',
+        timeZone: 'Asia/Jerusalem',
+        subTracks: [
+          _track(1),
+          _track(2, end: '2026-09-07'),
+        ],
+        calendarProgram: false,
+      );
+      expect(read.todayAt(DateTime.utc(2026, 9, 7, 20, 59)), '2026-09-07');
+      final later = read.todayAt(DateTime.utc(2026, 9, 7, 21, 1));
+      expect(later, '2026-09-08');
+      expect(identical(read.atDay('2026-09-07'), read), isTrue);
+      final next = read.atDay(later);
+      expect(next.today, '2026-09-08');
+      expect(next.timeZone, 'Asia/Jerusalem');
+      expect(next.subTracks, read.subTracks);
+      expect(read.ongoingInUse(), 2);
+      expect(next.ongoingInUse(), 1);
+    });
+
+    test('untilNextLearnerDay waits for the zone midnight, DST-aware', () {
+      expect(
+        untilNextLearnerDay('UTC', DateTime.utc(2026, 9, 7, 23)),
+        const Duration(hours: 1, microseconds: 1),
+      );
+      // Jerusalem leaves summer time on 25 Oct 2026: that civil day is
+      // 25 hours long, and midnight is 22:00 UTC after it.
+      expect(
+        untilNextLearnerDay('Asia/Jerusalem', DateTime.utc(2026, 10, 24, 21)),
+        const Duration(hours: 25, microseconds: 1),
+      );
     });
   });
 

@@ -20,6 +20,7 @@ void main() {
             (ref) async => OngoingSubTrackContext(
               curriculumId: 'mishnayos',
               today: '2026-09-07',
+              timeZone: 'UTC',
               subTracks: const [],
               calendarProgram: false,
             ),
