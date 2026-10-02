@@ -62,8 +62,21 @@ Set<String> firstLearningEarners(
 ) {
   final ordered = [...countedLearns]..sort(compareEventsByEffectiveAt);
   final seen = <LeafRef>{};
+  // Node events already expanded into [seen]. A later event on the same
+  // node covers exactly the same leaves, all already seen, so it can never
+  // be a first learning: skip re-expanding it (AD-54 — a log can hold many
+  // `before_tracking` events on the same whole volume).
+  final expandedNodes = <(String, String)>{};
   final out = <String>{};
   for (final e in ordered) {
+    final ref = e.ref;
+    final level = e.level;
+    if (e.isLearn &&
+        ref != null &&
+        level != null &&
+        !expandedNodes.add((level, ref))) {
+      continue;
+    }
     var first = false;
     for (final leaf in coveredLeaves(e, corpus)) {
       if (seen.add(leaf)) first = true;
