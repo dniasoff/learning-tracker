@@ -281,7 +281,8 @@ void main() {
       final indexes = json['indexes']! as List<Object?>;
       expect(
         indexes.where(
-          (i) => (i! as Map<String, Object?>)['collectionGroup'] == 'change_log',
+          (i) =>
+              (i! as Map<String, Object?>)['collectionGroup'] == 'change_log',
         ),
         isEmpty,
       );
@@ -335,11 +336,7 @@ void main() {
       expect(seen, [false]);
 
       await _seed(firestore, scope, [
-        _entry(
-          700,
-          GovernedEntity.mainTrackOrder,
-          revertsActionId: undone,
-        ),
+        _entry(700, GovernedEntity.mainTrackOrder, revertsActionId: undone),
       ]);
       await pumpEventQueue();
       expect(seen, [false, true], reason: 'every device marks it Undone');
@@ -354,9 +351,11 @@ void main() {
       final doc = firestore.doc('$profilePath/track_learning_order/$_orderDoc');
       await doc.set({'curriculum_id': 'mishnayos', 'ref': 'Berakhot 1'});
       final repo = FirestoreChangeLogRepository(firestore: firestore);
-      final batch = _batch(engineUlid(1), {
-        'user_sort_order': 3,
-      }, before: {'user_sort_order': null});
+      final batch = _batch(
+        engineUlid(1),
+        {'user_sort_order': 3},
+        before: {'user_sort_order': null},
+      );
 
       await repo.commitGoverned(scope, batch);
 
@@ -417,7 +416,10 @@ void main() {
       expect(firestore.ops, isEmpty);
 
       await expectLater(
-        repo.commitGoverned(scope, _batch(engineUlid(3), {'user_sort_order': 9})),
+        repo.commitGoverned(
+          scope,
+          _batch(engineUlid(3), {'user_sort_order': 9}),
+        ),
         throwsA(isA<ChangeLogConflictException>()),
       );
       expect(firestore.ops, isEmpty);
@@ -538,10 +540,9 @@ void main() {
       final firestore = FakeFirebaseFirestore();
       await firestore.doc(profilePath).set({'time_zone': 'UTC'});
       final repo = FirestoreChangeLogRepository(firestore: firestore);
-      expect(
-        await repo.currentDoc(scope, 'learner_profiles', profileUlid),
-        {'time_zone': 'UTC'},
-      );
+      expect(await repo.currentDoc(scope, 'learner_profiles', profileUlid), {
+        'time_zone': 'UTC',
+      });
     });
   });
 }

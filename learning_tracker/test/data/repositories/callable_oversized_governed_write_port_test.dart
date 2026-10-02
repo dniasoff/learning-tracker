@@ -57,7 +57,9 @@ void main() {
   test('encodes the complete ordered action; a tombstone is `true`; '
       'ownerUid is never sent', () async {
     Map<String, Object?>? sent;
-    final port = CallableOversizedGovernedWritePort.withInvoker((payload) async {
+    final port = CallableOversizedGovernedWritePort.withInvoker((
+      payload,
+    ) async {
       sent = payload;
       return {
         'success': true,
