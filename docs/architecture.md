@@ -253,6 +253,7 @@ graph TD
     sacred_time["sacred_time"]
     scheduler["scheduler"]
     settings["settings"]
+    sub_tracks["sub_tracks"]
     tracks["tracks"]
     tutoring["tutoring"]
 
