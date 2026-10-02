@@ -1908,6 +1908,81 @@ class AppLocalizationsEn extends AppLocalizations {
       'When you complete a masechta or sefer, it will be recorded here as a permanent milestone.';
 
   @override
+  String changeHistoryUndoChangedSince(String field, String actor) {
+    return '$field — changed since by $actor';
+  }
+
+  @override
+  String changeHistoryUndoChangedSinceUnknown(String field) {
+    return '$field — changed since';
+  }
+
+  @override
+  String get changeHistoryUndoDone => 'Change undone';
+
+  @override
+  String get changeHistoryUndoFieldDeadline => 'Deadline';
+
+  @override
+  String get changeHistoryUndoFieldGoal => 'Goal';
+
+  @override
+  String get changeHistoryUndoFieldGround => 'Sub-track ground';
+
+  @override
+  String get changeHistoryUndoFieldName => 'Sub-track name';
+
+  @override
+  String get changeHistoryUndoFieldOrder => 'Learning order';
+
+  @override
+  String get changeHistoryUndoFieldProgram => 'Program';
+
+  @override
+  String get changeHistoryUndoFieldScope => 'Scope';
+
+  @override
+  String get changeHistoryUndoFieldSettings => 'Location and time zone';
+
+  @override
+  String get changeHistoryUndoFieldStages => 'Review stages';
+
+  @override
+  String get changeHistoryUndoFieldStudyDays => 'Study days';
+
+  @override
+  String get changeHistoryUndoFieldSubTrack => 'Sub-track';
+
+  @override
+  String get changeHistoryUndoFieldTrack => 'Track';
+
+  @override
+  String get changeHistoryUndoNotAllowed => 'This change can\'t be undone';
+
+  @override
+  String get changeHistoryUndoNotSaved => 'The undo couldn\'t be saved';
+
+  @override
+  String get changeHistoryUndoNothingToUndo =>
+      'Nothing to undo — changed since';
+
+  @override
+  String get changeHistoryUndoOnlineRequired => 'Online required';
+
+  @override
+  String changeHistoryUndoPartlyDone(String fields) {
+    return 'Undone, except: $fields';
+  }
+
+  @override
+  String changeHistoryUndoRevertedChange(String summary) {
+    return 'Reverted change: $summary';
+  }
+
+  @override
+  String get changeHistoryUndoUndoneTag => 'Undone';
+
+  @override
   String get chartCumulativeProgress => 'Cumulative Progress';
 
   @override

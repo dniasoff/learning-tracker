@@ -1894,6 +1894,80 @@ class AppLocalizationsHe extends AppLocalizations {
       'כשתסיימו מסכתא או ספר, הוא יירשם כאן כאבן דרך קבועה.';
 
   @override
+  String changeHistoryUndoChangedSince(String field, String actor) {
+    return '$field — שונה מאז על ידי $actor';
+  }
+
+  @override
+  String changeHistoryUndoChangedSinceUnknown(String field) {
+    return '$field — שונה מאז';
+  }
+
+  @override
+  String get changeHistoryUndoDone => 'השינוי בוטל';
+
+  @override
+  String get changeHistoryUndoFieldDeadline => 'תאריך יעד';
+
+  @override
+  String get changeHistoryUndoFieldGoal => 'יעד';
+
+  @override
+  String get changeHistoryUndoFieldGround => 'חומר המסלול המשני';
+
+  @override
+  String get changeHistoryUndoFieldName => 'שם המסלול המשני';
+
+  @override
+  String get changeHistoryUndoFieldOrder => 'סדר הלימוד';
+
+  @override
+  String get changeHistoryUndoFieldProgram => 'תוכנית';
+
+  @override
+  String get changeHistoryUndoFieldScope => 'היקף';
+
+  @override
+  String get changeHistoryUndoFieldSettings => 'מיקום ואזור זמן';
+
+  @override
+  String get changeHistoryUndoFieldStages => 'שלבי חזרה';
+
+  @override
+  String get changeHistoryUndoFieldStudyDays => 'ימי לימוד';
+
+  @override
+  String get changeHistoryUndoFieldSubTrack => 'מסלול משני';
+
+  @override
+  String get changeHistoryUndoFieldTrack => 'מסלול';
+
+  @override
+  String get changeHistoryUndoNotAllowed => 'אי אפשר לבטל את השינוי הזה';
+
+  @override
+  String get changeHistoryUndoNotSaved => 'לא ניתן היה לשמור את הביטול';
+
+  @override
+  String get changeHistoryUndoNothingToUndo => 'אין מה לבטל — שונה מאז';
+
+  @override
+  String get changeHistoryUndoOnlineRequired => 'נדרש חיבור לאינטרנט';
+
+  @override
+  String changeHistoryUndoPartlyDone(String fields) {
+    return 'בוטל, חוץ מ: $fields';
+  }
+
+  @override
+  String changeHistoryUndoRevertedChange(String summary) {
+    return 'שינוי שבוטל: $summary';
+  }
+
+  @override
+  String get changeHistoryUndoUndoneTag => 'בוטל';
+
+  @override
   String get chartCumulativeProgress => 'התקדמות מצטברת';
 
   @override
