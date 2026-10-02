@@ -11,6 +11,7 @@ library;
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/ports/ports.dart';
 
 void main() {
   const libPath = 'lib/domain/learner_state/ports/ports.dart';
@@ -38,5 +39,19 @@ void main() {
         isNot(contains(libPath)),
       ),
     );
+  });
+
+  test('the barrel exports every learner-state port (C0, DNI-524)', () {
+    // Compile-time: each name resolves through ports.dart alone.
+    expect(<Type>[
+      ChangeLogRepository,
+      CompleteRead,
+      GovernedIntentRepository,
+      LearnerScope,
+      LearningEventRepository,
+      LearningWritePort,
+      OversizedGovernedWritePort,
+      SubTrackRepository,
+    ], hasLength(8));
   });
 }

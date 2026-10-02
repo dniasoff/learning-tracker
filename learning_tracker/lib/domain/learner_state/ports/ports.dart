@@ -8,7 +8,11 @@
 /// enforces it as a hard gate.
 library;
 
+export 'change_log_repository.dart';
 export 'complete_read.dart';
+export 'governed_intent_repository.dart';
 export 'learner_scope.dart';
 export 'learning_event_repository.dart';
+export 'learning_write_port.dart';
+export 'oversized_governed_write_port.dart';
 export 'sub_track_repository.dart';
