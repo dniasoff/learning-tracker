@@ -254,7 +254,11 @@ void main() {
       'created_at = the award instant, round-tripping', () {
     final at = DateTime.utc(2026, 9, 1, 8);
     final entry = PointsLedgerEntry.forAward(
-      PointsAward(eventId: '01ARZ3NDEKTSV4RRFFQ69G5FAA', amount: 5, createdAt: at),
+      PointsAward(
+        eventId: '01ARZ3NDEKTSV4RRFFQ69G5FAA',
+        amount: 5,
+        createdAt: at,
+      ),
     );
     final map = entry.toFirestore();
     expect(map, {

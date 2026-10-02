@@ -20,17 +20,15 @@ void main() {
     reader = FirestorePointsAmountReader(firestore: firestore);
   });
 
-  Future<void> stage(int order, {bool ended = false}) => firestore
-      .doc('$profile/stage_definitions/mishnayos_$order')
-      .set({
+  Future<void> stage(int order, {bool ended = false}) =>
+      firestore.doc('$profile/stage_definitions/mishnayos_$order').set({
         'curriculum_id': 'mishnayos',
         'stage_order': order,
         if (ended) 'ended_at': DateTime.utc(2026),
       });
 
-  Future<void> config(int order, int points) => firestore
-      .doc('$profile/point_configs/mishnayos_$order')
-      .set({
+  Future<void> config(int order, int points) =>
+      firestore.doc('$profile/point_configs/mishnayos_$order').set({
         'curriculum_id': 'mishnayos',
         'stage_order': order,
         'points': points,

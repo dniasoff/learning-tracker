@@ -16,11 +16,7 @@ import '../../../../helpers/learner_state/in_memory_ports.dart';
 LearningWriteChunk _chunk(int first, {int size = 2}) => LearningWriteChunk(
   events: [for (var i = 0; i < size; i++) engineLearn(first + i, 'r$i')],
   awards: [
-    PointsAward(
-      eventId: engineUlid(first),
-      amount: 10,
-      createdAt: engineAt(0),
-    ),
+    PointsAward(eventId: engineUlid(first), amount: 10, createdAt: engineAt(0)),
   ],
 );
 

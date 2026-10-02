@@ -102,14 +102,15 @@ List<WriteUnit> planCapture({
     actor: stamp.actor,
   );
   return [
-    for (final leaf in leaves) learnUnit(learn(leaf, null), amount, stamp.nowUtc),
+    for (final leaf in leaves)
+      learnUnit(learn(leaf, null), amount, stamp.nowUtc),
     for (final node in nodes)
       learnUnit(learn(node.ref, node.level), amount, stamp.nowUtc),
   ];
 }
 
 /// A `void` of [targetId]; [revertsActionId] only when written by an undo.
-LearningEvent voidEvent(
+LearningEvent voidEventOf(
   CommandStamp stamp,
   String id,
   String targetId, {
@@ -237,10 +238,10 @@ List<WriteUnit> planUnlearnWrites(CommandStamp stamp, UnlearnPlan plan) {
             recordedAt: stamp.nowUtc,
             actor: stamp.actor,
           ),
-        voidEvent(stamp, ids[i++], node.target.id),
+        voidEventOf(stamp, ids[i++], node.target.id),
       ]),
     for (final leaf in plan.leafVoids)
-      WriteUnit([voidEvent(stamp, ids[i++], leaf.id)]),
+      WriteUnit([voidEventOf(stamp, ids[i++], leaf.id)]),
   ];
 }
 

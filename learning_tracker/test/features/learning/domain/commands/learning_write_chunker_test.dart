@@ -10,9 +10,10 @@ import '../../../../helpers/learner_state/engine_fixtures.dart';
 
 WriteUnit _paired(int n) {
   final e = engineLearn(n, 'Mishnah Berakhot 1:1');
-  return WriteUnit([e], [
-    PointsAward(eventId: e.id, amount: 10, createdAt: engineAt(0)),
-  ]);
+  return WriteUnit(
+    [e],
+    [PointsAward(eventId: e.id, amount: 10, createdAt: engineAt(0))],
+  );
 }
 
 WriteUnit _single(int n) => WriteUnit([engineVoid(n, 1)]);
@@ -60,20 +61,18 @@ void main() {
   });
 
   test('exactly 450 writes stay in one chunk; 451 split', () {
-    expect(chunkWrites([for (var i = 0; i < 225; i++) _paired(i)]), hasLength(1));
     expect(
-      chunkWrites([
-        for (var i = 0; i < 225; i++) _paired(i),
-        _single(999),
-      ]),
+      chunkWrites([for (var i = 0; i < 225; i++) _paired(i)]),
+      hasLength(1),
+    );
+    expect(
+      chunkWrites([for (var i = 0; i < 225; i++) _paired(i), _single(999)]),
       hasLength(2),
     );
   });
 
   test('a unit wider than a chunk splits per event, in order', () {
-    final wide = WriteUnit([
-      for (var i = 0; i < 460; i++) engineVoid(i, 5000),
-    ]);
+    final wide = WriteUnit([for (var i = 0; i < 460; i++) engineVoid(i, 5000)]);
     final chunks = chunkWrites([wide]);
     expect(chunks.map((c) => c.events.length), [450, 10]);
     expect(chunks.last.events.last.id, engineUlid(459));

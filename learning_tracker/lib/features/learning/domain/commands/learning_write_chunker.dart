@@ -58,10 +58,13 @@ List<LearningWriteChunk> chunkWrites(
       continue;
     }
     for (final event in unit.events) {
-      add([event], [
-        for (final award in unit.awards)
-          if (award.eventId == event.id) award,
-      ]);
+      add(
+        [event],
+        [
+          for (final award in unit.awards)
+            if (award.eventId == event.id) award,
+        ],
+      );
     }
   }
   flush();

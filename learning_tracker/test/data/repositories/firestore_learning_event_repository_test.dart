@@ -438,22 +438,25 @@ void main() {
       });
     });
 
-    test('an identical re-commit (retry) leaves the documents unchanged', () async {
-      final firestore = FakeFirebaseFirestore();
-      final repo = FirestoreLearningEventRepository(firestore: firestore);
-      final c = chunk();
-      await repo.commit(scope, c);
-      await repo.commit(scope, c);
-      expect(
-        (await firestore.collection('${profile()}/learning_events').get())
-            .docs,
-        hasLength(2),
-      );
-      expect(
-        (await firestore.collection('${profile()}/points_ledger').get()).docs,
-        hasLength(1),
-      );
-    });
+    test(
+      'an identical re-commit (retry) leaves the documents unchanged',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        final repo = FirestoreLearningEventRepository(firestore: firestore);
+        final c = chunk();
+        await repo.commit(scope, c);
+        await repo.commit(scope, c);
+        expect(
+          (await firestore.collection('${profile()}/learning_events').get())
+              .docs,
+          hasLength(2),
+        );
+        expect(
+          (await firestore.collection('${profile()}/points_ledger').get()).docs,
+          hasLength(1),
+        );
+      },
+    );
 
     test('terminal server codes are the permanent-rejection set', () {
       expect(

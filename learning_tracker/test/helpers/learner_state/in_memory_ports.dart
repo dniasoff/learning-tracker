@@ -323,8 +323,7 @@ final class InMemoryLearningWritePort implements LearningWritePort {
   void release() => _holds.removeAt(0).complete();
 
   /// Rejects the oldest held commit with [rejection].
-  void reject(Object rejection) =>
-      _holds.removeAt(0).completeError(rejection);
+  void reject(Object rejection) => _holds.removeAt(0).completeError(rejection);
 
   @override
   Future<void> commit(LearnerScope scope, LearningWriteChunk chunk) async {

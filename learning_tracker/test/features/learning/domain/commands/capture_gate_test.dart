@@ -54,11 +54,7 @@ void main() {
     test('locked inside a window, reporting its true bounds; both bounds '
         'are inside (closed interval, fail closed)', () {
       final window = LockWindow(_lockStart, _lockEnd);
-      for (final at in [
-        _lockStart,
-        DateTime.utc(2026, 9, 5, 10),
-        _lockEnd,
-      ]) {
+      for (final at in [_lockStart, DateTime.utc(2026, 9, 5, 10), _lockEnd]) {
         expect(gate.check(c0SettingsHistory(), at), GateLocked(window));
       }
     });
@@ -87,10 +83,7 @@ void main() {
         const LearnerSettings(profileId: profileUlid, timeZone: 'Mars/Base'),
       );
       // Fri 00:00Z is before the UTC window but inside the widened one.
-      expect(
-        lockOf(gate.check(history, DateTime.utc(2026, 9, 4))),
-        isNotNull,
-      );
+      expect(lockOf(gate.check(history, DateTime.utc(2026, 9, 4))), isNotNull);
     });
   });
 

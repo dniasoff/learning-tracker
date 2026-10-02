@@ -34,18 +34,13 @@ void main() {
       peah,
     ]);
     final leaves = [for (final n in cover) ...corpus.leavesUnder(n)];
-    expect(leaves.toSet(), {
-      ...corpus.leavesUnder(zeraim),
-    }..remove(_b12));
+    expect(leaves.toSet(), {...corpus.leavesUnder(zeraim)}..remove(_b12));
     expect(leaves, hasLength(leaves.toSet().length), reason: 'no overlap');
   });
 
   test('an untouched node is its own cover; a fully covered one has none', () {
     expect(maximalCover(peah, {_b12}, corpus), [peah]);
-    expect(
-      maximalCover(berakhot1, {_b11, _b12, _b13}, corpus),
-      isEmpty,
-    );
+    expect(maximalCover(berakhot1, {_b11, _b12, _b13}, corpus), isEmpty);
   });
 
   test('a counted node event covering part of S is re-issued; leaf events '

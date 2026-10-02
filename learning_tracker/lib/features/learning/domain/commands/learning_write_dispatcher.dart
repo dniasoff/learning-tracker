@@ -126,10 +126,13 @@ final class LearningWriteDispatcher {
         statuses[i].then((s) => settled[i] = s),
     ]);
     var timedOut = false;
-    await all.timeout(ackWait, onTimeout: () {
-      timedOut = true;
-      return const [];
-    });
+    await all.timeout(
+      ackWait,
+      onTimeout: () {
+        timedOut = true;
+        return const [];
+      },
+    );
     if (timedOut) {
       // Keep the later outcomes observed (pending failures are recorded by
       // [_commit]); a late non-permanent error must not escape the zone.
