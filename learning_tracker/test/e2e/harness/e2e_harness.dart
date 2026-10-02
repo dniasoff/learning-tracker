@@ -113,6 +113,7 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show ActiveProfileDocId, activeProfileDocIdProvider;
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -129,6 +130,7 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -745,6 +747,14 @@ class E2EHarness {
       // ── Streak milestone observer (no Firestore watch) ────────────────────
       streakMilestoneAnalyticsObserverProvider.overrideWith(
         (ref) => const Stream<void>.empty(),
+      ),
+
+      // ── Learn-tab sub-track rows (DNI-501) ────────────────────────────────
+      // No headless journey seeds sub-tracks; resolving the learner scope
+      // for an empty section only leaves the device-account stream loading
+      // at teardown. A sub-track journey overrides this with its tracks.
+      activeSubTracksProvider.overrideWith(
+        (ref) => Stream.value(const <SubTrack>[]),
       ),
     ];
   }
