@@ -186,6 +186,14 @@ final class FakeLearningCommands implements LearningCommands {
       _record('undoAction', {'actionId': actionId}, changes: 1);
 
   @override
+  Future<CaptureResult> removeTrack(String curriculumId) async =>
+      _record('removeTrack', {'curriculumId': curriculumId}, changes: 1);
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async =>
+      _record('reAddTrack', {'curriculumId': curriculumId}, changes: 1);
+
+  @override
   Stream<List<PendingFailure>> watchPendingFailures() {
     calls.add(const LearningCommandCall('watchPendingFailures', {}));
     return pendingFailures.stream;

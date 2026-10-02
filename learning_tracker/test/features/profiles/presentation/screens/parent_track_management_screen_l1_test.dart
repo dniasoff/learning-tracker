@@ -3,7 +3,6 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -41,7 +40,6 @@ class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
-class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 class _HebrewTermsOff extends UseHebrewTerms {
   @override
@@ -113,10 +111,7 @@ Widget _buildApp({
         ),
       ),
       curriculumTrackRepositoryAdapterProvider.overrideWith(
-        (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-          ref: ref,
-          functions: _MockFirebaseFunctions(),
-        ),
+        (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
       ),
       if (!useFirestoreTracks)
         activeTracksProvider.overrideWith(

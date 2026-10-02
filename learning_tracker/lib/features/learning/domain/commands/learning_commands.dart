@@ -132,6 +132,21 @@ abstract interface class LearningCommands {
   /// Undoes the governed action [actionId].
   Future<CaptureResult> undoAction(String actionId);
 
+  /// AD-38 "Remove track" (DNI-476): ONE action of a `mainTrack` entry
+  /// setting `ended_at` on `curriculum_tracks/{curriculumId}` plus one
+  /// `subTrack` tombstone entry (`end_reason: track_deleted`) per
+  /// non-ended sub-track of that curriculum, sharing one `action_id`.
+  /// Learning events and the points ledger are never touched. An unknown
+  /// track is `targetNotFound`; an already removed one writes nothing.
+  Future<CaptureResult> removeTrack(String curriculumId);
+
+  /// AD-38 "Re-add" (DNI-476): clears the track's `ended_at` through a
+  /// logged change; its prior config, progress and history were never
+  /// touched, so they return with it. Sub-tracks ended by the removal stay
+  /// ended (ruling B13). An unknown track is `targetNotFound`; a live one
+  /// writes nothing.
+  Future<CaptureResult> reAddTrack(String curriculumId);
+
   /// Queued writes the server rejected, live.
   Stream<List<PendingFailure>> watchPendingFailures();
 
@@ -147,6 +162,12 @@ abstract interface class GovernedLearningCommands {
 
   /// See [LearningCommands.undoAction].
   Future<CaptureResult> undoAction(String actionId);
+
+  /// See [LearningCommands.removeTrack].
+  Future<CaptureResult> removeTrack(String curriculumId);
+
+  /// See [LearningCommands.reAddTrack].
+  Future<CaptureResult> reAddTrack(String curriculumId);
 
   /// The governed writes the server did not save, live (AD-54 Recovery);
   /// [LearningCommands.watchPendingFailures] lists them after the event
@@ -550,6 +571,24 @@ final class DefaultLearningCommands implements LearningCommands {
       throw UnimplementedError('undoAction (filled by DNI-470)');
     }
     return _gated((_, _) => governed.undoAction(actionId));
+  }
+
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) {
+    final governed = _governed;
+    if (governed == null) {
+      throw UnimplementedError('removeTrack (filled by DNI-476)');
+    }
+    return _gated((_, _) => governed.removeTrack(curriculumId));
+  }
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) {
+    final governed = _governed;
+    if (governed == null) {
+      throw UnimplementedError('reAddTrack (filled by DNI-476)');
+    }
+    return _gated((_, _) => governed.reAddTrack(curriculumId));
   }
 
   /// The event failures, then the governed ones (AD-54 Recovery).

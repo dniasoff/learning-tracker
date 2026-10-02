@@ -14,6 +14,12 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 abstract interface class OwnerGovernedWriter {
   /// See [LearningCommands.applyGovernedChange].
   Future<CaptureResult> applyGovernedChange(GovernedAction action);
+
+  /// See [LearningCommands.removeTrack].
+  Future<CaptureResult> removeTrack(String curriculumId);
+
+  /// See [LearningCommands.reAddTrack].
+  Future<CaptureResult> reAddTrack(String curriculumId);
 }
 
 /// No [LearningCommands] are available for the write: no active learner
@@ -52,11 +58,29 @@ final class LearningCommandsOwnerWriter implements OwnerGovernedWriter {
   final Future<LearningCommands?> Function() _resolve;
 
   @override
-  Future<CaptureResult> applyGovernedChange(GovernedAction action) async {
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) async =>
+      (await _commands()).applyGovernedChange(action);
+
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) async =>
+      (await _commands()).removeTrack(curriculumId);
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async =>
+      (await _commands()).reAddTrack(curriculumId);
+
+  Future<LearningCommands> _commands() async {
     final commands = await _resolve();
     if (commands == null) throw const GovernedWriterNotReadyException();
-    return commands.applyGovernedChange(action);
+    return commands;
   }
+}
+
+/// Returns [result] when it is a success, else throws
+/// [GovernedWriteRejectedException].
+CaptureSuccess requireOwnerSuccess(CaptureResult result) {
+  if (result is CaptureSuccess) return result;
+  throw GovernedWriteRejectedException(result);
 }
 
 /// Applies [action] through [writer] and returns the success, or throws
@@ -66,7 +90,5 @@ Future<CaptureSuccess> applyOwnerAction(
   OwnerGovernedWriter writer,
   GovernedAction action,
 ) async {
-  final result = await writer.applyGovernedChange(action);
-  if (result is CaptureSuccess) return result;
-  throw GovernedWriteRejectedException(result);
+  return requireOwnerSuccess(await writer.applyGovernedChange(action));
 }

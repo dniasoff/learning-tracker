@@ -8,10 +8,8 @@ library;
 
 import 'dart:async';
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -90,22 +88,9 @@ class CurriculumTrackRepositoryNotReadyException implements Exception {
 /// reorder-amnesty instant is the `mainTrackOrder` change-log entry a
 /// reorder writes (`FirestoreTrackLearningOrderRepository`).
 class FirestoreCurriculumTrackRepositoryAdapter {
-  FirestoreCurriculumTrackRepositoryAdapter({
-    required Ref ref,
-    FirebaseFunctions? functions,
-  }) : _ref = ref,
-       _functionsOverride = functions;
+  FirestoreCurriculumTrackRepositoryAdapter({required Ref ref}) : _ref = ref;
 
   final Ref _ref;
-  final FirebaseFunctions? _functionsOverride;
-
-  // Lazy: only deleteTrackPermanently below needs Cloud Functions at all —
-  // every other method here (retire/archive/reactivate/query) is a pure
-  // Firestore operation, so the client is resolved at call time, from the
-  // ACTIVE account's named app (DNI-520: the default app has no signed-in
-  // user, so its FirebaseFunctions.instance would call unauthenticated).
-  Future<FirebaseFunctions> _functions() async =>
-      _functionsOverride ?? await _ref.read(accountFunctionsProvider)();
 
   /// Emits whether the active profile's Firestore track repository is ready.
   ///
@@ -289,40 +274,24 @@ class FirestoreCurriculumTrackRepositoryAdapter {
     await repo.retireTrack(curriculumId);
   }
 
-  /// Permanently deletes a curriculum track and its dependent data.
-  ///
-  /// ## Why this goes through a Cloud Function
-  ///
-  /// `firestore.rules` sets `allow delete: if false` on `curriculum_tracks`, so
-  /// a client CANNOT delete one directly — that is deliberate, not an
-  /// oversight. Deletion also has to fan out across sibling collections keyed
-  /// by `curriculum_id`, which is not something a client should attempt
-  /// non-atomically. `functions/src/deletes.ts` owns it.
-  ///
-  /// This is NOT interchangeable with [retireTrack] or `archiveTrack`. Both of
-  /// those are soft and PRESERVE the config; this destroys it. The distinction
-  /// is deliberate — see `CurriculumActivationService`'s doc comments, which
-  /// warn that `deactivate` should be used "only where hard-deleting the config
-  /// on deactivation is actually intended".
-  ///
-  /// Throws whatever the callable throws — notably `invalid-argument` if the
-  /// profile ULID or curriculum key is empty, and `permission-denied` if the
-  /// caller does not own the profile. Deliberately NOT swallowed: a delete that
-  /// silently does nothing is indistinguishable from one that worked.
-  Future<void> deleteTrackPermanently(CurriculumId curriculumId) async {
-    final profileUlid = _ref.read(activeProfileDocIdProvider);
-    if (profileUlid == null || profileUlid.isEmpty) {
-      throw const CurriculumTrackRepositoryNotReadyException();
-    }
-    final functions = await _functions();
-    await functions
-        .httpsCallable('deleteCurriculumTrack')
-        .call<Map<String, dynamic>>({
-          // Both are STRINGS on the function side (deletes.ts:214-219) — it
-          // was migrated to ULIDs already, so this must not pass an int.
-          'profileId': profileUlid,
-          'curriculumId': curriculumId.storageKey,
-        });
+  /// AD-38 "Remove track" (DNI-476): one governed action that sets
+  /// `ended_at` on the track and tombstones its live sub-tracks — never a
+  /// delete; learning events and points are untouched, and [reAddTrack]
+  /// brings the track back with its prior config, progress and history.
+  /// Throws [CurriculumTrackRepositoryNotReadyException] when not ready,
+  /// [StateError] for the profile's only active track, and
+  /// `GovernedWriteRejectedException` when the write is refused.
+  Future<void> removeTrack(CurriculumId curriculumId) async {
+    final repo = await _resolve();
+    await repo.removeTrack(curriculumId);
+  }
+
+  /// AD-38 "Re-add": clears the removed track's `ended_at` through a logged
+  /// change. Throws [CurriculumTrackRepositoryNotReadyException] when not
+  /// ready.
+  Future<void> reAddTrack(CurriculumId curriculumId) async {
+    final repo = await _resolve();
+    await repo.reAddTrack(curriculumId);
   }
 
   /// Archives [curriculumId]'s track. Throws

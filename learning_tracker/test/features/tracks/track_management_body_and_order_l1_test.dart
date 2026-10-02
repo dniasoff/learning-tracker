@@ -5,7 +5,6 @@ library;
 // ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
 import 'package:auto_route/auto_route.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,7 +40,6 @@ class _Router extends Mock implements StackRouter {}
 
 class _OrderRepo extends Mock implements TrackLearningOrderRepository {}
 
-class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY9';
 
@@ -64,10 +62,7 @@ Widget _body(
   overrides: [
     activeProfileIdProvider.overrideWithValue(_profileId),
     curriculumTrackRepositoryAdapterProvider.overrideWith(
-      (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-        ref: ref,
-        functions: _MockFirebaseFunctions(),
-      ),
+      (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
     ),
     firestoreCurriculumTrackRepositoryProvider.overrideWith(
       (ref) async => FirestoreCurriculumTrackRepository(

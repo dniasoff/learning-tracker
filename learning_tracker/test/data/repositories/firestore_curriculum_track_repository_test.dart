@@ -34,9 +34,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/learner_state/c0_fixtures.dart';
+import '../../helpers/learner_state/engine_fixtures.dart';
 import '../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'uid-1';
@@ -434,6 +437,78 @@ void main() {
         entry.after.keys,
         contains('curriculum_tracks/mishnayos.ended_at'),
       );
+    });
+  });
+
+  group('DNI-476 AC-4: remove / re-add through the governed commands', () {
+    DocumentReference<Map<String, dynamic>> profileDoc() => firestore
+        .collection('users')
+        .doc(_uid)
+        .collection('learner_profiles')
+        .doc(_profileId);
+
+    test('remove: one action (mainTrack ended_at + a track_deleted '
+        'tombstone per live sub-track) sharing action_id; learning events and '
+        'points untouched; re-add restores the track', () async {
+      final repo = buildRepo();
+      await repo.activateTrack(CurriculumId.mishnayos);
+      await repo.activateTrack(CurriculumId.bavli);
+      final sub = c0SubTrack(id: engineUlid(7));
+      await profileDoc()
+          .collection('sub_tracks')
+          .doc(sub.id)
+          .set(toFirestoreMap(sub.toStorage()));
+      const event = {'kind': 'learn', 'curriculum_id': 'mishnayos'};
+      const points = {'amount': 10, 'curriculum_id': 'mishnayos'};
+      await profileDoc().collection('learning_events').doc('e1').set(event);
+      await profileDoc().collection('points_ledger').doc('p1').set(points);
+
+      await repo.removeTrack(CurriculumId.mishnayos);
+
+      expect(await repo.getTrack(CurriculumId.mishnayos), isNull);
+      final raw = (await rawDoc(CurriculumId.mishnayos).get()).data()!;
+      expect(raw['ended_at'], isA<Timestamp>());
+      final subRaw =
+          (await profileDoc().collection('sub_tracks').doc(sub.id).get())
+              .data()!;
+      expect(subRaw['end_reason'], 'track_deleted');
+      expect(subRaw['ended_at'], isA<Timestamp>());
+      final entries = await writer.lastEntries();
+      expect(entries.map((e) => e.entity.storage), ['mainTrack', 'subTrack']);
+      expect(entries.map((e) => e.actionId).toSet(), {entries.first.id});
+      expect(
+        (await profileDoc().collection('learning_events').doc('e1').get())
+            .data(),
+        event,
+      );
+      expect(
+        (await profileDoc().collection('points_ledger').doc('p1').get()).data(),
+        points,
+      );
+
+      await repo.reAddTrack(CurriculumId.mishnayos);
+      final back = await repo.getTrack(CurriculumId.mishnayos);
+      expect(back, isNotNull);
+      expect(back!.isActive, isTrue);
+      expect(
+        (await profileDoc().collection('sub_tracks').doc(sub.id).get())
+            .data()!['end_reason'],
+        'track_deleted',
+        reason: 'ruling B13: re-add does not reactivate the sub-tracks',
+      );
+    });
+
+    test('removing the only active track throws StateError and writes '
+        'nothing', () async {
+      final repo = buildRepo();
+      await repo.activateTrack(CurriculumId.mishnayos);
+      final before = writer.results.length;
+      await expectLater(
+        repo.removeTrack(CurriculumId.mishnayos),
+        throwsStateError,
+      );
+      expect(writer.results, hasLength(before));
+      expect(await repo.getTrack(CurriculumId.mishnayos), isNotNull);
     });
   });
 }

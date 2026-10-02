@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +12,6 @@ import 'package:learning_tracker/features/tracks/domain/services/curriculum_acti
 import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
-import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
@@ -21,8 +19,6 @@ import '../../../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'curriculum-activation-test-user';
 const _profileId = '01J0000000000000000000000A';
-
-class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 CollectionReference<Map<String, dynamic>> _profileCollection(
   FakeFirebaseFirestore firestore,
@@ -75,10 +71,7 @@ void main() {
           (ref) async => studyDayConfigRepository,
         ),
         curriculumTrackRepositoryAdapterProvider.overrideWith(
-          (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-            ref: ref,
-            functions: _MockFirebaseFunctions(),
-          ),
+          (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
         ),
       ],
     );
@@ -332,6 +325,32 @@ void main() {
               config['curriculum_id'] == CurriculumId.mishnayos.storageKey,
         ),
         isTrue,
+      );
+    });
+  });
+
+  group('removeTrack (AD-38, DNI-476)', () {
+    test('removes a curriculum with a logged ended_at tombstone, never a '
+        'delete', () async {
+      await service.activate(CurriculumId.bavli);
+      await service.activate(CurriculumId.yerushalmi);
+
+      await service.removeTrack(CurriculumId.bavli);
+
+      expect(await trackRepository.isActive(CurriculumId.bavli), isFalse);
+      final raw = await _profileCollection(
+        firestore,
+        'curriculum_tracks',
+      ).doc('bavli').get();
+      expect(raw.exists, isTrue);
+      expect(raw.data()!['ended_at'], isNotNull);
+    });
+
+    test('refuses to remove the last active curriculum', () async {
+      await service.activate(CurriculumId.bavli);
+      expect(
+        () => service.removeTrack(CurriculumId.bavli),
+        throwsA(isA<LastActiveCurriculumException>()),
       );
     });
   });

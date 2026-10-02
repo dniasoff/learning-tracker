@@ -5,7 +5,6 @@ library;
 // ignore_for_file: directives_ordering, unused_element_parameter, prefer_const_constructors
 
 import 'package:auto_route/auto_route.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,7 +36,6 @@ class _HebrewOff extends UseHebrewTerms {
   bool build() => false;
 }
 
-class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 const _uid = 'track-hub-test-uid';
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
@@ -87,10 +85,7 @@ Widget _app({
       ),
     ),
     curriculumTrackRepositoryAdapterProvider.overrideWith(
-      (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-        ref: ref,
-        functions: _MockFirebaseFunctions(),
-      ),
+      (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
     ),
     firestoreStudyDayConfigRepositoryProvider.overrideWith(
       (ref) async => FirestoreStudyDayConfigRepository(

@@ -2,7 +2,6 @@
 @Tags(['progress', 'pace', 'f4_regression'])
 library;
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -32,7 +31,6 @@ class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
-class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 class _ActiveProfile extends ActiveProfileId {
   @override
@@ -104,10 +102,7 @@ void main() {
         // pattern scheduler_all_daily_tasks_test.dart and the
         // parent-track-management screen tests already use.
         curriculumTrackRepositoryAdapterProvider.overrideWith(
-          (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-            ref: ref,
-            functions: _MockFirebaseFunctions(),
-          ),
+          (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
         ),
       ],
     );

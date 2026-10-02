@@ -77,10 +77,7 @@ void main() {
     ) {
       final adapterProvider =
           Provider<FirestoreCurriculumTrackRepositoryAdapter>(
-            (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-              ref: ref,
-              functions: MockFirebaseFunctions(),
-            ),
+            (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
           );
       return container.read(adapterProvider);
     }
@@ -274,6 +271,19 @@ void main() {
           );
         },
       );
+
+      test('removeTrack ends the track through the governed commands; '
+          'reAddTrack brings it back (DNI-476 AC-4)', () async {
+        await adapter.activateTrack(CurriculumId.mishnayos);
+        await adapter.activateTrack(CurriculumId.bavli);
+
+        await adapter.removeTrack(CurriculumId.mishnayos);
+        expect(await adapter.getTrack(CurriculumId.mishnayos), isNull);
+        expect(await adapter.getActiveCurriculumIds(), ['bavli']);
+
+        await adapter.reAddTrack(CurriculumId.mishnayos);
+        expect(await adapter.isActive(CurriculumId.mishnayos), isTrue);
+      });
 
       test(
         'activateTrack then getTrack round-trips through Firestore',

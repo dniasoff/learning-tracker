@@ -122,6 +122,20 @@ final class FirestoreGovernedWriter implements OwnerGovernedWriter {
     return result;
   }
 
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) async {
+    final result = await commands.removeTrack(curriculumId);
+    results.add(result);
+    return result;
+  }
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async {
+    final result = await commands.reAddTrack(curriculumId);
+    results.add(result);
+    return result;
+  }
+
   /// Every `change_log` entry of the scope, decoded, in id order.
   Future<List<ChangeLogEntry>> entries() async {
     final snapshot = await firestore

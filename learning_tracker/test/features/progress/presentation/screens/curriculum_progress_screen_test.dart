@@ -15,7 +15,6 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -60,7 +59,6 @@ class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
-class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) =>
     AccountFirebaseHandles(
@@ -263,10 +261,7 @@ Widget _pump({
       // that never seed a track: getTrack then returns null and pace stays
       // null, same as before this override existed.
       curriculumTrackRepositoryAdapterProvider.overrideWith(
-        (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-          ref: ref,
-          functions: _MockFirebaseFunctions(),
-        ),
+        (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
       ),
       // Data-consistency fix (run-9 audit): CurriculumProgressScreen now
       // watches trackDualProgressMetricsProvider so its "Track progress" row

@@ -43,6 +43,17 @@
 ///    caller error (unknown sub-track, invalid payload or baseline) is
 ///    reported as that rejection and is not retryable.
 ///
+/// ## removeTrack / reAddTrack (DNI-476, AD-38 track lifecycle)
+///
+/// Remove reads the track doc and the complete sub-track list (waiting at
+/// most [DefaultGovernedLearningCommands.subTrackReadWait]), then runs ONE
+/// action through the same path as `applyGovernedChange`: the `mainTrack`
+/// `ended_at` batch first, then one `subTrack` tombstone batch per
+/// non-ended sub-track of the curriculum, all sharing the first entry id
+/// as `action_id`. Re-add is one logged change clearing `ended_at`. An
+/// unknown track is `targetNotFound`; a no-op (already removed / already
+/// live) writes nothing.
+///
 /// ## undoAction (AC-4, AC-5)
 ///
 /// An undo is one new action whose every entry carries
@@ -71,6 +82,7 @@ import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart';
@@ -291,6 +303,92 @@ final class DefaultGovernedLearningCommands
       revertsActionId: actionId,
       changedSince: changedSince,
       knownDocs: docs,
+    );
+  }
+
+  /// How long [removeTrack] waits for the complete sub-track read before
+  /// it writes nothing.
+  static const subTrackReadWait = Duration(seconds: 10);
+
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) async {
+    final now = _clock().toUtc();
+    final _DocView track;
+    final List<SubTrack> subTracks;
+    try {
+      track = await _reader.currentDoc(
+        _scope,
+        GovernedEntity.mainTrack.collection,
+        curriculumId,
+      );
+      if (track == null) {
+        return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+      }
+      if (track[GovernedKeys.endedAt] != null) {
+        return const CaptureResult.success(); // already removed
+      }
+      final ready = await _subTracks
+          .watchAll(_scope)
+          .firstWhere((r) => r is CompleteReadReady<SubTrack>)
+          .timeout(subTrackReadWait);
+      subTracks = (ready as CompleteReadReady<SubTrack>).items;
+    } on ArgumentError {
+      return _invalid;
+    } on Object {
+      return _notSaved; // the track or its sub-tracks could not be read
+    }
+    final GovernedAction action;
+    try {
+      action = OwnerGovernedIntents.removeTrack(
+        curriculumId: curriculumId,
+        subTracks: subTracks,
+        at: now,
+      );
+    } on ArgumentError {
+      return _invalid;
+    }
+    return _run(
+      action.changes,
+      now: now,
+      knownDocs: {
+        _docKey(GovernedEntity.mainTrack.collection, curriculumId): track,
+      },
+    );
+  }
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async {
+    final now = _clock().toUtc();
+    final _DocView track;
+    try {
+      track = await _reader.currentDoc(
+        _scope,
+        GovernedEntity.mainTrack.collection,
+        curriculumId,
+      );
+    } on ArgumentError {
+      return _invalid;
+    } on Object {
+      return _notSaved;
+    }
+    if (track == null) {
+      return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+    }
+    if (track[GovernedKeys.endedAt] == null) {
+      return const CaptureResult.success(); // already live
+    }
+    final GovernedEntityChange change;
+    try {
+      change = OwnerGovernedIntents.reAddTrack(curriculumId);
+    } on ArgumentError {
+      return _invalid;
+    }
+    return _run(
+      [change],
+      now: now,
+      knownDocs: {
+        _docKey(GovernedEntity.mainTrack.collection, curriculumId): track,
+      },
     );
   }
 

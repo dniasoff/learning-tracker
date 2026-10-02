@@ -312,6 +312,35 @@ class FirestoreCurriculumTrackRepository {
     }
   }
 
+  /// AD-38 "Remove track": `LearningCommands.removeTrack` — ONE action
+  /// setting `ended_at` on this doc plus one `subTrack` tombstone per
+  /// non-ended sub-track of the curriculum (shared `action_id`). Learning
+  /// events and the points ledger are never touched. Throws [StateError]
+  /// when [curriculumId] is this profile's only active track, and
+  /// [GovernedWriteRejectedException] when the commands refuse the write.
+  Future<void> removeTrack(CurriculumId curriculumId) async {
+    final existing = await getTrack(curriculumId);
+    if (existing != null && existing.isActive) await _assertNotLastActive();
+    requireOwnerSuccess(
+      await _requireWriter().removeTrack(curriculumId.storageKey),
+    );
+  }
+
+  /// AD-38 "Re-add": `LearningCommands.reAddTrack` — clears `ended_at`
+  /// through a logged change, so the track returns with its prior config,
+  /// progress and history.
+  Future<void> reAddTrack(CurriculumId curriculumId) async {
+    requireOwnerSuccess(
+      await _requireWriter().reAddTrack(curriculumId.storageKey),
+    );
+  }
+
+  OwnerGovernedWriter _requireWriter() {
+    final writer = _writer;
+    if (writer == null) throw const GovernedWriterNotReadyException();
+    return writer;
+  }
+
   GovernedEntityChange _change(
     CurriculumId curriculumId,
     Map<String, Object?> fields,
@@ -324,9 +353,6 @@ class FirestoreCurriculumTrackRepository {
     },
   );
 
-  Future<void> _apply(List<GovernedEntityChange> changes) async {
-    final writer = _writer;
-    if (writer == null) throw const GovernedWriterNotReadyException();
-    await applyOwnerAction(writer, GovernedAction(changes));
-  }
+  Future<void> _apply(List<GovernedEntityChange> changes) =>
+      applyOwnerAction(_requireWriter(), GovernedAction(changes));
 }

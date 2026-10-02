@@ -211,13 +211,7 @@ abstract final class OwnerGovernedIntents {
             .toList()
           ..sort((a, b) => a.id.compareTo(b.id));
     return GovernedAction([
-      mainTrackDocs(
-        entity: GovernedEntity.mainTrack,
-        curriculumId: curriculumId,
-        docs: {
-          curriculumId: {GovernedKeys.endedAt: when},
-        },
-      ),
+      _trackLifecycle(curriculumId, when),
       for (final t in live)
         GovernedEntityChange(
           entity: GovernedEntity.subTrack,
@@ -240,13 +234,33 @@ abstract final class OwnerGovernedIntents {
   /// AD-38 "Re-add": clears `ended_at` on `curriculum_tracks/{curriculumId}`
   /// through a logged change; every other field (the prior config) is kept.
   /// Sub-tracks ended by the removal stay ended (ruling B13).
-  static GovernedEntityChange reAddTrack(String curriculumId) => mainTrackDocs(
-    entity: GovernedEntity.mainTrack,
-    curriculumId: curriculumId,
-    docs: {
-      curriculumId: {GovernedKeys.endedAt: null},
-    },
-  );
+  static GovernedEntityChange reAddTrack(String curriculumId) =>
+      _trackLifecycle(curriculumId, null);
+
+  /// The `mainTrack` change setting `ended_at` = [endedAt] on the existing
+  /// `curriculum_tracks/{curriculumId}` doc ([DocMode.update]: an unknown
+  /// track is `targetNotFound`, never created).
+  static GovernedEntityChange _trackLifecycle(
+    String curriculumId,
+    DateTime? endedAt,
+  ) {
+    _requireCurriculum(curriculumId);
+    return GovernedEntityChange(
+      entity: GovernedEntity.mainTrack,
+      entityId: curriculumId,
+      docs: [
+        GovernedDocPatch(
+          collection: GovernedEntity.mainTrack.collection,
+          docId: curriculumId,
+          fields: {
+            GovernedKeys.endedAt: endedAt,
+            GovernedKeys.curriculumId: curriculumId,
+          },
+          mode: DocMode.update,
+        ),
+      ],
+    );
+  }
 
   static Map<String, Object?> _withCurriculum(
     Map<String, Object?> fields,

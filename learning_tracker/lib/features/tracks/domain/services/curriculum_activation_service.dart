@@ -108,8 +108,8 @@ class CurriculumActivationService {
   /// `choice == 'archive'` ("Archive — keep history") UI action:
   /// `track_management_body.dart:336` and `track_detail_screen.dart:996`, each
   /// inside `if (choice == 'archive')`. The "wipe / Delete and wipe history"
-  /// action is routed to a *separate* method — `purgeTrackHistory` (the
-  /// hard-delete path) — never to `deactivate`.
+  /// action is routed to a *separate* method — [removeTrack] (the AD-38
+  /// ended_at tombstone) — never to `deactivate`.
   ///
   /// Therefore `deactivate` means "stop showing this track but keep the
   /// history": it maps to the soft
@@ -154,23 +154,22 @@ class CurriculumActivationService {
     }
   }
 
-  /// Hard-delete ("wipe") a curriculum track and its dependent data.
+  /// AD-38 "Remove track" (DNI-476): one governed action that sets
+  /// `ended_at` on the curriculum's track and tombstones its live
+  /// sub-tracks, sharing one `action_id` in the change log. Nothing is
+  /// deleted: learning events and the points ledger are untouched, and a
+  /// later re-add (adding the curriculum again) clears `ended_at` and brings
+  /// back the prior config, progress and history. No client path hard-
+  /// deletes a track any more.
   ///
-  /// In Firestore, `curriculum_tracks` is `allow delete: if false` in
-  /// `firestore.rules` — a client cannot delete the document directly, by
-  /// design. Deletion must fan out across the sibling collections
-  /// (`goals`, `stage_definitions`, `study_day_configs`,
-  /// `curriculum_scopes`, `learning_order`, `profile_programs`) plus the
-  /// document itself, so it is owned by the `deleteCurriculumTrack` Cloud
-  /// Function. This is the in-service caller of that function via
-  /// [FirestoreCurriculumTrackRepositoryAdapter.deleteTrackPermanently].
-  ///
-  /// AD-25: there is no integer track id in Firestore — a track IS its
-  /// curriculum — so the deleted Drift `TrackDao.purgeHistory(int trackId)`
-  /// signature is replaced with the curriculum-keyed one. This is the only
-  /// permanent-delete surface this service exposes; [deactivate] is soft.
-  Future<void> purgeTrackHistory(CurriculumId curriculum) {
-    return _trackRepository.deleteTrackPermanently(curriculum);
+  /// Throws [LastActiveCurriculumException] when the profile has exactly one
+  /// active curriculum (minimum-1 invariant).
+  Future<void> removeTrack(CurriculumId curriculum) async {
+    try {
+      await _trackRepository.removeTrack(curriculum);
+    } on StateError {
+      throw const LastActiveCurriculumException();
+    }
   }
 
   /// Toggle a curriculum on or off for the active profile.
