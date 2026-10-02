@@ -45,7 +45,6 @@ import 'package:learning_tracker/features/settings/presentation/screens/settings
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
-import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart'
     show TutorGrant;
 import 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';
@@ -300,11 +299,6 @@ class AppRouter extends RootStackRouter {
       path: '/settings/lifetime/:curriculumId',
       page: LifetimeCurriculumMarkingRoute.page,
       guards: [authGuard, childModeGuard, pinGuard],
-    ),
-    AutoRoute(
-      path: '/curriculum/:curriculumId/order',
-      page: LearningOrderRoute.page,
-      guards: [authGuard],
     ),
 
     // Tutoring routes (W6.11-W6.13)

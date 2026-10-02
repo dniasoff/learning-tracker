@@ -27,10 +27,12 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/study_day_config_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/firestore_governed_writer.dart';
 import 'not_ready_expectations.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
@@ -159,6 +161,13 @@ void main() {
         firestore = FakeFirebaseFirestore();
         container = ProviderContainer(
           overrides: [
+            ownerGovernedWriterProvider.overrideWithValue(
+              FirestoreGovernedWriter(
+                firestore,
+                uid: uid,
+                profileId: profileDocId,
+              ),
+            ),
             activeAccountFirebaseProvider.overrideWith(
               (ref) async => handles(firestore),
             ),

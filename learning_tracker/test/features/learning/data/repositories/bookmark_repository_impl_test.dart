@@ -11,7 +11,7 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
 import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
@@ -21,6 +21,7 @@ import 'package:mocktail/mocktail.dart';
 import '../../../../helpers/data_export_firestore_test_support.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
@@ -41,16 +42,21 @@ void main() {
 
   late FakeFirebaseFirestore firestore;
   late MockContentRepository contentRepository;
-  late FirestoreLearningOrderRepository learningOrderRepository;
+  late FirestoreTrackLearningOrderRepository learningOrderRepository;
   late FirestoreBookmarkRepository repository;
 
   setUp(() {
     firestore = createFakeFirestore(authenticatedUid: _uid);
     contentRepository = MockContentRepository();
-    learningOrderRepository = FirestoreLearningOrderRepository(
+    learningOrderRepository = FirestoreTrackLearningOrderRepository(
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     );
     repository = FirestoreBookmarkRepository(
       firestore: firestore,
@@ -122,41 +128,45 @@ void main() {
       expect(updated?.sefariaRef, _ref2);
     });
 
-    test('advanceBookmark follows a saved custom learning order', () async {
-      await learningOrderRepository.saveOrder(CurriculumId.mishnayos, [
-        const LearningOrderItem(
+    test(
+      'advanceBookmark follows a saved custom main-track order (a governed '
+      'reorder of the top-level nodes, read back through orderedLeaves)',
+      () async {
+        await learningOrderRepository.saveSedarimOrder(CurriculumId.mishnayos, [
+          const LearningOrderItem(
+            sefariaRef: _ref3,
+            displayNameHe: '',
+            displayNameEn: 'B 1:3',
+            userSortOrder: 0,
+          ),
+          const LearningOrderItem(
+            sefariaRef: _ref1,
+            displayNameHe: '',
+            displayNameEn: 'B 1:1',
+            userSortOrder: 1,
+          ),
+          const LearningOrderItem(
+            sefariaRef: _ref2,
+            displayNameHe: '',
+            displayNameEn: 'B 1:2',
+            userSortOrder: 2,
+          ),
+        ]);
+        await repository.setBookmark(
+          curriculumId: CurriculumId.mishnayos,
           sefariaRef: _ref3,
-          displayNameHe: '',
-          displayNameEn: 'B 1:3',
-          userSortOrder: 0,
-        ),
-        const LearningOrderItem(
-          sefariaRef: _ref1,
-          displayNameHe: '',
-          displayNameEn: 'B 1:1',
-          userSortOrder: 1,
-        ),
-        const LearningOrderItem(
-          sefariaRef: _ref2,
-          displayNameHe: '',
-          displayNameEn: 'B 1:2',
-          userSortOrder: 2,
-        ),
-      ]);
-      await repository.setBookmark(
-        curriculumId: CurriculumId.mishnayos,
-        sefariaRef: _ref3,
-      );
-      await repository.advanceBookmark(
-        curriculumId: CurriculumId.mishnayos,
-        completedSefariaRef: _ref3,
-      );
+        );
+        await repository.advanceBookmark(
+          curriculumId: CurriculumId.mishnayos,
+          completedSefariaRef: _ref3,
+        );
 
-      final updated = await repository.getBookmark(
-        curriculumId: CurriculumId.mishnayos,
-      );
-      expect(updated?.sefariaRef, _ref1);
-    });
+        final updated = await repository.getBookmark(
+          curriculumId: CurriculumId.mishnayos,
+        );
+        expect(updated?.sefariaRef, _ref1);
+      },
+    );
 
     test('advanceBookmark keeps the bookmark at the last item', () async {
       await repository.setBookmark(

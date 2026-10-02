@@ -32,7 +32,6 @@
 /// order-independent under `--test-randomize-ordering-seed=random`.
 library;
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -53,11 +52,11 @@ import 'package:learning_tracker/data/repositories/firestore_curriculum_track_re
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -252,20 +251,18 @@ void main() {
       final repo = await container.read(firestoreGoalRepositoryProvider.future);
 
       expect(repo, isA<FirestoreGoalRepository>());
-      await repo!.createGoal(
+      await seedGoal(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
         curriculumId: CurriculumId.chumash,
-        targetPercent: 50,
+        goalType: 'deadline',
+        targetDate: DateTime.utc(2027),
       );
 
-      final snapshot = await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_profileId)
-          .collection('goals')
-          .get();
-      expect(snapshot.docs, hasLength(1));
-      expect(snapshot.docs.single.data()['curriculum_id'], 'chumash');
+      final goals = await repo!.getGoals(CurriculumId.chumash);
+      expect(goals, hasLength(1));
+      expect(goals.single.curriculumId, CurriculumId.chumash);
     });
 
     test('switching the active profile id re-resolves to a repository '
@@ -281,41 +278,36 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await seedGoal(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.chumash,
+        goalType: 'deadline',
+        targetDate: DateTime.utc(2027),
+      );
+      await seedGoal(
+        firestore,
+        uid: _uid,
+        profileId: _otherProfileId,
+        curriculumId: CurriculumId.nach,
+        goalType: 'deadline',
+        targetDate: DateTime.utc(2027),
+      );
+
       container.read(activeProfileDocIdProvider.notifier).set(_profileId);
       final first = await container.read(
         firestoreGoalRepositoryProvider.future,
       );
-      await first!.createGoal(
-        curriculumId: CurriculumId.chumash,
-        targetPercent: 10,
-      );
-
       container.read(activeProfileDocIdProvider.notifier).set(_otherProfileId);
       final second = await container.read(
         firestoreGoalRepositoryProvider.future,
       );
-      await second!.createGoal(
-        curriculumId: CurriculumId.nach,
-        targetPercent: 20,
-      );
 
-      final firstProfileGoals = await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_profileId)
-          .collection('goals')
-          .get();
-      final secondProfileGoals = await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_otherProfileId)
-          .collection('goals')
-          .get();
-
-      expect(firstProfileGoals.docs, hasLength(1));
-      expect(secondProfileGoals.docs, hasLength(1));
+      expect(await first!.getGoals(CurriculumId.chumash), hasLength(1));
+      expect(await first.getGoals(CurriculumId.nach), isEmpty);
+      expect(await second!.getGoals(CurriculumId.nach), hasLength(1));
+      expect(await second.getGoals(CurriculumId.chumash), isEmpty);
     });
 
     test(
@@ -577,25 +569,32 @@ void main() {
         ],
       );
 
-      // Write a custom `learning_order` doc directly, matching the shape
-      // `FirestoreLearningOrderRepository.saveOrder` writes, so this is a
-      // regression guard on the PROVIDER's wiring, not on saveOrder.
-      final orderDocId = DocIds.learningOrderDocId({
-        'curriculum_id': CurriculumId.chumash.storageKey,
-        'sefaria_ref': 'Genesis 2:1',
-      });
+      // Write a live main-track order doc directly (AD-52 shape: level,
+      // ref, user_sort_order, governed last_change_id), so this is a
+      // regression guard on the PROVIDER's wiring, not on the writer.
+      final level = FirestoreTrackLearningOrderRepository.levelName(
+        CurriculumId.chumash,
+        1,
+      );
       await firestore
           .collection('users')
           .doc(_uid)
           .collection('learner_profiles')
           .doc(_profileId)
-          .collection('learning_order')
-          .doc(orderDocId)
+          .collection('track_learning_order')
+          .doc(
+            DocIds.trackLearningOrderDocId({
+              'curriculum_id': CurriculumId.chumash.storageKey,
+              'level': level,
+              'ref': 'Genesis 2:1',
+            }),
+          )
           .set({
             'curriculum_id': CurriculumId.chumash.storageKey,
-            'sefaria_ref': 'Genesis 2:1',
+            'level': level,
+            'ref': 'Genesis 2:1',
             'user_sort_order': 0,
-            'updated_at': Timestamp.now(),
+            'last_change_id': '01ARZ3NDEKTSV4RRFFQ69G5FC0',
           });
 
       final container = ProviderContainer(
@@ -621,8 +620,8 @@ void main() {
       );
 
       // The custom order names "Genesis 2:1" first, NOT the natural-order
-      // first item ("Genesis 1:1") — proves the injected learning-order
-      // repository's custom order won.
+      // first item ("Genesis 1:1") — proves the injected main-track order
+      // reader's custom order (orderedLeaves) won.
       expect(bookmark.sefariaRef, 'Genesis 2:1');
     });
   });
@@ -657,7 +656,9 @@ void main() {
           isNull,
         );
         expect(
-          await container.read(firestoreLearningOrderRepositoryProvider.future),
+          await container.read(
+            firestoreTrackLearningOrderRepositoryProvider.future,
+          ),
           isNull,
         );
         expect(
@@ -715,8 +716,10 @@ void main() {
         isA<FirestoreLearningLedgerRepository>(),
       );
       expect(
-        await container.read(firestoreLearningOrderRepositoryProvider.future),
-        isA<FirestoreLearningOrderRepository>(),
+        await container.read(
+          firestoreTrackLearningOrderRepositoryProvider.future,
+        ),
+        isA<FirestoreTrackLearningOrderRepository>(),
       );
       expect(
         await container.read(firestoreProfileProgramRepositoryProvider.future),

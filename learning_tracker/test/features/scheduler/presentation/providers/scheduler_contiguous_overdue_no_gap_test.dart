@@ -1,7 +1,6 @@
 /// Regression coverage for a contiguous overdue self-paced sequence.
 library;
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +32,6 @@ class _FirebaseApp extends Mock implements FirebaseApp {}
 
 class _FirebaseAuth extends Mock implements FirebaseAuth {}
 
-class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 class _ProfileId extends ActiveProfileId {
   @override
@@ -136,10 +134,7 @@ Future<ProviderContainer> _container(DateTime now) async {
     overrides: [
       activeAccountFirebaseProvider.overrideWith((ref) async => handles),
       curriculumTrackRepositoryAdapterProvider.overrideWith(
-        (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-          ref: ref,
-          functions: _MockFirebaseFunctions(),
-        ),
+        (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
       ),
       activeProfileIdProvider.overrideWith(_ProfileId.new),
       activeProfileDocIdProvider.overrideWith(_ProfileDocId.new),

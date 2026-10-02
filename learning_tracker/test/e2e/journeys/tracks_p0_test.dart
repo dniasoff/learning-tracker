@@ -6,14 +6,13 @@
 ///   E2E-403  Re-add existing curriculum — replace confirm dialog
 ///   E2E-404  View track detail and navigate to all action tiles
 ///   E2E-405  Delete track — archive path (keep history)
-///   E2E-406  Delete track — wipe path (purge history)
+///   E2E-406  Delete track — remove path (AD-38 ended_at tombstone)
 ///   E2E-407  Delete last track — blocked by last-curriculum guard
 ///
 /// Catalog: docs/planning/e2e-test-suite-plan.md §2 Area 4 / §7 R-TR*
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -21,12 +20,9 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
-import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart'
-    show curriculumTrackDetailRepositoryProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
@@ -52,32 +48,6 @@ Future<void> _seedTrack(
     stateChangedAt: stub.stateChangedAt,
     paceResetDate: stub.paceResetDate,
   );
-}
-
-/// Test seam for the wipe path. The production adapter delegates this call to
-/// a Cloud Function; this fake applies the same observable document deletion
-/// directly to the harness's in-memory Firestore.
-class _FakeCurriculumTrackRepository extends Fake
-    implements FirestoreCurriculumTrackRepositoryAdapter {
-  _FakeCurriculumTrackRepository({
-    required this.firestore,
-    required this.identity,
-  });
-
-  final FakeFirebaseFirestore firestore;
-  final E2EIdentity identity;
-
-  @override
-  Future<void> deleteTrackPermanently(CurriculumId curriculumId) async {
-    await firestore
-        .collection('users')
-        .doc(identity.accountId)
-        .collection('learner_profiles')
-        .doc(identity.profileId)
-        .collection('curriculum_tracks')
-        .doc(curriculumId.storageKey)
-        .delete();
-  }
 }
 
 // ── Override factories ─────────────────────────────────────────────────────────
@@ -495,13 +465,15 @@ void main() {
 
   // ── E2E-406 ──────────────────────────────────────────────────────────────
 
-  group('E2E-406 — Delete track: wipe path (purge history)', () {
+  group('E2E-406 — Delete track: remove path (AD-38 tombstone)', () {
     // Journey: hub with 2 active tracks → tap 1st → TrackDetailScreen →
-    // Delete → dialog → Wipe → track row gone; completion records purged.
+    // Delete → dialog → Wipe → the track is removed (ended_at) through the
+    // real governed write path; no learning data is deleted.
     //
     // R-TR1: wipe path via TrackDetailScreen._showDeleteDialog.
     testWidgets(
-      'wipe track from detail screen: track row purged from Firestore',
+      'wipe track from detail screen: the track gets a logged ended_at '
+      'tombstone, not a delete',
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Frank');
         final h = E2EHarness(tester, identity: identity);
@@ -525,12 +497,6 @@ void main() {
             ..._trackDetailSilenceOverrides(),
             dashboardActiveCurriculaProvider.overrideWith(
               (ref) async => [CurriculumId.mishnayos, CurriculumId.bavli],
-            ),
-            curriculumTrackDetailRepositoryProvider.overrideWithValue(
-              _FakeCurriculumTrackRepository(
-                firestore: h.firestore,
-                identity: identity,
-              ),
             ),
           ],
         );
@@ -564,17 +530,25 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 500));
 
-        // After wipe, the Firestore track document should be purged (the
-        // migrated path hard-deletes the track and linked data).
-        final trackDoc = await h.firestore
+        // AD-38 "Remove track" (DNI-476): nothing is deleted — the track
+        // doc gets an ended_at tombstone through one logged mainTrack
+        // change, so a re-add can bring it back with its history.
+        final profile = h.firestore
             .collection('users')
             .doc(identity.accountId)
             .collection('learner_profiles')
-            .doc(identity.profileId)
+            .doc(identity.profileId);
+        final trackDoc = await profile
             .collection('curriculum_tracks')
             .doc(CurriculumId.mishnayos.storageKey)
             .get();
-        expect(trackDoc.exists, isFalse);
+        expect(trackDoc.exists, isTrue);
+        expect(trackDoc.data()!['ended_at'], isNotNull);
+        final entries = await profile.collection('change_log').get();
+        expect(
+          entries.docs.map((d) => (d.data()['entity'], d.data()['entity_id'])),
+          contains(('mainTrack', CurriculumId.mishnayos.storageKey)),
+        );
       },
     );
   });

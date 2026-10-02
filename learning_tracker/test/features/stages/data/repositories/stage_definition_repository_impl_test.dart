@@ -6,10 +6,11 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 void main() {
   const uid = 'uid-stage-test';
-  const profileId = 'profile-stage-test';
+  const profileId = governedTestProfileId;
   const curriculum = CurriculumId.mishnayos;
 
   late FirestoreStageDefinitionRepository repository;
@@ -21,6 +22,11 @@ void main() {
       firestore: firestore,
       uid: uid,
       profileId: profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: uid,
+        profileId: profileId,
+      ),
     );
   });
 

@@ -26,6 +26,7 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -34,6 +35,7 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/lea
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../../helpers/learner_state/provider_settle.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
@@ -313,6 +315,68 @@ void main() {
       );
       expect(port.attempts, isEmpty);
     });
+  });
+  group('ownerGovernedWriterProvider (DNI-476)', () {
+    test('writes through the current LearningCommands', () async {
+      final commands = FakeLearningCommands();
+      final container = ProviderContainer(
+        overrides: [
+          learningCommandsProvider.overrideWith((ref) async => commands),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final writer = container.read(ownerGovernedWriterProvider);
+      await writer.applyGovernedChange(
+        GovernedAction([
+          const GovernedEntityChange(
+            entity: GovernedEntity.mainTrack,
+            entityId: 'mishnayos',
+            docs: [
+              GovernedDocPatch(
+                collection: 'curriculum_tracks',
+                docId: 'mishnayos',
+                fields: {'state': 'active'},
+              ),
+            ],
+          ),
+        ]),
+      );
+      expect(commands.calls.single.name, 'applyGovernedChange');
+    });
+
+    test(
+      'throws not-ready (and writes nothing) while there are no commands',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            learningCommandsProvider.overrideWith((ref) async => null),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await expectLater(
+          container
+              .read(ownerGovernedWriterProvider)
+              .applyGovernedChange(
+                GovernedAction([
+                  const GovernedEntityChange(
+                    entity: GovernedEntity.mainTrack,
+                    entityId: 'mishnayos',
+                    docs: [
+                      GovernedDocPatch(
+                        collection: 'curriculum_tracks',
+                        docId: 'mishnayos',
+                        fields: {'state': 'active'},
+                      ),
+                    ],
+                  ),
+                ]),
+              ),
+          throwsA(isA<GovernedWriterNotReadyException>()),
+        );
+      },
+    );
   });
 }
 

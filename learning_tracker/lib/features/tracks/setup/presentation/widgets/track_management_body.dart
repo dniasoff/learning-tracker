@@ -352,7 +352,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     try {
       await ref
           .read(curriculumActivationServiceProvider)
-          .purgeTrackHistory(track.curriculumId);
+          .removeTrack(track.curriculumId);
       await onTrackChanged(ref);
     } catch (e) {
       if (!mounted) return;

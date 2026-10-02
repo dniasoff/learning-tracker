@@ -28,9 +28,12 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../../helpers/firestore_governed_writer.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -74,10 +77,7 @@ void main() {
     ) {
       final adapterProvider =
           Provider<FirestoreCurriculumTrackRepositoryAdapter>(
-            (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-              ref: ref,
-              functions: MockFirebaseFunctions(),
-            ),
+            (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
           );
       return container.read(adapterProvider);
     }
@@ -183,20 +183,6 @@ void main() {
           );
         },
       );
-
-      test(
-        'resetPace throws CurriculumTrackRepositoryNotReadyException',
-        () async {
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final adapter = buildAdapter(container);
-
-          expect(
-            () => adapter.resetPace(CurriculumId.mishnayos),
-            throwsA(isA<CurriculumTrackRepositoryNotReadyException>()),
-          );
-        },
-      );
     });
 
     group('ready (active account + profile)', () {
@@ -210,6 +196,13 @@ void main() {
           overrides: [
             activeAccountFirebaseProvider.overrideWith(
               (ref) async => handles(firestore),
+            ),
+            ownerGovernedWriterProvider.overrideWithValue(
+              FirestoreGovernedWriter(
+                firestore,
+                uid: uid,
+                profileId: profileDocId,
+              ),
             ),
           ],
         );
@@ -258,6 +251,11 @@ void main() {
             firestore: firestore,
             uid: uid,
             profileId: profileDocId,
+            writer: FirestoreGovernedWriter(
+              firestore,
+              uid: uid,
+              profileId: profileDocId,
+            ),
           );
           await repository.activateTrack(CurriculumId.mishnayos);
           final readyAdapter = buildAdapter(readyContainer);
@@ -273,6 +271,19 @@ void main() {
           );
         },
       );
+
+      test('removeTrack ends the track through the governed commands; '
+          'reAddTrack brings it back (DNI-476 AC-4)', () async {
+        await adapter.activateTrack(CurriculumId.mishnayos);
+        await adapter.activateTrack(CurriculumId.bavli);
+
+        await adapter.removeTrack(CurriculumId.mishnayos);
+        expect(await adapter.getTrack(CurriculumId.mishnayos), isNull);
+        expect(await adapter.getActiveCurriculumIds(), ['bavli']);
+
+        await adapter.reAddTrack(CurriculumId.mishnayos);
+        expect(await adapter.isActive(CurriculumId.mishnayos), isTrue);
+      });
 
       test(
         'activateTrack then getTrack round-trips through Firestore',
@@ -332,15 +343,6 @@ void main() {
           );
         },
       );
-
-      test('resetPace stamps a paceResetDate on the track', () async {
-        await adapter.activateTrack(CurriculumId.mishnayos);
-
-        await adapter.resetPace(CurriculumId.mishnayos);
-
-        final track = await adapter.getTrack(CurriculumId.mishnayos);
-        expect(track!.paceResetDate, isNotNull);
-      });
     });
   });
 }

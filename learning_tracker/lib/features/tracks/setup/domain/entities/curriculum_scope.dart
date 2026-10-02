@@ -65,8 +65,8 @@ class CurriculumScopeEntity {
 /// [CurriculumScopeEntity].
 ///
 /// Throws [ArgumentError] for an unrecognised `curriculum_id` and
-/// [FormatException] for a missing `scope_level`/`scope_value`/
-/// `created_at` — both are caller-visible decode failures by design (mirrors
+/// [FormatException] for a missing `scope_level`/`scope_value` — both are
+/// caller-visible decode failures by design (mirrors
 /// `stageDefinitionFromFirestore`), surfaced via `resilientQueryStream`'s
 /// per-document error handling (skips just that document) rather than
 /// silently defaulted.
@@ -80,11 +80,9 @@ CurriculumScopeEntity curriculumScopeFromFirestore(Map<String, dynamic> data) {
 
   final scopeLevel = FirestoreCodec.parseInt(data['scope_level']);
   final scopeValue = data['scope_value'] as String?;
-  final createdAt = FirestoreCodec.parseDateTime(data['created_at']);
-  if (scopeLevel == null || scopeValue == null || createdAt == null) {
+  if (scopeLevel == null || scopeValue == null) {
     throw FormatException(
-      'curriculum_scopes document missing scope_level/scope_value/'
-      'created_at: $data',
+      'curriculum_scopes document missing scope_level/scope_value: $data',
     );
   }
 
@@ -92,7 +90,10 @@ CurriculumScopeEntity curriculumScopeFromFirestore(Map<String, dynamic> data) {
     curriculumId: curriculumId,
     scopeLevel: scopeLevel,
     scopeValue: scopeValue,
-    createdAt: createdAt,
+    // A governed write (AD-38, DNI-476) writes only the AD-52 keys, so
+    // `created_at` is absent on docs written since.
+    createdAt:
+        FirestoreCodec.parseDateTime(data['created_at']) ?? DateTime.utc(1970),
     updatedAt: FirestoreCodec.parseDateTime(data['updated_at']),
   );
 }

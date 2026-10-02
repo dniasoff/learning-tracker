@@ -310,7 +310,8 @@ class _ParentTrackManagementScreenState
       return;
     }
 
-    // Wipe path: hard-delete the track and its history. AUD-tracks-14
+    // Remove path (AD-38, DNI-476): an ended_at tombstone through one
+    // governed action — learning history is never deleted. AUD-tracks-14
     // (DB-1): routed through curriculumActivationServiceProvider — same
     // service the 'archive' branch above uses — instead of pulling trackDao
     // out of userDatabaseProvider directly, including try/catch + a
@@ -319,7 +320,7 @@ class _ParentTrackManagementScreenState
     try {
       await ref
           .read(curriculumActivationServiceProvider)
-          .purgeTrackHistory(track.curriculumId);
+          .removeTrack(track.curriculumId);
       await onTrackChanged(ref);
     } catch (e) {
       if (!mounted) return;

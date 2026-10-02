@@ -277,6 +277,14 @@ final class GatedLearningCommands implements LearningCommands {
       _held(() => inner.deleteSubTrack(subTrackId));
 
   @override
+  Future<CaptureResult> removeTrack(String curriculumId) =>
+      _held(() => inner.removeTrack(curriculumId));
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) =>
+      _held(() => inner.reAddTrack(curriculumId));
+
+  @override
   Stream<List<PendingFailure>> watchPendingFailures() =>
       inner.watchPendingFailures();
 

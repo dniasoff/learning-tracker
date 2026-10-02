@@ -1,0 +1,265 @@
+/// An [OwnerGovernedWriter] for owner-repository tests (DNI-476): the real
+/// `DefaultGovernedLearningCommands` over the real
+/// `FirestoreChangeLogRepository` / `FirestoreSubTrackRepository`, all on
+/// the test's `FakeFirebaseFirestore`, so a repository write lands exactly
+/// as it would in production — field-level merges, `last_change_id` and a
+/// co-written `change_log` entry per entity.
+///
+/// Oversized actions (an entity over the AD-54 budget) go to
+/// [ApplyingOversizedPort], which applies them to the same fake (as the
+/// `ownerOversizedGovernedWrite` callable would) and records each request;
+/// set [ApplyingOversizedPort.online] to false to simulate offline. Like the
+/// callable, it refuses (`invalid-argument`) any field its
+/// `writeWithChangeLog` `FIELD_SPECS` does not allow — read from the
+/// functions source, so a client payload the callable would reject fails
+/// here too.
+library;
+
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
+import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
+import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
+import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
+import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/governed_action_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
+
+/// A fixed ULID profile id for owner-repository tests (AD-24).
+const governedTestProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
+
+/// The governed-writer test clock.
+final governedTestNow = DateTime.utc(2026, 9, 10, 12);
+
+/// The client-writable fields per governed collection, parsed from the
+/// `FIELD_SPECS` table of `functions/src/write_with_change_log.ts` (the
+/// callable's own allow-list; tests run from the package root).
+final Map<String, Set<String>> callableFieldSpecs = _parseCallableFieldSpecs();
+
+Map<String, Set<String>> _parseCallableFieldSpecs() {
+  final source = File(
+    'functions/src/write_with_change_log.ts',
+  ).readAsStringSync();
+  final start = source.indexOf('const FIELD_SPECS');
+  final end = source.indexOf('\n};', start);
+  if (start < 0 || end < 0) {
+    throw StateError('FIELD_SPECS not found in write_with_change_log.ts');
+  }
+  final collection = RegExp(r'^  (\w+): \{$');
+  final field = RegExp(r'^    (\w+):');
+  final specs = <String, Set<String>>{};
+  Set<String>? current;
+  for (final line in source.substring(start, end).split('\n')) {
+    final c = collection.firstMatch(line);
+    if (c != null) {
+      current = specs[c.group(1)!] = {};
+      continue;
+    }
+    final f = field.firstMatch(line);
+    if (f != null) current?.add(f.group(1)!);
+  }
+  if (specs.isEmpty) throw StateError('FIELD_SPECS parsed empty');
+  return specs;
+}
+
+/// Applies oversized actions to the fake Firestore and records them.
+final class ApplyingOversizedPort implements OversizedGovernedWritePort {
+  /// Creates the port over [firestore].
+  ApplyingOversizedPort(this.firestore);
+
+  /// The fake the requests are applied to.
+  final FakeFirebaseFirestore firestore;
+
+  /// Every request sent, in order.
+  final List<OversizedGovernedWrite> requests = [];
+
+  /// When false, every write throws [OnlineRequiredException].
+  bool online = true;
+
+  @override
+  Future<GovernedWriteReceipt> write(
+    LearnerScope scope,
+    OversizedGovernedWrite request,
+  ) async {
+    if (!online) throw const OnlineRequiredException();
+    requests.add(request);
+    // The callable validates every field before writing anything.
+    for (final entry in request.entries) {
+      for (final doc in entry.change.docs) {
+        final allowed = callableFieldSpecs[doc.collection];
+        final unknown = doc.fields.keys.where(
+          (k) => !(allowed?.contains(k) ?? false),
+        );
+        if (unknown.isNotEmpty) {
+          throw const PermanentWriteRejection('invalid-argument');
+        }
+      }
+    }
+    final profile = firestore.doc(scope.profilePath);
+    final batch = firestore.batch();
+    for (final entry in request.entries) {
+      for (final doc in entry.change.docs) {
+        batch.set(
+          profile.collection(doc.collection).doc(doc.docId),
+          toFirestoreMap({...doc.fields, 'last_change_id': entry.entryId}),
+          SetOptions(merge: true),
+        );
+      }
+    }
+    await batch.commit();
+    return GovernedWriteReceipt(
+      actionId: request.actionId,
+      changeIds: [for (final e in request.entries) e.entryId],
+    );
+  }
+}
+
+/// A [ChangeLogRepository] whose next commit of an entity in [failOnce]
+/// throws [error] (a batch the server refuses), then behaves normally — the
+/// AD-54 "not saved, retry" path.
+final class FailOnceChangeLog implements ChangeLogRepository {
+  /// Wraps [inner].
+  FailOnceChangeLog(this.inner);
+
+  /// The real repository.
+  final ChangeLogRepository inner;
+
+  /// Entities whose next commit fails.
+  final Set<GovernedEntity> failOnce = {};
+
+  /// The error a failing commit throws.
+  Exception error = const PermanentWriteRejection('unavailable');
+
+  /// Every committed entry id, in commit order (failed attempts included).
+  final List<String> attempts = [];
+
+  @override
+  Future<void> commitGoverned(LearnerScope scope, GovernedBatch batch) async {
+    attempts.add(batch.entry.id);
+    if (failOnce.remove(batch.entry.entity)) throw error;
+    await inner.commitGoverned(scope, batch);
+  }
+
+  @override
+  Future<List<ChangeLogEntry>> entriesOfAction(
+    LearnerScope scope,
+    String actionId,
+  ) => inner.entriesOfAction(scope, actionId);
+
+  @override
+  Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>
+      inner.watchIntentHistory(scope);
+
+  @override
+  Stream<bool> watchIsReverted(LearnerScope scope, String actionId) =>
+      inner.watchIsReverted(scope, actionId);
+}
+
+/// The owner governed writer under test (see the library doc comment).
+final class FirestoreGovernedWriter implements OwnerGovernedWriter {
+  /// Creates the writer for `users/[uid]/learner_profiles/[profileId]`.
+  FirestoreGovernedWriter(
+    this.firestore, {
+    required String uid,
+    String profileId = governedTestProfileId,
+    DateTime? now,
+  }) : scope = LearnerScope(ownerUid: uid, profileId: profileId),
+       oversized = ApplyingOversizedPort(firestore) {
+    final changeLog = FirestoreChangeLogRepository(firestore: firestore);
+    this.changeLog = FailOnceChangeLog(changeLog);
+    final at = now ?? governedTestNow;
+    commands = DefaultGovernedLearningCommands(
+      scope: scope,
+      actor: Actor(uid: uid, role: ActorRole.parent, displayName: ''),
+      changeLog: this.changeLog,
+      subTracks: FirestoreSubTrackRepository(firestore: firestore),
+      reader: changeLog,
+      oversized: oversized,
+      clock: () => at,
+      newUlid: newUlid,
+    );
+  }
+
+  /// The fake Firestore.
+  final FakeFirebaseFirestore firestore;
+
+  /// The scope written to.
+  final LearnerScope scope;
+
+  /// The oversized-callable fake.
+  final ApplyingOversizedPort oversized;
+
+  /// The change log the commands commit through (failure injection).
+  late final FailOnceChangeLog changeLog;
+
+  /// The commands every write goes through.
+  late final DefaultGovernedLearningCommands commands;
+
+  /// Every action handed to the writer, in order.
+  final List<GovernedAction> actions = [];
+
+  /// Every result returned, in order.
+  final List<CaptureResult> results = [];
+
+  @override
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) async {
+    actions.add(action);
+    final result = await commands.applyGovernedChange(action);
+    results.add(result);
+    return result;
+  }
+
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) async {
+    final result = await commands.removeTrack(curriculumId);
+    results.add(result);
+    return result;
+  }
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async {
+    final result = await commands.reAddTrack(curriculumId);
+    results.add(result);
+    return result;
+  }
+
+  /// Every `change_log` entry of the scope, decoded, in id order.
+  Future<List<ChangeLogEntry>> entries() async {
+    final snapshot = await firestore
+        .doc(scope.profilePath)
+        .collection('change_log')
+        .orderBy(FieldPath.documentId)
+        .get();
+    return [
+      for (final doc in snapshot.docs)
+        ChangeLogEntry.fromStorage(doc.id, fromFirestoreMap(doc.data())),
+    ];
+  }
+
+  /// The entries written by the last successful action, in action order.
+  Future<List<ChangeLogEntry>> lastEntries() async {
+    final last = results.whereType<CaptureSuccess>().last;
+    final byId = {for (final e in await entries()) e.id: e};
+    return [for (final id in last.changeIds) byId[id]!];
+  }
+
+  /// The raw stored fields of `{collection}/{docId}`, or null.
+  Future<Map<String, dynamic>?> doc(String collection, String docId) async {
+    final snapshot = await firestore
+        .doc(scope.profilePath)
+        .collection(collection)
+        .doc(docId)
+        .get();
+    return snapshot.data();
+  }
+}

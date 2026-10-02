@@ -14,6 +14,7 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -24,6 +25,7 @@ import 'package:learning_tracker/features/tracks/stages/presentation/providers/s
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'learning-process-wizard-uid';
 const _profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
@@ -58,6 +60,9 @@ void main() {
     );
     container = ProviderContainer(
       overrides: [
+        ownerGovernedWriterProvider.overrideWithValue(
+          FirestoreGovernedWriter(firestore, uid: _uid, profileId: _profileId),
+        ),
         activeAccountFirebaseProvider.overrideWith((ref) async => handles),
         activeProfileDocIdProvider.overrideWith(_ProfileDocIdOverride.new),
       ],
@@ -70,6 +75,11 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     );
   });
 

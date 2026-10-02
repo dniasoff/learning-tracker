@@ -133,8 +133,6 @@ class _CurrentFirestoreWriter {
             .collection('learner_profiles')
             .doc(id)
             .set(data);
-      case #pushLearningOrder:
-        return _write('learning_order', DocIds.learningOrderDocId(data), data);
     }
     return super.noSuchMethod(invocation);
   }
@@ -699,97 +697,40 @@ void main() {
     });
   });
 
-  // ── learning_order re-key — Gap 3 ─────────────────────────────────────
+  // ── track_learning_order — DocIds.trackLearningOrderDocId ─────────────
   //
-  // `docs/firestore-rewrite-map.md`'s traps list, item 7: DocIds
-  // .learningOrderDocId was the ONLY formula in this module that skipped
-  // encodeKeyComponent. The current repository path uses this encoded form;
-  // the old raw join is retained only as the rejected comparison.
-  group('learning_order re-key — Gap 3: encodeKeyComponent closes a doc-id '
-      'collision hole', () {
-    test('GREEN: {curriculumId}_{ref}, each component percent-encoded', () {
-      expect(
-        DocIds.learningOrderDocId({
-          'curriculum_id': 'mishnayos',
-          'sefaria_ref': 'Berakhot 1:1',
-        }),
-        equals('mishnayos_Berakhot%201%3A1'),
-      );
-    });
-
-    test('still accepts the legacy "ref" field alias when sefaria_ref is '
-        'absent', () {
-      expect(
-        DocIds.learningOrderDocId({
-          'curriculum_id': 'abc',
-          'ref': 'Shabbat 2:1',
-        }),
-        equals('abc_Shabbat%202%3A1'),
-      );
-    });
-
-    test(
-      'RED-DEMO: the current formula rejects the old raw unencoded output '
-      'for a ref containing a literal "_" — the exact collision this fix closes',
-      () async {
-        final fs = createFakeFirestore(authenticatedUid: _uid);
-        final data = <String, dynamic>{
-          'curriculum_id': 'mishnayos',
-          'sefaria_ref': 'Berakhot_1:1', // literal '_' inside the ref
-        };
-        await _gw(fs).pushLearningOrder(profileId: _profileId, data: data);
-        final liveCurrentShape = await _liveDocId(fs, 'learning_order');
-        expect(liveCurrentShape, equals(DocIds.learningOrderDocId(data)));
-        expect(
-          DocIds.learningOrderDocId(data),
-          isNot(equals('mishnayos_Berakhot_1:1')),
-        );
-      },
-    );
-
-    test('RED-DEMO: an unencoded naive join collides two DISTINCT natural '
-        'keys onto one doc id when a component embeds the "_" separator — '
-        'the real (encoded) formula does not', () {
-      String naiveJoin(Map<String, dynamic> data) =>
-          '${data['curriculum_id']}_${data['sefaria_ref']}';
-
-      // (curriculumId='mishnayos', sefariaRef='Berakhot_1:1') and
-      // (curriculumId='mishnayos_Berakhot', sefariaRef='1:1') are two
-      // DIFFERENT natural keys — but the naive join can't tell where one
-      // component ends and the next begins once "_" appears inside a
-      // component, so both collide on 'mishnayos_Berakhot_1:1'.
-      final keyA = {
-        'curriculum_id': 'mishnayos',
-        'sefaria_ref': 'Berakhot_1:1',
-      };
-      final keyB = {
-        'curriculum_id': 'mishnayos_Berakhot',
-        'sefaria_ref': '1:1',
-      };
-      expect(naiveJoin(keyA), equals(naiveJoin(keyB))); // RED: collision.
-
-      expect(
-        DocIds.learningOrderDocId(keyA),
-        isNot(equals(DocIds.learningOrderDocId(keyB))),
-      );
-    });
-  });
-
-  // ── track_learning_order — DocIds.trackLearningOrderDocId (Gap 1) ─────
-  //
-  // `docs/firestore-rewrite-map.md`'s "OPEN" section: TrackLearningOrder
-  // (Drift; per-track sedarim/masechtos reordering) had no Firestore home.
-  // Like curriculumScopeDocId, this is a new formula with no legacy sync
-  // counterpart, so it is pinned here by direct formula assertion.
+  // AD-52 `mainTrackOrder` docs (DNI-476): `{curriculumId}_{level}_{ref}`,
+  // each component percent-encoded. The retired `learning_order` collection
+  // (R13) has no formula any more.
   group('track_learning_order — DocIds.trackLearningOrderDocId', () {
-    test('GREEN: {curriculumId}_{sefariaRef}, each component percent-encoded '
-        'via encodeKeyComponent', () {
+    test('GREEN: {curriculumId}_{level}_{ref}, each component '
+        'percent-encoded via encodeKeyComponent', () {
       expect(
         DocIds.trackLearningOrderDocId({
           'curriculum_id': 'mishnayos',
-          'sefaria_ref': 'Mishnah Berakhot',
+          'level': 'masechta',
+          'ref': 'Mishnah Berakhot',
         }),
-        equals('mishnayos_Mishnah%20Berakhot'),
+        equals('mishnayos_masechta_Mishnah%20Berakhot'),
+      );
+    });
+
+    test('a seder and a masechta of the same ref are distinct docs', () {
+      expect(
+        DocIds.trackLearningOrderDocId({
+          'curriculum_id': 'mishnayos',
+          'level': 'seder',
+          'ref': 'Zeraim',
+        }),
+        isNot(
+          equals(
+            DocIds.trackLearningOrderDocId({
+              'curriculum_id': 'mishnayos',
+              'level': 'masechta',
+              'ref': 'Zeraim',
+            }),
+          ),
+        ),
       );
     });
 
@@ -797,15 +738,17 @@ void main() {
         'keys onto one doc id when a component embeds the "_" separator — '
         'the real (encoded) formula does not', () {
       String naiveJoin(Map<String, dynamic> data) =>
-          '${data['curriculum_id']}_${data['sefaria_ref']}';
+          '${data['curriculum_id']}_${data['level']}_${data['ref']}';
 
       final keyA = {
         'curriculum_id': 'mishnayos',
-        'sefaria_ref': 'Mishnah_Berakhot',
+        'level': 'masechta',
+        'ref': 'Mishnah_Berakhot',
       };
       final keyB = {
-        'curriculum_id': 'mishnayos_Mishnah',
-        'sefaria_ref': 'Berakhot',
+        'curriculum_id': 'mishnayos_masechta',
+        'level': 'Mishnah',
+        'ref': 'Berakhot',
       };
       expect(naiveJoin(keyA), equals(naiveJoin(keyB))); // RED: collision.
 
@@ -815,17 +758,14 @@ void main() {
       );
     });
 
-    test('produces the SAME shape as DocIds.learningOrderDocId for the same '
-        'inputs — the collection PATH, not this formula, is what keeps '
-        'track_learning_order and learning_order from colliding (see the '
-        "formula's own doc comment)", () {
-      final data = {
-        'curriculum_id': 'mishnayos',
-        'sefaria_ref': 'Mishnah Berakhot',
-      };
+    test('an empty component is refused', () {
       expect(
-        DocIds.trackLearningOrderDocId(data),
-        equals(DocIds.learningOrderDocId(data)),
+        () => DocIds.trackLearningOrderDocId({
+          'curriculum_id': 'mishnayos',
+          'level': '',
+          'ref': 'Zeraim',
+        }),
+        throwsArgumentError,
       );
     });
   });

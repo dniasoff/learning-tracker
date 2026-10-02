@@ -261,83 +261,31 @@ final class DocIds {
     ].join('_');
   }
 
-  // ── learning_order ───────────────────────────────────────────────────
-
-  /// `learning_order/{curriculumId}_{ref}` doc-id formula, each component
-  /// percent-encoded via [encodeKeyComponent] and joined with `_`.
-  ///
-  /// **INTENTIONALLY diverges from `FirestoreGatewayImpl.pushLearningOrder`
-  /// (`firestore_gateway_impl.dart:377-382`) — this formula is NO LONGER
-  /// byte-for-byte with the live (not-yet-rewired) gateway, on purpose.**
-  /// Before this fix, this was the ONLY formula in this module that skipped
-  /// [encodeKeyComponent], mirroring the live gateway's raw
-  /// `'${curriculumId}_$ref'` join byte-for-byte. That byte-for-byte
-  /// continuity requirement existed to protect EXISTING users' data
-  /// (MCF-3-continuity) — but this app is greenfield with no users and no
-  /// back-compat (`docs/firestore-rewrite-map.md`'s opening line), so the
-  /// requirement no longer applies here, and leaving the hole open kept a
-  /// real collision surface live: a `sefariaRef` containing a literal `_`
-  /// could collide two distinct `(curriculumId, sefariaRef)` natural keys
-  /// onto one document (see the RED-DEMO in `doc_ids_test.dart`). **Do NOT
-  /// "restore continuity" by reverting this to the raw join** — there is no
-  /// historical document for it to stay compatible with, and doing so would
-  /// reopen the collision.
-  ///
-  /// Still accepts the legacy `ref` field alias when `sefaria_ref` is
-  /// absent — that fallback is a payload-shape convenience, independent of
-  /// the encoding fix above.
-  static String learningOrderDocId(Map<String, dynamic> data) {
-    final curriculumId = data['curriculum_id']?.toString() ?? '';
-    final ref =
-        data['sefaria_ref']?.toString() ?? data['ref']?.toString() ?? '';
-    return [
-      encodeKeyComponent(curriculumId),
-      encodeKeyComponent(ref),
-    ].join('_');
-  }
-
   // ── track_learning_order ─────────────────────────────────────────────
 
-  /// `track_learning_order/{curriculumId}_{sefariaRef}` doc-id formula,
-  /// each component percent-encoded via [encodeKeyComponent] and joined
-  /// with `_`. Closes the gap `docs/firestore-rewrite-map.md`'s "OPEN"
-  /// section describes: `TrackLearningOrder` (Drift; per-track
-  /// sedarim/masechtos reordering) had no Firestore home at all.
+  /// `track_learning_order/{curriculumId}_{level}_{ref}` doc-id formula
+  /// (AD-52 `mainTrackOrder`, DNI-476): one doc per ordered ContentIndex
+  /// node, each component percent-encoded via [encodeKeyComponent] and
+  /// joined with `_`, so a component containing `_` can never collide two
+  /// distinct `(curriculumId, level, ref)` keys onto one doc.
   ///
-  /// **New collection, no live-gateway counterpart.** Same situation as
-  /// [curriculumScopeDocId] and the AD-25/AD-24 re-keyed formulas above:
-  /// `TrackLearningOrder` was NEVER synced by `FirestoreGatewayImpl` — no
-  /// `pushTrackLearningOrder` method exists to golden-test byte-for-byte
-  /// against. Pinned in `doc_ids_test.dart` by direct formula assertion,
-  /// not a live-gateway comparison.
-  ///
-  /// **Deliberately a SEPARATE collection from `learning_order`, not the
-  /// same collection with a discriminator field.** See
-  /// `firestore_learning_order_repository.dart`'s class doc comment ("The
-  /// collision finding") for the full reasoning: `TrackLearningOrder`
-  /// (track-scoped) and `LearningOrder` (curriculum-scoped) draw from the
-  /// SAME `sefariaRef` universe, and AD-25 makes `curriculum_id` the sole
-  /// canonical stable track key (there is exactly one track per
-  /// curriculum) — so a track-scoped write and a curriculum-scoped write
-  /// for the same `(curriculumId, sefariaRef)` pair would compute an
-  /// IDENTICAL doc-id if they shared one collection, with no spare key
-  /// component available to disambiguate them, and
-  /// `firestore.rules`' `learning_order` `.hasOnly()` whitelist forbids
-  /// writing a discriminator field to work around that. This formula's own
-  /// components are therefore intentionally identical in SHAPE to
-  /// [learningOrderDocId]'s post-encoding-fix shape — it is the COLLECTION
-  /// PATH (`track_learning_order` vs. `learning_order`), not this formula,
-  /// that disambiguates the two orderings.
-  ///
-  /// Unlike [learningOrderDocId]'s pre-fix shape, this formula was never
-  /// unencoded to begin with — it is new — so there is no continuity
-  /// concern here at all; no legacy `ref` alias either, since no prior
-  /// payload shape for this collection ever existed.
+  /// `level` is the node's ContentIndex level name and `ref` its
+  /// sefariaRef, so a seder and a masechta of the same name are distinct
+  /// docs. The retired `learning_order` collection (R13) is merged into
+  /// this one; there is no `learning_order` formula any more.
   static String trackLearningOrderDocId(Map<String, dynamic> data) {
     final curriculumId = data['curriculum_id']?.toString() ?? '';
-    final ref = data['sefaria_ref']?.toString() ?? '';
+    final level = data['level']?.toString() ?? '';
+    final ref = data['ref']?.toString() ?? '';
+    if (curriculumId.isEmpty || level.isEmpty || ref.isEmpty) {
+      throw ArgumentError(
+        'trackLearningOrderDocId requires non-empty curriculum_id, level and '
+        'ref',
+      );
+    }
     return [
       encodeKeyComponent(curriculumId),
+      encodeKeyComponent(level),
       encodeKeyComponent(ref),
     ].join('_');
   }
@@ -492,7 +440,7 @@ final class DocIds {
   /// convention. This matters because two [CurriculumId] storage keys embed
   /// a literal `_`: `mishnehTorah` ('mishneh_torah') and `mishnaBerurah`
   /// ('mishna_berurah') — exactly the split-ambiguity
-  /// [learningOrderDocId] warns never to reopen. `stage_order` is always a
+  /// [encodeKeyComponent] closes elsewhere. `stage_order` is always a
   /// plain non-negative int today, so no current pair actually collides,
   /// but an unencoded join is one future stage-order format change away
   /// from silently overwriting the wrong document.

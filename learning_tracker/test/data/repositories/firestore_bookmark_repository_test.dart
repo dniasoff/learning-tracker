@@ -2,10 +2,11 @@
 /// — the REFERENCE Firestore repository (Epic B). Covers: doc-id
 /// correctness, model round-trip, the stream emitting on change, the
 /// advance/initialize natural-order paths, and (see the "custom learning
-/// order" group) the custom `learning_order` override that
-/// [advanceBookmark]/[initializeBookmark] now check FIRST via the injected
-/// [FirestoreLearningOrderRepository] — see the class doc comment's
-/// "Custom learning order is honoured" section.
+/// order" group) the custom main-track order (AD-33 `orderedLeaves` over the
+/// live `track_learning_order` docs, DNI-476) that
+/// [advanceBookmark]/[initializeBookmark] check FIRST via the injected
+/// [FirestoreTrackLearningOrderRepository] — see the class doc comment's
+/// "The main-track learning order is honoured" section.
 ///
 /// **What these tests cannot see** (report this honestly, do not paper over
 /// it): `fake_cloud_firestore`'s rules companion cannot evaluate
@@ -33,8 +34,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
-import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
+import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/firestore_fake.dart';
@@ -77,8 +77,8 @@ void main() {
           .collection('bookmarks')
           .doc(curriculumId.storageKey);
 
-  FirestoreLearningOrderRepository buildLearningOrderRepo() {
-    return FirestoreLearningOrderRepository(
+  FirestoreTrackLearningOrderRepository buildLearningOrderRepo() {
+    return FirestoreTrackLearningOrderRepository(
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
@@ -96,29 +96,40 @@ void main() {
     );
   }
 
-  /// Seeds a custom `learning_order` for [curriculumId] via
-  /// [FirestoreLearningOrderRepository.saveOrder] — the list POSITION of
-  /// [refs] becomes the saved `user_sort_order`, exactly like a real drag-
-  /// reorder save.
+  /// Seeds a live main-track order for [curriculumId]: one
+  /// `track_learning_order` doc per ref (top-level nodes), the list
+  /// POSITION of [refs] as `user_sort_order` — the AD-52 shape a governed
+  /// reorder writes.
   Future<void> seedCustomOrder(
     CurriculumId curriculumId,
     List<String> refs,
   ) async {
-    final orderRepo = buildLearningOrderRepo();
-    await orderRepo.saveOrder(
+    final level = FirestoreTrackLearningOrderRepository.levelName(
       curriculumId,
-      refs
-          .map(
-            (ref) => LearningOrderItem(
-              sefariaRef: ref,
-              displayNameHe: ref,
-              displayNameEn: ref,
-              userSortOrder: 0,
-              isCustomOrdered: true,
-            ),
-          )
-          .toList(),
+      1,
     );
+    for (var i = 0; i < refs.length; i++) {
+      await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('track_learning_order')
+          .doc(
+            DocIds.trackLearningOrderDocId({
+              'curriculum_id': curriculumId.storageKey,
+              'level': level,
+              'ref': refs[i],
+            }),
+          )
+          .set({
+            'curriculum_id': curriculumId.storageKey,
+            'level': level,
+            'ref': refs[i],
+            'user_sort_order': i,
+            'last_change_id': '01ARZ3NDEKTSV4RRFFQ69G5FC0',
+          });
+    }
   }
 
   group('doc-id correctness', () {
@@ -454,25 +465,30 @@ void main() {
     late ContentIndex naturalIndex;
 
     setUp(() {
+      final leaves = [
+        _leaf(
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'A',
+          sortOrder: 1,
+        ),
+        _leaf(
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'B',
+          sortOrder: 2,
+        ),
+        _leaf(
+          curriculumId: CurriculumId.mishnayos,
+          sefariaRef: 'C',
+          sortOrder: 3,
+        ),
+      ];
       naturalIndex = ContentIndex.fromCurricula({
-        CurriculumId.mishnayos: [
-          _leaf(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: 'A',
-            sortOrder: 1,
-          ),
-          _leaf(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: 'B',
-            sortOrder: 2,
-          ),
-          _leaf(
-            curriculumId: CurriculumId.mishnayos,
-            sefariaRef: 'C',
-            sortOrder: 3,
-          ),
-        ],
+        CurriculumId.mishnayos: leaves,
       });
+      // The orderedLeaves corpus is built from the full content tree.
+      when(
+        () => contentRepository.getContentForCurriculum(CurriculumId.mishnayos),
+      ).thenAnswer((_) async => leaves);
     });
 
     test('custom order [B, A, C] with natural order A,B,C: completing A '
@@ -495,8 +511,8 @@ void main() {
       expect(bookmark!.sefariaRef, 'C');
     });
 
-    test('completed ref absent from a non-empty custom order: no advance, '
-        'NOT a natural-order fallback', () async {
+    test('order docs naming no node of the corpus are ignored (AD-33): the '
+        'order is the natural one', () async {
       await seedCustomOrder(CurriculumId.mishnayos, ['X', 'Y']);
       final repo = buildRepo(contentIndex: naturalIndex);
 
@@ -508,7 +524,27 @@ void main() {
       final bookmark = await repo.getBookmark(
         curriculumId: CurriculumId.mishnayos,
       );
-      expect(bookmark, isNull);
+      expect(bookmark!.sefariaRef, 'B');
+    });
+
+    test('an ended (reset) order doc is ignored', () async {
+      await seedCustomOrder(CurriculumId.mishnayos, ['C', 'B', 'A']);
+      final docs = await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('track_learning_order')
+          .get();
+      for (final doc in docs.docs) {
+        await doc.reference.update({'ended_at': Timestamp.now()});
+      }
+      final repo = buildRepo(contentIndex: naturalIndex);
+
+      final result = await repo.initializeBookmark(
+        curriculumId: CurriculumId.mishnayos,
+      );
+      expect(result.sefariaRef, 'A');
     });
 
     test(
@@ -545,7 +581,7 @@ void main() {
       expect(result.sefariaRef, 'C');
     });
 
-    test('REGRESSION GUARD: zero learning_order documents saved — '
+    test('REGRESSION GUARD: zero order documents saved — '
         "advanceBookmark('A') yields the natural next item B (catches a "
         'naive getOrder().isNotEmpty port, which would wrongly treat this '
         'as a custom order)', () async {

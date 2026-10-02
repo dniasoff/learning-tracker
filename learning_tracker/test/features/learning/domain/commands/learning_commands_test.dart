@@ -127,6 +127,18 @@ final class _LoggedGoverned implements GovernedLearningCommands {
     return const CaptureResult.success();
   }
 
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) async {
+    log.add('governed');
+    return const CaptureResult.success();
+  }
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async {
+    log.add('governed');
+    return const CaptureResult.success();
+  }
+
   /// The governed pending failures it reports.
   List<PendingFailure> failures = const [];
 
@@ -297,6 +309,8 @@ void main() {
       'applyGovernedChange': (h) =>
           h.commands.applyGovernedChange(_governedAction),
       'undoAction': (h) => h.commands.undoAction(engineUlid(1)),
+      'removeTrack': (h) => h.commands.removeTrack('mishnayos'),
+      'reAddTrack': (h) => h.commands.reAddTrack('mishnayos'),
     };
 
     for (final MapEntry(key: name, value: run) in commands.entries) {

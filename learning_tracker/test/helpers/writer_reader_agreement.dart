@@ -41,18 +41,20 @@
 ///
 /// **Shape B — a Ref-taking feature adapter that itself re-resolves a
 /// `repository_providers.dart` provider internally at call time** (the
-/// `FirestoreLearningOrderRepositoryAdapter` pattern). Worked example, from
+/// `FirestoreTrackLearningOrderRepositoryAdapter` pattern). Worked example, from
 /// the one existing precedent,
 /// `test/features/scheduler/data/repositories/
 /// scheduler_learning_order_repository_impl_test.dart`:
 /// ```dart
-/// SchedulerFirestoreLearningOrderRepositoryAdapter buildReader(
+/// SchedulerTrackOrderRepositoryAdapter buildReader(
 ///   ProviderContainer container,
 /// ) {
-///   final readerProvider =
-///       Provider<SchedulerFirestoreLearningOrderRepositoryAdapter>(
-///         (ref) => SchedulerFirestoreLearningOrderRepositoryAdapter(ref: ref),
-///       );
+///   final readerProvider = Provider<SchedulerTrackOrderRepositoryAdapter>(
+///     (ref) => SchedulerTrackOrderRepositoryAdapter(
+///       ref: ref,
+///       content: (_) async => items,
+///     ),
+///   );
 ///   return container.read(readerProvider);
 /// }
 /// // ...
@@ -94,10 +96,12 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'data_export_firestore_test_support.dart';
 import 'firestore_fake.dart';
+import 'firestore_governed_writer.dart';
 
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -141,6 +145,11 @@ activateAccountAndProfile({
   final firestore = createFakeFirestore(strictRules: false);
   final container = ProviderContainer(
     overrides: [
+      // Owner governed writes (DNI-476) run through the real governed
+      // commands on the same fake, scoped like the repositories.
+      ownerGovernedWriterProvider.overrideWithValue(
+        FirestoreGovernedWriter(firestore, uid: uid, profileId: profileId),
+      ),
       activeAccountFirebaseProvider.overrideWith(
         (ref) async => AccountFirebaseHandles(
           app: _MockFirebaseApp(),

@@ -93,7 +93,6 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
@@ -124,6 +123,8 @@ import 'package:learning_tracker/features/account/presentation/providers/magic_l
     show magicLinkInitializationProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -135,6 +136,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_fixtures.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 // ── Global setup helper ─────────────────────────────────────────────────────
 
@@ -695,6 +697,15 @@ class E2EHarness {
         ),
         activeProfileDocIdProvider.overrideWith(
           () => _FixedActiveProfileDocId(profileId),
+        ),
+        // Owner governed writes (DNI-476) through the real governed
+        // commands on the same fake Firestore.
+        ownerGovernedWriterProvider.overrideWithValue(
+          FirestoreGovernedWriter(
+            _firestore,
+            uid: accountId,
+            profileId: profileId,
+          ),
         ),
       ],
 

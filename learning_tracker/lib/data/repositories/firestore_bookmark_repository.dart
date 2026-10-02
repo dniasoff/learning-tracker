@@ -12,7 +12,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_order_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 
@@ -87,23 +87,18 @@ import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart
 ///    why `snapshots()` alone would leave a UI dark forever after one
 ///    transient error.
 ///
-/// ## Custom learning order is honoured
+/// ## The main-track learning order is honoured
 ///
 /// [advanceBookmark]/[initializeBookmark] need "the next item in learning
-/// order", which the Drift implementation resolves two ways: a custom
-/// `learning_order` override (checked first), falling back to natural
-/// content order via [ContentIndex]/[ContentRepository]. This class mirrors
-/// that exactly via the injected [FirestoreLearningOrderRepository]: both
-/// [_getNextItemId] and [_getFirstItemId] first call
-/// `_learningOrderRepository.getCustomOrderRefs(curriculumId)` and take the
-/// custom-order branch whenever that list is non-empty (see the predicate
-/// doc on [getCustomOrderRefs] itself). `getOrder(...).isNotEmpty` would be
-/// the WRONG gate here — it always synthesizes a non-empty natural-order
-/// list when there are zero stored rows, so it would read as "custom order
-/// exists" for every uncustomized profile. [getCustomOrderRefs] returns raw
-/// rows only, so its emptiness is a truthful "is there a custom order?"
-/// signal, and it needs no `allItems`, which keeps the [ContentIndex] O(1)
-/// fast path intact when there is no custom order.
+/// order": the custom main-track order when the curriculum has one, else
+/// natural content order via [ContentIndex]/[ContentRepository]. The
+/// custom order is the AD-33 `orderedLeaves` of the curriculum's live
+/// `track_learning_order` docs
+/// ([FirestoreTrackLearningOrderRepository.orderedLeafRefs], DNI-476; the
+/// retired `learning_order` collection is no longer read). Its emptiness
+/// is a truthful "no custom order" signal, and it fetches the content tree
+/// only when a live order doc exists, which keeps the [ContentIndex] O(1)
+/// fast path intact otherwise.
 ///
 /// ## Dropped along with the interface
 ///
@@ -120,7 +115,7 @@ class FirestoreBookmarkRepository {
     required String uid,
     required String profileId,
     required ContentRepository contentRepository,
-    required FirestoreLearningOrderRepository learningOrderRepository,
+    required FirestoreTrackLearningOrderRepository learningOrderRepository,
     ContentIndex? contentIndex,
     AppLogger? logger,
   }) : _firestore = firestore,
@@ -135,7 +130,7 @@ class FirestoreBookmarkRepository {
   final String _uid;
   final String _profileId;
   final ContentRepository _contentRepository;
-  final FirestoreLearningOrderRepository _learningOrderRepository;
+  final FirestoreTrackLearningOrderRepository _learningOrderRepository;
   final ContentIndex? _contentIndex;
   final AppLogger _logger;
 
@@ -240,8 +235,8 @@ class FirestoreBookmarkRepository {
     return setBookmark(curriculumId: curriculumId, sefariaRef: first);
   }
 
-  /// Mirrors `BookmarkRepositoryImpl._getNextItemId` exactly: a custom
-  /// `learning_order` override is checked FIRST and, whenever any row
+  /// Mirrors `BookmarkRepositoryImpl._getNextItemId`: the custom main-track
+  /// order is checked FIRST and, whenever any row
   /// exists for [curriculumId], wins unconditionally — [currentSefariaRef]
   /// not being found in it (or being its last entry) returns `null`, it
   /// does NOT fall through to natural order. Only when there is no custom
@@ -251,8 +246,9 @@ class FirestoreBookmarkRepository {
     required CurriculumId curriculumId,
     required String currentSefariaRef,
   }) async {
-    final customOrder = await _learningOrderRepository.getCustomOrderRefs(
+    final customOrder = await _learningOrderRepository.orderedLeafRefs(
       curriculumId,
+      content: () => _contentRepository.getContentForCurriculum(curriculumId),
     );
     if (customOrder.isNotEmpty) {
       final currentIndex = customOrder.indexOf(currentSefariaRef);
@@ -282,13 +278,14 @@ class FirestoreBookmarkRepository {
     return leafItems[currentIndex + 1].sefariaRef;
   }
 
-  /// Mirrors `BookmarkRepositoryImpl._getFirstItemId` exactly: same custom-
-  /// `learning_order`-first gate as [_getNextItemId] — a non-empty custom
+  /// Mirrors `BookmarkRepositoryImpl._getFirstItemId`: the same custom-
+  /// order-first gate as [_getNextItemId] — a non-empty custom
   /// order returns its first entry unconditionally, before either the
   /// [ContentIndex] fast path or the O(N) content fallback runs.
   Future<String?> _getFirstItemId(CurriculumId curriculumId) async {
-    final customOrder = await _learningOrderRepository.getCustomOrderRefs(
+    final customOrder = await _learningOrderRepository.orderedLeafRefs(
       curriculumId,
+      content: () => _contentRepository.getContentForCurriculum(curriculumId),
     );
     if (customOrder.isNotEmpty) {
       return customOrder.first;

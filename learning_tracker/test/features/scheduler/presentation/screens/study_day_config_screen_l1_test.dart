@@ -21,6 +21,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 import '../../../../helpers/pump_app.dart';
 
 const _uid = 'study-day-screen-uid';
@@ -62,6 +63,7 @@ FirestoreStudyDayConfigRepository _repository(
   firestore: firestore,
   uid: _uid,
   profileId: _profileId,
+  writer: FirestoreGovernedWriter(firestore, uid: _uid, profileId: _profileId),
 );
 
 void main() {

@@ -466,7 +466,13 @@ class SchedulerEngine {
     }
   }
 
-  /// Build ordered list of sefariaRefs respecting custom learning order.
+  /// Build ordered list of sefariaRefs respecting the main-track order.
+  ///
+  /// [customOrder] is the AD-33 `orderedLeaves` of the curriculum
+  /// (DNI-476, see [SchedulerLearningOrderRepository.getOrder]): its refs in
+  /// order, restricted to [contentItems] (the scoped leaves), then any
+  /// content leaf it does not name in natural `sortOrder`. An empty
+  /// [customOrder] is natural `sortOrder`.
   List<String> _buildOrderedRefs(
     List<SchedulerContentItem> contentItems,
     List<SchedulerOrderItem> customOrder,

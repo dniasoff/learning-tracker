@@ -12,6 +12,7 @@ import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_w
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_intents.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
@@ -653,6 +654,8 @@ void main() {
       expect(h.changeLog.issued, isEmpty);
     });
   });
+
+  dni476OwnerGovernedGroups();
 }
 
 /// An order change then a program change of [_cid] (two batches).
@@ -697,4 +700,360 @@ final class _Reporter implements LearningFailureReporter {
     required PendingFailureReason reason,
     required int writeCount,
   }) => reports.add((command, reason, writeCount));
+}
+
+/// DNI-476 (Story 1.14) T1: the owner governed intents through
+/// `applyGovernedChange` — AD-43 fixed goal ids, per-field LWW, the
+/// calendar-program goal rejection, field-level merges with an immutable
+/// `curriculum_id`, and no delete anywhere.
+void dni476OwnerGovernedGroups() {
+  const goal = GovernedEntity.goal;
+  final deadlineId = goalDocId(_cid, GoalKind.deadline);
+  final paceId = goalDocId(_cid, GoalKind.pace);
+
+  GovernedAction deadline(Map<String, Object?> fields) => GovernedAction([
+    OwnerGovernedIntents.setGoal(
+      curriculumId: _cid,
+      kind: GoalKind.deadline,
+      fields: fields,
+    ),
+  ]);
+
+  group('DNI-476 AC-1: owner writes are governed field-level merges', () {
+    test('a goal entity carries its changed fields and immutable '
+        'curriculum_id; exactly one matching entry; last_change_id is '
+        'that entry', () async {
+      final h = GovernedHarness();
+      final result = await h.commands.applyGovernedChange(
+        deadline({'target_date': '2027-06-01', 'description': 'Siyum'}),
+      );
+
+      final batch = h.batches.single;
+      expect(batch.entry.entity, goal);
+      expect(batch.entry.entityId, deadlineId);
+      expect(batch.merges.single.collection, 'goals');
+      expect(batch.merges.single.docId, '${_cid}_deadline');
+      expect(h.doc('goals', deadlineId), {
+        'target_date': '2027-06-01',
+        'description': 'Siyum',
+        'goal_type': 'deadline',
+        'curriculum_id': _cid,
+        'last_change_id': batch.entry.id,
+      });
+      expect(h.store.entriesOf(h.scope), [batch.entry]);
+      expect(result, isA<CaptureSuccess>());
+    });
+
+    test('a merge leaves unrelated fields intact and logs only the changed '
+        'ones', () async {
+      final h = GovernedHarness()
+        ..seedDoc('study_day_configs', '${_cid}_1', {
+          'curriculum_id': _cid,
+          'day_of_week': 1,
+          'day_type': 'study',
+          'track_id': 'legacy',
+          'last_change_id': ulidC,
+        });
+      await h.commands.applyGovernedChange(
+        GovernedAction([
+          OwnerGovernedIntents.mainTrackDocs(
+            entity: GovernedEntity.mainTrackStudyDays,
+            curriculumId: _cid,
+            docs: {
+              '${_cid}_1': {'day_of_week': 1, 'day_type': 'review'},
+            },
+          ),
+        ]),
+      );
+      final entry = h.batches.single.entry;
+      expect(entry.after, {
+        _key('study_day_configs', '${_cid}_1', 'day_type'): 'review',
+      });
+      expect(h.doc('study_day_configs', '${_cid}_1'), {
+        'curriculum_id': _cid,
+        'day_of_week': 1,
+        'day_type': 'review',
+        'track_id': 'legacy',
+        'last_change_id': entry.id,
+      });
+    });
+
+    test('a new mainTrack* doc is written with its curriculum_id', () async {
+      final h = GovernedHarness();
+      await h.commands.applyGovernedChange(
+        GovernedAction([
+          OwnerGovernedIntents.mainTrackDocs(
+            entity: GovernedEntity.mainTrackStages,
+            curriculumId: _cid,
+            docs: {
+              '${_cid}_1': {'stage_order': 1, 'stage_name': 'Learn'},
+            },
+          ),
+        ]),
+      );
+      expect(h.doc('stage_definitions', '${_cid}_1')?['curriculum_id'], _cid);
+    });
+
+    test('removal is a logged ended_at tombstone, never a delete', () async {
+      final h = GovernedHarness()
+        ..seedDoc('goals', paceId, {
+          'goal_type': 'pace',
+          'pace_value': 2,
+          'curriculum_id': _cid,
+          'last_change_id': ulidC,
+        });
+      await h.commands.applyGovernedChange(
+        GovernedAction([
+          OwnerGovernedIntents.endGoal(
+            curriculumId: _cid,
+            kind: GoalKind.pace,
+            at: governedNow,
+          ),
+        ]),
+      );
+      final entry = h.batches.single.entry;
+      expect(h.doc('goals', paceId), {
+        'goal_type': 'pace',
+        'pace_value': 2,
+        'curriculum_id': _cid,
+        'ended_at': governedNow,
+        'last_change_id': entry.id,
+      });
+      expect(entry.before, {_key('goals', paceId, 'ended_at'): null});
+    });
+  });
+
+  group('DNI-476 AC-3: fixed goal ids converge by field', () {
+    test('a second create is an update of the same doc', () async {
+      final h = GovernedHarness();
+      await h.commands.applyGovernedChange(
+        deadline({'target_date': '2027-06-01'}),
+      );
+      await h.commands.applyGovernedChange(
+        deadline({'target_date': '2027-09-01'}),
+      );
+      expect(h.store.entriesOf(h.scope).map((e) => e.entityId).toSet(), {
+        deadlineId,
+      });
+      expect(h.doc('goals', deadlineId)?['target_date'], '2027-09-01');
+      expect(h.batches[1].entry.before, {
+        _key('goals', deadlineId, 'target_date'): '2027-06-01',
+      });
+    });
+
+    test('two offline devices create the same goal: unrelated fields both '
+        'survive, a same-field conflict follows commit order', () async {
+      final a = GovernedHarness();
+      final b = GovernedHarness(
+        actor: childActor,
+        firstId: 200,
+        store: a.store,
+        subTracks: a.subTracks,
+      );
+      // Both devices wrote offline against an empty cache: device A's batch
+      // reaches the server first, then device B's.
+      final aAction = deadline({
+        'target_date': '2027-06-01',
+        'description': 'from A',
+      });
+      final bAction = GovernedAction([
+        OwnerGovernedIntents.setGoal(
+          curriculumId: _cid,
+          kind: GoalKind.deadline,
+          fields: {'target_date': '2027-09-01', 'date_type': 'hebrew'},
+        ),
+      ]);
+      await a.commands.applyGovernedChange(aAction);
+      await b.commands.applyGovernedChange(bAction);
+
+      expect(a.doc('goals', deadlineId), {
+        'target_date': '2027-09-01', // same field: the later commit wins
+        'description': 'from A', // unrelated field of A survives
+        'date_type': 'hebrew', // unrelated field of B survives
+        'goal_type': 'deadline',
+        'curriculum_id': _cid,
+        'last_change_id': engineUlid(200),
+      });
+      expect(
+        a.store.entriesOf(a.scope).map((e) => e.entityId),
+        everyElement(deadlineId),
+      );
+    });
+  });
+
+  group(
+    'DNI-476 AC-3: a goal on a calendar-program curriculum is rejected',
+    () {
+      test('a live program_id rejects the goal before any write', () async {
+        final h = GovernedHarness()
+          ..seedDoc('profile_programs', _cid, {
+            'curriculum_id': _cid,
+            'program_id': 'mishna_yomi',
+            'tracking_start_date': '2026-01-01',
+          });
+        final result = await h.commands.applyGovernedChange(
+          deadline({'target_date': '2027-06-01'}),
+        );
+        expect(result, const CaptureResult.rejected(CaptureRejection.invalid));
+        expect(h.batches, isEmpty);
+        expect(h.oversized.requests, isEmpty);
+        expect(h.doc('goals', deadlineId), isNull);
+      });
+
+      test('a legacy numeric program_id counts as a program', () async {
+        final h = GovernedHarness()
+          ..seedDoc('profile_programs', _cid, {
+            'curriculum_id': _cid,
+            'program_id': 3,
+          });
+        expect(
+          await h.commands.applyGovernedChange(
+            deadline({'target_date': '2027-06-01'}),
+          ),
+          const CaptureResult.rejected(CaptureRejection.invalid),
+        );
+      });
+
+      test(
+        'an ended program, or one this action ends, allows the goal',
+        () async {
+          final ended = GovernedHarness()
+            ..seedDoc('profile_programs', _cid, {
+              'curriculum_id': _cid,
+              'program_id': 'mishna_yomi',
+              'ended_at': governedNow,
+            });
+          expect(
+            await ended.commands.applyGovernedChange(
+              deadline({'target_date': '2027-06-01'}),
+            ),
+            isA<CaptureSuccess>(),
+          );
+
+          final h = GovernedHarness()
+            ..seedDoc('profile_programs', _cid, {
+              'curriculum_id': _cid,
+              'program_id': 'mishna_yomi',
+            });
+          final result = await h.commands.applyGovernedChange(
+            GovernedAction([
+              OwnerGovernedIntents.endMainTrackDocs(
+                entity: GovernedEntity.mainTrackProgram,
+                curriculumId: _cid,
+                docIds: [_cid],
+                at: governedNow,
+              ),
+              ...deadline({'target_date': '2027-06-01'}).changes,
+            ]),
+          );
+          expect(result, isA<CaptureSuccess>());
+          expect(h.batches, hasLength(2));
+        },
+      );
+
+      test(
+        'an action that sets a program and a goal together is rejected',
+        () async {
+          final h = GovernedHarness();
+          final result = await h.commands.applyGovernedChange(
+            GovernedAction([
+              OwnerGovernedIntents.mainTrackDocs(
+                entity: GovernedEntity.mainTrackProgram,
+                curriculumId: _cid,
+                docs: {
+                  _cid: {
+                    'program_id': 'daf',
+                    'tracking_start_date': '2026-09-01',
+                  },
+                },
+              ),
+              ...deadline({'target_date': '2027-06-01'}).changes,
+            ]),
+          );
+          expect(
+            result,
+            const CaptureResult.rejected(CaptureRejection.invalid),
+          );
+          expect(h.batches, isEmpty);
+        },
+      );
+
+      test(
+        'ending a goal on a calendar-program curriculum is allowed',
+        () async {
+          final h = GovernedHarness()
+            ..seedDoc('profile_programs', _cid, {
+              'curriculum_id': _cid,
+              'program_id': 'daf',
+            })
+            ..seedDoc('goals', deadlineId, {
+              'goal_type': 'deadline',
+              'target_date': '2027-06-01',
+              'curriculum_id': _cid,
+            });
+          final result = await h.commands.applyGovernedChange(
+            GovernedAction([
+              OwnerGovernedIntents.endGoal(
+                curriculumId: _cid,
+                kind: GoalKind.deadline,
+                at: governedNow,
+              ),
+            ]),
+          );
+          expect(result, isA<CaptureSuccess>());
+        },
+      );
+    },
+  );
+
+  group(
+    'DNI-476 AC-6: tutor-only and rewards writers are not governed here',
+    () {
+      test('the governed entity set is exactly the AD-38 one (no rewards or '
+          'tutor-only entity was added)', () {
+        expect(GovernedEntity.values.map((e) => e.storage).toSet(), {
+          'subTrack',
+          'goal',
+          'mainTrack',
+          'mainTrackOrder',
+          'mainTrackProgram',
+          'mainTrackStudyDays',
+          'mainTrackStages',
+          'mainTrackScope',
+          'learnerSettings',
+        });
+        expect(mainTrackEntities.map((e) => e.collection).toSet(), {
+          'curriculum_tracks',
+          'track_learning_order',
+          'profile_programs',
+          'study_day_configs',
+          'stage_definitions',
+          'curriculum_scopes',
+        });
+      });
+
+      test('a rewards doc cannot ride a governed action: invalid, nothing read '
+          'or written', () async {
+        final h = GovernedHarness();
+        final result = await h.commands.applyGovernedChange(
+          GovernedAction([
+            const GovernedEntityChange(
+              entity: GovernedEntity.mainTrack,
+              entityId: _cid,
+              docs: [
+                GovernedDocPatch(
+                  collection: 'reward_redemptions',
+                  docId: 'r1',
+                  fields: {'amount': 5},
+                ),
+              ],
+            ),
+          ]),
+        );
+        expect(result, const CaptureResult.rejected(CaptureRejection.invalid));
+        expect(h.reader.reads, isEmpty);
+        expect(h.batches, isEmpty);
+      });
+    },
+  );
 }

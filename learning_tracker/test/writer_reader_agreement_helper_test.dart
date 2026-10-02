@@ -76,6 +76,7 @@ void main() {
       await repoA!.createGoal(
         curriculumId: CurriculumId.mishnayos,
         targetPercent: 50,
+        paceTarget: DeadlineTarget(DateTime.utc(2030)),
       );
 
       final repoB = await rigB.container.read(
@@ -121,6 +122,7 @@ void main() {
           await repo!.createGoal(
             curriculumId: CurriculumId.mishnayos,
             targetPercent: 75,
+            paceTarget: DeadlineTarget(DateTime.utc(2030)),
           );
         },
         read: () => rig.container
@@ -184,6 +186,7 @@ void main() {
             await repo!.createGoal(
               curriculumId: CurriculumId.mishnayos,
               targetPercent: 75,
+              paceTarget: DeadlineTarget(DateTime.utc(2030)),
             );
           },
           read: () async {

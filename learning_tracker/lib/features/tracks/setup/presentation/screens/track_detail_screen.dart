@@ -983,7 +983,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     }
     if (!mounted) return;
 
-    // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
+    // 'archive' = retire (keep showing as archived); 'wipe' = AD-38 remove
+    // (ended_at tombstone, history kept); null = cancel
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1039,12 +1040,18 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       return;
     }
 
-    // Cloud Function sweep — confirmed (functions/src/deletes.ts) to
-    // delete completions/learning_ledger/streak_events/points_ledger/
-    // preferences alongside the track doc itself, a superset of Drift's
-    // purgeHistory, not a narrower stand-in.
+    // AD-38 "Remove track" (DNI-476): one governed action setting
+    // ended_at on the track and tombstoning its live sub-tracks. Nothing is
+    // deleted (no Cloud Function sweep): learning events and points stay,
+    // and re-adding the curriculum brings the track back.
     final trackRepo = ref.read(curriculumTrackDetailRepositoryProvider);
-    await trackRepo.deleteTrackPermanently(track.curriculumId);
+    try {
+      await trackRepo.removeTrack(track.curriculumId);
+    } on StateError {
+      if (!mounted) return;
+      _showLastCurriculumError(AppLocalizations.of(context)!);
+      return;
+    }
     await onTrackChanged(ref);
     if (mounted) context.router.pop();
   }

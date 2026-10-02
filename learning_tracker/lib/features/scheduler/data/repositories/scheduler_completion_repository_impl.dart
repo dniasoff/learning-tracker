@@ -31,7 +31,7 @@ class SchedulerCompletionRepositoryNotReadyException implements Exception {
 /// Replaces the Drift-backed `CompletionDao`/`StageDao` implementation the
 /// Drift user DB deletion removed (archived under
 /// `docs/_archive/drift-user-db/`). Built to the same resolved-`Ref`-per-call
-/// pattern as `SchedulerFirestoreLearningOrderRepositoryAdapter`
+/// pattern as `SchedulerTrackOrderRepositoryAdapter`
 /// (`scheduler_learning_order_repository_impl.dart`) and
 /// `FirestoreCompletionRepositoryAdapter`
 /// (`lib/features/learning/data/repositories/completion_repository_impl.dart`)

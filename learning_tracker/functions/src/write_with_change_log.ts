@@ -140,6 +140,10 @@ const groundItem: Check = (v) =>
 
 const CURRICULUM_ID = str(200);
 const ENDED_AT: Check = (v) => v === TOMBSTONE || v === null;
+/** A client ISO-8601 instant (a legacy display stamp, AD-52 storage form). */
+const instant: Check = (v) => typeof v === "string" && !Number.isNaN(Date.parse(v));
+/** A bounded string that may be empty (e.g. a goal's display name). */
+const text = (max = 500): Check => (v) => typeof v === "string" && v.length <= max;
 
 /**
  * Client-writable fields per governed collection. `last_change_id` is never
@@ -175,11 +179,23 @@ const FIELD_SPECS: Readonly<Record<string, Readonly<Record<string, Check>>>> = {
     pace_value: nullable(posNum),
     pace_unit: nullable(str(64)),
     pace_granularity: nullable(str(64)),
+    // Legacy display keys the owner goal writer still writes and the rules
+    // accept (DNI-476): the track's display name, the target-date calendar,
+    // and the (re)creation stamp. Without them an oversized owner action
+    // carrying a goal (e.g. a long Add track) was rejected here while the
+    // same action under the budget was accepted by the rules.
+    description: text(500),
+    date_type: oneOf("gregorian", "hebrew"),
+    created_at: instant,
     curriculum_id: CURRICULUM_ID,
     ended_at: ENDED_AT,
   },
   curriculum_tracks: {
     state: oneOf("active", "retired", "archived"),
+    // Legacy lifecycle stamps the owner track writer still writes and the
+    // rules accept (DNI-476; the track decoder requires them).
+    state_changed_at: instant,
+    activated_at: instant,
     curriculum_id: CURRICULUM_ID,
     ended_at: ENDED_AT,
   },

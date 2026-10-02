@@ -1,7 +1,6 @@
 /// Provider integration coverage for the real allDailyTasksProvider.
 library;
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +28,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'scheduler-all-tasks-uid';
 const _profileId = '01J9V8J5Q2K7M3N6P4R8T1WXYZ';
@@ -37,7 +37,6 @@ class _FirebaseApp extends Mock implements FirebaseApp {}
 
 class _FirebaseAuth extends Mock implements FirebaseAuth {}
 
-class _MockFirebaseFunctions extends Mock implements FirebaseFunctions {}
 
 class _ProfileId extends ActiveProfileId {
   @override
@@ -157,6 +156,11 @@ Future<ProviderContainer> _container({
         firestore: firestore,
         uid: _uid,
         profileId: _profileId,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+        ),
       );
       await studyDays.initializeDefaults(curriculum);
       for (final day in {...reviewDays, if (reviewDay != null) reviewDay}) {
@@ -193,10 +197,7 @@ Future<ProviderContainer> _container({
     overrides: [
       activeAccountFirebaseProvider.overrideWith((ref) async => handles),
       curriculumTrackRepositoryAdapterProvider.overrideWith(
-        (ref) => FirestoreCurriculumTrackRepositoryAdapter(
-          ref: ref,
-          functions: _MockFirebaseFunctions(),
-        ),
+        (ref) => FirestoreCurriculumTrackRepositoryAdapter(ref: ref),
       ),
       activeProfileIdProvider.overrideWith(_ProfileId.new),
       activeProfileDocIdProvider.overrideWith(_ProfileDocId.new),

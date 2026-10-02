@@ -39,6 +39,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -175,16 +176,31 @@ void main() {
       firestore: _firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        _firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     );
     _trackRepository = FirestoreCurriculumTrackRepository(
       firestore: _firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        _firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     );
     _goalRepository = FirestoreGoalRepository(
       firestore: _firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        _firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     );
   });
 

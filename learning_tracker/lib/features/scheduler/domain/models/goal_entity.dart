@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 part 'goal_entity.freezed.dart';
@@ -151,7 +152,9 @@ abstract class GoalEntity with _$GoalEntity {
   String? get paceGranularityKey =>
       paceGranularity?.storageKey ?? rawLearningUnit;
 
-  /// Firestore document ID (deterministic per P4).
+  /// Deterministic per-goal key (P4). Since DNI-476 (AD-43) it is NOT the
+  /// Firestore doc id: a goal lives at `goals/{curriculumId}_deadline` or
+  /// `goals/{curriculumId}_pace` (`FirestoreGoalRepository`).
   ///
   /// Uses curriculum + createdAt for uniqueness since multiple goals per
   /// curriculum are allowed.
@@ -202,6 +205,11 @@ abstract class GoalEntity with _$GoalEntity {
         (data['curriculum_id'] ?? data['curriculumId']) as String;
     final rawUnit =
         (data['pace_granularity'] ?? data['paceGranularity']) as String?;
+    // AD-38 retired `updated_at` from governed docs; an AD-43 goal keeps
+    // the `created_at` its (re)creation wrote.
+    final createdAt =
+        _parseInstant(data['created_at'] ?? data['createdAt']) ??
+        DateTime.utc(1970);
     return GoalEntity(
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == rawCurriculumId,
@@ -212,28 +220,27 @@ abstract class GoalEntity with _$GoalEntity {
           ((data['target_percent'] ?? data['targetPercent']) as num?)
               ?.toDouble() ??
           100.0,
-      targetDate: (data['target_date'] ?? data['targetDate']) != null
-          ? DateTime.parse(
-              (data['target_date'] ?? data['targetDate']) as String,
-            ).toUtc()
-          : null,
+      // An AD-43 civil date (`YYYY-MM-DD`), or a legacy ISO instant.
+      targetDate: FirestoreCodec.parseCivilDate(
+        data['target_date'] ?? data['targetDate'],
+      ),
       description: data['description'] as String? ?? '',
       dateType:
           (data['date_type'] ?? data['dateType']) as String? ?? 'gregorian',
       goalType:
           (data['goal_type'] ?? data['goalType']) as String? ?? 'deadline',
-      paceValue: (data['pace_value'] ?? data['paceValue']) as int?,
+      paceValue: ((data['pace_value'] ?? data['paceValue']) as num?)?.toInt(),
       pacePeriod: (data['pace_unit'] ?? data['pacePeriod']) as String?,
       paceGranularity: PaceGranularity.fromStorageKey(rawUnit),
       rawLearningUnit: PaceGranularity.fromStorageKey(rawUnit) == null
           ? rawUnit
           : null,
-      createdAt: DateTime.parse(
-        (data['created_at'] ?? data['createdAt']) as String,
-      ).toUtc(),
-      updatedAt: DateTime.parse(
-        (data['updated_at'] ?? data['updatedAt']) as String,
-      ).toUtc(),
+      createdAt: createdAt,
+      updatedAt:
+          _parseInstant(data['updated_at'] ?? data['updatedAt']) ?? createdAt,
     );
   }
+
+  static DateTime? _parseInstant(Object? raw) =>
+      raw is String ? DateTime.parse(raw).toUtc() : null;
 }

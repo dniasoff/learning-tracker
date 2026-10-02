@@ -141,12 +141,10 @@ void main() {
       );
     });
 
-    test('throws FormatException when created_at is missing', () {
+    test('a governed doc without created_at decodes (DNI-476: governed '
+        'writes carry only the AD-52 keys)', () {
       final data = validMap()..remove('created_at');
-      expect(
-        () => curriculumScopeFromFirestore(data),
-        throwsA(isA<FormatException>()),
-      );
+      expect(curriculumScopeFromFirestore(data).createdAt, DateTime.utc(1970));
     });
 
     test('a fully valid map decodes without throwing', () {

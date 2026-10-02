@@ -10,10 +10,12 @@ import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/firestore_fixtures.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -115,6 +117,13 @@ void main() {
 
       container = ProviderContainer(
         overrides: [
+          ownerGovernedWriterProvider.overrideWithValue(
+            FirestoreGovernedWriter(
+              firestore,
+              uid: _uid,
+              profileId: _profileId,
+            ),
+          ),
           activeAccountFirebaseProvider.overrideWith(
             (ref) async => AccountFirebaseHandles(
               app: _MockFirebaseApp(),
@@ -170,7 +179,7 @@ void main() {
             )
             .get();
         expect(deletedStage.exists, isTrue);
-        expect(deletedStage.data(), contains('synced_at'));
+        expect(deletedStage.data()!['ended_at'], isNotNull);
       },
     );
   });

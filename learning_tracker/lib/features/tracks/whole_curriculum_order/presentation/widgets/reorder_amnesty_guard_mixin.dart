@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/widgets/reorder_confirm_dialog.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 
 /// Shared reorder-amnesty guard for the tracks reorder screens
-/// (`TrackLearningOrderScreen`, `LearningOrderScreen`).
+/// (`TrackLearningOrderScreen`).
 ///
 /// Before a reorder is applied, the guard reads the outstanding overdue
 /// count for [curriculumId] and — if there are overdue items — shows
