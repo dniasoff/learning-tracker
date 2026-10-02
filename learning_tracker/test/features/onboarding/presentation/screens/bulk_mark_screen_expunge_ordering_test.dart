@@ -1,7 +1,7 @@
 // AUD-onboarding-07 regression guard.
 //
-// BulkMarkScreen._expungeRefs fires service.expungePriorCompletions(...) for
-// each unticked pre-ticked ref WITHOUT awaiting it, then immediately calls
+// BulkMarkScreen._expungeRefs fires the recorder's unrecord (unlearn) for
+// the unticked pre-ticked refs WITHOUT awaiting it, then immediately calls
 // ref.invalidate(...) on the dashboard/progress providers. Because those
 // providers are manually invalidated (not reactively derived from the write
 // itself), an active listener refetches before the un-awaited expunge write

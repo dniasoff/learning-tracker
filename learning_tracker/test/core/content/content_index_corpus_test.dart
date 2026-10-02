@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/content/content_index_corpus.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
@@ -145,6 +146,48 @@ void main() {
   test('levels deeper than the labels are named level<depth>', () {
     expect(contentLevelName(const ['Book'], 3), 'level3');
     expect(contentLevelName(const ['Book'], 1), 'book');
+  });
+
+  group('Story 1.11 (DNI-473) capture helpers', () {
+    ContentItem item(String ref, int order, List<String> path, bool leaf) =>
+        ContentItem(
+          curriculumId: 'mishnayos',
+          level1: path[0],
+          level2: path.length > 1 ? path[1] : null,
+          level3: path.length > 2 ? path[2] : null,
+          level4: path.length > 3 ? path[3] : null,
+          displayNameHe: ref,
+          displayNameEn: ref,
+          sefariaRef: ref,
+          sortOrder: order,
+          isLeaf: leaf,
+        );
+    final items = [
+      item('Seder Zeraim', 0, ['Zeraim'], false),
+      item('Mishnah Berakhot', 1, ['Zeraim', 'Mishnah Berakhot'], false),
+      item('Mishnah Berakhot 1', 2, ['Zeraim', 'Mishnah Berakhot', '1'], false),
+      item('Mishnah Berakhot 1:1', 3, [
+        'Zeraim',
+        'Mishnah Berakhot',
+        '1',
+        '1',
+      ], true),
+    ];
+
+    test('contentDepthOf is the deepest non-null level', () {
+      expect(items.map(contentDepthOf), [1, 2, 3, 4]);
+    });
+
+    test('nodeEntryOf names a container exactly as corpusOf does, so a '
+        'before_tracking node event expands to its leaves', () {
+      final corpus = corpusOf(CurriculumId.mishnayos, items);
+      for (final container in items.where((i) => !i.isLeaf)) {
+        final entry = nodeEntryOf(CurriculumId.mishnayos, container);
+        expect(corpus.nodeForRef(container.sefariaRef), entry);
+        expect(corpus.leavesUnder(entry), ['Mishnah Berakhot 1:1']);
+      }
+      expect(corpus.unitLevels, hasLength(2), reason: 'seder and masechta');
+    });
   });
 
   group('bundled hierarchies', () {
