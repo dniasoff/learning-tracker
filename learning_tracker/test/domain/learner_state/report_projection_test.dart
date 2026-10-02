@@ -1149,7 +1149,7 @@ void main() {
             _ => engineGround(1000 + i, peah),
           },
       ];
-      final deadline = DeadlineGoal(
+      const deadline = DeadlineGoal(
         curriculumId: engineCurriculum,
         targetDate: '2027-09-01',
       );
