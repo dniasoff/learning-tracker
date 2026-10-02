@@ -26,6 +26,7 @@ import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/counted_events.dart';
 import 'package:learning_tracker/domain/learner_state/derived_curriculum_state.dart';
 import 'package:learning_tracker/domain/learner_state/expand_ground.dart';
+import 'package:learning_tracker/domain/learner_state/goal_target.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -183,21 +184,22 @@ final class LearnerStateEngine {
       scopedLeaves: scoped,
       learntLeaves: learntLeaves(learns, corpus, scopedSet.contains),
     );
+    final mainTrack = evaluated
+        ? _mainTrack(
+            curriculumId,
+            inputs,
+            intent,
+            corpus,
+            learnt,
+            learns,
+            firstStage,
+          )
+        : const MainTrackRecord.none();
     return DerivedCurriculumState(
       curriculumId: curriculumId,
       evaluated: evaluated,
       learnt: learnt,
-      mainTrack: evaluated
-          ? _mainTrack(
-              curriculumId,
-              inputs,
-              intent,
-              corpus,
-              learnt,
-              learns,
-              firstStage,
-            )
-          : const MainTrackRecord.none(),
+      mainTrack: mainTrack,
       completedUnits: completedUnits(
         corpus: corpus,
         inScope: learnt.inScope,
@@ -213,6 +215,7 @@ final class LearnerStateEngine {
               learnt,
               learns,
               firstStage,
+              mainTrack,
             )
           : const PlanRecord.none(),
       streak: evaluated
@@ -268,6 +271,7 @@ final class LearnerStateEngine {
     LearntRecord learnt,
     List<LearningEvent> learns,
     int? firstStage,
+    MainTrackRecord mainTrack,
   ) {
     final today = civilDate(inputs.nowUtc, inputs.settingsHistory);
     final configHistory = MainTrackConfigHistory.build(
@@ -306,7 +310,34 @@ final class LearnerStateEngine {
         validationErrors: errors,
       );
     }
-    return PlanRecord(reviews: reviews, validationErrors: errors);
+    // AD-43/AD-44: a deadline gives `dailyTarget`, a pace gives `paceRate`
+    // (it also feeds FR-20 with a deadline); neither gives nulls. The
+    // numerator is the no-sub-track case (DNI-494 adds the sub-track
+    // terms).
+    final goals = inputs.goals[curriculumId];
+    final deadline = liveDeadline(goals);
+    final pace = livePace(goals);
+    final studyDays = configHistory.current.studyDays;
+    return PlanRecord(
+      reviews: reviews,
+      dailyTarget: deadline == null
+          ? null
+          : deadlineDailyTarget(
+              numerator: mainTrack.schedulableRefs.length,
+              deadline: deadline,
+              studyDays: studyDays,
+              today: today,
+            ),
+      paceRate: pace == null
+          ? null
+          : paceRateOf(
+              pace: pace,
+              corpus: corpus,
+              inScope: learnt.inScope,
+              studyDays: studyDays,
+            ),
+      validationErrors: errors,
+    );
   }
 
   /// The ground of [curriculumId]'s `holdsGround` sub-tracks (AD-34), which
