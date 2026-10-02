@@ -213,7 +213,9 @@ abstract interface class LearningCommands {
   });
 
   /// Edits any field of sub-track [subTrackId] except `curriculum_id`;
-  /// `ground` is replaced whole. Writes and logs only changed fields.
+  /// `ground` is replaced whole, or picked nodes are appended to the latest
+  /// stored ground (`SubTrackEdit.appendGround`, Story 2.7). Writes and logs
+  /// only changed fields.
   Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit);
 
   /// Ends sub-track [subTrackId]: `ended_at` + `end_reason = ended`.
