@@ -5,20 +5,24 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/data/firestore/tutor_scope_grant_providers.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/tutor_scope_grant_source.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_tutor_scope_grant_source.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 import '../../sub_track_detail_harness.dart';
@@ -302,6 +306,64 @@ void main() {
         await roleWith(() => Completer<LearnerProfileEntity?>().future),
         SubTrackDetailRole.child,
       );
+    });
+  });
+  group('tutored session (grant-gated read, DNI-523)', () {
+    late FakeTutorScopeGrantSource grants;
+    setUp(() => grants = FakeTutorScopeGrantSource());
+
+    ProviderContainer tutored() {
+      final c = ProviderContainer(
+        overrides: [
+          ...h.overrides(role: SubTrackDetailRole.tutor),
+          tutorScopeGrantSourceProvider.overrideWith((ref) async => grants),
+          activeTutoredProfileSelectionProvider.overrideWithValue(
+            TutoredProfileSelection(
+              profileId: h.scope.profileId,
+              ownerUid: h.scope.ownerUid,
+              grantId: 'grant',
+              permissions: TutorPermissions.readOnly(),
+            ),
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    test('reads nothing of the learner until an active grant authorizes '
+        'the tutor', () async {
+      final school = detailSubTrack(10, 'School', const [peah]);
+      h.seed(subTracks: [school]);
+      final c = tutored();
+      expect(await settle(c, school.id), isA<AsyncLoading<SubTrackDetail>>());
+      expect(c.exists(subTrackDetailTracksProvider(h.scope)), isFalse);
+      expect(c.exists(subTrackDetailEventsProvider(h.scope)), isFalse);
+    });
+
+    test('a granted tutor sees the detail; once the grant is revoked the '
+        'detail is a fresh access-denied error with no cached value, and the '
+        'sub-track and event reads are released', () async {
+      final school = detailSubTrack(10, 'School', const [berakhot1, peah]);
+      h.seed(subTracks: [school]);
+      grants.grant(h.scope);
+      final c = tutored();
+      final sub = c.listen(subTrackDetailProvider(school.id), (_, _) {});
+      addTearDown(sub.close);
+      for (var i = 0; i < 20 && sub.read().isLoading; i++) {
+        await pumpEventQueue();
+      }
+      expect(sub.read().requireValue.track, school);
+      expect(c.exists(subTrackDetailTracksProvider(h.scope)), isTrue);
+
+      grants.deny(h.scope, TutorScopeDenialReason.grantNotActive);
+      await pumpEventQueue();
+      final denied = sub.read();
+      expect(denied.error, isA<TutorScopeAccessDeniedException>());
+      expect(denied.hasValue, isFalse);
+      await pumpEventQueue();
+      expect(c.exists(subTrackDetailTracksProvider(h.scope)), isFalse);
+      expect(c.exists(subTrackDetailEventsProvider(h.scope)), isFalse);
     });
   });
 }

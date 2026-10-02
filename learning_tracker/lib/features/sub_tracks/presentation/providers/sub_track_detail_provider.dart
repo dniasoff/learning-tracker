@@ -22,6 +22,7 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_for_scope_provider.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -312,9 +313,25 @@ final subTrackDetailProvider = Provider.autoDispose
         );
       }
 
+      // A tutored session reads another owner's learner, so it goes through
+      // the grant-gated read path (DNI-523, ruling B10), watched FIRST: until
+      // an active grant authorizes the tutor, and as soon as it is revoked or
+      // a read is permission-denied, the detail is a fresh error (or
+      // loading) with no value, and the sub-track and event reads are not
+      // watched at all, so their cached rows are disposed and never
+      // rendered.
+      final AsyncValue<LearnerState> state;
+      if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
+        state = ref.watch(learnerStateForScopeProvider(active));
+        if (state case AsyncError(:final error, :final stackTrace)) {
+          return AsyncError(error, stackTrace);
+        }
+        if (!state.hasValue) return const AsyncLoading();
+      } else {
+        state = ref.watch(learnerStateProvider(active));
+      }
       final tracks = ref.watch(subTrackDetailTracksProvider(active));
       final events = ref.watch(subTrackDetailEventsProvider(active));
-      final state = ref.watch(learnerStateProvider(active));
       final corpora = ref.watch(corporaProvider);
       for (final input in <AsyncValue<Object?>>[
         tracks,
@@ -410,6 +427,9 @@ void retrySubTrackDetail(WidgetRef ref) {
   }
   final active = scope.value;
   if (active == null) return;
+  if (ref.read(activeTutoredProfileSelectionProvider) != null) {
+    ref.invalidate(tutorScopeGrantProvider(active));
+  }
   ref
     ..invalidate(subTrackDetailTracksProvider(active))
     ..invalidate(subTrackDetailEventsProvider(active))
