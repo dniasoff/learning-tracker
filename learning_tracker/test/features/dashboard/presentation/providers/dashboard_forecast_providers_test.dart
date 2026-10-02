@@ -118,8 +118,13 @@ void main() {
   });
 
   test('a load error is passed through for the retry (AC-8)', () async {
-    // No learner-state override: the C0 stub fails the read.
-    final value = await _settledForecast(_container());
+    final container = ProviderContainer(
+      overrides: forecastOverrides(
+        states: Stream<LearnerState>.error(StateError('read failed')),
+      ),
+    );
+    addTearDown(container.dispose);
+    final value = await _settledForecast(container);
     expect(value, isA<AsyncError<List<CurriculumForecast>>>());
   });
 
