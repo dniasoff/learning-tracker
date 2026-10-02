@@ -16,10 +16,15 @@ import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/achievement_latch_adapter.dart';
@@ -32,12 +37,9 @@ import 'package:learning_tracker/features/learning/domain/commands/governed_acti
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
-<<<<<<< HEAD
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
-=======
-import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
->>>>>>> 79dd8695e (fix(sub-tracks): DNI-501 owner capture checks a sub-track source belongs to the learner and curriculum)
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -149,6 +151,27 @@ LearnerStateFeed learnerStateFeed(Ref ref, LearnerScope scope) {
   return LearnerStateFeed(latest: () => latest, changes: changes.stream);
 }
 
+/// The learner's civil date under the current settings, falling back to UTC
+/// until the settings history is available.
+CivilDate learnerToday(DateTime nowUtc, LearnerSettingsHistory? history) =>
+    history == null
+    ? formatCivilDay(DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day))
+    : civilDate(nowUtc, history);
+
+final class _DeferredGovernedIntentRepository
+    implements GovernedIntentRepository {
+  _DeferredGovernedIntentRepository(this._resolve);
+
+  final Future<GovernedIntentRepository?> Function() _resolve;
+
+  @override
+  Stream<LearnerIntent> watch(LearnerScope scope) async* {
+    final repository = await _resolve();
+    if (repository == null) return;
+    yield* repository.watch(scope);
+  }
+}
+
 /// The commands bound to the active learner's scope and session actor, or
 /// null while no learner is active, the account is not ready, or the
 /// session is a tutored one (tutor writes go through callables, AD-53;
@@ -188,7 +211,12 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     learnerLockSettingsProvider(scope).future,
     (_, _) {},
   );
+  final settingsNow = ref.listen(learnerLockSettingsProvider(scope), (_, _) {});
   final corpora = ref.listen(corporaProvider.future, (_, _) {});
+  final intent = ref.listen(governedIntentRepositoryProvider.future, (_, _) {});
+  final clock = ref.watch(learningCommandClockProvider);
+  Future<Corpus?> corpusOf(String curriculumId) async =>
+      (await corpora.read())[curriculumId];
   final failureReporter = ref.watch(learningFailureReporterProvider);
   final governed = DefaultGovernedLearningCommands(
     scope: scope,
@@ -207,6 +235,17 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       states: learnerStateFeed(ref, scope),
     ),
   );
+  final subTrackCommands = SubTrackCommands(
+    scope: scope,
+    actor: actor,
+    subTracks: subTracks,
+    intent: _DeferredGovernedIntentRepository(intent.read),
+    today: () => learnerToday(clock(), settingsNow.read().value),
+    nowUtc: clock,
+    newId: newUlid,
+    corpusOf: corpusOf,
+    analytics: ref.watch(learningAnalyticsProvider),
+  );
   final commands = DefaultLearningCommands(
     scope: scope,
     actor: actor,
@@ -218,7 +257,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
             .firstWhere((r) => r is CompleteReadReady<LearningEvent>);
         return (ready as CompleteReadReady<LearningEvent>).items;
       },
-      corpus: (curriculumId) async => (await corpora.read())[curriculumId],
+      corpus: corpusOf,
       points: points,
     ),
     writePort: port,
@@ -231,6 +270,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     achievements: achievements,
     // A sub-track source must be live in this learner's scope and curriculum.
     sourceCheck: subTrackSourceCheckFrom(subTracks, scope),
+    subTrackCommands: subTrackCommands,
   );
   // Recover any latch a failed check left absent (app start, learner
   // switch); runs in the background and retries its own failures.
@@ -238,6 +278,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   ref.onDispose(achievements.dispose);
   ref.onDispose(commands.dispose);
   ref.onDispose(governed.dispose);
+  ref.onDispose(subTrackCommands.dispose);
   return commands;
 }, retry: (retryCount, error) => null);
 

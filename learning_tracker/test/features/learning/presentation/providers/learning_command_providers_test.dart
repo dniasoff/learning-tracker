@@ -15,8 +15,11 @@ import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_settings_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
@@ -162,6 +165,8 @@ void main() {
   group('learningCommandsProvider', () {
     late InMemoryLearningWritePort port;
     late InMemoryChangeLogRepository changeLog;
+    late InMemorySubTrackRepository subTracks;
+    late InMemoryGovernedIntentRepository intent;
 
     List<Override> ready({bool lockSettings = true}) => [
       learningCommandClockProvider.overrideWithValue(() => engineAt(600)),
@@ -171,8 +176,9 @@ void main() {
       changeLogRepositoryProvider.overrideWith((ref) async => changeLog),
       governedDocReaderProvider.overrideWith((ref) async => changeLog),
       subTrackRepositoryProvider.overrideWith(
-        (ref) async => InMemorySubTrackRepository(),
+        (ref) async => subTracks,
       ),
+      governedIntentRepositoryProvider.overrideWith((ref) async => intent),
       oversizedGovernedWritePortProvider.overrideWith(
         (ref) async => FakeOversizedGovernedWritePort(),
       ),
@@ -195,6 +201,16 @@ void main() {
     setUp(() {
       port = InMemoryLearningWritePort();
       changeLog = InMemoryChangeLogRepository();
+      subTracks = InMemorySubTrackRepository();
+      intent = InMemoryGovernedIntentRepository()
+        ..emit(
+          c0Scope(),
+          LearnerIntent(
+            settings: c0Settings,
+            mainTracks: {engineCurriculum: engineIntent()},
+            goals: const {},
+          ),
+        );
     });
 
     test('null while no learner is active', () async {
@@ -314,6 +330,44 @@ void main() {
         isA<CaptureLocked>(),
       );
       expect(port.attempts, isEmpty);
+    });
+
+    test('wires the governed sub-track commands: a parent ground reorder '
+        'through editSubTrack is saved, not answered onlineRequired '
+        '(DNI-497)', () async {
+      subTracks.seed(c0Scope(), [
+        SubTrack(
+          id: ulidD,
+          curriculumId: engineCurriculum,
+          name: 'School',
+          type: SubTrackType.ongoing,
+          windowStart: '2026-09-01',
+          ratePerWeek: 3,
+          weeksPerYear: 40,
+          learnsOnShabbos: false,
+          ground: const [berakhot1, peah],
+          lastChangeId: ulidE,
+        ),
+      ]);
+      final container = ProviderContainer.test(overrides: ready());
+      final commands = (await settledAsync(
+        container,
+        learningCommandsProvider,
+      )).value!;
+      final result = await commands.editSubTrack(
+        ulidD,
+        const SubTrackEdit(ground: [peah, berakhot1]),
+      );
+      expect(result, isA<CaptureSuccess>());
+      expect((result as CaptureSuccess).queued, isFalse);
+      expect(subTracks.tracksOf(c0Scope()).single.ground, const [
+        peah,
+        berakhot1,
+      ]);
+      final (scope, entry) = subTracks.entries.single;
+      expect(scope, c0Scope());
+      expect(entry.actor.uid, 'auth-uid');
+      expect(entry.actor.role, ActorRole.parent);
     });
   });
   group('ownerGovernedWriterProvider (DNI-476)', () {
