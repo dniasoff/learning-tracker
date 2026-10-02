@@ -125,8 +125,11 @@ enum NextYearAvailability {
   /// (AC-2).
   beyondPickerRange,
 
-  /// No pill: the source is not a live school-year sub-track (an ongoing
-  /// track, or an ended detail, which is read-only).
+  /// No pill: the source is not a school-year sub-track, or it is
+  /// tombstoned (ended, deleted, undone or its track removed), whose detail
+  /// is wholly read-only. A school year whose window merely passed keeps
+  /// the pill: rolling it over creates a new sub-track and never edits the
+  /// source (UJ-3: "In July the sub-track ends … He taps *Add next year*").
   notOffered,
 }
 
@@ -142,7 +145,7 @@ NextYearAvailability nextYearAvailability({
   final year = source.academicYear;
   if (source.type != SubTrackType.schoolYear ||
       year == null ||
-      isEndedSubTrack(source, today)) {
+      source.isEnded) {
     return NextYearAvailability.notOffered;
   }
   final next = year + 1;
