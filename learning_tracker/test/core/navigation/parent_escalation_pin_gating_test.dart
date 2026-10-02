@@ -114,6 +114,8 @@ const _pinGatedEscalationPaths = <String>{
   '/parent-mode/point-config',
   '/parent-mode/reward-config',
   '/parent-mode/tracks',
+  // DNI-513: the parent Change history (also refuses tutored sessions).
+  '/parent-mode/change-history',
   '/settings/lifetime',
   '/settings/lifetime/:curriculumId',
   // DNI-487 / ruling B11: Manage tutors carries the parent-only "Can edit

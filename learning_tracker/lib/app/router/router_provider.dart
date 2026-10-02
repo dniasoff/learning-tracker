@@ -5,6 +5,7 @@ import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/own_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
@@ -63,6 +64,11 @@ final routerProvider = Provider<AppRouter>((ref) {
           sub.close();
         }
       },
+    ),
+    // DNI-513: parent-only views refuse a tutored session.
+    ownSessionGuard: OwnSessionGuard(
+      isTutoredSession: () =>
+          ref.read(activeTutoredProfileSelectionProvider) != null,
     ),
     pinGuard: PinGuard(
       pinService: pinSvc,
