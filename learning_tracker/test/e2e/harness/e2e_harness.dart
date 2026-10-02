@@ -123,6 +123,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart'
     show magicLinkInitializationProvider;
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -805,6 +806,16 @@ class E2EHarness {
       // at teardown. A sub-track journey overrides this with its tracks.
       activeSubTracksProvider.overrideWith(
         (ref) => Stream.value(const <SubTrack>[]),
+      ),
+      // ── Dashboard / Learn forecast (DNI-502) ──────────────────────────────
+      // No headless journey seeds a learner state; resolving the learner
+      // scope for these sections only leaves the device-account stream
+      // loading at teardown. A forecast journey overrides these.
+      parentForecastProvider.overrideWith(
+        (ref) => const AsyncData(<CurriculumForecast>[]),
+      ),
+      learnerTodayProvider.overrideWith(
+        (ref) => const AsyncData(<CurriculumToday>[]),
       ),
     ];
   }
