@@ -242,8 +242,8 @@ final class LearnerStateEngine {
   }
 
   /// The ground of [curriculumId]'s `holdsGround` sub-tracks (AD-34), which
-  /// leaves the main track. `holdsGround` and `civilDate` are filled by
-  /// DNI-467 and DNI-466; with no sub-track neither is called.
+  /// leaves the main track. A leaf held by several sub-tracks is excluded
+  /// once (a set).
   Set<LeafRef> _heldGround(
     String curriculumId,
     LearnerStateInputs inputs,
