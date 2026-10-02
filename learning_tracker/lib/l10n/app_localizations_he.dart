@@ -386,6 +386,39 @@ class AppLocalizationsHe extends AppLocalizations {
   String get hiddenUntilEarned => 'מוסתר עד שנצבר (הפתעה)';
 
   @override
+  String get onTrackBehindPace => 'מאחורי הקצב';
+
+  @override
+  String onTrackDailyTarget(String count, String unit) {
+    return 'יעד יומי: $count $unit ליום';
+  }
+
+  @override
+  String get onTrackFinishUnknown => 'עדיין לא ידוע';
+
+  @override
+  String get onTrackLoading => 'טוען את מצב הקצב';
+
+  @override
+  String get onTrackOnTrack => 'בקצב הנכון';
+
+  @override
+  String onTrackProjectedFinish(String finish) {
+    return 'סיום משוער: $finish';
+  }
+
+  @override
+  String onTrackProjectedFinishWithDeadline(String finish, String deadline) {
+    return 'סיום משוער: $finish · יעד $deadline';
+  }
+
+  @override
+  String get onTrackTooEarly => 'מוקדם מדי לדעת';
+
+  @override
+  String get todayTargetAllCovered => 'הכול מכוסה — כל לימוד נוסף הוא בונוס.';
+
+  @override
   String get onboarding => 'הגדרה ראשונית';
 
   @override

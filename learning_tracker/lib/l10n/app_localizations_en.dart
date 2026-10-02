@@ -388,6 +388,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hiddenUntilEarned => 'Hidden until earned (surprise)';
 
   @override
+  String get onTrackBehindPace => 'Behind pace';
+
+  @override
+  String onTrackDailyTarget(String count, String unit) {
+    return 'Daily target: $count $unit/day';
+  }
+
+  @override
+  String get onTrackFinishUnknown => 'not yet known';
+
+  @override
+  String get onTrackLoading => 'Loading pace status';
+
+  @override
+  String get onTrackOnTrack => 'On track';
+
+  @override
+  String onTrackProjectedFinish(String finish) {
+    return 'Projected finish: $finish';
+  }
+
+  @override
+  String onTrackProjectedFinishWithDeadline(String finish, String deadline) {
+    return 'Projected finish: $finish · deadline $deadline';
+  }
+
+  @override
+  String get onTrackTooEarly => 'Too early to tell';
+
+  @override
+  String get todayTargetAllCovered =>
+      'All covered — any extra learning is a bonus.';
+
+  @override
   String get onboarding => 'Onboarding';
 
   @override

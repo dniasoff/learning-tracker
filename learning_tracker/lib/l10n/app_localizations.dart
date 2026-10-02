@@ -782,6 +782,60 @@ abstract class AppLocalizations {
   /// **'Hidden until earned (surprise)'**
   String get hiddenUntilEarned;
 
+  /// No description provided for @onTrackBehindPace.
+  ///
+  /// In en, this message translates to:
+  /// **'Behind pace'**
+  String get onTrackBehindPace;
+
+  /// No description provided for @onTrackDailyTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily target: {count} {unit}/day'**
+  String onTrackDailyTarget(String count, String unit);
+
+  /// No description provided for @onTrackFinishUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'not yet known'**
+  String get onTrackFinishUnknown;
+
+  /// No description provided for @onTrackLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading pace status'**
+  String get onTrackLoading;
+
+  /// No description provided for @onTrackOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'On track'**
+  String get onTrackOnTrack;
+
+  /// No description provided for @onTrackProjectedFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected finish: {finish}'**
+  String onTrackProjectedFinish(String finish);
+
+  /// No description provided for @onTrackProjectedFinishWithDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected finish: {finish} · deadline {deadline}'**
+  String onTrackProjectedFinishWithDeadline(String finish, String deadline);
+
+  /// No description provided for @onTrackTooEarly.
+  ///
+  /// In en, this message translates to:
+  /// **'Too early to tell'**
+  String get onTrackTooEarly;
+
+  /// No description provided for @todayTargetAllCovered.
+  ///
+  /// In en, this message translates to:
+  /// **'All covered — any extra learning is a bonus.'**
+  String get todayTargetAllCovered;
+
   /// No description provided for @onboarding.
   ///
   /// In en, this message translates to:
