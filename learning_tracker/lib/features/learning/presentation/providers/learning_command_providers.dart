@@ -27,6 +27,9 @@ import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
+import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart'
+    show OnlineRequiredException;
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_latest_write.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/achievement_latch_adapter.dart';
@@ -189,7 +192,8 @@ final class _DeferredGovernedIntentRepository
 /// with, the sub-track repository (DNI-497). While it is unavailable (not
 /// ready, or its provider failed) [watchAll] fails as a timeout, so the
 /// command answers onlineRequired; every other command is unaffected.
-final class _DeferredSubTrackRepository implements SubTrackRepository {
+final class _DeferredSubTrackRepository
+    implements SubTrackRepository, SubTrackLatestWrite {
   _DeferredSubTrackRepository(this._resolve);
 
   final Future<SubTrackRepository?> Function() _resolve;
@@ -224,6 +228,18 @@ final class _DeferredSubTrackRepository implements SubTrackRepository {
       throw StateError('sub-track repository unavailable');
     }
     return repository.applyGovernedChange(scope, change);
+  }
+
+  @override
+  Future<SubTrackChange?> applyGovernedChangeToLatest(
+    LearnerScope scope,
+    String subTrackId,
+    SubTrackChange? Function(SubTrack latest) build,
+  ) async {
+    if (await _repository() case final SubTrackLatestWrite writer) {
+      return writer.applyGovernedChangeToLatest(scope, subTrackId, build);
+    }
+    throw const OnlineRequiredException();
   }
 }
 
