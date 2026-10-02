@@ -225,6 +225,59 @@ void main() {
       expect(learnRow.canUndo, isFalse);
     });
 
+    test('a persisted void whose target is another void maps without '
+        'crashing, as a generic removal with its own who and when', () {
+      final rows = _rows(
+        events: [
+          historyLearn(1, minutes: 10, actor: historyChild),
+          historyVoid(2, target: 1, minutes: 30, actor: historyParent),
+          historyVoid(3, target: 2, minutes: 50, actor: historyTutor),
+        ],
+      );
+      expect(rows, hasLength(3));
+      final voidOfVoid = rows.first;
+      expect(voidOfVoid.isVoid, isTrue);
+      expect(_learning(voidOfVoid).refs, isEmpty);
+      expect(_learning(voidOfVoid).source, isNull);
+      expect(voidOfVoid.stamp.actor, historyTutor);
+      expect(voidOfVoid.stamp.at, historyAt(50));
+      expect(voidOfVoid.canUndo, isFalse);
+
+      // The first void still names the learn it removed, and a void of a
+      // void cancels nothing (countEvents): the learn stays removed.
+      expect(_learning(rows[1]).refs, ['Mishnah Berakhot 1:1']);
+      expect(rows.last.voidedBy?.actor, historyParent);
+      expect(rows.last.voidedCount, 1);
+    });
+
+    test('a void of a void resolved only by an id lookup (target off the '
+        'loaded pages) also maps as a generic removal', () {
+      final buffer = ChangeHistoryBuffer()
+        ..addChangeLogPage(
+          HistoryPage(
+            items: const [],
+            next: null,
+            exhausted: true,
+            watermark: null,
+          ),
+        )
+        ..addLearningEventPage(
+          HistoryPage(
+            items: [historyVoid(3, target: 2, minutes: 50)],
+            next: null,
+            exhausted: true,
+            watermark: null,
+          ),
+        )
+        ..addLookups([historyVoid(2, target: 1, minutes: 30)]);
+      final row = ChangeHistoryRowMapper(
+        settingsHistory: _ny,
+      ).map(buffer.visibleItems(), buffer).single;
+      expect(row.isVoid, isTrue);
+      expect(_learning(row).refs, isEmpty);
+      expect(_learning(row).source, isNull);
+    });
+
     test('E-2 a void whose target is unknown and an actor with no display '
         'name still map, keeping role and time', () {
       const anonymous = Actor(uid: 'x', role: ActorRole.tutor, displayName: '');
