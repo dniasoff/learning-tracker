@@ -4595,6 +4595,174 @@ abstract class AppLocalizations {
   /// **'All done for today!'**
   String get allDoneForToday;
 
+  /// No description provided for @mishnaHistoryActionChangeDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date'**
+  String get mishnaHistoryActionChangeDate;
+
+  /// No description provided for @mishnaHistoryActionChangePlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Change place'**
+  String get mishnaHistoryActionChangePlace;
+
+  /// No description provided for @mishnaHistoryActionChangeSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Change source'**
+  String get mishnaHistoryActionChangeSource;
+
+  /// No description provided for @mishnaHistoryActionRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get mishnaHistoryActionRemove;
+
+  /// No description provided for @mishnaHistoryActionsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Change or remove'**
+  String get mishnaHistoryActionsHint;
+
+  /// No description provided for @mishnaHistoryActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change this entry'**
+  String get mishnaHistoryActionsTitle;
+
+  /// No description provided for @mishnaHistoryBeforeTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Before tracking'**
+  String get mishnaHistoryBeforeTracking;
+
+  /// No description provided for @mishnaHistoryChoosePlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to'**
+  String get mishnaHistoryChoosePlace;
+
+  /// No description provided for @mishnaHistoryChooseSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose source'**
+  String get mishnaHistoryChooseSource;
+
+  /// No description provided for @mishnaHistoryCorrectionChildLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Only a parent can change this. You can remove it instead.'**
+  String get mishnaHistoryCorrectionChildLimit;
+
+  /// No description provided for @mishnaHistoryCorrectionRolledBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save that change — the entry is back as it was.'**
+  String get mishnaHistoryCorrectionRolledBack;
+
+  /// No description provided for @mishnaHistoryEventCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning events: {count}'**
+  String mishnaHistoryEventCount(int count);
+
+  /// No description provided for @mishnaHistoryEventNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'#{number}'**
+  String mishnaHistoryEventNumber(int number);
+
+  /// No description provided for @mishnaHistoryFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeats never add to goal progress — they\'re kept here as your record.'**
+  String get mishnaHistoryFooter;
+
+  /// No description provided for @mishnaHistoryLearnt.
+  ///
+  /// In en, this message translates to:
+  /// **'Learnt'**
+  String get mishnaHistoryLearnt;
+
+  /// No description provided for @mishnaHistoryLockIgnored.
+  ///
+  /// In en, this message translates to:
+  /// **'kept, not counted — recorded during Shabbos/Yom Tov'**
+  String get mishnaHistoryLockIgnored;
+
+  /// No description provided for @mishnaHistoryNewestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Every time · newest first'**
+  String get mishnaHistoryNewestFirst;
+
+  /// No description provided for @mishnaHistoryNotLearntYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not learnt yet'**
+  String get mishnaHistoryNotLearntYet;
+
+  /// No description provided for @mishnaHistoryOpenText.
+  ///
+  /// In en, this message translates to:
+  /// **'Open text'**
+  String get mishnaHistoryOpenText;
+
+  /// No description provided for @mishnaHistoryRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed'**
+  String get mishnaHistoryRemoved;
+
+  /// No description provided for @mishnaHistorySaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get mishnaHistorySaving;
+
+  /// No description provided for @mishnaHistorySourceEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (ended)'**
+  String mishnaHistorySourceEnded(String name);
+
+  /// No description provided for @mishnaHistorySourceHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get mishnaHistorySourceHome;
+
+  /// No description provided for @mishnaHistorySourceUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended sub-track'**
+  String get mishnaHistorySourceUnknown;
+
+  /// No description provided for @mishnaHistoryTagCatchUp.
+  ///
+  /// In en, this message translates to:
+  /// **'catch-up'**
+  String get mishnaHistoryTagCatchUp;
+
+  /// No description provided for @mishnaHistoryTagChazara.
+  ///
+  /// In en, this message translates to:
+  /// **'chazara'**
+  String get mishnaHistoryTagChazara;
+
+  /// No description provided for @mishnaHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mishna history'**
+  String get mishnaHistoryTitle;
+
+  /// No description provided for @mishnaHistoryUnreadableRows.
+  ///
+  /// In en, this message translates to:
+  /// **'Some records couldn\'t be read.'**
+  String get mishnaHistoryUnreadableRows;
+
   /// No description provided for @missedReview.
   ///
   /// In en, this message translates to:

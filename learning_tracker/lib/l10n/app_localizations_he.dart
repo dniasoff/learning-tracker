@@ -2572,6 +2572,99 @@ class AppLocalizationsHe extends AppLocalizations {
   String get allDoneForToday => 'סיימתם להיום!';
 
   @override
+  String get mishnaHistoryActionChangeDate => 'שינוי תאריך';
+
+  @override
+  String get mishnaHistoryActionChangePlace => 'שינוי מקום';
+
+  @override
+  String get mishnaHistoryActionChangeSource => 'שינוי מקור';
+
+  @override
+  String get mishnaHistoryActionRemove => 'הסרה';
+
+  @override
+  String get mishnaHistoryActionsHint => 'שינוי או הסרה';
+
+  @override
+  String get mishnaHistoryActionsTitle => 'שינוי הרשומה';
+
+  @override
+  String get mishnaHistoryBeforeTracking => 'לפני המעקב';
+
+  @override
+  String get mishnaHistoryChoosePlace => 'העברה אל';
+
+  @override
+  String get mishnaHistoryChooseSource => 'בחירת מקור';
+
+  @override
+  String get mishnaHistoryCorrectionChildLimit =>
+      'רק הורה יכול לשנות זאת. אפשר להסיר את הרשומה.';
+
+  @override
+  String get mishnaHistoryCorrectionRolledBack =>
+      'לא ניתן היה לשמור את השינוי — הרשומה חזרה למצבה הקודם.';
+
+  @override
+  String mishnaHistoryEventCount(int count) {
+    return 'אירועי למידה: $count';
+  }
+
+  @override
+  String mishnaHistoryEventNumber(int number) {
+    return '#$number';
+  }
+
+  @override
+  String get mishnaHistoryFooter =>
+      'חזרות אינן מוסיפות להתקדמות ביעד — הן נשמרות כאן כתיעוד שלך.';
+
+  @override
+  String get mishnaHistoryLearnt => 'נלמד';
+
+  @override
+  String get mishnaHistoryLockIgnored => 'נשמר, לא נספר — נרשם בשבת/יום טוב';
+
+  @override
+  String get mishnaHistoryNewestFirst => 'כל הפעמים · מהחדש לישן';
+
+  @override
+  String get mishnaHistoryNotLearntYet => 'עוד לא נלמד';
+
+  @override
+  String get mishnaHistoryOpenText => 'פתיחת הטקסט';
+
+  @override
+  String get mishnaHistoryRemoved => 'הוסר';
+
+  @override
+  String get mishnaHistorySaving => 'שומר…';
+
+  @override
+  String mishnaHistorySourceEnded(String name) {
+    return '$name (הסתיים)';
+  }
+
+  @override
+  String get mishnaHistorySourceHome => 'בית';
+
+  @override
+  String get mishnaHistorySourceUnknown => 'תת-מסלול שהסתיים';
+
+  @override
+  String get mishnaHistoryTagCatchUp => 'השלמה';
+
+  @override
+  String get mishnaHistoryTagChazara => 'חזרה';
+
+  @override
+  String get mishnaHistoryTitle => 'היסטוריית משנה';
+
+  @override
+  String get mishnaHistoryUnreadableRows => 'חלק מהרשומות לא נקראו.';
+
+  @override
   String missedReview(int count) {
     return 'חזרה שהוחמצה ($count)';
   }

@@ -2602,6 +2602,100 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allDoneForToday => 'All done for today!';
 
   @override
+  String get mishnaHistoryActionChangeDate => 'Change date';
+
+  @override
+  String get mishnaHistoryActionChangePlace => 'Change place';
+
+  @override
+  String get mishnaHistoryActionChangeSource => 'Change source';
+
+  @override
+  String get mishnaHistoryActionRemove => 'Remove';
+
+  @override
+  String get mishnaHistoryActionsHint => 'Change or remove';
+
+  @override
+  String get mishnaHistoryActionsTitle => 'Change this entry';
+
+  @override
+  String get mishnaHistoryBeforeTracking => 'Before tracking';
+
+  @override
+  String get mishnaHistoryChoosePlace => 'Move to';
+
+  @override
+  String get mishnaHistoryChooseSource => 'Choose source';
+
+  @override
+  String get mishnaHistoryCorrectionChildLimit =>
+      'Only a parent can change this. You can remove it instead.';
+
+  @override
+  String get mishnaHistoryCorrectionRolledBack =>
+      'Couldn\'t save that change — the entry is back as it was.';
+
+  @override
+  String mishnaHistoryEventCount(int count) {
+    return 'Learning events: $count';
+  }
+
+  @override
+  String mishnaHistoryEventNumber(int number) {
+    return '#$number';
+  }
+
+  @override
+  String get mishnaHistoryFooter =>
+      'Repeats never add to goal progress — they\'re kept here as your record.';
+
+  @override
+  String get mishnaHistoryLearnt => 'Learnt';
+
+  @override
+  String get mishnaHistoryLockIgnored =>
+      'kept, not counted — recorded during Shabbos/Yom Tov';
+
+  @override
+  String get mishnaHistoryNewestFirst => 'Every time · newest first';
+
+  @override
+  String get mishnaHistoryNotLearntYet => 'Not learnt yet';
+
+  @override
+  String get mishnaHistoryOpenText => 'Open text';
+
+  @override
+  String get mishnaHistoryRemoved => 'Removed';
+
+  @override
+  String get mishnaHistorySaving => 'Saving…';
+
+  @override
+  String mishnaHistorySourceEnded(String name) {
+    return '$name (ended)';
+  }
+
+  @override
+  String get mishnaHistorySourceHome => 'Home';
+
+  @override
+  String get mishnaHistorySourceUnknown => 'Ended sub-track';
+
+  @override
+  String get mishnaHistoryTagCatchUp => 'catch-up';
+
+  @override
+  String get mishnaHistoryTagChazara => 'chazara';
+
+  @override
+  String get mishnaHistoryTitle => 'Mishna history';
+
+  @override
+  String get mishnaHistoryUnreadableRows => 'Some records couldn\'t be read.';
+
+  @override
   String missedReview(int count) {
     return 'Missed review ($count)';
   }
