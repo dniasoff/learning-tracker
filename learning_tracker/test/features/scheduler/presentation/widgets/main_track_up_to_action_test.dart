@@ -3,11 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/main_track_up_to_action.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../../helpers/pump_app.dart';
 
@@ -83,7 +85,10 @@ void main() {
     await tester.pumpWidget(
       pumpApp(
         overrides: [
-          ...learnerStateOverrides(scope: c0Scope()),
+          ...learnerStateOverrides(
+            scope: c0Scope(),
+            commands: FakeLearningCommands(),
+          ),
           allDailyTasksProvider.overrideWith(
             (ref) async => [
               _task(
@@ -107,5 +112,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Mishnayos · up to…'), findsOneWidget);
     expect(find.text('Bavli · up to…'), findsOneWidget);
+  });
+
+  testWidgets('absent while the session has no learning commands', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: [
+          ...learnerStateOverrides(scope: c0Scope()),
+          learningCommandsProvider.overrideWith((ref) async => null),
+          allDailyTasksProvider.overrideWith(
+            (ref) async => [
+              _task(
+                CurriculumId.mishnayos,
+                'm1',
+                DailyTaskPriority.newLearning,
+              ),
+            ],
+          ),
+        ],
+        child: const Scaffold(body: MainTrackUpToActions()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Up to…'), findsNothing);
   });
 }
