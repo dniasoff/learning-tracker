@@ -31,8 +31,6 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -80,16 +78,6 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 class _NoGoals extends Fake implements GoalRepository {
   @override
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async => [];
-}
-
-class _RecordingBookmarks extends Fake implements BookmarkRepository {
-  final advanced = <String>[];
-
-  @override
-  Future<void> advanceBookmark({
-    required CurriculumId curriculumId,
-    required String completedSefariaRef,
-  }) async => advanced.add(completedSefariaRef);
 }
 
 class _FontSize extends FontSizeNotifier {
@@ -170,7 +158,6 @@ final class _Flow {
   final port = InMemoryLearningWritePort();
   late final DefaultLearningCommands commands;
   final legacy = FakeCompletionRepository();
-  final bookmarks = _RecordingBookmarks();
   final router = _MockStackRouter();
 
   List<LearningEvent> get written => [for (final c in port.chunks) ...c.events];
@@ -217,7 +204,6 @@ final class _Flow {
       ),
       completionRepositoryProvider.overrideWithValue(legacy),
       goalRepositoryProvider.overrideWithValue(_NoGoals()),
-      bookmarkRepositoryProvider.overrideWithValue(bookmarks),
       analyticsServiceProvider.overrideWithValue(const NullAnalyticsService()),
       learningCommandsProvider.overrideWith((ref) async => commands),
     ];
@@ -267,7 +253,6 @@ void main() {
     expect(event.stage, 1);
     expect(flow.awards.single.eventId, event.id, reason: 'AD-50 pts_');
     expect(flow.legacy.markedRequests, isEmpty, reason: 'no legacy writer');
-    expect(flow.bookmarks.advanced, [_ref1], reason: 'planner moves on');
 
     final route =
         verify(() => flow.router.replace(captureAny())).captured.single

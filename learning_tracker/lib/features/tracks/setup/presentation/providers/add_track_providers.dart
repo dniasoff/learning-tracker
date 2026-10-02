@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/add_track_action_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/add_track_action_repository.dart';
@@ -16,7 +15,6 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
   return TrackCreationService(
     actionRepository: ref.watch(addTrackActionRepositoryProvider),
     wizardService: ref.watch(learningProcessWizardServiceProvider),
-    bookmarkRepository: ref.watch(bookmarkRepositoryProvider),
     analytics: ref.watch(analyticsServiceProvider),
   );
 });

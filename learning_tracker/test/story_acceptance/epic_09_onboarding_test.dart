@@ -10,7 +10,6 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -57,7 +56,6 @@ void main() {
       addTearDown(commands.dispose);
       final recorder = BeforeTrackingRecorder(
         contentRepository: _Mishnayos(),
-        bookmarkRepository: _NoBookmarks(),
         commands: () async => commands,
         events: () async => const [],
       );
@@ -110,5 +108,3 @@ class _Mishnayos extends Fake implements ContentRepository {
     _item('Mishnah Berakhot 1:1', 2, ['Zeraim', 'Mishnah Berakhot', '1'], true),
   ];
 }
-
-class _NoBookmarks extends Fake implements BookmarkRepository {}

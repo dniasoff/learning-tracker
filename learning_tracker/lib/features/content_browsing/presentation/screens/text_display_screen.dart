@@ -22,7 +22,6 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -794,9 +793,6 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       if (recorded.isNotEmpty) {
         _recordedKeys.addAll(recorded);
         _applyOptimistic(recorded);
-        // Legacy planner position (R4, retired by DNI-478): the bookmark
-        // still advances so today's list moves on exactly as before.
-        await _advanceBookmark(task, markRefs.last);
       }
 
       if (mounted) {
@@ -879,25 +875,6 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
   }
 
   LearningCommands? _commands;
-
-  /// Moves the legacy reading-order bookmark past [completedRef]; a failure
-  /// is logged and never undoes the recorded learning.
-  Future<void> _advanceBookmark(DailyTask task, String completedRef) async {
-    try {
-      await ref
-          .read(bookmarkRepositoryProvider)
-          .advanceBookmark(
-            curriculumId: task.curriculumId,
-            completedSefariaRef: completedRef,
-          );
-    } on Exception catch (e, st) {
-      AppLogger.instance.error(
-        event: 'completion_bookmark_advance_failed',
-        exception: e,
-        stackTrace: st,
-      );
-    }
-  }
 
   // W6.15/W6.17 / WS3.3e (DEC-21): Returns true only when the current user
   // is *actively viewing a talmid's profile context* (i.e. has passed the

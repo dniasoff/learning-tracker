@@ -19,9 +19,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -108,18 +106,6 @@ class _Content implements ContentRepository {
   }) async => null;
 }
 
-class _Bookmarks extends Fake implements BookmarkRepository {
-  @override
-  Future<BookmarkEntity> setBookmark({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async => BookmarkEntity(
-    curriculumId: curriculumId,
-    sefariaRef: sefariaRef,
-    updatedAt: DateTime.utc(2026, 9, 1),
-  );
-}
-
 class _FlatPoints implements PointsAmountReader {
   @override
   Future<int> pointsAmount(
@@ -168,7 +154,6 @@ final class _Capture {
     );
     recorder = BeforeTrackingRecorder(
       contentRepository: content,
-      bookmarkRepository: _Bookmarks(),
       commands: () async => commands,
       events: () async => written,
     );

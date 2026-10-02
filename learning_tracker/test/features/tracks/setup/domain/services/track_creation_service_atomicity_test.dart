@@ -7,8 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
@@ -44,43 +42,8 @@ class _NoPrograms implements ProfileProgramRepository {
       fail('Add track writes the program inside its action');
 }
 
-class _MemoryBookmarks implements BookmarkRepository {
-  BookmarkEntity? value;
-  var writes = 0;
-
-  @override
-  Future<BookmarkEntity?> getBookmark({
-    required CurriculumId curriculumId,
-  }) async => value;
-
-  @override
-  Future<BookmarkEntity> setBookmark({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async {
-    writes++;
-    return value = BookmarkEntity(
-      curriculumId: curriculumId,
-      sefariaRef: sefariaRef,
-      updatedAt: DateTimeFactory.nowUtc(),
-    );
-  }
-
-  @override
-  Future<void> advanceBookmark({
-    required CurriculumId curriculumId,
-    required String completedSefariaRef,
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<BookmarkEntity> initializeBookmark({
-    required CurriculumId curriculumId,
-  }) async => throw UnimplementedError();
-}
-
 TrackCreationService _buildService({
   required RecordingAddTrackActions actions,
-  BookmarkRepository? bookmarkRepository,
   AnalyticsService? analytics,
 }) => TrackCreationService(
   actionRepository: actions,
@@ -89,7 +52,6 @@ TrackCreationService _buildService({
     learningProgramRepo: LearningProgramRepository.instance,
     profileProgramRepository: _NoPrograms(),
   ),
-  bookmarkRepository: bookmarkRepository ?? _MemoryBookmarks(),
   analytics: analytics,
 );
 
@@ -126,14 +88,10 @@ void main() {
     );
   });
 
-  test('a failed action writes no bookmark and propagates', () async {
+  test('a failed action propagates', () async {
     final actions = RecordingAddTrackActions()..failWith = Exception('x');
-    final bookmarks = _MemoryBookmarks();
     await expectLater(
-      _buildService(
-        actions: actions,
-        bookmarkRepository: bookmarks,
-      ).createTrack(
+      _buildService(actions: actions).createTrack(
         result: const AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
@@ -144,7 +102,6 @@ void main() {
       ),
       throwsException,
     );
-    expect(bookmarks.writes, 0);
   });
 
   for (final (label, startingRef) in [
@@ -177,14 +134,10 @@ void main() {
   }
 
   test(
-    'F1: program creation writes the starting bookmark through the repository',
+    'program creation stores its governed starting reference in the action',
     () async {
       final actions = RecordingAddTrackActions();
-      final bookmarks = _MemoryBookmarks();
-      await _buildService(
-        actions: actions,
-        bookmarkRepository: bookmarks,
-      ).createTrack(
+      await _buildService(actions: actions).createTrack(
         result: const AddTrackResult(
           curriculumId: CurriculumId.bavli,
           label: 'Bavli',
@@ -198,38 +151,24 @@ void main() {
         actions.plans.single.program?.trackingStartRef,
         'Mishnah Berakhot 2:1',
       );
-      expect(
-        (await bookmarks.getBookmark(
-          curriculumId: CurriculumId.bavli,
-        ))?.sefariaRef,
-        'Mishnah Berakhot 2:1',
-      );
     },
   );
 
-  test(
-    'a re-add of a removed track keeps its prior program, so no '
-    'starting bookmark is written for the flow\'s ref (ruling B13)',
-    () async {
-      final actions = RecordingAddTrackActions()..reAdded = true;
-      final bookmarks = _MemoryBookmarks();
-      await _buildService(
-        actions: actions,
-        bookmarkRepository: bookmarks,
-      ).createTrack(
-        result: const AddTrackResult(
-          curriculumId: CurriculumId.bavli,
-          label: 'Bavli',
-          programId: 99,
-          studyDays: {1: 'study'},
-          startingRef: 'Mishnah Berakhot 2:1',
-        ),
-      );
+  test('a re-add keeps its prior program and ignores the flow\'s starting ref '
+      '(ruling B13)', () async {
+    final actions = RecordingAddTrackActions()..reAdded = true;
+    await _buildService(actions: actions).createTrack(
+      result: const AddTrackResult(
+        curriculumId: CurriculumId.bavli,
+        label: 'Bavli',
+        programId: 99,
+        studyDays: {1: 'study'},
+        startingRef: 'Mishnah Berakhot 2:1',
+      ),
+    );
 
-      expect(actions.plans, hasLength(1));
-      expect(bookmarks.writes, 0);
-    },
-  );
+    expect(actions.plans, hasLength(1));
+  });
 
   group('an action queued offline (AD-54)', () {
     const programResult = AddTrackResult(
@@ -240,73 +179,69 @@ void main() {
       startingRef: 'Mishnah Berakhot 2:1',
     );
 
-    test('defers the bookmark and track-added event until the server '
-        'confirms the track', () async {
-      final confirmation = Completer<bool>();
-      final actions = RecordingAddTrackActions()
-        ..queuedConfirmation = confirmation;
-      final bookmarks = _MemoryBookmarks();
-      final analytics = FakeAnalyticsService();
+    test(
+      'defers the track-added event until the server confirms the track',
+      () async {
+        final confirmation = Completer<bool>();
+        final actions = RecordingAddTrackActions()
+          ..queuedConfirmation = confirmation;
+        final analytics = FakeAnalyticsService();
 
-      await _buildService(
-        actions: actions,
-        bookmarkRepository: bookmarks,
-        analytics: analytics,
-      ).createTrack(result: programResult);
+        await _buildService(
+          actions: actions,
+          analytics: analytics,
+        ).createTrack(result: programResult);
 
-      expect(actions.plans, hasLength(1));
-      expect(bookmarks.writes, 0);
-      expect(analytics.countOf(AnalyticsEvent.trackAdded), 0);
+        expect(actions.plans, hasLength(1));
+        expect(analytics.countOf(AnalyticsEvent.trackAdded), 0);
 
-      confirmation.complete(true);
-      await pumpEventQueue();
+        confirmation.complete(true);
+        await pumpEventQueue();
 
-      expect(bookmarks.writes, 1);
-      expect(analytics.countOf(AnalyticsEvent.trackAdded), 1);
-    });
-
-    test('a queued action the server later refuses leaves no bookmark and '
-        'no track-added event', () async {
-      final confirmation = Completer<bool>();
-      final actions = RecordingAddTrackActions()
-        ..queuedConfirmation = confirmation;
-      final bookmarks = _MemoryBookmarks();
-      final analytics = FakeAnalyticsService();
-
-      await _buildService(
-        actions: actions,
-        bookmarkRepository: bookmarks,
-        analytics: analytics,
-      ).createTrack(result: programResult);
-      confirmation.complete(false);
-      await pumpEventQueue();
-
-      expect(bookmarks.writes, 0);
-      expect(analytics.countOf(AnalyticsEvent.trackAdded), 0);
-    });
-  });
-
-  test('a saved (not queued) action writes the bookmark and fires '
-      'track-added before createTrack returns', () async {
-    final bookmarks = _MemoryBookmarks();
-    final analytics = FakeAnalyticsService();
-    await _buildService(
-      actions: RecordingAddTrackActions(),
-      bookmarkRepository: bookmarks,
-      analytics: analytics,
-    ).createTrack(
-      result: const AddTrackResult(
-        curriculumId: CurriculumId.bavli,
-        label: 'Bavli',
-        programId: 99,
-        studyDays: {1: 'study'},
-        startingRef: 'Mishnah Berakhot 2:1',
-      ),
+        expect(analytics.countOf(AnalyticsEvent.trackAdded), 1);
+      },
     );
-    expect(bookmarks.writes, 1);
-    await pumpEventQueue();
-    expect(analytics.countOf(AnalyticsEvent.trackAdded), 1);
+
+    test(
+      'a queued action the server later refuses leaves no track-added event',
+      () async {
+        final confirmation = Completer<bool>();
+        final actions = RecordingAddTrackActions()
+          ..queuedConfirmation = confirmation;
+        final analytics = FakeAnalyticsService();
+
+        await _buildService(
+          actions: actions,
+          analytics: analytics,
+        ).createTrack(result: programResult);
+        confirmation.complete(false);
+        await pumpEventQueue();
+
+        expect(analytics.countOf(AnalyticsEvent.trackAdded), 0);
+      },
+    );
   });
+
+  test(
+    'a saved (not queued) action fires track-added before createTrack returns',
+    () async {
+      final analytics = FakeAnalyticsService();
+      await _buildService(
+        actions: RecordingAddTrackActions(),
+        analytics: analytics,
+      ).createTrack(
+        result: const AddTrackResult(
+          curriculumId: CurriculumId.bavli,
+          label: 'Bavli',
+          programId: 99,
+          studyDays: {1: 'study'},
+          startingRef: 'Mishnah Berakhot 2:1',
+        ),
+      );
+      await pumpEventQueue();
+      expect(analytics.countOf(AnalyticsEvent.trackAdded), 1);
+    },
+  );
 
   test(
     'stages come from the wizard result when the flow supplies one',

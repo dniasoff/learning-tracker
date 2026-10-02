@@ -3,7 +3,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -26,8 +25,6 @@ class _Goals extends Mock implements GoalRepository {}
 
 class _Programs extends Mock implements ProfileProgramRepository {}
 
-class _Bookmarks extends Mock implements BookmarkRepository {}
-
 class _StudyDays implements StudyDayWriteRepository {
   Map<int, DayType>? last;
 
@@ -48,7 +45,6 @@ TrackCreationService _creationService(RecordingAddTrackActions actions) =>
         learningProgramRepo: LearningProgramRepository.instance,
         profileProgramRepository: _Programs(),
       ),
-      bookmarkRepository: _Bookmarks(),
     );
 
 void main() {

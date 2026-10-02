@@ -13,8 +13,6 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
@@ -99,23 +97,6 @@ class _Content extends Fake implements ContentRepository {
   @override
   Future<List<ContentItem>> getContentForCurriculum(CurriculumId id) async =>
       _items;
-}
-
-class _Bookmarks extends Fake implements BookmarkRepository {
-  final set = <String>[];
-
-  @override
-  Future<BookmarkEntity> setBookmark({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async {
-    set.add(sefariaRef);
-    return BookmarkEntity(
-      curriculumId: curriculumId,
-      sefariaRef: sefariaRef,
-      updatedAt: DateTime.utc(2026, 9, 1),
-    );
-  }
 }
 
 LearningEvent _learn(
@@ -218,20 +199,17 @@ void main() {
 
   group('BeforeTrackingRecorder', () {
     late FakeLearningCommands commands;
-    late _Bookmarks bookmarks;
     late List<LearningEvent> events;
 
     BeforeTrackingRecorder recorder({bool noLearner = false}) =>
         BeforeTrackingRecorder(
           contentRepository: _Content(),
-          bookmarkRepository: bookmarks,
           commands: () async => noLearner ? null : commands,
           events: () async => events,
         );
 
     setUp(() {
       commands = FakeLearningCommands();
-      bookmarks = _Bookmarks();
       events = [];
     });
     tearDown(() => commands.dispose());
@@ -260,26 +238,7 @@ void main() {
       },
     );
 
-    test('a recorded batch moves the legacy bookmark to the first leaf not '
-        'yet learnt', () async {
-      events = [
-        _learn(
-          '01ARZ3NDEKTSV4RRFFQ69G0001',
-          'Mishnah Peah 1:1',
-          state: DateState.dated,
-        ),
-      ];
-      final result = await recorder().record(
-        curriculumId: _m,
-        selections: const [
-          HierarchySelection(level1: 'Zeraim', level2: 'Berakhot'),
-        ],
-      );
-      expect(bookmarks.set, ['Mishnah Shabbat 1:1']);
-      expect(result.bookmarkSefariaRef, 'Mishnah Shabbat 1:1');
-    });
-
-    test('a locked or failed capture moves no bookmark', () async {
+    test('a failed capture is rejected', () async {
       commands.nextResult = const CaptureResult.rejected(
         CaptureRejection.notSaved,
       );
@@ -289,17 +248,15 @@ void main() {
       );
       expect(result.capture, isA<CaptureRejected>());
       expect(result.eventCount, 0);
-      expect(bookmarks.set, isEmpty);
     });
 
-    test('recordScopes never moves the bookmark', () async {
+    test('recordScopes captures a selected node', () async {
       final result = await recorder().recordScopes(
         curriculumId: _m,
         scopes: const [(level: 1, unitId: 'Moed')],
       );
       expect(result.capture, isA<CaptureSuccess>());
       expect(result.itemCount, 1);
-      expect(bookmarks.set, isEmpty);
       expect(commands.calls.single.args['nodes'], [
         NodeEntry(level: _level(1), ref: 'Seder Moed'),
       ]);
