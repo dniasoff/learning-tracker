@@ -69,13 +69,13 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
   var _phase = _Phase.selection;
   final _selections = <HierarchySelection>{};
 
-  /// Leaf sefariaRefs that were pre-ticked because they already exist in the DB.
-  /// Unticking one of these triggers an expunge call (B8).
-  final _preTickedRefs = <String>{};
-
-  /// The leaf selections added by the pre-tick, which are already recorded
-  /// and are not captured again.
-  final _preTickedSelections = <HierarchySelection>{};
+  /// The leaves that are recorded "before tracking" right now, by
+  /// sefariaRef, each with the leaf selection the pre-tick (B7) added for it.
+  ///
+  /// Unticking one of these un-learns it (B8) and drops it from this map, so
+  /// re-ticking it captures it again; confirming never re-captures a leaf
+  /// still in this map.
+  final _preTicked = <String, HierarchySelection>{};
 
   /// Full (scope-applied) content list for this curriculum. Loaded once on
   /// open — used both to map pre-ticked refs to selections and to compute the
@@ -123,25 +123,20 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       if (completedRefs.isEmpty) return;
 
       // Build pre-ticked leaf-level selections for every already-completed ref.
-      final preTickedSelections = <HierarchySelection>{};
-      for (final item in allItems) {
-        if (!item.isLeaf) continue;
-        if (completedRefs.contains(item.sefariaRef)) {
-          preTickedSelections.add(
-            HierarchySelection(
+      final preTicked = <String, HierarchySelection>{
+        for (final item in allItems)
+          if (item.isLeaf && completedRefs.contains(item.sefariaRef))
+            item.sefariaRef: HierarchySelection(
               level1: item.level1,
               level2: item.level2,
               level3: item.level3,
               level4: item.level4,
             ),
-          );
-          _preTickedRefs.add(item.sefariaRef);
-        }
-      }
+      };
 
-      _preTickedSelections.addAll(preTickedSelections);
-      if (mounted && preTickedSelections.isNotEmpty) {
-        setState(() => _selections.addAll(preTickedSelections));
+      _preTicked.addAll(preTicked);
+      if (mounted && preTicked.isNotEmpty) {
+        setState(() => _selections.addAll(preTicked.values));
       }
     } catch (e, st) {
       // AUD-onboarding-11 (EH-3): non-fatal -- if pre-tick loading fails just
@@ -282,9 +277,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             return true;
           })
           .map((leaf) => leaf.sefariaRef)
-          .where(_preTickedRefs.contains)
+          .where(_preTicked.containsKey)
           .toList();
-    } else if (item.isLeaf && _preTickedRefs.contains(item.sefariaRef)) {
+    } else if (item.isLeaf && _preTicked.containsKey(item.sefariaRef)) {
       // Slow path: item itself is a leaf.
       refs = [item.sefariaRef];
     } else {
@@ -306,6 +301,15 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     // B8 (AD-31): ONE un-learn covering every un-ticked ref of this user
     // action. A node event covering part of them is voided and re-issued as
     // Before-tracking events for the rest by the command itself.
+    //
+    // The refs stop counting as recorded as soon as they are unticked, so a
+    // re-tick before Confirm captures them again instead of being filtered
+    // out as "already recorded" after their events were voided. A failed
+    // un-learn leaves them recorded, so they go back.
+    final unticked = {
+      for (final r in refs)
+        if (_preTicked.remove(r) case final sel?) r: sel,
+    };
     var failed = false;
     try {
       final result = await ref
@@ -320,6 +324,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         stackTrace: st,
       );
     }
+    if (failed) _preTicked.addAll(unticked);
 
     // AUD-onboarding-01 (SM-4): the await above may outlive this screen
     // (backgrounding, popping mid-expunge) — touching ref/context below
@@ -397,13 +402,15 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     setState(() => _phase = _Phase.processing);
 
     try {
-      // One before_tracking capture for the whole selection (R10).
+      // One before_tracking capture for the whole selection (R10), less the
+      // leaves still recorded from before this screen opened.
+      final recorded = _preTicked.values.toSet();
       final result = await ref
           .read(beforeTrackingRecorderProvider)
           .record(
             curriculumId: widget.curriculumId,
             selections: _selections
-                .where((sel) => !_preTickedSelections.contains(sel))
+                .where((sel) => !recorded.contains(sel))
                 .toList(),
           );
 
