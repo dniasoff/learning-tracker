@@ -2843,7 +2843,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
+    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב, מ-10 דקות לפני הדלקת נרות ועד 10 דקות אחרי צאת הכוכבים לפי המיקום של הלומד.';
   }
 
   @override
@@ -2893,6 +2893,14 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get sacredTimeLocationDetectErrorGeneric =>
       'לא ניתן לזהות מיקום. נסו שוב, או בחרו עיר במקום.';
+
+  @override
+  String get sacredTimeSettingsNotSaved =>
+      'לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.';
+
+  @override
+  String get sacredTimeSettingsUnavailable =>
+      'ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.';
 
   @override
   String get newPasswordLabel => 'סיסמה חדשה';

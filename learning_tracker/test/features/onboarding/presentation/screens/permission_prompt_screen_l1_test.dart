@@ -8,8 +8,9 @@
 //   • Tapping "Allow" on the Notifications card calls
 //     notificationServiceProvider.requestPermission().
 //   • Granted path: granted icon shown; denied path: denied icon shown.
-//   • Tapping "Allow" on the Location card calls
-//     sacredLocationProvider.notifier.detect().
+//   • Tapping "Allow" on the Location card runs the learner-settings
+//     editor's detect (DNI-481: a fix is written onto the active learner as
+//     a governed learnerSettings change).
 //   • Location granted shows granted icon; denied shows denied icon.
 //   • Primary CTA ("Done"/"Start Learning") calls context.maybePop().
 //   • "Skip for now" calls context.maybePop().
@@ -32,7 +33,9 @@ import 'package:learning_tracker/features/sacred_time/data/services/location_ser
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart'
+    show locationServiceProvider;
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
@@ -42,24 +45,29 @@ import '../../../../helpers/pump_app.dart';
 class _MockNotificationGateway extends Mock implements NotificationGateway {}
 
 class _FakeLocationService extends LocationService {
-  _FakeLocationService({required this.permissionGranted});
+  _FakeLocationService({required this.permissionGranted, this.detect});
 
   final bool permissionGranted;
 
+  /// The canned detect; null fails the test if called.
+  final Future<LocationFetchResult> Function()? detect;
+
   @override
   Future<bool> hasPermission() async => permissionGranted;
+
+  @override
+  Future<LocationFetchResult> detectCurrent() => detect!();
 }
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
-// ── Fake SacredLocationNotifier ───────────────────────────────────────────────
+// ── Canned location detect ──────────────────────────────────────────────────
 //
-// We cannot easily mock the *notifier* because sacredLocationProvider is a
-// $NotifierProvider and overrideWith() requires providing a real notifier
-// instance. Instead we use a minimal subclass that delegates detect() to an
-// injected closure, avoiding real geolocator calls.
+// The screen detects through `learnerSettingsEditorProvider`; the stub feeds
+// its LocationService a canned result (no real geolocator) and the editor
+// has no learner commands, so nothing is written.
 
 // ── Hebrew Terms / nusach overrides ─────────────────────────────────────────────
 
@@ -83,16 +91,10 @@ class _FixedVariant extends CurrentTransliterationVariant {
   TransliterationVariant build() => _variant;
 }
 
-class _FakeSacredLocationNotifier extends SacredLocationNotifier {
-  _FakeSacredLocationNotifier(this._detectResult);
+class _FakeSacredLocationNotifier {
+  _FakeSacredLocationNotifier(this.detect);
 
-  final Future<LocationFetchResult> Function() _detectResult;
-
-  @override
-  SacredLocation? build() => null; // no SharedPreferences in tests
-
-  @override
-  Future<LocationFetchResult> detect() => _detectResult();
+  final Future<LocationFetchResult> Function() detect;
 }
 
 // ── Build helper ──────────────────────────────────────────────────────────────
@@ -114,7 +116,17 @@ Widget _buildApp({
       locationServiceProvider.overrideWithValue(
         _FakeLocationService(permissionGranted: locationPermissionGranted),
       ),
-      sacredLocationProvider.overrideWith(() => locationNotifier),
+      learnerSettingsEditorProvider.overrideWithValue(
+        LearnerSettingsEditor(
+          commands: () async => null,
+          scope: () async => null,
+          locationService: _FakeLocationService(
+            permissionGranted: locationPermissionGranted,
+            detect: locationNotifier.detect,
+          ),
+          deviceTimeZone: () async => null,
+        ),
+      ),
       useHebrewTermsProvider.overrideWith(
         () => useHebrewTerms ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
       ),
@@ -496,34 +508,33 @@ void main() {
   // ── Location permission ─────────────────────────────────────────────────────
 
   group('PermissionPromptScreen — location permission', () {
-    testWidgets(
-      'tapping Allow on Location card calls sacredLocationProvider.notifier.detect()',
-      (tester) async {
-        var detectCalled = false;
-        final locationNotif = _FakeSacredLocationNotifier(() async {
-          detectCalled = true;
-          return const LocationFetchPermissionDenied(permanentlyDenied: false);
-        });
+    testWidgets('tapping Allow on Location card runs the location detect', (
+      tester,
+    ) async {
+      var detectCalled = false;
+      final locationNotif = _FakeSacredLocationNotifier(() async {
+        detectCalled = true;
+        return const LocationFetchPermissionDenied(permanentlyDenied: false);
+      });
 
-        await tester.pumpWidget(
-          _buildApp(
-            notifGateway: _defaultNotifGateway(),
-            router: _defaultRouter(),
-            locationNotifier: locationNotif,
-          ),
-        );
-        await _pump(tester);
+      await tester.pumpWidget(
+        _buildApp(
+          notifGateway: _defaultNotifGateway(),
+          router: _defaultRouter(),
+          locationNotifier: locationNotif,
+        ),
+      );
+      await _pump(tester);
 
-        // Tap the second "Allow" button (Location card)
-        await tester.tap(find.text('Allow').last);
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+      // Tap the second "Allow" button (Location card)
+      await tester.tap(find.text('Allow').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(detectCalled, isTrue, reason: 'detect() must have been called');
+      expect(detectCalled, isTrue, reason: 'detect() must have been called');
 
-        await _teardown(tester);
-      },
-    );
+      await _teardown(tester);
+    });
 
     testWidgets(
       'LocationFetchSuccess: check_circle icon shown for location card',

@@ -2880,7 +2880,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'App is silenced and locked during $term and Yom Tov. Times computed locally from your location with a 15-minute cushion.';
+    return 'App is silenced and locked during $term and Yom Tov, from 10 minutes before candle-lighting until 10 minutes after tzeis at this learner\'s location.';
   }
 
   @override
@@ -2932,6 +2932,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get sacredTimeLocationDetectErrorGeneric =>
       'Could not detect location. Try again, or choose a city instead.';
+
+  @override
+  String get sacredTimeSettingsNotSaved =>
+      'Couldn\'t save this learner\'s Sacred Time settings. Try again.';
+
+  @override
+  String get sacredTimeSettingsUnavailable =>
+      'Sacred Time settings can be changed only for your own learners.';
 
   @override
   String get newPasswordLabel => 'New Password';

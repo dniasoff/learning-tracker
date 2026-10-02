@@ -17,65 +17,63 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Fake notifiers ─────────────────────────────────────────────────────────────
+import '../../../../helpers/learner_state_fixtures.dart';
 
-class _FakeSacredLocationNotifier extends SacredLocationNotifier {
-  final SacredLocation? _initial;
-  _FakeSacredLocationNotifier([this._initial]);
+// ── Fakes ──────────────────────────────────────────────────────────────────────
 
-  @override
-  SacredLocation? build() => _initial; // skip SharedPreferences I/O
-}
-
-/// Fake notifier whose [detect] returns a canned [LocationFetchResult] —
-/// used to drive the SnackBar rendered by `_LocationActions._showOutcome`
-/// without touching real GPS/SharedPreferences.
-class _FakeDetectingLocationNotifier extends SacredLocationNotifier {
-  _FakeDetectingLocationNotifier(this._result);
+/// A [LocationService] whose detect returns a canned [LocationFetchResult]
+/// — drives the SnackBar rendered by `_LocationActions._showOutcome`
+/// without touching real GPS.
+class _FakeLocationService extends LocationService {
+  const _FakeLocationService(this._result);
 
   final LocationFetchResult _result;
 
   @override
-  SacredLocation? build() => null; // skip SharedPreferences I/O
-
-  @override
-  Future<LocationFetchResult> detect() async => _result;
+  Future<LocationFetchResult> detectCurrent() async => _result;
 }
 
-class _FakeInIsraelNotifier extends InIsraelNotifier {
-  final bool _initial;
-  _FakeInIsraelNotifier(this._initial);
-
-  @override
-  bool build() => _initial; // skip SharedPreferences I/O
-}
+/// The editor over fakes: no learner commands (nothing is written).
+LearnerSettingsEditor _editor(LocationFetchResult detect) =>
+    LearnerSettingsEditor(
+      commands: () async => null,
+      scope: () async => null,
+      locationService: _FakeLocationService(detect),
+      deviceTimeZone: () async => null,
+    );
 
 // ── Build helper ───────────────────────────────────────────────────────────────
 
 Widget _buildCard({
-  SacredLocation? location,
-  bool inIsrael = false,
+  LearnerSettings? settings,
   Locale locale = const Locale('he'),
   bool? useHebrewTerms,
   TransliterationVariant? variant,
-  SacredLocationNotifier? locationNotifierOverride,
+  LocationFetchResult? detectResult,
 }) {
-  final locationNotifier =
-      locationNotifierOverride ?? _FakeSacredLocationNotifier(location);
-  final inIsraelNotifier = _FakeInIsraelNotifier(inIsrael);
-
   return ProviderScope(
     overrides: [
-      sacredLocationProvider.overrideWith(() => locationNotifier),
-      inIsraelProvider.overrideWith(() => inIsraelNotifier),
+      activeLearnerSettingsProvider.overrideWithValue(
+        AsyncData(
+          settings ??
+              const LearnerSettings(profileId: profileUlid, timeZone: 'UTC'),
+        ),
+      ),
+      learnerSettingsEditorProvider.overrideWithValue(
+        _editor(
+          detectResult ?? const LocationFetchError(LocationErrorCode.unknown),
+        ),
+      ),
       if (useHebrewTerms != null)
         useHebrewTermsProvider.overrideWithValue(useHebrewTerms),
       if (variant != null)
@@ -304,15 +302,13 @@ void main() {
         'he locale: timeout error SnackBar shows the Hebrew generic string, '
         'never raw exception text',
         (tester) async {
-          final locationNotifier = _FakeDetectingLocationNotifier(
-            const LocationFetchError(
-              LocationErrorCode.timeout,
-              debugDetail: 'TimeoutException after 15s GPS timeLimit',
-            ),
-          );
-
           await tester.pumpWidget(
-            _buildCard(locationNotifierOverride: locationNotifier),
+            _buildCard(
+              detectResult: const LocationFetchError(
+                LocationErrorCode.timeout,
+                debugDetail: 'TimeoutException after 15s GPS timeLimit',
+              ),
+            ),
           );
           await tester.pump();
 
@@ -337,4 +333,56 @@ void main() {
       );
     },
   );
+  // ── DNI-481: the card shows the ACTIVE LEARNER's settings ─────────────────
+  group('SacredTimeSettingsCard — learner settings (DNI-481)', () {
+    testWidgets('shows the learner location, zone and Israel flag', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildCard(
+          locale: const Locale('en'),
+          settings: const LearnerSettings(
+            profileId: profileUlid,
+            timeZone: 'Asia/Jerusalem',
+            latitude: 31.778,
+            longitude: 35.235,
+            inIsrael: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('31.778, 35.235'), findsOneWidget);
+      expect(find.text('Asia/Jerusalem'), findsOneWidget);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+    });
+
+    testWidgets('a detect that cannot write (no own learner) says so', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildCard(
+          locale: const Locale('en'),
+          detectResult: LocationFetchSuccess(
+            SacredLocation(
+              latitude: 31.778,
+              longitude: 35.235,
+              source: SacredLocationSource.detected,
+              fixedAt: DateTime.utc(2026, 9, 1),
+              countryCode: 'IL',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Detect'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        find.text(
+          'Sacred Time settings can be changed only for your own learners.',
+        ),
+        findsOneWidget,
+      );
+    });
+  });
 }

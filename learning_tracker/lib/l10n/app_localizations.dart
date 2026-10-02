@@ -5072,7 +5072,7 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeCardDescription.
   ///
   /// In en, this message translates to:
-  /// **'App is silenced and locked during {term} and Yom Tov. Times computed locally from your location with a 15-minute cushion.'**
+  /// **'App is silenced and locked during {term} and Yom Tov, from 10 minutes before candle-lighting until 10 minutes after tzeis at this learner\'s location.'**
   String sacredTimeCardDescription(String term);
 
   /// No description provided for @sacredTimeShabbosModeLabel.
@@ -5158,6 +5158,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not detect location. Try again, or choose a city instead.'**
   String get sacredTimeLocationDetectErrorGeneric;
+
+  /// DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save this learner\'s Sacred Time settings. Try again.'**
+  String get sacredTimeSettingsNotSaved;
+
+  /// DRAFT copy, pending zc4. DNI-481: no own learner is active (none selected, or a tutored session), so no learnerSettings change can be written.
+  ///
+  /// In en, this message translates to:
+  /// **'Sacred Time settings can be changed only for your own learners.'**
+  String get sacredTimeSettingsUnavailable;
 
   /// No description provided for @newPasswordLabel.
   ///

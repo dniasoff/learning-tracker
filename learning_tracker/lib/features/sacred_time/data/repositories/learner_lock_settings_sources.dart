@@ -8,4 +8,7 @@
 library;
 
 export 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart'
-    show changeLogRepositoryProvider, learnerSettingsReaderProvider;
+    show
+        activeLearnerScopeProvider,
+        changeLogRepositoryProvider,
+        learnerSettingsReaderProvider;

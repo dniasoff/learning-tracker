@@ -22,42 +22,50 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
-import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/learner_state_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
-/// Skips real SharedPreferences/GPS I/O — the guard is what's under test,
-/// not the detect flow itself.
-class _FakeSacredLocationNotifier extends SacredLocationNotifier {
-  @override
-  SacredLocation? build() => null;
+/// Skips real GPS I/O — the guard is what's under test, not the detect
+/// flow itself.
+class _FakeLocationService extends LocationService {
+  const _FakeLocationService();
 
   @override
-  Future<LocationFetchResult> detect() async =>
+  Future<LocationFetchResult> detectCurrent() async =>
       const LocationFetchServiceDisabled();
-}
-
-class _FakeInIsraelNotifier extends InIsraelNotifier {
-  @override
-  bool build() => false;
 }
 
 Widget _buildCard({required bool pinGuardRequired, StackRouter? router}) {
   final mockRouter = router ?? _MockStackRouter();
   return pumpApp(
     overrides: [
-      sacredLocationProvider.overrideWith(_FakeSacredLocationNotifier.new),
-      inIsraelProvider.overrideWith(_FakeInIsraelNotifier.new),
+      activeLearnerSettingsProvider.overrideWithValue(
+        const AsyncData(
+          LearnerSettings(profileId: profileUlid, timeZone: 'UTC'),
+        ),
+      ),
+      learnerSettingsEditorProvider.overrideWithValue(
+        LearnerSettingsEditor(
+          commands: () async => null,
+          scope: () async => null,
+          locationService: const _FakeLocationService(),
+          deviceTimeZone: () async => null,
+        ),
+      ),
     ],
     child: StackRouterScope(
       controller: mockRouter,
@@ -119,6 +127,21 @@ void main() {
               'pinGuardRequired is true must show the Parent PIN '
               'verification dialog first, not navigate directly.',
         );
+      },
+    );
+
+    testWidgets(
+      'DNI-481: the Israel switch (a learner setting) shows the Parent PIN '
+      'dialog when pinGuardRequired=true',
+      (tester) async {
+        await tester.pumpWidget(_buildCard(pinGuardRequired: true));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(Switch));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Enter Parent PIN'), findsOneWidget);
       },
     );
 

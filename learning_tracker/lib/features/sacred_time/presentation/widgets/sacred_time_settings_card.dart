@@ -6,23 +6,23 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
-import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// AUD-sacred_time-08: whether Sacred Time's location actions (Detect /
-/// Choose City) require a Parent PIN challenge before executing.
+/// AUD-sacred_time-08: whether Sacred Time's settings actions (Detect /
+/// Choose City / the in-Israel switch) require a Parent PIN challenge
+/// before executing.
 ///
-/// DEC-26 made location a DEVICE-scoped setting, so [SacredTimeSettingsCard]
-/// is shown to every profile — including children — in Settings' DEVICE
-/// section, and `SettingsRoute` itself carries no route-level PIN/child-mode
-/// guard (see `app_router.dart`: `/` → `settings` vs. the PIN-guarded
-/// `/parent-mode/*` routes). Changing the device's physical location is
-/// still an escalating action from a child context, so it is gated the same
-/// way ProfileSwitcherSheet gates its escalating actions (AN-2,
+/// [SacredTimeSettingsCard] is shown to every profile — including children
+/// — and `SettingsRoute` itself carries no route-level PIN/child-mode guard
+/// (see `app_router.dart`: `/` → `settings` vs. the PIN-guarded
+/// `/parent-mode/*` routes). Changing a learner's lock settings (AD-37,
+/// DNI-481) is an escalating action from a child context, so it is gated
+/// the same way ProfileSwitcherSheet gates its escalating actions (AN-2,
 /// `switcherSheetPinGuardRequiredProvider`): true only when the active
 /// profile is a child with a configured Parent PIN.
 final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
@@ -32,10 +32,9 @@ final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
       ref.watch(profileListStreamProvider).asData?.value ??
       <LearnerProfileEntity>[];
   // T-37: keyed on the DEVICE OWNER's own profile, not activeProfileIdProvider
-  // (which redirects to the talmid's profileId during a tutored session).
-  // Location is a device-scoped setting escalated by whoever's holding the
-  // device, so the PIN gate must evaluate against the tutor's own profile —
-  // mirrors switcherSheetPinGuardRequiredProvider's identical fix.
+  // (which redirects to the talmid's profileId during a tutored session):
+  // the PIN gate evaluates whoever's holding the device — mirrors
+  // switcherSheetPinGuardRequiredProvider's identical fix.
   final selectedId = ref.watch(selectedProfileIdProvider);
   final active = profiles.where((p) => p.profileId == selectedId).firstOrNull;
   if (active == null || active.mode != ProfileMode.child) return false;
@@ -45,8 +44,13 @@ final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
 });
 
 /// Settings card for the Sacred Time feature. Hard-on (no disable toggle).
-/// Lets the user choose location source (detect / manual city), refresh, and
-/// flip the in-Israel one-day-chag override.
+///
+/// Shows and edits the ACTIVE LEARNER's lock settings (DNI-481 AC-3, AD-37):
+/// the location (detect / choose a city) and the in-Israel one-day-chag
+/// flag. Reads come from [activeLearnerSettingsProvider] (over
+/// `learnerLockSettingsProvider`); every edit is a governed, logged
+/// `learnerSettings` change through [learnerSettingsEditorProvider]. No
+/// device preference is read or written.
 class SacredTimeSettingsCard extends ConsumerWidget {
   const SacredTimeSettingsCard({
     super.key,
@@ -71,8 +75,7 @@ class SacredTimeSettingsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final location = ref.watch(sacredLocationProvider);
-    final inIsrael = ref.watch(inIsraelProvider);
+    final settings = ref.watch(activeLearnerSettingsProvider);
     // Variant-aware Shabbos term, resolved once here at the Consumer layer and
     // composed into the localized header/description frames.
     final shabbos = domainTermLabels(
@@ -109,14 +112,19 @@ class SacredTimeSettingsCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _LocationRow(location: location),
+                _LocationRow(settings: settings),
                 const SizedBox(height: 12),
                 _LocationActions(
                   pinGuardRequired: pinGuardRequired,
                   activeProfileId: activeProfileId,
                 ),
                 const Divider(height: 28),
-                _InIsraelRow(value: inIsrael),
+                _InIsraelRow(
+                  value: settings.asData?.value?.inIsrael ?? false,
+                  enabled: settings.asData?.value != null,
+                  pinGuardRequired: pinGuardRequired,
+                  activeProfileId: activeProfileId,
+                ),
               ],
             ),
           ),
@@ -177,53 +185,59 @@ class _Header extends StatelessWidget {
 }
 
 class _LocationRow extends StatelessWidget {
-  const _LocationRow({required this.location});
+  const _LocationRow({required this.settings});
 
-  final SacredLocation? location;
+  /// The active learner's current settings (loading / error / none).
+  final AsyncValue<LearnerSettings?> settings;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final label = location == null
+    final current = settings.asData?.value;
+    final latitude = current?.latitude;
+    final longitude = current?.longitude;
+    // Coordinates are stored at 3 decimal places (PV-7); the row shows the
+    // same precision.
+    final label = latitude == null || longitude == null
         ? l10n.sacredTimeNoLocation
-        : (location!.cityLabel ??
-              '${location!.latitude.toStringAsFixed(3)}, '
-                  '${location!.longitude.toStringAsFixed(3)}');
-    final sourceLabel = location == null
-        ? null
-        : switch (location!.source) {
-            SacredLocationSource.detected => l10n.sacredTimeSourceDetected,
-            SacredLocationSource.manualCity => l10n.sacredTimeSourceManualCity,
-            SacredLocationSource.manualCoords =>
-              l10n.sacredTimeSourceManualCoords,
-          };
+        : '${latitude.toStringAsFixed(3)}, ${longitude.toStringAsFixed(3)}';
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Icon(Icons.place_outlined, size: 20),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (sourceLabel != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  sourceLabel,
-                  style: theme.textTheme.bodySmall?.copyWith(
+          // While the settings load the row shows a neutral dash (no
+          // indeterminate spinner: the card sits on the scrolling Settings
+          // screen).
+          child: settings.isLoading && current == null
+              ? Text(
+                  '—',
+                  style: theme.textTheme.titleSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (current != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        current.timeZone,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ],
-          ),
         ),
       ],
     );
@@ -284,7 +298,7 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
     if (!mounted) return;
     setState(() => _detecting = true);
     try {
-      final result = await ref.read(sacredLocationProvider.notifier).detect();
+      final result = await ref.read(learnerSettingsEditorProvider).detect();
       if (!mounted) return;
       _showOutcome(result);
     } finally {
@@ -302,25 +316,19 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
   /// AUD-sacred_time-08: shows the Parent PIN verification dialog and
   /// returns whether it succeeded. Mirrors ProfileSwitcherSheet's
   /// `_guardEscalating` (AN-2).
-  Future<bool> _verifyParentPin() {
-    final activeProfileId = widget.activeProfileId;
-    // Fail closed: nothing to verify against — same posture as
-    // ProfileSwitcherSheet's AN-2 `_guardEscalating`.
-    if (activeProfileId == null) return Future.value(false);
-    final l10n = AppLocalizations.of(context)!;
-    return showParentPinVerificationDialog(
-      context,
-      profileId: activeProfileId,
-      pinService: ref.read(pinServiceProvider),
-      subtitle: l10n.pinDialogSubtitleLocationAccess,
-    );
-  }
+  Future<bool> _verifyParentPin() =>
+      _verifySacredTimeParentPin(context, ref, widget.activeProfileId);
 
-  void _showOutcome(LocationFetchResult result) {
+  void _showOutcome(LearnerLocationDetectResult detected) {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final result = detected.fetch;
     final message = switch (result) {
-      LocationFetchSuccess() => l10n.sacredTimeLocationUpdated,
+      LocationFetchSuccess() => _editOutcomeMessage(
+        detected.outcome,
+        l10n,
+        saved: l10n.sacredTimeLocationUpdated,
+      ),
       LocationFetchPermissionDenied(:final permanentlyDenied) =>
         permanentlyDenied
             ? l10n.sacredTimeLocationPermissionPermanentlyDenied
@@ -328,6 +336,7 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
       LocationFetchServiceDisabled() => l10n.sacredTimeLocationServicesOff,
       LocationFetchError(:final code) => _errorMessage(code, l10n),
     };
+    if (message == null) return;
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
@@ -346,10 +355,73 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
   }
 }
 
-class _InIsraelRow extends ConsumerWidget {
-  const _InIsraelRow({required this.value});
+/// AUD-sacred_time-08: shows the Parent PIN verification dialog for
+/// [activeProfileId] and returns whether it succeeded. Mirrors
+/// ProfileSwitcherSheet's `_guardEscalating` (AN-2); fails closed when there
+/// is nothing to verify against.
+Future<bool> _verifySacredTimeParentPin(
+  BuildContext context,
+  WidgetRef ref,
+  String? activeProfileId,
+) {
+  if (activeProfileId == null) return Future.value(false);
+  final l10n = AppLocalizations.of(context)!;
+  return showParentPinVerificationDialog(
+    context,
+    profileId: activeProfileId,
+    pinService: ref.read(pinServiceProvider),
+    subtitle: l10n.pinDialogSubtitleLocationAccess,
+  );
+}
 
+/// The message for a settings edit [outcome]; [saved] when it was written,
+/// null for no message.
+String? _editOutcomeMessage(
+  LearnerSettingsEditOutcome? outcome,
+  AppLocalizations l10n, {
+  String? saved,
+}) => switch (outcome) {
+  LearnerSettingsEditOutcome.saved || null => saved,
+  LearnerSettingsEditOutcome.locked ||
+  LearnerSettingsEditOutcome.notSaved => l10n.sacredTimeSettingsNotSaved,
+  LearnerSettingsEditOutcome.unavailable => l10n.sacredTimeSettingsUnavailable,
+};
+
+class _InIsraelRow extends ConsumerWidget {
+  const _InIsraelRow({
+    required this.value,
+    required this.enabled,
+    required this.pinGuardRequired,
+    required this.activeProfileId,
+  });
+
+  /// The learner's current flag (`false` when never set: diaspora).
   final bool value;
+
+  /// False while no learner's settings are loaded.
+  final bool enabled;
+
+  /// AUD-sacred_time-08: the switch changes a learner setting, so it is
+  /// gated like the location actions.
+  final bool pinGuardRequired;
+  final String? activeProfileId;
+
+  Future<void> _set(BuildContext context, WidgetRef ref, bool next) async {
+    if (pinGuardRequired &&
+        !await _verifySacredTimeParentPin(context, ref, activeProfileId)) {
+      return;
+    }
+    final outcome = await ref
+        .read(learnerSettingsEditorProvider)
+        .setInIsrael(next);
+    if (!context.mounted) return;
+    final message = _editOutcomeMessage(outcome, AppLocalizations.of(context)!);
+    if (message != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -380,7 +452,7 @@ class _InIsraelRow extends ConsumerWidget {
         ),
         Switch(
           value: value,
-          onChanged: (v) => ref.read(inIsraelProvider.notifier).setInIsrael(v),
+          onChanged: enabled ? (v) => _set(context, ref, v) : null,
         ),
       ],
     );
