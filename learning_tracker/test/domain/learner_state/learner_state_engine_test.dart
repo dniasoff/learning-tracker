@@ -544,6 +544,103 @@ void main() {
     });
   });
 
+  group('DNI-466 AC-6: per-curriculum streak', () {
+    // UTC learner with no location: the Shabbos lock is Fri 09-04 12:00Z →
+    // Sun 09-06 01:00Z, locked day Sat 09-05; Sunday holds locked
+    // instants, so its catch-up runs to the end of Monday 09-07.
+    // nowUtc is Mon 09-07 22:40Z.
+    int day(int d) => (d - 1) * 1440 + 600; // 10:00Z on 2026-09-[d]
+    String on(int d) => '2026-09-0$d';
+    final other = InMemoryCorpus('other', const [
+      CorpusNode(NodeEntry(level: 'sefer', ref: 'O'), [
+        CorpusNode(NodeEntry(level: 'chapter', ref: 'O 1')),
+      ]),
+    ]);
+
+    LearnerStateInputs inputs(List<LearningEvent> events) => engineInputs(
+      events: events,
+      intents: {
+        engineCurriculum: engineIntent(),
+        'other': engineIntent(curriculumId: 'other'),
+      },
+      corpora: {engineCurriculum: mishnayosCorpus(), 'other': other},
+    );
+
+    LearningEvent dated(int id, int d) =>
+        engineLearn(id, b11, minutes: day(d), learnedOn: on(d));
+
+    final excluded = [
+      // Tue 09-01: a sub-track learn, a voided learn and a before-tracking
+      // learn never make a streak day.
+      engineLearn(20, b12, minutes: day(1), learnedOn: on(1), source: subTrack),
+      engineLearn(21, b12, minutes: day(1), learnedOn: on(1)),
+      engineVoid(22, 21, minutes: day(1) + 1),
+      engineGround(23, berakhot1, minutes: day(1)),
+    ];
+
+    test('counts counted main events; a caught-up Shabbos keeps it', () {
+      final state = engine.run(
+        inputs([
+          ...excluded,
+          for (final d in [2, 3, 4]) dated(d, d),
+          // Saturday 09-05 caught up on Sunday.
+          engineLearn(
+            5,
+            b11,
+            minutes: day(6),
+            learnedOn: on(5),
+            dateState: DateState.catchUp,
+          ),
+          dated(6, 6),
+          dated(7, 7),
+          engineLearn(
+            8,
+            'O 1',
+            curriculumId: 'other',
+            minutes: day(7),
+            learnedOn: on(7),
+          ),
+        ]),
+      );
+      expect(
+        state[engineCurriculum]!.streak,
+        const CurriculumStreak(current: 6, best: 6, lastDay: '2026-09-07'),
+      );
+      // Per curriculum: the other curriculum has only its own Monday.
+      expect(
+        state['other']!.streak,
+        const CurriculumStreak(current: 1, best: 1, lastDay: '2026-09-07'),
+      );
+    });
+
+    test('a lock-ignored dated learn does not stand in for a catch-up', () {
+      final state = engine.run(
+        inputs([
+          for (final d in [2, 3, 4]) dated(d, d),
+          // Recorded on Shabbos itself (inside the lock).
+          engineLearn(5, b11, minutes: day(5), learnedOn: on(5)),
+          dated(6, 6),
+          dated(7, 7),
+        ]),
+      );
+      expect(state.lockIgnoredEventIds, {engineUlid(5)});
+      // Saturday's catch-up window is still open on Monday night, so
+      // Saturday is pending, not a streak day and not a break.
+      expect(
+        state[engineCurriculum]!.streak,
+        const CurriculumStreak(current: 5, best: 5, lastDay: '2026-09-07'),
+      );
+    });
+
+    test('an evaluated curriculum with no learning has a zero streak', () {
+      final state = engine.run(inputs(const []));
+      expect(
+        state[engineCurriculum]!.streak,
+        const CurriculumStreak(current: 0, best: 0),
+      );
+    });
+  });
+
   test('no inputs give no curricula', () {
     final state = engine.run(
       engineInputs(intents: const {}, corpora: const {}),
