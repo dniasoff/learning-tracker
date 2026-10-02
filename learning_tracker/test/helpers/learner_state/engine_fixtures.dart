@@ -5,6 +5,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -211,14 +212,16 @@ LearnerStateInputs engineInputs({
   List<SubTrack> subTracks = const [],
   LearnerSettingsHistory? settingsHistory,
   DateTime? nowUtc,
+  Map<String, CurriculumGoals> goals = const {},
+  Map<String, List<CalendarAssignment>> calendars = const {},
 }) => LearnerStateInputs(
   events: events,
   subTracks: subTracks,
   mainTrackIntent: intents ?? {engineCurriculum: engineIntent()},
-  goals: const {},
+  goals: goals,
   intentHistory: intentHistory,
   settingsHistory: settingsHistory ?? c0SettingsHistory(),
-  calendars: const {},
+  calendars: calendars,
   corpora: corpora ?? {engineCurriculum: mishnayosCorpus()},
   nowUtc: nowUtc ?? engineAt(10000),
 );

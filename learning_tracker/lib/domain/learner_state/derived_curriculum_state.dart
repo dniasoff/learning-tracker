@@ -11,6 +11,7 @@
 /// | streak | [streak] | DNI-466 |
 library;
 
+import 'package:learning_tracker/domain/learner_state/calendar_plan.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -124,29 +125,37 @@ final class MainTrackRecord {
       Object.hash(Object.hashAll(schedulableRefs), currentUnit, position);
 }
 
-/// The planning stage of one curriculum. DNI-467 fills it; until then every
-/// member is empty or null.
+/// The planning stage of one curriculum (DNI-467). Empty for a curriculum
+/// that is not evaluated.
 final class PlanRecord {
   /// Creates the record.
-  const PlanRecord({
+  PlanRecord({
     this.subTracks = const {},
-    this.programAssignments = const {},
-    this.programBacklog = const {},
+    this.calendar,
     this.reviewsDue = const {},
     this.dailyTarget,
     this.paceRate,
     this.shortfall,
     this.projection,
-  });
+    Set<CurriculumValidationError> validationErrors = const {},
+  }) : validationErrors = Set.unmodifiable(validationErrors);
+
+  /// No plan.
+  const PlanRecord.none()
+    : subTracks = const {},
+      calendar = null,
+      reviewsDue = const {},
+      dailyTarget = null,
+      paceRate = null,
+      shortfall = null,
+      projection = null,
+      validationErrors = const {};
 
   /// Sub-track states by sub-track ULID.
   final Map<String, SubTrackState> subTracks;
 
-  /// Program assignments by civil date.
-  final Map<CivilDate, List<LeafRef>> programAssignments;
-
-  /// Program backlog by the `today` it was asked for.
-  final Map<CivilDate, List<LeafRef>> programBacklog;
+  /// The calendar plan, for a calendar-program curriculum only.
+  final CalendarPlan? calendar;
 
   /// Reviews due by civil date.
   final Map<CivilDate, List<ReviewDue>> reviewsDue;
@@ -154,7 +163,7 @@ final class PlanRecord {
   /// Today's target in leaves.
   final int? dailyTarget;
 
-  /// The goal pace in leaves per day.
+  /// The goal pace in leaves per study day.
   final double? paceRate;
 
   /// Leaves behind the goal.
@@ -163,17 +172,20 @@ final class PlanRecord {
   /// The deadline projection.
   final Projection? projection;
 
+  /// Invalid intent found while planning.
+  final Set<CurriculumValidationError> validationErrors;
+
   @override
   bool operator ==(Object other) =>
       other is PlanRecord &&
       _mapEquals(other.subTracks, subTracks) &&
-      _listMapEquals(other.programAssignments, programAssignments) &&
-      _listMapEquals(other.programBacklog, programBacklog) &&
+      other.calendar == calendar &&
       _listMapEquals(other.reviewsDue, reviewsDue) &&
       other.dailyTarget == dailyTarget &&
       other.paceRate == paceRate &&
       other.shortfall == shortfall &&
-      other.projection == projection;
+      other.projection == projection &&
+      _setEquals(other.validationErrors, validationErrors);
 
   static bool _listMapEquals<T>(
     Map<CivilDate, List<T>> a,
@@ -190,13 +202,13 @@ final class PlanRecord {
   @override
   int get hashCode => Object.hash(
     subTracks.length,
-    programAssignments.length,
-    programBacklog.length,
+    calendar,
     reviewsDue.length,
     dailyTarget,
     paceRate,
     shortfall,
     projection,
+    Object.hashAllUnordered(validationErrors),
   );
 }
 
@@ -209,7 +221,7 @@ final class DerivedCurriculumState implements CurriculumState {
     required this.learnt,
     this.mainTrack = const MainTrackRecord.none(),
     List<CompletedUnit> completedUnits = const [],
-    this.plan = const PlanRecord(),
+    this.plan = const PlanRecord.none(),
     this.streak,
   }) : completedUnits = List.unmodifiable(completedUnits);
 
@@ -267,11 +279,11 @@ final class DerivedCurriculumState implements CurriculumState {
 
   @override
   List<LeafRef> programAssignments(CivilDate date) =>
-      plan.programAssignments[date] ?? const [];
+      plan.calendar?.assignments(date) ?? const [];
 
   @override
   List<LeafRef> programBacklog(CivilDate today) =>
-      plan.programBacklog[today] ?? const [];
+      plan.calendar?.backlog(today) ?? const [];
 
   @override
   List<ReviewDue> reviewsDue(CivilDate date) =>
@@ -288,6 +300,9 @@ final class DerivedCurriculumState implements CurriculumState {
 
   @override
   Projection? get projection => plan.projection;
+
+  @override
+  Set<CurriculumValidationError> get validationErrors => plan.validationErrors;
 
   @override
   bool operator ==(Object other) =>
