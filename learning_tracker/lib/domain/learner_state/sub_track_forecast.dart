@@ -188,6 +188,9 @@ Map<String, SubTrackState> withForecast(
         capacity: f.capacity,
         expectedNewGround: f.expectedNewGround,
         shortfall: f.shortfallLeaves.length,
+        shortfallLeaves: f.shortfallLeaves,
+        windowEnd: s.windowEnd,
+        lastShortfallNode: f.lastShortfallNode,
       ),
     },
 };

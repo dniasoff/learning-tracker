@@ -99,5 +99,6 @@ SubTrackState subTrackState(
     groundExhausted: ground.isNotEmpty && at < 0,
     ticked: ticked,
     remainingPath: at < 0 ? const [] : List.unmodifiable(ground.sublist(at)),
+    windowEnd: s.windowEnd,
   );
 }

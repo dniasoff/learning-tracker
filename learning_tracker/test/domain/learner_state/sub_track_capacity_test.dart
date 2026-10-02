@@ -643,6 +643,106 @@ void main() {
     });
   });
 
+  group('AC-4: per-sub-track shortfall output for FR-21', () {
+    List<String> leaves(String masechta, int perek, {int from = 1}) => [
+      for (final l in corpus.leavesUnder(_perek(masechta, perek)))
+        if (int.parse(l.split(':').last) >= from) l,
+    ];
+
+    test('count, leaves in path order, window end and last ground node', () {
+      final s = _run(subTracks: [_rebbe(), _school()]);
+      final rebbe = s.subTracks[_rebbeId]!;
+      expect(rebbe.shortfallLeaves, [
+        ...leaves('Berakhot', 8, from: 4),
+        ...leaves('Peah', 2),
+        ...leaves('Peah', 3),
+      ]);
+      expect(rebbe.shortfall, rebbe.shortfallLeaves.length);
+      expect(rebbe.windowEnd, isNull);
+      expect(rebbe.lastShortfallNode, _perek('Peah', 3));
+      final school = s.subTracks[_schoolId]!;
+      expect(school.windowEnd, '2027-07-31');
+      expect(school.shortfallLeaves, isEmpty);
+      expect(school.lastShortfallNode, isNull);
+      // The curriculum shortfall is the FR-19 term the target divided.
+      expect(s.shortfall, 21);
+      expect(_numerator(s), s.mainTrackRemaining - 81 + 21);
+    });
+
+    test('path order follows ground as entered, not ContentIndex order', () {
+      final s = _run(
+        subTracks: [
+          _rebbe(
+            ground: [
+              _perek('Peah', 3),
+              _perek('Berakhot', 6),
+              _perek('Berakhot', 2),
+              _perek('Peah', 2),
+              _perek('Berakhot', 8),
+            ],
+          ),
+        ],
+      );
+      final rebbe = s.subTracks[_rebbeId]!;
+      expect(rebbe.shortfallLeaves, [
+        ...leaves('Berakhot', 2, from: 4),
+        ...leaves('Peah', 2),
+        ...leaves('Berakhot', 8),
+      ]);
+      expect(rebbe.lastShortfallNode, _perek('Berakhot', 8));
+    });
+
+    test('the last node is the last entry that still has a shortfall leaf', () {
+      // The Shiur reaches Peah 3, so the Rebbe's last shortfall entry is
+      // Peah 2.
+      final s = _run(
+        subTracks: [
+          _rebbe(),
+          _shiur([_perek('Peah', 3)]),
+        ],
+      );
+      final rebbe = s.subTracks[_rebbeId]!;
+      expect(rebbe.shortfallLeaves, [
+        ...leaves('Berakhot', 8, from: 4),
+        ...leaves('Peah', 2),
+      ]);
+      expect(rebbe.lastShortfallNode, _perek('Peah', 2));
+    });
+
+    test('an overlapping shortfall leaf belongs to one track only, so the '
+        'per-track counts sum to the FR-19 term', () {
+      final s = _run(
+        subTracks: [
+          _rebbe(),
+          _shiur([_perek('Peah', 4), _perek('Peah', 3)]),
+        ],
+      );
+      final rebbe = s.subTracks[_rebbeId]!;
+      final shiur = s.subTracks[_shiurId]!;
+      expect(shiur.shortfallLeaves, leaves('Peah', 4, from: 10));
+      expect(shiur.lastShortfallNode, _perek('Peah', 4));
+      expect(
+        rebbe.shortfallLeaves.toSet().intersection(
+          shiur.shortfallLeaves.toSet(),
+        ),
+        isEmpty,
+      );
+      expect(rebbe.shortfall + shiur.shortfall, s.shortfall);
+    });
+
+    test('with no deadline nothing is exposed but the window end', () {
+      final s = _run(subTracks: [_rebbe(), _school()], withDeadline: false);
+      for (final t in s.subTracks.values) {
+        expect(t.capacity, isNull);
+        expect(t.shortfall, 0);
+        expect(t.shortfallLeaves, isEmpty);
+        expect(t.lastShortfallNode, isNull);
+      }
+      expect(s.subTracks[_schoolId]!.windowEnd, '2027-07-31');
+      expect(s.shortfall, isNull);
+    });
+  });
+
   group('AC-8: calendar-program curriculum', () {
     test('AD-44 is not computed; dailyTarget comes from the calendar', () {
       final s = const LearnerStateEngine().run(
