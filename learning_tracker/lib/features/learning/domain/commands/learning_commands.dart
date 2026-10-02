@@ -22,6 +22,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/features/learning/domain/commands/achievement_latch.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/child_redate_limit.dart';
@@ -205,7 +206,9 @@ final class DefaultLearningCommands implements LearningCommands {
     Duration ackWait = defaultLearningAckWait,
     Duration pointsWait = defaultPointsReadWait,
     GovernedLearningCommands? governed,
+    AchievementLatch? achievements,
   }) : _scope = scope,
+       _achievements = achievements,
        _pointsWait = pointsWait,
        _actor = actor,
        _reads = reads,
@@ -231,6 +234,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final GovernedLearningCommands? _governed;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
+  final AchievementLatch? _achievements;
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -257,6 +261,10 @@ final class DefaultLearningCommands implements LearningCommands {
   }
 
   /// Chunks and dispatches [units]; the result of a command that wrote.
+  ///
+  /// After a write that recorded learn events, runs the AD-50 achievement
+  /// latch in the background (DNI-480): it never delays or fails the
+  /// command.
   Future<CaptureResult> _write(
     LearningCommandKind kind,
     List<WriteUnit> units,
@@ -265,6 +273,16 @@ final class DefaultLearningCommands implements LearningCommands {
     final outcome = await _dispatcher.dispatch(kind, chunkWrites(units));
     if (outcome.allRejected) {
       return const CaptureResult.rejected(CaptureRejection.notSaved);
+    }
+    final achievements = _achievements;
+    if (achievements != null) {
+      final written = outcome.eventIds.toSet();
+      final learns = {
+        for (final unit in units)
+          for (final e in unit.events)
+            if (e.isLearn && written.contains(e.id)) e.id,
+      };
+      unawaited(achievements.afterWrite(_scope, learns));
     }
     return CaptureResult.success(
       eventIds: outcome.eventIds,

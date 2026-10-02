@@ -16,12 +16,16 @@ import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/achievement_latch_adapter.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
+import 'package:learning_tracker/features/learning/domain/commands/achievement_latch.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/governed_action_commands.dart';
@@ -119,6 +123,22 @@ Actor learningSessionActor({
   );
 }
 
+/// The learner state of [scope] as the commands' achievement latch reads it
+/// (DNI-480): the latest complete state and every later one, held through
+/// a subscription that lives as long as the commands.
+LearnerStateFeed learnerStateFeed(Ref ref, LearnerScope scope) {
+  final changes = StreamController<LearnerState>.broadcast();
+  LearnerState? latest;
+  ref.listen<AsyncValue<LearnerState>>(learnerStateProvider(scope), (_, next) {
+    if (next case AsyncData(:final value)) {
+      latest = value;
+      changes.add(value);
+    }
+  }, fireImmediately: true);
+  ref.onDispose(changes.close);
+  return LearnerStateFeed(latest: () => latest, changes: changes.stream);
+}
+
 /// The commands bound to the active learner's scope and session actor, or
 /// null while no learner is active, the account is not ready, or the
 /// session is a tutored one (tutor writes go through callables, AD-53;
@@ -192,6 +212,12 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
     governed: governed,
+    achievements: AchievementLatch(
+      FirestoreAchievementLatchAdapter(
+        ref: ref,
+        states: learnerStateFeed(ref, scope),
+      ),
+    ),
   );
   ref.onDispose(commands.dispose);
   ref.onDispose(governed.dispose);

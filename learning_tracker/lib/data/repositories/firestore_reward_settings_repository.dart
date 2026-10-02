@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/firestore/write_ack.dart';
 
 /// Persists the reward catalogue in the same open-ended settings document
 /// written by `tutorUpdateGamificationSettings`.
@@ -47,6 +48,44 @@ class FirestoreRewardSettingsRepository {
       );
     }
     return raw.map((key, value) => MapEntry(key.toString(), value));
+  }
+
+  /// The AD-27 / AD-50 achievement latch field of this document.
+  static const unlockedAchievementIdsField = 'unlocked_achievement_ids';
+
+  /// The latched achievement ids (`unlocked_achievement_ids`); empty when
+  /// the document or the field is absent. A present but malformed field
+  /// throws (D-E: never a fabricated "nothing unlocked").
+  Future<Set<String>> readUnlockedAchievementIds() async =>
+      _decodeUnlocked((await _settings.get()).data());
+
+  /// Live [readUnlockedAchievementIds]: every achievement surface reads
+  /// this list and nothing else (DNI-480, AD-50).
+  Stream<Set<String>> watchUnlockedAchievementIds() =>
+      _settings.snapshots().map((s) => _decodeUnlocked(s.data()));
+
+  /// Array-unions [achievementIds] into `unlocked_achievement_ids`
+  /// (`LearningCommands`' latch, DNI-480). Merge plus array union keeps the
+  /// list monotonic and idempotent: a repeated or concurrent latch of the
+  /// same id from any device leaves one id, and sibling keys
+  /// (`reward_settings`, point settings) are untouched.
+  Future<void> latchUnlockedAchievementIds(Set<String> achievementIds) async {
+    if (achievementIds.isEmpty) return;
+    await _settings.set(<String, dynamic>{
+      unlockedAchievementIdsField: FieldValue.arrayUnion([...achievementIds]),
+    }, SetOptions(merge: true)).orQueuedOffline;
+  }
+
+  static Set<String> _decodeUnlocked(Map<String, dynamic>? data) {
+    final raw = data?[unlockedAchievementIdsField];
+    if (raw == null) return const {};
+    if (raw is! List || raw.any((e) => e is! String)) {
+      throw const FormatException(
+        'gamification_settings.unlocked_achievement_ids must be a list of '
+        'strings',
+      );
+    }
+    return Set.unmodifiable(raw.cast<String>());
   }
 
   /// Merges the owner-produced reward snapshot into the shared settings doc.
