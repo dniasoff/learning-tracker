@@ -4,15 +4,14 @@
 /// [CountedEvents] this stage returns, never the raw event list. A `learn`
 /// event counts iff it is not voided and not lock-ignored.
 ///
-/// The lock rule itself is Story 1.4 (DNI-466): this stage only accepts it
-/// as a [LockIgnoreHook]. Until DNI-466 fills it, the engine passes
-/// [noLockIgnored].
+/// The lock rule itself is `lock_filter.dart` (DNI-466): this stage only
+/// accepts it as a [LockIgnoreHook].
 library;
 
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 
 /// Whether [event] was recorded inside a lock window and must be ignored
-/// (AD-36 "enforced again by derivation"). Filled by DNI-466.
+/// (AD-36 "enforced again by derivation"); see `lockIgnoreHook`.
 typedef LockIgnoreHook = bool Function(LearningEvent event);
 
 /// The [LockIgnoreHook] that ignores nothing.
