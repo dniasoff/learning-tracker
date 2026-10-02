@@ -113,6 +113,15 @@ class _FlatPoints implements PointsAmountReader {
   ) async => 10;
 }
 
+class _FlatPoints implements PointsAmountReader {
+  @override
+  Future<int> pointsAmount(
+    LearnerScope scope,
+    String curriculumId,
+    int? stage,
+  ) async => 10;
+}
+
 class _UseHebrewTermsOff extends UseHebrewTerms {
   @override
   bool build() => false;
