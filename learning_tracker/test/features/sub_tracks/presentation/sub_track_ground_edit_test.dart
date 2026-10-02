@@ -39,6 +39,10 @@ final class _SubTrackOnlyCommands implements LearningCommands {
   }
 
   @override
+  Stream<List<PendingFailure>> watchPendingFailures() =>
+      inner.watchPendingFailures();
+
+  @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('${invocation.memberName} is not used here');
 }
@@ -320,6 +324,93 @@ void main() {
       find.text("Couldn't remove it. The ground is back as it was."),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a reorder queued offline and later refused by the server '
+      'rolls back to the last confirmed order with the snackbar', (
+    tester,
+  ) async {
+    init();
+    h.tracks
+      ..offline = true
+      ..failNextWith(const PermanentWriteRejection('permission-denied'));
+    await pump(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('subTrackEntryMenu:Mishnah Berakhot 1')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Move down'));
+    await tester.pumpAndSettle();
+
+    // Queued: accepted locally, no snackbar yet.
+    expect(h.tracks.heldCount, 1);
+    expect(stored().ground, const [peah, berakhot1, berakhot2]);
+    expect(rowOrder(tester).first, 'Mishnah Peah');
+    expect(find.byType(SnackBar), findsNothing);
+
+    // The server refuses it for good.
+    h.tracks.settleHeld();
+    await tester.pumpAndSettle();
+
+    expect(stored().ground, school.ground);
+    expect(rowOrder(tester), [
+      'Mishnah Berakhot 1',
+      'Mishnah Peah',
+      'Mishnah Berakhot 2',
+    ]);
+    expect(
+      find.text("Couldn't save the new order. It's back as it was."),
+      findsOneWidget,
+    );
+    expectEngineRecomputed();
+  });
+
+  testWidgets('a removal queued offline and later refused shows the '
+      'removal snackbar', (tester) async {
+    init();
+    h.tracks
+      ..offline = true
+      ..failNextWith(const PermanentWriteRejection('permission-denied'));
+    await pump(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('subTrackEntryMenu:Mishnah Peah')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove from School'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('subTrackRemoveConfirm')));
+    await tester.pumpAndSettle();
+    expect(rowOrder(tester), ['Mishnah Berakhot 1', 'Mishnah Berakhot 2']);
+
+    h.tracks.settleHeld();
+    await tester.pumpAndSettle();
+    expect(rowOrder(tester), [
+      'Mishnah Berakhot 1',
+      'Mishnah Peah',
+      'Mishnah Berakhot 2',
+    ]);
+    expect(
+      find.text("Couldn't remove it. The ground is back as it was."),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a queued reorder the server accepts stays, with no '
+      'snackbar', (tester) async {
+    init();
+    h.tracks.offline = true;
+    await pump(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('subTrackEntryMenu:Mishnah Berakhot 1')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Move down'));
+    await tester.pumpAndSettle();
+    h.tracks.settleHeld();
+    await tester.pumpAndSettle();
+    expect(stored().ground, const [peah, berakhot1, berakhot2]);
+    expect(rowOrder(tester).first, 'Mishnah Peah');
+    expect(find.byType(SnackBar), findsNothing);
   });
 
   testWidgets('the reorder shows at once, before the command returns '

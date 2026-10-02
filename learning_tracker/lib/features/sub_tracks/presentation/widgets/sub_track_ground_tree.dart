@@ -101,8 +101,16 @@ class _SubTrackGroundTreeState extends ConsumerState<SubTrackGroundTree> {
     final messenger = ScaffoldMessenger.of(context);
     final accepted = await ref
         .read(subTrackGroundEditorProvider(widget.detail.track.id).notifier)
-        .commit(next);
+        .commit(next, prior: _order, removal: removal);
     if (accepted) return;
+    _showRolledBack(messenger, l10n, removal: removal);
+  }
+
+  static void _showRolledBack(
+    ScaffoldMessengerState messenger,
+    AppLocalizations l10n, {
+    required bool removal,
+  }) {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
@@ -117,6 +125,20 @@ class _SubTrackGroundTreeState extends ConsumerState<SubTrackGroundTree> {
   @override
   Widget build(BuildContext context) {
     final detail = widget.detail;
+    // A queued edit the server refused later rolls back with the same
+    // snackbar as an immediate refusal (UX-DR-124).
+    ref.listen(subTrackGroundEditorProvider(detail.track.id), (prev, next) {
+      final rollback = next.rollback;
+      if (rollback == null ||
+          next.lateRejections <= (prev?.lateRejections ?? 0)) {
+        return;
+      }
+      _showRolledBack(
+        ScaffoldMessenger.of(context),
+        AppLocalizations.of(context)!,
+        removal: rollback.removal,
+      );
+    });
     final ground = detail.ground;
     if (ground.isGroundless) return const _GroundlessState();
     if (!detail.canEdit) {
@@ -127,8 +149,7 @@ class _SubTrackGroundTreeState extends ConsumerState<SubTrackGroundTree> {
         ],
       );
     }
-    final busy =
-        ref.watch(subTrackGroundEditorProvider(detail.track.id)) != null;
+    final busy = ref.watch(subTrackGroundEditorProvider(detail.track.id)).busy;
     final count = ground.entries.length;
     return ReorderableListView.builder(
       key: const ValueKey('subTrackGroundReorderable'),
