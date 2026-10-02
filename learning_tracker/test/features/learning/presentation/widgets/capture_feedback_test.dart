@@ -152,11 +152,11 @@ void main() {
       expect(find.text('Undo'), findsNothing);
     });
 
-    testWidgets('a rejected capture says not saved', (tester) async {
+    testWidgets('an invalid capture says not saved', (tester) async {
       await tester.pumpWidget(
         _outcomeHost(
           commands,
-          const CaptureResult.rejected(CaptureRejection.notSaved),
+          const CaptureResult.rejected(CaptureRejection.invalid),
         ),
       );
       await tester.tap(find.text('go'));
@@ -165,6 +165,19 @@ void main() {
         find.text('Not saved — your learning was not recorded.'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('a batch rejected for good is left to the pending-failure '
+        'listener (no duplicate notice)', (tester) async {
+      await tester.pumpWidget(
+        _outcomeHost(
+          commands,
+          const CaptureResult.rejected(CaptureRejection.notSaved),
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SnackBar), findsNothing);
     });
   });
 

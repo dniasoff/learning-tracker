@@ -15,7 +15,6 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
-import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
 export 'package:learning_tracker/core/content/hierarchy_selection.dart';
@@ -92,24 +91,6 @@ class BulkPriorCompletionService {
   final StageDefinitionRepository? _stageRepository;
   final LocalDayClock _clock;
 
-  /// Post completion-orchestrator lift (`docs/firestore-rewrite-map.md`,
-  /// owner decision 1). When set, [execute] routes its bulk-mark write
-  /// through [CompletionOrchestrator.bulkMarkComplete] instead of calling
-  /// [_completionRepository] directly — required for achievement (siyum)
-  /// detection to fire, since the repository no longer does that itself.
-  ///
-  /// **Optional, not required**, to avoid a breaking constructor change
-  /// across this service's ~10 existing test call sites, most of which
-  /// exercise dedup/bookmark/expunge behavior and never assert siyum
-  /// outcomes. When `null`, [execute] falls back to calling
-  /// `_completionRepository.bulkMarkComplete` directly — the storage write
-  /// still happens correctly, but the four post-write side effects
-  /// (points, streak, siyum, bookmark) do NOT fire, since the repository is
-  /// storage-only now. Production wiring (`onboarding_providers.dart`)
-  /// always supplies a real orchestrator; only test doubles that do not
-  /// care about those side effects may omit it.
-  final CompletionOrchestrator? _orchestrator;
-
   /// D-M — siyum retraction collaborators. Both optional, mirroring
   /// [_orchestrator]'s precedent, so existing test call sites that never
   /// exercise [expungePriorCompletions]'s real body do not need a
@@ -141,7 +122,6 @@ class BulkPriorCompletionService {
     required BookmarkRepository bookmarkRepository,
     AnalyticsService? analytics,
     StageDefinitionRepository? stageRepository,
-    CompletionOrchestrator? orchestrator,
     CompletionDetectionService? completionDetectionService,
     LearningLedgerRepository? ledgerRepository,
     LocalDayClock? clock,
@@ -150,7 +130,6 @@ class BulkPriorCompletionService {
        _bookmarkRepository = bookmarkRepository,
        _analytics = analytics ?? const NullAnalyticsService(),
        _stageRepository = stageRepository,
-       _orchestrator = orchestrator,
        _completionDetectionService = completionDetectionService,
        _ledgerRepository = ledgerRepository,
        _clock = clock ?? const SystemLocalDayClock();
@@ -310,10 +289,7 @@ class BulkPriorCompletionService {
         creditsAchievement: true,
         completedAt: kBulkPriorSentinelDate, // sentinel: "learned in the past"
       );
-      final orchestrator = _orchestrator;
-      final completions = orchestrator != null
-          ? await orchestrator.bulkMarkComplete(request)
-          : await _completionRepository.bulkMarkComplete(request);
+      final completions = await _completionRepository.bulkMarkComplete(request);
       totalCompletions += completions.length;
     }
 

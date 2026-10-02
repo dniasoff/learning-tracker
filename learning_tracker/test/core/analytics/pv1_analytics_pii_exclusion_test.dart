@@ -50,20 +50,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
-import 'package:learning_tracker/features/learning/domain/services/completion_orchestrator.dart';
-import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -351,48 +338,6 @@ void main() {
         );
         expectDirectCallNoPiiIn(AnalyticsEvent.tutorLiveMarkBlocked);
       });
-
-      test('bulk_engagement_skipped — no parameters at all', () async {
-        final useCase = _useCase(analytics);
-        await useCase.call(
-          const CompletionRequest(
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: 'personal',
-          ),
-          source: CompletionSource.bulkInTrack,
-        );
-        expectDirectCallNoPiiIn(AnalyticsEvent.bulkEngagementSkipped);
-      });
-
-      test('lifetime_achievement_skipped — no parameters at all', () async {
-        final useCase = _useCase(
-          analytics,
-          contentRepository: const _FakeSingleItemContentRepository(
-            ContentItem(
-              curriculumId: 'mishnayos',
-              level1: 'Berakhot',
-              displayNameHe: 'ברכות ב.',
-              displayNameEn: 'Berakhot 2a',
-              sefariaRef: 'Berakhot.2a',
-              sortOrder: 1,
-              isLeaf: true,
-            ),
-          ),
-          learningLedgerRepository: _FakeLearningLedgerRepository(),
-        );
-        await useCase.call(
-          const CompletionRequest(
-            curriculumId: 'mishnayos',
-            sefariaRef: 'Berakhot.2a',
-            stageId: 1,
-            trackType: 'personal',
-          ),
-          source: CompletionSource.lifetimeOnly,
-        );
-        expectDirectCallNoPiiIn(AnalyticsEvent.lifetimeAchievementSkipped);
-      });
     },
   );
 
@@ -413,8 +358,6 @@ void main() {
       AnalyticsEvent.tutorGrantRevoked,
       AnalyticsEvent.tutorResigned,
       AnalyticsEvent.tutorLiveMarkBlocked,
-      AnalyticsEvent.bulkEngagementSkipped,
-      AnalyticsEvent.lifetimeAchievementSkipped,
     };
     expect(
       _exercisedDirectCallEvents,
@@ -436,8 +379,6 @@ void main() {
       AnalyticsEvent.tutorGrantRevoked,
       AnalyticsEvent.tutorResigned,
       AnalyticsEvent.tutorLiveMarkBlocked,
-      AnalyticsEvent.bulkEngagementSkipped,
-      AnalyticsEvent.lifetimeAchievementSkipped,
     };
     // AnalyticsEvent members with zero lib/ emitters — verified by grep,
     // nothing to sweep. `AnalyticsEvent.tutorActionRecorded` was the sole
@@ -529,8 +470,6 @@ void main() {
       AnalyticsEvent.tutorGrantRevoked,
       AnalyticsEvent.tutorResigned,
       AnalyticsEvent.tutorLiveMarkBlocked,
-      AnalyticsEvent.bulkEngagementSkipped,
-      AnalyticsEvent.lifetimeAchievementSkipped,
       AnalyticsEvent.capture,
     };
     expect(
@@ -607,257 +546,3 @@ class _FakeTutorGrantRepository implements TutorGrantRepository {
   @override
   Future<List<TutorGrant>> listPendingInvitesForMe() async => [];
 }
-
-/// Minimal [CompletionRepository] stub — [MarkCompletionUseCase] fires its
-/// analytics BEFORE delegating here, so the returned result only needs to
-/// satisfy the return type.
-class _FakeCompletionRepository implements CompletionRepository {
-  @override
-  Future<MarkCompletionResult> markComplete(
-    CompletionRequest request, {
-    bool awardGamificationPoints = true,
-    bool creditsAchievement = true,
-  }) async => MarkCompletionResult(
-    completion: CompletionEntity(
-      curriculumId: CurriculumId.fromStorageKey(request.curriculumId)!,
-      sefariaRef: request.sefariaRef,
-      stageId: request.stageId,
-      trackType: request.trackType,
-      source: CompletionSource.live,
-      completedAt: DateTime.utc(2026, 5, 1),
-      points: 0,
-    ),
-  );
-
-  @override
-  Future<List<CompletionEntity>> bulkMarkComplete(
-    BulkCompletionRequest request,
-  ) async => [];
-
-  @override
-  Future<List<CompletionEntity>> getCompletionsByCurriculum(
-    String curriculumId, {
-    int? profileId,
-  }) async => [];
-
-  @override
-  Future<List<CompletionEntity>> getCompletionsForContentItem(
-    String sefariaRef,
-  ) async => [];
-
-  @override
-  Future<Map<String, int>> getReviewCountsForCurriculum(
-    CurriculumId curriculumId,
-  ) async => {};
-
-  @override
-  Future<Map<int, int>> getStageBreakdownForItem({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async => {};
-
-  @override
-  Future<bool> isStageCompleted({
-    required String sefariaRef,
-    required int stageId,
-    required String trackType,
-  }) async => false;
-
-  @override
-  Future<void> purgeCompletion({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-    required int stageId,
-    required DateTime purgedAt,
-  }) async {}
-}
-
-/// Minimal [ContentRepository] stub — [CompletionOrchestrator] requires one
-/// at construction, but its methods are only reached by post-write side
-/// effects (siyum dispatch), which never fire here (no
-/// `CompletionDetectionService` is wired in, and every write below is a
-/// duplicate-free single mark, so [MarkCompletionResult.isNew] is `true`
-/// but the siyum dispatch itself is a no-op with `_completionDetectionService
-/// == null`).
-class _FakeContentRepository implements ContentRepository {
-  @override
-  Future<List<ContentItem>> getContentForCurriculum(
-    CurriculumId curriculumId,
-  ) async => const [];
-
-  @override
-  Future<CurriculumHierarchyConfig> getHierarchyConfig(
-    CurriculumId curriculumId,
-  ) async => const CurriculumHierarchyConfig(
-    curriculumId: 'mishnayos',
-    levelLabels: [],
-    totalItems: 0,
-  );
-
-  @override
-  Future<List<ContentItem>> filterByLevel({
-    required CurriculumId curriculumId,
-    String? level1,
-    String? level2,
-    String? level3,
-    String? level4,
-  }) async => const [];
-
-  @override
-  Future<List<ContentItem>> getScopedContent({
-    required CurriculumId curriculumId,
-    required int scopeLevel,
-    required List<String> scopeValues,
-  }) async => const [];
-
-  @override
-  Future<List<ContentItem>> search({
-    required CurriculumId curriculumId,
-    required String query,
-  }) async => const [];
-
-  @override
-  Future<ContentItem?> getContentByRef({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async => null;
-}
-
-/// Resolves ONLY the one ref the `lifetime_achievement_skipped` test marks —
-/// [_recordLifetimeOnly] needs a real item to build the ledger entry from.
-class _FakeSingleItemContentRepository implements ContentRepository {
-  const _FakeSingleItemContentRepository(this._item);
-
-  final ContentItem _item;
-
-  @override
-  Future<ContentItem?> getContentByRef({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async => sefariaRef == _item.sefariaRef ? _item : null;
-
-  @override
-  Future<List<ContentItem>> getContentForCurriculum(
-    CurriculumId curriculumId,
-  ) async => const [];
-
-  @override
-  Future<CurriculumHierarchyConfig> getHierarchyConfig(
-    CurriculumId curriculumId,
-  ) async => const CurriculumHierarchyConfig(
-    curriculumId: 'mishnayos',
-    levelLabels: [],
-    totalItems: 0,
-  );
-
-  @override
-  Future<List<ContentItem>> filterByLevel({
-    required CurriculumId curriculumId,
-    String? level1,
-    String? level2,
-    String? level3,
-    String? level4,
-  }) async => const [];
-
-  @override
-  Future<List<ContentItem>> getScopedContent({
-    required CurriculumId curriculumId,
-    required int scopeLevel,
-    required List<String> scopeValues,
-  }) async => const [];
-
-  @override
-  Future<List<ContentItem>> search({
-    required CurriculumId curriculumId,
-    required String query,
-  }) async => const [];
-}
-
-/// Minimal [LearningLedgerRepository] stub — only [recordCompletion] is
-/// reached by [CompletionOrchestrator._recordLifetimeOnly]; every other
-/// method is unused by this suite.
-class _FakeLearningLedgerRepository implements LearningLedgerRepository {
-  @override
-  Future<LearningLedgerEntry> recordCompletion({
-    required CurriculumId curriculumId,
-    required String entryScope,
-    required String unitIdentifier,
-    required String unitDisplayNameHe,
-    required String unitDisplayNameEn,
-    required String trackType,
-    String? markedBy,
-    required bool isManual,
-    CompletionSource source = CompletionSource.live,
-    String? ulid,
-  }) async => LearningLedgerEntry(
-    ulid: ulid ?? 'fake-ledger-entry',
-    curriculumId: curriculumId,
-    entryScope: entryScope,
-    unitIdentifier: unitIdentifier,
-    unitDisplayNameHe: unitDisplayNameHe,
-    unitDisplayNameEn: unitDisplayNameEn,
-    trackType: trackType,
-    completedAt: DateTime.utc(2026, 5, 1),
-    completionNumber: 1,
-    markedBy: markedBy ?? 'fake-profile',
-    isManual: isManual,
-    source: source,
-  );
-
-  @override
-  Future<List<LearningLedgerEntry>> recordCompletionsBatch(
-    List<LedgerEntryDraft> items, {
-    CompletionSource source = CompletionSource.lifetimeOnly,
-  }) async => [];
-
-  @override
-  Future<List<LearningLedgerEntry>> getLifetimeLedger() async => [];
-
-  @override
-  Future<List<LearningLedgerEntry>> getLedgerByCurriculum(
-    CurriculumId curriculumId,
-  ) async => [];
-
-  @override
-  Future<List<LearningLedgerEntry>> getLedgerByCurriculumIncludingTombstoned(
-    CurriculumId curriculumId,
-  ) async => [];
-
-  @override
-  Future<Map<String, int>> getCompletionStats(
-    CurriculumId curriculumId,
-  ) async => {};
-
-  @override
-  Future<void> purgeEntry({
-    required String ulid,
-    required DateTime purgedAt,
-  }) async {}
-}
-
-/// Builds a [MarkCompletionUseCase] wired over [CompletionOrchestrator] for
-/// these PII-exclusion tests — the orchestrator's optional collaborators
-/// (bookmark repository, siyum detection, points, streak) are all omitted,
-/// which resolves every post-write side effect to a safe no-op (see
-/// [CompletionOrchestrator]'s class doc comment). Only order validation and
-/// the storage write itself run, both against [_FakeCompletionRepository].
-///
-/// [contentRepository] / [learningLedgerRepository] are overridable because
-/// `CompletionSource.lifetimeOnly` routes through
-/// [CompletionOrchestrator._recordLifetimeOnly], which — unlike every other
-/// source — treats the content lookup and the ledger write as its PRIMARY
-/// write path, not an optional post-write side effect: it hard-requires a
-/// non-null ledger repository and a resolvable content item.
-MarkCompletionUseCase _useCase(
-  AnalyticsService analytics, {
-  ContentRepository? contentRepository,
-  LearningLedgerRepository? learningLedgerRepository,
-}) => MarkCompletionUseCase(
-  CompletionOrchestrator(
-    repository: _FakeCompletionRepository(),
-    contentRepository: contentRepository ?? _FakeContentRepository(),
-    activeProfileId: '01J8M6H7QK2P4N9R5T6V8W0XYZ',
-    learningLedgerRepository: learningLedgerRepository,
-  ),
-  analytics: analytics,
-);
