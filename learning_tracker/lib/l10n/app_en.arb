@@ -1586,6 +1586,190 @@
     }
   },
   "allDoneForToday": "All done for today!",
+  "groundHeldTagSemantics": "Held by {names}. Not on the home schedule.",
+  "@groundHeldTagSemantics": {
+    "description": "Main-track browse: screen-reader text of a greyed leaf held by a sub-track (DNI-498 AC-6, UX-DR-63, UX-DR-93).",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerAddGround": "Add ground",
+  "@groundPickerAddGround": {
+    "description": "Sub-track detail: parent action opening the ground picker (DNI-498 AC-1, UX-DR-54)."
+  },
+  "groundPickerAlreadyIn": "Already in {name}",
+  "@groundPickerAlreadyIn": {
+    "description": "Ground picker: tag and screen-reader state of a node already in this sub-track, pre-checked and disabled (DNI-498 AC-3, UX-DR-79).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerAvailableOnly": "Available only",
+  "@groundPickerAvailableOnly": {
+    "description": "Ground picker: filter hiding in-use, learnt and already-assigned ground (DNI-498 AC-3, UX-DR-125)."
+  },
+  "groundPickerChazara": "Chazara",
+  "@groundPickerChazara": {
+    "description": "Ground picker: tag on ground already learnt; it stays selectable (DNI-498 AC-3, UX-DR-92)."
+  },
+  "groundPickerClose": "Close",
+  "@groundPickerClose": {
+    "description": "Ground picker: close button tooltip; focus returns to Add ground (DNI-498 AC-9, UX-DR-160)."
+  },
+  "groundPickerCollapse": "Collapse {node}",
+  "@groundPickerCollapse": {
+    "description": "Ground picker: screen-reader action collapsing a tree row (DNI-498 AC-9).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerConfirm": "Add {count} {unit} to {name}",
+  "@groundPickerConfirm": {
+    "description": "Ground picker: sticky footer confirm pill with the live count in the curriculum's own level unit (DNI-498 AC-2, UX-DR-30).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerConfirmEmpty": "Add to {name}",
+  "@groundPickerConfirmEmpty": {
+    "description": "Ground picker: disabled confirm pill while nothing is picked (DNI-498 AC-2). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerExpand": "Expand {node}",
+  "@groundPickerExpand": {
+    "description": "Ground picker: screen-reader action expanding a tree row (DNI-498 AC-9).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerFilterEmpty": "Everything here is already assigned or learnt.",
+  "@groundPickerFilterEmpty": {
+    "description": "Ground picker: Available only left nothing to show (DNI-498 AC-3, UX-DR-125)."
+  },
+  "groundPickerInUse": "{name} · In use",
+  "@groundPickerInUse": {
+    "description": "Ground picker: tag on ground held by another non-ended sub-track; it stays selectable (DNI-498 AC-3, UX-DR-92).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerLegendComplete": "Complete",
+  "@groundPickerLegendComplete": {
+    "description": "Ground picker: progress legend, every leaf learnt (DNI-498 AC-2, FR-15)."
+  },
+  "groundPickerLegendEmpty": "Empty",
+  "@groundPickerLegendEmpty": {
+    "description": "Ground picker: progress legend, nothing learnt (DNI-498 AC-2, FR-15)."
+  },
+  "groundPickerLegendPartial": "Partial",
+  "@groundPickerLegendPartial": {
+    "description": "Ground picker: progress legend, some leaves learnt (DNI-498 AC-2, FR-15)."
+  },
+  "groundPickerLoadError": "Couldn't load the curriculum.",
+  "@groundPickerLoadError": {
+    "description": "Ground picker: load failure above the AppErrorView retry (DNI-498 AC-2, UX-DR-126). DRAFT copy, pending zc4."
+  },
+  "groundPickerNoMatches": "Nothing matches “{query}”.",
+  "@groundPickerNoMatches": {
+    "description": "Ground picker: the search matched no node (DNI-498 edge). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerNotSelected": "Not selected",
+  "@groundPickerNotSelected": {
+    "description": "Ground picker: screen-reader selection state of an unpicked row (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerPartlySelected": "Partly selected",
+  "@groundPickerPartlySelected": {
+    "description": "Ground picker: screen-reader selection state of a partly picked row (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerProgressComplete": "Complete",
+  "@groundPickerProgressComplete": {
+    "description": "Ground picker: screen-reader progress state, every leaf learnt (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerProgressEmpty": "Empty",
+  "@groundPickerProgressEmpty": {
+    "description": "Ground picker: screen-reader progress state, nothing learnt (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerProgressPartial": "Partial",
+  "@groundPickerProgressPartial": {
+    "description": "Ground picker: screen-reader progress state, some leaves learnt (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerRejected": "Couldn't add the ground. Nothing was changed.",
+  "@groundPickerRejected": {
+    "description": "Ground picker: snackbar after a rejected assignment rolled back (DNI-498 AC-4, UX-DR-127). DRAFT copy, pending zc4."
+  },
+  "groundPickerReset": "Reset changes",
+  "@groundPickerReset": {
+    "description": "Ground picker: sticky footer action clearing only the pending selection (DNI-498 AC-3, UX-DR-30)."
+  },
+  "groundPickerScheduleNote": "They'll leave the home schedule while {name} holds them.",
+  "@groundPickerScheduleNote": {
+    "description": "Ground picker: footer note under the confirm pill (DNI-498 AC-2, UX-DR-30).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerSearchHint": "Search",
+  "@groundPickerSearchHint": {
+    "description": "Ground picker: search field hint; matches English and Hebrew names (DNI-498 AC-2)."
+  },
+  "groundPickerSelected": "Selected",
+  "@groundPickerSelected": {
+    "description": "Ground picker: screen-reader selection state of a picked row (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerTitle": "Add ground to {name}",
+  "@groundPickerTitle": {
+    "description": "Ground picker: screen title; focus lands here on open (DNI-498 AC-2, AC-9).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerUnavailable": "Ground can't be added here.",
+  "@groundPickerUnavailable": {
+    "description": "Ground picker: shown instead of the picker for a calendar-program curriculum, a child session or an unknown sub-track (DNI-498 AC-7, AC-8). DRAFT copy, pending zc4."
+  },
+  "groundPickerUnitCount": "{count} {unit}",
+  "@groundPickerUnitCount": {
+    "description": "Ground picker: a row's child count in the curriculum's own level name (DNI-498 AC-2).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
   "mishnaHistoryActionChangeDate": "Change date",
   "mishnaHistoryActionChangePlace": "Change place",
   "mishnaHistoryActionChangeSource": "Change source",

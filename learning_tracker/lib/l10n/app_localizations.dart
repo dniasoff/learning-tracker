@@ -4619,6 +4619,186 @@ abstract class AppLocalizations {
   /// **'All done for today!'**
   String get allDoneForToday;
 
+  /// Main-track browse: screen-reader text of a greyed leaf held by a sub-track (DNI-498 AC-6, UX-DR-63, UX-DR-93).
+  ///
+  /// In en, this message translates to:
+  /// **'Held by {names}. Not on the home schedule.'**
+  String groundHeldTagSemantics(String names);
+
+  /// Sub-track detail: parent action opening the ground picker (DNI-498 AC-1, UX-DR-54).
+  ///
+  /// In en, this message translates to:
+  /// **'Add ground'**
+  String get groundPickerAddGround;
+
+  /// Ground picker: tag and screen-reader state of a node already in this sub-track, pre-checked and disabled (DNI-498 AC-3, UX-DR-79).
+  ///
+  /// In en, this message translates to:
+  /// **'Already in {name}'**
+  String groundPickerAlreadyIn(String name);
+
+  /// Ground picker: filter hiding in-use, learnt and already-assigned ground (DNI-498 AC-3, UX-DR-125).
+  ///
+  /// In en, this message translates to:
+  /// **'Available only'**
+  String get groundPickerAvailableOnly;
+
+  /// Ground picker: tag on ground already learnt; it stays selectable (DNI-498 AC-3, UX-DR-92).
+  ///
+  /// In en, this message translates to:
+  /// **'Chazara'**
+  String get groundPickerChazara;
+
+  /// Ground picker: close button tooltip; focus returns to Add ground (DNI-498 AC-9, UX-DR-160).
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get groundPickerClose;
+
+  /// Ground picker: screen-reader action collapsing a tree row (DNI-498 AC-9).
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse {node}'**
+  String groundPickerCollapse(String node);
+
+  /// Ground picker: sticky footer confirm pill with the live count in the curriculum's own level unit (DNI-498 AC-2, UX-DR-30).
+  ///
+  /// In en, this message translates to:
+  /// **'Add {count} {unit} to {name}'**
+  String groundPickerConfirm(int count, String unit, String name);
+
+  /// Ground picker: disabled confirm pill while nothing is picked (DNI-498 AC-2). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to {name}'**
+  String groundPickerConfirmEmpty(String name);
+
+  /// Ground picker: screen-reader action expanding a tree row (DNI-498 AC-9).
+  ///
+  /// In en, this message translates to:
+  /// **'Expand {node}'**
+  String groundPickerExpand(String node);
+
+  /// Ground picker: Available only left nothing to show (DNI-498 AC-3, UX-DR-125).
+  ///
+  /// In en, this message translates to:
+  /// **'Everything here is already assigned or learnt.'**
+  String get groundPickerFilterEmpty;
+
+  /// Ground picker: tag on ground held by another non-ended sub-track; it stays selectable (DNI-498 AC-3, UX-DR-92).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · In use'**
+  String groundPickerInUse(String name);
+
+  /// Ground picker: progress legend, every leaf learnt (DNI-498 AC-2, FR-15).
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get groundPickerLegendComplete;
+
+  /// Ground picker: progress legend, nothing learnt (DNI-498 AC-2, FR-15).
+  ///
+  /// In en, this message translates to:
+  /// **'Empty'**
+  String get groundPickerLegendEmpty;
+
+  /// Ground picker: progress legend, some leaves learnt (DNI-498 AC-2, FR-15).
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get groundPickerLegendPartial;
+
+  /// Ground picker: load failure above the AppErrorView retry (DNI-498 AC-2, UX-DR-126). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the curriculum.'**
+  String get groundPickerLoadError;
+
+  /// Ground picker: the search matched no node (DNI-498 edge). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches “{query}”.'**
+  String groundPickerNoMatches(String query);
+
+  /// Ground picker: screen-reader selection state of an unpicked row (DNI-498 AC-9, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Not selected'**
+  String get groundPickerNotSelected;
+
+  /// Ground picker: screen-reader selection state of a partly picked row (DNI-498 AC-9, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Partly selected'**
+  String get groundPickerPartlySelected;
+
+  /// Ground picker: screen-reader progress state, every leaf learnt (DNI-498 AC-9, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get groundPickerProgressComplete;
+
+  /// Ground picker: screen-reader progress state, nothing learnt (DNI-498 AC-9, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Empty'**
+  String get groundPickerProgressEmpty;
+
+  /// Ground picker: screen-reader progress state, some leaves learnt (DNI-498 AC-9, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get groundPickerProgressPartial;
+
+  /// Ground picker: snackbar after a rejected assignment rolled back (DNI-498 AC-4, UX-DR-127). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add the ground. Nothing was changed.'**
+  String get groundPickerRejected;
+
+  /// Ground picker: sticky footer action clearing only the pending selection (DNI-498 AC-3, UX-DR-30).
+  ///
+  /// In en, this message translates to:
+  /// **'Reset changes'**
+  String get groundPickerReset;
+
+  /// Ground picker: footer note under the confirm pill (DNI-498 AC-2, UX-DR-30).
+  ///
+  /// In en, this message translates to:
+  /// **'They\'ll leave the home schedule while {name} holds them.'**
+  String groundPickerScheduleNote(String name);
+
+  /// Ground picker: search field hint; matches English and Hebrew names (DNI-498 AC-2).
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get groundPickerSearchHint;
+
+  /// Ground picker: screen-reader selection state of a picked row (DNI-498 AC-9, UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get groundPickerSelected;
+
+  /// Ground picker: screen title; focus lands here on open (DNI-498 AC-2, AC-9).
+  ///
+  /// In en, this message translates to:
+  /// **'Add ground to {name}'**
+  String groundPickerTitle(String name);
+
+  /// Ground picker: shown instead of the picker for a calendar-program curriculum, a child session or an unknown sub-track (DNI-498 AC-7, AC-8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Ground can\'t be added here.'**
+  String get groundPickerUnavailable;
+
+  /// Ground picker: a row's child count in the curriculum's own level name (DNI-498 AC-2).
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {unit}'**
+  String groundPickerUnitCount(int count, String unit);
+
   /// No description provided for @mishnaHistoryActionChangeDate.
   ///
   /// In en, this message translates to:

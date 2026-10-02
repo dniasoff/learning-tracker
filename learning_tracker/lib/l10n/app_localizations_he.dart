@@ -2587,6 +2587,119 @@ class AppLocalizationsHe extends AppLocalizations {
   String get allDoneForToday => 'סיימתם להיום!';
 
   @override
+  String groundHeldTagSemantics(String names) {
+    return 'בשימוש של $names. לא בלוח הלימוד בבית.';
+  }
+
+  @override
+  String get groundPickerAddGround => 'הוספת חומר';
+
+  @override
+  String groundPickerAlreadyIn(String name) {
+    return 'כבר ב$name';
+  }
+
+  @override
+  String get groundPickerAvailableOnly => 'זמין בלבד';
+
+  @override
+  String get groundPickerChazara => 'חזרה';
+
+  @override
+  String get groundPickerClose => 'סגירה';
+
+  @override
+  String groundPickerCollapse(String node) {
+    return 'כיווץ $node';
+  }
+
+  @override
+  String groundPickerConfirm(int count, String unit, String name) {
+    return 'הוספת $count $unit ל$name';
+  }
+
+  @override
+  String groundPickerConfirmEmpty(String name) {
+    return 'הוספה ל$name';
+  }
+
+  @override
+  String groundPickerExpand(String node) {
+    return 'הרחבת $node';
+  }
+
+  @override
+  String get groundPickerFilterEmpty => 'כל החומר כאן כבר משויך או נלמד.';
+
+  @override
+  String groundPickerInUse(String name) {
+    return '$name · בשימוש';
+  }
+
+  @override
+  String get groundPickerLegendComplete => 'הושלם';
+
+  @override
+  String get groundPickerLegendEmpty => 'ריק';
+
+  @override
+  String get groundPickerLegendPartial => 'חלקי';
+
+  @override
+  String get groundPickerLoadError => 'לא ניתן היה לטעון את תוכנית הלימוד.';
+
+  @override
+  String groundPickerNoMatches(String query) {
+    return 'אין תוצאות עבור “$query”.';
+  }
+
+  @override
+  String get groundPickerNotSelected => 'לא נבחר';
+
+  @override
+  String get groundPickerPartlySelected => 'נבחר חלקית';
+
+  @override
+  String get groundPickerProgressComplete => 'הושלם';
+
+  @override
+  String get groundPickerProgressEmpty => 'ריק';
+
+  @override
+  String get groundPickerProgressPartial => 'חלקי';
+
+  @override
+  String get groundPickerRejected =>
+      'לא ניתן היה להוסיף את החומר. לא בוצע שינוי.';
+
+  @override
+  String get groundPickerReset => 'ביטול השינויים';
+
+  @override
+  String groundPickerScheduleNote(String name) {
+    return 'הם ייצאו מלוח הלימוד בבית כל עוד $name מחזיק בהם.';
+  }
+
+  @override
+  String get groundPickerSearchHint => 'חיפוש';
+
+  @override
+  String get groundPickerSelected => 'נבחר';
+
+  @override
+  String groundPickerTitle(String name) {
+    return 'הוספת חומר ל$name';
+  }
+
+  @override
+  String get groundPickerUnavailable => 'לא ניתן להוסיף כאן חומר.';
+
+  @override
+  String groundPickerUnitCount(int count, String unit) {
+    return '$count $unit';
+  }
+
+  @override
   String get mishnaHistoryActionChangeDate => 'שינוי תאריך';
 
   @override
