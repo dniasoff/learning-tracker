@@ -7292,6 +7292,12 @@ abstract class AppLocalizations {
   /// **'Set a deadline'**
   String get subTrackNoDeadlineLink;
 
+  /// Snackbar when the goal opened from a sub-track form's no-deadline link could not be saved (DNI-495 AC-6).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the goal.'**
+  String get subTrackGoalSaveFailed;
+
   /// Sub-track form inline error: blank name (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
   ///
   /// In en, this message translates to:

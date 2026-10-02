@@ -209,9 +209,21 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
   Future<CaptureResult> undoEvents(List<String> eventIds) =>
       _fake.undoEvents(eventIds);
 
+  /// Every `applyGovernedChange` action, in order (the AC-6 goal link).
+  final List<GovernedAction> governed = [];
+
+  /// When set, the next `applyGovernedChange` returns it (one-shot).
+  CaptureResult? nextGovernedResult;
+
   @override
-  Future<CaptureResult> applyGovernedChange(GovernedAction action) =>
-      _fake.applyGovernedChange(action);
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) {
+    governed.add(action);
+    final result = nextGovernedResult;
+    nextGovernedResult = null;
+    return result != null
+        ? Future.value(result)
+        : _fake.applyGovernedChange(action);
+  }
 
   @override
   Future<CaptureResult> undoAction(String actionId) =>

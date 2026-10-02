@@ -4203,6 +4203,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get subTrackNoDeadlineLink => 'הגדרת תאריך יעד';
 
   @override
+  String get subTrackGoalSaveFailed => 'לא ניתן היה לשמור את היעד.';
+
+  @override
   String get subTrackErrorNameRequired => 'יש להזין שם';
 
   @override

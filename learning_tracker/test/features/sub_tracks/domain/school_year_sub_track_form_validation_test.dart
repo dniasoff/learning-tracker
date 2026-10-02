@@ -455,10 +455,9 @@ void main() {
         academicYear: 2025,
         openEnd: true,
       );
-      expect(
-        _validate(_values(academicYear: 2028), subTracks: [open]),
-        {SchoolYearFormField.window: SchoolYearFormError.windowOverlap},
-      );
+      expect(_validate(_values(academicYear: 2028), subTracks: [open]), {
+        SchoolYearFormField.window: SchoolYearFormError.windowOverlap,
+      });
     });
 
     test('values of a stored track round-trip its months and numbers', () {
