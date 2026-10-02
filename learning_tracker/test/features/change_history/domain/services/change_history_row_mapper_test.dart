@@ -53,9 +53,11 @@ ChangeLogEntry _subTrackEntry(
   required Map<String, Object?> after,
   Actor actor = historyTutor,
   int? actionOf,
+  int? originalMinutes,
 }) => historyEntry(
   n,
   minutes: minutes,
+  originalMinutes: originalMinutes,
   entity: GovernedEntity.subTrack,
   entityId: subTrackId,
   actor: actor,
@@ -266,6 +268,65 @@ void main() {
       expect(batch.learnedOn, '2026-08-29');
       expect(rows[2].eventCount, 3);
       expect(rows[2].canUndo, isTrue);
+    });
+  });
+
+  group('imported entries take effect at original_at', () {
+    test('an imported change is stamped, ordered and undone at its '
+        'original instant, not the day it was written', () {
+      // Written 2026-09-08 (minute 7 days + 600), imported from
+      // 2026-09-01T12:00Z (08:00 in New York).
+      final rows = _rows(
+        entries: [
+          historyEntry(1, minutes: 7 * 24 * 60 + 600, originalMinutes: 720),
+          historyEntry(2, minutes: 7 * 24 * 60 + 601, reverts: 1),
+        ],
+        events: [historyLearn(10, minutes: 24 * 60)],
+      );
+      expect(rows.map((r) => r.key), [
+        'action:${historyId(2)}',
+        rows[1].key,
+        'action:${historyId(1)}',
+      ]);
+      expect(rows[1].kind, ChangeHistoryRowKind.learning);
+      final imported = rows.last;
+      expect(imported.stamp.at, historyAt(720));
+      expect(imported.stamp.day, '2026-09-01');
+      expect(imported.stamp.localTime, DateTime(2026, 9, 1, 8));
+      expect(imported.undoneBy?.at, historyAt(7 * 24 * 60 + 601));
+    });
+
+    test('an imported rename names sources by its original instant', () {
+      final sub = historyId(7001);
+      final rows = _rows(
+        entries: [
+          // Renamed at minute 100, imported (written) at minute 1000.
+          _subTrackEntry(
+            1,
+            minutes: 1000,
+            originalMinutes: 100,
+            subTrackId: sub,
+            before: {'name': 'Rebbe'},
+            after: {'name': 'Rav Cohen shiur'},
+          ),
+        ],
+        events: [
+          historyLearn(10, minutes: 50, source: sub),
+          historyLearn(11, minutes: 200, source: sub),
+        ],
+        names: {sub: 'Rav Cohen shiur'},
+      );
+      String? nameOf(String key) =>
+          ((rows.singleWhere((r) => r.key == key).summary as LearningSummary)
+                      .source!
+                  as SubTrackSource)
+              .name;
+      final learnRows = [
+        for (final r in rows)
+          if (r.kind == ChangeHistoryRowKind.learning) r.key,
+      ];
+      expect(nameOf(learnRows.first), 'Rav Cohen shiur', reason: 'minute 200');
+      expect(nameOf(learnRows.last), 'Rebbe', reason: 'minute 50');
     });
   });
 

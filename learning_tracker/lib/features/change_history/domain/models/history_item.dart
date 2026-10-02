@@ -8,6 +8,16 @@ import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 
+/// The instant [entry] took effect: `original_at ?? at` (AD-41), the
+/// change-log counterpart of [effectiveAt]. An imported entry keeps the
+/// instant of the change it records, not the day it was written. History
+/// sorts, groups, stamps and names by it, never by the raw `at`.
+///
+/// It is never later than `at` (`original_at` is the earlier, original
+/// instant of an imported change), so the `at` watermark of the
+/// `change_log` pages still bounds every unread entry.
+DateTime changeAt(ChangeLogEntry entry) => entry.originalAt ?? entry.at;
+
 /// One merged history item, ordered newest [sortAt] first.
 sealed class HistoryItem {
   const HistoryItem();
@@ -53,10 +63,10 @@ final class GovernedActionItem extends HistoryItem {
   @override
   String get key => 'action:$actionId';
 
-  /// The newest entry instant of the action.
+  /// The newest effective entry instant of the action ([changeAt]).
   @override
   DateTime get sortAt =>
-      entries.map((e) => e.at).reduce((a, b) => b.isAfter(a) ? b : a);
+      entries.map(changeAt).reduce((a, b) => b.isAfter(a) ? b : a);
 
   @override
   Actor get actor => primary.actor;

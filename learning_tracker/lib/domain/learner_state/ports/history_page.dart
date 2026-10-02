@@ -12,7 +12,10 @@
 /// Ordering fields (single-field orders served by Firestore's automatic
 /// indexes; no new index, AD-54):
 ///
-/// - `change_log` pages by `at` descending.
+/// - `change_log` pages by `at` descending. The caller orders by the
+///   effective instant `original_at ?? at` and uses the `at` watermark as
+///   its bound, as below: `original_at` (import only) is the earlier,
+///   original instant of an imported change.
 /// - `learning_events` pages by `recorded_at` descending. A query cannot
 ///   order by `original_recorded_at ?? recorded_at`, so the caller orders
 ///   by that effective instant and uses [HistoryPage.watermark] (the
