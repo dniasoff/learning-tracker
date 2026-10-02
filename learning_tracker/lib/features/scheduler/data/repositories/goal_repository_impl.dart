@@ -104,8 +104,28 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
     String dateType = 'gregorian',
     String? paceGranularity,
   }) async {
-    final repo = await _resolve();
     final granularity = PaceGranularity.fromStorageKey(paceGranularity);
+    // Story 1.24 (DNI-486): a tutor's first goal on a track is the governed
+    // `tutorUpsertGoal` callable, with the same creation rule — never a
+    // client write into the talmid's tree.
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      final created = FirestoreGoalRepository.buildNewGoal(
+        curriculumId: curriculumId,
+        now: DateTimeFactory.nowUtc(),
+        paceTarget: paceTarget,
+        description: description,
+        dateType: dateType,
+        paceGranularity: granularity,
+        rawLearningUnit: granularity == null ? paceGranularity : null,
+      );
+      final writes = await requireTutorGovernedWrites(_ref);
+      await writes.upsertGoal(
+        goalId: created.firestoreId,
+        data: created.toFirestore(),
+      );
+      return created;
+    }
+    final repo = await _resolve();
     return repo.createGoal(
       curriculumId: curriculumId,
       paceTarget: paceTarget,

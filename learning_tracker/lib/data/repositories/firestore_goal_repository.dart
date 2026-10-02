@@ -190,11 +190,34 @@ class FirestoreGoalRepository {
     PaceGranularity? paceGranularity,
     String? rawLearningUnit,
   }) async {
-    final now = _clock();
+    final entity = buildNewGoal(
+      curriculumId: curriculumId,
+      now: _clock(),
+      paceTarget: paceTarget,
+      description: description,
+      dateType: dateType,
+      paceGranularity: paceGranularity,
+      rawLearningUnit: rawLearningUnit,
+    );
+    await _apply(await planSetGoal(entity));
+    return entity;
+  }
+
+  /// Resolves a new goal without writing so owner and tutor paths share
+  /// the same creation rule.
+  static GoalEntity buildNewGoal({
+    required CurriculumId curriculumId,
+    required DateTime now,
+    PaceTarget? paceTarget,
+    String description = '',
+    String dateType = 'gregorian',
+    PaceGranularity? paceGranularity,
+    String? rawLearningUnit,
+  }) {
     final (goalType, targetDate, paceValue, pacePeriod) = _decomposePaceTarget(
       paceTarget,
     );
-    final entity = GoalEntity(
+    return GoalEntity(
       curriculumId: curriculumId,
       targetDate: targetDate,
       description: description,
@@ -206,8 +229,6 @@ class FirestoreGoalRepository {
       rawLearningUnit: paceGranularity == null ? rawLearningUnit : null,
       createdAt: now,
     );
-    await _apply(await planSetGoal(entity));
-    return entity;
   }
 
   /// Resolves an update without writing so owner and tutor paths share the
