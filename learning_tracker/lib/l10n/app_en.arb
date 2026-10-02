@@ -248,6 +248,42 @@
   "visibleToChild": "Visible to child",
   "childCanSee": "Child can see this reward",
   "hiddenUntilEarned": "Hidden until earned (surprise)",
+  "onTrackBehindPace": "Behind pace",
+  "onTrackDailyTarget": "Daily target: {count} {unit}/day",
+  "@onTrackDailyTarget": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "onTrackFinishUnknown": "not yet known",
+  "onTrackLoading": "Loading pace status",
+  "onTrackOnTrack": "On track",
+  "onTrackProjectedFinish": "Projected finish: {finish}",
+  "@onTrackProjectedFinish": {
+    "placeholders": {
+      "finish": {
+        "type": "String"
+      }
+    }
+  },
+  "onTrackProjectedFinishWithDeadline": "Projected finish: {finish} · deadline {deadline}",
+  "@onTrackProjectedFinishWithDeadline": {
+    "placeholders": {
+      "finish": {
+        "type": "String"
+      },
+      "deadline": {
+        "type": "String"
+      }
+    }
+  },
+  "onTrackTooEarly": "Too early to tell",
+  "todayTargetAllCovered": "All covered — any extra learning is a bonus.",
   "onboarding": "Onboarding",
   "getStarted": "Get Started",
   "ctaGetStartedTitle": "Get started",
