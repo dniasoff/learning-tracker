@@ -32,6 +32,7 @@ import 'package:test/test.dart';
 
 import '../helpers/fake_clock.dart';
 import '../helpers/firestore_fixtures.dart';
+import '../helpers/firestore_governed_writer.dart';
 
 void main() {
   group('Invariant net — 2026-05-17 quality crisis', tags: ['invariants'], () {
@@ -107,6 +108,11 @@ void main() {
             firestore: firestore,
             uid: uid,
             profileId: profileId,
+            writer: FirestoreGovernedWriter(
+              firestore,
+              uid: uid,
+              profileId: profileId,
+            ),
           );
           final completions = FirestoreCompletionRepository(
             firestore: firestore,
@@ -188,6 +194,11 @@ void main() {
             firestore: firestore,
             uid: uid,
             profileId: profileId,
+            writer: FirestoreGovernedWriter(
+              firestore,
+              uid: uid,
+              profileId: profileId,
+            ),
           );
           final originalActivatedAt = DateTime.utc(2026, 5, 27, 12);
           await seedTrack(

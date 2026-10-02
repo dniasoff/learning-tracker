@@ -94,10 +94,12 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'data_export_firestore_test_support.dart';
 import 'firestore_fake.dart';
+import 'firestore_governed_writer.dart';
 
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -141,6 +143,11 @@ activateAccountAndProfile({
   final firestore = createFakeFirestore(strictRules: false);
   final container = ProviderContainer(
     overrides: [
+      // Owner governed writes (DNI-476) run through the real governed
+      // commands on the same fake, scoped like the repositories.
+      ownerGovernedWriterProvider.overrideWithValue(
+        FirestoreGovernedWriter(firestore, uid: uid, profileId: profileId),
+      ),
       activeAccountFirebaseProvider.overrideWith(
         (ref) async => AccountFirebaseHandles(
           app: _MockFirebaseApp(),

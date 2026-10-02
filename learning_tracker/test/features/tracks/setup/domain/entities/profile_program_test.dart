@@ -192,12 +192,20 @@ void main() {
       );
     });
 
-    test('throws FormatException when updated_at is missing', () {
+    test('a governed doc without the retired updated_at decodes (AD-38, '
+        'DNI-476)', () {
       final data = validMap()..remove('updated_at');
-      expect(
-        () => profileProgramFromFirestore(data),
-        throwsA(isA<FormatException>()),
-      );
+      expect(profileProgramFromFirestore(data).updatedAt, DateTime.utc(1970));
+    });
+
+    test('decodes the AD-52 shapes: a string program_id and a civil-date '
+        'tracking_start_date', () {
+      final data = validMap()
+        ..['program_id'] = '7'
+        ..['tracking_start_date'] = '2026-03-04';
+      final entity = profileProgramFromFirestore(data);
+      expect(entity.programId, 7);
+      expect(entity.trackingStartDate, DateTime.utc(2026, 3, 4));
     });
 
     test('a fully valid map decodes without throwing', () {

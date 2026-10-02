@@ -65,6 +65,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -217,6 +218,11 @@ void main() {
         firestore: firestore,
         uid: _profileUid,
         profileId: _profileId,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: _profileUid,
+          profileId: _profileId,
+        ),
       );
       await profileProgramRepository.setProgram(
         curriculumId: CurriculumId.mishnayos,

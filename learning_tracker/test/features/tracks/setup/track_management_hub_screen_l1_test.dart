@@ -26,6 +26,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/firestore_fake.dart';
 import '../../../helpers/firestore_fixtures.dart';
+import '../../../helpers/firestore_governed_writer.dart';
 
 class _Router extends Mock implements StackRouter {}
 
@@ -66,6 +67,11 @@ Widget _app({
           firestore: firestore,
           uid: _uid,
           profileId: _profileId,
+          writer: FirestoreGovernedWriter(
+            firestore,
+            uid: _uid,
+            profileId: _profileId,
+          ),
         ).watchActiveTracks(),
       ),
     firestoreCurriculumTrackRepositoryProvider.overrideWith(
@@ -73,6 +79,11 @@ Widget _app({
         firestore: firestore,
         uid: _uid,
         profileId: _profileId,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+        ),
       ),
     ),
     curriculumTrackRepositoryAdapterProvider.overrideWith(
@@ -86,6 +97,11 @@ Widget _app({
         firestore: firestore,
         uid: _uid,
         profileId: _profileId,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+        ),
       ),
     ),
     dashboardActiveCurriculaProvider.overrideWith(
@@ -328,6 +344,11 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     ).getTrack(CurriculumId.mishnayos);
     expect(stored?.isActive, isFalse);
     expect(stored?.state, 'retired');

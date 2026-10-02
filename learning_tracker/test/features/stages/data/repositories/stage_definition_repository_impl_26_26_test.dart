@@ -13,6 +13,7 @@ import 'package:learning_tracker/data/repositories/firestore_stage_definition_re
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 void main() {
   group('ScheduleSpec.fromParts — reconstruction', () {
@@ -69,11 +70,21 @@ void main() {
         firestore: firestore,
         uid: uid,
         profileId: profile1,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: uid,
+          profileId: profile1,
+        ),
       );
       final repo2 = FirestoreStageDefinitionRepository(
         firestore: firestore,
         uid: uid,
         profileId: profile2,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: uid,
+          profileId: profile2,
+        ),
       );
 
       await seedStageDefinitions(

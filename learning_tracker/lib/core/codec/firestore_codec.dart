@@ -80,6 +80,45 @@ abstract class FirestoreCodec {
   /// which does this.
   static String? encodeDateTime(DateTime? dt) => dt?.toUtc().toIso8601String();
 
+  // ── AD-52 civil dates ────────────────────────────────────────────────────────
+
+  static final _civilDate = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
+
+  /// The AD-52 civil date (`YYYY-MM-DD`) a date-valued [instant] names
+  /// (a goal's `target_date`, a program's `tracking_start_date`): a UTC
+  /// midnight is that UTC day; any other instant — e.g. a local midnight a
+  /// caller converted with `toUtc()` — is read on the device's calendar.
+  static String encodeCivilDate(DateTime instant) {
+    final utcMidnight =
+        instant.isUtc &&
+        instant.hour == 0 &&
+        instant.minute == 0 &&
+        instant.second == 0 &&
+        instant.millisecond == 0 &&
+        instant.microsecond == 0;
+    final date = utcMidnight ? instant : instant.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${two(date.month)}-${two(date.day)}';
+  }
+
+  /// Decodes a date-valued field: an AD-52 civil date (`YYYY-MM-DD`) is
+  /// that day's UTC midnight; any other shape goes through
+  /// [parseDateTime] (legacy ISO-8601 instants).
+  static DateTime? parseCivilDate(Object? raw) {
+    if (raw is String) {
+      final m = _civilDate.firstMatch(raw);
+      if (m != null) {
+        return DateTime.utc(
+          int.parse(m.group(1)!),
+          int.parse(m.group(2)!),
+          int.parse(m.group(3)!),
+        );
+      }
+    }
+    return parseDateTime(raw);
+  }
+
   // ── Primitive coercions ──────────────────────────────────────────────────────
 
   /// Parse an `int` from a field that may arrive as `String` or `num`.

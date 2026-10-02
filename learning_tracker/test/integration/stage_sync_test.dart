@@ -6,6 +6,7 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
 
 import '../helpers/firestore_fake.dart';
 import '../helpers/firestore_fixtures.dart';
+import '../helpers/firestore_governed_writer.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -29,6 +30,11 @@ void main() {
       firestore: firestore,
       uid: uid,
       profileId: profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: uid,
+        profileId: profileId,
+      ),
     );
   });
 
@@ -85,7 +91,7 @@ void main() {
     );
 
     test(
-      'resetToDefaults restores defaults while retaining a custom stage',
+      'resetToDefaults restores defaults and tombstones a custom 4th stage',
       () async {
         await seedStageDefinitions(
           firestore,
@@ -111,17 +117,16 @@ void main() {
 
         await repository.resetToDefaults(curriculum);
 
+        // DNI-476: the custom 4th stage is now really removed — a logged
+        // ended_at tombstone, so reads no longer return it.
         final stages = await repository.getStagesForCurriculum(curriculum);
-        expect(stages, hasLength(4));
+        expect(stages, hasLength(3));
         expect(stages.take(3).map((s) => s.stageName).toList(), [
           'לימוד',
           'חזרה א׳',
           'חזרה ב׳',
         ]);
-        expect(stages.take(3).every((s) => s.isDefault), isTrue);
-        expect(stages.last.stageName, 'Custom');
-        expect(stages.last.delayDays, 60);
-        expect(stages.last.isDefault, false);
+        expect(stages.every((s) => s.isDefault), isTrue);
       },
     );
   });

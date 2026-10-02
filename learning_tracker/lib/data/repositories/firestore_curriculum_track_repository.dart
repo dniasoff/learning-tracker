@@ -1,8 +1,39 @@
-/// Firestore implementation for curriculum tracks — the repository that
-/// absorbs TWO Drift DAOs into one (`docs/firestore-rewrite-map.md`).
-/// Follows the shape `FirestoreStageDefinitionRepository`/
-/// `FirestoreGoalRepository` established; see this file's own doc comments
-/// for what is genuinely new.
+/// Firestore implementation for curriculum tracks —
+/// `users/{uid}/learner_profiles/{profileId}/curriculum_tracks/
+/// {curriculumId}`, the AD-38 governed entity `mainTrack`.
+///
+/// Reads are direct; every write is ONE governed action handed to
+/// `LearningCommands.applyGovernedChange` through the injected
+/// [OwnerGovernedWriter] (Story 1.14, DNI-476): a field-level merge of the
+/// changed fields with `last_change_id` and a co-written `change_log`
+/// entry. This class never writes or deletes a document itself.
+///
+/// ## Two Drift DAOs collapse into one repository
+///
+/// `TrackDao` (lifecycle) and `ActiveCurriculumDao` (a "which curricula are
+/// active" wrapper over the same table) map onto the single
+/// `curriculum_tracks` doc. [retireTrack] and [archiveTrack] keep
+/// `ActiveCurriculumDao`'s "never drop the profile to zero active
+/// curricula" guard ([StateError]).
+///
+/// ## Removal is a tombstone (AD-38 track lifecycle)
+///
+/// "Remove track" sets `ended_at` on this doc through
+/// `LearningCommands.removeTrack` (one action that also tombstones the
+/// curriculum's live sub-tracks); "Re-add" clears it. While a track has
+/// `ended_at`, every read here treats it as absent, and the engine reads
+/// the curriculum's other governed docs as ended (`LearnerStateEngine`).
+/// Learning events and the points ledger are never touched. Client
+/// `delete` is denied by the rules.
+///
+/// ## Retired fields
+///
+/// `updated_at` / `synced_at` are retired from governed docs, and so are
+/// `pace_reset_date` (Reset pace is retired, prd-deviations #14) and
+/// `last_reorder_at` (the AD-35 amnesty instant is the latest
+/// `mainTrackOrder` / `mainTrackProgram` change-log entry): none is
+/// written. The legacy lifecycle stamps `state_changed_at` and
+/// `activated_at` the decoder requires are still written.
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,121 +43,36 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
-import 'package:learning_tracker/data/firestore/write_ack.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_intents.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
-/// Firestore-backed curriculum-track repository: `users/{uid}/
-/// learner_profiles/{profileId}/curriculum_tracks/{curriculumId}`
-/// (`docs/firestore-rewrite-map.md`, `firestore.rules` `match
-/// /curriculum_tracks/{trackId}`).
-///
-/// **Not wired into the app's production provider yet** — but
-/// `FirestoreCurriculumTrackRepositoryAdapter`
-/// (`lib/features/tracks/setup/data/repositories/
-/// curriculum_track_repository_impl.dart`) exists and does read this class.
-/// That adapter itself is not constructed by any real provider (it appears
-/// nowhere in `lib/` outside its own definition and its tests), so no
-/// screen reaches this repository through it yet. The existing Drift-backed
-/// `TrackDao`/`ActiveCurriculumDao` are untouched and still serve the app.
-///
-/// **No interface** — same reasoning as `FirestoreBookmarkRepository`'s doc
-/// comment: the Drift implementations are being deleted outright, not kept
-/// alongside this one.
-///
-/// ## Two DAOs collapse into one repository
-///
-/// `TrackDao` owns the track lifecycle (activate / retire / archive /
-/// restore-or-create / pace-reset / reorder-amnesty stamp); `ActiveCurriculumDao`
-/// is a thin by-profile "which curricula are active" wrapper OVER `TrackDao`
-/// — every one of its query methods is `WHERE state = 'active'` against the
-/// exact same table, and its two mutating methods
-/// (`deactivateByProfile`/`archiveByProfile`) are themselves just
-/// `TrackDao.deleteTrackAndData`/`archiveTrack` wrapped in a "don't drop
-/// below one active curriculum" guard. In Firestore both DAOs' data lives
-/// on the SAME document (`state` is a field, not a separate table), so the
-/// split has no structural reason to survive: this repository is
-/// `ActiveCurriculumDao`'s guard logic layered directly onto `TrackDao`'s
-/// state-transition methods, both scoped by the constructor-level
-/// [profileId] the way every repository here already is (no more
-/// `int profileId` parameter threaded through every call, no more
-/// `activateByProfile`/`activate` legacy-profile-0 method pairs — AD-24
-/// already made [profileId] a required String ULID everywhere).
-///
-/// [retireTrack] and [archiveTrack] below are exactly this merge: each is
-/// `TrackDao`'s own state-transition body PLUS `ActiveCurriculumDao`'s
-/// "would this drop the profile to zero active curricula" guard, run as one
-/// atomic-from-the-caller's-perspective operation instead of two DAOs
-/// calling into each other.
-///
-/// ## Deletion is NOT this repository's job
-///
-/// `TrackDao.deleteTrackAndData`/`purgeHistory` doesn't exist here at all —
-/// not trimmed-and-noted, just absent. Both used to soft/hard-delete 10-11
-/// Drift tables in one transaction; in Firestore that sweep is already
-/// implemented server-side, in the `deleteCurriculumTrack` Cloud Function
-/// (`functions/src/deletes.ts`), which sweeps the six sibling collections
-/// (`goals`, `stage_definitions`, `study_day_configs`, `curriculum_scopes`,
-/// `learning_order`, `profile_programs`) plus this track document itself via
-/// `BulkWriter`/`recursiveDelete`. `firestore.rules` backs this up
-/// structurally: `curriculum_tracks` is `allow delete: if false` — there is
-/// no rules-legal way for ANY client method on this class to remove this
-/// document. Callers that need "delete and wipe history" call the Cloud
-/// Function, not this repository.
-///
-/// ## `state == 'deleted'` does not survive into Firestore
-///
-/// See [CurriculumTrackEntity.state]'s doc comment for the full reasoning —
-/// short version: Drift's soft-delete tombstone existed to propagate a
-/// deletion through the (now-deleted) LWW sync engine; the Cloud Function
-/// above hard-deletes the document instead, so a purged track's signal is
-/// [getTrack] returning `null`, never a fourth state value. This repository
-/// never constructs, writes, or exposes a `'deleted'` state.
-///
-/// ## `reorder-amnesty stamp` — rules and write path
-///
-/// `TrackDao.stampReorderAt` (`lastReorderAt`) used to have **no Firestore
-/// field to carry it**: `firestore.rules`' `curriculum_tracks` `.hasOnly()`
-/// whitelist (mirrored 1:1 in `tutor_writes.ts`'s
-/// `CURRICULUM_TRACK_ALLOWED_FIELDS`) omitted `last_reorder_at` entirely, and
-/// because `hasOnly()` is all-or-nothing, writing that field would have made
-/// `permission-denied` reject the ENTIRE document write, for the legitimate
-/// owner, on every track write this repository makes.
-///
-/// **That rules gap is now closed.** Both `firestore.rules`' whitelist and
-/// `tutor_writes.ts`'s mirrored `CURRICULUM_TRACK_ALLOWED_FIELDS` include
-/// `last_reorder_at` today, so a client write from this repository CAN
-/// legally carry the stamp without endangering the rest of the document.
-///
-/// [stampReorderAt] now writes the field, and
-/// [addReorderStampToBatch] lets order repositories co-write it atomically
-/// with their order mutations. The scheduler projection receives the decoded
-/// [CurriculumTrackEntity.lastReorderAt] value through its [activeTracks]
-/// input and applies the amnesty cutoff from that value.
-///
-/// ## `purged` / `purged_at` are in the whitelist but likewise unused here
-///
-/// Both existed as `TrackDao.purgeHistory`'s tombstone-before-hard-delete
-/// payload, pushed through the (deleted) sync engine's outbox so other
-/// devices could see a purge before the local hard-delete round-tripped.
-/// With deletion routed through `deleteCurriculumTrack` (a synchronous
-/// Cloud Function every device calls directly, no outbox relay needed),
-/// there is no remaining reason for a CLIENT to ever write these — left in
-/// the rules whitelist for backward-reads of any pre-rewrite document only.
+/// Firestore-backed curriculum-track repository (see the library doc
+/// comment).
 class FirestoreCurriculumTrackRepository {
   FirestoreCurriculumTrackRepository({
     required FirebaseFirestore firestore,
     required String uid,
     required String profileId,
+    OwnerGovernedWriter? writer,
     AppLogger? logger,
+    DateTime Function()? clock,
   }) : _firestore = firestore,
        _uid = uid,
        _profileId = profileId,
-       _logger = logger ?? AppLogger.instance;
+       _writer = writer,
+       _logger = logger ?? AppLogger.instance,
+       _clock = clock ?? DateTimeFactory.nowUtc;
 
   final FirebaseFirestore _firestore;
   final String _uid;
   final String _profileId;
+  final OwnerGovernedWriter? _writer;
   final AppLogger _logger;
+  final DateTime Function() _clock;
 
   CollectionReference<Map<String, dynamic>> get _tracks => _firestore
       .collection('users')
@@ -140,17 +86,20 @@ class FirestoreCurriculumTrackRepository {
         DocIds.curriculumTrackDocId({'curriculum_id': curriculumId.storageKey}),
       );
 
+  /// Whether a track doc is removed (`ended_at` set, AD-38).
+  static bool _isEnded(Map<String, dynamic> data) =>
+      data[GovernedKeys.endedAt] != null;
+
   CurriculumTrackEntity? _decode(
     DocumentSnapshot<Map<String, dynamic>> snapshot,
   ) {
     final data = snapshot.data();
-    if (data == null) return null;
+    if (data == null || _isEnded(data)) return null;
     return curriculumTrackFromFirestore(data);
   }
 
   /// Returns the track for [curriculumId], or `null` if it has never been
-  /// activated (or was purged — see the class doc comment's "`state ==
-  /// 'deleted'`" section).
+  /// activated or was removed (`ended_at`, see the library doc comment).
   Future<CurriculumTrackEntity?> getTrack(CurriculumId curriculumId) async {
     final snapshot = await _doc(curriculumId).get();
     return _decode(snapshot);
@@ -188,6 +137,7 @@ class FirestoreCurriculumTrackRepository {
   ) {
     final results = <CurriculumTrackEntity>[];
     for (final doc in docs) {
+      if (_isEnded(doc.data())) continue;
       try {
         results.add(curriculumTrackFromFirestore(doc.data()));
       } catch (error, stackTrace) {
@@ -202,6 +152,11 @@ class FirestoreCurriculumTrackRepository {
     return results;
   }
 
+  /// A live track doc decoded, or null for a removed one.
+  static CurriculumTrackEntity? _decodeLive(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) => _isEnded(doc.data()) ? null : curriculumTrackFromFirestore(doc.data());
+
   /// Every track for this profile (any state). Unfiltered — no `where()`/
   /// `orderBy()`, so no composite index needed.
   Future<List<CurriculumTrackEntity>> getAllTracks() async {
@@ -212,15 +167,15 @@ class FirestoreCurriculumTrackRepository {
   /// Live updates for every track for this profile (`resilientQueryStream`
   /// — one bad document is skipped, not the whole list).
   Stream<List<CurriculumTrackEntity>> watchAllTracks() {
-    return resilientQueryStream<CurriculumTrackEntity>(
+    return resilientQueryStream<CurriculumTrackEntity?>(
       openStream: () => _tracks.snapshots(),
-      decode: (doc) => curriculumTrackFromFirestore(doc.data()),
+      decode: _decodeLive,
       onError: (error, stackTrace) => _logger.warning(
         event: 'firestore_curriculum_tracks_watch_error',
         exception: error,
         stackTrace: stackTrace,
       ),
-    );
+    ).map((tracks) => tracks.whereType<CurriculumTrackEntity>().toList());
   }
 
   /// Single-field equality filter on `state` — no composite index needed
@@ -248,16 +203,18 @@ class FirestoreCurriculumTrackRepository {
 
   /// Live updates for [getActiveTracks], sorted the same way.
   Stream<List<CurriculumTrackEntity>> watchActiveTracks() {
-    return resilientQueryStream<CurriculumTrackEntity>(
+    return resilientQueryStream<CurriculumTrackEntity?>(
       openStream: () => _activeQuery.snapshots(),
-      decode: (doc) => curriculumTrackFromFirestore(doc.data()),
+      decode: _decodeLive,
       onError: (error, stackTrace) => _logger.warning(
         event: 'firestore_curriculum_tracks_active_watch_error',
         exception: error,
         stackTrace: stackTrace,
       ),
     ).map(
-      (tracks) => List<CurriculumTrackEntity>.of(tracks)..sort(_byCurriculumId),
+      (tracks) =>
+          tracks.whereType<CurriculumTrackEntity>().toList()
+            ..sort(_byCurriculumId),
     );
   }
 
@@ -277,99 +234,72 @@ class FirestoreCurriculumTrackRepository {
   /// Mirrors `TrackDao.countActiveTracksForProfile`.
   Future<int> countActiveTracks() async => (await getActiveTracks()).length;
 
-  /// Activates [curriculumId]'s track — creating it if it has never
-  /// existed, or reactivating it from any non-active state (retired or
-  /// archived). Idempotent: a no-op re-fetch if already active.
-  ///
-  /// Collapses THREE near-duplicate Drift entry points into one honest
-  /// method: `TrackDao.activateTrack` (insert-or-reactivate),
-  /// `TrackDao.restoreOrCreate` (identical insert-or-reactivate logic, just
-  /// also returning the Drift row id — meaningless here, there is no
-  /// integer id), and `TrackDao.initializeDefaultTracks`
-  /// (insert-if-truly-absent only, deliberately does NOT reactivate a
-  /// retired/archived row — the one genuinely different behavior of the
-  /// three). That narrower "never reactivate" semantics is not preserved as
-  /// a separate method: nothing under `lib/features/` calls any of the
-  /// three yet (this repository isn't wired in), and a future caller that
-  /// specifically needs "only create if truly absent, never reactivate" can
-  /// check [getTrack] first and branch — cheaper than carrying a second
-  /// activation method for a distinction with no current caller.
-  ///
-  /// Does not touch [CurriculumTrackEntity.paceResetDate] on reactivation
-  /// (mirrors `TrackDao.activateTrack`'s reactivation branch, which never
-  /// includes `paceResetDate` in its update) — a `SetOptions(merge: true)`
-  /// write that never mentions `pace_reset_date` leaves any prior value on
-  /// the document untouched.
+  /// Activates [curriculumId]'s track: creates it, reactivates it from a
+  /// retired or archived state, or re-adds a removed one (clearing
+  /// `ended_at`, AD-38) — one logged `mainTrack` change. Idempotent: a live
+  /// active track is returned unchanged with nothing written.
   Future<CurriculumTrackEntity> activateTrack(CurriculumId curriculumId) async {
     final existing = await getTrack(curriculumId);
     if (existing != null && existing.isActive) return existing;
+    final (change, entity) = await planActivateTrack(curriculumId);
+    await _apply([change]);
+    return entity;
+  }
 
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
+  /// The `mainTrack` change [activateTrack] writes, and the entity it
+  /// yields. Used by the one-action Add track flow (DNI-476 T5).
+  Future<(GovernedEntityChange, CurriculumTrackEntity)> planActivateTrack(
+    CurriculumId curriculumId,
+  ) async {
+    final snapshot = await _doc(curriculumId).get();
+    final data = snapshot.data();
+    final now = _clock();
     final entity = CurriculumTrackEntity(
       curriculumId: curriculumId,
       state: CurriculumTrackState.active.storageKey,
       stateChangedAt: now,
       activatedAt: now,
-      paceResetDate: existing?.paceResetDate,
+      paceResetDate: data == null
+          ? null
+          : FirestoreCodec.parseDateTime(data['pace_reset_date']),
     );
-    await _doc(curriculumId).set(entity.toFirestore(), SetOptions(merge: true));
-    return entity;
+    final change = _change(curriculumId, {
+      'state': CurriculumTrackState.active.storageKey,
+      'state_changed_at': FirestoreCodec.encodeDateTime(now),
+      'activated_at': FirestoreCodec.encodeDateTime(now),
+      GovernedKeys.endedAt: null,
+    });
+    return (change, entity);
   }
 
   /// Retires [curriculumId]'s track (soft-deactivation, reversible via
-  /// [activateTrack]). No-op if the track is not currently active (mirrors
-  /// `TrackDao.retireTrack`'s own `existing.state == active` guard).
-  ///
-  /// Absorbs `ActiveCurriculumDao.deactivateByProfile`'s "don't drop this
-  /// profile to zero active curricula" guard directly into this method —
-  /// see the class doc comment's "Two DAOs collapse into one repository"
-  /// section for why. Throws [StateError] if [curriculumId] is this
-  /// profile's only active track. `ActiveCurriculumDao`'s own guard threw
-  /// `DaoInvariantError(DaoErrorCode.lastActiveCurriculum)` — that stable
-  /// error-code type lives in `lib/core/database/` (Drift-adjacent) and is
-  /// deliberately NOT imported here; a plain [StateError] carries the same
-  /// information without pulling Drift-era code into a Firestore
-  /// repository that has no other reason to depend on it. (Mirrors
-  /// `ActiveCurriculumDao.archiveByProfile`, which already used a plain
-  /// `StateError` for the identical guard rather than the DAO-specific
-  /// type.)
+  /// [activateTrack]). No-op if the track is not currently active. Throws
+  /// [StateError] if [curriculumId] is this profile's only active track.
   Future<void> retireTrack(CurriculumId curriculumId) async {
     final existing = await getTrack(curriculumId);
     if (existing == null || !existing.isActive) return;
 
     await _assertNotLastActive();
-
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-    await _doc(curriculumId).set({
-      'state': CurriculumTrackState.retired.storageKey,
-      'state_changed_at': FirestoreCodec.encodeDateTime(now),
-    }, SetOptions(merge: true));
+    await _setState(curriculumId, CurriculumTrackState.retired);
   }
 
-  /// Archives [curriculumId]'s track — unlike [retireTrack], config data
-  /// living in sibling collections (goals/stage_definitions/etc.) was never
-  /// touched by the Drift `archiveTrack` either; both `state` values are
-  /// "hidden, sibling data untouched", the whole distinction Drift's
-  /// `archiveTrack` doc comment draws is against `deleteTrackAndData`,
-  /// which has no counterpart on this class at all (see the class doc
-  /// comment's "Deletion is NOT this repository's job").
-  ///
-  /// Unconditional — unlike [retireTrack], there is no "already archived"
-  /// or "must currently be active" guard on the state transition itself
-  /// (mirrors `TrackDao.archiveTrack`, which has none either). Still runs
-  /// the same "don't drop this profile to zero active curricula" guard as
-  /// [retireTrack] beforehand (mirrors `ActiveCurriculumDao
-  /// .archiveByProfile`) — see [retireTrack]'s doc comment for why that
-  /// guard is a plain [StateError] here rather than `DaoInvariantError`.
+  /// Archives [curriculumId]'s track — hidden, its sibling config kept.
+  /// Unconditional on the current state; throws [StateError] if
+  /// [curriculumId] is this profile's only active track.
   Future<void> archiveTrack(CurriculumId curriculumId) async {
     await _assertNotLastActive();
-
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-    await _doc(curriculumId).set({
-      'state': CurriculumTrackState.archived.storageKey,
-      'state_changed_at': FirestoreCodec.encodeDateTime(now),
-    }, SetOptions(merge: true));
+    await _setState(curriculumId, CurriculumTrackState.archived);
   }
+
+  Future<void> _setState(
+    CurriculumId curriculumId,
+    CurriculumTrackState state,
+  ) => _apply([
+    _change(curriculumId, {
+      'state': state.storageKey,
+      'state_changed_at': FirestoreCodec.encodeDateTime(_clock()),
+    }),
+  ]);
 
   /// See [retireTrack]/[archiveTrack]'s doc comments.
   Future<void> _assertNotLastActive() async {
@@ -382,28 +312,21 @@ class FirestoreCurriculumTrackRepository {
     }
   }
 
-  /// Resets the pace baseline for [curriculumId] (Recovery Action). Sets
-  /// `paceResetDate` to now. Does not touch completions or chazara data —
-  /// mirrors `TrackDao.resetPace`.
-  Future<void> resetPace(CurriculumId curriculumId) async {
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-    await _doc(curriculumId).set({
-      'pace_reset_date': FirestoreCodec.encodeDateTime(now),
-    }, SetOptions(merge: true));
-  }
+  GovernedEntityChange _change(
+    CurriculumId curriculumId,
+    Map<String, Object?> fields,
+  ) => OwnerGovernedIntents.mainTrackDocs(
+    entity: GovernedEntity.mainTrack,
+    curriculumId: curriculumId.storageKey,
+    docs: {
+      DocIds.curriculumTrackDocId({'curriculum_id': curriculumId.storageKey}):
+          fields,
+    },
+  );
 
-  /// Stamps the reorder timestamp for [curriculumId] (Reorder Amnesty).
-  /// Sets `last_reorder_at` to now. Mirrors `TrackDao.stampReorderAt`.
-  Future<void> stampReorderAt(CurriculumId curriculumId) async {
-    final batch = _firestore.batch();
-    addReorderStampToBatch(batch, curriculumId, DateTimeFactory.nowUtc());
-    await batch.commit().orQueuedOffline;
-  }
-
-  /// Adds the reorder-amnesty stamp to [batch] for [curriculumId].
-  ///
-  /// Order writes use this helper so the order rows and their amnesty
-  /// baseline are committed atomically in one cross-collection batch.
+  /// Adds the legacy reorder-amnesty stamp to [batch]. Only the
+  /// `track_learning_order` writer still calls it; DNI-476 T3 retires both
+  /// (the AD-35 amnesty instant is the `mainTrackOrder` entry).
   void addReorderStampToBatch(
     WriteBatch batch,
     CurriculumId curriculumId,
@@ -412,5 +335,11 @@ class FirestoreCurriculumTrackRepository {
     batch.set(_doc(curriculumId), {
       'last_reorder_at': FirestoreCodec.encodeDateTime(timestamp),
     }, SetOptions(merge: true));
+  }
+
+  Future<void> _apply(List<GovernedEntityChange> changes) async {
+    final writer = _writer;
+    if (writer == null) throw const GovernedWriterNotReadyException();
+    await applyOwnerAction(writer, GovernedAction(changes));
   }
 }

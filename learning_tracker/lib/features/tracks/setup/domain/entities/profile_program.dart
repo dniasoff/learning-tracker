@@ -90,7 +90,7 @@ class ProfileProgramEntity {
 /// [ProfileProgramEntity].
 ///
 /// Throws [ArgumentError] for an unrecognised `curriculum_id` and
-/// [FormatException] for a missing `program_id`/`updated_at` — both
+/// [FormatException] for a missing `program_id` — both
 /// caller-visible decode failures by design, mirroring
 /// `stageDefinitionFromFirestore`/`curriculumScopeFromFirestore`.
 ProfileProgramEntity profileProgramFromFirestore(Map<String, dynamic> data) {
@@ -101,22 +101,24 @@ ProfileProgramEntity profileProgramFromFirestore(Map<String, dynamic> data) {
     throw ArgumentError('Unknown curriculumId: ${data['curriculum_id']}');
   }
 
+  // `program_id` is an AD-52 string or a legacy int; `updated_at` is
+  // retired from governed docs (AD-38, DNI-476), so it may be absent.
   final programId = FirestoreCodec.parseInt(data['program_id']);
-  final updatedAt = FirestoreCodec.parseDateTime(data['updated_at']);
-  if (programId == null || updatedAt == null) {
+  if (programId == null) {
     throw FormatException(
-      'profile_programs document missing program_id/updated_at: $data',
+      'profile_programs document missing program_id: $data',
     );
   }
 
   return ProfileProgramEntity(
     curriculumId: curriculumId,
     programId: programId,
-    trackingStartDate: FirestoreCodec.parseDateTime(
+    trackingStartDate: FirestoreCodec.parseCivilDate(
       data['tracking_start_date'],
     ),
     trackingStartRef: data['tracking_start_ref'] as String?,
-    updatedAt: updatedAt,
+    updatedAt:
+        FirestoreCodec.parseDateTime(data['updated_at']) ?? DateTime.utc(1970),
     syncedAt: FirestoreCodec.parseDateTime(data['synced_at']),
   );
 }

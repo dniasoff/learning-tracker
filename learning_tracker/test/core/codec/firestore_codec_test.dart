@@ -192,4 +192,38 @@ void main() {
       expect(FirestoreCodec.parseBool(1.5), isNull);
     });
   });
+
+  group('AD-52 civil dates (DNI-476)', () {
+    test('encodeCivilDate: a UTC midnight is that UTC day', () {
+      expect(
+        FirestoreCodec.encodeCivilDate(DateTime.utc(2027, 6, 1)),
+        '2027-06-01',
+      );
+    });
+
+    test(
+      'encodeCivilDate: any other instant is read on the device calendar',
+      () {
+        final local = DateTime(2027, 6, 1); // a local midnight
+        expect(FirestoreCodec.encodeCivilDate(local.toUtc()), '2027-06-01');
+        expect(FirestoreCodec.encodeCivilDate(local), '2027-06-01');
+      },
+    );
+
+    test('parseCivilDate: YYYY-MM-DD is that day at UTC midnight', () {
+      expect(
+        FirestoreCodec.parseCivilDate('2026-03-04'),
+        DateTime.utc(2026, 3, 4),
+      );
+    });
+
+    test('parseCivilDate: legacy instants and null fall back to '
+        'parseDateTime', () {
+      expect(
+        FirestoreCodec.parseCivilDate('2026-03-04T10:00:00.000Z'),
+        DateTime.utc(2026, 3, 4, 10),
+      );
+      expect(FirestoreCodec.parseCivilDate(null), isNull);
+    });
+  });
 }

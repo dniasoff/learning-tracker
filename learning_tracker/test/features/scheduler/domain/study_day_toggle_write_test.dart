@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart'
 import 'package:learning_tracker/features/scheduler/domain/services/study_day_toggle_service.dart';
 
 import '../../../helpers/firestore_fake.dart';
+import '../../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'study-day-write-uid';
 const _profileId = '01J9V8J5Q2K7M3N6P4R8T1WXYZ';
@@ -26,6 +27,11 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     );
   });
 

@@ -20,6 +20,7 @@
 library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -44,12 +45,12 @@ enum GoalKind {
   };
 }
 
-/// Storage key `goal_type`.
-const kGoalType = 'goal_type';
-
-/// The AD-43 doc id of [curriculumId]'s goal of [kind].
-String goalDocId(String curriculumId, GoalKind kind) =>
-    '${curriculumId}_${kind.storage}';
+/// The AD-43 doc id of [curriculumId]'s goal of [kind]
+/// ([deadlineGoalDocId] / [paceGoalDocId]).
+String goalDocId(String curriculumId, GoalKind kind) => switch (kind) {
+  GoalKind.deadline => deadlineGoalDocId(curriculumId),
+  GoalKind.pace => paceGoalDocId(curriculumId),
+};
 
 /// The `(curriculumId, kind)` an AD-43 goal doc id names, or null when
 /// [docId] is not `{curriculumId}_deadline` / `{curriculumId}_pace`.

@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/learning/domain/commands/governed_acti
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -196,3 +197,15 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   ref.onDispose(governed.dispose);
   return commands;
 }, retry: (retryCount, error) => null);
+
+/// The governed writer the owner repositories (goals, curriculum tracks,
+/// order, programs, study days, stages, scopes) write through (AD-38,
+/// DNI-476): every write resolves [learningCommandsProvider] at call time
+/// and goes through `applyGovernedChange`; with no commands (no active
+/// learner, or a tutored session) it throws
+/// [GovernedWriterNotReadyException] and nothing is written.
+final ownerGovernedWriterProvider = Provider<OwnerGovernedWriter>(
+  (ref) => LearningCommandsOwnerWriter(
+    () => ref.read(learningCommandsProvider.future),
+  ),
+);

@@ -38,15 +38,18 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_fixtures.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'uid-1';
-const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
+const _profileId = governedTestProfileId;
 
 void main() {
   late FakeFirebaseFirestore firestore;
+  late FirestoreGovernedWriter writer;
 
   setUp(() {
     firestore = createFakeFirestore(authenticatedUid: _uid);
+    writer = FirestoreGovernedWriter(firestore, uid: _uid);
   });
 
   DocumentReference<Map<String, dynamic>> rawDoc({
@@ -70,6 +73,7 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: writer,
     );
   }
 
@@ -322,30 +326,67 @@ void main() {
       expect(learn.stageName, isNot('Customized'));
     });
 
-    test('does NOT remove a 4th custom stage beyond the 3 defaults — '
-        'firestore.rules denies delete on this collection entirely', () async {
+    test('tombstones a 4th custom stage beyond the 3 defaults (a logged '
+        'ended_at, never a delete) so reads no longer return it', () async {
       final repo = buildRepo();
       await repo.initializeDefaults(CurriculumId.mishnayos);
-      const extra = StageDefinition(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 4,
-        stageName: 'Custom extra stage',
-        delayDays: 14,
-        isDefault: false,
-      );
-      await rawDoc(
-        curriculumId: CurriculumId.mishnayos,
-        stageOrder: 4,
-      ).set(extra.toFirestore(updatedAt: DateTime.utc(2026, 1, 1)));
+      await repo.replaceStagesForCurriculum(CurriculumId.mishnayos, const [
+        StageDefinition(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 1,
+          stageName: 'Learn',
+          delayDays: 0,
+          isDefault: false,
+        ),
+        StageDefinition(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 2,
+          stageName: 'Review',
+          delayDays: 1,
+          isDefault: false,
+        ),
+        StageDefinition(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 3,
+          stageName: 'Review 2',
+          delayDays: 7,
+          isDefault: false,
+        ),
+        StageDefinition(
+          curriculumId: CurriculumId.mishnayos,
+          stageOrder: 4,
+          stageName: 'Custom extra stage',
+          delayDays: 14,
+          isDefault: false,
+        ),
+      ]);
 
       await repo.resetToDefaults(CurriculumId.mishnayos);
 
       final stages = await repo.getStagesForCurriculum(CurriculumId.mishnayos);
-      expect(
-        stages.map((s) => s.stageOrder),
-        containsAll(<int>[1, 2, 3, 4]),
-        reason: 'the 4th stage survives — this repository cannot delete',
-      );
+      expect(stages.map((s) => s.stageOrder), [1, 2, 3]);
+      final fourth = await rawDoc(
+        curriculumId: CurriculumId.mishnayos,
+        stageOrder: 4,
+      ).get();
+      expect(fourth.exists, isTrue);
+      expect(fourth.data()!['ended_at'], isA<Timestamp>());
+      final entry = (await writer.lastEntries()).single;
+      expect(entry.entity.storage, 'mainTrackStages');
+      expect(entry.entityId, 'mishnayos');
+    });
+
+    test('a write never carries the retired updated_at / synced_at', () async {
+      final repo = buildRepo();
+      await repo.initializeDefaults(CurriculumId.bavli);
+      final raw = (await rawDoc(
+        curriculumId: CurriculumId.bavli,
+        stageOrder: 1,
+      ).get()).data()!;
+      expect(raw.keys, isNot(contains('updated_at')));
+      expect(raw.keys, isNot(contains('synced_at')));
+      expect(raw['last_change_id'], isA<String>());
+      expect(raw['curriculum_id'], 'bavli');
     });
   });
 

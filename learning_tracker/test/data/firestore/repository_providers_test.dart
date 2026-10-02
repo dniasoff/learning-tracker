@@ -252,20 +252,18 @@ void main() {
       final repo = await container.read(firestoreGoalRepositoryProvider.future);
 
       expect(repo, isA<FirestoreGoalRepository>());
-      await repo!.createGoal(
+      await seedGoal(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
         curriculumId: CurriculumId.chumash,
-        targetPercent: 50,
+        goalType: 'deadline',
+        targetDate: DateTime.utc(2027),
       );
 
-      final snapshot = await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_profileId)
-          .collection('goals')
-          .get();
-      expect(snapshot.docs, hasLength(1));
-      expect(snapshot.docs.single.data()['curriculum_id'], 'chumash');
+      final goals = await repo!.getGoals(CurriculumId.chumash);
+      expect(goals, hasLength(1));
+      expect(goals.single.curriculumId, CurriculumId.chumash);
     });
 
     test('switching the active profile id re-resolves to a repository '
@@ -281,41 +279,36 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await seedGoal(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+        curriculumId: CurriculumId.chumash,
+        goalType: 'deadline',
+        targetDate: DateTime.utc(2027),
+      );
+      await seedGoal(
+        firestore,
+        uid: _uid,
+        profileId: _otherProfileId,
+        curriculumId: CurriculumId.nach,
+        goalType: 'deadline',
+        targetDate: DateTime.utc(2027),
+      );
+
       container.read(activeProfileDocIdProvider.notifier).set(_profileId);
       final first = await container.read(
         firestoreGoalRepositoryProvider.future,
       );
-      await first!.createGoal(
-        curriculumId: CurriculumId.chumash,
-        targetPercent: 10,
-      );
-
       container.read(activeProfileDocIdProvider.notifier).set(_otherProfileId);
       final second = await container.read(
         firestoreGoalRepositoryProvider.future,
       );
-      await second!.createGoal(
-        curriculumId: CurriculumId.nach,
-        targetPercent: 20,
-      );
 
-      final firstProfileGoals = await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_profileId)
-          .collection('goals')
-          .get();
-      final secondProfileGoals = await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_otherProfileId)
-          .collection('goals')
-          .get();
-
-      expect(firstProfileGoals.docs, hasLength(1));
-      expect(secondProfileGoals.docs, hasLength(1));
+      expect(await first!.getGoals(CurriculumId.chumash), hasLength(1));
+      expect(await first.getGoals(CurriculumId.nach), isEmpty);
+      expect(await second!.getGoals(CurriculumId.nach), hasLength(1));
+      expect(await second.getGoals(CurriculumId.chumash), isEmpty);
     });
 
     test(

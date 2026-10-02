@@ -35,6 +35,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_fixtures.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 class _Router extends Mock implements StackRouter {}
 
@@ -73,6 +74,11 @@ Widget _body(
         firestore: firestore,
         uid: 'track-body-test-uid',
         profileId: _profileId,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: 'track-body-test-uid',
+          profileId: _profileId,
+        ),
       ),
     ),
     firestoreStudyDayConfigRepositoryProvider.overrideWith(
@@ -80,6 +86,11 @@ Widget _body(
         firestore: firestore,
         uid: 'track-body-test-uid',
         profileId: _profileId,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: 'track-body-test-uid',
+          profileId: _profileId,
+        ),
       ),
     ),
     if (activeStream != null)
@@ -90,6 +101,11 @@ Widget _body(
           firestore: firestore,
           uid: 'track-body-test-uid',
           profileId: _profileId,
+          writer: FirestoreGovernedWriter(
+            firestore,
+            uid: 'track-body-test-uid',
+            profileId: _profileId,
+          ),
         ).watchActiveTracks(),
       ),
     dashboardActiveCurriculaProvider.overrideWith(
@@ -286,6 +302,11 @@ void main() {
       firestore: firestore,
       uid: 'track-body-test-uid',
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: 'track-body-test-uid',
+        profileId: _profileId,
+      ),
     ).getTrack(CurriculumId.mishnayos);
     expect(stored?.isActive, isFalse);
     expect(stored?.state, 'retired');

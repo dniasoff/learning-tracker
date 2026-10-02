@@ -19,6 +19,7 @@ import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/point_config.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_track_management_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
@@ -29,6 +30,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 import '../../../../helpers/pump_app.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
@@ -92,6 +94,9 @@ Widget _buildApp({
       activeProfileIdProvider.overrideWithValue(_profileId),
       activeProfileDocIdProvider.overrideWith(
         () => _FixedActiveProfileDocId(_profileId),
+      ),
+      ownerGovernedWriterProvider.overrideWithValue(
+        FirestoreGovernedWriter(firestore, uid: _uid, profileId: _profileId),
       ),
       activeAccountFirebaseProvider.overrideWith(
         (ref) async => AccountFirebaseHandles(

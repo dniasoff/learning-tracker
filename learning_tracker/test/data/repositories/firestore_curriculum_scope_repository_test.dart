@@ -4,9 +4,10 @@
 /// function's doc comment in `lib/data/firestore/doc_ids.dart` for why it
 /// has no live-gateway golden counterpart, unlike most `DocIds` formulas),
 /// round-trip, decode leniency (one-shot reads AND the stream), merge-write
-/// preserving an out-of-band tutor-CF field, `setScopes`' clear-then-insert
-/// replace (both the single-atomic-batch common path and the
-/// more-than-500-combined-ops chunked path), and `clearScopes`/delete.
+/// preserving an out-of-band tutor-CF field, `setScopes`' replace as ONE
+/// governed `mainTrackScope` change (an owner batch within 10 docs, the
+/// online-only oversized path above that), and `clearScopes` as tombstones
+/// (DNI-476: never a delete). Writes run through `FirestoreGovernedWriter`.
 ///
 /// **What these tests cannot see** (same limitation documented in
 /// `firestore_bookmark_repository_test.dart` and, at length, in
@@ -41,18 +42,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_scope.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'uid-1';
-const _profileId = 'profile-ulid-1';
+const _profileId = governedTestProfileId;
 
 void main() {
   late FakeFirebaseFirestore firestore;
+  late FirestoreGovernedWriter writer;
 
   setUp(() {
     firestore = createFakeFirestore(authenticatedUid: _uid);
+    writer = FirestoreGovernedWriter(firestore, uid: _uid);
   });
 
   CollectionReference<Map<String, dynamic>> rawCollection() => firestore
@@ -79,6 +85,7 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: writer,
     );
   }
 
@@ -304,38 +311,76 @@ void main() {
       expect(bavliScopes.single.scopeValue, 'Seder Nezikin');
     });
 
-    test(
-      'more than 500 combined delete+insert operations still lands the '
-      'correct end state via the chunked (non-single-batch) path — see the '
-      'class doc comment\'s atomicity caveat for what this does NOT prove',
-      () async {
-        final repo = buildRepo();
-        final initial = [
-          for (var i = 0; i < 300; i++) (level: 1, value: 'old-$i'),
-        ];
-        await repo.insertScopes(
-          curriculumId: CurriculumId.mishnayos,
-          scopes: initial,
-        );
-        // 300 deletes + 300 inserts = 600 combined ops > 500-op batch cap.
-        final replacement = [for (var i = 0; i < 300; i++) 'new-$i'];
+    test('a replacement within 10 docs is ONE governed owner batch: a single '
+        'mainTrackScope entry, tombstones for the dropped values', () async {
+      final repo = buildRepo();
+      await repo.insertScopes(
+        curriculumId: CurriculumId.mishnayos,
+        scopes: [
+          (level: 1, value: 'Seder Zeraim'),
+          (level: 1, value: 'Seder Moed'),
+        ],
+      );
 
-        await repo.setScopes(
+      await repo.setScopes(
+        curriculumId: CurriculumId.mishnayos,
+        scopeLevel: 1,
+        scopeValues: ['Seder Moed', 'Seder Nashim'],
+      );
+
+      final entry = (await writer.lastEntries()).single;
+      expect(entry.entity.storage, 'mainTrackScope');
+      expect(entry.entityId, 'mishnayos');
+      // Zeraim tombstoned, Nashim added; the kept Moed is not touched.
+      expect(entry.after.keys.where((k) => k.endsWith('.ended_at')), [
+        'curriculum_scopes/mishnayos_1_Seder%20Zeraim.ended_at',
+      ]);
+      expect(entry.after.keys.where((k) => k.contains('Nashim')), isNotEmpty);
+      expect(entry.after.keys.any((k) => k.contains('Moed')), isFalse);
+      final values = (await repo.getScopes(
+        CurriculumId.mishnayos,
+      )).map((s) => s.scopeValue).toList()..sort();
+      expect(values, ['Seder Moed', 'Seder Nashim']);
+      expect(writer.oversized.requests, isEmpty);
+    });
+
+    test('a replacement over 10 docs goes whole through the online '
+        'oversized path; offline it writes nothing', () async {
+      final repo = buildRepo();
+      final replacement = [for (var i = 0; i < 12; i++) 'new-$i'];
+
+      writer.oversized.online = false;
+      await expectLater(
+        repo.setScopes(
           curriculumId: CurriculumId.mishnayos,
           scopeLevel: 1,
           scopeValues: replacement,
-        );
+        ),
+        throwsA(
+          isA<GovernedWriteRejectedException>().having(
+            (e) => e.result,
+            'result',
+            const CaptureResult.onlineRequired(),
+          ),
+        ),
+      );
+      expect(await repo.getScopes(CurriculumId.mishnayos), isEmpty);
 
-        final scopes = await repo.getScopes(CurriculumId.mishnayos);
-        expect(scopes, hasLength(300));
-        expect(scopes.every((s) => s.scopeValue.startsWith('new-')), isTrue);
-      },
-      timeout: const Timeout(Duration(seconds: 60)),
-    );
+      writer.oversized.online = true;
+      await repo.setScopes(
+        curriculumId: CurriculumId.mishnayos,
+        scopeLevel: 1,
+        scopeValues: replacement,
+      );
+      final request = writer.oversized.requests.single;
+      expect(request.entries.single.change.docs, hasLength(12));
+      expect(await repo.getScopes(CurriculumId.mishnayos), hasLength(12));
+    });
   });
 
   group('clearScopes', () {
-    test('deletes every scope document for the curriculum', () async {
+    test('tombstones every scope document for the curriculum (never a '
+        'delete)', () async {
       final repo = buildRepo();
       await repo.insertScopes(
         curriculumId: CurriculumId.mishnayos,
@@ -348,8 +393,13 @@ void main() {
       await repo.clearScopes(CurriculumId.mishnayos);
 
       expect(await repo.getScopes(CurriculumId.mishnayos), isEmpty);
+      expect(await repo.hasScopes(CurriculumId.mishnayos), isFalse);
       final rawSnapshot = await rawCollection().get();
-      expect(rawSnapshot.docs, isEmpty);
+      expect(rawSnapshot.docs, hasLength(2));
+      expect(
+        rawSnapshot.docs.map((d) => d.data()['ended_at']),
+        everyElement(isNotNull),
+      );
     });
   });
 

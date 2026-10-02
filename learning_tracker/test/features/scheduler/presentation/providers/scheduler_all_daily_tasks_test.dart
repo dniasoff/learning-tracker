@@ -29,6 +29,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'scheduler-all-tasks-uid';
 const _profileId = '01J9V8J5Q2K7M3N6P4R8T1WXYZ';
@@ -157,6 +158,11 @@ Future<ProviderContainer> _container({
         firestore: firestore,
         uid: _uid,
         profileId: _profileId,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+        ),
       );
       await studyDays.initializeDefaults(curriculum);
       for (final day in {...reviewDays, if (reviewDay != null) reviewDay}) {

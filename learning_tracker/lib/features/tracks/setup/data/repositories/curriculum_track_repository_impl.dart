@@ -72,7 +72,7 @@ class CurriculumTrackRepositoryNotReadyException implements Exception {
 ///   .isActive`'s own `track?.isActive ?? false` null-collapse).
 /// - [getAllTracks] / [getActiveTracks] / [getActiveCurriculumIds] → `[]`.
 /// - [countActiveTracks] → `0`.
-/// - [activateTrack] / [retireTrack] / [archiveTrack] / [resetPace] — no
+/// - [activateTrack] / [retireTrack] / [archiveTrack] — no
 ///   natural "nothing happened" value for a lifecycle transition or a state
 ///   mutation to reuse, so these throw
 ///   [CurriculumTrackRepositoryNotReadyException] instead, exactly the write
@@ -355,13 +355,6 @@ class FirestoreCurriculumTrackRepositoryAdapter {
   Future<void> archiveTrack(CurriculumId curriculumId) async {
     final repo = await _resolve();
     await repo.archiveTrack(curriculumId);
-  }
-
-  /// Resets the pace baseline for [curriculumId]. Throws
-  /// [CurriculumTrackRepositoryNotReadyException] when not ready.
-  Future<void> resetPace(CurriculumId curriculumId) async {
-    final repo = await _resolve();
-    await repo.resetPace(curriculumId);
   }
 }
 

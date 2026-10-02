@@ -17,6 +17,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'curriculum-activation-test-user';
 const _profileId = '01J0000000000000000000000A';
@@ -49,11 +50,21 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     );
     studyDayConfigRepository = FirestoreStudyDayConfigRepository(
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: FirestoreGovernedWriter(
+        firestore,
+        uid: _uid,
+        profileId: _profileId,
+      ),
     );
     container = ProviderContainer(
       overrides: [

@@ -3,12 +3,13 @@
 /// Epic B. Covers: doc-id correctness, the composite-index query shape
 /// (`curriculum_id` equality + `day_of_week` ordering), model round-trip,
 /// the stream emitting on change, [FirestoreStudyDayConfigRepository
-/// .initializeDefaults]' idempotency, and — the one capability this
-/// collection has that the reference `stage_definitions` repository does
-/// NOT (rules permit delete here) —
-/// [FirestoreStudyDayConfigRepository.replaceAllForCurriculum]'s actual
-/// delete-then-upsert semantics. Also the "one bad document doesn't blank
-/// the list" decode leniency (both the stream AND the one-shot read).
+/// .initializeDefaults]' idempotency,
+/// [FirestoreStudyDayConfigRepository.replaceAllForCurriculum]'s replace
+/// semantics as ONE governed `mainTrackStudyDays` change (upserts plus
+/// `ended_at` tombstones — never a delete, DNI-476), and the "one bad
+/// document doesn't blank the list" decode leniency (both the stream AND
+/// the one-shot read). Writes run through `FirestoreGovernedWriter` (the
+/// real governed commands on the fake Firestore).
 ///
 /// **What these tests cannot see** (same limitation as
 /// `firestore_stage_definition_repository_test.dart`):
@@ -40,15 +41,18 @@ import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart'
 import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'uid-1';
-const _profileId = 'profile-ulid-1';
+const _profileId = governedTestProfileId;
 
 void main() {
   late FakeFirebaseFirestore firestore;
+  late FirestoreGovernedWriter writer;
 
   setUp(() {
     firestore = createFakeFirestore(authenticatedUid: _uid);
+    writer = FirestoreGovernedWriter(firestore, uid: _uid);
   });
 
   DocumentReference<Map<String, dynamic>> rawDoc({
@@ -72,6 +76,7 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: writer,
     );
   }
 
@@ -267,8 +272,8 @@ void main() {
     );
   });
 
-  group('replaceAllForCurriculum — the capability stage_definitions/goals '
-      'cannot offer (rules permit delete on this collection)', () {
+  group('replaceAllForCurriculum — one logged change, tombstones for the '
+      'days dropped', () {
     test('upserts every day in the new set', () async {
       final repo = buildRepo();
 
@@ -283,31 +288,51 @@ void main() {
       expect(configs.first.dayType, DayType.review);
     });
 
-    test(
-      'DELETES an existing day absent from the new set — the actual '
-      'replace-all semantics rules deny for stage_definitions/goals',
-      () async {
-        final repo = buildRepo();
-        await repo.initializeDefaults(CurriculumId.bavli); // seeds days 1-7
+    test('tombstones (never deletes) an existing day absent from the new set, '
+        'in the same single entry', () async {
+      final repo = buildRepo();
+      await repo.initializeDefaults(CurriculumId.bavli); // seeds days 1-7
 
-        await repo.replaceAllForCurriculum(
+      await repo.replaceAllForCurriculum(
+        curriculumId: CurriculumId.bavli,
+        studyDays: {1: DayType.study, 2: DayType.review},
+      );
+
+      final configs = await repo.getConfigsForCurriculum(CurriculumId.bavli);
+      expect(configs.map((c) => c.dayOfWeek), [1, 2]);
+      for (final day in [3, 4, 5, 6, 7]) {
+        final snapshot = await rawDoc(
           curriculumId: CurriculumId.bavli,
-          studyDays: {1: DayType.study, 2: DayType.study},
-        );
+          dayOfWeek: day,
+        ).get();
+        expect(snapshot.exists, isTrue);
+        expect(snapshot.data()!['ended_at'], isA<Timestamp>());
+      }
+      final entry = (await writer.lastEntries()).single;
+      expect(entry.entity.storage, 'mainTrackStudyDays');
+      expect(entry.entityId, 'bavli');
+      expect(entry.after.keys, hasLength(6)); // day 2 type + 5 tombstones
+    });
 
-        final configs = await repo.getConfigsForCurriculum(CurriculumId.bavli);
-        expect(configs.map((c) => c.dayOfWeek), [1, 2]);
-        for (final day in [3, 4, 5, 6, 7]) {
-          final snapshot = await rawDoc(
-            curriculumId: CurriculumId.bavli,
-            dayOfWeek: day,
-          ).get();
-          expect(snapshot.exists, isFalse);
-        }
-      },
-    );
+    test('a dropped day comes back when it is selected again', () async {
+      final repo = buildRepo();
+      await repo.initializeDefaults(CurriculumId.bavli);
+      await repo.replaceAllForCurriculum(
+        curriculumId: CurriculumId.bavli,
+        studyDays: {1: DayType.study},
+      );
+      await repo.replaceAllForCurriculum(
+        curriculumId: CurriculumId.bavli,
+        studyDays: {1: DayType.study, 5: DayType.review},
+      );
+      final configs = await repo.getConfigsForCurriculum(CurriculumId.bavli);
+      expect(configs.map((c) => (c.dayOfWeek, c.dayType)), [
+        (1, DayType.study),
+        (5, DayType.review),
+      ]);
+    });
 
-    test('replacing with an empty map deletes every existing day', () async {
+    test('replacing with an empty map ends every existing day', () async {
       final repo = buildRepo();
       await repo.initializeDefaults(CurriculumId.bavli);
 

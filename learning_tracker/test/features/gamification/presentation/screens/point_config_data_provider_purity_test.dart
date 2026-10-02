@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'point-config-purity-uid';
 const _profileId = '01J00000000000000000000019';
@@ -34,6 +35,11 @@ void main() {
         firestore: firestore,
         uid: _uid,
         profileId: _profileId,
+        writer: FirestoreGovernedWriter(
+          firestore,
+          uid: _uid,
+          profileId: _profileId,
+        ),
       );
       await stageRepository.initializeDefaults(CurriculumId.mishnayos);
       final tracks = StreamController<List<CurriculumTrackEntity>>.broadcast();

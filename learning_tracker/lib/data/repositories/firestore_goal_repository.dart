@@ -1,132 +1,87 @@
-/// Firestore implementation for goals — Epic B (`docs/
-/// firestore-rewrite-map.md`), built to the shape
-/// `lib/data/repositories/firestore_stage_definition_repository.dart`
-/// establishes as the reference. See that file's class doc comment for the
-/// pattern this copies (resolved-handle constructor, `DocIds`-only doc-ids,
-/// entity-owned codec, merge writes, one-shot-read decode leniency). This
-/// doc comment only calls out what is DIFFERENT for `goals`.
+/// Firestore implementation for goals — `users/{uid}/learner_profiles/
+/// {profileId}/goals/{goalId}`, the AD-38 governed entity `goal`.
+///
+/// Reads are direct queries; every write is ONE governed action handed to
+/// `LearningCommands.applyGovernedChange` through the injected
+/// [OwnerGovernedWriter] (Story 1.14, DNI-476). This class never writes or
+/// deletes a document itself.
+///
+/// ## AD-43 fixed ids, not one doc per created goal
+///
+/// A curriculum has at most one deadline goal, `goals/{curriculumId}_deadline`
+/// (`target_date`, a `YYYY-MM-DD` civil date) and one pace goal,
+/// `goals/{curriculumId}_pace` (`pace_value`, `pace_unit`,
+/// `pace_granularity`). A second create is structurally an update of the
+/// same doc: logged, and last-write-wins per field by server commit order
+/// (AD-38), so two devices creating the same goal offline converge on one
+/// doc. [GoalEntity.firestoreId] is no longer the doc id.
+///
+/// The app's single "current goal" per curriculum maps onto that pair:
+/// setting a goal of one kind upserts that kind's doc and, in the SAME
+/// action, ends the other kind's live doc; a `'none'` goal ends both. The
+/// two goal entities then share one `action_id`.
+///
+/// ## Removal is a tombstone
+///
+/// [deleteGoal] sets `ended_at` through a logged change; client `delete` is
+/// denied by the rules (AD-38). Reads skip ended docs.
+///
+/// ## Fields
+///
+/// Only the changed fields are written (field-level `set(merge: true)`):
+/// the AD-52 keys plus the legacy display keys the rules still accept
+/// (`description`, `date_type`, and `created_at` when a goal doc is created
+/// or revived). `updated_at` / `synced_at` are retired from governed docs
+/// and `target_percent` is retired by AD-43, so none of them is written.
+///
+/// ## Calendar programs
+///
+/// A goal on a calendar-program curriculum is rejected by
+/// `applyGovernedChange` before anything is written (AD-43 / AD-45); the
+/// write then throws [GovernedWriteRejectedException].
+///
+/// ## No Firestore `orderBy` — sorted client-side
+///
+/// `target_date` is absent on pace goals, and a Firestore `orderBy` on a
+/// field some documents lack silently excludes them. The query only
+/// equality-filters on `curriculum_id` and sorts client-side
+/// ([_byTargetDate], null first, then ascending).
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_intents.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 
-/// Firestore-backed goal repository: `users/{uid}/learner_profiles/
-/// {profileId}/goals/{goalId}` (`docs/firestore-rewrite-map.md`,
-/// `firestore.rules` `match /goals/{goalId}`). Multiple goals per
-/// curriculum are allowed (e.g. "finish Seder Zeraim by Pesach, all
-/// Mishnayos by bar mitzvah") — `goals` is deliberately NOT unique per
-/// curriculum, unlike `bookmarks`/`stage_definitions`.
-///
-/// **Not wired into the app's production provider yet** — but
-/// `FirestoreGoalRepositoryAdapter`
-/// (`lib/features/scheduler/data/repositories/goal_repository_impl.dart`)
-/// exists and does read this class. That adapter itself is not constructed
-/// by any real provider (it appears nowhere in `lib/` outside its own
-/// definition), so no screen reaches this repository through it yet; the
-/// existing Drift-backed `GoalRepositoryImpl`
-/// (`lib/features/scheduler/data/repositories/`) is untouched and keeps
-/// serving the app until the rewiring stage.
-///
-/// **No interface** — same reasoning as the reference repositories: the
-/// Drift implementation is being deleted outright, not kept alongside this
-/// one.
-///
-/// ## Doc-id: reuses `GoalEntity.firestoreId`, routed through `DocIds`
-///
-/// [GoalEntity] already carries its own stable doc-id formula —
-/// [GoalEntity.firestoreId] — built from `curriculumId` + `createdAt` only,
-/// deliberately excluding `targetPercent`/`trackId`/`id` so an ordinary
-/// edit never computes a different id (see that getter's doc comment,
-/// AUD-scheduler-16). `DocIds.goalDocId` independently mirrors the live
-/// gateway's `pushGoal` byte-for-byte: prefer `data['id']`, then
-/// `data['goal_id']`, else fall back to `DocIds.fallbackGoalDocId`
-/// (`curriculum_targetPercent_createdAt` — NOTE this fallback embeds
-/// `targetPercent`, unlike [GoalEntity.firestoreId]). `pushGoal`'s own doc
-/// comment confirms the fallback is a defensive backstop for an
-/// (unreachable in practice) caller that omits `id`/`goal_id` entirely —
-/// "every real producer already injects data['id']". This repository is
-/// that producer: [_doc] always supplies `'id': goal.firestoreId`, so
-/// `DocIds.goalDocId` always resolves to [GoalEntity.firestoreId] directly
-/// and [DocIds.fallbackGoalDocId]'s `targetPercent`-embedding path is never
-/// actually exercised — which matters, because if it WERE exercised on
-/// every write, editing a goal's `targetPercent` (a routine, expected edit)
-/// would silently orphan the old Firestore document and create a new one
-/// instead of updating it. Doc-ids still route through `DocIds` per the
-/// "never hand-rolled" rule; they just resolve to the entity's own stable
-/// id rather than reaching the fallback formula.
-///
-/// ## No Firestore `orderBy` for [getGoals]/[watchGoals] — sorted client-side
-///
-/// The Drift DAO orders `getGoalsByCurriculumAndProfile` by `target_date`
-/// ASC (SQLite places `NULL` first). `target_date` is **nullable** — it is
-/// only set for `goalType == 'deadline'` goals; `'pace'`/`'none'` goals
-/// never carry one. A Firestore `.orderBy('target_date')` on a field some
-/// documents entirely lack would silently EXCLUDE every pace/none goal
-/// from the query result (Firestore drops documents missing the ordered
-/// field, it does not sort them to an end) — a landmine that would blank
-/// half of a curriculum's goal list with no error. This repository instead
-/// only equality-filters on `curriculum_id` (a single-field filter needs no
-/// composite index) and sorts the decoded list client-side —
-/// `_byTargetDate`, mirroring SQLite's null-first ASC ordering exactly.
-///
-/// ## Trimmed from the Drift-era `GoalRepository` interface — not reimplemented
-///
-/// - **`createGoal`'s `profileId`/`trackId` parameters do not exist on this
-///   class.** `profileId` is redundant with the constructor-level
-///   [profileId] (path-scoped, same as every other Firestore repository
-///   here). `trackId` is the Drift-era per-device `int` AD-25 retired for
-///   this migration; `GoalEntity.toFirestore()` already only writes
-///   `track_id` when the entity's own `trackId` field is non-null, and this
-///   repository never sets that field on any entity it constructs — so no
-///   `track_id` is ever written, keeping the MCF-11
-///   autoincrement-id-in-payload ratchet unmoved.
-/// - **[deleteGoal] only ever removes the OWNER's own document.**
-///   `firestore.rules` permits `delete` on `goals` for the profile owner —
-///   `create`/`update` were already owner-writable, so forbidding removal
-///   protected nothing, and a tutor with `can_edit_goals` could already
-///   delete a goal via the `tutorDeleteGoal` Cloud Function (Admin SDK).
-///   See [deleteGoal]'s doc comment for the full rationale. This is
-///   unlike `FirestoreStageDefinitionRepository`, which still drops
-///   `deleteStagesForTrack` outright — `stage_definitions` itself still
-///   denies `delete` in `firestore.rules`, unaffected by this.
-/// - **`GoalProfileMismatchException` is never thrown here.** It existed
-///   because the Drift DAO's `getGoalById`/`updateGoal`/`deleteGoal` are
-///   NOT scoped by profile — any caller with a raw `goalId` int could
-///   address any profile's row, so `GoalRepositoryImpl` added a
-///   repository-layer guard as the last line of defense
-///   (AUD-scheduler-03). That addressing surface does not exist here: this
-///   repository's [_goals] collection reference is *itself* rooted at
-///   `users/{uid}/learner_profiles/{profileId}/goals`, so there is no way
-///   to construct a request that reaches another profile's goal through
-///   this class in the first place — the invariant is now structural, not
-///   a runtime check.
-/// - **`updateGoal` takes the current [GoalEntity], not an `int goalId`.**
-///   There is no local autoincrement id to look up by; callers already
-///   hold the entity (from [getGoals]/[watchGoals]) they are editing. The
-///   returned/written entity keeps the original `curriculumId`/`createdAt`
-///   pair, so [GoalEntity.firestoreId] — and therefore the target document
-///   — is unchanged by the update, exactly like the Drift path's
-///   `id`-keyed update.
+/// Firestore-backed goal repository (see the library doc comment).
 class FirestoreGoalRepository {
   FirestoreGoalRepository({
     required FirebaseFirestore firestore,
     required String uid,
     required String profileId,
+    OwnerGovernedWriter? writer,
     AppLogger? logger,
+    DateTime Function()? clock,
   }) : _firestore = firestore,
        _uid = uid,
        _profileId = profileId,
-       _logger = logger ?? AppLogger.instance;
+       _writer = writer,
+       _logger = logger ?? AppLogger.instance,
+       _clock = clock ?? DateTimeFactory.nowUtc;
 
   final FirebaseFirestore _firestore;
   final String _uid;
   final String _profileId;
+  final OwnerGovernedWriter? _writer;
   final AppLogger _logger;
+  final DateTime Function() _clock;
 
   CollectionReference<Map<String, dynamic>> get _goals => _firestore
       .collection('users')
@@ -135,18 +90,11 @@ class FirestoreGoalRepository {
       .doc(_profileId)
       .collection('goals');
 
-  /// See the class doc comment ("Doc-id") for why this always resolves to
-  /// [GoalEntity.firestoreId] rather than [DocIds.fallbackGoalDocId].
-  DocumentReference<Map<String, dynamic>> _doc(GoalEntity goal) =>
-      _goals.doc(DocIds.goalDocId({'id': goal.firestoreId}));
-
   Query<Map<String, dynamic>> _queryForCurriculum(CurriculumId curriculumId) =>
       _goals.where('curriculum_id', isEqualTo: curriculumId.storageKey);
 
-  /// Null-first ascending comparator, mirroring SQLite's
-  /// `ORDER BY target_date ASC` (NULLs sort first) — see the class doc
-  /// comment for why this is done client-side rather than via a Firestore
-  /// `orderBy`.
+  /// Null-first ascending comparator on `targetDate` (see the library doc
+  /// comment for why this is done client-side).
   static int _byTargetDate(GoalEntity a, GoalEntity b) {
     final aDate = a.targetDate;
     final bDate = b.targetDate;
@@ -156,25 +104,28 @@ class FirestoreGoalRepository {
     return aDate.compareTo(bDate);
   }
 
-  /// Returns all goals for [curriculumId], sorted by `targetDate`
-  /// (null-first, ascending) — see the class doc comment.
+  static bool _isLive(Map<String, dynamic> data) =>
+      data[GovernedKeys.endedAt] == null;
+
+  /// The live goals of [curriculumId], sorted by `targetDate` (null first,
+  /// then ascending). Ended goals are skipped.
   Future<List<GoalEntity>> getGoals(CurriculumId curriculumId) async {
     final snapshot = await _queryForCurriculum(curriculumId).get();
     return _decodeAll(snapshot.docs);
   }
 
-  /// Decodes every document in [docs], skipping (and logging) any single
-  /// document whose decode fails rather than letting one malformed row
-  /// fail the whole read — same "one bad document should not blank the
-  /// list" treatment `FirestoreStageDefinitionRepository._decodeAll`
-  /// applies.
+  /// Decodes every live document in [docs], skipping (and logging) any
+  /// single document whose decode fails so one bad document never blanks
+  /// the list.
   List<GoalEntity> _decodeAll(
     Iterable<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
     final results = <GoalEntity>[];
     for (final doc in docs) {
+      final data = doc.data();
+      if (!_isLive(data)) continue;
       try {
-        results.add(GoalEntity.fromFirestore(doc.data()));
+        results.add(GoalEntity.fromFirestore(data));
       } catch (error, stackTrace) {
         _logger.warning(
           event: 'firestore_goals_decode_error',
@@ -188,25 +139,28 @@ class FirestoreGoalRepository {
     return results;
   }
 
-  /// Live updates for [curriculumId]'s goal list, sorted the same way as
-  /// [getGoals]. Resubscribes with bounded exponential backoff if the
-  /// underlying listener errors (`resilientQueryStream`).
+  /// Live updates of [getGoals]. Resubscribes with bounded exponential
+  /// backoff if the underlying listener errors (`resilientQueryStream`).
   Stream<List<GoalEntity>> watchGoals(CurriculumId curriculumId) {
-    return resilientQueryStream<GoalEntity>(
+    return resilientQueryStream<GoalEntity?>(
       openStream: () => _queryForCurriculum(curriculumId).snapshots(),
-      decode: (doc) => GoalEntity.fromFirestore(doc.data()),
+      decode: (doc) {
+        final data = doc.data();
+        return _isLive(data) ? GoalEntity.fromFirestore(data) : null;
+      },
       onError: (error, stackTrace) => _logger.warning(
         event: 'firestore_goals_watch_error',
         exception: error,
         stackTrace: stackTrace,
         fields: {'curriculum_id': curriculumId.storageKey},
       ),
-    ).map((goals) => List<GoalEntity>.of(goals)..sort(_byTargetDate));
+    ).map(
+      (goals) => goals.whereType<GoalEntity>().toList()..sort(_byTargetDate),
+    );
   }
 
-  /// Decomposes a [PaceTarget] into the four raw fields
-  /// (goalType, targetDate, paceValue, pacePeriod) — mirrors
-  /// `GoalRepositoryImpl._decomposePaceTarget` exactly.
+  /// Decomposes a [PaceTarget] into (goalType, targetDate, paceValue,
+  /// pacePeriod).
   static (String, DateTime?, int?, String?) _decomposePaceTarget(
     PaceTarget? paceTarget,
   ) {
@@ -220,9 +174,10 @@ class FirestoreGoalRepository {
     }
   }
 
-  /// Creates a new goal for [curriculumId]. [paceTarget] is the sealed
-  /// discriminant carrying deadline- or pace-mode data (`null` for
-  /// `goalType == 'none'`) — see [PaceTarget]'s subtypes.
+  /// Sets [curriculumId]'s goal: one governed action (see the library doc
+  /// comment). [paceTarget] is the deadline or pace mode, `null` for a
+  /// `'none'` goal (which only ends the live goals). Returns the entity as
+  /// the app models it.
   Future<GoalEntity> createGoal({
     required CurriculumId curriculumId,
     required double targetPercent,
@@ -232,7 +187,7 @@ class FirestoreGoalRepository {
     PaceGranularity? paceGranularity,
     String? rawLearningUnit,
   }) async {
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
+    final now = _clock();
     final (goalType, targetDate, paceValue, pacePeriod) = _decomposePaceTarget(
       paceTarget,
     );
@@ -250,19 +205,18 @@ class FirestoreGoalRepository {
       createdAt: now,
       updatedAt: now,
     );
-    await _doc(entity).set(entity.toFirestore(), SetOptions(merge: true));
+    await _apply(await planSetGoal(entity));
     return entity;
   }
 
-  /// Updates [goal] and writes the result back to the SAME document (its
-  /// `curriculumId`/`createdAt` — and therefore
-  /// [GoalEntity.firestoreId] — are unchanged by an update; see the class
-  /// doc comment). Pass [paceTarget] to change the goal's deadline/pace
-  /// mode, or [clearPaceTarget] == `true` to remove it entirely
-  /// (`goalType` becomes `'none'`). Omitting both leaves the existing
-  /// mode untouched. [clearLearningUnit] == `true` removes the learning
-  /// unit entirely; omitting [paceGranularity]/[rawLearningUnit] leaves the
-  /// existing unit untouched.
+  /// Updates [goal]. Pass [paceTarget] to change the goal's mode, or
+  /// [clearPaceTarget] == `true` to make it a `'none'` goal; omitting both
+  /// keeps the mode. [clearLearningUnit] == `true` removes the learning
+  /// unit; omitting [paceGranularity] / [rawLearningUnit] keeps it.
+  ///
+  /// A mode change ends the old kind's doc and sets the new kind's doc in
+  /// one action; otherwise only the changed fields of the same doc are
+  /// written.
   Future<GoalEntity> updateGoal({
     required GoalEntity goal,
     double? targetPercent,
@@ -273,8 +227,6 @@ class FirestoreGoalRepository {
     String? rawLearningUnit,
     bool clearLearningUnit = false,
   }) async {
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-
     final String resolvedGoalType;
     final DateTime? resolvedTargetDate;
     final int? resolvedPaceValue;
@@ -322,24 +274,99 @@ class FirestoreGoalRepository {
       pacePeriod: resolvedPacePeriod,
       paceGranularity: resolvedGranularity,
       rawLearningUnit: resolvedRawUnit,
-      updatedAt: now,
+      updatedAt: _clock(),
     );
-
-    await _doc(updated).set(updated.toFirestore(), SetOptions(merge: true));
+    await _apply(await planSetGoal(updated));
     return updated;
   }
 
-  /// Hard-deletes [goal]'s Firestore document — a genuine remove, not a
-  /// tombstone. Permitted by `firestore.rules` (`match /goals/{goalId}`)
-  /// specifically so this call succeeds: `create`/`update` were already
-  /// owner-writable, so a client could already replace a goal's fields
-  /// arbitrarily — forbidding removal protected nothing, and it left an
-  /// asymmetry where a tutor with `can_edit_goals` could delete a goal via
-  /// the `tutorDeleteGoal` Cloud Function (Admin SDK, bypasses rules) but
-  /// the owner could not remove their own goal from the client. [goal]'s
-  /// `curriculumId`/`createdAt` pair (via [GoalEntity.firestoreId]) resolves
-  /// the same document [updateGoal] would target — see the class doc
-  /// comment's "Doc-id" section. Mirrors
-  /// `FirestoreProfileProgramRepository.removeProgram`.
-  Future<void> deleteGoal(GoalEntity goal) => _doc(goal).delete();
+  /// Ends [goal]'s doc: an `ended_at` tombstone through a logged change,
+  /// never a delete. A `'none'` goal has no doc, so nothing is written.
+  Future<void> deleteGoal(GoalEntity goal) async {
+    final kind = GoalKind.byStorage[goal.goalType];
+    if (kind == null) return;
+    await _apply([
+      OwnerGovernedIntents.endGoal(
+        curriculumId: goal.curriculumId.storageKey,
+        kind: kind,
+        at: _clock(),
+      ),
+    ]);
+  }
+
+  /// The governed entity changes that make [goal] its curriculum's goal:
+  /// upsert of [goal]'s kind (nothing for `'none'`) plus an `ended_at`
+  /// tombstone of every other live goal doc of the curriculum. Used by the
+  /// one-action Add track flow (DNI-476 T5) as well as the writes above.
+  Future<List<GovernedEntityChange>> planSetGoal(GoalEntity goal) async {
+    final curriculumId = goal.curriculumId.storageKey;
+    final kind = GoalKind.byStorage[goal.goalType];
+    final live = await _liveDocs(goal.curriculumId);
+    final changes = <GovernedEntityChange>[];
+    if (kind != null) {
+      final docId = goalDocId(curriculumId, kind);
+      changes.add(
+        OwnerGovernedIntents.setGoal(
+          curriculumId: curriculumId,
+          kind: kind,
+          fields: {
+            ..._fieldsOf(goal, kind),
+            if (!live.contains(docId))
+              'created_at': goal.createdAt.toUtc().toIso8601String(),
+          },
+        ),
+      );
+    }
+    for (final other in GoalKind.values) {
+      if (other == kind) continue;
+      if (!live.contains(goalDocId(curriculumId, other))) continue;
+      changes.add(
+        OwnerGovernedIntents.endGoal(
+          curriculumId: curriculumId,
+          kind: other,
+          at: _clock(),
+        ),
+      );
+    }
+    return changes;
+  }
+
+  /// The ids of [curriculumId]'s live goal docs.
+  Future<Set<String>> _liveDocs(CurriculumId curriculumId) async {
+    final snapshot = await _queryForCurriculum(curriculumId).get();
+    return {
+      for (final doc in snapshot.docs)
+        if (_isLive(doc.data())) doc.id,
+    };
+  }
+
+  /// The storage fields of [goal] as a goal of [kind].
+  static Map<String, Object?> _fieldsOf(GoalEntity goal, GoalKind kind) {
+    final shared = <String, Object?>{
+      'description': goal.description,
+      'date_type': goal.dateType,
+    };
+    switch (kind) {
+      case GoalKind.deadline:
+        final due = goal.targetDate;
+        return {
+          ...shared,
+          if (due != null) 'target_date': FirestoreCodec.encodeCivilDate(due),
+        };
+      case GoalKind.pace:
+        return {
+          ...shared,
+          'pace_value': goal.paceValue,
+          'pace_unit': goal.pacePeriod,
+          'pace_granularity': goal.paceGranularityKey,
+        };
+    }
+  }
+
+  Future<void> _apply(List<GovernedEntityChange> changes) async {
+    if (changes.isEmpty) return;
+    final writer = _writer;
+    if (writer == null) throw const GovernedWriterNotReadyException();
+    await applyOwnerAction(writer, GovernedAction(changes));
+  }
 }

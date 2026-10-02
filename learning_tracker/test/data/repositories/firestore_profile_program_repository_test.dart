@@ -34,15 +34,18 @@ import 'package:learning_tracker/data/repositories/firestore_profile_program_rep
 import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'uid-1';
-const _profileId = 'profile-ulid-1';
+const _profileId = governedTestProfileId;
 
 void main() {
   late FakeFirebaseFirestore firestore;
+  late FirestoreGovernedWriter writer;
 
   setUp(() {
     firestore = createFakeFirestore(authenticatedUid: _uid);
+    writer = FirestoreGovernedWriter(firestore, uid: _uid);
   });
 
   CollectionReference<Map<String, dynamic>> rawCollection() => firestore
@@ -60,6 +63,7 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: writer,
     );
   }
 
@@ -117,7 +121,13 @@ void main() {
       expect(read.programId, 7);
       expect(read.trackingStartDate, DateTime.utc(2026, 1, 1));
       expect(read.trackingStartRef, 'Genesis.1.1');
-      expect(read.updatedAt, written.updatedAt);
+      // AD-52 shapes: program_id is a string, the start a civil date;
+      // updated_at is retired from governed docs.
+      final raw = (await rawDoc(CurriculumId.chumash).get()).data()!;
+      expect(raw['program_id'], '7');
+      expect(raw['tracking_start_date'], '2026-01-01');
+      expect(raw.keys, isNot(contains('updated_at')));
+      expect(written.programId, 7);
     });
 
     test('setProgram with no tracking window omits both fields', () async {
@@ -141,22 +151,21 @@ void main() {
     });
   });
 
-  group('profile_id is written as the String ULID, never a Drift int', () {
-    test(
-      'the raw document stores profile_id as the profileId String',
-      () async {
-        final repo = buildRepo();
+  group('governed writes (AD-38, DNI-476)', () {
+    test('setProgram is one logged mainTrackProgram change carrying '
+        'curriculum_id and last_change_id; no profile_id', () async {
+      final repo = buildRepo();
 
-        await repo.setProgram(
-          curriculumId: CurriculumId.mishnayos,
-          programId: 1,
-        );
+      await repo.setProgram(curriculumId: CurriculumId.mishnayos, programId: 1);
 
-        final snapshot = await rawDoc(CurriculumId.mishnayos).get();
-        expect(snapshot.data()!['profile_id'], _profileId);
-        expect(snapshot.data()!['profile_id'], isA<String>());
-      },
-    );
+      final entry = (await writer.lastEntries()).single;
+      expect(entry.entity.storage, 'mainTrackProgram');
+      expect(entry.entityId, 'mishnayos');
+      final raw = (await rawDoc(CurriculumId.mishnayos).get()).data()!;
+      expect(raw['last_change_id'], entry.id);
+      expect(raw['curriculum_id'], 'mishnayos');
+      expect(raw.keys, isNot(contains('profile_id')));
+    });
   });
 
   group('SetOptions(merge: true) field-clearing trap — tracking_start_date/'
@@ -176,13 +185,13 @@ void main() {
 
       final snapshot = await rawDoc(CurriculumId.chumash).get();
       expect(
-        snapshot.data(),
-        isNot(contains('tracking_start_date')),
+        snapshot.data()!['tracking_start_date'],
+        isNull,
         reason:
-            'a bare merge-set omitting the key would have left the '
-            'STALE 2026-01-01 value in place instead',
+            'an omitted key would have left the STALE 2026-01-01 value in '
+            'place; the governed patch clears it with an explicit null',
       );
-      expect(snapshot.data(), isNot(contains('tracking_start_ref')));
+      expect(snapshot.data()!['tracking_start_ref'], isNull);
       final read = await repo.getProgram(CurriculumId.chumash);
       expect(read!.trackingStartDate, isNull);
       expect(read.trackingStartRef, isNull);
@@ -206,20 +215,40 @@ void main() {
 
       final snapshot = await rawDoc(CurriculumId.chumash).get();
       expect(snapshot.data()!['synced_at'], 'server-stamped-value');
-      expect(snapshot.data()!['program_id'], 2);
+      expect(snapshot.data()!['program_id'], '2');
     });
   });
 
-  group('removeProgram — real delete', () {
-    test('deletes the document for the curriculum', () async {
+  group('removeProgram — a tombstone, never a delete', () {
+    test('sets ended_at through a logged change; reads skip it', () async {
       final repo = buildRepo();
       await repo.setProgram(curriculumId: CurriculumId.mishnayos, programId: 1);
 
       await repo.removeProgram(CurriculumId.mishnayos);
 
       final snapshot = await rawDoc(CurriculumId.mishnayos).get();
-      expect(snapshot.exists, isFalse);
+      expect(snapshot.exists, isTrue);
+      expect(snapshot.data()!['ended_at'], isA<Timestamp>());
       expect(await repo.getProgram(CurriculumId.mishnayos), isNull);
+      expect(await repo.getAllPrograms(), isEmpty);
+      final entry = (await writer.lastEntries()).single;
+      expect(entry.after.keys, ['profile_programs/mishnayos.ended_at']);
+    });
+
+    test('is a no-op when there is no live assignment', () async {
+      final repo = buildRepo();
+      await repo.removeProgram(CurriculumId.mishnayos);
+      expect(writer.actions, isEmpty);
+    });
+
+    test('setProgram after removal revives the same doc', () async {
+      final repo = buildRepo();
+      await repo.setProgram(curriculumId: CurriculumId.mishnayos, programId: 1);
+      await repo.removeProgram(CurriculumId.mishnayos);
+      await repo.setProgram(curriculumId: CurriculumId.mishnayos, programId: 4);
+
+      final read = await repo.getProgram(CurriculumId.mishnayos);
+      expect(read!.programId, 4);
     });
 
     test('does not disturb a different curriculum\'s assignment', () async {

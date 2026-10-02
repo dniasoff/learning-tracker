@@ -103,6 +103,7 @@ import 'package:learning_tracker/data/repositories/firestore_study_day_config_re
 import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_tutor_audit_log_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 // Direct import, not the tutoring barrel: this file lives outside
 // lib/features/** and lib/domain/**, so it is outside audit check 102's
 // (`tool/check_dependency_direction.dart`) scan in either direction — the
@@ -410,6 +411,7 @@ final firestoreCurriculumScopeRepositoryProvider =
         firestore: handles.firestore,
         uid: ownerUid,
         profileId: profileId,
+        writer: ref.watch(ownerGovernedWriterProvider),
       );
     });
 
@@ -423,6 +425,7 @@ final firestoreCurriculumTrackRepositoryProvider =
         firestore: handles.firestore,
         uid: ownerUid,
         profileId: profileId,
+        writer: ref.watch(ownerGovernedWriterProvider),
       );
     });
 
@@ -436,6 +439,7 @@ final firestoreGoalRepositoryProvider =
         firestore: handles.firestore,
         uid: ownerUid,
         profileId: profileId,
+        writer: ref.watch(ownerGovernedWriterProvider),
       );
     });
 
@@ -501,6 +505,7 @@ final firestoreProfileProgramRepositoryProvider =
         firestore: handles.firestore,
         uid: ownerUid,
         profileId: profileId,
+        writer: ref.watch(ownerGovernedWriterProvider),
       );
     });
 
@@ -527,6 +532,7 @@ final firestoreStageDefinitionRepositoryProvider =
         firestore: handles.firestore,
         uid: ownerUid,
         profileId: profileId,
+        writer: ref.watch(ownerGovernedWriterProvider),
       );
     });
 
@@ -574,5 +580,6 @@ final firestoreStudyDayConfigRepositoryProvider =
         firestore: handles.firestore,
         uid: ownerUid,
         profileId: profileId,
+        writer: ref.watch(ownerGovernedWriterProvider),
       );
     });

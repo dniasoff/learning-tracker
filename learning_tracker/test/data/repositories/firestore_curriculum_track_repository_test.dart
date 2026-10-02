@@ -37,15 +37,18 @@ import 'package:learning_tracker/data/repositories/firestore_curriculum_track_re
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 
 import '../../helpers/firestore_fake.dart';
+import '../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'uid-1';
-const _profileId = 'profile-ulid-1';
+const _profileId = governedTestProfileId;
 
 void main() {
   late FakeFirebaseFirestore firestore;
+  late FirestoreGovernedWriter writer;
 
   setUp(() {
     firestore = createFakeFirestore(authenticatedUid: _uid);
+    writer = FirestoreGovernedWriter(firestore, uid: _uid);
   });
 
   DocumentReference<Map<String, dynamic>> rawDoc(CurriculumId curriculumId) =>
@@ -66,6 +69,7 @@ void main() {
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
+      writer: writer,
     );
   }
 
@@ -140,7 +144,10 @@ void main() {
       final repo = buildRepo();
       await repo.activateTrack(CurriculumId.mishnayos);
       await repo.activateTrack(CurriculumId.bavli);
-      await repo.resetPace(CurriculumId.mishnayos);
+      // A legacy pace-reset stamp (Reset pace is retired; the stamp stays).
+      await rawDoc(CurriculumId.mishnayos).set({
+        'pace_reset_date': '2026-01-01T00:00:00.000Z',
+      }, SetOptions(merge: true));
       final beforeRetire = await repo.getTrack(CurriculumId.mishnayos);
       expect(beforeRetire!.paceResetDate, isNotNull);
       await repo.retireTrack(CurriculumId.mishnayos);
@@ -225,20 +232,6 @@ void main() {
         () => repo.archiveTrack(CurriculumId.mishnayos),
         throwsA(isA<StateError>()),
       );
-    });
-  });
-
-  group('resetPace', () {
-    test('sets paceResetDate without touching state', () async {
-      final repo = buildRepo();
-      final created = await repo.activateTrack(CurriculumId.mishnayos);
-      expect(created.paceResetDate, isNull);
-
-      await repo.resetPace(CurriculumId.mishnayos);
-
-      final track = await repo.getTrack(CurriculumId.mishnayos);
-      expect(track!.paceResetDate, isNotNull);
-      expect(track.state, CurriculumTrackState.active.storageKey);
     });
   });
 
@@ -381,6 +374,66 @@ void main() {
       final repo = buildRepo();
 
       expect(await repo.getTrack(CurriculumId.mishnehTorah), isNull);
+    });
+  });
+
+  group('DNI-476: governed writes, tombstone reads', () {
+    test(
+      'activateTrack is one logged mainTrack change with last_change_id',
+      () async {
+        await buildRepo().activateTrack(CurriculumId.mishnayos);
+        final entry = (await writer.lastEntries()).single;
+        expect(entry.entity.storage, 'mainTrack');
+        expect(entry.entityId, 'mishnayos');
+        final doc = (await rawDoc(CurriculumId.mishnayos).get()).data()!;
+        expect(doc['last_change_id'], entry.id);
+        expect(doc['curriculum_id'], 'mishnayos');
+        expect(doc.keys, isNot(contains('updated_at')));
+        expect(doc.keys, isNot(contains('synced_at')));
+      },
+    );
+
+    test('an ended (removed) track reads as absent everywhere', () async {
+      final repo = buildRepo();
+      await repo.activateTrack(CurriculumId.mishnayos);
+      await repo.activateTrack(CurriculumId.bavli);
+      await rawDoc(CurriculumId.mishnayos).set({
+        'ended_at': Timestamp.fromDate(governedTestNow),
+      }, SetOptions(merge: true));
+
+      expect(await repo.getTrack(CurriculumId.mishnayos), isNull);
+      expect(await repo.isActive(CurriculumId.mishnayos), isFalse);
+      expect(await repo.getActiveCurriculumIds(), ['bavli']);
+      expect((await repo.getAllTracks()).map((t) => t.curriculumId), [
+        CurriculumId.bavli,
+      ]);
+      expect((await repo.watchAllTracks().first).map((t) => t.curriculumId), [
+        CurriculumId.bavli,
+      ]);
+      expect(await repo.watchActiveCurriculumIds().first, ['bavli']);
+    });
+
+    test('activating a removed track re-adds it: ended_at is cleared through '
+        'a logged change and the doc keeps its other fields', () async {
+      final repo = buildRepo();
+      await repo.activateTrack(CurriculumId.mishnayos);
+      await rawDoc(CurriculumId.mishnayos).set({
+        'ended_at': Timestamp.fromDate(governedTestNow),
+        'progress_model': 'kept',
+      }, SetOptions(merge: true));
+
+      final track = await repo.activateTrack(CurriculumId.mishnayos);
+
+      expect(track.isActive, isTrue);
+      final doc = (await rawDoc(CurriculumId.mishnayos).get()).data()!;
+      expect(doc['ended_at'], isNull);
+      expect(doc['progress_model'], 'kept');
+      final entry = (await writer.lastEntries()).single;
+      expect(entry.after['curriculum_tracks/mishnayos.ended_at'], isNull);
+      expect(
+        entry.after.keys,
+        contains('curriculum_tracks/mishnayos.ended_at'),
+      );
     });
   });
 }

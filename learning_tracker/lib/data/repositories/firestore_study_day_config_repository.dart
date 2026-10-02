@@ -1,11 +1,33 @@
-/// Firestore implementation for study-day configs — Epic B (`docs/
-/// firestore-rewrite-map.md`), built to the shape
-/// `lib/data/repositories/firestore_stage_definition_repository.dart`
-/// establishes as the reference. See that file's class doc comment for the
-/// pattern this copies (resolved-handle constructor, `DocIds`-only doc-ids,
-/// entity-owned codec, merge writes, `resilientQueryStream` for the
-/// composite-index list query, one-shot-read decode leniency). This doc
-/// comment only calls out what is DIFFERENT for this collection.
+/// Firestore implementation for study-day configs —
+/// `users/{uid}/learner_profiles/{profileId}/study_day_configs/
+/// {curriculumId}_{dayOfWeek}`, the AD-38 governed entity
+/// `mainTrackStudyDays` (one entity per curriculum, one doc per weekday).
+///
+/// Reads are direct queries; every write is ONE governed action handed to
+/// `LearningCommands.applyGovernedChange` through the injected
+/// [OwnerGovernedWriter] (Story 1.14, DNI-476): a field-level merge of the
+/// changed docs with `last_change_id` and one co-written `change_log`
+/// entry for the curriculum's study days. This class never writes or
+/// deletes a document itself.
+///
+/// ## Replace-all without deletes
+///
+/// [replaceAllForCurriculum] upserts every day present and tombstones
+/// (`ended_at`) every live day absent; a later write of that day revives
+/// it. Client `delete` is denied by the rules (AD-38). Reads skip ended
+/// docs. A curriculum has at most 7 docs, so the action always fits one
+/// owner batch (AD-54).
+///
+/// ## Fields
+///
+/// `curriculum_id`, `day_of_week`, `day_type` (+ `ended_at`).
+/// `updated_at` / `synced_at` are retired from governed docs and never
+/// written.
+///
+/// ## Composite index
+///
+/// [_queryForCurriculum] filters `curriculum_id` and orders by
+/// `day_of_week`, which every doc carries, so no row is silently dropped.
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,101 +36,37 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
-import 'package:learning_tracker/data/firestore/write_ack.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_intents.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
 
-/// Firestore-backed study-day-configs repository: `users/{uid}/
-/// learner_profiles/{profileId}/study_day_configs/{curriculumId}_
-/// {dayOfWeek}` (`docs/firestore-rewrite-map.md`, `firestore.rules`
-/// `match /study_day_configs/{configId}`).
-///
-/// **Not wired into the app's production provider yet** — but
-/// `FirestoreStudyDayConfigRepositoryAdapter`
-/// (`lib/features/scheduler/data/repositories/
-/// study_day_config_repository_impl.dart`) exists and does read this class.
-/// That adapter itself is not constructed by any real provider (it appears
-/// nowhere in `lib/` outside its own definition), so no screen reaches this
-/// repository through it yet; the existing Drift-backed `StudyDayConfigDao`
-/// (`lib/core/database/daos/study_day_config_dao.dart`) is untouched and
-/// keeps serving the app until the rewiring stage.
-///
-/// **No interface** — same reasoning as the reference repositories: the
-/// Drift DAO is being deleted outright, not kept alongside this one, so
-/// there is nothing to be substitutable with. Unlike `GoalRepository` /
-/// `StageDefinitionRepository`, there was never an abstract
-/// `StudyDayConfigRepository` interface in the Drift-era codebase to begin
-/// with — `StudyDayConfigDao` was called directly by services — so this
-/// class's method set is derived from the DAO's actual call sites, not
-/// from trimming an existing interface.
-///
-/// ## AD-25 re-key
-///
-/// The doc-id is `{curriculumId}_{dayOfWeek}` (`DocIds.studyDayConfigDocId`)
-/// — no `track_id` component. Before Story 2.3's AD-25 re-key the live
-/// gateway embedded a third, per-device `track_id` segment; `curriculum_id`
-/// is now the sole canonical stable track key for this collection (see
-/// `DocIds.studyDayConfigDocId`'s doc comment). This repository never
-/// accepts or writes a `trackId`/`track_id` at all, for the same reason the
-/// reference stage-definitions repository doesn't: a Drift-local `int`
-/// `trackId` has no cross-device meaning, and writing it here would trip
-/// the MCF-11 autoincrement-id-in-payload ratchet as a brand-new site.
-///
-/// ## Trimmed from the Drift-era DAO — not reimplemented
-///
-/// - **Every `*ForTrack`/`*ByTrack` method
-///   (`getConfigsByTrack`/`watchConfigsByTrack`/`isStudyDayForTrack`/
-///   `getStudyDaysPerWeekForTrack`/`countStudyDaysInInclusiveDateRangeForTrack`/
-///   `seedDefaultsForTrack`/`deleteConfigsForTrack`) is keyed on the
-///   Drift-local `int trackId`** — dropped entirely, same reasoning as
-///   `FirestoreStageDefinitionRepository` dropping `getStagesByTrack`/
-///   `deleteStagesForTrack`. There is no per-device track id left to key by
-///   after AD-25; `curriculum_id` is the sole key every method here takes.
-/// - **`isStudyDay`, `getStudyDaysPerWeek`, `getLatestUpdatedAt`,
-///   `countStudyDaysInInclusiveDateRangeForTrack` do not exist on this
-///   class.** Every one of these is a pure derived computation over the
-///   list [getConfigsForCurriculum]/[watchConfigsForCurriculum] already
-///   return in full (filter by `dayType`, take a max `updatedAt`, count
-///   weekdays in a date range) — none of them touch Firestore themselves in
-///   the Drift DAO either; they all call `getConfigsByCurriculumAndProfile`
-///   first and then compute client-side. Repeating that computation here
-///   would duplicate logic that belongs in a scheduler/service layer
-///   consuming [StudyDayConfigEntry] lists, not in repository plumbing.
-/// - **`upsertDayConfigFromSync`** was a sync-merge-path variant of
-///   [setDayConfig] that accepted an explicit remote `updatedAt` for LWW
-///   ordering. There is no separate merge/LWW path for a Firestore-native
-///   repository — the SDK's own offline-write-queue + `SetOptions(merge:
-///   true)` replace it — so only the "now"-stamping [setDayConfig] exists.
-///
-/// ## What this ADDS relative to the Drift DAO (rules permit it)
-///
-/// Unlike `goals`/`stage_definitions` (`allow delete: if false`),
-/// `study_day_configs`' rules permit owner `delete`
-/// (`firestore.rules` `match /study_day_configs/{configId}`). So
-/// [replaceAllForCurriculum] can actually implement "replace the whole
-/// set" honestly — delete every day absent from the new set, upsert every
-/// day present — mirroring `StudyDayConfigDao.replaceAllForTrack`'s
-/// delete-then-insert semantics in a single Firestore batch instead of a
-/// delete pass followed by a per-row insert loop. This is the one place
-/// this repository's capability is a strict superset of what
-/// `FirestoreStageDefinitionRepository.resetToDefaults` could do for its
-/// own (delete-denied) collection — flagged so the asymmetry isn't
-/// mistaken for an oversight.
+/// Firestore-backed study-day-configs repository (see the library doc
+/// comment).
 class FirestoreStudyDayConfigRepository {
   FirestoreStudyDayConfigRepository({
     required FirebaseFirestore firestore,
     required String uid,
     required String profileId,
+    OwnerGovernedWriter? writer,
     AppLogger? logger,
+    DateTime Function()? clock,
   }) : _firestore = firestore,
        _uid = uid,
        _profileId = profileId,
-       _logger = logger ?? AppLogger.instance;
+       _writer = writer,
+       _logger = logger ?? AppLogger.instance,
+       _clock = clock ?? DateTimeFactory.nowUtc;
 
   final FirebaseFirestore _firestore;
   final String _uid;
   final String _profileId;
+  final OwnerGovernedWriter? _writer;
   final AppLogger _logger;
+  final DateTime Function() _clock;
 
   CollectionReference<Map<String, dynamic>> get _configs => _firestore
       .collection('users')
@@ -117,32 +75,22 @@ class FirestoreStudyDayConfigRepository {
       .doc(_profileId)
       .collection('study_day_configs');
 
-  DocumentReference<Map<String, dynamic>> _doc({
-    required CurriculumId curriculumId,
-    required int dayOfWeek,
-  }) => _configs.doc(
-    DocIds.studyDayConfigDocId({
-      'curriculum_id': curriculumId.storageKey,
-      'day_of_week': dayOfWeek,
-    }),
-  );
+  static String _docId(CurriculumId curriculumId, int dayOfWeek) =>
+      DocIds.studyDayConfigDocId({
+        'curriculum_id': curriculumId.storageKey,
+        'day_of_week': dayOfWeek,
+      });
 
-  /// The composite-index-requiring query behind
-  /// [getConfigsForCurriculum]/[watchConfigsForCurriculum] — `curriculum_id`
-  /// equality plus `day_of_week` ordering needs a composite index, same
-  /// shape as `FirestoreStageDefinitionRepository`'s `curriculum_id` +
-  /// `stage_order` query. Unlike `goals`' `target_date` (nullable — see
-  /// `FirestoreGoalRepository`'s doc comment for why THAT repository sorts
-  /// client-side instead), `day_of_week` is always present on every
-  /// document this repository writes, so ordering by it in the query
-  /// itself never silently drops a row.
   Query<Map<String, dynamic>> _queryForCurriculum(CurriculumId curriculumId) =>
       _configs
           .where('curriculum_id', isEqualTo: curriculumId.storageKey)
           .orderBy('day_of_week');
 
-  /// Returns all configured days for [curriculumId], ordered by
-  /// `dayOfWeek` (1=Mon..7=Sun).
+  static bool _isLive(Map<String, dynamic> data) =>
+      data[GovernedKeys.endedAt] == null;
+
+  /// The live configured days of [curriculumId], ordered by `dayOfWeek`
+  /// (1=Mon..7=Sun).
   Future<List<StudyDayConfigEntry>> getConfigsForCurriculum(
     CurriculumId curriculumId,
   ) async {
@@ -150,15 +98,14 @@ class FirestoreStudyDayConfigRepository {
     return _decodeAll(snapshot.docs);
   }
 
-  /// Decodes every document in [docs], skipping (and logging) any single
-  /// document whose decode fails rather than letting one malformed row fail
-  /// the whole read — same "one bad document should not blank the list"
-  /// treatment `FirestoreStageDefinitionRepository._decodeAll` applies.
+  /// Decodes every live document in [docs], skipping (and logging) any
+  /// single document whose decode fails.
   List<StudyDayConfigEntry> _decodeAll(
     Iterable<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
     final results = <StudyDayConfigEntry>[];
     for (final doc in docs) {
+      if (!_isLive(doc.data())) continue;
       try {
         results.add(studyDayConfigEntryFromFirestore(doc.data()));
       } catch (error, stackTrace) {
@@ -173,94 +120,100 @@ class FirestoreStudyDayConfigRepository {
     return results;
   }
 
-  /// Live updates for [curriculumId]'s ordered day-config list.
-  /// Resubscribes with bounded exponential backoff if the underlying
-  /// listener errors (`resilientQueryStream`).
+  /// Live updates of [getConfigsForCurriculum]. Resubscribes with bounded
+  /// exponential backoff if the listener errors (`resilientQueryStream`).
   Stream<List<StudyDayConfigEntry>> watchConfigsForCurriculum(
     CurriculumId curriculumId,
   ) {
-    return resilientQueryStream<StudyDayConfigEntry>(
+    return resilientQueryStream<StudyDayConfigEntry?>(
       openStream: () => _queryForCurriculum(curriculumId).snapshots(),
-      decode: (doc) => studyDayConfigEntryFromFirestore(doc.data()),
+      decode: (doc) => _isLive(doc.data())
+          ? studyDayConfigEntryFromFirestore(doc.data())
+          : null,
       onError: (error, stackTrace) => _logger.warning(
         event: 'firestore_study_day_configs_watch_error',
         exception: error,
         stackTrace: stackTrace,
         fields: {'curriculum_id': curriculumId.storageKey},
       ),
-    );
+    ).map((days) => days.whereType<StudyDayConfigEntry>().toList());
   }
 
-  /// Creates or updates a single day's config. Merge write — this
-  /// collection has a second writer, the tutor-proxy Cloud Function
-  /// `tutorUpsertStudyDayConfig` (`functions/src/tutor_writes.ts`), which
-  /// also merges and stamps a server `synced_at`; a bare `.set()` from this
-  /// client would blow that field away on the next owner write.
+  /// Creates or updates a single day's config: one logged change.
   Future<void> setDayConfig({
     required CurriculumId curriculumId,
     required int dayOfWeek,
     required DayType dayType,
-  }) async {
-    final entry = StudyDayConfigEntry(dayOfWeek: dayOfWeek, dayType: dayType);
-    await _doc(curriculumId: curriculumId, dayOfWeek: dayOfWeek).set(
-      entry.toFirestore(
-        curriculumId: curriculumId,
-        updatedAt: DateTimeFactory.nowUtc(), // P5: UTC timestamps
-      ),
-      SetOptions(merge: true),
-    );
-  }
+  }) => _apply([
+    _change(curriculumId, {
+      _docId(curriculumId, dayOfWeek): _fields(dayOfWeek, dayType),
+    }),
+  ]);
 
   /// Replaces the full set of day configs for [curriculumId] with exactly
-  /// [studyDays]: every day present is upserted, every EXISTING day absent
-  /// from [studyDays] is deleted. See the class doc comment ("What this
-  /// ADDS") for why this collection (unlike `goals`/`stage_definitions`)
-  /// can support a genuine replace-all.
+  /// [studyDays]: one logged change that upserts every day present and
+  /// tombstones every live day absent.
   Future<void> replaceAllForCurriculum({
     required CurriculumId curriculumId,
     required Map<int, DayType> studyDays,
   }) async {
-    final existing = await getConfigsForCurriculum(curriculumId);
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-    final batch = _firestore.batch();
-    for (final existingEntry in existing) {
-      if (!studyDays.containsKey(existingEntry.dayOfWeek)) {
-        batch.delete(
-          _doc(curriculumId: curriculumId, dayOfWeek: existingEntry.dayOfWeek),
-        );
-      }
-    }
-    for (final day in studyDays.entries) {
-      final entry = StudyDayConfigEntry(dayOfWeek: day.key, dayType: day.value);
-      batch.set(
-        _doc(curriculumId: curriculumId, dayOfWeek: day.key),
-        entry.toFirestore(curriculumId: curriculumId, updatedAt: now),
-        SetOptions(merge: true),
-      );
-    }
-    await batch.commit().orQueuedOffline;
+    final change = await planReplaceAll(
+      curriculumId: curriculumId,
+      studyDays: studyDays,
+    );
+    if (change != null) await _apply([change]);
   }
 
-  /// Seeds all 7 days as [DayType.study] if no config exists yet for
-  /// [curriculumId]. Idempotent — no-op if any config already exists,
-  /// mirroring `FirestoreStageDefinitionRepository.initializeDefaults`.
-  /// Writes directly (rather than routing through
-  /// [replaceAllForCurriculum]) since the "nothing exists yet" precondition
-  /// means there is never anything to delete — no need to pay for a second
-  /// read of the (already-known-empty) existing set.
+  /// The `mainTrackStudyDays` change [replaceAllForCurriculum] writes, or
+  /// null when there is nothing to write. Used by the one-action Add track
+  /// flow (DNI-476 T5).
+  Future<GovernedEntityChange?> planReplaceAll({
+    required CurriculumId curriculumId,
+    required Map<int, DayType> studyDays,
+  }) async {
+    final existing = await getConfigsForCurriculum(curriculumId);
+    final now = _clock();
+    final docs = <String, Map<String, Object?>>{
+      for (final day in studyDays.entries)
+        _docId(curriculumId, day.key): _fields(day.key, day.value),
+      for (final old in existing)
+        if (!studyDays.containsKey(old.dayOfWeek))
+          _docId(curriculumId, old.dayOfWeek): {GovernedKeys.endedAt: now},
+    };
+    return docs.isEmpty ? null : _change(curriculumId, docs);
+  }
+
+  /// Seeds all 7 days as [DayType.study] if no live config exists yet for
+  /// [curriculumId]. Idempotent — a no-op once any config exists.
   Future<void> initializeDefaults(CurriculumId curriculumId) async {
     final existing = await getConfigsForCurriculum(curriculumId);
     if (existing.isNotEmpty) return;
-    final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
-    final batch = _firestore.batch();
-    for (var day = 1; day <= 7; day++) {
-      final entry = StudyDayConfigEntry(dayOfWeek: day, dayType: DayType.study);
-      batch.set(
-        _doc(curriculumId: curriculumId, dayOfWeek: day),
-        entry.toFirestore(curriculumId: curriculumId, updatedAt: now),
-        SetOptions(merge: true),
-      );
-    }
-    await batch.commit().orQueuedOffline;
+    await _apply([
+      _change(curriculumId, {
+        for (var day = 1; day <= 7; day++)
+          _docId(curriculumId, day): _fields(day, DayType.study),
+      }),
+    ]);
+  }
+
+  static Map<String, Object?> _fields(int dayOfWeek, DayType dayType) => {
+    'day_of_week': dayOfWeek,
+    'day_type': dayType.storageKey,
+    GovernedKeys.endedAt: null,
+  };
+
+  static GovernedEntityChange _change(
+    CurriculumId curriculumId,
+    Map<String, Map<String, Object?>> docs,
+  ) => OwnerGovernedIntents.mainTrackDocs(
+    entity: GovernedEntity.mainTrackStudyDays,
+    curriculumId: curriculumId.storageKey,
+    docs: docs,
+  );
+
+  Future<void> _apply(List<GovernedEntityChange> changes) async {
+    final writer = _writer;
+    if (writer == null) throw const GovernedWriterNotReadyException();
+    await applyOwnerAction(writer, GovernedAction(changes));
   }
 }
