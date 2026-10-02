@@ -719,9 +719,20 @@ final class DefaultLearningCommands implements LearningCommands {
         return commands.deleteSubTrack(subTrackId);
       });
 
+  /// The event failures, then the governed ones, then the sub-track ones.
   @override
-  Stream<List<PendingFailure>> watchPendingFailures() =>
-      _dispatcher.watchPendingFailures();
+  Stream<List<PendingFailure>> watchPendingFailures() {
+    var failures = _dispatcher.watchPendingFailures();
+    final governed = _governed;
+    if (governed != null) {
+      failures = _concatLatest(failures, governed.watchPendingFailures());
+    }
+    final subTracks = _subTrackCommands;
+    if (subTracks != null) {
+      failures = _concatLatest(failures, subTracks.watchPendingFailures());
+    }
+    return failures;
+  }
 
   @override
   Future<CaptureResult> retry(String pendingFailureId) =>
