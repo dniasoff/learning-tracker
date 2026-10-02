@@ -8,6 +8,7 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/pending_capture_rollback.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_capture_section.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
@@ -31,8 +32,10 @@ Future<CaptureRig> _pump(WidgetTester tester, {CaptureRig? rig}) async {
     pumpApp(
       overrides: r.overrides(),
       child: const Scaffold(
-        body: SingleChildScrollView(
-          child: Column(children: [SubTrackCaptureSection(), _RecordAll()]),
+        body: PendingCaptureRollback(
+          child: SingleChildScrollView(
+            child: Column(children: [SubTrackCaptureSection(), _RecordAll()]),
+          ),
         ),
       ),
     ),

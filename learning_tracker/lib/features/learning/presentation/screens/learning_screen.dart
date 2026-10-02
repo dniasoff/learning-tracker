@@ -109,6 +109,9 @@ class LearningScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(25, 10, 25, 32),
                   children: [
+                    // Up to… / +1 rollback and retry, with or without
+                    // sub-track rows (keeps itself alive in the list).
+                    const PendingCaptureRollback(),
                     const SizedBox(height: 18),
                     _StreakHeroCard(
                       streakAsync: streakAsync,

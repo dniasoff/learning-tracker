@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/pending_capture_rollback.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_capture_section.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
@@ -28,7 +29,9 @@ Future<CaptureRig> _pump(WidgetTester tester, DateTime now) async {
     pumpApp(
       overrides: rig.overrides(),
       child: const Scaffold(
-        body: SingleChildScrollView(child: SubTrackCaptureSection()),
+        body: PendingCaptureRollback(
+          child: SingleChildScrollView(child: SubTrackCaptureSection()),
+        ),
       ),
     ),
   );

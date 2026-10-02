@@ -11,7 +11,7 @@
 ///   leaves are marked recorded before the command returns, so the row and
 ///   the next picker move on in the same frame (UX-DR-154). Undo, a refused
 ///   capture, or a chunk the server rejects — within the ack window or
-///   later (the Learn rollback listener, UX-DR-110) — removes exactly its
+///   later (`PendingCaptureRollback`, UX-DR-110) — removes exactly its
 ///   leaves again; an entry is pruned once the engine counts (or
 ///   lock-ignores) its events.
 library;

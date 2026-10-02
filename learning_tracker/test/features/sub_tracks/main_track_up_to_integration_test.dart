@@ -1,12 +1,15 @@
 // Story 2.10 (DNI-501) AC-5 integration: Up to… on the main-track today
 // list, through the real LearningCommands and engine.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/main_track_up_to_action.dart';
+import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -74,11 +77,37 @@ Future<(CaptureRig, List<int>)> _pump(
         if (tutored)
           activeTutoredProfileSelectionProvider.overrideWith(_Tutored.new),
       ],
-      child: const Scaffold(body: Center(child: MainTrackUpToActions())),
+      // The Learn tab's capture surface with no sub-track: the rollback
+      // listener does not depend on sub-track rows.
+      child: const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PendingCaptureRollback(),
+              MainTrackUpToActions(),
+              SubTrackCaptureSection(),
+            ],
+          ),
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();
   return (rig, builds);
+}
+
+Set<String> _pendingMain(WidgetTester tester) =>
+    ProviderScope.containerOf(tester.element(find.byType(MainTrackUpToActions)))
+        .read(pendingCapturesProvider)
+        .refsOf(engineCurriculum, LearningEvent.sourceMain);
+
+Future<void> _recordThrough12(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('mainTrackUpTo-mishnayos')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Berakhot 1:2'));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('upToRecord')));
 }
 
 void main() {
@@ -147,6 +176,54 @@ void main() {
     expect(find.text('Berakhot 1:1'), findsNothing);
     expect(find.text('Berakhot 1:3'), findsNothing);
     expect(find.text('Berakhot 1:2'), findsOneWidget);
+  });
+
+  testWidgets('no sub-track: an immediate permanent rejection rolls back '
+      'and offers Retry', (tester) async {
+    final (rig, _) = await _pump(tester);
+    expect(find.byKey(const Key('subTrackSection')), findsNothing);
+    rig.port.failNextWith(const PermanentWriteRejection('permission-denied'));
+    await _recordThrough12(tester);
+    await tester.pumpAndSettle();
+    expect(rig.port.chunks, isEmpty);
+    expect(_pendingMain(tester), isEmpty);
+    expect(find.text('Recorded 2'), findsNothing);
+    expect(
+      find.text('Not saved — your learning was not recorded.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(
+      [for (final e in rig.written) e.ref],
+      ['Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:2'],
+    );
+  });
+
+  testWidgets('no sub-track: a queued capture the server rejects later is '
+      'rolled back, with Retry', (tester) async {
+    final (rig, _) = await _pump(tester);
+    rig.port.holdNext();
+    await _recordThrough12(tester);
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.pump();
+    expect(rig.port.heldCount, 1);
+    expect(_pendingMain(tester), {
+      'Mishnah Berakhot 1:1',
+      'Mishnah Berakhot 1:2',
+    });
+    expect(find.text('Recorded 2'), findsOneWidget);
+
+    rig.port.reject(const PermanentWriteRejection('permission-denied'));
+    await tester.pumpAndSettle();
+    expect(rig.port.chunks, isEmpty);
+    expect(_pendingMain(tester), isEmpty);
+    expect(find.text('Retry'), findsOneWidget);
+    // The rolled-back leaves lead the picker again.
+    await tester.tap(find.byKey(const Key('mainTrackUpTo-mishnayos')));
+    await tester.pumpAndSettle();
+    expect(find.text('Berakhot 1:1'), findsOneWidget);
   });
 
   testWidgets('absent in a tutored session', (tester) async {
