@@ -71,7 +71,7 @@ enum MishnaCorrection {
   /// `LearningCommands.replace` with a new leaf `ref`.
   changePlace,
 
-  /// `LearningCommands.replace` to Home or Before tracking.
+  /// `LearningCommands.replace` to Home, a sub-track or Before tracking.
   changeSource,
 
   /// `LearningCommands.replace` with a new `learned_on`.

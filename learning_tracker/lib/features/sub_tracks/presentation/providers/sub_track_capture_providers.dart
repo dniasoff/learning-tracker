@@ -26,7 +26,36 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+/// Whether the session may write sub-track learning: false on a tutor
+/// device (tutor sub-track writes are read-only until a later epic, Story
+/// 2.9 AC-9; AC-11). Owner-device capture (`LearningCommands`) is null in
+/// a tutored session too, so the main-track Up to… follows the same flag.
+final subTrackWritesAllowedProvider = Provider.autoDispose<bool>(
+  (ref) => ref.watch(activeTutoredProfileSelectionProvider) == null,
+);
+
+/// A sub-track a capture or a source correction may name.
+typedef SubTrackSourceChoice = ({String id, String name});
+
+/// The sub-track sources offered for [curriculumId] (AC-9, AC-10): its
+/// `onHome` sub-tracks by name, in hub order. Empty in a tutored session
+/// (AC-11) and while the list is loading or failed — Home and Before
+/// tracking stay available either way. Watch it where the choice is
+/// offered so it is ready when the sheet opens.
+final subTrackSourceChoicesProvider = Provider.autoDispose
+    .family<List<SubTrackSourceChoice>, String>((ref, curriculumId) {
+      if (!ref.watch(subTrackWritesAllowedProvider)) return const [];
+      final rows = ref.watch(onHomeSubTracksProvider).asData?.value;
+      if (rows == null) return const [];
+      return [
+        for (final r in rows)
+          if (r.curriculumId == curriculumId) (id: r.id, name: r.track.name),
+      ];
+    });
 
 /// One capture this device made that the engine has not derived yet.
 final class PendingCapture {

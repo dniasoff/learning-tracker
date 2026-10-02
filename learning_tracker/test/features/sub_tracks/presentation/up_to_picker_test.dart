@@ -1,16 +1,20 @@
 // Story 2.10 (DNI-501) widget: the Up to… picker (AC-1, AC-2, AC-4, AC-6,
 // AC-7).
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/up_to_selection.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/on_home_sub_tracks.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_capture_section.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_row.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/up_to_picker.dart';
 
 import '../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../helpers/pump_app.dart';
 import '../helpers/up_to_fixtures.dart';
@@ -350,6 +354,52 @@ void main() {
       await tester.pumpAndSettle();
       expect(attempts, greaterThan(before));
       expect(_recordEnabled(tester), isFalse);
+    });
+  });
+
+  group('AC-11 tutor device', () {
+    testWidgets('sub-track Up to… and +1 are visible but disabled; no '
+        'sub-track write reaches LearningCommands', (tester) async {
+      final commands = FakeLearningCommands();
+      useSurface(tester, phoneSize);
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [
+            ...learnerStateOverrides(scope: c0Scope(), commands: commands),
+            ...upToLabelOverrides(),
+            onHomeSubTracksProvider.overrideWith(
+              (ref) => AsyncData([
+                OnHomeSubTrack(
+                  track: fixtureSubTrack(schoolId, 'School'),
+                  state: fixtureSubTrackState(schoolId, path: _path),
+                ),
+              ]),
+            ),
+            subTrackWritesAllowedProvider.overrideWithValue(false),
+          ],
+          child: const Scaffold(body: SubTrackCaptureSection()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(Key('subTrackUpTo-$schoolId')), findsOneWidget);
+      expect(find.byKey(Key('subTrackPlusOne-$schoolId')), findsOneWidget);
+      await tester.tap(find.byKey(Key('subTrackUpTo-$schoolId')));
+      await tester.tap(find.byKey(Key('subTrackPlusOne-$schoolId')));
+      await tester.pumpAndSettle();
+      expect(find.byType(UpToPicker), findsNothing);
+      expect(
+        commands.calls.where((c) => c.name != 'watchPendingFailures'),
+        isEmpty,
+      );
+      final opacity = tester.widget<Opacity>(
+        find
+            .ancestor(
+              of: find.byKey(Key('subTrackPlusOne-$schoolId')),
+              matching: find.byType(Opacity),
+            )
+            .first,
+      );
+      expect(opacity.opacity, 0.4);
     });
   });
 }

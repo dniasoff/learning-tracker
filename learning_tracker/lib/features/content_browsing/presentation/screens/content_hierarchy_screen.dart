@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/learni
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/held_ground_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -94,6 +95,11 @@ class _ContentHierarchyScreenState
   Widget build(BuildContext context) {
     final curriculum = _curriculumOrNull;
 
+    if (curriculum != null) {
+      // Story 2.10 (AC-9): keep the sub-track sources ready for the
+      // free-tick sheet (empty on a tutor device, AC-11).
+      ref.watch(subTrackSourceChoicesProvider(curriculum.storageKey));
+    }
     if (curriculum == null) {
       final l10nEarly = AppLocalizations.of(context)!;
       return Scaffold(
@@ -500,6 +506,14 @@ class _ContentHierarchyScreenState
       title: title,
       count: leaves.length,
       today: ref.read(localDayClockProvider).today(),
+      // Home (default), each onHome sub-track of this curriculum by name,
+      // then Before tracking (FR-3, UX-DR-20; Story 2.10 AC-9).
+      extraSources: [
+        for (final s in ref.read(
+          subTrackSourceChoicesProvider(curriculum.storageKey),
+        ))
+          FreeTickSourceOption(id: s.id, label: s.name),
+      ],
     );
     if (choice == null || !mounted) return;
     setState(() => _capturing = true);
