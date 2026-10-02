@@ -26,20 +26,32 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// the same way ProfileSwitcherSheet gates its escalating actions (AN-2,
 /// `switcherSheetPinGuardRequiredProvider`): true only when the active
 /// profile is a child with a configured Parent PIN.
+///
+/// FAILS CLOSED: it resolves only once the profile list has loaded and the
+/// device holder is found in it. While the list loads, on a read error, with
+/// no selected profile, or when the selected profile is not (yet) in the
+/// list, it stays loading or errors — never a fabricated `false` — and the
+/// card disables its actions until it resolves (see
+/// [SacredTimeSettingsCard.pinGuard]). A child with a Parent PIN therefore
+/// cannot reach Detect or the Israel switch unauthenticated during a cold
+/// start or a transient read failure.
 final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
   ref,
 ) async {
-  final profiles =
-      ref.watch(profileListStreamProvider).asData?.value ??
-      <LearnerProfileEntity>[];
   // T-37: keyed on the DEVICE OWNER's own profile, not activeProfileIdProvider
   // (which redirects to the talmid's profileId during a tutored session):
   // the PIN gate evaluates whoever's holding the device — mirrors
   // switcherSheetPinGuardRequiredProvider's identical fix.
   final selectedId = ref.watch(selectedProfileIdProvider);
+  final profiles = await ref.watch(profileListStreamProvider.future);
   final active = profiles.where((p) => p.profileId == selectedId).firstOrNull;
-  if (active == null || active.mode != ProfileMode.child) return false;
-  if (selectedId == null) return false;
+  if (selectedId == null || active == null) {
+    throw StateError(
+      'Sacred Time PIN guard: the device holder is not among the loaded '
+      'profiles — failing closed',
+    );
+  }
+  if (active.mode != ProfileMode.child) return false;
   final pinService = ref.read(pinServiceProvider);
   return pinService.hasProfilePin(selectedId);
 });
@@ -141,19 +153,21 @@ Future<bool> guardLearnerLocationPromptAccess(
 class SacredTimeSettingsCard extends ConsumerWidget {
   const SacredTimeSettingsCard({
     super.key,
-    this.pinGuardRequired = false,
+    this.pinGuard = const AsyncData(false),
     this.activeProfileId,
   });
 
-  /// AUD-sacred_time-08: gates the location actions behind a Parent PIN
-  /// challenge (see [sacredTimeLocationPinGuardRequiredProvider]).
+  /// AUD-sacred_time-08: whether the location actions and the Israel switch
+  /// are gated behind a Parent PIN challenge (see
+  /// [sacredTimeLocationPinGuardRequiredProvider]).
   ///
-  /// This card has no DB-backed provider dependency of its own — the caller
-  /// (`SettingsScreen`, which already watches the active profile for other
-  /// purposes) resolves the guard and threads it down as a plain bool/id
-  /// pair. Callers that omit it (every pre-existing construction site,
-  /// including tests) default to no guard, matching pre-fix behaviour.
-  final bool pinGuardRequired;
+  /// The caller (`SettingsScreen`) resolves the guard and threads it down
+  /// with the id to verify. It FAILS CLOSED: until the guard is a settled
+  /// [AsyncData] — while it loads or reloads, or on an error — Detect,
+  /// Choose city and the Israel switch are disabled, so an unresolved guard
+  /// never lets a guarded child through. Callers that omit it (tests that do
+  /// not exercise the guard) default to a resolved "no guard".
+  final AsyncValue<bool> pinGuard;
 
   /// Active profile id passed through to the Parent PIN dialog. Ignored
   /// when [pinGuardRequired] is false.
@@ -163,6 +177,10 @@ class SacredTimeSettingsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final settings = ref.watch(activeLearnerSettingsProvider);
+    // Fail closed: the actions are live only on a settled guard value.
+    final guard = pinGuard;
+    final guardResolved = guard is AsyncData<bool> && !guard.isLoading;
+    final pinGuardRequired = guardResolved ? guard.value : true;
     // Variant-aware Shabbos term, resolved once here at the Consumer layer and
     // composed into the localized header/description frames.
     final shabbos = domainTermLabels(
@@ -202,13 +220,14 @@ class SacredTimeSettingsCard extends ConsumerWidget {
                 _LocationRow(settings: settings),
                 const SizedBox(height: 12),
                 _LocationActions(
+                  enabled: guardResolved,
                   pinGuardRequired: pinGuardRequired,
                   activeProfileId: activeProfileId,
                 ),
                 const Divider(height: 28),
                 _InIsraelRow(
                   value: settings.asData?.value?.inIsrael ?? false,
-                  enabled: settings.asData?.value != null,
+                  enabled: guardResolved && settings.asData?.value != null,
                   pinGuardRequired: pinGuardRequired,
                   activeProfileId: activeProfileId,
                 ),
@@ -333,10 +352,14 @@ class _LocationRow extends StatelessWidget {
 
 class _LocationActions extends ConsumerStatefulWidget {
   const _LocationActions({
+    required this.enabled,
     required this.pinGuardRequired,
     required this.activeProfileId,
   });
 
+  /// False while the PIN guard is unresolved (fail closed): both buttons
+  /// are disabled.
+  final bool enabled;
   final bool pinGuardRequired;
   final String? activeProfileId;
 
@@ -353,7 +376,7 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: _detecting ? null : _detect,
+            onPressed: _detecting || !widget.enabled ? null : _detect,
             icon: _detecting
                 ? const SizedBox(
                     width: 16,
@@ -367,7 +390,7 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
         const SizedBox(width: 10),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: _detecting ? null : _pickCity,
+            onPressed: _detecting || !widget.enabled ? null : _pickCity,
             icon: const Icon(Icons.search, size: 18),
             label: Text(AppLocalizations.of(context)!.sacredTimeChooseCity),
           ),
@@ -493,7 +516,8 @@ class _InIsraelRow extends ConsumerWidget {
   /// The learner's current flag (`false` when never set: diaspora).
   final bool value;
 
-  /// False while no learner's settings are loaded.
+  /// False while no learner's settings are loaded, or while the PIN guard
+  /// is unresolved (fail closed).
   final bool enabled;
 
   /// AUD-sacred_time-08: the switch changes a learner setting, so it is

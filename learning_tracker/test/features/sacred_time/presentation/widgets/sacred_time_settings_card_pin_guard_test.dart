@@ -20,6 +20,8 @@
 @Tags(['sacred_time', 'settings_card', 'pin_guard', 'regression'])
 library;
 
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -55,7 +57,8 @@ class _FakeLocationService extends LocationService {
 }
 
 Widget _buildCard({
-  required bool pinGuardRequired,
+  bool pinGuardRequired = false,
+  AsyncValue<bool>? pinGuard,
   StackRouter? router,
   List<Override> overrides = const [],
 }) {
@@ -82,7 +85,7 @@ Widget _buildCard({
       stateHash: 0,
       child: Scaffold(
         body: SacredTimeSettingsCard(
-          pinGuardRequired: pinGuardRequired,
+          pinGuard: pinGuard ?? AsyncData(pinGuardRequired),
           activeProfileId: '01JQ3K5M8N2P4R6T7V9X0Z1AB',
         ),
       ),
@@ -111,6 +114,36 @@ final _account = [
   _learner(_otherChild, ProfileMode.child),
 ];
 
+/// The [ButtonStyleButton] labelled [label] (Detect / Choose city).
+ButtonStyleButton _button(WidgetTester tester, String label) =>
+    tester.widget<ButtonStyleButton>(
+      find.ancestor(
+        of: find.text(label),
+        matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+      ),
+    );
+
+/// Asserts the card's three settings actions are disabled and that tapping
+/// them neither prompts, nor runs the action, nor navigates.
+Future<void> _expectActionsLockedShut(
+  WidgetTester tester, {
+  StackRouter? router,
+}) async {
+  expect(_button(tester, 'Detect').onPressed, isNull);
+  expect(_button(tester, 'Choose city').onPressed, isNull);
+  expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+
+  await tester.tap(find.text('Detect'), warnIfMissed: false);
+  await tester.tap(find.text('Choose city'), warnIfMissed: false);
+  await tester.tap(find.byType(Switch), warnIfMissed: false);
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
+
+  expect(find.text('Enter Parent PIN'), findsNothing);
+  expect(find.byType(SnackBar), findsNothing);
+  if (router != null) verifyNever(() => router.push<Object?>(any()));
+}
+
 class _Selected extends SelectedProfileId {
   _Selected(this._id);
 
@@ -118,6 +151,11 @@ class _Selected extends SelectedProfileId {
 
   @override
   String? build() => _id;
+
+  /// Switches the device holder (a profile switch), without the real
+  /// notifier's active-profile-doc side effect.
+  @override
+  void select(String profileId) => state = profileId;
 }
 
 void main() {
@@ -273,6 +311,180 @@ void main() {
         expect(access.consume(verifiedId), isTrue);
       },
     );
+  });
+
+  group('fail closed while the PIN guard is unresolved (cold start, '
+      'transient profile-read failure)', () {
+    testWidgets('a loading guard disables Detect, Choose city and the '
+        'Israel switch', (tester) async {
+      final router = _MockStackRouter();
+      await tester.pumpWidget(
+        _buildCard(pinGuard: const AsyncLoading(), router: router),
+      );
+      await tester.pumpAndSettle();
+      await _expectActionsLockedShut(tester, router: router);
+    });
+
+    testWidgets('an errored guard disables Detect, Choose city and the '
+        'Israel switch', (tester) async {
+      final router = _MockStackRouter();
+      await tester.pumpWidget(
+        _buildCard(
+          pinGuard: AsyncError<bool>(StateError('read'), StackTrace.empty),
+          router: router,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _expectActionsLockedShut(tester, router: router);
+    });
+
+    /// Composes the provider with the card as `SettingsScreen` does.
+    Widget composed({
+      required Stream<List<LearnerProfileEntity>> profiles,
+      required Object? selected,
+      required PinService pinService,
+    }) => pumpApp(
+      overrides: [
+        selectedProfileIdProvider.overrideWith(
+          () =>
+              selected is _Selected ? selected : _Selected(selected as String?),
+        ),
+        profileListStreamProvider.overrideWith((ref) => profiles),
+        pinServiceProvider.overrideWithValue(pinService),
+        activeLearnerSettingsProvider.overrideWithValue(
+          const AsyncData(
+            LearnerSettings(profileId: profileUlid, timeZone: 'UTC'),
+          ),
+        ),
+        learnerSettingsEditorProvider.overrideWithValue(
+          LearnerSettingsEditor(
+            commands: () async => null,
+            scope: () async => null,
+            locationService: const _FakeLocationService(),
+            deviceTimeZone: () async => null,
+          ),
+        ),
+      ],
+      child: Scaffold(
+        body: Consumer(
+          builder: (context, ref, _) => SacredTimeSettingsCard(
+            pinGuard: ref.watch(sacredTimeLocationPinGuardRequiredProvider),
+            activeProfileId: ref.watch(selectedProfileIdProvider),
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('a child with a Parent PIN on a cold start: no access while '
+        'the profile list loads; the PIN is asked for once it resolves', (
+      tester,
+    ) async {
+      final pinService = _MockPinService();
+      when(() => pinService.hasProfilePin(any())).thenAnswer((_) async => true);
+      final profiles = StreamController<List<LearnerProfileEntity>>();
+      addTearDown(profiles.close);
+
+      await tester.pumpWidget(
+        composed(
+          profiles: profiles.stream,
+          selected: _child,
+          pinService: pinService,
+        ),
+      );
+      await tester.pump();
+      await _expectActionsLockedShut(tester);
+
+      profiles.add(_account);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Detect'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter Parent PIN'), findsOneWidget);
+    });
+
+    testWidgets('switching the holder from an adult to a guarded child: '
+        'no access while the guard re-resolves (the adult\'s "no guard" is '
+        'never borrowed)', (tester) async {
+      final childPin = Completer<bool>();
+      final pinService = _MockPinService();
+      when(
+        () => pinService.hasProfilePin(_child),
+      ).thenAnswer((_) => childPin.future);
+      final selected = _Selected(_adult);
+
+      await tester.pumpWidget(
+        composed(
+          profiles: Stream.value(_account),
+          selected: selected,
+          pinService: pinService,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(_button(tester, 'Detect').onPressed, isNotNull);
+
+      selected.select(_child);
+      await tester.pump();
+      await _expectActionsLockedShut(tester);
+
+      childPin.complete(true);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Detect'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter Parent PIN'), findsOneWidget);
+    });
+
+    testWidgets('a child with a Parent PIN when the profile read fails: '
+        'no access', (tester) async {
+      final pinService = _MockPinService();
+      when(() => pinService.hasProfilePin(any())).thenAnswer((_) async => true);
+
+      await tester.pumpWidget(
+        composed(
+          profiles: Stream.error(StateError('transient')),
+          selected: _child,
+          pinService: pinService,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _expectActionsLockedShut(tester);
+    });
+
+    testWidgets('a device holder missing from the loaded profiles: no '
+        'access', (tester) async {
+      final pinService = _MockPinService();
+      when(() => pinService.hasProfilePin(any())).thenAnswer((_) async => true);
+
+      await tester.pumpWidget(
+        composed(
+          profiles: Stream.value(_account),
+          selected: '01ARZ3NDEKTSV4RRFFQ69G5FZZ',
+          pinService: pinService,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _expectActionsLockedShut(tester);
+    });
+
+    testWidgets('an adult holder: the actions run with no PIN once the '
+        'guard resolves', (tester) async {
+      final pinService = _MockPinService();
+      when(() => pinService.hasProfilePin(any())).thenAnswer((_) async => true);
+
+      await tester.pumpWidget(
+        composed(
+          profiles: Stream.value(_account),
+          selected: _adult,
+          pinService: pinService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Detect'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Enter Parent PIN'), findsNothing);
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
   });
 
   group('DNI-481 after-lock prompt: the PIN of the TARGET learner', () {
