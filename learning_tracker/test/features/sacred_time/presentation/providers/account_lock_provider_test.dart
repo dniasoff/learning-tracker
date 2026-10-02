@@ -195,4 +195,33 @@ void main() {
       );
     });
   });
+
+  group('deviceLockPredicateProvider (DNI-481 AC-5)', () {
+    test('judges an instant with the same union the overlay shows', () {
+      final lakewoodH = constantHistory(lakewood);
+      final jerusalemH = constantHistory(jerusalem);
+      final c = ProviderContainer.test(
+        overrides: [
+          accountLockHistoriesProvider.overrideWithValue([
+            jerusalemH,
+            lakewoodH,
+          ]),
+        ],
+      );
+      final isLocked = c.read(deviceLockPredicateProvider);
+      for (final t in [
+        DateTime.utc(2026, 9, 5, 12),
+        DateTime.utc(2026, 9, 5, 20),
+        DateTime.utc(2026, 9, 8, 12),
+      ]) {
+        expect(
+          isLocked(t),
+          sacredWindowAt([jerusalemH, lakewoodH], t) != null,
+          reason: '$t',
+        );
+      }
+      expect(isLocked(DateTime.utc(2026, 9, 5, 20)), isTrue);
+      expect(isLocked(DateTime.utc(2026, 9, 8, 12)), isFalse);
+    });
+  });
 }
