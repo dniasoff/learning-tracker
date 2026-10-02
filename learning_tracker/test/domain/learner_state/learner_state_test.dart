@@ -13,6 +13,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+
+import '../../helpers/learner_state/fake_learner_state.dart';
 
 void main() {
   const libPath = 'lib/domain/learner_state/learner_state.dart';
@@ -53,6 +56,24 @@ void main() {
       expect(s.earningEventIds, isEmpty);
       expect(s.lockIgnoredEventIds, isEmpty);
       expect(s.rejectedRows, isEmpty);
+    });
+
+    test('operator [] reads the curriculum state; collections are '
+        'unmodifiable copies', () {
+      final curricula = <String, CurriculumState>{
+        'mishnayos': FakeCurriculumState(curriculumId: 'mishnayos'),
+      };
+      final s = LearnerState(
+        nowUtc: now,
+        curricula: curricula,
+        countedEventIds: {'a'},
+        rejectedRows: const [RejectedRow('bad', 'oops')],
+      );
+      curricula.clear();
+      expect(s['mishnayos']?.curriculumId, 'mishnayos');
+      expect(() => s.curricula['x'] = s['mishnayos']!, throwsUnsupportedError);
+      expect(() => s.countedEventIds.add('b'), throwsUnsupportedError);
+      expect(s.rejectedRows, const [RejectedRow('bad', 'oops')]);
     });
   });
 
