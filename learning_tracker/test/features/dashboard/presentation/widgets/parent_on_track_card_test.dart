@@ -16,9 +16,13 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/learner_today_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/shortfall_warning_card.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/dashboard/epic2_surfaces.dart';
@@ -449,6 +453,72 @@ void main() {
       expect(builds, 2);
       expect(find.byType(InlineAsyncError), findsNothing);
       expect(_text('On track'), findsOneWidget);
+    });
+  });
+
+  group('T7: Hebrew strings, right to left', () {
+    testWidgets('the card, the shortfall warning and the child section '
+        'render their Hebrew copy without overflow', (tester) async {
+      final he = lookupAppLocalizations(const Locale('he'));
+      final state = forecastState([
+        forecastCurriculumState(
+          projection: const Projection(
+            status: ProjectionStatus.behindPace,
+            projectedFinish: '2029-03-14',
+            deadline: '2029-09-10',
+            newlyLearntToday: 1,
+          ),
+          dailyTarget: 0,
+          subTracks: {
+            schoolSubTrackId: shortfallSubTrack(
+              id: schoolSubTrackId,
+              name: 'בית הספר',
+              shortfall: 40,
+              lastNode: const NodeEntry(
+                level: 'chapter',
+                ref: 'Mishnah Berakhot 3',
+              ),
+              windowEnd: '2027-07-31',
+            ),
+          },
+        ),
+      ]);
+      await tester.pumpWidget(
+        pumpApp(
+          locale: const Locale('he'),
+          theme: AppTheme.lightTheme(),
+          overrides: forecastOverrides(
+            state: state,
+            nodeLabels: const {'Mishnah Berakhot 3': 'ברכות פרק ג'},
+          ),
+          child: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  ParentForecastSection(
+                    belowCard: (f) => ShortfallWarningList(forecast: f),
+                  ),
+                  const LearnerTodaySection(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        Directionality.of(tester.element(find.byType(OnTrackCard))),
+        TextDirection.rtl,
+      );
+      expect(_text(he.onTrackBehindPace), findsOneWidget);
+      // The bonus copy on the parent card and in the today section.
+      expect(_text(he.todayTargetAllCovered), findsNWidgets(2));
+      expect(_text(he.shortfallCardView('בית הספר')), findsOneWidget);
+      expect(
+        find.textContaining('ייתכן ש־בית הספר לא יגיע ל־ברכות פרק ג'),
+        findsOneWidget,
+      );
     });
   });
 
