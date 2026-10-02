@@ -10,6 +10,18 @@
 ///   the two land atomically (and queue together offline). Removal is a
 ///   tombstone (`ended_at` + `end_reason`); this class never calls
 ///   `delete()`.
+/// - **Existing, valid target** (review R3). Before the batch, the target
+///   `sub_tracks/{id}` row is read (cache, then server). A row the client
+///   cannot find throws [SubTrackNotFoundException] — a merge on an unknown
+///   id would otherwise mint a partial document [SubTrack.fromStorage]
+///   rejects. The patch is then applied to the decoded row and the MERGED
+///   state is validated as a whole [SubTrack] (type/academic_year,
+///   window_start/window_end, ended_at/end_reason), so a change that is
+///   valid field-by-field but breaks a cross-field invariant throws
+///   [StorageFormatException] and nothing is written. An offline client
+///   validates against its cached row; a merge stays queueable offline
+///   (AD-38), so this is a client-side check, not a transaction — the
+///   AD-46 rules (Story 1.9) are the atomic server-side guarantee.
 /// - **Append-only change log** (AD-6, AD-38, AD-46). `change_log/{entryId}`
 ///   is create-only: before the batch, the entry is read through
 ///   [readExistingForCreate] (cache, then server). An identical entry means
@@ -51,14 +63,20 @@ final class FirestoreSubTrackRepository implements SubTrackRepository {
     this.onListenerError,
     this.pageProbe,
     CreateGuardRead? guardRead,
+    CreateGuardRead? targetRead,
   }) : _firestore = firestore,
-       _guardRead = guardRead ?? readExistingForCreate;
+       _guardRead = guardRead ?? readExistingForCreate,
+       _targetRead = targetRead ?? readExistingForCreate;
 
   final FirebaseFirestore _firestore;
 
   /// The change-log create-only pre-read (tests inject cache/server
   /// outcomes).
   final CreateGuardRead _guardRead;
+
+  /// The target sub-track pre-read (cache, then server; null = not found).
+  /// Tests inject server-only or failing outcomes.
+  final CreateGuardRead _targetRead;
 
   /// AD-9 resubscribe backoff base.
   final Duration backoffBase;
@@ -115,12 +133,16 @@ final class FirestoreSubTrackRepository implements SubTrackRepository {
       if (_decodesTo(change.entry, existing)) return;
       throw ChangeLogConflictException(change.entry.id);
     }
+    final trackDoc = collectionFor(scope).doc(change.subTrackId);
+    final current = await _targetRead(trackDoc);
+    if (current == null) throw SubTrackNotFoundException(change.subTrackId);
+    // Validate the full merged row; throws StorageFormatException.
+    SubTrack.fromStorage(change.subTrackId, {
+      ...fromFirestoreMap(current),
+      ...change.toMergePatch(),
+    });
     final batch = _firestore.batch()
-      ..set(
-        collectionFor(scope).doc(change.subTrackId),
-        patch,
-        SetOptions(merge: true),
-      )
+      ..set(trackDoc, patch, SetOptions(merge: true))
       ..set(entryDoc, entryPayload);
     await batch.commit();
   }

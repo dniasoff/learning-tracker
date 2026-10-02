@@ -26,6 +26,11 @@ abstract interface class SubTrackRepository {
   /// (AD-38 "an entity's docs and its entry are always in one batch").
   /// Never deletes.
   ///
+  /// The target must exist: an unknown [SubTrackChange.subTrackId] throws
+  /// [SubTrackNotFoundException], and a change whose MERGED row is not a
+  /// valid [SubTrack] (cross-field invariants included) throws
+  /// [StorageFormatException]. Neither writes anything.
+  ///
   /// The change log is append-only (AD-6, AD-38, AD-46): an identical
   /// replay of an entry that already exists is a no-op (the sub-track is
   /// not re-patched), and a NON-identical entry at an existing id throws
@@ -48,6 +53,21 @@ final class ChangeLogConflictException implements Exception {
   String toString() =>
       'ChangeLogConflictException: change_log/$entryId already holds a '
       'different entry';
+}
+
+/// A governed change whose target `sub_tracks/{id}` row the client cannot
+/// find (not in the local cache and not on the server, or offline with no
+/// cached row). Nothing is written: a merge would mint a partial row.
+final class SubTrackNotFoundException implements Exception {
+  /// Creates the exception for [subTrackId].
+  const SubTrackNotFoundException(this.subTrackId);
+
+  /// The missing `sub_tracks/{ulid}` id.
+  final String subTrackId;
+
+  @override
+  String toString() =>
+      'SubTrackNotFoundException: sub_tracks/$subTrackId does not exist';
 }
 
 /// One governed change to one sub-track, paired with its change-log entry.
