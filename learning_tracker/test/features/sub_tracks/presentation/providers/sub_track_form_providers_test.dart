@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
@@ -133,6 +134,36 @@ void main() {
       );
     });
 
+    test(
+      'undecodable rows make the read an error, not a shorter list',
+      () async {
+        final h = SubTrackHarness(
+          seed: [storedSchoolYear('01JHARN0000000000000000001')],
+        );
+        addTearDown(h.dispose);
+        h.repo.seedRejected(
+          h.scope,
+          const RejectedRow('01JHARN0000000000000000098', 'bad window_end'),
+        );
+        final container = ProviderContainer(overrides: h.overrides());
+        addTearDown(container.dispose);
+        final tracks = container.listen(
+          learnerSubTracksProvider.future,
+          (_, _) {},
+        );
+        await expectLater(
+          tracks.read(),
+          throwsA(
+            isA<SubTrackRowsRejectedException>().having(
+              (e) => e.docIds,
+              'docIds',
+              ['01JHARN0000000000000000098'],
+            ),
+          ),
+        );
+      },
+    );
+
     test('a calendar program marks the curriculum', () async {
       final h = SubTrackHarness(calendarProgramId: 'daf_yomi');
       addTearDown(h.dispose);
@@ -145,7 +176,7 @@ void main() {
       expect((await intent.read()).followsCalendarProgram, isTrue);
     });
 
-    test('no learner: empty sub-tracks and an empty intent', () async {
+    test('no learner: both reads fail closed, never empty', () async {
       final container = ProviderContainer(
         overrides: [
           activeLearnerScopeProvider.overrideWith((ref) async => null),
@@ -156,13 +187,76 @@ void main() {
         learnerSubTracksProvider.future,
         (_, _) {},
       );
-      expect(await tracks.read(), isEmpty);
+      await expectLater(
+        tracks.read(),
+        throwsA(isA<SubTrackReadUnavailableException>()),
+      );
       final intent = container.listen(
         subTrackCurriculumIntentProvider('mishnayos').future,
         (_, _) {},
       );
-      expect(await intent.read(), const SubTrackCurriculumIntent());
+      await expectLater(
+        intent.read(),
+        throwsA(isA<SubTrackReadUnavailableException>()),
+      );
     });
+
+    test('no sub-track repository: an error, not zero rows', () async {
+      final h = SubTrackHarness(
+        seed: [storedSchoolYear('01JHARN0000000000000000001')],
+      );
+      addTearDown(h.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          ...h.overrides(subTrackRepository: false),
+          subTrackRepositoryProvider.overrideWith((ref) async => null),
+        ],
+      );
+      addTearDown(container.dispose);
+      final tracks = container.listen(
+        learnerSubTracksProvider.future,
+        (_, _) {},
+      );
+      await expectLater(
+        tracks.read(),
+        throwsA(
+          isA<SubTrackReadUnavailableException>().having(
+            (e) => e.port,
+            'port',
+            'sub_tracks',
+          ),
+        ),
+      );
+    });
+
+    test(
+      'no governed-intent repository: an error, never a self-paced intent',
+      () async {
+        final h = SubTrackHarness(calendarProgramId: 'daf_yomi');
+        addTearDown(h.dispose);
+        final container = ProviderContainer(
+          overrides: [
+            ...h.overrides(governedIntentRepository: false),
+            governedIntentRepositoryProvider.overrideWith((ref) async => null),
+          ],
+        );
+        addTearDown(container.dispose);
+        final intent = container.listen(
+          subTrackCurriculumIntentProvider(subTrackTestCurriculum).future,
+          (_, _) {},
+        );
+        await expectLater(
+          intent.read(),
+          throwsA(
+            isA<SubTrackReadUnavailableException>().having(
+              (e) => e.port,
+              'port',
+              'governed_intent',
+            ),
+          ),
+        );
+      },
+    );
 
     test('pending failures keep only sub-track batches', () async {
       final commands = FakeLearningCommands();

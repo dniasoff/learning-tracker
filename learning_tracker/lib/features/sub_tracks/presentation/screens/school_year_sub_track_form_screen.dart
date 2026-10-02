@@ -41,7 +41,9 @@ const kSubTrackFormMaxWidth = 600.0;
 /// Saving calls Story 2.1 `createSubTrack` / `editSubTrack` (only changed
 /// fields); the form never writes Firestore itself. The route is behind the
 /// parent-session guard, and the form renders nothing for a non-parent
-/// session as well (AC-3, defence in depth).
+/// session as well (AC-3, defence in depth). It also renders nothing until
+/// the Story 2.1 commands are live, and no form until the sub-track and
+/// governed-intent reads have loaded (fail closed).
 @RoutePage()
 class SchoolYearSubTrackFormScreen extends ConsumerWidget {
   const SchoolYearSubTrackFormScreen({
@@ -61,7 +63,6 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final editing = subTrackId != null;
     final parent = ref.watch(subTrackParentSessionProvider);
-    final subTracks = ref.watch(learnerSubTracksProvider);
     return Scaffold(
       backgroundColor: context.colors.surfaceF5,
       appBar: AppBar(
@@ -75,47 +76,100 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
         ),
       ),
       body: switch (parent) {
-        AsyncData(value: true) => subTracks.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => AppErrorView(
-            error: e,
-            stackTrace: st,
-            onRetry: () => ref.invalidate(learnerSubTracksProvider),
+        AsyncData(value: true) => _CommandsGate(
+          child: _ReadsGate(
+            curriculumId: curriculumId,
+            builder: (tracks) => _formFor(ref, tracks),
           ),
-          data: (tracks) {
-            SubTrack? existing;
-            if (subTrackId case final id?) {
-              // The id must name a school-year row of this route's
-              // curriculum: a stale or crafted URL must not edit another
-              // curriculum's row (or an ongoing one) against the wrong
-              // sibling set.
-              existing = tracks
-                  .where(
-                    (t) =>
-                        t.id == id &&
-                        t.curriculumId == curriculumId &&
-                        t.type == SubTrackType.schoolYear,
-                  )
-                  .firstOrNull;
-              if (existing == null) {
-                return AppErrorView(
-                  error: SubTrackNotFoundForFormException(id),
-                  onRetry: () => ref.invalidate(learnerSubTracksProvider),
-                );
-              }
-            }
-            return SchoolYearSubTrackForm(
-              key: ValueKey(subTrackId ?? 'new'),
-              curriculumId: curriculumId,
-              existing: existing,
-              subTracks: tracks,
-            );
-          },
         ),
         AsyncLoading() => const Center(child: CircularProgressIndicator()),
         _ => const SizedBox.shrink(),
       },
     );
+  }
+
+  Widget _formFor(WidgetRef ref, List<SubTrack> tracks) {
+    SubTrack? existing;
+    if (subTrackId case final id?) {
+      // The id must name a school-year row of this route's curriculum: a
+      // stale or crafted URL must not edit another curriculum's row (or an
+      // ongoing one) against the wrong sibling set.
+      existing = tracks
+          .where(
+            (t) =>
+                t.id == id &&
+                t.curriculumId == curriculumId &&
+                t.type == SubTrackType.schoolYear,
+          )
+          .firstOrNull;
+      if (existing == null) {
+        return AppErrorView(
+          error: SubTrackNotFoundForFormException(id),
+          onRetry: () => ref.invalidate(learnerSubTracksProvider),
+        );
+      }
+    }
+    return SchoolYearSubTrackForm(
+      key: ValueKey(subTrackId ?? 'new'),
+      curriculumId: curriculumId,
+      existing: existing,
+      subTracks: tracks,
+    );
+  }
+}
+
+/// Renders [child] only while the Story 2.1 commands are live for the
+/// learner. The entry point stays inert until they are (ruling: "the
+/// sub-track entry point stays inert until 2.1 commands are live"), so a
+/// direct route or deep link never opens a form whose save cannot work:
+/// unavailable or failed commands render nothing, loading a spinner.
+class _CommandsGate extends ConsumerWidget {
+  const _CommandsGate({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final commands = ref.watch(learningCommandsProvider);
+    if (commands.value != null) return child;
+    if (commands.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return const SizedBox.shrink(key: ValueKey('subTrackFormInert'));
+  }
+}
+
+/// Builds the form only once both the complete sub-track read and the
+/// curriculum's governed intent have loaded: a loading read shows a
+/// spinner and an unavailable or failed one the shared [AppErrorView]
+/// with retry (fail closed: never a form over unknown siblings or intent).
+class _ReadsGate extends ConsumerWidget {
+  const _ReadsGate({required this.curriculumId, required this.builder});
+
+  final String curriculumId;
+  final Widget Function(List<SubTrack> tracks) builder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final intent = ref.watch(subTrackCurriculumIntentProvider(curriculumId));
+    final tracks = ref.watch(learnerSubTracksProvider);
+    final failed = intent.hasError ? intent : (tracks.hasError ? tracks : null);
+    if (failed != null) {
+      return AppErrorView(
+        error: failed.error!,
+        stackTrace: failed.stackTrace,
+        onRetry: () {
+          ref
+            ..invalidate(subTrackCurriculumIntentProvider(curriculumId))
+            ..invalidate(learnerSubTracksProvider);
+        },
+      );
+    }
+    final all = tracks.value;
+    if (intent.value == null || all == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return builder(all);
   }
 }
 
