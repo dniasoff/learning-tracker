@@ -8,20 +8,13 @@ import 'dart:async';
 // `misc.dart` (same import as `test/helpers/pump_app.dart`).
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
-import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
-import 'package:learning_tracker/domain/learner_state/learning_event.dart';
-import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 
 import '../learner_state/c0_fixtures.dart';
-import '../learner_state/engine_fixtures.dart';
 import '../learner_state/fake_learner_state.dart';
 
 /// The Mishnayos curriculum storage key.
@@ -86,8 +79,6 @@ List<Override> forecastOverrides({
   Map<String, String> nodeLabels = const {},
 }) => [
   parentSessionProvider.overrideWith((ref) async => parent),
-  // English units ("Mishnayos"); Hebrew terms have their own setting.
-  effectiveUseHebrewTermsProvider.overrideWithValue(false),
   activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
   if (state != null || states != null)
     learnerStateProvider.overrideWith(
@@ -118,67 +109,3 @@ final class LearnerStateFeed {
   /// Closes the feed.
   Future<void> close() => _controller.close();
 }
-
-/// The ordinary weekday instant fixture events are recorded at
-/// (Thursday 2026-10-08 10:00Z, outside any lock); `learned_on` carries
-/// the day.
-final forecastRecordedAt = DateTime.utc(2026, 10, 8, 10);
-
-/// A dated main-track `learn` of [ref] on [learnedOn], recorded at
-/// [recordedAt] (default [forecastRecordedAt]).
-LearningEvent forecastLearn(
-  int id,
-  String ref,
-  String learnedOn, {
-  DateTime? recordedAt,
-  DateState dateState = DateState.dated,
-}) => engineLearn(
-  id,
-  ref,
-  minutes: (recordedAt ?? forecastRecordedAt)
-      .difference(DateTime.utc(2026, 9))
-      .inMinutes,
-  learnedOn: learnedOn,
-  stage: 1,
-  dateState: dateState,
-);
-
-/// The real engine's state at [nowUtc] for the Mishnayos fixture corpus
-/// tracked from [trackingStartDate], with an optional [deadline] goal.
-LearnerState engineForecastState({
-  required DateTime nowUtc,
-  required String trackingStartDate,
-  List<LearningEvent> events = const [],
-  String? deadline,
-  List<SubTrack> subTracks = const [],
-}) => const LearnerStateEngine().run(
-  engineInputs(
-    events: events,
-    nowUtc: nowUtc,
-    subTracks: subTracks,
-    intents: {
-      engineCurriculum: MainTrackIntent(
-        curriculumId: engineCurriculum,
-        track: MainTrack(
-          curriculumId: engineCurriculum,
-          state: MainTrackState.active,
-        ),
-        program: MainTrackProgram(
-          curriculumId: engineCurriculum,
-          trackingStartDate: trackingStartDate,
-        ),
-        stages: [engineStage(1), engineStage(2)],
-      ),
-    },
-    goals: {
-      engineCurriculum: CurriculumGoals(
-        deadline: deadline == null
-            ? null
-            : DeadlineGoal(
-                curriculumId: engineCurriculum,
-                targetDate: deadline,
-              ),
-      ),
-    },
-  ),
-);
