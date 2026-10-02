@@ -20,8 +20,6 @@ const _inventory = <(String, String)>[
   // DNI-468 (1.6)
   ('DNI-468', 'newlyCrossedAchievements'),
   ('DNI-468', 'pointsTotals'),
-  // DNI-470 (1.8)
-  ('DNI-470', 'governedIntentRepositoryProvider'),
   // DNI-474 (1.12)
   ('DNI-474', 'corporaProvider'),
   ('DNI-474', 'learnerStateProvider'),

@@ -21,6 +21,7 @@ import 'package:learning_tracker/data/firestore/learner_state_repository_provide
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/callable_oversized_governed_write_port.dart';
 import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_governed_intent_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_settings_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
@@ -31,7 +32,6 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../helpers/learner_state/provider_settle.dart';
 import '../../helpers/learner_state_fixtures.dart';
 
 class _MockApp extends Mock implements FirebaseApp {}
@@ -213,6 +213,10 @@ void main() {
       await container.read(learnerSettingsReaderProvider.future),
       isA<FirestoreLearnerSettingsReader>(),
     );
+    expect(
+      await container.read(governedIntentRepositoryProvider.future),
+      isA<FirestoreGovernedIntentRepository>(),
+    );
     expect(await container.read(activeLearnerScopeProvider.future), isNull);
 
     // The repository writes through the SAME handle.
@@ -380,24 +384,5 @@ void main() {
       container.read(activeLearnerScopeProvider.future),
       throwsFormatException,
     );
-  });
-
-  group('C0 (DNI-524) contract providers are stubs resolving to '
-      'AsyncError', () {
-    for (final (provider, owner, what) in [
-      (
-        governedIntentRepositoryProvider,
-        'DNI-470',
-        'governedIntentRepositoryProvider',
-      ),
-    ]) {
-      test(what, () async {
-        final container = ProviderContainer.test();
-        expect(
-          await settledAsync<Object?>(container, provider),
-          isAsyncC0Stub(owner, what),
-        );
-      });
-    }
   });
 }
