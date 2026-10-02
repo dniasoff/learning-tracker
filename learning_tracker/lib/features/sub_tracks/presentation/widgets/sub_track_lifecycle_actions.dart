@@ -9,6 +9,14 @@
 /// same no-op. On success the detail returns to the hub and a snackbar
 /// confirms; the schedule and target recompute from the stored tombstone.
 ///
+/// A write the server has not acknowledged yet (`success(queued: true)`,
+/// AD-54) is not reported as done: the detail still returns to the hub,
+/// which now shows the local tombstone, but the snackbar says it is saved
+/// on this device only, and the write is handed to
+/// `subTrackLifecycleSyncProvider`, which keeps it visibly pending and
+/// shows the confirmation only once the server accepts it, or "not saved"
+/// with Retry when the server refuses it.
+///
 /// [subTrackLifecycleMenuActions] is registry-ready for DNI-497's detail
 /// overflow registry (`subTrackMenu:{id}` keys); [SubTrackLifecycleMenu]
 /// renders the same actions as a stand-alone ⋮ until that lands.
@@ -19,7 +27,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// One explicit lifecycle action of the parent's ⋮ menu.
@@ -51,7 +61,9 @@ const subTrackLifecycleMenuActions = SubTrackLifecycleMenuAction.values;
 
 /// Confirms and runs [action] on [track]. Returns true when the command
 /// succeeded (written, or queued offline per AD-54); [onReturnToHub] then
-/// runs before the confirmation snackbar. A cancelled or dismissed dialog
+/// runs before the snackbar, which confirms an acknowledged write and says
+/// a queued one is saved on this device only (it stays pending in
+/// `subTrackLifecycleSyncProvider`). A cancelled or dismissed dialog
 /// issues no command.
 Future<bool> runSubTrackLifecycleAction(
   BuildContext context,
@@ -80,8 +92,9 @@ Future<bool> runSubTrackLifecycleAction(
   if (!confirmed || !context.mounted) return false;
   final messenger = ScaffoldMessenger.of(context);
   CaptureResult? result;
+  LearningCommands? commands;
   try {
-    final commands = await ref.read(learningCommandsProvider.future);
+    commands = await ref.read(learningCommandsProvider.future);
     result = await switch (action) {
       SubTrackLifecycleMenuAction.end => commands?.endSubTrack(track.id),
       SubTrackLifecycleMenuAction.delete => commands?.deleteSubTrack(track.id),
@@ -94,6 +107,25 @@ Future<bool> runSubTrackLifecycleAction(
       SnackBar(content: Text(l10n.subTrackLifecycleActionFailed)),
     );
     return false;
+  }
+  if (result.queued && result.changeIds.isNotEmpty && commands != null) {
+    ref
+        .read(subTrackLifecycleSyncProvider.notifier)
+        .track(
+          SubTrackLifecycleSync(
+            changeId: result.changeIds.first,
+            write: delete
+                ? SubTrackLifecycleWrite.delete
+                : SubTrackLifecycleWrite.end,
+            name: track.name,
+          ),
+          commands,
+        );
+    onReturnToHub();
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.subTrackLifecycleQueued)),
+    );
+    return true;
   }
   onReturnToHub();
   messenger.showSnackBar(

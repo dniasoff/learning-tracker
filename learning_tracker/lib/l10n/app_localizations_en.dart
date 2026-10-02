@@ -1061,6 +1061,35 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save the sub-track. Try again.';
 
   @override
+  String get subTrackLifecycleQueued =>
+      'Saved on this device. It will sync when you\'re back online.';
+
+  @override
+  String subTrackLifecycleSyncAddNextYear(String name, String yearLabel) {
+    return 'Adding $name for $yearLabel';
+  }
+
+  @override
+  String subTrackLifecycleSyncDelete(String name) {
+    return 'Deleting $name';
+  }
+
+  @override
+  String subTrackLifecycleSyncEnd(String name) {
+    return 'Ending $name';
+  }
+
+  @override
+  String subTrackLifecycleSyncNotSaved(String action) {
+    return '$action: not saved';
+  }
+
+  @override
+  String subTrackLifecycleSyncWaiting(String action) {
+    return '$action: waiting to sync';
+  }
+
+  @override
   String get progressChartsTile => 'Progress Charts';
 
   @override

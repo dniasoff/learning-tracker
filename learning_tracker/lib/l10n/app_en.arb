@@ -999,6 +999,58 @@
   "@subTrackLifecycleSaveFailed": {
     "description": "Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4."
   },
+  "subTrackLifecycleQueued": "Saved on this device. It will sync when you're back online.",
+  "@subTrackLifecycleQueued": {
+    "description": "Snackbar when an End, Delete or Add next year is queued offline and not yet accepted by the server (AD-54). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleSyncAddNextYear": "Adding {name} for {yearLabel}",
+  "@subTrackLifecycleSyncAddNextYear": {
+    "description": "Sync panel: a queued Add next year, used inside subTrackLifecycleSyncWaiting / subTrackLifecycleSyncNotSaved. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSyncDelete": "Deleting {name}",
+  "@subTrackLifecycleSyncDelete": {
+    "description": "Sync panel: a queued Delete track. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSyncEnd": "Ending {name}",
+  "@subTrackLifecycleSyncEnd": {
+    "description": "Sync panel: a queued End sub-track now. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSyncNotSaved": "{action}: not saved",
+  "@subTrackLifecycleSyncNotSaved": {
+    "description": "Sync panel row: the server refused the queued action for good; Retry re-sends it (AD-54 Recovery). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSyncWaiting": "{action}: waiting to sync",
+  "@subTrackLifecycleSyncWaiting": {
+    "description": "Sync panel row: the action is applied on this device and not yet accepted by the server. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
   "progressChartsTile": "Progress Charts",
   "progressChartsTileSubtitle": "Completions, trends, and more",
   "learningLifetime": "Learning Lifetime",

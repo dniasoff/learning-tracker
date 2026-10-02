@@ -1056,6 +1056,34 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא ניתן היה לשמור את מסלול המשנה. נסו שוב.';
 
   @override
+  String get subTrackLifecycleQueued => 'נשמר במכשיר. יסונכרן כשתחזרו לרשת.';
+
+  @override
+  String subTrackLifecycleSyncAddNextYear(String name, String yearLabel) {
+    return 'הוספת $name לשנת $yearLabel';
+  }
+
+  @override
+  String subTrackLifecycleSyncDelete(String name) {
+    return 'מחיקת $name';
+  }
+
+  @override
+  String subTrackLifecycleSyncEnd(String name) {
+    return 'סיום $name';
+  }
+
+  @override
+  String subTrackLifecycleSyncNotSaved(String action) {
+    return '$action: לא נשמר';
+  }
+
+  @override
+  String subTrackLifecycleSyncWaiting(String action) {
+    return '$action: ממתין לסנכרון';
+  }
+
+  @override
   String get progressChartsTile => 'גרפי התקדמות';
 
   @override

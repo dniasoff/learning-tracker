@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/next_year_sub_track_form_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/add_next_year_action.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_actions.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_sync_panel.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Pushes the lifecycle detail of [subTrackId].
@@ -110,6 +111,8 @@ class SubTrackLifecycleDetailScreen extends ConsumerWidget {
           key: ValueKey('subTrackLifecycleDetail:$subTrackId'),
           padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
           children: [
+            // A queued Add next year stays visibly pending here (AD-54).
+            const SubTrackLifecycleSyncPanel(),
             if (ended) const _ReadOnlyNote(),
             _Summary(track: found),
             const SizedBox(height: 20),

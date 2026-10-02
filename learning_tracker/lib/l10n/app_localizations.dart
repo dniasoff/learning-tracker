@@ -1871,6 +1871,42 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save the sub-track. Try again.'**
   String get subTrackLifecycleSaveFailed;
 
+  /// Snackbar when an End, Delete or Add next year is queued offline and not yet accepted by the server (AD-54). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this device. It will sync when you\'re back online.'**
+  String get subTrackLifecycleQueued;
+
+  /// Sync panel: a queued Add next year, used inside subTrackLifecycleSyncWaiting / subTrackLifecycleSyncNotSaved. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding {name} for {yearLabel}'**
+  String subTrackLifecycleSyncAddNextYear(String name, String yearLabel);
+
+  /// Sync panel: a queued Delete track. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting {name}'**
+  String subTrackLifecycleSyncDelete(String name);
+
+  /// Sync panel: a queued End sub-track now. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Ending {name}'**
+  String subTrackLifecycleSyncEnd(String name);
+
+  /// Sync panel row: the server refused the queued action for good; Retry re-sends it (AD-54 Recovery). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{action}: not saved'**
+  String subTrackLifecycleSyncNotSaved(String action);
+
+  /// Sync panel row: the action is applied on this device and not yet accepted by the server. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{action}: waiting to sync'**
+  String subTrackLifecycleSyncWaiting(String action);
+
   /// No description provided for @progressChartsTile.
   ///
   /// In en, this message translates to:

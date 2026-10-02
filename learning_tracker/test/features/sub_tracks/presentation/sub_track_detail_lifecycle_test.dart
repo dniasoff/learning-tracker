@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
@@ -381,6 +382,149 @@ void main() {
       addTearDown(world.dispose);
       await _openDetail(tester, world, lifecycleId(1));
       expect(menu, findsNothing);
+    });
+  });
+
+  group('AD-54 a queued End, Delete or Add next year is pending, not done', () {
+    final menu = find.byKey(const ValueKey('subTrackLifecycleMenu'));
+    const queuedCopy =
+        "Saved on this device. It will sync when you're back online.";
+
+    Future<void> confirm(WidgetTester tester, String id, String label) async {
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey('subTrackMenu:$id')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    Finder syncRow(String text) => find.descendant(
+      of: find.byKey(const ValueKey('subTrackLifecycleSyncPanel')),
+      matching: find.text(text),
+    );
+
+    testWidgets('a queued End returns to the hub as waiting to sync, and is '
+        'confirmed and reported only when the server accepts it', (
+      tester,
+    ) async {
+      final track = ongoing();
+      final world = LifecycleWorld([track]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, track.id);
+      world.repo.offline = true;
+      await confirm(tester, 'end', 'End sub-track');
+
+      expect(find.byKey(const ValueKey('lifecycleHubHost')), findsOneWidget);
+      expect(find.text(queuedCopy), findsOneWidget);
+      expect(find.text('Night seder ended'), findsNothing);
+      expect(syncRow('Ending Night seder: waiting to sync'), findsOneWidget);
+      expect(world.analytics.lifecycles, isEmpty);
+
+      world.repo.settleHeld();
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('subTrackLifecycleSyncPanel')),
+        findsNothing,
+      );
+      expect(find.text('Night seder ended'), findsOneWidget);
+      expect(
+        world.analytics.lifecycles.single.action,
+        SubTrackLifecycleAction.end,
+      );
+      expect(world.stored.single.endReason, SubTrackEndReason.ended);
+    });
+
+    testWidgets('a queued Delete the server refuses shows not saved with '
+        'Retry; the retry saves it once and confirms', (tester) async {
+      final source = schoolYear();
+      final world = LifecycleWorld([source]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, source.id);
+      world.repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('permission-denied'));
+      await confirm(tester, 'delete', 'Delete');
+      expect(syncRow('Deleting School: waiting to sync'), findsOneWidget);
+
+      world.repo.settleHeld();
+      await tester.pumpAndSettle();
+      expect(world.stored.single.endedAt, isNull, reason: 'reverted');
+      expect(syncRow('Deleting School: not saved'), findsOneWidget);
+      expect(find.text('School deleted'), findsNothing);
+      expect(world.analytics.lifecycles, isEmpty);
+
+      world.repo.offline = false;
+      final changeId = world.repo.calls.single.$2.entry.id;
+      await tester.tap(find.byKey(ValueKey('subTrackSyncRetry:$changeId')));
+      await tester.pumpAndSettle();
+      expect(world.commands.calls, ['deleteSubTrack', 'retry']);
+      expect(world.stored.single.endReason, SubTrackEndReason.deleted);
+      expect(world.repo.entries, hasLength(1));
+      expect(
+        find.byKey(const ValueKey('subTrackLifecycleSyncPanel')),
+        findsNothing,
+      );
+      expect(find.text('School deleted'), findsOneWidget);
+      expect(world.analytics.lifecycles, hasLength(1));
+    });
+
+    testWidgets('a refused write can be closed without a retry', (
+      tester,
+    ) async {
+      final world = LifecycleWorld([schoolYear()]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+      world.repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('permission-denied'));
+      await confirm(tester, 'delete', 'Delete');
+      world.repo.settleHeld();
+      await tester.pumpAndSettle();
+      final changeId = world.repo.calls.single.$2.entry.id;
+      await tester.tap(find.byKey(ValueKey('subTrackSyncClose:$changeId')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('subTrackLifecycleSyncPanel')),
+        findsNothing,
+      );
+      expect(world.commands.calls, ['deleteSubTrack']);
+    });
+
+    testWidgets('a queued Add next year closes the form as waiting to sync '
+        'on the source detail and confirms on the server ack', (tester) async {
+      final source = schoolYear();
+      final world = LifecycleWorld([source]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, source.id);
+      world.repo.offline = true;
+      await tester.tap(_pill);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('subTrackNextYearSave')),
+      );
+      await tester.tap(find.byKey(const ValueKey('subTrackNextYearSave')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(ValueKey('subTrackLifecycleDetail:${source.id}')),
+        findsOneWidget,
+      );
+      expect(find.text(queuedCopy), findsOneWidget);
+      expect(find.text('School added for 2027–28'), findsNothing);
+      expect(
+        syncRow('Adding School for 2027–28: waiting to sync'),
+        findsOneWidget,
+      );
+      expect(world.analytics.lifecycles, isEmpty);
+
+      world.repo.settleHeld();
+      await tester.pumpAndSettle();
+      expect(find.text('School added for 2027–28'), findsOneWidget);
+      expect(
+        world.analytics.lifecycles.single.action,
+        SubTrackLifecycleAction.addNextYear,
+      );
     });
   });
 }

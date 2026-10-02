@@ -21,10 +21,13 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_lifecycle_detail_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ended_sub_tracks_section.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_sync_panel.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// The hub's sub-track rows; nothing while there are none, while loading,
-/// or when the read fails (the curriculum list stays usable).
+/// The hub's sub-track rows, under the lifecycle writes still waiting for
+/// the server ([SubTrackLifecycleSyncPanel]); no rows while there are
+/// none, while loading, or when the read fails (the curriculum list stays
+/// usable).
 class SubTrackLifecycleHubSection extends ConsumerWidget {
   /// Creates the section.
   const SubTrackLifecycleHubSection({super.key});
@@ -33,7 +36,7 @@ class SubTrackLifecycleHubSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = ref.watch(subTrackLifecycleGroupsProvider).value;
     if (groups == null || (groups.active.isEmpty && groups.ended.isEmpty)) {
-      return const SizedBox.shrink();
+      return const SubTrackLifecycleSyncPanel();
     }
     final l10n = AppLocalizations.of(context)!;
     final colors = context.colors;
@@ -41,6 +44,7 @@ class SubTrackLifecycleHubSection extends ConsumerWidget {
       key: const ValueKey('subTrackLifecycleHubSection'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const SubTrackLifecycleSyncPanel(),
         if (groups.active.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsetsDirectional.only(top: 8, bottom: 10),

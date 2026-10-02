@@ -21,6 +21,7 @@ import 'package:learning_tracker/features/learning/domain/commands/sub_track_com
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_lifecycle_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_sync_panel.dart';
 
 import '../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../helpers/learner_state/fake_learning_commands.dart';
@@ -139,6 +140,18 @@ final class SubTrackLifecycleCommands implements LearningCommands {
   @override
   Future<CaptureResult> deleteSubTrack(String subTrackId) =>
       _run('deleteSubTrack', () => inner.deleteSubTrack(subTrackId));
+
+  @override
+  Stream<List<PendingFailure>> watchPendingFailures() =>
+      inner.watchPendingFailures();
+
+  @override
+  Future<CaptureResult> retry(String pendingFailureId) =>
+      _run('retry', () => inner.retry(pendingFailureId));
+
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) =>
+      inner.whenConfirmed(changeId);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
@@ -270,8 +283,9 @@ final class LifecycleWorld {
   }
 }
 
-/// A stand-in hub page: one button per [ids] opening its detail through
-/// [open], so a test can assert the return to the hub.
+/// A stand-in hub page: the queued-write panel, then one button per [ids]
+/// opening its detail through [open], so a test can assert the return to
+/// the hub.
 class LifecycleHubHost extends StatelessWidget {
   /// Creates the host.
   const LifecycleHubHost({super.key, required this.ids, required this.open});
@@ -287,6 +301,7 @@ class LifecycleHubHost extends StatelessWidget {
     body: ListView(
       key: const ValueKey('lifecycleHubHost'),
       children: [
+        const SubTrackLifecycleSyncPanel(),
         for (final id in ids)
           TextButton(
             key: ValueKey('open:$id'),
