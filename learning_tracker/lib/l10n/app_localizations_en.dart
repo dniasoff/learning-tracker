@@ -625,6 +625,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subTrackDetailOpenHistory => 'Open history';
 
   @override
+  String subTrackDetailWindow(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String subTrackDetailWindowOpen(String start) {
+    return 'From $start';
+  }
+
+  @override
+  String get subTrackDetailUpNext => 'Up next';
+
+  @override
+  String get subTrackDetailAllTicked => 'All ground ticked';
+
+  @override
+  String subTrackDetailTicked(int count) {
+    return '$count ticked';
+  }
+
+  @override
+  String get subTrackDetailMoreOptions => 'More options';
+
+  @override
+  String get subTrackDetailEdit => 'Edit';
+
+  @override
+  String get subTrackDetailSelectPrompt =>
+      'Select a sub-track to see its details';
+
+  @override
   String get switchProfile => 'Switch profile';
 
   @override

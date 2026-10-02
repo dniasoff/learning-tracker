@@ -159,6 +159,7 @@ final class DetailHarness {
     SubTrackDetailRole role = SubTrackDetailRole.parent,
     LearningCommands? commands,
     Stream<LearnerState>? state,
+    Stream<LearnerState> Function()? engine,
   }) => [
     activeLearnerScopeProvider.overrideWith((ref) async => scope),
     subTrackRepositoryProvider.overrideWith((ref) async => tracks),
@@ -166,7 +167,9 @@ final class DetailHarness {
     corporaProvider.overrideWith(
       (ref) async => <String, Corpus>{engineCurriculum: mishnayosCorpus()},
     ),
-    learnerStateProvider.overrideWith((ref, _) => state ?? _engine()),
+    learnerStateProvider.overrideWith(
+      (ref, _) => state ?? (engine ?? _engine)(),
+    ),
     subTrackDetailRoleProvider.overrideWithValue(role),
     if (commands != null)
       learningCommandsProvider.overrideWith((ref) async => commands),
@@ -287,3 +290,12 @@ List<Override> rawLabelOverrides() => [
   subTrackRefLabelProvider.overrideWith((ref, sefariaRef) => sefariaRef),
   subTrackNodeNameProvider.overrideWith((ref, sefariaRef) => sefariaRef),
 ];
+
+/// The real engine's state over [subTracks] and [events].
+LearnerState engineDetailState(
+  SubTrack track, {
+  List<SubTrack> others = const [],
+  List<LearningEvent> events = const [],
+}) => const LearnerStateEngine().run(
+  engineInputs(events: events, subTracks: [track, ...others]),
+);

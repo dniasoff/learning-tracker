@@ -622,6 +622,37 @@ class AppLocalizationsHe extends AppLocalizations {
   String get subTrackDetailOpenHistory => 'פתיחת היסטוריה';
 
   @override
+  String subTrackDetailWindow(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String subTrackDetailWindowOpen(String start) {
+    return 'החל מ$start';
+  }
+
+  @override
+  String get subTrackDetailUpNext => 'הבא בתור';
+
+  @override
+  String get subTrackDetailAllTicked => 'כל החומר סומן';
+
+  @override
+  String subTrackDetailTicked(int count) {
+    return '$count סומנו';
+  }
+
+  @override
+  String get subTrackDetailMoreOptions => 'אפשרויות נוספות';
+
+  @override
+  String get subTrackDetailEdit => 'עריכה';
+
+  @override
+  String get subTrackDetailSelectPrompt =>
+      'יש לבחור תת-מסלול כדי לראות את פרטיו';
+
+  @override
   String get switchProfile => 'החלף פרופיל';
 
   @override

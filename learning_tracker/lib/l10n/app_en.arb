@@ -502,6 +502,56 @@
   "@subTrackDetailOpenHistory": {
     "description": "Sub-track detail: screen-reader hint on a leaf label, which opens its Mishna history (DNI-497 AC-3)."
   },
+  "subTrackDetailWindow": "{start} – {end}",
+  "@subTrackDetailWindow": {
+    "description": "Sub-track detail: the sub-track window, start and end month (DNI-497 AC-1).",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailWindowOpen": "From {start}",
+  "@subTrackDetailWindowOpen": {
+    "description": "Sub-track detail: the window of an open-ended sub-track (DNI-497 AC-1).",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailUpNext": "Up next",
+  "@subTrackDetailUpNext": {
+    "description": "Sub-track detail: label over this sub-track's engine position (DNI-497 AC-1)."
+  },
+  "subTrackDetailAllTicked": "All ground ticked",
+  "@subTrackDetailAllTicked": {
+    "description": "Sub-track detail: Up next when every ground leaf is ticked in this sub-track; no position (DNI-497 AC-1). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailTicked": "{count} ticked",
+  "@subTrackDetailTicked": {
+    "description": "Sub-track detail: distinct ground leaves ticked in this sub-track (DNI-497 AC-1).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailMoreOptions": "More options",
+  "@subTrackDetailMoreOptions": {
+    "description": "Sub-track detail: tooltip and screen-reader label of the ⋮ overflow menu (DNI-497 AC-1)."
+  },
+  "subTrackDetailEdit": "Edit",
+  "@subTrackDetailEdit": {
+    "description": "Sub-track detail: ⋮ action opening the sub-track's metadata form; Edit moved here from the hub row (DNI-497 AC-1, UX-DR-53)."
+  },
+  "subTrackDetailSelectPrompt": "Select a sub-track to see its details",
+  "@subTrackDetailSelectPrompt": {
+    "description": "Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4."
+  },
   "switchProfile": "Switch profile",
   "switchProfileSubtitle": "Change to a different profile or your account",
   "manageProfiles": "Manage Profiles",

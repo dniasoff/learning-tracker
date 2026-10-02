@@ -1202,6 +1202,54 @@ abstract class AppLocalizations {
   /// **'Open history'**
   String get subTrackDetailOpenHistory;
 
+  /// Sub-track detail: the sub-track window, start and end month (DNI-497 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'{start} – {end}'**
+  String subTrackDetailWindow(String start, String end);
+
+  /// Sub-track detail: the window of an open-ended sub-track (DNI-497 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'From {start}'**
+  String subTrackDetailWindowOpen(String start);
+
+  /// Sub-track detail: label over this sub-track's engine position (DNI-497 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Up next'**
+  String get subTrackDetailUpNext;
+
+  /// Sub-track detail: Up next when every ground leaf is ticked in this sub-track; no position (DNI-497 AC-1). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'All ground ticked'**
+  String get subTrackDetailAllTicked;
+
+  /// Sub-track detail: distinct ground leaves ticked in this sub-track (DNI-497 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'{count} ticked'**
+  String subTrackDetailTicked(int count);
+
+  /// Sub-track detail: tooltip and screen-reader label of the ⋮ overflow menu (DNI-497 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get subTrackDetailMoreOptions;
+
+  /// Sub-track detail: ⋮ action opening the sub-track's metadata form; Edit moved here from the hub row (DNI-497 AC-1, UX-DR-53).
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get subTrackDetailEdit;
+
+  /// Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a sub-track to see its details'**
+  String get subTrackDetailSelectPrompt;
+
   /// No description provided for @switchProfile.
   ///
   /// In en, this message translates to:

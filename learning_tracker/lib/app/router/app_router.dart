@@ -46,6 +46,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/lifetime
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ground_picker_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
@@ -328,6 +329,14 @@ class AppRouter extends RootStackRouter {
       path: '/settings/tracks/:curriculumId/sub-tracks/school-year',
       page: SchoolYearSubTrackFormRoute.page,
       guards: [authGuard, parentSessionGuard],
+    ),
+    // Sub-tracks (Epic 2). Story 2.6 (DNI-497): the sub-track detail, opened
+    // from a Manage tracks hub row. Any role may open it (the child and tutor
+    // read-only), so no parent-session guard.
+    AutoRoute(
+      path: '/settings/tracks/sub-tracks/:subTrackId',
+      page: SubTrackDetailRoute.page,
+      guards: [authGuard],
     ),
     AutoRoute(
       path: '/settings/lifetime',
