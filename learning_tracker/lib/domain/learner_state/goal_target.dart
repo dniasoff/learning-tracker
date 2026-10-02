@@ -37,9 +37,9 @@ PaceGoal? livePace(CurriculumGoals? goals) {
 /// (B13 default 5, DNI-494).
 ///
 /// [numerator] is `mainTrackRemaining − Σ expectedNewGround(s) +
-/// Σ shortfall(s)` over the curriculum's `holdsGround` sub-tracks; this
-/// story passes `mainTrackRemaining` (the no-sub-track case) and DNI-494
-/// adds the sub-track terms.
+/// Σ shortfall(s)` over the curriculum's `holdsGround` sub-tracks
+/// (`DeadlineForecast.numerator`, DNI-494); with no sub-track it is
+/// `mainTrackRemaining`.
 int deadlineDailyTarget({
   required int numerator,
   required DeadlineGoal deadline,

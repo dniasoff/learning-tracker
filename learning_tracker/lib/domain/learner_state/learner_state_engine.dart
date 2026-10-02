@@ -17,8 +17,11 @@
 ///    (`calendar_plan.dart`), reviews (`review_schedule.dart` over
 ///    `main_track_config_history.dart`), goal target and pace
 ///    (`goal_target.dart`) and projection (`projection.dart`);
-///    Sub-track states (`sub_track_positions.dart`, DNI-493): each
-///    sub-track's own position, ticked count and remaining path;
+///    sub-track states (`sub_track_positions.dart`, DNI-493): each
+///    sub-track's own position, ticked count and remaining path; and the
+///    AD-44 deadline forecast (`sub_track_forecast.dart` over
+///    `sub_track_capacity.dart`, DNI-494): per-sub-track capacity,
+///    expected new ground and shortfall feeding the FR-19 `dailyTarget`;
 /// 7. points (DNI-468).
 ///
 /// No I/O, clock read or global state: every input is in
@@ -52,6 +55,7 @@ import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track_forecast.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_positions.dart';
 
 /// One calendar program assignment: [node] is assigned on [date].
@@ -348,23 +352,43 @@ final class LearnerStateEngine {
         validationErrors: errors,
       );
     }
-    // AD-43/AD-44: a deadline gives `dailyTarget`, a pace gives `paceRate`
-    // (it also feeds FR-20 with a deadline); neither gives nulls. The
-    // numerator is the no-sub-track case (DNI-494 adds the sub-track
-    // terms).
+    // AD-43/AD-44: a deadline gives `dailyTarget` from the FR-19
+    // numerator over the `holdsGround` sub-tracks (DNI-494), a pace gives
+    // `paceRate` (it also feeds FR-20 with a deadline); neither gives
+    // nulls. With no deadline no capacity or shortfall is computed and no
+    // sub-track rate affects any value.
     final pace = livePace(goals);
     final studyDays = configHistory.current.studyDays;
+    DeadlineForecast? forecast;
+    int? dailyTarget;
+    if (deadline != null) {
+      forecast = deriveDeadlineForecast(
+        subTracks: [
+          for (final s in inputs.subTracks)
+            if (s.curriculumId == curriculumId) s,
+        ],
+        states: subTracks,
+        corpus: corpus,
+        isLearnt: learnt.learntLeaves.contains,
+        inScope: learnt.inScope,
+        mainTrackRemaining: mainTrack.schedulableRefs.length,
+        today: today,
+        targetDate: deadline.targetDate,
+      );
+      dailyTarget = deadlineDailyTarget(
+        numerator: forecast.numerator,
+        deadline: deadline,
+        studyDays: studyDays,
+        today: today,
+      );
+    }
     return PlanRecord(
-      subTracks: subTracks,
+      subTracks: forecast == null
+          ? subTracks
+          : withForecast(subTracks, forecast),
       reviews: reviews,
-      dailyTarget: deadline == null
-          ? null
-          : deadlineDailyTarget(
-              numerator: mainTrack.schedulableRefs.length,
-              deadline: deadline,
-              studyDays: studyDays,
-              today: today,
-            ),
+      dailyTarget: dailyTarget,
+      shortfall: forecast?.shortfall,
       paceRate: pace == null
           ? null
           : paceRateOf(

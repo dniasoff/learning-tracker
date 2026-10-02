@@ -220,13 +220,23 @@ final class SubTrackState {
   /// empty with no [position] (DNI-493). The AD-44 `path`.
   final List<LeafRef> remainingPath;
 
-  /// Remaining capacity in leaves, if bounded.
+  /// AD-44 capacity in leaves: `floor(rate_per_week × activeWeeksLeft)`
+  /// up to the deadline, 0 when the capacity interval is empty. Null when
+  /// not computed: no live deadline, a calendar-program curriculum, or a
+  /// sub-track that does not hold ground (DNI-494).
   final int? capacity;
 
-  /// Leaves of ground it is expected to cover.
+  /// `max(0, capacity − |remainingPath|)`: capacity left over for ground
+  /// not entered yet, credited against the main track (FR-19). 0 when
+  /// [capacity] is null.
   final int expectedNewGround;
 
-  /// Leaves it is behind.
+  /// The leaves of [remainingPath] this sub-track will not reach by the
+  /// deadline and that come back to the main track: unlearnt, at indices
+  /// `≥ capacity`, not reached within capacity by another holder, each
+  /// counted under one sub-track only (DNI-494). Its sum over the
+  /// curriculum's sub-tracks is the FR-19 shortfall term. 0 when
+  /// [capacity] is null.
   final int shortfall;
 
   @override
@@ -345,8 +355,10 @@ abstract interface class CurriculumState {
 
   /// Today's target in leaves. Calendar program: assigned through today
   /// minus learnt. Otherwise, with a live `goals/{c}_deadline`:
-  /// `max(0, ceil(numerator ÷ studyDaysToDeadline))`, or the numerator
-  /// when no study day is left (AD-44). Null with no deadline.
+  /// `max(0, ceil(numerator ÷ studyDaysToDeadline))`, or
+  /// `max(0, numerator)` when no study day is left (AD-44, B13), where
+  /// `numerator = mainTrackRemaining − Σ expectedNewGround + Σ shortfall`
+  /// over the `holdsGround` sub-tracks (DNI-494). Null with no deadline.
   int? get dailyTarget;
 
   /// Leaves per study day from a live `goals/{c}_pace` doc (AD-43); null
@@ -354,8 +366,9 @@ abstract interface class CurriculumState {
   double? get paceRate;
 
   /// Leaves behind: the calendar backlog size on a calendar-program
-  /// curriculum; the AD-44 sub-track shortfall is DNI-494's. Null when not
-  /// derived.
+  /// curriculum; otherwise, with a live deadline, the FR-19 sub-track
+  /// shortfall term (each leaf once; the sum of [SubTrackState.shortfall],
+  /// DNI-494). Null when not derived (no deadline).
   int? get shortfall;
 
   /// The finish projection of an evaluated curriculum (AD-35): velocity =
