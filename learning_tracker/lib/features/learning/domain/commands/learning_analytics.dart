@@ -28,6 +28,40 @@ enum CaptureSourceKind {
   final String storage;
 }
 
+/// Low-cardinality source category required by SM-1/SM-2.
+enum CaptureSourceType {
+  /// Main track.
+  main('main'),
+
+  /// School-year sub-track.
+  schoolYear('school_year'),
+
+  /// Ongoing sub-track.
+  ongoing('ongoing');
+
+  const CaptureSourceType(this.storage);
+
+  /// The analytics parameter value.
+  final String storage;
+}
+
+/// Capture gesture categories used to aggregate SM-4 effort.
+enum CaptureGesture {
+  /// One plus-one tap.
+  plusOne('plus_one'),
+
+  /// Confirming an up-to selection.
+  upTo('up_to'),
+
+  /// A task checkbox tick.
+  taskTick('task_tick');
+
+  const CaptureGesture(this.storage);
+
+  /// The analytics parameter value.
+  final String storage;
+}
+
 /// The `action` of a `subtrack_lifecycle` event (AD-47). Story 2.1 emits
 /// the four lifecycle commands; Story 2.8 (DNI-499) adds *Add next year*;
 /// later stories add ground add, reorder and remove.
@@ -73,6 +107,33 @@ abstract interface class LearningAnalytics {
     required SubTrackLifecycleAction action,
     required int groundEntries,
   });
+
+  /// AC-1 capture summary; content and identity are excluded.
+  void captureSummary({
+    required String curriculumId,
+    required CaptureSourceType sourceType,
+    required CaptureGesture gesture,
+    required int eventCount,
+    required int skippedCount,
+    required int taps,
+  });
+
+  /// AC-2 lifecycle summary with the resulting track counts.
+  void subTrackLifecycleSummary({
+    required String curriculumId,
+    required SubTrackType type,
+    required SubTrackLifecycleAction action,
+    required int groundEntries,
+    required int leaves,
+  });
+
+  /// AC-3 close-window forecast comparison.
+  void subTrackForecastVsActual({
+    required SubTrackType type,
+    required int forecast,
+    required int actual,
+    required int windowWeeks,
+  });
 }
 
 /// The learning analytics events, each registered in `AnalyticsEvent`.
@@ -82,6 +143,9 @@ enum LearningAnalyticsEvent {
 
   /// `AnalyticsEvent.subTrackLifecycle`.
   subTrackLifecycle,
+
+  /// `AnalyticsEvent.subTrackForecastVsActual`.
+  subTrackForecastVsActual,
 }
 
 /// Receives one event with its enum/count-only [parameters].
@@ -123,4 +187,58 @@ final class SinkLearningAnalytics implements LearningAnalytics {
     'action': action.storage,
     'ground_entries': groundEntries,
   });
+
+  @override
+  void captureSummary({
+    required String curriculumId,
+    required CaptureSourceType sourceType,
+    required CaptureGesture gesture,
+    required int eventCount,
+    required int skippedCount,
+    required int taps,
+  }) {
+    assert(eventCount >= 0 && skippedCount >= 0 && taps >= 0);
+    sink(LearningAnalyticsEvent.capture, {
+      'curriculum_id': curriculumId,
+      'source_type': sourceType.storage,
+      'gesture': gesture.storage,
+      'event_count': eventCount,
+      'skipped_count': skippedCount,
+      'taps': taps,
+    });
+  }
+
+  @override
+  void subTrackLifecycleSummary({
+    required String curriculumId,
+    required SubTrackType type,
+    required SubTrackLifecycleAction action,
+    required int groundEntries,
+    required int leaves,
+  }) {
+    assert(groundEntries >= 0 && leaves >= 0);
+    sink(LearningAnalyticsEvent.subTrackLifecycle, {
+      'curriculum_id': curriculumId,
+      'type': type.storage,
+      'action': action.storage,
+      'ground_entries': groundEntries,
+      'leaves': leaves,
+    });
+  }
+
+  @override
+  void subTrackForecastVsActual({
+    required SubTrackType type,
+    required int forecast,
+    required int actual,
+    required int windowWeeks,
+  }) {
+    assert(forecast >= 0 && actual >= 0 && windowWeeks >= 0);
+    sink(LearningAnalyticsEvent.subTrackForecastVsActual, {
+      'type': type.storage,
+      'forecast': forecast,
+      'actual': actual,
+      'window_weeks': windowWeeks,
+    });
+  }
 }

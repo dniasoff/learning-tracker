@@ -310,6 +310,15 @@ final class RecordingLearningAnalytics implements LearningAnalytics {
   /// Every `subTrackLifecycle`, in order.
   final List<RecordedSubTrackLifecycle> lifecycles = [];
 
+  /// Summary captures using the DNI-503 contract.
+  final List<Map<String, Object>> captureSummaries = [];
+
+  /// Summary lifecycle events using the DNI-503 contract.
+  final List<Map<String, Object>> lifecycleSummaries = [];
+
+  /// Close-window forecast comparisons.
+  final List<Map<String, Object>> forecastComparisons = [];
+
   @override
   void subTrackLifecycle({
     required String curriculumId,
@@ -335,6 +344,51 @@ final class RecordingLearningAnalytics implements LearningAnalytics {
     dateState: dateState,
     count: count,
   ));
+
+  @override
+  void captureSummary({
+    required String curriculumId,
+    required CaptureSourceType sourceType,
+    required CaptureGesture gesture,
+    required int eventCount,
+    required int skippedCount,
+    required int taps,
+  }) => captureSummaries.add({
+    'curriculum_id': curriculumId,
+    'source_type': sourceType.storage,
+    'gesture': gesture.storage,
+    'event_count': eventCount,
+    'skipped_count': skippedCount,
+    'taps': taps,
+  });
+
+  @override
+  void subTrackLifecycleSummary({
+    required String curriculumId,
+    required SubTrackType type,
+    required SubTrackLifecycleAction action,
+    required int groundEntries,
+    required int leaves,
+  }) => lifecycleSummaries.add({
+    'curriculum_id': curriculumId,
+    'type': type.storage,
+    'action': action.storage,
+    'ground_entries': groundEntries,
+    'leaves': leaves,
+  });
+
+  @override
+  void subTrackForecastVsActual({
+    required SubTrackType type,
+    required int forecast,
+    required int actual,
+    required int windowWeeks,
+  }) => forecastComparisons.add({
+    'type': type.storage,
+    'forecast': forecast,
+    'actual': actual,
+    'window_weeks': windowWeeks,
+  });
 }
 
 /// A [LearningCommandReads] over mutable in-memory values. Every read is

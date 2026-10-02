@@ -66,6 +66,9 @@ abstract final class AnalyticsEvent {
 
   /// AD-47: a successful sub-track lifecycle command; enums and counts only.
   static const subTrackLifecycle = 'subtrack_lifecycle';
+
+  /// AD-47: a close-window forecast comparison; enums and counts only.
+  static const subTrackForecastVsActual = 'subtrack_forecast_vs_actual';
 }
 
 /// Milestone thresholds for [AnalyticsEvent.streakMilestoneReached].
@@ -80,6 +83,10 @@ abstract class AnalyticsService {
 
   /// Log a named event with optional parameters.
   Future<void> logEvent(String name, {Map<String, Object?>? parameters});
+
+  /// Set an analytics user property outside event parameters. Implementors
+  /// without user-property support may safely ignore it.
+  Future<void> setUserProperty(String name, String? value) async {}
 
   /// Convenience helpers for the 12 Story 27.14 events.
 

@@ -31,4 +31,8 @@ class FirebaseAnalyticsService extends AnalyticsService {
     );
     return _analytics.logEvent(name: name, parameters: safeParams);
   }
+
+  @override
+  Future<void> setUserProperty(String name, String? value) =>
+      _analytics.setUserProperty(name: name, value: value);
 }
