@@ -43,6 +43,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/curricul
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ground_picker_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
@@ -305,6 +306,13 @@ class AppRouter extends RootStackRouter {
       path: '/settings/tracks/detail',
       page: TrackDetailRoute.page,
       guards: [authGuard],
+    ),
+    // Sub-tracks (Epic 2). One route per story; every sub-track write
+    // surface is behind the parent-session guard (DNI-495 AC-3).
+    AutoRoute(
+      path: '/settings/tracks/:curriculumId/sub-tracks/school-year',
+      page: SchoolYearSubTrackFormRoute.page,
+      guards: [authGuard, parentSessionGuard],
     ),
     AutoRoute(
       path: '/settings/lifetime',
