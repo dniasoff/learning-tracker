@@ -34,6 +34,14 @@ final resignTutorGrantUseCaseProvider = Provider<ResignTutorGrantUseCase>(
   (ref) => ResignTutorGrantUseCase(ref.watch(tutorGrantRepositoryProvider)),
 );
 
+/// AD-53 (DNI-487): parent-only "Can edit learning" toggle.
+final updateTutorGrantPermissionsUseCaseProvider =
+    Provider<UpdateTutorGrantPermissionsUseCase>(
+      (ref) => UpdateTutorGrantPermissionsUseCase(
+        ref.watch(tutorGrantRepositoryProvider),
+      ),
+    );
+
 final listOutgoingGrantsUseCaseProvider =
     Provider<ListOutgoingTutorGrantsUseCase>(
       (ref) => ListOutgoingTutorGrantsUseCase(

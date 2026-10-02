@@ -173,7 +173,9 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
       TutorGrantPreconditionCode.cannotAccept ||
       TutorGrantPreconditionCode.cannotRescind ||
       TutorGrantPreconditionCode.cannotRevoke ||
-      TutorGrantPreconditionCode.cannotResign => l10n.declineInviteGenericError,
+      TutorGrantPreconditionCode.cannotResign ||
+      TutorGrantPreconditionCode.cannotUpdatePermissions =>
+        l10n.declineInviteGenericError,
     };
   }
 

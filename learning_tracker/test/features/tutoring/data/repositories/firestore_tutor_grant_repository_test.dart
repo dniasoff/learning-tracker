@@ -1112,6 +1112,56 @@ void main() {
 
   // ── revokeGrant ───────────────────────────────────────────────────────────
 
+  group('updateGrantPermissions (DNI-487)', () {
+    test(
+      'success: calls updateTutorGrantPermissions with the B13 payload',
+      () async {
+        String? calledName;
+        Map<String, dynamic>? captured;
+        final repo = _buildRepo((name, params) async {
+          calledName = name;
+          captured = (params as Map).cast<String, dynamic>();
+          return <String, dynamic>{};
+        });
+
+        final result = await repo.updateGrantPermissions(
+          grantId: 'grant_upd',
+          canEditLearning: true,
+        );
+        expect(result, isA<TutorGrantSuccess>());
+        expect((result as TutorGrantSuccess).grantId, 'grant_upd');
+        expect(calledName, 'updateTutorGrantPermissions');
+        expect(captured, {'grantId': 'grant_upd', 'canEditLearning': true});
+      },
+    );
+
+    test('permission-denied → TutorGrantFailure carrying the code', () async {
+      final repo = _buildRepo(
+        (_, __) async => throw FirebaseFunctionsException(
+          code: 'permission-denied',
+          message: 'Only the owning parent can change',
+        ),
+      );
+      final result = await repo.updateGrantPermissions(
+        grantId: 'g',
+        canEditLearning: false,
+      );
+      expect(result, isA<TutorGrantFailure>());
+      expect((result as TutorGrantFailure).code, 'permission-denied');
+    });
+
+    test('generic error → stable unknown-error failure', () async {
+      final repo = _buildRepo((_, __) async => throw Exception('io'));
+      final result = await repo.updateGrantPermissions(
+        grantId: 'g',
+        canEditLearning: false,
+      );
+      expect(result, isA<TutorGrantFailure>());
+      expect((result as TutorGrantFailure).code, 'unknown-error');
+      expect(result.message, isNot(contains('io')));
+    });
+  });
+
   group('revokeGrant', () {
     test('success: returns TutorGrantSuccess', () async {
       String? calledName;

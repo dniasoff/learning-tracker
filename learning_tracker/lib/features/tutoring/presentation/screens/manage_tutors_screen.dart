@@ -8,6 +8,14 @@
 //   ListOutgoingTutorGrantsUseCase  — list grants per child
 //   RevokeTutorGrantUseCase         — revoke active grant
 //   RescindTutorInviteUseCase       — rescind pending invite
+//   UpdateTutorGrantPermissionsUseCase — AD-53 "Can edit learning" toggle
+//
+// DNI-487 (AD-53): each ACTIVE row carries the parent-only "Can edit
+// learning" switch. It never shows an unconfirmed value: the new state
+// appears only after updateTutorGrantPermissions succeeds; a failure keeps
+// the prior state and offers Retry; offline (or while a call is in flight)
+// the switch is disabled, with "Online required" when offline. The screen is
+// reachable only in parent mode (childModeGuard + pinGuard, ruling B11).
 
 import 'dart:async';
 
@@ -19,6 +27,8 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/features/account/account.dart'
+    show connectivityStreamProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -544,7 +554,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
         ? l10n.statusActive
         : l10n.statusPending;
 
-    return ListTile(
+    final row = ListTile(
       leading: CircleAvatar(
         backgroundColor: statusColor.withValues(alpha: 0.15),
         child: Icon(
@@ -600,6 +610,20 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
         ],
       ),
     );
+
+    if (grantState is! ActiveGrant) return row;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        row,
+        _CanEditLearningToggle(
+          grant: widget.grant,
+          childProfileId: widget.childProfileId,
+          confirmedValue: grantState.permissions.canEditLearning,
+        ),
+      ],
+    );
   }
 
   Future<bool> _showConfirmation(
@@ -632,5 +656,155 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
       ),
     );
     return result ?? false;
+  }
+}
+
+/// AD-53 (DNI-487 AC-5): the parent-only "Can edit learning" switch for one
+/// active grant.
+///
+/// Shows only server-confirmed state: [confirmedValue] from the grant list,
+/// or the value the last successful `updateTutorGrantPermissions` call
+/// committed. While a call is in flight, or when the device is not confirmed
+/// online, the switch is disabled and cannot send a mutation.
+class _CanEditLearningToggle extends ConsumerStatefulWidget {
+  const _CanEditLearningToggle({
+    required this.grant,
+    required this.childProfileId,
+    required this.confirmedValue,
+  });
+
+  final TutorGrant grant;
+  final String childProfileId;
+
+  /// `permissions.can_edit_learning` as last read from the server.
+  final bool confirmedValue;
+
+  @override
+  ConsumerState<_CanEditLearningToggle> createState() =>
+      _CanEditLearningToggleState();
+}
+
+class _CanEditLearningToggleState
+    extends ConsumerState<_CanEditLearningToggle> {
+  /// Value committed by this row's last successful update, until the grant
+  /// list catches up with it.
+  bool? _committed;
+
+  bool _inFlight = false;
+
+  /// Bumped on every submit; a stale Retry (one offered before a newer
+  /// submit) is ignored so it can never reverse a later confirmed state.
+  int _submitSeq = 0;
+
+  bool get _displayed => _committed ?? widget.confirmedValue;
+
+  @override
+  void didUpdateWidget(covariant _CanEditLearningToggle oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_committed != null && widget.confirmedValue == _committed) {
+      _committed = null;
+    }
+  }
+
+  Future<void> _submit(bool intended) async {
+    if (_inFlight) return;
+    final seq = ++_submitSeq;
+    setState(() => _inFlight = true);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    TutorGrantResult result;
+    try {
+      result = await ref
+          .read(updateTutorGrantPermissionsUseCaseProvider)
+          .call(grant: widget.grant, canEditLearning: intended);
+    } catch (e, st) {
+      AppLogger.instance.error(
+        event: 'Failed to update tutor grant permissions',
+        exception: e,
+        stackTrace: st,
+      );
+      result = const TutorGrantFailure(
+        message: 'An unexpected error occurred.',
+        code: 'unknown-error',
+      );
+    }
+    if (!mounted) return;
+    switch (result) {
+      case TutorGrantSuccess():
+        setState(() {
+          _inFlight = false;
+          _committed = intended;
+        });
+        ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+      case TutorGrantFailure(:final code):
+        AppLogger.instance.error(
+          event: 'Tutor grant permission update rejected',
+          fields: {'code': code ?? 'unknown'},
+        );
+        _showFailure(messenger, l10n, intended, seq);
+      case TutorGrantPreconditionError():
+        _showFailure(messenger, l10n, intended, seq);
+    }
+  }
+
+  void _showFailure(
+    ScaffoldMessengerState messenger,
+    AppLocalizations l10n,
+    bool intended,
+    int seq,
+  ) {
+    // Prior (confirmed) state is kept: [_committed] is untouched.
+    setState(() => _inFlight = false);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.manageTutorsCanEditLearningErrorGeneric),
+        action: SnackBarAction(
+          label: l10n.actionRetry,
+          onPressed: () {
+            if (!mounted || seq != _submitSeq) return;
+            unawaited(_submit(intended));
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    // Fail closed: only a confirmed online signal enables the mutation.
+    final online = ref.watch(connectivityStreamProvider).asData?.value ?? false;
+    final enabled = online && !_inFlight;
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 56),
+      child: SwitchListTile(
+        key: ValueKey('manageTutors.canEditLearning.${widget.grant.grantId}'),
+        value: _displayed,
+        onChanged: enabled ? (v) => unawaited(_submit(v)) : null,
+        contentPadding: const EdgeInsetsDirectional.only(start: 16, end: 8),
+        dense: true,
+        title: Text(
+          l10n.manageTutorsCanEditLearningLabel,
+          style: theme.textTheme.bodyMedium,
+        ),
+        subtitle: online
+            ? null
+            : Text(
+                l10n.manageTutorsCanEditLearningOnlineRequired,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+        secondary: _inFlight
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : null,
+      ),
+    );
   }
 }

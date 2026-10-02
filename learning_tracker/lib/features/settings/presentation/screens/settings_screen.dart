@@ -167,8 +167,9 @@ class SettingsScreen extends ConsumerWidget {
             // learner shell with no management access at all (TUT-02/TUT-06).
             //
             // Shown whenever the tutor has ANY management permission.
-            // canEditLearning (AD-53) covers tracks, goals, study days and
-            // learning records; the hub itself re-gates each individual tile.
+            // canEditLearning (AD-53, DNI-487) replaced the five legacy edit
+            // flags; it covers tracks, goals, study days and learning
+            // records. The hub itself re-gates each individual tile.
             if (isTutorElevated &&
                 (tutorPerms == null ||
                     tutorPerms.canEditLearning ||

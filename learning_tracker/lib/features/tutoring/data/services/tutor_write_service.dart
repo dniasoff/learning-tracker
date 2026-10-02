@@ -34,6 +34,22 @@ class TutorWriteFailure extends TutorWriteResult {
   final String? code;
 }
 
+/// AD-53 (DNI-487 AC-6): the callable's per-call grant check rejected the
+/// write because the parent turned off "Can edit learning". Nothing was
+/// written; the tutor's read access is unchanged. Surfaces show
+/// `tutorEditingTurnedOff(learner)` for it (see
+/// `tutorWriteFailureMessage`).
+class TutorWriteEditingTurnedOff extends TutorWriteFailure {
+  const TutorWriteEditingTurnedOff({required super.message})
+    : super(code: 'permission-denied');
+}
+
+/// The server's AD-53 rejection reads "Grant lacks can_edit_learning"
+/// (writeWithChangeLog, verifyTutorGrant and tutorBulkPriorCompletions).
+bool _isEditingTurnedOff(FirebaseFunctionsException e) =>
+    e.code == 'permission-denied' &&
+    (e.message ?? '').contains('can_edit_learning');
+
 /// Injectable callable: given a function name and args, calls the CF.
 /// Production builds it from the active account's named app (DNI-520);
 /// overridable in tests.
@@ -78,6 +94,9 @@ class TutorWriteService {
       await _invoker(functionName, args);
       return const TutorWriteSuccess();
     } on FirebaseFunctionsException catch (e) {
+      if (_isEditingTurnedOff(e)) {
+        return TutorWriteEditingTurnedOff(message: e.message!);
+      }
       return TutorWriteFailure(
         message: e.message ?? 'Cloud Function call failed',
         code: e.code,

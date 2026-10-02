@@ -582,6 +582,12 @@ class _FakeTutorGrantRepository implements TutorGrantRepository {
       const TutorGrantSuccess(grantId: 'grant-1');
 
   @override
+  Future<TutorGrantResult> updateGrantPermissions({
+    required String grantId,
+    required bool canEditLearning,
+  }) async => const TutorGrantSuccess(grantId: 'grant-1');
+
+  @override
   Future<List<TutorGrant>> listIncomingGrants() async => [];
 
   @override

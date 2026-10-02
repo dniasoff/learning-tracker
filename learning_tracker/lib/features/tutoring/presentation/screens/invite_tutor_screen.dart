@@ -215,7 +215,9 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
       TutorGrantPreconditionCode.cannotDecline ||
       TutorGrantPreconditionCode.cannotRescind ||
       TutorGrantPreconditionCode.cannotRevoke ||
-      TutorGrantPreconditionCode.cannotResign => l10n.inviteTutorErrorGeneric,
+      TutorGrantPreconditionCode.cannotResign ||
+      TutorGrantPreconditionCode.cannotUpdatePermissions =>
+        l10n.inviteTutorErrorGeneric,
     };
   }
 

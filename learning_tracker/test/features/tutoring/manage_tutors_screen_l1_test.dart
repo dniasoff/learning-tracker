@@ -30,7 +30,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
+import 'package:learning_tracker/features/account/account.dart'
+    show connectivityStreamProvider;
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -57,10 +63,21 @@ class _MockRevoke extends Mock implements RevokeTutorGrantUseCase {}
 
 class _MockRescind extends Mock implements RescindTutorInviteUseCase {}
 
+class _MockUpdatePermissions extends Mock
+    implements UpdateTutorGrantPermissionsUseCase {}
+
 class _MockNotificationGateway extends Mock
     implements TutorNotificationGateway {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+class _MockAuthGuard extends Mock implements AutoRouteGuard {}
+
+class _MockProfileGuard extends Mock implements ProfileGuard {}
+
+class _MockChildModeGuard extends Mock implements ChildModeGuard {}
+
+class _MockPinGuard extends Mock implements PinGuard {}
 
 class _FakeTutorGrant extends Fake implements TutorGrant {}
 
@@ -104,7 +121,10 @@ LearnerProfileEntity _adultProfile({
 }
 
 /// Construct an active [TutorGrant].
-TutorGrant _activeGrant({String tutorEmail = 'tutor@example.com'}) {
+TutorGrant _activeGrant({
+  String tutorEmail = 'tutor@example.com',
+  bool canEditLearning = false,
+}) {
   final now = DateTime.utc(2026, 1, 1);
   final doc = TutorGrantDoc(
     grantId: 'grant_active_1',
@@ -116,7 +136,10 @@ TutorGrant _activeGrant({String tutorEmail = 'tutor@example.com'}) {
     updatedAt: now,
     acceptedAt: now,
   );
-  return TutorGrant.fromDoc(doc, permissions: TutorPermissions.defaults());
+  return TutorGrant.fromDoc(
+    doc,
+    permissions: TutorPermissions(canEditLearning: canEditLearning),
+  );
 }
 
 /// Construct a pending [TutorGrant].
@@ -167,8 +190,10 @@ Widget _buildApp({
   _MockRevoke? revoke,
   _MockRescind? rescind,
   _MockNotificationGateway? notifications,
+  _MockUpdatePermissions? updatePermissions,
   bool disableRetry = false,
   Locale locale = const Locale('en'),
+  Stream<bool>? connectivity,
 }) {
   final auth = authRepository ?? _MockAuthRepository();
   when(() => auth.currentUser).thenReturn(null);
@@ -209,6 +234,13 @@ Widget _buildApp({
       revokeTutorGrantUseCaseProvider.overrideWithValue(revokeUC),
       rescindTutorInviteUseCaseProvider.overrideWithValue(rescindUC),
       tutorNotificationGatewayProvider.overrideWithValue(notifGw),
+      updateTutorGrantPermissionsUseCaseProvider.overrideWithValue(
+        updatePermissions ?? _MockUpdatePermissions(),
+      ),
+      // DNI-487: the permission toggle reads connectivity; online by default.
+      connectivityStreamProvider.overrideWith(
+        (ref) => connectivity ?? Stream.value(true),
+      ),
     ],
     child: MaterialApp(
       locale: locale,
@@ -1801,4 +1833,246 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  // ── DNI-487: "Can edit learning" toggle (AD-53, AC-2 / AC-5) ───────────────
+
+  group('Can edit learning toggle (DNI-487)', () {
+    const toggleKey = ValueKey('manageTutors.canEditLearning.grant_active_1');
+
+    Future<void> pumpWith(
+      WidgetTester tester, {
+      required _MockUpdatePermissions update,
+      bool canEditLearning = false,
+      Stream<bool>? connectivity,
+      Locale locale = const Locale('en'),
+      List<TutorGrant>? grants,
+    }) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          profilesState: AsyncData([_childProfile()]),
+          grantsPerChild: {
+            _childUlid: AsyncData(
+              grants ?? [_activeGrant(canEditLearning: canEditLearning)],
+            ),
+          },
+          updatePermissions: update,
+          connectivity: connectivity,
+          locale: locale,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      // Let the connectivity stream's first value rebuild the toggle (it is
+      // disabled until a confirmed online signal arrives).
+      await tester.pump();
+      await tester.pump();
+    }
+
+    SwitchListTile toggle(WidgetTester tester) =>
+        tester.widget<SwitchListTile>(find.byKey(toggleKey));
+
+    void stubUpdate(
+      _MockUpdatePermissions update,
+      Future<TutorGrantResult> Function(bool value) answer,
+    ) {
+      when(
+        () => update.call(
+          grant: any(named: 'grant'),
+          canEditLearning: any(named: 'canEditLearning'),
+        ),
+      ).thenAnswer(
+        (inv) => answer(inv.namedArguments[#canEditLearning]! as bool),
+      );
+    }
+
+    testWidgets('active row shows the confirmed value; pending row has no '
+        'toggle', (tester) async {
+      await pumpWith(
+        tester,
+        update: _MockUpdatePermissions(),
+        canEditLearning: true,
+        grants: [_activeGrant(canEditLearning: true), _pendingGrant()],
+      );
+
+      expect(find.byKey(toggleKey), findsOneWidget);
+      expect(toggle(tester).value, isTrue);
+      expect(find.text('Can edit learning'), findsOneWidget);
+      expect(find.byType(SwitchListTile), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(toggleKey)).height,
+        greaterThanOrEqualTo(48),
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('AC-5: online success shows the new value only after the '
+        'callable succeeds; in flight the switch is disabled', (tester) async {
+      final update = _MockUpdatePermissions();
+      final pending = Completer<TutorGrantResult>();
+      stubUpdate(update, (_) => pending.future);
+      await pumpWith(tester, update: update);
+
+      expect(toggle(tester).value, isFalse);
+      await tester.tap(find.byKey(toggleKey));
+      await tester.pump();
+
+      // In flight: no optimistic value, no second mutation.
+      expect(toggle(tester).value, isFalse);
+      expect(toggle(tester).onChanged, isNull);
+      await tester.tap(find.byKey(toggleKey));
+      await tester.pump();
+      verify(
+        () => update.call(grant: any(named: 'grant'), canEditLearning: true),
+      ).called(1);
+
+      pending.complete(const TutorGrantSuccess(grantId: 'grant_active_1'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(toggle(tester).value, isTrue);
+      expect(toggle(tester).onChanged, isNotNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('AC-5: a server failure restores the prior state and offers '
+        'Retry, which submits the intended value', (tester) async {
+      final update = _MockUpdatePermissions();
+      var calls = 0;
+      stubUpdate(update, (_) async {
+        calls++;
+        return calls == 1
+            ? const TutorGrantFailure(message: 'x', code: 'unavailable')
+            : const TutorGrantSuccess(grantId: 'grant_active_1');
+      });
+      await pumpWith(tester, update: update, canEditLearning: true);
+
+      await tester.tap(find.byKey(toggleKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(toggle(tester).value, isTrue, reason: 'prior state kept');
+      expect(
+        find.text("Couldn't change editing permission. Please try again."),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(SnackBarAction, 'Retry'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(SnackBarAction, 'Retry'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final captured = verify(
+        () => update.call(
+          grant: any(named: 'grant'),
+          canEditLearning: captureAny(named: 'canEditLearning'),
+        ),
+      ).captured;
+      expect(captured, [false, false], reason: 'retry resubmits intent');
+      expect(toggle(tester).value, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('edge: a stale Retry cannot reverse a later confirmed '
+        'state', (tester) async {
+      final update = _MockUpdatePermissions();
+      var calls = 0;
+      stubUpdate(update, (_) async {
+        calls++;
+        return calls == 1
+            ? const TutorGrantFailure(message: 'x', code: 'unavailable')
+            : const TutorGrantSuccess(grantId: 'grant_active_1');
+      });
+      await pumpWith(tester, update: update);
+
+      // First attempt (on) fails; the parent tries again directly and it
+      // succeeds.
+      await tester.tap(find.byKey(toggleKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.byKey(toggleKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(toggle(tester).value, isTrue);
+
+      // The old snackbar's Retry is now stale and must do nothing.
+      final retry = find.widgetWithText(SnackBarAction, 'Retry');
+      if (retry.evaluate().isNotEmpty) {
+        await tester.tap(retry.first);
+        await tester.pump();
+      }
+      verify(
+        () => update.call(
+          grant: any(named: 'grant'),
+          canEditLearning: any(named: 'canEditLearning'),
+        ),
+      ).called(2);
+      expect(toggle(tester).value, isTrue);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('AC-5: offline the toggle is disabled with "Online required" '
+        'and cannot send a mutation', (tester) async {
+      final update = _MockUpdatePermissions();
+      await pumpWith(tester, update: update, connectivity: Stream.value(false));
+
+      expect(find.text('Online required'), findsOneWidget);
+      expect(toggle(tester).onChanged, isNull);
+      // Disabled controls stay in the accessibility tree (UX-DR 158).
+      expect(find.byKey(toggleKey), findsOneWidget);
+      await tester.tap(find.byKey(toggleKey));
+      await tester.pump();
+      verifyNever(
+        () => update.call(
+          grant: any(named: 'grant'),
+          canEditLearning: any(named: 'canEditLearning'),
+        ),
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('Hebrew + large text: toggle renders without overflow', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await pumpWith(
+        tester,
+        update: _MockUpdatePermissions(),
+        locale: const Locale('he'),
+        connectivity: Stream.value(false),
+      );
+
+      expect(find.text('יכול לערוך למידה'), findsOneWidget);
+      expect(find.text('נדרש חיבור לאינטרנט'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  });
+
+  // AC-2 (UI half, ruling B11): the toggle and the invite checkbox live on
+  // routes the child role cannot reach — child mode alone is refused and the
+  // parent PIN session is required, the same pattern as /parent-mode/*.
+  test('AC-2: Manage tutors and Invite tutor routes are parent-only '
+      '(childModeGuard + pinGuard)', () {
+    final childModeGuard = _MockChildModeGuard();
+    final pinGuard = _MockPinGuard();
+    final appRouter = AppRouter(
+      authGuard: _MockAuthGuard(),
+      profileGuard: _MockProfileGuard(),
+      childModeGuard: childModeGuard,
+      pinGuard: pinGuard,
+    );
+    for (final path in ['/tutor/manage-tutors', '/tutor/invite']) {
+      final route = appRouter.routes.firstWhere((r) => r.path == path);
+      expect(route.guards, contains(childModeGuard), reason: path);
+      expect(route.guards, contains(pinGuard), reason: path);
+    }
+  });
 }

@@ -169,7 +169,9 @@ async function verifyTutorGrant(
     if (permissions[permKey] !== true) {
       throw new HttpsError(
         "permission-denied",
-        `Tutor does not have permission '${permKey}' for this grant`,
+        // Same wording as writeWithChangeLog's AD-53 rejection, so the client
+        // maps every "editing turned off" denial identically (DNI-487 AC-6).
+        `Grant lacks ${permKey}`,
       );
     }
   }

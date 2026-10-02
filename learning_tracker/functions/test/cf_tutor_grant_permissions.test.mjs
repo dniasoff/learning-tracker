@@ -102,6 +102,19 @@ describe('updateTutorGrantPermissions — AC-1 owner update', () => {
     });
   }
 
+  test('B13 contract: the shared client fixture is accepted verbatim', async () => {
+    // Same file the Dart codec test asserts UpdateTutorGrantPermissionsRequest
+    // .toWire() against (test/features/tutoring/data/repositories/
+    // update_tutor_grant_permissions_request_test.dart).
+    const fixture = JSON.parse(readFileSync(
+      new URL('./fixtures/update_tutor_grant_permissions_request.json', import.meta.url), 'utf8'));
+    assert.deepEqual(Object.keys(fixture).sort(), ['canEditLearning', 'grantId']);
+    assert.equal(fixture.grantId, GRANT);
+    const res = await call(fns.updateTutorGrantPermissions, fixture, parentAuth);
+    assert.equal(res.canEditLearning, fixture.canEditLearning);
+    assert.equal((await grantDoc()).permissions.can_edit_learning, fixture.canEditLearning);
+  });
+
   test('a grant with no permissions map gains can_edit_learning', async () => {
     await seedActiveGrant({});
     await db.collection('tutor_grants').doc(GRANT).update({ permissions: FieldValue.delete() });
