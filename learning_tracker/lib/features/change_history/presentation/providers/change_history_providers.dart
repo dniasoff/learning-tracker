@@ -326,8 +326,13 @@ final changeHistorySelectionProvider = NotifierProvider.autoDispose
       (scope) => ChangeHistorySelection(),
     );
 
-/// Today's sub-track names of [LearnerScope] (empty while unavailable;
-/// names at event time come from the change log first).
+/// The sub-track names of [LearnerScope] as the history opens (empty
+/// while unavailable; names at event time come from the change log first,
+/// `ChangeHistoryRowMapper`).
+///
+/// One snapshot, not followed live: the history pages are read once, so a
+/// rename made while the history is open is not on them, and a live name
+/// would then label older rows with today's name.
 final changeHistorySubTrackNamesProvider = StreamProvider.autoDispose
     .family<Map<String, String>, LearnerScope>((ref, scope) async* {
       final repo = await ref.watch(subTrackRepositoryProvider.future);
@@ -335,6 +340,7 @@ final changeHistorySubTrackNamesProvider = StreamProvider.autoDispose
       await for (final read in repo.watchAll(scope)) {
         if (read case CompleteReadReady<SubTrack>(:final items)) {
           yield {for (final s in items) s.id: s.name};
+          return; // the first complete read is the snapshot
         }
       }
     }, retry: (retryCount, error) => null);

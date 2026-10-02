@@ -25,9 +25,17 @@
 ///   `before` alone is not proof: an update logs only its changed fields,
 ///   so setting a field that was unset (a `window_end` going from null to
 ///   a date) is an edit.
-/// - **Source names** are the sub-track name at event time: the `before`
-///   of the first later rename, else the name set by the last rename up to
-///   then, else today's name.
+/// - **Source names** are the sub-track name at event time, read only
+///   when every rename after that instant is loaded: the `before` of the
+///   first later rename, else (no rename since) the name set by the
+///   last-written loaded rename, else the name the history opened with.
+///   Below that bound — the target of a void or the action an undo
+///   reverts, read by id under every loaded page — a later rename may sit
+///   on an unread page, so the row names the source as it was at the
+///   row's own instant (the void or the undo), which is always above the
+///   bound. A sub-track named only after the instant, or gone with no
+///   rename loaded, has no known name (null: the "unnamed sub-track"
+///   label); a newer name is never shown as the historical one.
 library;
 
 import 'package:learning_tracker/domain/learner_state/actor.dart';
@@ -85,7 +93,9 @@ final class ChangeHistoryRowMapper {
   /// The learner's settings history (time zone, lock settings).
   final LearnerSettingsHistory settingsHistory;
 
-  /// Today's sub-track names by id.
+  /// Sub-track names by id as the history opened: the names after every
+  /// loaded rename. Not followed live: a rename made after the pages were
+  /// read is not on them, so a live name would label older rows with it.
   final Map<String, String> currentSubTrackNames;
 
   /// The rows of [items] (visible, newest first), reading context from
@@ -185,7 +195,25 @@ final class _Context {
   HistoryStamp? _stampOf((Actor, DateTime)? held) =>
       held == null ? null : mapper.stamp(held.$1, held.$2);
 
-  String? _nameAt(String subTrackId, DateTime instant) {
+  /// Whether every `change_log` entry taking effect after [instant] is
+  /// loaded: the log is read to its end, or [instant] is at or above its
+  /// `at` watermark. An unread entry's `at` is at or below the watermark
+  /// and its effective instant ([changeAt]) never later than its `at`.
+  bool _changesLoadedAfter(DateTime instant) {
+    final log = buffer.changeLog;
+    if (!log.started) return false;
+    if (log.exhausted) return true;
+    final watermark = log.watermark;
+    return watermark != null && !instant.isBefore(watermark);
+  }
+
+  /// The name of sub-track [subTrackId] at [instant], when the loaded
+  /// pages prove it; else its name at [fallback] (the row's own instant),
+  /// when given and proved; else null (unknown). See the library doc.
+  String? _nameAt(String subTrackId, DateTime instant, {DateTime? fallback}) {
+    if (!_changesLoadedAfter(instant)) {
+      return fallback == null ? null : _nameAt(subTrackId, fallback);
+    }
     final renames = _renames[subTrackId] ?? const <ChangeLogEntry>[];
     final key = ChangedFieldKey(
       GovernedEntity.subTrack.collection,
@@ -194,17 +222,21 @@ final class _Context {
     ).key;
     for (final e in renames) {
       if (changeAt(e).isAfter(instant)) {
+        // The first later rename: its `before` is the name then. A null
+        // `before` means the name was first set later (no name then).
         final before = e.before[key];
-        if (before is String) return before;
-        break; // created after the instant: no earlier name is known
+        return before is String ? before : null;
       }
     }
-    for (final e in renames.reversed) {
-      if (!changeAt(e).isAfter(instant) && e.after[key] is String) {
-        return e.after[key]! as String;
-      }
-    }
-    return mapper.currentSubTrackNames[subTrackId];
+    // No rename after the instant: the name then is the name the pages
+    // end on, set by the last-written rename (the greatest `at`: every
+    // entry written after a loaded one is loaded), else, with none loaded,
+    // the name the history opened with.
+    if (renames.isEmpty) return mapper.currentSubTrackNames[subTrackId];
+    final latest = renames
+        .reduce((a, b) => b.at.isAfter(a.at) ? b : a)
+        .after[key];
+    return latest is String ? latest : null;
   }
 
   ChangeHistoryRow row(HistoryItem item) => switch (item) {
@@ -223,10 +255,10 @@ final class _Context {
       kind: ChangeHistoryRowKind.governed,
       stamp: mapper.stamp(item.actor, item.sortAt),
       summary: GovernedSummary(
-        primary: _part(primary),
+        primary: _part(primary, item.sortAt),
         others: [
           for (final e in described.entries)
-            if (e.id != primary.id) _part(e),
+            if (e.id != primary.id) _part(e, item.sortAt),
         ],
       ),
       notifiesParent:
@@ -246,7 +278,9 @@ final class _Context {
     return entries.isEmpty ? null : GovernedActionItem(actionId, entries);
   }
 
-  GovernedPart _part(ChangeLogEntry e) {
+  /// The part [e] contributes to a row stamped [rowAt] (the fallback
+  /// instant for its sub-track's name).
+  GovernedPart _part(ChangeLogEntry e, DateTime rowAt) {
     final keys = [
       for (final k in e.after.keys)
         if (ChangedFieldKey.tryParse(k) case final parsed?) parsed,
@@ -281,7 +315,9 @@ final class _Context {
       change: change,
       fields: fields,
       subjectName: e.entity == GovernedEntity.subTrack
-          ? (newName is String ? newName : _nameAt(e.entityId, changeAt(e)))
+          ? (newName is String
+                ? newName
+                : _nameAt(e.entityId, changeAt(e), fallback: rowAt))
           : null,
       newDate:
           e.entity == GovernedEntity.goal &&
@@ -309,7 +345,12 @@ final class _Context {
             if (target.isLearn) target,
       ];
       summary = targets.isNotEmpty
-          ? _learnSummary(targets, effectiveAt(targets.first), void_: true)
+          ? _learnSummary(
+              targets,
+              effectiveAt(targets.first),
+              void_: true,
+              rowAt: at,
+            )
           : LearningSummary(
               kind: LearningEventKind.void_,
               refs: [
@@ -318,7 +359,7 @@ final class _Context {
               ],
               source: first.source == null
                   ? null
-                  : _sourceOf(first.source!, at),
+                  : _sourceOf(first.source!, at, at),
               dateState: first.dateState,
               learnedOn: first.learnedOn,
             );
@@ -347,10 +388,13 @@ final class _Context {
     );
   }
 
+  /// The summary of [events] recorded at [at], in a row stamped [rowAt]
+  /// (the fallback instant for the source name; [at] when omitted).
   LearningSummary _learnSummary(
     List<LearningEvent> events,
     DateTime at, {
     bool void_ = false,
+    DateTime? rowAt,
   }) {
     final first = events.first;
     final source = first.source;
@@ -360,14 +404,14 @@ final class _Context {
         for (final e in events)
           if (e.ref case final ref?) ref,
       ],
-      source: source == null ? null : _sourceOf(source, at),
+      source: source == null ? null : _sourceOf(source, at, rowAt ?? at),
       dateState: first.dateState,
       learnedOn: first.learnedOn,
     );
   }
 
-  HistorySourceLabel _sourceOf(String source, DateTime at) =>
+  HistorySourceLabel _sourceOf(String source, DateTime at, DateTime rowAt) =>
       source == LearningEvent.sourceMain
       ? const MainTrackSource()
-      : SubTrackSource(_nameAt(source, at));
+      : SubTrackSource(_nameAt(source, at, fallback: rowAt));
 }

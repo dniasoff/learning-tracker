@@ -54,10 +54,12 @@ ChangeLogEntry _subTrackEntry(
   Actor actor = historyTutor,
   int? actionOf,
   int? originalMinutes,
+  int? reverts,
 }) => historyEntry(
   n,
   minutes: minutes,
   originalMinutes: originalMinutes,
+  reverts: reverts,
   entity: GovernedEntity.subTrack,
   entityId: subTrackId,
   actor: actor,
@@ -327,6 +329,143 @@ void main() {
       ];
       expect(nameOf(learnRows.first), 'Rav Cohen shiur', reason: 'minute 200');
       expect(nameOf(learnRows.last), 'Rebbe', reason: 'minute 50');
+    });
+  });
+
+  group('E-3 a source is never named with a later name as historical', () {
+    final sub = historyId(7001);
+    // The sub-track was named "Rebbe" until minute 100 ("Gemara shiur"
+    // after), then "Rav Cohen shiur" from minute 500. Only the minute-500
+    // rename is on a loaded change_log page (watermark 500); the minute-100
+    // one is on an unread page.
+    ChangeLogEntry laterRename() => _subTrackEntry(
+      2,
+      minutes: 500,
+      subTrackId: sub,
+      before: {'name': 'Gemara shiur'},
+      after: {'name': 'Rav Cohen shiur'},
+    );
+
+    ChangeHistoryBuffer buffer({
+      required List<LearningEvent> events,
+      List<ChangeLogEntry> entries = const [],
+    }) => ChangeHistoryBuffer()
+      ..addChangeLogPage(
+        HistoryPage(
+          items: [laterRename(), ...entries],
+          next: const HistoryCursor(1),
+          exhausted: false,
+          watermark: historyAt(500),
+        ),
+      )
+      ..addLearningEventPage(
+        HistoryPage(
+          items: events,
+          next: null,
+          exhausted: true,
+          watermark: null,
+        ),
+      );
+
+    List<ChangeHistoryRow> rowsOf(
+      ChangeHistoryBuffer buffer, {
+      Map<String, String> names = const {},
+    }) => ChangeHistoryRowMapper(
+      settingsHistory: _ny,
+      currentSubTrackNames: names,
+    ).map(buffer.visibleItems(), buffer);
+
+    test('a void of a record older than the loaded renames names the '
+        'source as it was when the record was removed', () {
+      final b = buffer(events: [historyVoid(20, target: 1, minutes: 600)])
+        ..addLookups([historyLearn(1, minutes: 10, source: sub)]);
+      final row = rowsOf(b, names: {sub: 'Rav Cohen shiur'}).single;
+      expect(row.isVoid, isTrue);
+      expect(
+        (_learning(row).source! as SubTrackSource).name,
+        'Rav Cohen shiur',
+        reason:
+            'the minute-500 rename\'s "before" (Gemara shiur) is not the '
+            'name at minute 10: an unread rename sits between them',
+      );
+    });
+
+    test('an undo of an action older than the loaded renames names the '
+        'sub-track as it was when undone', () {
+      final b =
+          buffer(
+            events: const [],
+            entries: [
+              _subTrackEntry(
+                30,
+                minutes: 700,
+                subTrackId: sub,
+                actor: historyParent,
+                before: {'window_end': '2026-12-01'},
+                after: {'window_end': null},
+                reverts: 3,
+              ),
+            ],
+          )..addActionLookups([
+            _subTrackEntry(
+              3,
+              minutes: 20,
+              subTrackId: sub,
+              before: {'window_end': null},
+              after: {'window_end': '2026-12-01'},
+            ),
+          ]);
+      final rows = rowsOf(b);
+      final undo = rows.firstWhere((r) => r.isRevert);
+      expect(_governed(undo).primary.subjectName, 'Rav Cohen shiur');
+    });
+
+    test('a visible row with no rename since it takes the name the pages '
+        'end on, not a newer live name', () {
+      final rows = rowsOf(
+        buffer(events: [historyLearn(10, minutes: 600, source: sub)]),
+        names: {sub: 'Renamed after the history opened'},
+      );
+      final learn = rows.firstWhere(
+        (r) => r.kind == ChangeHistoryRowKind.learning,
+      );
+      expect(
+        (_learning(learn).source! as SubTrackSource).name,
+        'Rav Cohen shiur',
+      );
+    });
+
+    test('with no rename loaded, a visible row takes the name the history '
+        'opened with: no rename since its instant exists', () {
+      final rows = _rows(
+        events: [historyLearn(10, minutes: 600, source: sub)],
+        names: {sub: 'Rav Cohen shiur'},
+      );
+      expect(
+        (_learning(rows.single).source! as SubTrackSource).name,
+        'Rav Cohen shiur',
+      );
+    });
+
+    test('a record older than the sub-track\'s first name has no known '
+        'name, never today\'s', () {
+      final rows = _rows(
+        entries: [
+          _subTrackEntry(
+            1,
+            minutes: 20,
+            subTrackId: sub,
+            before: {'curriculum_id': null, 'name': null},
+            after: {'curriculum_id': 'mishnayos', 'name': 'Rebbe'},
+          ),
+        ],
+        events: [historyLearn(10, minutes: 10, source: sub)],
+        names: {sub: 'Rebbe'},
+      );
+      final learn = rows.firstWhere(
+        (r) => r.kind == ChangeHistoryRowKind.learning,
+      );
+      expect((_learning(learn).source! as SubTrackSource).name, isNull);
     });
   });
 
