@@ -1,6 +1,6 @@
-/// Riverpod provider that watches streak state and fires
-/// [AnalyticsEvent.streakMilestoneReached] the first time the
-/// currentStreak crosses each milestone threshold (7, 30, 100 days).
+/// Fires [AnalyticsEvent.streakMilestoneReached] when a curriculum's
+/// streak newly crosses a milestone (7, 30, 100 days), per curriculum
+/// (DNI-479, AD-40: `LearnerState` has no profile-wide streak).
 ///
 /// Lives in [core/analytics/] so all analytics calls are confined to this
 /// layer (Story 27.14, DNI-390).
@@ -11,123 +11,103 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
-/// Stays active while watched to monitor streak milestones for the active
-/// profile.
+/// One milestone a curriculum's streak newly reached.
+typedef StreakMilestoneCrossing = ({CurriculumId curriculum, int milestone});
+
+/// The engine-derived per-curriculum milestone transitions of one session.
 ///
-/// Reads the streak stream and fires [AnalyticsEvent.streakMilestoneReached]
-/// the first time [currentStreak] reaches or crosses each milestone value in
-/// [kStreakMilestones] within this app session.
+/// The first state observed for a curriculum is its baseline (nothing
+/// fires for a streak that was already past a milestone when the session
+/// began). After that, a milestone fires when the curriculum's current
+/// streak goes from below it to at or above it, and at most once per
+/// session per curriculum, so a re-emitted or recomputed state never
+/// fires twice. A curriculum that is not a [CurriculumId] (or has no
+/// streak) is ignored.
+class StreakMilestoneTracker {
+  final Map<CurriculumId, int> _last = {};
+  final Map<CurriculumId, Set<int>> _fired = {};
+
+  /// The crossings [state] adds since the last observed state.
+  List<StreakMilestoneCrossing> observe(LearnerState state) {
+    final out = <StreakMilestoneCrossing>[];
+    for (final MapEntry(key: key, value: curriculum)
+        in state.curricula.entries) {
+      final id = CurriculumId.fromStorageKey(key);
+      final streak = curriculum.streak;
+      if (id == null || streak == null) continue;
+      final previous = _last[id];
+      _last[id] = streak.current;
+      if (previous == null) continue;
+      final fired = _fired.putIfAbsent(id, () => <int>{});
+      for (final milestone in kStreakMilestones) {
+        if (previous < milestone &&
+            streak.current >= milestone &&
+            fired.add(milestone)) {
+          out.add((curriculum: id, milestone: milestone));
+        }
+      }
+    }
+    return out;
+  }
+}
+
+/// Watches the active learner's state while the app shell watches it, and
+/// logs each [StreakMilestoneTracker] crossing with the curriculum's
+/// `curriculum_id` enum and the milestone count only (PV-1: no profile,
+/// learner, event or content identifier).
 ///
-/// "First time in session" semantics prevent duplicate events when the
-/// provider is re-read: the set of already-fired milestones resets on
-/// provider disposal (i.e. when the active profile changes or the app
-/// restarts).
+/// Rebuilt — and the session baseline reset — on every profile switch. A
+/// tutor viewing a talmid never attributes the talmid's milestone to the
+/// tutor's analytics identity.
 ///
 /// Wire via: `ref.watch(streakMilestoneAnalyticsObserverProvider)` in the
 /// app shell to activate.
 ///
-/// Error handling: the observer is a fire-and-forget background effect. Any
-/// [Exception] from the streak source or from the analytics call is
-/// swallowed (logged at WARNING level) so a transient failure never
-/// propagates to the host [StreamProvider] or crashes the app-shell build.
-/// The one `Error` subtype swallowed the same way is the [StateError] Drift
-/// throws when a query hits a database that closed mid-teardown (the D17
-/// profile/account-swap race) — an anticipated condition, not a bug. Every
-/// other `Error` subtype (`NoSuchMethodError`, `TypeError`, `RangeError`,
-/// ...) is a genuine programming bug and is intentionally left uncaught so
-/// it propagates to the zone's `onError` handler instead of being
-/// downgraded to a warning log line (EH-4, AUD-core-analytics-04).
+/// Error handling: a fire-and-forget background effect. A learner-state
+/// error is skipped (the next complete state is observed), and an
+/// [Exception] from the analytics call is logged at WARNING level, never
+/// propagated to the app-shell build.
 final streakMilestoneAnalyticsObserverProvider =
-    StreamProvider.autoDispose<void>((ref) async* {
-      // A tutor viewing a talmid must not attribute the talmid's milestone to
-      // the tutor's analytics identity.
-      if (ref.watch(activeTutoredProfileSelectionProvider) != null) return;
-      // Registers the active profile as a dependency (even though the id
-      // itself is unused below — StreakStateService resolves it internally
-      // via `ref`) so this provider rebuilds on every profile switch,
-      // resetting `firedMilestones` and re-subscribing the stream. Without
-      // this watch, switching from profile A (already past a milestone) to
-      // profile B leaves `firedMilestones` stale and silently suppresses B's
-      // own genuine first crossing.
+    StreamProvider.autoDispose<void>((ref) {
+      if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
+        return const Stream<void>.empty();
+      }
       ref.watch(activeProfileIdProvider);
       final analytics = ref.watch(analyticsServiceProvider);
       final logger = AppLogger.instance;
+      final tracker = StreakMilestoneTracker();
 
-      final stateProvider = StreakStateService(
-        ref: ref,
-        clock: ref.watch(localDayClockProvider),
-      );
-
-      final firedMilestones = <int>{};
-
-      try {
-        await for (final state in stateProvider.watch()) {
-          try {
-            final current = state.currentStreak;
-            for (final milestone in kStreakMilestones) {
-              if (current >= milestone &&
-                  !firedMilestones.contains(milestone)) {
-                firedMilestones.add(milestone);
-                unawaited(
-                  analytics
-                      .logStreakMilestoneReached(milestone: milestone)
-                      .catchError((Object e, StackTrace st) {
-                        logger.warning(
-                          event: 'streak_milestone_analytics_log_failed',
-                          fields: {'milestone': milestone},
-                          exception: e,
-                          stackTrace: st,
-                        );
-                      }),
-                );
-              }
-            }
-          } on Exception catch (e, st) {
-            // A bad tick (e.g. unexpected state shape) must not kill the loop.
-            // AUD-core-analytics-04: typed to `on Exception` (EH-4) — a bare
-            // `Error` here (NoSuchMethodError, TypeError, RangeError, ...)
-            // signals a real bug and must propagate, not be downgraded to a
-            // warning log line.
-            logger.warning(
-              event: 'streak_milestone_analytics_tick_error',
-              exception: e,
-              stackTrace: st,
-            );
-          }
+      ref.listen<AsyncValue<LearnerState?>>(activeLearnerStateProvider, (
+        _,
+        next,
+      ) {
+        final state = next.asData?.value;
+        if (state == null) return;
+        for (final crossing in tracker.observe(state)) {
+          unawaited(
+            analytics
+                .logStreakMilestoneReached(
+                  curriculumId: crossing.curriculum.storageKey,
+                  milestone: crossing.milestone,
+                )
+                .catchError((Object e, StackTrace st) {
+                  logger.warning(
+                    event: 'streak_milestone_analytics_log_failed',
+                    fields: {'milestone': crossing.milestone},
+                    exception: e,
+                    stackTrace: st,
+                  );
+                }),
+          );
         }
-      } on Exception catch (e, st) {
-        // The streak source stream itself errored (e.g. clock failure).  Log
-        // and return — the generator yields nothing further but the
-        // StreamProvider stays in the data/loading state it last held rather
-        // than entering error state.
-        // AUD-core-analytics-04: typed to `on Exception` (EH-4); see the
-        // `on StateError` clause below for the one anticipated `Error`
-        // subtype this observer also swallows.
-        logger.warning(
-          event: 'streak_milestone_analytics_stream_error',
-          exception: e,
-          stackTrace: st,
-        );
-      } on StateError catch (e, st) {
-        // AUD-core-analytics-04: the closed-database race (D17 profile/
-        // account-swap teardown window — restoreIfEmpty or a live query
-        // hitting a Drift handle mid-close) throws `StateError`, an `Error`
-        // subtype. It is the one Error EH-4's "never catch Error subtypes"
-        // is deliberately *not* applied to here: it is an anticipated,
-        // already-regression-tested condition (see
-        // streak_milestone_analytics_observer_test.dart, R6-3 test 1), not a
-        // programming bug. Every other Error subtype is intentionally left
-        // uncaught above.
-        logger.warning(
-          event: 'streak_milestone_analytics_stream_error',
-          exception: e,
-          stackTrace: st,
-        );
-      }
+      }, fireImmediately: true);
+
+      return const Stream<void>.empty();
     });

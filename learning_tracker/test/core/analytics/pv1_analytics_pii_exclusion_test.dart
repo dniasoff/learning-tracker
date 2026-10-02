@@ -175,7 +175,10 @@ void main() {
     });
 
     test('streak_milestone_reached', () async {
-      await analytics.logStreakMilestoneReached(milestone: 30);
+      await analytics.logStreakMilestoneReached(
+        curriculumId: 'mishnayos',
+        milestone: 30,
+      );
       expectNoPiiIn(AnalyticsEvent.streakMilestoneReached);
     });
 
