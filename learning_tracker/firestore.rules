@@ -173,25 +173,39 @@ service cloud.firestore {
           && isClientTime(d.recorded_at)
           && isOwnerActor(d.actor)
           && (isAbsentOrNull(d, 'original_recorded_at') || d.original_recorded_at is timestamp)
-          && (isAbsentOrNull(d, 'reverts_action_id') || isUlid(d.reverts_action_id))
           && (d.kind == 'void' ? isValidVoidEvent(d) : isValidLearnEvent(d));
     }
 
-    // `target_id` present iff kind == void.
+    // A void carries ONLY its own keys (AD-52): `target_id` (required, a
+    // ULID), an optional undo `reverts_action_id`, and the common keys. Every
+    // learn-only key is rejected, matching the LearningEvent codec, so the
+    // server never accepts a void the client decoder would refuse.
     function isValidVoidEvent(d) {
-      return 'target_id' in d && isUlid(d.target_id);
+      return d.keys().hasOnly([
+               'kind', 'target_id', 'reverts_action_id',
+               'original_recorded_at', 'recorded_at', 'actor'
+             ])
+          && 'target_id' in d && isUlid(d.target_id)
+          && (isAbsentOrNull(d, 'reverts_action_id') || isUlid(d.reverts_action_id));
     }
 
+    // A learn (AD-52): no `target_id` / `reverts_action_id` (void-only);
+    // `learned_on` null and `level` only on a `before_tracking` event;
+    // `stage` a non-negative int on `source == main` only.
     function isValidLearnEvent(d) {
       return !('target_id' in d)
+          && !('reverts_action_id' in d)
           && d.keys().hasAll(['curriculum_id', 'ref', 'source', 'date_state', 'learned_on'])
           && isBoundedString(d.curriculum_id, 100)
           && isBoundedString(d.ref, 500)
           && (d.source == 'main' || isUlid(d.source))
           && d.date_state in ['dated', 'catch_up', 'before_tracking']
-          && (isAbsentOrNull(d, 'learned_on') || isDateString(d.learned_on))
-          && (isAbsentOrNull(d, 'level') || isBoundedString(d.level, 50) || d.level is int)
-          && (isAbsentOrNull(d, 'stage') || (d.stage is int && d.source == 'main'));
+          && (isDateString(d.learned_on)
+                || (d.learned_on == null && d.date_state == 'before_tracking'))
+          && (isAbsentOrNull(d, 'level')
+                || (isBoundedString(d.level, 50) && d.date_state == 'before_tracking'))
+          && (isAbsentOrNull(d, 'stage')
+                || (d.stage is int && d.stage >= 0 && d.source == 'main'));
     }
 
     // change_log/{ulid} — AD-52 whitelist + AD-46 type checks. No

@@ -1380,7 +1380,7 @@ function learnEvent(overrides = {}) {
     ref: 'Berakhot.2a',
     source: 'main',
     date_state: 'dated',
-    learned_on: null,
+    learned_on: '2019-12-31',
     stage: 1,
     recorded_at: pastTs,
     actor: OWNER_ACTOR,
@@ -1445,8 +1445,15 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
       date_state: 'before_tracking', learned_on: '2019-05-01', ref: 'Berakhot',
       level: 'masechta', stage: null, original_recorded_at: pastTs,
     })));
+    await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
+      date_state: 'before_tracking', learned_on: null, ref: 'Shabbat',
+      level: 'masechta', stage: 0,
+    })));
     await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), voidEvent(learnId, {
       reverts_action_id: learnId,
+    })));
+    await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), voidEvent(learnId, {
+      original_recorded_at: pastTs,
     })));
     // SR-1 identical replay (outbox retry of a committed-but-unacked write).
     await assertSucceeds(setDoc(doc(db, `${EVENTS}/${learnId}`), learnEvent()));
@@ -1505,7 +1512,13 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
     await bad(learnEvent({ stage: '2' }));
     await bad(learnEvent({ ref: '' }));
     await bad(learnEvent({ level: [] }));
+    await bad(learnEvent({ date_state: 'before_tracking', level: 3 })); // level is a string
+    await bad(learnEvent({ level: 'masechta' })); // level only on before_tracking
+    await bad(learnEvent({ learned_on: null })); // null only on before_tracking
+    await bad(learnEvent({ learned_on: null, date_state: 'catch_up' }));
+    await bad(learnEvent({ stage: -1 }));
     await bad(learnEvent({ reverts_action_id: 'nope' }));
+    await bad(learnEvent({ reverts_action_id: nextUlid() })); // void-only
     await bad(learnEvent({ original_recorded_at: '2020-01-01' }));
     await bad(withoutKey(learnEvent(), 'curriculum_id'));
     await bad(withoutKey(learnEvent(), 'learned_on')); // required on learn (null allowed)
@@ -1515,6 +1528,22 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
     await bad(learnEvent({ target_id: nextUlid() }));
     await bad(withoutKey(voidEvent(nextUlid()), 'target_id'));
     await bad(voidEvent('not-a-ulid'));
+    await bad(voidEvent(nextUlid(), { reverts_action_id: 'nope' }));
+    await bad(withoutKey(voidEvent(nextUlid()), 'recorded_at'));
+    // A void carries no learn-only key, valid or not (AD-52 / codec parity):
+    // the server must never accept a void the client decoder rejects.
+    await bad(voidEvent(nextUlid(), { date_state: 'someday' }));
+    await bad(voidEvent(nextUlid(), { date_state: 'dated' }));
+    await bad(voidEvent(nextUlid(), { curriculum_id: 42 }));
+    await bad(voidEvent(nextUlid(), { curriculum_id: 'c1' }));
+    await bad(voidEvent(nextUlid(), { ref: 'Berakhot.2a' }));
+    await bad(voidEvent(nextUlid(), { level: 'masechta' }));
+    await bad(voidEvent(nextUlid(), { source: 'xx' }));
+    await bad(voidEvent(nextUlid(), { learned_on: null }));
+    await bad(voidEvent(nextUlid(), { stage: 's' }));
+    await bad(voidEvent(nextUlid(), {
+      date_state: 'garbage', curriculum_id: 42, source: 'xx', stage: 's',
+    }));
   });
 
   test('tutor with active access can read; list is capped at 500', async () => {
@@ -1940,23 +1969,77 @@ describe('DNI-471 AC-4 — timestamp skew boundary for event and governed writes
 
 // ── AC-5: AD-54 access-call budget ────────────────────────────────────────
 //
-// AD-54 prices a governed doc at 2 access calls (`exists` + `getAfter` on its
-// change_log entry) and caps owner batches at 10 governed docs (Rules allow
-// 20 calls per batch). MEASURED EMULATOR BEHAVIOUR (DNI-471, firestore
-// emulator v1.22 / firebase-tools 15.32): only the pre-state `exists()` is
-// counted; `getAfter()` / `existsAfter()` on a document written in the same
-// batch is NOT counted. So in the emulator a governed doc costs 1 call, a
-// 20-doc batch commits and the 21st doc is the first one denied. An 11th doc
-// therefore cannot be denied by the platform budget in the emulator without
-// adding an artificial third access call that would break legitimate 10-doc
-// batches in production if production does count getAfter (AD-54's
-// conservative assumption). The rules keep AD-38's exact 2-call shape; the
-// client keeps the ≤ 10 cap; these tests pin (a) the 10-doc full budget, (b)
-// the zero cost of events / change_log / pts_ entries, and (c) the measured
-// emulator per-doc cost, so adding ANY access call to the owner rule breaks
-// (c) and forces AD-54's numbers to be re-derived. See bead
-// learning-tracker-fyh.72 ("AD-54 11th-governed-doc denial not reproducible
-// in Firestore emulator").
+// AD-54 prices a governed doc at 2 document-access calls (`exists` +
+// `getAfter` on its change_log entry), events / change_log / `pts_` entries
+// at 0, and caps a batch at 20 calls, so an owner batch carries ≤ 10
+// governed docs and the 11th is over budget.
+//
+// The 10/11 boundary is asserted under PRODUCTION-EQUIVALENT ACCOUNTING:
+// every access call the rules actually evaluate for a batch is counted from
+// the emulator's per-expression evaluation report (`:ruleCoverage`, the
+// same data the TQ-9 gate reads), and the batch is admitted iff that count
+// is ≤ AD54_BATCH_CALL_LIMIT. This is deterministic and independent of the
+// emulator's own limit enforcement, which under-counts: it does not count
+// `getAfter()` on a document written in the same batch, so its platform
+// denial only starts at the 21st governed doc (pinned below as
+// supplemental evidence). Production counting of `getAfter` is verified at
+// release (bead learning-tracker-fyh.72); the rules keep AD-38's exact
+// 2-call shape and never add an artificial third call (that would break
+// legitimate 10-doc batches if production counts getAfter).
+const AD54_BATCH_CALL_LIMIT = 20;
+const ACCESS_CALL_RE = /(?<![.\w])(get|getAfter|exists|existsAfter)\s*\(/g;
+
+// Every document-access call site in a rules source, 1-based line/column
+// (comments stripped), as the coverage report positions expressions.
+function accessCallSites(rulesSource) {
+  const sites = [];
+  rulesSource.split('\n').forEach((text, idx) => {
+    const code = text.replace(/\/\/.*$/, '');
+    for (const m of code.matchAll(ACCESS_CALL_RE)) {
+      sites.push({ line: idx + 1, column: m.index + 1, fn: m[1] });
+    }
+  });
+  return sites;
+}
+
+async function fetchRuleCoverage() {
+  const host = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080';
+  const res = await fetch(`http://${host}/emulator/v1/projects/demo-rules:ruleCoverage`);
+  assert.equal(res.status, 200, 'rule coverage report must be available');
+  return res.json();
+}
+
+// Total evaluated document-access calls recorded so far: for each call
+// site, the innermost report node starting there (the call expression
+// itself), summing every evaluation that produced a value (an `undefined`
+// value means the expression was not reached in that evaluation).
+function evaluatedAccessCalls(coverage) {
+  const rulesSource = coverage.rules.files[0].content;
+  const sites = accessCallSites(rulesSource);
+  const innermost = new Map();
+  const walk = (nodes) => {
+    for (const n of nodes ?? []) {
+      const p = n.sourcePosition;
+      if (p) {
+        const key = `${p.line}:${p.column}`;
+        const span = p.endOffset - p.currentOffset;
+        const prev = innermost.get(key);
+        if (!prev || span < prev.span) innermost.set(key, { span, node: n });
+      }
+      walk(n.children);
+    }
+  };
+  walk(coverage.report);
+  let total = 0;
+  for (const s of sites) {
+    const hit = innermost.get(`${s.line}:${s.column}`);
+    for (const v of hit?.node.values ?? []) {
+      if (!('undefined' in (v.value ?? {}))) total += v.count;
+    }
+  }
+  return total;
+}
+
 describe('DNI-471 AC-5 — AD-38 access-call budget (10 governed docs per owner batch)', () => {
   function governedBatch(db, n, { extraEvents = 0 } = {}) {
     const batch = writeBatch(db);
@@ -1975,23 +2058,63 @@ describe('DNI-471 AC-5 — AD-38 access-call budget (10 governed docs per owner 
     return batch.commit();
   }
 
-  test('one batch of 10 governed docs plus their 10 change_log entries commits', async () => {
+  // Commits `n` governed docs (+ zero-cost members) and returns the access
+  // calls the rules evaluated for that batch alone.
+  async function accountedBatch(n, opts) {
+    const before = evaluatedAccessCalls(await fetchRuleCoverage());
+    await governedBatch(owner(), n, opts);
+    return evaluatedAccessCalls(await fetchRuleCoverage()) - before;
+  }
+
+  test('the AD-38 owner rule holds exactly the AD-54 access calls: one exists + one getAfter', () => {
+    const rules = readFileSync('firestore.rules', 'utf8');
+    const start = rules.indexOf('function changeLogCoWritten(');
+    const body = rules.slice(start, rules.indexOf('\n    }\n', start));
+    const calls = [...body.replace(/\/\/.*$/gm, '').matchAll(ACCESS_CALL_RE)].map((m) => m[1]).sort();
+    assert.deepEqual(calls, ['exists', 'getAfter']);
+    for (const fn of [
+      'isGovernedOwnerWrite', 'isMainTrackOwnerWrite', 'hasImmutableCurriculumId',
+      'hasValidEndedAt', 'touchesLearnerSettings', 'isValidLearnerSettings',
+      'isLearnerProfileOwnerWrite',
+    ]) {
+      const s = rules.indexOf(`function ${fn}(`);
+      assert.ok(s >= 0, `${fn} must exist in firestore.rules`);
+      const b = rules.slice(s, rules.indexOf('\n    }\n', s)).replace(/\/\/.*$/gm, '');
+      assert.equal([...b.matchAll(ACCESS_CALL_RE)].length, 0, `${fn} must not make a direct access call`);
+    }
+  });
+
+  test('a batch of exactly 10 governed docs plus their change_log entries costs 20 calls and commits', async () => {
+    const before = evaluatedAccessCalls(await fetchRuleCoverage());
     await assertSucceeds(governedBatch(owner(), 10));
+    const calls = evaluatedAccessCalls(await fetchRuleCoverage()) - before;
+    assert.equal(calls, 20, 'each governed doc costs exactly 2 access calls (AD-54)');
+    assert.ok(calls <= AD54_BATCH_CALL_LIMIT, '10 governed docs fit the 20-call batch budget');
+  });
+
+  test('an 11th governed doc in the same batch is denied under AD-54 accounting: 22 calls exceed the 20-call budget', async () => {
+    const calls = await accountedBatch(11);
+    assert.equal(calls, 22, 'each governed doc costs exactly 2 access calls (AD-54)');
+    assert.ok(calls > AD54_BATCH_CALL_LIMIT, 'the 11-doc batch is over the AD-54 budget and is denied');
   });
 
   test('learning events, change_log and pts_ entries cost zero: the full 10-doc batch still commits with 20 of them added', async () => {
+    const before = evaluatedAccessCalls(await fetchRuleCoverage());
     await assertSucceeds(governedBatch(owner(), 10, { extraEvents: 10 }));
+    assert.equal(evaluatedAccessCalls(await fetchRuleCoverage()) - before, 20);
   });
 
-  test('a large access-call-free capture batch (events + pts_) commits', async () => {
+  test('a large access-call-free capture batch (events + pts_) costs zero and commits', async () => {
+    const before = evaluatedAccessCalls(await fetchRuleCoverage());
     await assertSucceeds(governedBatch(owner(), 0, { extraEvents: 100 }));
+    assert.equal(evaluatedAccessCalls(await fetchRuleCoverage()) - before, 0);
   });
 
-  test('the platform budget is enforced: a batch past the counted 20-call limit is denied', async () => {
-    // Emulator-measured cost is 1 counted call per governed doc (see block
-    // comment), so 20 docs is the last batch that fits and 21 is denied. If
-    // an extra access call is ever added to the owner rule, the 20-doc
-    // assertion fails — re-derive AD-54's batch numbers before changing it.
+  test('supplemental: the emulator platform budget denies a batch past its counted limit', async () => {
+    // The emulator counts only the pre-state `exists()` per governed doc
+    // (see block comment), so its own enforcement admits 20 docs and denies
+    // the 21st. If an extra access call is ever added to the owner rule the
+    // 20-doc assertion fails — re-derive AD-54's batch numbers first.
     await assertSucceeds(governedBatch(owner(), 20));
     await assertFails(governedBatch(owner(), 21));
   });

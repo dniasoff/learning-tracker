@@ -116,7 +116,7 @@ class _OwnerBatch {
         'ref': 'Berakhot.${i + 2}a',
         'source': 'main',
         'date_state': 'dated',
-        'learned_on': null,
+        'learned_on': '2026-09-01',
         'stage': 1,
         'recorded_at': recordedAt,
         'actor': actor,
