@@ -46,7 +46,9 @@ class StreakAlertService {
     required String profileId,
     DateTime Function()? clock,
     AnalyticsService? analytics,
+    bool Function(DateTime utc)? isLockedAt,
   }) : _notifications = notifications,
+       _isLockedAt = isLockedAt,
        _markers = markers,
        _profileId = profileId,
        _clock = clock ?? DateTimeFactory.nowUtc,
@@ -54,6 +56,7 @@ class StreakAlertService {
 
   final StreakAlertNotifications _notifications;
   final StreakAlertMarkers _markers;
+  final bool Function(DateTime utc)? _isLockedAt;
   final String _profileId;
   final DateTime Function() _clock;
   final AnalyticsService _analytics;
@@ -137,7 +140,9 @@ class StreakAlertService {
       await cancel(curriculumId);
       rethrow;
     }
-    if (insideLock(locks, now) || insideLock(locks, fireAt)) {
+    if (insideLock(locks, now) ||
+        insideLock(locks, fireAt) ||
+        (_isLockedAt?.call(fireAt) ?? false)) {
       await cancel(curriculumId);
       return StreakAlertOutcome.lockSuppressed;
     }

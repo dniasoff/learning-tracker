@@ -50,7 +50,11 @@ const int _batchBaseOffset = 10;
 /// Size of the rolling one-shot batch (14 days, IDs offset 10–23).
 const int _batchSize = 14;
 
-/// IDs per profile block (must be > _batchBaseOffset + _batchSize).
+/// Offset for the base of the streak-alert batch IDs within a profile's
+/// block (DNI-481 AC-5: 14 lock-filtered one-shots, IDs offset 30–43).
+const int _streakBatchBaseOffset = 30;
+
+/// IDs per profile block (must be > _streakBatchBaseOffset + _batchSize).
 const int _idsPerProfile = 1000;
 
 /// Number of possible non-zero blocks a profile can hash into.
@@ -98,6 +102,49 @@ int streakAlertIdForProfile(String profileId) =>
 /// Returns the base notification ID for the batch reminders of [profileId].
 int batchBaseIdForProfile(String profileId) =>
     _blockForProfile(profileId) * _idsPerProfile + _batchBaseOffset;
+
+/// Returns the base notification ID for the streak-alert batch of
+/// [profileId] (offsets 30–43 of its block).
+int streakAlertBatchBaseIdForProfile(String profileId) =>
+    _blockForProfile(profileId) * _idsPerProfile + _streakBatchBaseOffset;
+
+/// The next [days] daily fire-times at [hour]:[minute] from [now] — the
+/// first one today when still ahead of [now], else tomorrow — minus every
+/// one inside a Sacred Time lock ([isLockedAt], judged on the UTC instant;
+/// bounds inclusive). DNI-481 AC-5: a recurring notification is scheduled
+/// as these one-shots, so no occurrence fires inside a future lock even
+/// while the app stays closed.
+List<tz.TZDateTime> lockFilteredDailyFireTimes({
+  required tz.TZDateTime now,
+  required int hour,
+  required int minute,
+  int days = _batchSize,
+  bool Function(DateTime utc)? isLockedAt,
+}) {
+  final first = tz.TZDateTime(
+    now.location,
+    now.year,
+    now.month,
+    now.day,
+    hour,
+    minute,
+  );
+  final startDay = first.isBefore(now) ? 1 : 0;
+  final result = <tz.TZDateTime>[];
+  for (var day = startDay; day < startDay + days; day++) {
+    final candidate = tz.TZDateTime(
+      now.location,
+      now.year,
+      now.month,
+      now.day + day,
+      hour,
+      minute,
+    );
+    if (isLockedAt?.call(candidate.toUtc()) ?? false) continue;
+    result.add(candidate);
+  }
+  return result;
+}
 
 /// Payload used when a streak protection notification is tapped.
 const String streakAlertPayload = 'streak_protection';
@@ -278,20 +325,32 @@ class NotificationGateway {
     }
   }
 
-  /// Schedule a daily streak protection alert for [profileId] at
-  /// [hour]:[minute].
+  /// Schedule the streak protection alert for [profileId] at
+  /// [hour]:[minute] as a rolling batch of one-shots: the next [_batchSize]
+  /// daily occurrences (the first today when still ahead), minus every one
+  /// that falls inside a Sacred Time lock ([isLockedAt]; DNI-481 AC-5 — the
+  /// same predicate as the lock overlay). A repeating alert would fire
+  /// inside a future lock while the app stays closed; these never do.
   ///
-  /// Uses the per-profile streak-alert ID block (`profileId*1000 + 1`) and a
-  /// `streak_protection:<profileId>` payload so the tap handler can switch to
-  /// the correct profile. Mirrors [scheduleDailyReminderForProfile].
+  /// Uses the per-profile streak-alert batch ID block
+  /// (`block*1000 + 30..43`) and a `streak_protection:<profileId>` payload
+  /// so the tap handler can switch to the correct profile. Any earlier
+  /// schedule (batch or the legacy repeating id) is cancelled first.
   Future<void> scheduleStreakAlertForProfile({
     required String profileId,
     required int hour,
     required int minute,
     required String body,
     String title = 'Streak at Risk!',
+    bool Function(DateTime utc)? isLockedAt,
   }) async {
-    final scheduledTime = _nextInstanceOfTime(hour, minute);
+    await cancelStreakAlertForProfile(profileId);
+    final fireTimes = lockFilteredDailyFireTimes(
+      now: tz.TZDateTime.now(tz.local),
+      hour: hour,
+      minute: minute,
+      isLockedAt: isLockedAt,
+    );
 
     const androidDetails = AndroidNotificationDetails(
       _streakChannelId,
@@ -302,21 +361,28 @@ class NotificationGateway {
     );
     const notificationDetails = NotificationDetails(android: androidDetails);
 
-    await _plugin.zonedSchedule(
-      id: streakAlertIdForProfile(profileId),
-      title: title,
-      body: body,
-      scheduledDate: scheduledTime,
-      notificationDetails: notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-      payload: '$streakAlertPayload:$profileId',
-    );
+    final baseId = streakAlertBatchBaseIdForProfile(profileId);
+    for (var i = 0; i < fireTimes.length && i < _batchSize; i++) {
+      await _plugin.zonedSchedule(
+        id: baseId + i,
+        title: title,
+        body: body,
+        scheduledDate: fireTimes[i],
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: '$streakAlertPayload:$profileId',
+      );
+    }
   }
 
-  /// Cancel the streak protection alert for [profileId].
+  /// Cancel the streak protection alert for [profileId]: its one-shot
+  /// batch and the legacy repeating alert id (`block*1000 + 1`).
   Future<void> cancelStreakAlertForProfile(String profileId) async {
     await _plugin.cancel(id: streakAlertIdForProfile(profileId));
+    final baseId = streakAlertBatchBaseIdForProfile(profileId);
+    for (var i = 0; i < _batchSize; i++) {
+      await _plugin.cancel(id: baseId + i);
+    }
   }
 
   /// Get the next instance of the given time (today or tomorrow).

@@ -522,6 +522,7 @@ StreakAlertService streakAlertService(Ref ref, String profileId) {
     markers: ref.watch(streakAlertMarkersProvider),
     profileId: profileId,
     analytics: ref.watch(analyticsServiceProvider),
+    isLockedAt: ref.watch(deviceLockPredicateProvider),
   );
 }
 

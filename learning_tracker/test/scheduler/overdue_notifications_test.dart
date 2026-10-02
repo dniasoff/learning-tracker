@@ -130,6 +130,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
     required int minute,
     required String body,
     String title = 'Streak at Risk!',
+    bool Function(DateTime utc)? isLockedAt,
   }) async {}
 
   @override
