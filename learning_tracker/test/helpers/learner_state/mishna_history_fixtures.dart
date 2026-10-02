@@ -265,12 +265,12 @@ final class GatedLearningCommands implements LearningCommands {
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
-    String? nextYearOf,
+    bool addNextYear = false,
   }) => _held(
     () => inner.createSubTrack(
       draft,
       subTrackId: subTrackId,
-      nextYearOf: nextYearOf,
+      addNextYear: addNextYear,
     ),
   );
 

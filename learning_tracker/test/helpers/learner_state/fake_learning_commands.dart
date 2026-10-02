@@ -193,11 +193,11 @@ final class FakeLearningCommands implements LearningCommands {
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
-    String? nextYearOf,
+    bool addNextYear = false,
   }) async => _record('createSubTrack', {
     'draft': draft,
     'subTrackId': subTrackId,
-    'nextYearOf': nextYearOf,
+    'addNextYear': addNextYear,
   }, changes: 1);
 
   @override

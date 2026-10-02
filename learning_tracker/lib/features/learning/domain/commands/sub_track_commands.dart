@@ -243,10 +243,13 @@ final class SubTrackCommands {
   );
 
   /// Creates a sub-track from [draft]. [subTrackId] is the new doc ULID
-  /// (minted when omitted); it is the entry's `entity_id`.
+  /// (minted when omitted); it is the entry's `entity_id`. [addNextYear]
+  /// reports the create as *Add next year* (Story 2.8) in
+  /// `subtrack_lifecycle`; the write is identical.
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
+    bool addNextYear = false,
   }) async {
     if (actor.role == ActorRole.child) return const CaptureResult.childLimit();
     final id = subTrackId ?? _newId();
@@ -287,7 +290,9 @@ final class SubTrackCommands {
         ),
       ),
       candidate,
-      SubTrackLifecycleAction.create,
+      addNextYear
+          ? SubTrackLifecycleAction.addNextYear
+          : SubTrackLifecycleAction.create,
     );
   }
 
