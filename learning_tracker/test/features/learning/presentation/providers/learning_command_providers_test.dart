@@ -386,3 +386,10 @@ final class _UnreadableSettings implements LearnerSettingsReader {
   Stream<LearnerSettings> watch(LearnerScope scope) =>
       Stream.error(const FormatException('no time_zone'));
 }
+
+/// A learner whose settings doc cannot be read.
+final class _UnreadableSettings implements LearnerSettingsReader {
+  @override
+  Stream<LearnerSettings> watch(LearnerScope scope) =>
+      Stream.error(const FormatException('no time_zone'));
+}
