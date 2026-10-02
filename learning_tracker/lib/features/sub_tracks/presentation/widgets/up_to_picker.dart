@@ -429,10 +429,14 @@ class UpToActionButton extends StatefulWidget {
     super.key,
     required this.semanticsLabel,
     required this.onOpen,
+    this.label,
   });
 
   /// The screen-reader label ("Record up to, School").
   final String semanticsLabel;
+
+  /// The visible label; "Up to…" when null.
+  final String? label;
 
   /// Opens the picker and completes when it closes; null disables.
   final Future<void> Function()? onOpen;
@@ -473,7 +477,9 @@ class _UpToActionButtonState extends State<UpToActionButton> {
             minimumSize: const Size(48, 48),
           ),
           onPressed: enabled ? _open : null,
-          child: Text(AppLocalizations.of(context)!.upToPickerAction),
+          child: Text(
+            widget.label ?? AppLocalizations.of(context)!.upToPickerAction,
+          ),
         ),
       ),
     );

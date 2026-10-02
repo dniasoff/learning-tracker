@@ -126,6 +126,7 @@ class LearningScreen extends ConsumerWidget {
                     ),
                     const ErevPlannedSlot(),
                     const AlsoLearningSlot(),
+                    const MainTrackUpToActions(),
                     const SubTrackCaptureSection(),
                     const SizedBox(height: 36),
                     const _BrowseSection(),
