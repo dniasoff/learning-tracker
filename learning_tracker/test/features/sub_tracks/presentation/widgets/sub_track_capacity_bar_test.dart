@@ -8,9 +8,9 @@ import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dar
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_ground_projection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_capacity_bar.dart';
 
-import '../../../helpers/learner_state/engine_fixtures.dart';
-import '../../../helpers/pump_app.dart';
-import '../sub_track_detail_harness.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/pump_app.dart';
+import '../../sub_track_detail_harness.dart';
 
 SubTrackDetail _detail({
   required SubTrackDetailRole role,
