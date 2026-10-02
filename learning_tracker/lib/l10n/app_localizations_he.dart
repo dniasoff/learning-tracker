@@ -1775,6 +1775,254 @@ class AppLocalizationsHe extends AppLocalizations {
   String get changeParentPin => 'שינוי קוד הורה';
 
   @override
+  String changeHistoryAlsoChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ועוד $count שינויים בפעולה זו',
+      one: 'ועוד שינוי אחד בפעולה זו',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get changeHistoryBeforeTracking => 'לפני תחילת המעקב';
+
+  @override
+  String get changeHistoryDateCatchUp => 'השלמה';
+
+  @override
+  String get changeHistoryDayToday => 'היום';
+
+  @override
+  String get changeHistoryDayYesterday => 'אתמול';
+
+  @override
+  String changeHistoryDeadlineSet(String date) {
+    return 'שינה את תאריך היעד ל־$date';
+  }
+
+  @override
+  String get changeHistoryDetailsTitle => 'פרטי השינוי';
+
+  @override
+  String get changeHistoryDetailsWhat => 'מה השתנה';
+
+  @override
+  String get changeHistoryDetailsWhen => 'מתי';
+
+  @override
+  String get changeHistoryDetailsWho => 'בוצע על ידי';
+
+  @override
+  String get changeHistoryEmpty => 'אין שינויים עדיין.';
+
+  @override
+  String get changeHistoryFieldDates => 'תאריכים';
+
+  @override
+  String get changeHistoryFieldGround => 'מה הוא כולל';
+
+  @override
+  String get changeHistoryFieldLocation => 'מיקום';
+
+  @override
+  String get changeHistoryFieldName => 'שם';
+
+  @override
+  String get changeHistoryFieldOther => 'הגדרות';
+
+  @override
+  String get changeHistoryFieldPace => 'קצב';
+
+  @override
+  String get changeHistoryFieldShabbos => 'לימוד בשבת';
+
+  @override
+  String get changeHistoryFieldTimeZone => 'אזור זמן';
+
+  @override
+  String get changeHistoryFilterAll => 'הכול';
+
+  @override
+  String get changeHistoryFilterLabel => 'הצג';
+
+  @override
+  String get changeHistoryFilterLearning => 'לימוד';
+
+  @override
+  String get changeHistoryFilterParent => 'הורה';
+
+  @override
+  String get changeHistoryFilterTutor => 'מורה';
+
+  @override
+  String get changeHistoryGoalChanged => 'שינה את היעד';
+
+  @override
+  String get changeHistoryGoalCreated => 'הגדיר יעד';
+
+  @override
+  String get changeHistoryGoalEnded => 'הסיר את היעד';
+
+  @override
+  String changeHistoryLearned(String refs, String source) {
+    return 'למד $refs · $source';
+  }
+
+  @override
+  String get changeHistoryLockIgnored => 'נשמר, לא נספר — נרשם בשבת/יום טוב';
+
+  @override
+  String get changeHistoryMainTrackChanged => 'שינה את המסלול הראשי';
+
+  @override
+  String get changeHistoryMainTrackCreated => 'הוסיף את המסלול הראשי';
+
+  @override
+  String get changeHistoryMainTrackEnded => 'הסיר את המסלול הראשי';
+
+  @override
+  String get changeHistoryNoMatches => 'אין שינויים התואמים לסינון זה.';
+
+  @override
+  String get changeHistoryNotAvailable =>
+      'היסטוריית השינויים פתוחה להורה בלבד.';
+
+  @override
+  String get changeHistoryNotified => 'ההורה קיבל התראה';
+
+  @override
+  String get changeHistoryOrderChanged => 'שינה את סדר הלימוד';
+
+  @override
+  String get changeHistoryProgramChanged => 'שינה את התוכנית';
+
+  @override
+  String changeHistoryRefList(String first, String second) {
+    return '$first, $second';
+  }
+
+  @override
+  String changeHistoryRefRange(String first, String last, int count) {
+    return '$first – $last ($count)';
+  }
+
+  @override
+  String changeHistoryRemovedLearning(String refs, String source) {
+    return 'הסיר $refs · $source';
+  }
+
+  @override
+  String get changeHistoryRemovedUnknown => 'הסיר רישום לימוד קודם';
+
+  @override
+  String changeHistoryReverted(String summary) {
+    return 'שינוי שבוטל: $summary';
+  }
+
+  @override
+  String get changeHistoryRoleChild => 'ילד';
+
+  @override
+  String get changeHistoryRoleParent => 'הורה';
+
+  @override
+  String get changeHistoryRoleTutor => 'מורה';
+
+  @override
+  String get changeHistoryScopeChanged => 'שינה את היקף המסלול הראשי';
+
+  @override
+  String get changeHistorySelectPrompt => 'בחרו שינוי כדי לראות את פרטיו.';
+
+  @override
+  String changeHistorySettingsChanged(String fields) {
+    return 'שינה הגדרות לומד: $fields';
+  }
+
+  @override
+  String get changeHistorySettingsSubtitle =>
+      'כל שינוי במסלולים, ביעדים ובלימוד, על ידי כל אחד';
+
+  @override
+  String get changeHistorySourceMain => 'מסלול ראשי';
+
+  @override
+  String get changeHistoryStagesChanged => 'שינה את שלבי החזרה';
+
+  @override
+  String get changeHistoryStudyDaysChanged => 'שינה את ימי הלימוד';
+
+  @override
+  String changeHistorySubTrackChanged(String name, String fields) {
+    return 'שינה את $name: $fields';
+  }
+
+  @override
+  String changeHistorySubTrackCreated(String name) {
+    return 'הוסיף את $name';
+  }
+
+  @override
+  String changeHistorySubTrackEnded(String name) {
+    return 'סיים את $name';
+  }
+
+  @override
+  String changeHistorySubTrackRemoved(String name) {
+    return 'הסיר את $name';
+  }
+
+  @override
+  String changeHistorySubTrackRenamed(String name) {
+    return 'שינה שם של מסלול משנה ל־$name';
+  }
+
+  @override
+  String get changeHistorySubTrackUnnamed => 'מסלול משנה';
+
+  @override
+  String get changeHistoryTitle => 'היסטוריית שינויים';
+
+  @override
+  String get changeHistoryUndo => 'ביטול';
+
+  @override
+  String get changeHistoryUndone => 'בוטל';
+
+  @override
+  String changeHistoryUndoneBy(String name, String time) {
+    return 'בוטל על ידי $name · $time';
+  }
+
+  @override
+  String changeHistoryUpdates(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count עדכונים',
+      one: 'עדכון אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String changeHistoryVoidedBy(String name, String time) {
+    return 'הוסר על ידי $name · $time';
+  }
+
+  @override
+  String changeHistoryVoidedSome(
+    int count,
+    int total,
+    String name,
+    String time,
+  ) {
+    return '$count מתוך $total הוסרו על ידי $name · $time';
+  }
+
+  @override
   String get pinChangedSuccessfully => 'הקוד שונה בהצלחה';
 
   @override

@@ -3191,6 +3191,401 @@ abstract class AppLocalizations {
   /// **'Change Parent PIN'**
   String get changeParentPin;
 
+  /// No description provided for @changeHistoryAlsoChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{+1 more change in this action} other{+{count} more changes in this action}}'**
+  String changeHistoryAlsoChanged(int count);
+
+  /// No description provided for @changeHistoryBeforeTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Before tracking'**
+  String get changeHistoryBeforeTracking;
+
+  /// No description provided for @changeHistoryDateCatchUp.
+  ///
+  /// In en, this message translates to:
+  /// **'catch-up'**
+  String get changeHistoryDateCatchUp;
+
+  /// No description provided for @changeHistoryDayToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get changeHistoryDayToday;
+
+  /// No description provided for @changeHistoryDayYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get changeHistoryDayYesterday;
+
+  /// No description provided for @changeHistoryDeadlineSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the deadline to {date}'**
+  String changeHistoryDeadlineSet(String date);
+
+  /// No description provided for @changeHistoryDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change details'**
+  String get changeHistoryDetailsTitle;
+
+  /// No description provided for @changeHistoryDetailsWhat.
+  ///
+  /// In en, this message translates to:
+  /// **'What changed'**
+  String get changeHistoryDetailsWhat;
+
+  /// No description provided for @changeHistoryDetailsWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get changeHistoryDetailsWhen;
+
+  /// No description provided for @changeHistoryDetailsWho.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed by'**
+  String get changeHistoryDetailsWho;
+
+  /// No description provided for @changeHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes yet.'**
+  String get changeHistoryEmpty;
+
+  /// No description provided for @changeHistoryFieldDates.
+  ///
+  /// In en, this message translates to:
+  /// **'dates'**
+  String get changeHistoryFieldDates;
+
+  /// No description provided for @changeHistoryFieldGround.
+  ///
+  /// In en, this message translates to:
+  /// **'what it covers'**
+  String get changeHistoryFieldGround;
+
+  /// No description provided for @changeHistoryFieldLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'location'**
+  String get changeHistoryFieldLocation;
+
+  /// No description provided for @changeHistoryFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'name'**
+  String get changeHistoryFieldName;
+
+  /// No description provided for @changeHistoryFieldOther.
+  ///
+  /// In en, this message translates to:
+  /// **'settings'**
+  String get changeHistoryFieldOther;
+
+  /// No description provided for @changeHistoryFieldPace.
+  ///
+  /// In en, this message translates to:
+  /// **'pace'**
+  String get changeHistoryFieldPace;
+
+  /// No description provided for @changeHistoryFieldShabbos.
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos learning'**
+  String get changeHistoryFieldShabbos;
+
+  /// No description provided for @changeHistoryFieldTimeZone.
+  ///
+  /// In en, this message translates to:
+  /// **'time zone'**
+  String get changeHistoryFieldTimeZone;
+
+  /// No description provided for @changeHistoryFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get changeHistoryFilterAll;
+
+  /// No description provided for @changeHistoryFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get changeHistoryFilterLabel;
+
+  /// No description provided for @changeHistoryFilterLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning'**
+  String get changeHistoryFilterLearning;
+
+  /// No description provided for @changeHistoryFilterParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent'**
+  String get changeHistoryFilterParent;
+
+  /// No description provided for @changeHistoryFilterTutor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor'**
+  String get changeHistoryFilterTutor;
+
+  /// No description provided for @changeHistoryGoalChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the goal'**
+  String get changeHistoryGoalChanged;
+
+  /// No description provided for @changeHistoryGoalCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a goal'**
+  String get changeHistoryGoalCreated;
+
+  /// No description provided for @changeHistoryGoalEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed the goal'**
+  String get changeHistoryGoalEnded;
+
+  /// No description provided for @changeHistoryLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Learned {refs} · {source}'**
+  String changeHistoryLearned(String refs, String source);
+
+  /// No description provided for @changeHistoryLockIgnored.
+  ///
+  /// In en, this message translates to:
+  /// **'kept, not counted — recorded during Shabbos/Yom Tov'**
+  String get changeHistoryLockIgnored;
+
+  /// No description provided for @changeHistoryMainTrackChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the main track'**
+  String get changeHistoryMainTrackChanged;
+
+  /// No description provided for @changeHistoryMainTrackCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Added the main track'**
+  String get changeHistoryMainTrackCreated;
+
+  /// No description provided for @changeHistoryMainTrackEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed the main track'**
+  String get changeHistoryMainTrackEnded;
+
+  /// No description provided for @changeHistoryNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes match this filter.'**
+  String get changeHistoryNoMatches;
+
+  /// No description provided for @changeHistoryNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Change history is open to the parent only.'**
+  String get changeHistoryNotAvailable;
+
+  /// No description provided for @changeHistoryNotified.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent notified'**
+  String get changeHistoryNotified;
+
+  /// No description provided for @changeHistoryOrderChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the learning order'**
+  String get changeHistoryOrderChanged;
+
+  /// No description provided for @changeHistoryProgramChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the program'**
+  String get changeHistoryProgramChanged;
+
+  /// No description provided for @changeHistoryRefList.
+  ///
+  /// In en, this message translates to:
+  /// **'{first}, {second}'**
+  String changeHistoryRefList(String first, String second);
+
+  /// No description provided for @changeHistoryRefRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{first} – {last} ({count})'**
+  String changeHistoryRefRange(String first, String last, int count);
+
+  /// No description provided for @changeHistoryRemovedLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {refs} · {source}'**
+  String changeHistoryRemovedLearning(String refs, String source);
+
+  /// No description provided for @changeHistoryRemovedUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed an earlier learning record'**
+  String get changeHistoryRemovedUnknown;
+
+  /// No description provided for @changeHistoryReverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverted change: {summary}'**
+  String changeHistoryReverted(String summary);
+
+  /// No description provided for @changeHistoryRoleChild.
+  ///
+  /// In en, this message translates to:
+  /// **'Child'**
+  String get changeHistoryRoleChild;
+
+  /// No description provided for @changeHistoryRoleParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent'**
+  String get changeHistoryRoleParent;
+
+  /// No description provided for @changeHistoryRoleTutor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor'**
+  String get changeHistoryRoleTutor;
+
+  /// No description provided for @changeHistoryScopeChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed what the main track covers'**
+  String get changeHistoryScopeChanged;
+
+  /// No description provided for @changeHistorySelectPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a change to see its details.'**
+  String get changeHistorySelectPrompt;
+
+  /// No description provided for @changeHistorySettingsChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed learner settings: {fields}'**
+  String changeHistorySettingsChanged(String fields);
+
+  /// No description provided for @changeHistorySettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Every change to tracks, goals and learning, by anyone'**
+  String get changeHistorySettingsSubtitle;
+
+  /// No description provided for @changeHistorySourceMain.
+  ///
+  /// In en, this message translates to:
+  /// **'Main track'**
+  String get changeHistorySourceMain;
+
+  /// No description provided for @changeHistoryStagesChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the review stages'**
+  String get changeHistoryStagesChanged;
+
+  /// No description provided for @changeHistoryStudyDaysChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the study days'**
+  String get changeHistoryStudyDaysChanged;
+
+  /// No description provided for @changeHistorySubTrackChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed {name}: {fields}'**
+  String changeHistorySubTrackChanged(String name, String fields);
+
+  /// No description provided for @changeHistorySubTrackCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {name}'**
+  String changeHistorySubTrackCreated(String name);
+
+  /// No description provided for @changeHistorySubTrackEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended {name}'**
+  String changeHistorySubTrackEnded(String name);
+
+  /// No description provided for @changeHistorySubTrackRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {name}'**
+  String changeHistorySubTrackRemoved(String name);
+
+  /// No description provided for @changeHistorySubTrackRenamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Renamed a sub-track to {name}'**
+  String changeHistorySubTrackRenamed(String name);
+
+  /// No description provided for @changeHistorySubTrackUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'a sub-track'**
+  String get changeHistorySubTrackUnnamed;
+
+  /// No description provided for @changeHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change history'**
+  String get changeHistoryTitle;
+
+  /// No description provided for @changeHistoryUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get changeHistoryUndo;
+
+  /// No description provided for @changeHistoryUndone.
+  ///
+  /// In en, this message translates to:
+  /// **'Undone'**
+  String get changeHistoryUndone;
+
+  /// No description provided for @changeHistoryUndoneBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Undone by {name} · {time}'**
+  String changeHistoryUndoneBy(String name, String time);
+
+  /// No description provided for @changeHistoryUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 update} other{{count} updates}}'**
+  String changeHistoryUpdates(int count);
+
+  /// No description provided for @changeHistoryVoidedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed by {name} · {time}'**
+  String changeHistoryVoidedBy(String name, String time);
+
+  /// No description provided for @changeHistoryVoidedSome.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {total} removed by {name} · {time}'**
+  String changeHistoryVoidedSome(
+    int count,
+    int total,
+    String name,
+    String time,
+  );
+
   /// No description provided for @pinChangedSuccessfully.
   ///
   /// In en, this message translates to:
