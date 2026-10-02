@@ -59,6 +59,21 @@ final class AddTrackPlan {
   final GoalEntity? goal;
 }
 
+/// What one Add track action did.
+final class AddTrackOutcome {
+  /// Creates the outcome.
+  const AddTrackOutcome({required this.actionId, this.reAdded = false});
+
+  /// The governed action id, or null when nothing changed.
+  final String? actionId;
+
+  /// Whether the curriculum's track had been removed and the action
+  /// re-added it (AD-38, ruling B13): its prior config was restored and
+  /// the plan's config was NOT applied (only entities the removed track
+  /// never had — stages, study days — are seeded from the plan).
+  final bool reAdded;
+}
+
 /// Writes the Add track action.
 abstract interface class AddTrackActionRepository {
   /// Writes [plan] as ONE governed action: the `mainTrack` (activated, or
@@ -69,8 +84,16 @@ abstract interface class AddTrackActionRepository {
   /// governed docs (AD-54; an entity over that budget sends the whole
   /// action through the online-only path).
   ///
-  /// Returns the action id, or null when nothing changed. Throws when the
-  /// backend is not ready or the commands refuse the action (e.g. a goal on
-  /// a calendar-program curriculum, or online-only while offline).
-  Future<String?> applyAddTrack(AddTrackPlan plan);
+  /// **Re-add (AD-38, ruling B13).** When [AddTrackPlan.curriculumId]'s
+  /// track was removed (`ended_at` set), the action is a re-add: the
+  /// `mainTrack` change only clears `ended_at` (keeping its lifecycle
+  /// stamps), the removed track's stages, study days, scope, program and
+  /// goal are kept as they were, and only a config entity the track never
+  /// had (no live stages / no live study days) is seeded from [plan].
+  /// Sub-tracks ended by the removal stay ended.
+  ///
+  /// Throws when the backend is not ready or the commands refuse the
+  /// action (e.g. a goal on a calendar-program curriculum, or online-only
+  /// while offline).
+  Future<AddTrackOutcome> applyAddTrack(AddTrackPlan plan);
 }

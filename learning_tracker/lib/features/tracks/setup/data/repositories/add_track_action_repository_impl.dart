@@ -4,10 +4,18 @@
 /// `planSetScopes`, `planSetProgram` / `planRemoveProgram`, `planSetGoal`)
 /// and hands them, in action order, to `LearningCommands
 /// .applyGovernedChange` as ONE action through the owner governed writer.
+///
+/// Adding a removed curriculum is a re-add (AD-38, ruling B13): see
+/// [AddTrackActionRepository.applyAddTrack].
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -39,7 +47,7 @@ final class FirestoreAddTrackActionRepository
   final DateTime Function() _clock;
 
   @override
-  Future<String?> applyAddTrack(AddTrackPlan plan) async {
+  Future<AddTrackOutcome> applyAddTrack(AddTrackPlan plan) async {
     final tracks = await _ref.read(
       firestoreCurriculumTrackRepositoryProvider.future,
     );
@@ -66,14 +74,68 @@ final class FirestoreAddTrackActionRepository
     }
 
     final curriculumId = plan.curriculumId;
+    final activation = await tracks.planActivateTrack(curriculumId);
+    final List<GovernedEntityChange> changes;
+    if (activation.reAdded) {
+      // AD-38 / ruling B13: a re-add restores the removed track's prior
+      // config — only a config entity it never had is seeded from the plan
+      // (a track always needs stages and study days to schedule).
+      final hasStages = (await stages.getStagesForCurriculum(
+        curriculumId,
+      )).isNotEmpty;
+      final hasStudyDays = (await studyDays.getConfigsForCurriculum(
+        curriculumId,
+      )).isNotEmpty;
+      changes = [
+        activation.change,
+        if (!hasStages)
+          ?await stages.planReplaceStages(curriculumId, plan.stages),
+        if (!hasStudyDays)
+          ?await studyDays.planReplaceAll(
+            curriculumId: curriculumId,
+            studyDays: plan.studyDays,
+          ),
+      ];
+    } else {
+      changes = await _planNewTrack(
+        plan,
+        activation.change,
+        stages: stages,
+        studyDays: studyDays,
+        scopes: scopes,
+        programs: programs,
+        goals: goals,
+      );
+    }
+
+    final writer = _ref.read(ownerGovernedWriterProvider);
+    final success = await applyOwnerAction(writer, GovernedAction(changes));
+    return AddTrackOutcome(
+      actionId: success.actionId,
+      reAdded: activation.reAdded,
+    );
+  }
+
+  /// The full Add track action for a track that is new (or live but not
+  /// active): [mainTrack] then every config entity of [plan].
+  Future<List<GovernedEntityChange>> _planNewTrack(
+    AddTrackPlan plan,
+    GovernedEntityChange mainTrack, {
+    required FirestoreStageDefinitionRepository stages,
+    required FirestoreStudyDayConfigRepository studyDays,
+    required FirestoreCurriculumScopeRepository scopes,
+    required FirestoreProfileProgramRepository programs,
+    required FirestoreGoalRepository goals,
+  }) async {
+    final curriculumId = plan.curriculumId;
     final now = _clock();
     final program = plan.program;
     // AD-43 / AD-45: on a calendar-program curriculum the calendar sets the
     // pace, so the action ends any goal instead of writing one (a goal
     // there would be rejected by validation).
     final goal = program == null ? plan.goal : null;
-    final changes = <GovernedEntityChange>[
-      (await tracks.planActivateTrack(curriculumId)).$1,
+    return [
+      mainTrack,
       ?await stages.planReplaceStages(curriculumId, plan.stages),
       ?await studyDays.planReplaceAll(
         curriculumId: curriculumId,
@@ -105,9 +167,5 @@ final class FirestoreAddTrackActionRepository
             ),
       ),
     ];
-
-    final writer = _ref.read(ownerGovernedWriterProvider);
-    final success = await applyOwnerAction(writer, GovernedAction(changes));
-    return success.actionId;
   }
 }

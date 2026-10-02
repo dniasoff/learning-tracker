@@ -12,11 +12,17 @@ final class RecordingAddTrackActions implements AddTrackActionRepository {
   /// When set, [applyAddTrack] throws it.
   Exception? failWith;
 
+  /// Whether the next actions report a re-add of a removed track.
+  bool reAdded = false;
+
   @override
-  Future<String?> applyAddTrack(AddTrackPlan plan) async {
+  Future<AddTrackOutcome> applyAddTrack(AddTrackPlan plan) async {
     final error = failWith;
     if (error != null) throw error;
     plans.add(plan);
-    return 'action-${plans.length}';
+    return AddTrackOutcome(
+      actionId: 'action-${plans.length}',
+      reAdded: reAdded,
+    );
   }
 }

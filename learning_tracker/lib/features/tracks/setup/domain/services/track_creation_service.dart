@@ -36,8 +36,12 @@ const kDefaultStudyDays = <int, String>{
 /// written as ONE owner action through [AddTrackActionRepository]: one
 /// change-log entry per entity, all sharing one `action_id`, each entity in
 /// its own self-contained batch of at most 10 governed docs, in action
-/// order, with a retry re-sending the identical batch (same ids). Adding a
-/// curriculum whose track was removed re-adds it (clears `ended_at`).
+/// order, with a retry re-sending the identical batch (same ids).
+///
+/// Adding a curriculum whose track was removed re-adds it (AD-38, ruling
+/// B13): `ended_at` is cleared and the prior config is kept, so the flow's
+/// own config (and the program's starting bookmark) is not applied — see
+/// [AddTrackActionRepository.applyAddTrack].
 ///
 /// The starting bookmark of a program track is not a governed entity
 /// (bookmarks are retired by AD-49); it is written after the action, as
@@ -64,12 +68,13 @@ class TrackCreationService {
   /// governed action.
   Future<void> createTrack({required AddTrackResult result}) async {
     final plan = planFor(result);
-    await _actionRepository.applyAddTrack(plan);
+    final outcome = await _actionRepository.applyAddTrack(plan);
 
     // The bookmark is a SEPARATE, non-governed write (not part of the
     // program enrolment); `tracking_start_ref` is the durable record of the
-    // chosen starting ref.
-    final bookmarkRef = plan.program?.trackingStartRef;
+    // chosen starting ref. A re-add keeps the prior program, so the plan's
+    // starting ref was not applied and no bookmark is written for it.
+    final bookmarkRef = outcome.reAdded ? null : plan.program?.trackingStartRef;
     if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
       await _bookmarkRepository.setBookmark(
         curriculumId: result.curriculumId,

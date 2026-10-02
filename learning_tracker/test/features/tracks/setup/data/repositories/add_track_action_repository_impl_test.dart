@@ -101,7 +101,7 @@ void main() {
 
   test('one action: an entry per entity, all sharing the action id, in '
       'action order', () async {
-    final actionId = await repo.applyAddTrack(
+    final actionId = (await repo.applyAddTrack(
       AddTrackPlan(
         curriculumId: _c,
         stages: _stages(3),
@@ -116,7 +116,7 @@ void main() {
           updatedAt: governedTestNow,
         ),
       ),
-    );
+    )).actionId;
 
     final result = writer.results.single as CaptureSuccess;
     expect(actionId, result.actionId);
@@ -168,7 +168,7 @@ void main() {
 
   test('an oversized Add track with a new goal goes online as one action '
       'the callable accepts (its field specs allow every key sent)', () async {
-    final actionId = await repo.applyAddTrack(
+    final actionId = (await repo.applyAddTrack(
       AddTrackPlan(
         curriculumId: _c,
         // 11 stages: one entity over the 10-doc budget sends the whole
@@ -185,7 +185,7 @@ void main() {
           updatedAt: governedTestNow,
         ),
       ),
-    );
+    )).actionId;
 
     final request = writer.oversized.requests.single;
     expect(actionId, request.actionId);
@@ -236,9 +236,9 @@ void main() {
       're-sends the identical entry (same id and action id)', () async {
     writer.changeLog.failOnce.add(GovernedEntity.mainTrackStudyDays);
 
-    final actionId = await repo.applyAddTrack(
+    final actionId = (await repo.applyAddTrack(
       AddTrackPlan(curriculumId: _c, stages: _stages(2), studyDays: _allDays),
-    );
+    )).actionId;
 
     final pending = await writer.commands.watchPendingFailures().first;
     final failed = pending.single;
@@ -260,30 +260,138 @@ void main() {
     );
   });
 
-  test(
-    're-adding a removed curriculum clears ended_at in the same action',
-    () async {
+  group('re-adding a removed curriculum (AD-38, ruling B13)', () {
+    const trackPath =
+        'users/$_uid/learner_profiles/$_profileId/curriculum_tracks/mishnayos';
+
+    Future<Map<String, dynamic>> removeTrack() async {
+      final before = (await writer.doc('curriculum_tracks', 'mishnayos'))!;
+      await firestore.doc(trackPath).update({
+        'ended_at': DateTime.utc(2026, 9, 5),
+      });
+      return before;
+    }
+
+    test('only clears ended_at: the prior non-default config and lifecycle '
+        'stamps are kept, the new plan is not applied', () async {
+      await repo.applyAddTrack(
+        AddTrackPlan(
+          curriculumId: _c,
+          stages: _stages(3),
+          studyDays: _allDays,
+          scopes: const [(level: 1, value: 'Seder Zeraim')],
+          goal: GoalEntity(
+            curriculumId: _c,
+            goalType: 'deadline',
+            targetDate: DateTime.utc(2027, 6, 1),
+            description: 'Siyum',
+            createdAt: governedTestNow,
+            updatedAt: governedTestNow,
+          ),
+        ),
+      );
+      final before = await removeTrack();
+      final stagesBefore = await writer.doc('stage_definitions', 'mishnayos_3');
+      final dayBefore = await writer.doc('study_day_configs', 'mishnayos_6');
+      final goalBefore = await writer.doc('goals', 'mishnayos_deadline');
+
+      final outcome = await repo.applyAddTrack(
+        AddTrackPlan(
+          curriculumId: _c,
+          stages: _stages(1),
+          studyDays: const {1: DayType.study},
+          program: const AddTrackProgram(programId: 3),
+        ),
+      );
+
+      expect(outcome.reAdded, isTrue);
+      final entries = await entriesOf(outcome.actionId!);
+      final main = entries.single;
+      expect(main.entity, GovernedEntity.mainTrack);
+      expect(main.after, {'curriculum_tracks/mishnayos.ended_at': null});
+      final track = (await writer.doc('curriculum_tracks', 'mishnayos'))!;
+      expect(track['ended_at'], isNull);
+      expect(track['state'], 'active');
+      expect(track['activated_at'], before['activated_at']);
+      expect(track['state_changed_at'], before['state_changed_at']);
+      // Prior stages, study days, scope and goal are untouched.
+      expect(
+        await writer.doc('stage_definitions', 'mishnayos_3'),
+        stagesBefore,
+      );
+      expect(await writer.doc('study_day_configs', 'mishnayos_6'), dayBefore);
+      expect(await writer.doc('goals', 'mishnayos_deadline'), goalBefore);
+      expect(await writer.doc('profile_programs', 'mishnayos'), isNull);
+      final scopes = await firestore
+          .collection(
+            'users/$_uid/learner_profiles/$_profileId/'
+            'curriculum_scopes',
+          )
+          .get();
+      expect(
+        scopes.docs.where((d) => d.data()['ended_at'] == null),
+        hasLength(1),
+      );
+    });
+
+    test(
+      'seeds only the config entities the removed track never had',
+      () async {
+        // A track activated without the Add track flow: no stages, no days.
+        await firestore.doc(trackPath).set({
+          'curriculum_id': 'mishnayos',
+          'state': 'active',
+          'state_changed_at': '2026-01-01T00:00:00.000Z',
+          'activated_at': '2026-01-01T00:00:00.000Z',
+          'ended_at': DateTime.utc(2026, 9, 5),
+        });
+
+        final outcome = await repo.applyAddTrack(
+          AddTrackPlan(
+            curriculumId: _c,
+            stages: _stages(2),
+            studyDays: _allDays,
+          ),
+        );
+
+        expect(outcome.reAdded, isTrue);
+        final entities = [
+          for (final e in await entriesOf(outcome.actionId!)) e.entity,
+        ];
+        expect(
+          entities,
+          unorderedEquals([
+            GovernedEntity.mainTrack,
+            GovernedEntity.mainTrackStages,
+            GovernedEntity.mainTrackStudyDays,
+          ]),
+        );
+        expect(await writer.doc('stage_definitions', 'mishnayos_2'), isNotNull);
+        final track = (await writer.doc('curriculum_tracks', 'mishnayos'))!;
+        expect(track['activated_at'], '2026-01-01T00:00:00.000Z');
+      },
+    );
+
+    test('a track removed while retired comes back active, keeping its '
+        'activated_at', () async {
+      await firestore.doc(trackPath).set({
+        'curriculum_id': 'mishnayos',
+        'state': 'retired',
+        'state_changed_at': '2026-01-01T00:00:00.000Z',
+        'activated_at': '2025-01-01T00:00:00.000Z',
+        'ended_at': DateTime.utc(2026, 9, 5),
+      });
+
       await repo.applyAddTrack(
         AddTrackPlan(curriculumId: _c, stages: _stages(1), studyDays: _allDays),
       );
-      await firestore
-          .doc(
-            'users/$_uid/learner_profiles/$_profileId/curriculum_tracks/mishnayos',
-          )
-          .update({'ended_at': DateTime.utc(2026, 9, 5)});
 
-      final actionId = await repo.applyAddTrack(
-        AddTrackPlan(curriculumId: _c, stages: _stages(1), studyDays: _allDays),
-      );
-
-      final track = await writer.doc('curriculum_tracks', 'mishnayos');
-      expect(track?['ended_at'], isNull);
-      final main = (await entriesOf(
-        actionId!,
-      )).firstWhere((e) => e.entity == GovernedEntity.mainTrack);
-      expect(main.after.keys, contains('curriculum_tracks/mishnayos.ended_at'));
-    },
-  );
+      final track = (await writer.doc('curriculum_tracks', 'mishnayos'))!;
+      expect(track['ended_at'], isNull);
+      expect(track['state'], 'active');
+      expect(track['activated_at'], '2025-01-01T00:00:00.000Z');
+    });
+  });
 
   test('not ready: no account throws and writes nothing', () async {
     final bare = ProviderContainer(

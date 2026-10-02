@@ -204,6 +204,30 @@ void main() {
   );
 
   test(
+    'a re-add of a removed track keeps its prior program, so no '
+    'starting bookmark is written for the flow\'s ref (ruling B13)',
+    () async {
+      final actions = RecordingAddTrackActions()..reAdded = true;
+      final bookmarks = _MemoryBookmarks();
+      await _buildService(
+        actions: actions,
+        bookmarkRepository: bookmarks,
+      ).createTrack(
+        result: const AddTrackResult(
+          curriculumId: CurriculumId.bavli,
+          label: 'Bavli',
+          programId: 99,
+          studyDays: {1: 'study'},
+          startingRef: 'Mishnah Berakhot 2:1',
+        ),
+      );
+
+      expect(actions.plans, hasLength(1));
+      expect(bookmarks.writes, 0);
+    },
+  );
+
+  test(
     'stages come from the wizard result when the flow supplies one',
     () async {
       final actions = RecordingAddTrackActions();

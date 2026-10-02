@@ -235,25 +235,67 @@ class FirestoreCurriculumTrackRepository {
   Future<int> countActiveTracks() async => (await getActiveTracks()).length;
 
   /// Activates [curriculumId]'s track: creates it, reactivates it from a
-  /// retired or archived state, or re-adds a removed one (clearing
-  /// `ended_at`, AD-38) — one logged `mainTrack` change. Idempotent: a live
-  /// active track is returned unchanged with nothing written.
+  /// retired or archived state, or re-adds a removed one (see
+  /// [planActivateTrack]) — one logged `mainTrack` change. Idempotent: a
+  /// live active track is returned unchanged with nothing written.
   Future<CurriculumTrackEntity> activateTrack(CurriculumId curriculumId) async {
     final existing = await getTrack(curriculumId);
     if (existing != null && existing.isActive) return existing;
-    final (change, entity) = await planActivateTrack(curriculumId);
-    await _apply([change]);
-    return entity;
+    final activation = await planActivateTrack(curriculumId);
+    await _apply([activation.change]);
+    return activation.entity;
   }
 
-  /// The `mainTrack` change [activateTrack] writes, and the entity it
-  /// yields. Used by the one-action Add track flow (DNI-476 T5).
-  Future<(GovernedEntityChange, CurriculumTrackEntity)> planActivateTrack(
-    CurriculumId curriculumId,
-  ) async {
+  /// The `mainTrack` change [activateTrack] writes, the entity it yields,
+  /// and whether it re-adds a removed track. Used by the one-action Add
+  /// track flow (DNI-476 T5).
+  ///
+  /// * No doc, or a live one: `state = active` with fresh
+  ///   `state_changed_at` / `activated_at` stamps.
+  /// * A removed doc (`ended_at` set) is a **re-add** (AD-38, ruling B13):
+  ///   the change only clears `ended_at` ([OwnerGovernedIntents.reAddTrack])
+  ///   so the prior config and lifecycle stamps are kept. Only when the
+  ///   track was removed from a retired or archived state does it also
+  ///   set `state = active` (stamping `state_changed_at`); `activated_at`
+  ///   is never rewritten on a re-add.
+  Future<
+    ({GovernedEntityChange change, CurriculumTrackEntity entity, bool reAdded})
+  >
+  planActivateTrack(CurriculumId curriculumId) async {
     final snapshot = await _doc(curriculumId).get();
     final data = snapshot.data();
     final now = _clock();
+    if (data != null && _isEnded(data)) {
+      final prior = curriculumTrackFromFirestore(data);
+      if (prior.isActive) {
+        return (
+          change: OwnerGovernedIntents.reAddTrack(curriculumId.storageKey),
+          entity: prior,
+          reAdded: true,
+        );
+      }
+      return (
+        change: _change(curriculumId, {
+          'state': CurriculumTrackState.active.storageKey,
+          'state_changed_at': FirestoreCodec.encodeDateTime(now),
+          GovernedKeys.endedAt: null,
+        }),
+        entity: CurriculumTrackEntity(
+          curriculumId: curriculumId,
+          state: CurriculumTrackState.active.storageKey,
+          stateChangedAt: now,
+          activatedAt: prior.activatedAt,
+          paceResetDate: prior.paceResetDate,
+          lastReorderAt: prior.lastReorderAt,
+          progressSchemaVersion: prior.progressSchemaVersion,
+          progressComputedAt: prior.progressComputedAt,
+          progressModel: prior.progressModel,
+          programProgress: prior.programProgress,
+          selfPacedProgress: prior.selfPacedProgress,
+        ),
+        reAdded: true,
+      );
+    }
     final entity = CurriculumTrackEntity(
       curriculumId: curriculumId,
       state: CurriculumTrackState.active.storageKey,
@@ -269,7 +311,7 @@ class FirestoreCurriculumTrackRepository {
       'activated_at': FirestoreCodec.encodeDateTime(now),
       GovernedKeys.endedAt: null,
     });
-    return (change, entity);
+    return (change: change, entity: entity, reAdded: false);
   }
 
   /// Retires [curriculumId]'s track (soft-deactivation, reversible via
