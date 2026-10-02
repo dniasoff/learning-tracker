@@ -2143,3 +2143,50 @@ describe('DNI-471 AC-5 — AD-38 access-call budget (10 governed docs per owner 
     await assertFails(governedBatch(owner(), 21));
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// DNI-492 (story 2.1) — the owner sub-track lifecycle batches exactly as
+// SubTrackCommands writes them (ruling B6: an owner create is an ordinary
+// doc + entry batch admitted by the `resource == null` branch; it never
+// claims the create). No rules change in this story.
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('DNI-492 — owner sub-track lifecycle batches', () => {
+  // The create payload SubTrackCommands sends: absent optionals are omitted.
+  const createFields = () => withoutKey(withoutKey(subTrack({ type: 'ongoing' }), 'academic_year'), 'window_end');
+  const keyed = (id, fields, value) =>
+    Object.fromEntries(Object.keys(fields).map((f) => [`sub_tracks/${id}.${f}`, value(f)]));
+
+  test('create: new doc + entry with null before per field succeeds (2 writes)', async () => {
+    const id = nextUlid();
+    const fields = createFields();
+    await assertSucceeds(writeSubTrack(owner(), id, fields, {
+      entry: { before: keyed(id, fields, () => null), after: keyed(id, fields, (f) => fields[f]) },
+    }));
+    const snap = await getDoc(doc(owner(), `${SUB_TRACKS}/${id}`));
+    assert.strictEqual(snap.data().window_end, undefined);
+  });
+
+  test('create without its entry, or with another entity id, is denied', async () => {
+    const id = nextUlid();
+    await assertFails(writeSubTrack(owner(), id, createFields(), { withEntry: false }));
+    await assertFails(governedWrite(owner(), `${SUB_TRACKS}/${id}`, createFields(), 'subTrack', nextUlid()));
+  });
+
+  test('edit replacing ground whole, then end and delete tombstones succeed', async () => {
+    const id = nextUlid();
+    await writeSubTrack(owner(), id, createFields());
+    await assertSucceeds(writeSubTrack(owner(), id, {
+      ground: [{ level: 'masechta', ref: 'Shabbat' }, { level: 'masechta', ref: 'Berakhot' }],
+    }));
+    await assertSucceeds(writeSubTrack(owner(), id, { ended_at: pastTs, end_reason: 'ended' }));
+    const other = nextUlid();
+    await writeSubTrack(owner(), other, createFields());
+    await assertSucceeds(writeSubTrack(owner(), other, { ended_at: pastTs, end_reason: 'deleted' }));
+    await assertFails(deleteDoc(doc(owner(), `${SUB_TRACKS}/${other}`)));
+  });
+
+  test('an extra field on the create is denied (hasOnly whitelist)', async () => {
+    await assertFails(writeSubTrack(owner(), nextUlid(), { ...createFields(), progress: 3 }));
+  });
+});
