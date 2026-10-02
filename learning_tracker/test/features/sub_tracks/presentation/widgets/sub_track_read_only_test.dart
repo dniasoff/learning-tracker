@@ -37,4 +37,14 @@ void main() {
     expect(rowTaps, 0);
     handle.dispose();
   });
+
+  testWidgets('the tutor note reads the assumed copy', (tester) async {
+    await tester.pumpWidget(
+      pumpApp(child: const Scaffold(body: SubTrackTutorReadOnlyNote())),
+    );
+    expect(
+      find.text('Editing sub-tracks from a tutor device is coming soon'),
+      findsOneWidget,
+    );
+  });
 }

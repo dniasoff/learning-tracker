@@ -328,6 +328,39 @@ void main() {
     expect(pushed.single, isA<TextDisplayRoute>());
   });
 
+  testWidgets('AC-9: on a tutor device the sub-track rows are read-only while '
+      'today\'s main-track tasks still open for capture', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final router = _MockStackRouter();
+    when(() => router.canPop()).thenReturn(false);
+    when(
+      () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+    ).thenAnswer((_) async => null);
+    await tester.pumpWidget(
+      _screen(
+        _screenOverrides(
+          subTracks: _withSubTracks(role: SubTrackViewerRole.tutor),
+        ),
+        router: router,
+      ),
+    );
+    await _settle(tester);
+    expect(
+      find.text('Editing sub-tracks from a tutor device is coming soon'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Shabbos 3:2'));
+    await tester.pump();
+    final pushed = verify(
+      () => router.push<Object?>(
+        captureAny(),
+        onFailure: any(named: 'onFailure'),
+      ),
+    ).captured;
+    expect(pushed.single, isA<TextDisplayRoute>());
+  });
+
   for (final role in SubTrackViewerRole.values) {
     testWidgets('AC-7 (${role.name}): tapping a row body opens that track\'s '
         'detail', (tester) async {

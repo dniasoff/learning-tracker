@@ -1,8 +1,11 @@
-/// The `Disabled action` look (DESIGN.md `disabled-action`, UX-DR-36) shared
-/// by the sub-track rows and cards (Story 2.9, DNI-500).
+/// The `Disabled action` look (DESIGN.md `disabled-action`, UX-DR-36) and
+/// the tutor read-only note shared by the sub-track rows and cards
+/// (Story 2.9, DNI-500).
 library;
 
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Opacity of a disabled sub-track action (DESIGN.md: 40%).
 const double subTrackDisabledOpacity = 0.4;
@@ -25,4 +28,35 @@ class SubTrackDisabledAction extends StatelessWidget {
     onTap: () {},
     child: Opacity(opacity: subTrackDisabledOpacity, child: child),
   );
+}
+
+/// The single note on a read-only tutor sub-track surface (AC-9,
+/// UX-DR-158): every sub-track write control there is visible but disabled
+/// until tutor sub-track writes ship (DNI-509/DNI-510). Shown once per
+/// surface, never per row.
+class SubTrackTutorReadOnlyNote extends StatelessWidget {
+  /// Creates the note.
+  const SubTrackTutorReadOnlyNote({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.colors;
+    return Row(
+      key: const Key('subTrackTutorReadOnlyNote'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.info_outline_rounded, size: 18, color: colors.brandInkMuted),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            AppLocalizations.of(context)!.subTrackTutorReadOnlyNote,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.brandInkMuted,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
