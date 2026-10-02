@@ -198,12 +198,18 @@ void main() {
       );
     });
 
-    test('not offered on an ended or elapsed source (read-only detail)', () {
-      final ended = _school(endReason: SubTrackEndReason.ended);
-      expect(
-        nextYearAvailability(source: ended, siblings: [ended], today: _today),
-        NextYearAvailability.notOffered,
-      );
+    test('not offered on a tombstoned source (read-only detail)', () {
+      for (final reason in SubTrackEndReason.values) {
+        final ended = _school(endReason: reason);
+        expect(
+          nextYearAvailability(source: ended, siblings: [ended], today: _today),
+          NextYearAvailability.notOffered,
+          reason: reason.storage,
+        );
+      }
+    });
+
+    test('still offered once the window passed with no action (UJ-3)', () {
       final elapsed = _school(
         academicYear: 2025,
         windowStart: '2025-09-01',
@@ -215,7 +221,7 @@ void main() {
           siblings: [elapsed],
           today: _today,
         ),
-        NextYearAvailability.notOffered,
+        NextYearAvailability.available,
       );
     });
   });
