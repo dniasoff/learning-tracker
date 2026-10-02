@@ -75,26 +75,29 @@ class MishnaHistoryScreen extends ConsumerWidget {
     // AD-36: nothing of the history is built while the learner's lock is
     // up, or while it is still unknown (fail closed).
     final lock = ref.watch(mishnaHistoryLockProvider);
+    // Locked, unknown or unreadable: a title-only app bar with its back
+    // action, so the pushed route is always leavable. The title carries no
+    // event content, and no breadcrumb or Open text action is built.
+    Scaffold titleOnly({Key? key, required Widget body}) => Scaffold(
+      key: key,
+      backgroundColor: context.colors.surfaceF4,
+      appBar: AppBar(
+        foregroundColor: context.colors.brandInk,
+        title: Text(l10n.mishnaHistoryTitle),
+      ),
+      body: SafeArea(child: body),
+    );
     if (lock case AsyncError(:final error, :final stackTrace)) {
-      // The title and back affordance carry no event content, so the
-      // learner can leave a route whose lock could not be read.
-      return Scaffold(
-        backgroundColor: context.colors.surfaceF4,
-        appBar: AppBar(
-          foregroundColor: context.colors.brandInk,
-          title: Text(l10n.mishnaHistoryTitle),
-        ),
-        body: SafeArea(
-          child: AppErrorView(
-            error: error,
-            stackTrace: stackTrace,
-            onRetry: () => retryMishnaHistory(ref),
-          ),
+      return titleOnly(
+        body: AppErrorView(
+          error: error,
+          stackTrace: stackTrace,
+          onRetry: () => retryMishnaHistory(ref),
         ),
       );
     }
     if (lock.value != false) {
-      return Scaffold(
+      return titleOnly(
         key: const Key('mishnaHistoryLocked'),
         body: lock.hasValue
             ? const SizedBox.shrink()

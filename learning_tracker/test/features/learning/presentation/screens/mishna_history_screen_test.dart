@@ -354,7 +354,7 @@ void main() {
       );
       expect(find.text('Learnt'), findsNothing);
       expect(_row(1), findsNothing);
-      expect(find.text('Mishna history'), findsNothing);
+      expect(find.byKey(const Key('mishnaHistoryOpenText')), findsNothing);
     });
 
     testWidgets("the target learner's lock hides the history with no device "
@@ -375,10 +375,49 @@ void main() {
       expect(find.byKey(const Key('mishnaHistoryLocked')), findsOneWidget);
       expect(find.text('Learnt'), findsNothing);
       expect(_row(1), findsNothing);
-      expect(find.text('Mishna history'), findsNothing);
+      // Title only: no breadcrumb and no Open text action.
+      expect(find.text('Mishna history'), findsOneWidget);
+      expect(find.byKey(const Key('mishnaHistoryOpenText')), findsNothing);
       // Judged on the active learner's own lock settings.
       expect(gate.checks, isNotEmpty);
       expect(gate.checks.last.$1, same(settings));
+    });
+
+    testWidgets("under the target learner's lock the pushed route keeps its "
+        'back action and leaves to the previous screen', (tester) async {
+      _seedLearnt(ports);
+      await _pump(
+        tester,
+        historyOverrides(
+          ports,
+          state: _learntState(),
+          gate: FakeCaptureGate.locked(LockWindow(onDay(4), onDay(5))),
+        ),
+        child: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (_) => _screen)),
+                child: const Text('open history'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open history'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('mishnaHistoryLocked')), findsOneWidget);
+      expect(_row(1), findsNothing);
+      expect(find.byType(BackButton), findsOneWidget);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('mishnaHistoryLocked')), findsNothing);
+      expect(find.text('open history'), findsOneWidget);
     });
 
     testWidgets('when the learner lock starts, the open correction sheet '
