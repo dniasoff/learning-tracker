@@ -270,6 +270,22 @@ final class GatedLearningCommands implements LearningCommands {
   @override
   Future<BackupReplayResult> importBackup(BackupReplayInput input) =>
       inner.importBackup(input);
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+  }) => _held(() => inner.createSubTrack(draft, subTrackId: subTrackId));
+
+  @override
+  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>
+      _held(() => inner.editSubTrack(subTrackId, edit));
+
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) =>
+      _held(() => inner.endSubTrack(subTrackId));
+
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) =>
+      _held(() => inner.deleteSubTrack(subTrackId));
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>
