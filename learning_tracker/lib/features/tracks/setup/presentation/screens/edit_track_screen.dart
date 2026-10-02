@@ -396,7 +396,6 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
           'program_id': enrollment.programId,
           'tracking_start_date': todayUtc.toIso8601String(),
           'tracking_start_ref': todayRef,
-          'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
         },
       );
       if (result is TutorWriteFailure) {

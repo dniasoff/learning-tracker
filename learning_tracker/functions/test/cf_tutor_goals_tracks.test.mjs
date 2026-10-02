@@ -84,15 +84,42 @@ describe('tutor goal / track callables — AC-3 behaviour', () => {
   test('tutorUpsertGoal drops legacy bookkeeping keys and normalises an ISO target_date', async () => {
     const res = await call(fns.tutorUpsertGoal, {
       ...base, goalId: `${C}_deadline`,
-      goalData: {
-        ...DEADLINE, target_date: '2027-06-01T00:00:00.000Z',
-        profile_id: PROFILE, updated_at: '2026-01-01T00:00:00Z', synced_at: 'x',
-      },
+      goalData: { ...DEADLINE, target_date: '2027-06-01T00:00:00.000Z', profile_id: PROFILE },
     });
     assert.equal(res.success, true);
     const goal = (await goals().doc(`${C}_deadline`).get()).data();
     assert.equal(goal.target_date, '2027-06-01');
-    for (const k of ['profile_id', 'updated_at', 'synced_at']) assert.equal(goal[k], undefined);
+    assert.equal(goal.profile_id, undefined);
+  });
+
+  // DNI-484 (R16): every retired goal key — target_percent, its camelCase
+  // alias and the governed timestamps (both spellings) — is rejected, never
+  // silently dropped, and nothing is written.
+  test('tutorUpsertGoal rejects each R16 retired goal field, aliases included', async () => {
+    for (const [key, value] of [
+      ['target_percent', 80], ['targetPercent', 80],
+      ['updated_at', '2026-01-01T00:00:00Z'], ['updatedAt', '2026-01-01T00:00:00Z'],
+      ['synced_at', '2026-01-01T00:00:00Z'], ['syncedAt', '2026-01-01T00:00:00Z'],
+    ]) {
+      await assert.rejects(
+        call(fns.tutorUpsertGoal, { ...base, goalId: `${C}_deadline`, goalData: { ...DEADLINE, [key]: value } }),
+        (e) => e.code === 'invalid-argument', key);
+    }
+    assert.deepEqual(await changeLog(), []);
+    assert.equal((await goals().doc(`${C}_deadline`).get()).exists, false);
+  });
+
+  test('tutorUpsertGoal still accepts the live deadline and pace fields', async () => {
+    await call(fns.tutorUpsertGoal, { ...base, goalId: `${C}_deadline`, goalData: DEADLINE });
+    await call(fns.tutorUpsertGoal, {
+      ...base, goalId: `${C}_pace`,
+      goalData: { goal_type: 'pace', pace_value: 2, pace_unit: 'per_day', pace_granularity: 'daf', curriculum_id: C },
+    });
+    const pace = (await goals().doc(`${C}_pace`).get()).data();
+    assert.equal(pace.pace_value, 2);
+    assert.equal(pace.pace_unit, 'per_day');
+    assert.equal(pace.pace_granularity, 'daf');
+    assert.equal((await changeLog()).length, 2);
   });
 
   test('tutorDeleteGoal tombstones (ended_at) instead of deleting, and logs it', async () => {
@@ -146,6 +173,37 @@ describe('tutor goal / track callables — AC-3 behaviour', () => {
         (e) => e.code === 'invalid-argument');
     }
     assert.deepEqual(await changeLog(), []);
+  });
+
+  // DNI-484 (R16): every retired curriculum_tracks key and the camelCase
+  // aliases are rejected; state and the display-only activated_at still pass.
+  test('tutorUpsertTrack rejects each R16 retired track field, aliases included', async () => {
+    const stamp = '2026-01-01T00:00:00.000Z';
+    for (const [key, value] of [
+      ['state_changed_at', stamp], ['stateChangedAt', stamp],
+      ['purged', true], ['purged_at', stamp],
+      ['pace_reset_date', stamp], ['paceResetDate', stamp],
+      ['last_reorder_at', stamp], ['lastReorderAt', stamp],
+      ['progress_schema_version', 1], ['progress_computed_at', stamp],
+      ['progress_model', 'x'], ['program_progress', {}], ['self_paced_progress', {}],
+      ['updated_at', stamp], ['updatedAt', stamp], ['synced_at', stamp], ['syncedAt', stamp],
+    ]) {
+      await assert.rejects(
+        call(fns.tutorUpsertTrack, { ...base, trackId: C, trackData: { state: 'active', [key]: value } }),
+        (e) => e.code === 'invalid-argument', key);
+    }
+    assert.deepEqual(await changeLog(), []);
+    assert.equal((await tracks().doc(C).get()).exists, false);
+  });
+
+  test('tutorUpsertTrack accepts state with the display-only activated_at', async () => {
+    const res = await call(fns.tutorUpsertTrack, {
+      ...base, trackId: C, trackData: { state: 'active', activated_at: '2026-01-01T00:00:00.000Z' },
+    });
+    assert.equal(res.success, true);
+    const track = (await tracks().doc(C).get()).data();
+    assert.equal(track.state, 'active');
+    assert.equal(track.activated_at, '2026-01-01T00:00:00.000Z');
   });
 
   test('tutorDeleteTrack performs the remove-track action, sharing one action_id', async () => {

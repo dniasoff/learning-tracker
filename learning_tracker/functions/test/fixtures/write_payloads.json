@@ -23,7 +23,6 @@
     "track_id": "1",
     "curriculum_id": "c1",
     "state": "active",
-    "state_changed_at": "2020-01-01T00:00:00.000Z",
     "activated_at": "2020-01-01T00:00:00.000Z"
   },
   "stage_definitions": {
@@ -32,16 +31,14 @@
     "stage_order": 1,
     "stage_name": "Stage 1",
     "schedule": "{\"type\":\"delay\",\"delay_days\":7}",
-    "is_default": true,
-    "updated_at": "2020-01-01T00:00:00.000Z"
+    "is_default": true
   },
   "study_day_configs": {
     "profile_id": "5",
     "curriculum_id": "c1",
     "track_id": 1,
     "day_of_week": 1,
-    "day_type": "study",
-    "updated_at": "2020-01-01T00:00:00.000Z"
+    "day_type": "study"
   },
   "point_configs": {
     "curriculum_id": "c1",
@@ -53,11 +50,9 @@
     "id": "g1",
     "profile_id": "5",
     "curriculum_id": "c1",
-    "target_percent": 80,
     "description": "Finish Berakhot",
     "date_type": "fixed",
     "goal_type": "completion",
-    "updated_at": "2020-01-01T00:00:00.000Z",
     "created_at": "2020-01-01T00:00:00.000Z",
     "pace_value": 2,
     "pace_unit": "daily",

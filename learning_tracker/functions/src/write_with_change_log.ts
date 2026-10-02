@@ -183,9 +183,8 @@ const FIELD_SPECS: Readonly<Record<string, Readonly<Record<string, Check>>>> = {
   },
   curriculum_tracks: {
     state: oneOf("active", "retired", "archived"),
-    // Legacy lifecycle stamps the owner track writer still writes and the
-    // rules accept (DNI-476; the track decoder requires them).
-    state_changed_at: instant,
+    // The display-only "Started" date (R16, DNI-484: never an engine
+    // anchor, AD-35). Every other legacy track field is retired.
     activated_at: instant,
     curriculum_id: CURRICULUM_ID,
     ended_at: ENDED_AT,

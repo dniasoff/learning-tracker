@@ -610,7 +610,7 @@ describe('stage_definitions — owner write with key whitelist, tutor read, dele
   // Sourced from PAYLOADS.stage_definitions (the codec-derived single source
   // of truth — see C-EXTRA) with only the whitelist-only legacy fields the
   // current codec no longer emits (profile_id/delay_days/days_of_week/
-  // rolling_window_size/synced_at) layered on top. Keeps this matrix literal
+  // rolling_window_size) layered on top (R16, DNI-484: synced_at is retired). Keeps this matrix literal
   // from silently diverging from PAYLOADS the way `track_id` once did
   // (string 't1' here vs. numeric 1 in the fixture — see AUD-firebase-13).
   const validStage = {
@@ -619,7 +619,6 @@ describe('stage_definitions — owner write with key whitelist, tutor read, dele
     delay_days: 0,
     days_of_week: [1, 2, 3],
     rolling_window_size: 7,
-    synced_at: pastTs,
   };
 
   test('owner-write + tutor-read + stranger-deny matrix', async () => {
@@ -649,9 +648,7 @@ describe('curriculum_tracks — owner write with key whitelist, tutor read, dele
     track_id: 't1',
     curriculum_id: 'c1',
     state: 'active',
-    state_changed_at: pastTs,
     activated_at: pastTs,
-    synced_at: pastTs,
   };
 
   test('owner-write + tutor-read + stranger-deny matrix', async () => {
@@ -670,30 +667,8 @@ describe('curriculum_tracks — owner write with key whitelist, tutor read, dele
   test('tutor cannot write curriculum_tracks', async () => {
     await assertFails(setDoc(doc(tutor(), `${LP}/curriculum_tracks/t1`), validTrack));
   });
-  // Gap 2 (docs/firestore-rewrite-map.md "OPEN" section): last_reorder_at
-  // (TrackDao.stampReorderAt's reorder-amnesty baseline) was absent from
-  // this whitelist, which permission-denied the WHOLE track write, not
-  // merely dropped the field (hasOnly() is all-or-nothing).
-  test('owner CAN write last_reorder_at (Gap 2 — reorder-amnesty baseline)', async () => {
-    await assertSucceeds(
-      governedWrite(owner(), `${LP}/curriculum_tracks/t_reorder`, {
-        ...validTrack,
-        last_reorder_at: pastTs,
-      }, GOV.entity, GOV.entityId),
-    );
-  });
-  // Regression guard: adding last_reorder_at did not widen the whitelist
-  // beyond that one field — a genuinely unknown field is still denied.
-  test('regression: an unrelated unknown field is still denied alongside ' +
-      'last_reorder_at', async () => {
-    await assertFails(
-      governedWrite(owner(), `${LP}/curriculum_tracks/t_reorder2`, {
-        ...validTrack,
-        last_reorder_at: pastTs,
-        still_unknown_field: true,
-      }, GOV.entity, GOV.entityId),
-    );
-  });
+  // R16 (DNI-484): last_reorder_at (the old reorder-amnesty baseline) is
+  // retired with the other legacy track fields — see the DNI-484 block.
 });
 
 // ── Path 15: bookmarks (with hasOnly whitelist) ───────────────────────────────
@@ -785,8 +760,6 @@ describe('track_learning_order — owner write with key whitelist, tutor read, d
     curriculum_id: 'c1',
     sefaria_ref: 'Berakhot.2a',
     user_sort_order: 1,
-    updated_at: pastTs,
-    synced_at: pastTs,
   };
 
   test('owner-write + tutor-read + stranger-deny + unauthenticated-deny matrix', async () => {
@@ -871,7 +844,7 @@ describe('goals — owner write with key whitelist (AD-38 governed), tutor read-
   test('owner writes goal with whitelisted keys', async () => {
     await assertSucceeds(
       governedWrite(owner(), `${GOALS}/g`, {
-        goal_id: 'g', profile_id: PROFILE, target_percent: 80,
+        goal_id: 'g', profile_id: PROFILE, goal_type: 'deadline',
       }, 'goal', 'g'),
     );
   });
@@ -893,7 +866,7 @@ describe('goals — owner write with key whitelist (AD-38 governed), tutor read-
   // (the earlier owner-delete allowance is superseded). Tutor removal is
   // server-side via writeWithChangeLog (story 1.10).
   describe('client delete (denied for everyone, AD-38)', () => {
-    const validGoal = { goal_id: 'g_del', profile_id: PROFILE, target_percent: 50 };
+    const validGoal = { goal_id: 'g_del', profile_id: PROFILE, goal_type: 'deadline' };
 
     test('owner CANNOT delete their own goal; tombstoning via the owner rule works', async () => {
       await env.withSecurityRulesDisabled(async (ctx) => {
@@ -984,7 +957,6 @@ describe('profile_programs — owner write with key whitelist (AD-38 governed), 
     program_id: 'p1',
     tracking_start_date: '2024-01-01',
     tracking_start_ref: 'Berakhot.2a',
-    synced_at: pastTs,
   };
 
   test('owner-write + tutor-read + stranger-deny matrix (owner delete denied)', async () => {
@@ -1035,13 +1007,12 @@ describe('curriculum_scopes — owner write (no whitelist, AD-38 governed), tuto
 // DNI-471: governed entity `mainTrackStudyDays` (AD-38); owner delete denied.
 describe('study_day_configs — owner write with key whitelist (AD-38 governed), tutor read, delete denied', () => {
   const GOV = { entity: 'mainTrackStudyDays', entityId: 'c1' };
-  // Sourced from PAYLOADS.study_day_configs (see C-EXTRA) plus `synced_at`,
-  // the one field the fixture omits. Keeps this matrix literal from silently
-  // diverging from PAYLOADS the way `day_type` once did ('learning' here vs.
-  // 'study' in the fixture — see AUD-firebase-13).
+  // Sourced from PAYLOADS.study_day_configs (see C-EXTRA). Keeps this matrix
+  // literal from silently diverging from PAYLOADS the way `day_type` once did
+  // ('learning' here vs. 'study' in the fixture — see AUD-firebase-13).
+  // R16 (DNI-484): the governed synced_at is retired.
   const validConfig = {
     ...PAYLOADS.study_day_configs,
-    synced_at: pastTs,
   };
 
   test('owner-write + tutor-read + stranger-deny matrix (owner delete denied)', async () => {
@@ -2162,7 +2133,6 @@ describe('DNI-476 — owner governed order docs, tombstones and fixed goal ids',
   const trackDoc = {
     curriculum_id: 'c1',
     state: 'active',
-    state_changed_at: '2026-09-01T00:00:00.000Z',
     activated_at: '2026-09-01T00:00:00.000Z',
   };
 
@@ -2226,5 +2196,98 @@ describe('DNI-476 — owner governed order docs, tombstones and fixed goal ids',
       governedWrite(owner(), GOAL, { description: 'x' }, 'goal', 'c1_pace'),
     );
     await assertFails(deleteDoc(doc(owner(), GOAL)));
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// DNI-484 (story 1.22, R16) — retired fields are gone from the governed
+// whitelists. Each retired key (and the camelCase aliases) is denied on its
+// governed collection even inside an otherwise valid AD-38 write; the live
+// schema still passes; same-named timestamps on non-governed collections keep
+// their existing rules.
+// ════════════════════════════════════════════════════════════════════════════
+describe('DNI-484 — R16 retired fields are denied on governed docs', () => {
+  const TRACK_RETIRED = [
+    'state_changed_at', 'purged', 'purged_at', 'pace_reset_date',
+    'last_reorder_at', 'progress_schema_version', 'progress_computed_at',
+    'progress_model', 'program_progress', 'self_paced_progress',
+    'updated_at', 'synced_at',
+  ];
+  const GOAL_RETIRED = [
+    'target_percent', 'targetPercent', 'updated_at', 'updatedAt', 'synced_at',
+  ];
+  const liveTrack = { curriculum_id: 'c1', state: 'active', activated_at: pastTs };
+  const liveDeadline = {
+    curriculum_id: 'c1', goal_type: 'deadline', target_date: '2027-06-01',
+  };
+  const livePace = {
+    curriculum_id: 'c1', goal_type: 'pace', pace_value: 2,
+    pace_unit: 'per_day', pace_granularity: 'daf',
+  };
+
+  test('the live curriculum_tracks schema (state + display-only activated_at) passes', async () => {
+    await assertSucceeds(
+      governedWrite(owner(), `${LP}/curriculum_tracks/c1`, liveTrack, 'mainTrack', 'c1'),
+    );
+    await assertSucceeds(
+      governedWrite(owner(), `${LP}/curriculum_tracks/c1`, { state: 'retired' }, 'mainTrack', 'c1'),
+    );
+  });
+
+  for (const key of TRACK_RETIRED) {
+    test(`curriculum_tracks: retired ${key} is denied`, async () => {
+      await assertFails(
+        governedWrite(owner(), `${LP}/curriculum_tracks/c1`, {
+          ...liveTrack, [key]: key === 'purged' ? true : pastTs,
+        }, 'mainTrack', 'c1'),
+      );
+    });
+  }
+
+  test('the live goal schemas (deadline and pace at their AD-43 ids) pass', async () => {
+    await assertSucceeds(
+      governedWrite(owner(), `${GOALS}/c1_deadline`, liveDeadline, 'goal', 'c1_deadline'),
+    );
+    await assertSucceeds(
+      governedWrite(owner(), `${GOALS}/c1_pace`, livePace, 'goal', 'c1_pace'),
+    );
+  });
+
+  for (const key of GOAL_RETIRED) {
+    test(`goals: retired ${key} is denied`, async () => {
+      await assertFails(
+        governedWrite(owner(), `${GOALS}/c1_deadline`, {
+          ...liveDeadline, [key]: key.toLowerCase().includes('percent') ? 80 : pastTs,
+        }, 'goal', 'c1_deadline'),
+      );
+    });
+  }
+
+  const OTHER_GOVERNED = [
+    ['stage_definitions', 'c1_1', { ...PAYLOADS.stage_definitions }, 'mainTrackStages'],
+    ['study_day_configs', 'c1_1', { ...PAYLOADS.study_day_configs }, 'mainTrackStudyDays'],
+    ['profile_programs', 'c1', { ...PAYLOADS.profile_programs }, 'mainTrackProgram'],
+    ['track_learning_order', 'c1_masechta_Berakhot',
+      { curriculum_id: 'c1', level: 'masechta', ref: 'Berakhot', user_sort_order: 0 },
+      'mainTrackOrder'],
+  ];
+  for (const [col, id, live, entity] of OTHER_GOVERNED) {
+    test(`${col}: the live schema passes; governed updated_at / synced_at are denied`, async () => {
+      await assertSucceeds(governedWrite(owner(), `${LP}/${col}/${id}`, live, entity, 'c1'));
+      for (const key of ['updated_at', 'synced_at']) {
+        await assertFails(
+          governedWrite(owner(), `${LP}/${col}/${id}`, { ...live, [key]: pastTs }, entity, 'c1'),
+        );
+      }
+    });
+  }
+
+  test('non-governed collections keep their legitimate updated_at / synced_at', async () => {
+    await assertSucceeds(setDoc(doc(owner(), `${LP}/point_configs/c1_1`), {
+      curriculum_id: 'c1', stage_order: 1, points: 10, updated_at: pastTs, synced_at: pastTs,
+    }));
+    await assertSucceeds(setDoc(doc(owner(), `${LP}/import_metadata/c1`), {
+      profile_id: PROFILE, curriculum_id: 'c1', item_count: 1, imported_at: pastTs, synced_at: pastTs,
+    }));
   });
 });
