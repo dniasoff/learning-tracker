@@ -10,19 +10,13 @@
 //    (projection status, projected finish, daily target, calendar
 //    shortfall); it does not go through `OnTrackView`, so a mapping slip in
 //    the report fails.
-// 2. Dashboard half (DEFERRED to DNI-502): the Dashboard's on-track card is
-//    Story 2.11 (DNI-502, bead fyh.44, AC-1: "Projected finish: {date} ·
-//    deadline {date}" and "Daily target: {n} {unit}/day" from
-//    `LearnerState`), and it is not built yet. The parity test below
-//    requires the real `DashboardScreen` to paint the report's status,
-//    projected finish and daily target (presence, then equality), so it
-//    cannot pass on an empty Dashboard. It is skipped until DNI-502 lands
-//    (bead fyh.195 unskips it).
-// 3. Tripwire (live): today's Dashboard paints no on-track figure at all
-//    (its only legacy pace source, `dashboardPaceStatusProvider`, is
-//    watched by no widget and DNI-474 deletes it), so no second, divergent
-//    pace figure is visible beside the report. When the DNI-502 card lands
-//    this tripwire fails on purpose: delete it and unskip the parity test.
+// 2. Dashboard half (live): the real parent `DashboardScreen` over the same
+//    state must paint a status, a projected finish and a daily target
+//    (presence first, so an empty Dashboard fails), and each must equal the
+//    report's. Its on-track figures come from `ParentOnTrackSummary`, the
+//    Dashboard consumer of the shared learner state.
+// 3. Parent only: the same Dashboard outside a parent session (a child
+//    without the parent PIN, a tutor) paints no on-track figure.
 @Tags(['progress', 'lifetime', 'story_5_3'])
 library;
 
@@ -204,9 +198,11 @@ List<Override> _learner(LearnerState state) => [
   learnerStateProvider.overrideWith((ref, _) => Stream.value(state)),
 ];
 
-/// The parent Dashboard with Mishnayos active, over [state].
-List<Override> _dashboard(LearnerState state) => [
+/// The Dashboard with Mishnayos active, over [state]; a parent session
+/// unless [parent] is false.
+List<Override> _dashboard(LearnerState state, {bool parent = true}) => [
   ..._learner(state),
+  parentSessionProvider.overrideWith((ref) async => parent),
   dashboardActiveCurriculaProvider.overrideWith(
     (ref) => Future.value([CurriculumId.mishnayos]),
   ),
@@ -245,10 +241,6 @@ final _cases = <(String, LearnerState Function(), String)>[
   ('calendar program, behind the calendar', _calendar, 'Behind pace'),
 ];
 
-/// AC-11's Dashboard half waits for the DNI-502 on-track card (bead
-/// fyh.195). Flip to false when that card is on the Dashboard.
-const _dashboardCardPending = true;
-
 /// A phone-width surface tall enough that nothing on-track is off-screen.
 Future<void> _tallSurface(WidgetTester tester) async {
   await tester.binding.setSurfaceSize(const Size(400, 2400));
@@ -271,18 +263,27 @@ Future<_Figures> _pumpReport(WidgetTester tester, LearnerState state) async {
   return _report(tester);
 }
 
-/// Pumps the real parent Dashboard over [state], in a fresh scope, and
-/// returns every string it paints.
+/// Pumps the real Dashboard over [state] (a parent session unless
+/// [parent] is false), in a fresh scope, and returns every string it
+/// paints.
 Future<List<String>> _pumpDashboard(
   WidgetTester tester,
-  LearnerState state,
-) async {
+  LearnerState state, {
+  bool parent = true,
+}) async {
   await _tallSurface(tester);
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpWidget(
-    pumpApp(child: const DashboardScreen(), overrides: _dashboard(state)),
+    pumpApp(
+      child: const DashboardScreen(),
+      overrides: _dashboard(state, parent: parent),
+    ),
   );
   await tester.pump(const Duration(seconds: 1));
+  // The parent session, then the learner scope and state, resolve in turn.
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
   // The active Dashboard body rendered (greeting over a live track).
   expect(find.textContaining('Learner!'), findsOneWidget);
   return _painted(tester);
@@ -324,9 +325,8 @@ void main() {
     });
 
     testWidgets(
-      '[deferred to DNI-502] $label: the Dashboard on-track card paints the '
-      'report\'s status, projected finish and daily target',
-      skip: _dashboardCardPending,
+      '$label: the parent Dashboard paints the report\'s status, projected '
+      'finish and daily target',
       (tester) async {
         final state = build();
         final report = await _pumpReport(tester, state);
@@ -362,18 +362,11 @@ void main() {
     );
   }
 
-  testWidgets('tripwire: the Dashboard paints no on-track figure until the '
-      'DNI-502 card lands', (tester) async {
+  testWidgets('outside a parent session the Dashboard paints no on-track '
+      'figure', (tester) async {
     for (final (_, build, _) in _cases) {
-      final painted = await _pumpDashboard(tester, build());
-      expect(
-        painted.where(_isOnTrackFigure),
-        isEmpty,
-        reason:
-            'The Dashboard now paints an on-track figure (DNI-502 landed?). '
-            'Set _dashboardCardPending to false so AC-11 parity runs, and '
-            'delete this tripwire (bead fyh.195).',
-      );
+      final painted = await _pumpDashboard(tester, build(), parent: false);
+      expect(painted.where(_isOnTrackFigure), isEmpty);
     }
     await _unmount(tester);
   });

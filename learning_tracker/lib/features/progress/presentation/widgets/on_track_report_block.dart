@@ -47,13 +47,27 @@ String reportStatusText(AppLocalizations l10n, PaceReportStatus status) =>
 /// The On-track block and the shortfall messages under it (AC-6–AC-8).
 class OnTrackReportBlock extends ConsumerWidget {
   /// Creates the block.
-  const OnTrackReportBlock({super.key, required this.view, this.curriculum});
+  const OnTrackReportBlock({
+    super.key,
+    required this.view,
+    this.curriculum,
+    this.title,
+    this.showShortfalls = true,
+  });
 
   /// The engine's on-track values.
   final OnTrackView view;
 
   /// The curriculum, for the leaf unit (PRD deviation #12).
   final CurriculumId? curriculum;
+
+  /// The card title; null is the report's "Goal status".
+  final String? title;
+
+  /// Whether the FR-21 shortfall messages follow the block (the report);
+  /// the Dashboard summary shows the block alone (its shortfall cards are
+  /// Story 2.11, DNI-502).
+  final bool showShortfalls;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,7 +95,7 @@ class OnTrackReportBlock extends ConsumerWidget {
 
     final block = LifetimeReportCard(
       key: const ValueKey('reportOnTrackBlock'),
-      title: l10n.reportOnTrackTitle,
+      title: title ?? l10n.reportOnTrackTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -122,7 +136,7 @@ class OnTrackReportBlock extends ConsumerWidget {
         ],
       ),
     );
-    if (view.shortfalls.isEmpty) return block;
+    if (!showShortfalls || view.shortfalls.isEmpty) return block;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
