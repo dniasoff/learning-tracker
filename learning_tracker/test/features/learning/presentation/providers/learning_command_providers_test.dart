@@ -15,6 +15,7 @@ import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_settings_reader.dart';
@@ -37,6 +38,7 @@ import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';
+import '../../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../../helpers/learner_state/provider_settle.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 
@@ -163,8 +165,10 @@ void main() {
     late InMemoryLearningWritePort port;
     late InMemoryChangeLogRepository changeLog;
 
-    List<Override> ready({bool lockSettings = true}) => [
-      learningCommandClockProvider.overrideWithValue(() => engineAt(600)),
+    List<Override> ready({bool lockSettings = true, DateTime? now}) => [
+      learningCommandClockProvider.overrideWithValue(
+        () => now ?? engineAt(600),
+      ),
       activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
       activeAuthUidProvider.overrideWith((ref) async => 'auth-uid'),
       learningWritePortProvider.overrideWith((ref) async => port),
@@ -288,6 +292,64 @@ void main() {
         isA<CaptureLocked>(),
       );
       expect(port.attempts, isEmpty);
+    });
+
+    group('DNI-481 AC-6: the gate judges the TARGET learner (AD-36 write '
+        'path)', () {
+      // Saturday 2026-09-05 20:00Z: locked in Lakewood, open in Jerusalem.
+      final saturdayEvening = DateTime.utc(2026, 9, 5, 20);
+      final sibling = LearnerScope(
+        ownerUid: c0Scope().ownerUid,
+        profileId: '01ARZ3NDEKTSV4RRFFQ69G5FB2',
+      );
+
+      Future<CaptureResult> captureWith({
+        required LearnerSettingsHistory target,
+        required LearnerSettingsHistory other,
+      }) async {
+        final container = ProviderContainer.test(
+          overrides: [
+            ...ready(lockSettings: false, now: saturdayEvening),
+            learnerLockSettingsProvider.overrideWith(
+              (ref, scope) => Stream.value(
+                scope == c0Scope()
+                    ? target
+                    : scope == sibling
+                    ? other
+                    : throw StateError('unexpected scope $scope'),
+              ),
+            ),
+          ],
+        );
+        final commands = (await settledAsync(
+          container,
+          learningCommandsProvider,
+        )).value!;
+        return commands.capture(
+          curriculumId: engineCurriculum,
+          refs: const ['Mishnah Berakhot 1:1'],
+          source: LearningEvent.sourceMain,
+          dateState: DateState.dated,
+        );
+      }
+
+      test('a locked sibling does not lock the target learner', () async {
+        final result = await captureWith(
+          target: constantHistory(jerusalem),
+          other: constantHistory(lakewood),
+        );
+        expect(result, isNot(isA<CaptureLocked>()));
+        expect(port.attempts, isNotEmpty);
+      });
+
+      test('a locked target refuses before any write', () async {
+        final result = await captureWith(
+          target: constantHistory(lakewood),
+          other: constantHistory(jerusalem),
+        );
+        expect(result, isA<CaptureLocked>());
+        expect(port.attempts, isEmpty);
+      });
     });
 
     test('fails closed (locked, nothing written) while the settings '
