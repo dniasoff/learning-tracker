@@ -14,6 +14,10 @@
 ///   one `action_id` to the end; [watchIsReverted] watches for any entry
 ///   whose `reverts_action_id` is the action, so every device marks an
 ///   undone action "Undone".
+/// - **History pages** ([historyPage], DNI-513 parent Change history): one
+///   `orderBy('at', descending: true)` page of ≤ 100 through
+///   [readHistoryPage]; served by the automatic single-field index on
+///   `at` (no composite index, AD-54).
 /// - **Governed batch** ([commitGoverned], AC-2): one [WriteBatch] holding a
 ///   field-level `set(merge: true)` of each doc's changed fields plus
 ///   `last_change_id`, and the create of the entry. `change_log` is
@@ -37,12 +41,14 @@ import 'package:learning_tracker/data/repositories/create_only_guard.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart'
     show kChangeLogCollection;
+import 'package:learning_tracker/data/repositories/history_page_query.dart';
 import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/data/repositories/paged_complete_query.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
@@ -130,6 +136,19 @@ final class FirestoreChangeLogRepository
         onError: onListenerError,
         probe: pageProbe,
       );
+
+  @override
+  Future<HistoryPage<ChangeLogEntry>> historyPage(
+    LearnerScope scope, {
+    HistoryCursor? after,
+    int limit = kChangeHistoryPageSize,
+  }) => readHistoryPage(
+    collectionFor(scope),
+    orderField: ChangeLogEntry.kAt,
+    after: after,
+    limit: limit,
+    decode: ChangeLogEntry.fromStorage,
+  );
 
   @override
   Future<List<ChangeLogEntry>> entriesOfAction(

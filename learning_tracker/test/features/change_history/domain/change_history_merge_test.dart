@@ -6,14 +6,14 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/change_history/domain/models/history_item.dart';
-import 'package:learning_tracker/features/change_history/domain/repositories/change_history_repository.dart';
 import 'package:learning_tracker/features/change_history/domain/services/change_history_merge.dart';
 import 'package:learning_tracker/features/change_history/domain/services/change_history_pager.dart';
 
 import '../../../helpers/change_history_fixtures.dart';
-import '../../../helpers/fake_change_history_repository.dart';
+import '../../../helpers/fake_history_ports.dart';
 import '../../../helpers/learner_state_fixtures.dart';
 
 final _scope = LearnerScope(ownerUid: 'owner-uid', profileId: profileUlid);
@@ -57,7 +57,7 @@ void main() {
     test('an item at a page boundary is neither lost nor duplicated, and '
         'the cursors advance independently', () async {
       // Three entries at the same instant straddle a 2-row page.
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           historyEntry(1, minutes: 50),
           historyEntry(2, minutes: 50),
@@ -67,7 +67,8 @@ void main() {
         events: [for (var n = 0; n < 5; n++) historyLearn(100 + n, minutes: n)],
       );
       final pager = ChangeHistoryPager(
-        repository: repo,
+        changeLog: repo.changeLog,
+        events: repo.events,
         scope: _scope,
         pageSize: 2,
       );
@@ -100,7 +101,7 @@ void main() {
     test('the next page of a source is read only when the merged list '
         'reaches its end', () async {
       // Governed changes are all newer than every learning event.
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           for (var n = 1; n <= 250; n++) historyEntry(n, minutes: 10000 + n),
         ],
@@ -108,7 +109,11 @@ void main() {
           for (var n = 1; n <= 400; n++) historyLearn(1000 + n, minutes: n),
         ],
       );
-      final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+      final pager = ChangeHistoryPager(
+        changeLog: repo.changeLog,
+        events: repo.events,
+        scope: _scope,
+      );
       await pager.fill((v) => v.length >= 30);
       expect(repo.reads, [('change_log', 0), ('learning_events', 0)]);
       expect(
@@ -133,7 +138,7 @@ void main() {
 
     test('change_log entries sharing an action_id are one item, even when '
         'a page splits them', () async {
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           historyEntry(
             1,
@@ -157,7 +162,8 @@ void main() {
         ],
       );
       final pager = ChangeHistoryPager(
-        repository: repo,
+        changeLog: repo.changeLog,
+        events: repo.events,
         scope: _scope,
         pageSize: 2,
       );
@@ -176,7 +182,7 @@ void main() {
 
     test('events order by original_recorded_at ?? recorded_at while the '
         'source pages by recorded_at', () async {
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [historyEntry(1, minutes: 30)],
         events: [
           // Re-recorded at minute 60, originally learnt at minute 10.
@@ -184,7 +190,11 @@ void main() {
           historyLearn(3, minutes: 40),
         ],
       );
-      final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+      final pager = ChangeHistoryPager(
+        changeLog: repo.changeLog,
+        events: repo.events,
+        scope: _scope,
+      );
       await pager.fill(_never);
       expect(pager.buffer.visibleItems().map((i) => i.sortAt), [
         historyAt(40),
@@ -214,7 +224,7 @@ void main() {
       before: {'goals/deadline.target_date': '2026-11-03'},
       after: {'goals/deadline.target_date': '2026-10-01'},
     );
-    FakeChangeHistoryRepository repoWithFiller() => FakeChangeHistoryRepository(
+    FakeHistoryPorts repoWithFiller() => FakeHistoryPorts(
       entries: [
         deadline(),
         for (var n = 1; n <= 150; n++) historyEntry(100 + n, minutes: 100 + n),
@@ -225,7 +235,11 @@ void main() {
     test('the pager reads the reverted action by action_id without paging '
         'down to it, once', () async {
       final repo = repoWithFiller();
-      final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+      final pager = ChangeHistoryPager(
+        changeLog: repo.changeLog,
+        events: repo.events,
+        scope: _scope,
+      );
       await pager.fill((v) => v.isNotEmpty);
       expect(repo.changeLogReads, 1, reason: 'no page read to reach it');
       expect(repo.actionLookups, [
@@ -247,7 +261,11 @@ void main() {
     test('a failed lookup is not a history failure and is retried on the '
         'next fill', () async {
       final repo = repoWithFiller()..failActionLookups = 1;
-      final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+      final pager = ChangeHistoryPager(
+        changeLog: repo.changeLog,
+        events: repo.events,
+        scope: _scope,
+      );
       await pager.fill((v) => v.isNotEmpty);
       expect(pager.buffer.entriesOfAction(historyId(1)), isEmpty);
 
@@ -257,8 +275,12 @@ void main() {
     });
 
     test('no lookup once change_log is read to its end', () async {
-      final repo = FakeChangeHistoryRepository(entries: [deadline(), undo()]);
-      final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+      final repo = FakeHistoryPorts(entries: [deadline(), undo()]);
+      final pager = ChangeHistoryPager(
+        changeLog: repo.changeLog,
+        events: repo.events,
+        scope: _scope,
+      );
       await pager.fill(_never);
       expect(repo.actionLookups, isEmpty);
     });
@@ -267,12 +289,13 @@ void main() {
   group('AC-9 failure and retry', () {
     test('a failed page keeps what was loaded and retries the same page '
         'without duplicating rows', () async {
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [for (var n = 1; n <= 5; n++) historyEntry(n, minutes: n)],
         events: [for (var n = 1; n <= 3; n++) historyLearn(10 + n, minutes: n)],
       );
       final pager = ChangeHistoryPager(
-        repository: repo,
+        changeLog: repo.changeLog,
+        events: repo.events,
         scope: _scope,
         pageSize: 2,
       );
@@ -296,14 +319,15 @@ void main() {
     test(
       'a void whose target is on an unread page is looked up by id',
       () async {
-        final repo = FakeChangeHistoryRepository(
+        final repo = FakeHistoryPorts(
           events: [
             historyVoid(9, target: 1, minutes: 100),
             for (var n = 1; n <= 4; n++) historyLearn(n, minutes: n),
           ],
         );
         final pager = ChangeHistoryPager(
-          repository: repo,
+          changeLog: repo.changeLog,
+          events: repo.events,
           scope: _scope,
           pageSize: 2,
         );

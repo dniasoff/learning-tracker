@@ -17,6 +17,7 @@ import 'package:learning_tracker/domain/learner_state/ports/change_log_repositor
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
@@ -24,6 +25,8 @@ import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_w
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+
+import 'in_memory_history_page.dart';
 
 /// Per-scope change notifications shared by the fakes below.
 final class _ScopeChanges {
@@ -101,6 +104,28 @@ final class InMemoryLearningEventRepository implements LearningEventRepository {
         () => [const CompleteReadLoading<LearningEvent>(), _ready(scope)],
         () => _ready(scope),
       );
+
+  @override
+  Future<HistoryPage<LearningEvent>> historyPage(
+    LearnerScope scope, {
+    HistoryCursor? after,
+    int limit = kChangeHistoryPageSize,
+  }) async => inMemoryHistoryPage(
+    _events[scope]?.values ?? const <LearningEvent>[],
+    instantOf: rawRecordedAtForSkewRule,
+    idOf: (e) => e.id,
+    after: after,
+    limit: limit,
+  );
+
+  @override
+  Future<List<LearningEvent>> eventsById(
+    LearnerScope scope,
+    Set<String> ids,
+  ) async => [
+    for (final id in ids)
+      if (_events[scope]?[id] case final event?) event,
+  ];
 
   @override
   Future<void> create(LearnerScope scope, LearningEvent event) async {
@@ -340,6 +365,19 @@ final class InMemoryChangeLogRepository
         ],
         () => CompleteReadReady(_history(scope)),
       );
+
+  @override
+  Future<HistoryPage<ChangeLogEntry>> historyPage(
+    LearnerScope scope, {
+    HistoryCursor? after,
+    int limit = kChangeHistoryPageSize,
+  }) async => inMemoryHistoryPage(
+    entriesOf(scope),
+    instantOf: (e) => e.at,
+    idOf: (e) => e.id,
+    after: after,
+    limit: limit,
+  );
 
   @override
   Future<List<ChangeLogEntry>> entriesOfAction(

@@ -17,14 +17,17 @@ import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/features/change_history/domain/repositories/change_history_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 import 'package:learning_tracker/features/change_history/presentation/providers/change_history_providers.dart';
 import 'package:learning_tracker/features/change_history/presentation/widgets/change_history_row_tile.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 
 import '../../../helpers/change_history_fixtures.dart';
-import '../../../helpers/fake_change_history_repository.dart';
+import '../../../helpers/fake_history_ports.dart';
 import '../../../helpers/learner_state/lock_fixtures.dart';
 import 'change_history_harness.dart';
 
@@ -46,43 +49,81 @@ Finder _tile(String text) => find.ancestor(
   matching: find.byType(ChangeHistoryRowTile),
 );
 
-/// Delegates to a repository per learner.
-final class _PerLearner implements ChangeHistoryRepository {
+/// Delegates to a fake per learner.
+final class _PerLearner implements HistoryPorts {
   _PerLearner(this.byScope);
-  final Map<LearnerScope, ChangeHistoryRepository> byScope;
+  final Map<LearnerScope, HistoryPorts> byScope;
 
   @override
-  Future<HistoryPage<ChangeLogEntry>> changeLogPage(
+  late final ChangeLogRepository changeLog = _PerLearnerLog(byScope);
+
+  @override
+  late final LearningEventRepository events = _PerLearnerEvents(byScope);
+}
+
+final class _PerLearnerLog implements ChangeLogRepository {
+  _PerLearnerLog(this.byScope);
+  final Map<LearnerScope, HistoryPorts> byScope;
+
+  ChangeLogRepository _of(LearnerScope scope) => byScope[scope]!.changeLog;
+
+  @override
+  Future<HistoryPage<ChangeLogEntry>> historyPage(
     LearnerScope scope, {
     HistoryCursor? after,
     int limit = kChangeHistoryPageSize,
-  }) => byScope[scope]!.changeLogPage(scope, after: after, limit: limit);
+  }) => _of(scope).historyPage(scope, after: after, limit: limit);
 
   @override
-  Future<HistoryPage<LearningEvent>> learningEventPage(
+  Future<List<ChangeLogEntry>> entriesOfAction(
+    LearnerScope scope,
+    String actionId,
+  ) => _of(scope).entriesOfAction(scope, actionId);
+
+  @override
+  Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>
+      _of(scope).watchIntentHistory(scope);
+
+  @override
+  Stream<bool> watchIsReverted(LearnerScope scope, String actionId) =>
+      _of(scope).watchIsReverted(scope, actionId);
+
+  @override
+  Future<void> commitGoverned(LearnerScope scope, GovernedBatch batch) =>
+      _of(scope).commitGoverned(scope, batch);
+}
+
+final class _PerLearnerEvents implements LearningEventRepository {
+  _PerLearnerEvents(this.byScope);
+  final Map<LearnerScope, HistoryPorts> byScope;
+
+  LearningEventRepository _of(LearnerScope scope) => byScope[scope]!.events;
+
+  @override
+  Future<HistoryPage<LearningEvent>> historyPage(
     LearnerScope scope, {
     HistoryCursor? after,
     int limit = kChangeHistoryPageSize,
-  }) => byScope[scope]!.learningEventPage(scope, after: after, limit: limit);
+  }) => _of(scope).historyPage(scope, after: after, limit: limit);
 
   @override
-  Future<List<LearningEvent>> learningEventsById(
-    LearnerScope scope,
-    Set<String> ids,
-  ) => byScope[scope]!.learningEventsById(scope, ids);
+  Future<List<LearningEvent>> eventsById(LearnerScope scope, Set<String> ids) =>
+      _of(scope).eventsById(scope, ids);
 
   @override
-  Future<List<ChangeLogEntry>> changeLogEntriesOfActions(
-    LearnerScope scope,
-    Set<String> actionIds,
-  ) => byScope[scope]!.changeLogEntriesOfActions(scope, actionIds);
+  Stream<CompleteRead<LearningEvent>> watchAll(LearnerScope scope) =>
+      _of(scope).watchAll(scope);
+
+  @override
+  Future<void> create(LearnerScope scope, LearningEvent event) =>
+      _of(scope).create(scope, event);
 }
 
 void main() {
   group('AC-3 rows and day headers', () {
     testWidgets('actor, role, time and the plain-language action, under '
         'the learner-time-zone day', (tester) async {
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           _deadline(),
           // 2026-09-02T02:00Z is still 1 Sep in New York.
@@ -121,7 +162,7 @@ void main() {
     testWidgets('learning rows show the refs as a range, the source and '
         'the date state', (tester) async {
       final at = _m(DateTime.utc(2026, 9, 2, 9));
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         events: [
           for (final (n, ref) in [
             (1, 'Mishnah Beitzah 4:1'),
@@ -150,7 +191,7 @@ void main() {
   group('AC-4 Undone and Reverted change', () {
     testWidgets('the undone action reads Undone and the undo reads '
         'Reverted change; neither offers Undo', (tester) async {
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           _deadline(),
           historyEntry(
@@ -204,7 +245,7 @@ void main() {
     testWidgets('an undo whose reverted action is older than the loaded '
         'pages still reads Reverted change: <that action>', (tester) async {
       final base = _m(DateTime.utc(2026, 9, 2, 10));
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           _deadline(),
           // 150 newer changes push the deadline change off the first page.
@@ -240,9 +281,7 @@ void main() {
     testWidgets('without the Story 4.6 handler no Undo is shown', (
       tester,
     ) async {
-      final repo = FakeChangeHistoryRepository(
-        entries: [historyEntry(1, minutes: 60)],
-      );
+      final repo = FakeHistoryPorts(entries: [historyEntry(1, minutes: 60)]);
       await pumpChangeHistory(tester, changeHistoryOverrides(repository: repo));
       expect(find.text('Undo'), findsNothing);
     });
@@ -264,7 +303,7 @@ void main() {
         GovernedEntity.mainTrackScope,
         GovernedEntity.learnerSettings,
       ];
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           for (var i = 0; i < entities.length; i++)
             historyEntry(
@@ -307,7 +346,7 @@ void main() {
   group('AC-6 lock-ignored learning', () {
     testWidgets('is labelled kept, not counted, with no Undo', (tester) async {
       // Saturday 2026-09-05 15:00 in New York (no location: locked).
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         events: [historyLearn(1, minutes: _m(DateTime.utc(2026, 9, 5, 19)))],
       );
       await pumpChangeHistory(
@@ -324,7 +363,7 @@ void main() {
 
   group('AC-8 filter chips', () {
     testWidgets('Tutor, Parent and Learning keep their rows', (tester) async {
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           _deadline(),
           historyEntry(
@@ -362,16 +401,15 @@ void main() {
     testWidgets('no changes and no events: "No changes yet."', (tester) async {
       await pumpChangeHistory(
         tester,
-        changeHistoryOverrides(repository: FakeChangeHistoryRepository()),
+        changeHistoryOverrides(repository: FakeHistoryPorts()),
       );
       expect(find.text('No changes yet.'), findsOneWidget);
     });
 
     testWidgets('a failed first load shows AppErrorView; retry loads the '
         'history', (tester) async {
-      final repo = FakeChangeHistoryRepository(
-        entries: [historyEntry(1, minutes: 60)],
-      )..failEventReads = 1;
+      final repo = FakeHistoryPorts(entries: [historyEntry(1, minutes: 60)])
+        ..failEventReads = 1;
       await pumpChangeHistory(tester, changeHistoryOverrides(repository: repo));
       expect(find.byType(AppErrorView), findsOneWidget);
       expect(find.byType(ChangeHistoryRowTile), findsNothing);
@@ -384,7 +422,7 @@ void main() {
 
     testWidgets('a failed next page keeps the loaded rows, offers retry and '
         'adds no duplicate', (tester) async {
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [
           for (var n = 1; n <= 130; n++)
             historyEntry(n, minutes: n, entity: GovernedEntity.mainTrackOrder),
@@ -428,7 +466,7 @@ void main() {
   group('E-3 retained voids', () {
     testWidgets('a voided learn and its void stay visible with who and '
         'when', (tester) async {
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         events: [
           historyLearn(
             1,
@@ -466,7 +504,7 @@ void main() {
   group('E-4 lock and learner switch', () {
     testWidgets('while the lock overlay is up no timeline content is '
         'readable', (tester) async {
-      final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+      final repo = FakeHistoryPorts(entries: [_deadline()]);
       await pumpChangeHistory(
         tester,
         changeHistoryOverrides(
@@ -485,7 +523,7 @@ void main() {
 
     testWidgets("the learner's own lock hides the timeline with no device "
         'lock', (tester) async {
-      final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+      final repo = FakeHistoryPorts(entries: [_deadline()]);
       await pumpChangeHistory(
         tester,
         changeHistoryOverrides(
@@ -512,7 +550,7 @@ void main() {
         DateTime.utc(2026, 9, 6),
       ).single;
       var now = lock.startUtc.subtract(const Duration(minutes: 5));
-      final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+      final repo = FakeHistoryPorts(entries: [_deadline()]);
       await pumpChangeHistory(
         tester,
         changeHistoryOverrides(
@@ -548,7 +586,7 @@ void main() {
     testWidgets("while the learner's lock is unknown nothing is read", (
       tester,
     ) async {
-      final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+      final repo = FakeHistoryPorts(entries: [_deadline()]);
       await pumpChangeHistory(
         tester,
         changeHistoryOverrides(repository: repo, settingsPending: true),
@@ -568,7 +606,7 @@ void main() {
         profileId: historyId(4242),
       );
       final gate = Completer<void>();
-      final second = FakeChangeHistoryRepository(
+      final second = FakeHistoryPorts(
         entries: [
           historyEntry(1, minutes: 10, entity: GovernedEntity.mainTrackScope),
         ],
@@ -577,7 +615,7 @@ void main() {
       final container = ProviderContainer(
         overrides: changeHistoryOverrides(
           repository: _PerLearner({
-            historyScope: FakeChangeHistoryRepository(entries: [_deadline()]),
+            historyScope: FakeHistoryPorts(entries: [_deadline()]),
             other: second,
           }),
           scopeOf: (ref) async => ref.watch(scopeHolder.provider),
@@ -606,7 +644,7 @@ void main() {
   });
 
   testWidgets('AC-1 outside the parent role nothing is read', (tester) async {
-    final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+    final repo = FakeHistoryPorts(entries: [_deadline()]);
     await pumpChangeHistory(
       tester,
       changeHistoryOverrides(repository: repo, access: false),
@@ -620,7 +658,7 @@ void main() {
   });
 
   testWidgets('dark mode renders the same rows', (tester) async {
-    final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+    final repo = FakeHistoryPorts(entries: [_deadline()]);
     await pumpChangeHistory(
       tester,
       changeHistoryOverrides(repository: repo),
@@ -635,7 +673,7 @@ void main() {
       tester,
     ) async {
       const nameless = Actor(uid: 't', role: ActorRole.tutor, displayName: '');
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [historyEntry(1, minutes: 60, actor: nameless)],
       );
       await pumpChangeHistory(tester, changeHistoryOverrides(repository: repo));
@@ -651,7 +689,7 @@ void main() {
     ) async {
       tester.platformDispatcher.textScaleFactorTestValue = 2.0;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      final repo = FakeChangeHistoryRepository(
+      final repo = FakeHistoryPorts(
         entries: [_deadline()],
         events: [historyLearn(2, minutes: 600, actor: historyChild)],
       );
@@ -673,7 +711,7 @@ void main() {
     });
 
     testWidgets('chips and rows meet the 48dp target', (tester) async {
-      final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+      final repo = FakeHistoryPorts(entries: [_deadline()]);
       await pumpChangeHistory(tester, changeHistoryOverrides(repository: repo));
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     });

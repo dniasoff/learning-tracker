@@ -11,10 +11,10 @@ import 'package:learning_tracker/features/change_history/presentation/widgets/ch
 import 'package:learning_tracker/features/change_history/presentation/widgets/change_history_row_tile.dart';
 
 import '../../../helpers/change_history_fixtures.dart';
-import '../../../helpers/fake_change_history_repository.dart';
+import '../../../helpers/fake_history_ports.dart';
 import 'change_history_harness.dart';
 
-FakeChangeHistoryRepository _repo() => FakeChangeHistoryRepository(
+FakeHistoryPorts _repo() => FakeHistoryPorts(
   entries: [
     historyEntry(
       1,

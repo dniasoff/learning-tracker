@@ -1,5 +1,5 @@
 /// Shared widget-test rig for the DNI-513 Change history screen: provider
-/// overrides over [FakeChangeHistoryRepository], a fixed clock, New York
+/// overrides over [HistoryPorts] (e.g. [FakeHistoryPorts]), a fixed clock, New York
 /// learner settings and no lock unless asked.
 library;
 
@@ -13,13 +13,13 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/change_history/data/repositories/change_history_sources.dart';
-import 'package:learning_tracker/features/change_history/domain/repositories/change_history_repository.dart';
 import 'package:learning_tracker/features/change_history/presentation/providers/change_history_providers.dart';
 import 'package:learning_tracker/features/change_history/presentation/screens/change_history_screen.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 
+import '../../../helpers/fake_history_ports.dart';
 import '../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../helpers/learner_state_fixtures.dart';
 import '../../../helpers/pump_app.dart';
@@ -35,7 +35,7 @@ final historyNow = DateTime.utc(2026, 9, 2, 12);
 
 /// The overrides of the screen.
 List<Override> changeHistoryOverrides({
-  required ChangeHistoryRepository repository,
+  required HistoryPorts repository,
   LearnerScope? scope,
   bool access = true,
   LearnerSettingsHistory? settings,
@@ -50,7 +50,10 @@ List<Override> changeHistoryOverrides({
   activeLearnerScopeProvider.overrideWith(
     scopeOf ?? (ref) async => scope ?? historyScope,
   ),
-  changeHistoryRepositoryProvider.overrideWith((ref) async => repository),
+  changeLogRepositoryProvider.overrideWith((ref) async => repository.changeLog),
+  learningEventRepositoryProvider.overrideWith(
+    (ref) async => repository.events,
+  ),
   learnerLockSettingsProvider.overrideWith(
     (ref, scope) => settingsPending
         // Never emits: the learner's lock stays unknown.
