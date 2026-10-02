@@ -490,6 +490,82 @@ void main() {
     });
   });
 
+  group('AC-6 (DNI-470): ordinary profile edits are field-level and never '
+      'touch the settings', () {
+    test('updateProfile updates only the supplied field plus updated_at; '
+        'settings, last_change_id and other fields survive', () async {
+      final repo = buildRepo();
+      await rawProfiles().doc(profileUlid).set({
+        'display_name': 'Before',
+        'mode': 'child',
+        'avatar': 'fresh-avatar',
+        'created_at': _createdAt.toIso8601String(),
+        'updated_at': _createdAt.toIso8601String(),
+        'time_zone': 'Asia/Jerusalem',
+        'in_israel': true,
+        'latitude': 31.7,
+        'longitude': 35.2,
+        'last_change_id': ulidA,
+      });
+      // A stale in-memory entity (another writer changed the avatar since).
+      final stale = (await repo.getProfile(
+        profileUlid,
+      ))!.copyWith(avatar: 'stale-avatar');
+
+      final updated = await repo.updateProfile(
+        profile: stale,
+        displayName: 'After',
+      );
+
+      final data = (await rawProfiles().doc(profileUlid).get()).data()!;
+      expect(data['display_name'], 'After');
+      expect(data['avatar'], 'fresh-avatar', reason: 'not re-sent');
+      expect(data['mode'], 'child');
+      expect(data['created_at'], _createdAt.toIso8601String());
+      expect(data['updated_at'], isNot(_createdAt.toIso8601String()));
+      expect(data['time_zone'], 'Asia/Jerusalem');
+      expect(data['in_israel'], true);
+      expect(data['latitude'], 31.7);
+      expect(data['last_change_id'], ulidA);
+      expect(updated.displayName, 'After');
+    });
+
+    test('the ordinary update payload never carries a settings key', () {
+      final payload = LearnerProfileEntity.ordinaryUpdate(
+        updatedAt: _createdAt,
+        displayName: 'A',
+        mode: ProfileMode.adult,
+        avatar: 'b',
+      );
+      expect(payload.keys.toSet(), {
+        'display_name',
+        'mode',
+        'avatar',
+        'updated_at',
+      });
+      expect(LearnerProfileEntity.ordinaryUpdate(updatedAt: _createdAt).keys, [
+        'updated_at',
+      ]);
+    });
+
+    test('updating a profile doc that does not exist fails instead of '
+        'minting a partial doc', () async {
+      final repo = buildRepo();
+      final ghost = LearnerProfileEntity(
+        profileId: profileUlid,
+        displayName: 'Ghost',
+        mode: ProfileMode.adult,
+        createdAt: _createdAt,
+        updatedAt: _createdAt,
+      );
+      await expectLater(
+        repo.updateProfile(profile: ghost, displayName: 'X'),
+        throwsA(anything),
+      );
+      expect((await rawProfiles().doc(profileUlid).get()).exists, isFalse);
+    });
+  });
+
   group('AC-6 (DNI-470): creation seeds the learner settings atomically', () {
     const seedId = '01ARZ3NDEKTSV4RRFFQ69G5FS1';
     const jerusalem = LearnerSettings(

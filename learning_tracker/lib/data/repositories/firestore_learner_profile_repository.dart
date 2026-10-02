@@ -319,6 +319,8 @@ class FirestoreLearnerProfileRepository {
       updatedAt: now,
     );
     if (seed == null) {
+      // An ordinary (non-settings) write: the codec emits only its own
+      // keys, so the merge can never touch the governed settings.
       await _doc(profileId).set(entity.toFirestore(), SetOptions(merge: true));
       return entity;
     }
@@ -398,6 +400,13 @@ class FirestoreLearnerProfileRepository {
   /// Omitting [displayName]/[mode]/[avatar] leaves the existing value
   /// untouched — mirrors `FirestoreGoalRepository.updateGoal`'s "current
   /// entity + optional overrides" shape.
+  ///
+  /// **Field-level `update` of the supplied fields only (AD-37, DNI-470
+  /// AC-6).** The write carries just the given fields plus `updated_at`
+  /// ([LearnerProfileEntity.ordinaryUpdate]) — never a settings key and
+  /// never `last_change_id` — so it can neither overwrite the governed
+  /// learner settings nor clobber a concurrent edit of another field (by a
+  /// tutor or another device): each field resolves by its own last write.
   Future<LearnerProfileEntity> updateProfile({
     required LearnerProfileEntity profile,
     String? displayName,
@@ -411,9 +420,14 @@ class FirestoreLearnerProfileRepository {
       avatar: avatar ?? profile.avatar,
       updatedAt: now,
     );
-    await _doc(
-      updated.profileId,
-    ).set(updated.toFirestore(), SetOptions(merge: true));
+    await _doc(updated.profileId).update(
+      LearnerProfileEntity.ordinaryUpdate(
+        updatedAt: now,
+        displayName: displayName,
+        mode: mode,
+        avatar: avatar,
+      ),
+    );
     return updated;
   }
 }
