@@ -220,20 +220,29 @@ final class BeforeTrackingUnavailableException implements Exception {
 class BeforeTrackingRecorder {
   /// Creates the recorder. [commands] and [events] resolve the active
   /// learner's commands and complete event log (null when none is active).
+  ///
+  /// [ownsBookmark] says whether the session may write the active
+  /// learner's reading-order bookmark: false in a tutored session, where
+  /// the bookmark is owner-only by the Firestore rules and the capture goes
+  /// through the tutor callable (DNI-486). It is read once per capture,
+  /// before the capture runs.
   BeforeTrackingRecorder({
     required ContentRepository contentRepository,
     required BookmarkRepository bookmarkRepository,
     required Future<LearningCommands?> Function() commands,
     required Future<List<LearningEvent>?> Function() events,
+    required bool Function() ownsBookmark,
   }) : _content = contentRepository,
        _bookmarks = bookmarkRepository,
        _commands = commands,
-       _events = events;
+       _events = events,
+       _ownsBookmark = ownsBookmark;
 
   final ContentRepository _content;
   final BookmarkRepository _bookmarks;
   final Future<LearningCommands?> Function() _commands;
   final Future<List<LearningEvent>?> Function() _events;
+  final bool Function() _ownsBookmark;
 
   Future<LearningCommands> _requireCommands() async {
     final commands = await _commands();
@@ -252,7 +261,9 @@ class BeforeTrackingRecorder {
 
   /// Records [selections] as one `before_tracking` capture. On success the
   /// legacy reading-order bookmark moves to the first leaf not yet learnt
-  /// (R4 co-write, retired by DNI-478).
+  /// (R4 co-write, retired by DNI-478) — only when the session owns the
+  /// bookmark: a tutored capture is the callable's result alone, so a
+  /// committed capture is never followed by a forbidden bookmark write.
   Future<BeforeTrackingResult> record({
     required CurriculumId curriculumId,
     required List<HierarchySelection> selections,
@@ -298,6 +309,9 @@ class BeforeTrackingRecorder {
         itemCount: 0,
       );
     }
+    // Decided with the commands, before the capture: a tutored session's
+    // commands are the tutor callables and the bookmark is owner-only.
+    final writeBookmark = moveBookmark && _ownsBookmark();
     final commands = await _requireCommands();
     final capture = await commands.capture(
       curriculumId: curriculumId.storageKey,
@@ -307,7 +321,7 @@ class BeforeTrackingRecorder {
       dateState: DateState.beforeTracking,
     );
     String? bookmark;
-    if (moveBookmark && capture is CaptureSuccess) {
+    if (writeBookmark && capture is CaptureSuccess) {
       final learnt = {
         ...await _learntRefs(curriculumId, items),
         for (final leaf in batch.leaves) leaf.sefariaRef,

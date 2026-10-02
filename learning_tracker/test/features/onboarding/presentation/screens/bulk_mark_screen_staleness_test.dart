@@ -213,6 +213,7 @@ void main() {
         ),
         beforeTrackingRecorderProvider.overrideWith(
           (ref) => BeforeTrackingRecorder(
+            ownsBookmark: () => true,
             contentRepository: contentRepo,
             bookmarkRepository: FirestoreBookmarkRepositoryAdapter(
               ref: ref,

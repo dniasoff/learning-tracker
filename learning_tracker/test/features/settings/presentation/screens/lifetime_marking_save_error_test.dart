@@ -140,6 +140,7 @@ Widget _buildScreen({Locale locale = const Locale('en')}) {
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
+          ownsBookmark: () => true,
           contentRepository: content,
           bookmarkRepository: _NoBookmarks(),
           commands: () async =>
