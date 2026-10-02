@@ -205,6 +205,8 @@ void main() {
       learningEventRepositoryProvider.overrideWith(
         (ref) async => InMemoryLearningEventRepository(),
       ),
+      subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
+      governedIntentRepositoryProvider.overrideWith((ref) async => intent),
       activeProfileProvider.overrideWith(
         (ref) async => _profile(ProfileMode.adult),
       ),
@@ -228,6 +230,7 @@ void main() {
           LearnerIntent(
             settings: c0Settings,
             mainTracks: {
+              engineCurriculum: engineIntent(),
               'shas': MainTrackIntent(
                 curriculumId: 'shas',
                 track: MainTrack(
@@ -635,6 +638,44 @@ void main() {
         );
       });
     }
+
+    test('wires the governed sub-track commands: a parent ground reorder '
+        'through editSubTrack is saved, not answered onlineRequired '
+        '(DNI-497)', () async {
+      subTracks.seed(c0Scope(), [
+        SubTrack(
+          id: ulidD,
+          curriculumId: engineCurriculum,
+          name: 'School',
+          type: SubTrackType.ongoing,
+          windowStart: '2026-09-01',
+          ratePerWeek: 3,
+          weeksPerYear: 40,
+          learnsOnShabbos: false,
+          ground: const [berakhot1, peah],
+          lastChangeId: ulidE,
+        ),
+      ]);
+      final container = ProviderContainer.test(overrides: ready());
+      final commands = (await settledAsync(
+        container,
+        learningCommandsProvider,
+      )).value!;
+      final result = await commands.editSubTrack(
+        ulidD,
+        const SubTrackEdit(ground: [peah, berakhot1]),
+      );
+      expect(result, isA<CaptureSuccess>());
+      expect((result as CaptureSuccess).queued, isFalse);
+      expect(subTracks.tracksOf(c0Scope()).single.ground, const [
+        peah,
+        berakhot1,
+      ]);
+      final (scope, entry) = subTracks.entries.single;
+      expect(scope, c0Scope());
+      expect(entry.actor.uid, 'auth-uid');
+      expect(entry.actor.role, ActorRole.parent);
+    });
   });
 }
 
