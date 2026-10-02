@@ -483,6 +483,61 @@ void main() {
       );
     });
   });
+
+  group('T6 edge cases', () {
+    test('AC-8: two devices edit different fields of one doc; both patches '
+        'survive and both entries are logged', () async {
+      final a = GovernedHarness();
+      final b = GovernedHarness(
+        actor: childActor,
+        firstId: 200,
+        store: a.store,
+        subTracks: a.subTracks,
+      );
+      a.seedDoc('profile_programs', _cid, {
+        'curriculum_id': _cid,
+        'program_id': 'mishna_yomi',
+        'tracking_start_date': '2026-01-01',
+      });
+      await a.commands.applyGovernedChange(
+        oneEntity(_program, _cid, [
+          patch(_program, _cid, {'program_id': 'daf'}),
+        ]),
+      );
+      await b.commands.applyGovernedChange(
+        oneEntity(_program, _cid, [
+          patch(_program, _cid, {'tracking_start_date': '2026-02-01'}),
+        ]),
+      );
+      expect(a.doc('profile_programs', _cid), {
+        'curriculum_id': _cid,
+        'program_id': 'daf',
+        'tracking_start_date': '2026-02-01',
+        'last_change_id': engineUlid(200),
+      });
+      expect(a.store.entriesOf(a.scope).map((e) => (e.id, e.actor)), [
+        (engineUlid(100), parentActor),
+        (engineUlid(200), childActor),
+      ]);
+    });
+
+    test('an oversized action refused offline is sent whole once online '
+        'again', () async {
+      final h = GovernedHarness();
+      final action = oneEntity(_order, _cid, _orderDocs(12));
+      h.oversized.online = false;
+      expect(
+        await h.commands.applyGovernedChange(action),
+        const CaptureResult.onlineRequired(),
+      );
+      h.oversized.online = true;
+      final result = await h.commands.applyGovernedChange(action);
+      final (_, request) = h.oversized.requests.single;
+      expect(request.entries.single.change.docs, hasLength(12));
+      expect(result, isA<CaptureSuccess>());
+      expect(h.changeLog.issued, isEmpty);
+    });
+  });
 }
 
 /// A callable that rejects every request for good.
