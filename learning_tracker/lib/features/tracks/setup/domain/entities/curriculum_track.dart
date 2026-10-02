@@ -42,21 +42,13 @@ class CurriculumTrackEntity {
   /// [CurriculumTrackState.fromStorageKey] / [isActive] for typed access to
   /// the known values this repository itself ever writes.
   ///
-  /// **Only three values are reachable through this repository — not
-  /// four.** Drift's `TrackState` had a fourth member, `deleted`, used as a
-  /// soft-delete tombstone (`TrackDao.deleteTrackAndData`) because SQLite
-  /// deletion needed to propagate to other devices through the (now
-  /// deleted) LWW sync engine. In Firestore, deletion is a Cloud Function
-  /// (`deleteCurriculumTrack`, `functions/src/deletes.ts`) that
-  /// **hard-deletes** the document via `recursiveDelete` — there is no
-  /// client-writable path to a `state == 'deleted'` document at all
-  /// (`firestore.rules`: `allow delete: if false` — only the Admin SDK, which
-  /// bypasses rules, can remove this document). A purged track's signal is
-  /// therefore the document's ABSENCE ([FirestoreCurriculumTrackRepository
-  /// .getTrack] returning `null`), not a tombstone value. This is a
-  /// deliberate decision, not an oversight — see
-  /// `docs/firestore-rewrite-map.md` ("RESOLVED: prior-import tier
-  /// tracking...") for the parallel reasoning applied to completions.
+  /// **Only three values exist — `deleted` is gone.** Drift's `TrackState`
+  /// had a fourth member, `deleted`, as a soft-delete tombstone. Since
+  /// DNI-476 (AD-38) "Remove track" is the governed `ended_at` tombstone on
+  /// this document (written through `LearningCommands.removeTrack`, cleared
+  /// again by re-add), not a state value and never a delete; a removed
+  /// track reads as absent ([FirestoreCurriculumTrackRepository.getTrack]
+  /// returns `null`).
   final String state;
 
   /// LWW timestamp for [state] in the old sync engine (`TrackCodec`'s
@@ -73,12 +65,9 @@ class CurriculumTrackEntity {
 
   final DateTime activatedAt;
 
-  /// Date the pace baseline was last reset (Reset Pace recovery action).
-  /// `null` if never reset. Once set, this repository's [resetPace] only
-  /// ever moves it forward — nothing clears it back to `null` (mirrors
-  /// `TrackDao.resetPace`), so unlike e.g. `ProfileProgramEntity
-  /// .trackingStartDate` there is no `FieldValue.delete()` field-clearing
-  /// case to handle on this field.
+  /// Date the pace baseline was last reset (the retired Reset Pace action,
+  /// prd-deviations #14). Decode-only: no client writes it any more
+  /// (DNI-476).
   final DateTime? paceResetDate;
   final DateTime? lastReorderAt;
 
