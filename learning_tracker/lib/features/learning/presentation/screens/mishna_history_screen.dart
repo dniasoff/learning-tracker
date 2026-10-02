@@ -23,6 +23,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -609,7 +610,13 @@ Future<void> openMishnaCorrections(
     ),
   );
   if (choice == null || !context.mounted) return;
-  final request = await _requestFor(context, choice, item, history);
+  final request = await _requestFor(
+    context,
+    choice,
+    item,
+    history,
+    ref.read(localDayClockProvider).today(),
+  );
   if (request == null || !context.mounted) return;
   final messenger = ScaffoldMessenger.of(context);
   final outcome = await corrections.correct(item, request);
@@ -650,12 +657,13 @@ Future<MishnaCorrectionRequest?> _requestFor(
   MishnaCorrection action,
   MishnaHistoryItem item,
   MishnaHistory history,
+  DateTime today,
 ) async {
   switch (action) {
     case MishnaCorrection.remove:
       return const RemoveEventRequest();
     case MishnaCorrection.changeDate:
-      final date = await _pickDate(context, item);
+      final date = await _pickDate(context, item, today);
       if (date == null) return null;
       return ReplaceEventRequest(
         EventReplacement(
@@ -682,7 +690,7 @@ Future<MishnaCorrectionRequest?> _requestFor(
       if (item.isBeforeTracking) {
         // Home needs the day it was learnt.
         if (!context.mounted) return null;
-        final date = await _pickDate(context, item);
+        final date = await _pickDate(context, item, today);
         if (date == null) return null;
         return ReplaceEventRequest(
           EventReplacement(
@@ -700,9 +708,11 @@ Future<MishnaCorrectionRequest?> _requestFor(
 }
 
 /// A civil date (`YYYY-MM-DD`) picked on or before today.
-Future<String?> _pickDate(BuildContext context, MishnaHistoryItem item) async {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
+Future<String?> _pickDate(
+  BuildContext context,
+  MishnaHistoryItem item,
+  DateTime today,
+) async {
   final current = item.learnedOn;
   var initial = today;
   if (current != null) {
