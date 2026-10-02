@@ -18,7 +18,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { FieldValue } from 'firebase-admin/firestore';
-import { beforeEach, describe, test } from 'node:test';
+import { afterEach, beforeEach, describe, test } from 'node:test';
 import {
   GRANT,
   PARENT,
@@ -354,5 +354,74 @@ describe('updateTutorGrantPermissions — AC-6 legacy completion callables', () 
     const c1 = (await completionRef().get()).exists;
     assert.equal(!c1, reset.status === 'fulfilled', 'reset deleted iff it reported success');
     assert.equal((await grantDoc()).permissions.can_edit_learning, false);
+  });
+});
+
+// The grant check and the write must be ONE transaction on every learning-write
+// path (DNI-487 review). The window between a separate grant read and the write
+// is made deterministic: the turn-off commits right before the callable's
+// transaction starts. A callable that reads the grant outside that transaction
+// (or never opens one) lands the write after the turn-off and fails here.
+describe('updateTutorGrantPermissions — AC-6 a turn-off between check and write', () => {
+  const owner = { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE };
+  const bookmarkId = 'talmud_bavli_standard';
+  const bookmarkRef = () => profileRef().collection('bookmarks').doc(bookmarkId);
+  const settingsRef = () =>
+    profileRef().collection('preferences').doc('gamification_settings');
+  const originalRunTransaction = db.runTransaction;
+  let interleaved = false;
+
+  /** Run [action] once, right before the next transaction starts. */
+  function interleaveBeforeNextTransaction(action) {
+    db.runTransaction = async function (...args) {
+      db.runTransaction = originalRunTransaction;
+      await action();
+      interleaved = true;
+      return originalRunTransaction.apply(db, args);
+    };
+  }
+
+  beforeEach(async () => {
+    interleaved = false;
+    await clearFirestore();
+    await seedProfile();
+    await seedActiveGrant({ can_edit_learning: true, can_edit_rewards: true });
+  });
+
+  afterEach(() => {
+    db.runTransaction = originalRunTransaction;
+  });
+
+  test('tutorUpsertBookmark: a turn-off that commits first → denied, no bookmark', async () => {
+    interleaveBeforeNextTransaction(() =>
+      call(fns.updateTutorGrantPermissions, { grantId: GRANT, canEditLearning: false }, parentAuth));
+    await expectHttpsError(
+      call(fns.tutorUpsertBookmark, {
+        ...owner, bookmarkId, bookmarkData: { sefaria_ref: 'Berakhot.2a', stage_id: 'stage-1' },
+      }),
+      'permission-denied',
+    );
+    assert.ok(interleaved, 'the turn-off ran inside the check-to-write window');
+    assert.equal((await bookmarkRef().get()).exists, false, 'no bookmark after turn-off');
+  });
+
+  test('tutorUpsertBookmark: with editing on, the bookmark is written', async () => {
+    await call(fns.tutorUpsertBookmark, {
+      ...owner, bookmarkId, bookmarkData: { sefaria_ref: 'Berakhot.2a', stage_id: 'stage-1' },
+    });
+    assert.equal((await bookmarkRef().get()).data().sefaria_ref, 'Berakhot.2a');
+  });
+
+  test('tutorUpdateGamificationSettings: a revoke that commits first → denied, nothing written', async () => {
+    interleaveBeforeNextTransaction(() =>
+      call(fns.revokeTutorGrant, { grantId: GRANT }, parentAuth));
+    await expectHttpsError(
+      call(fns.tutorUpdateGamificationSettings, {
+        ...owner, permKey: 'can_edit_rewards', settingsData: { rewards_enabled: true },
+      }),
+      'permission-denied',
+    );
+    assert.ok(interleaved, 'the revoke ran inside the check-to-write window');
+    assert.equal((await settingsRef().get()).exists, false, 'no settings after revoke');
   });
 });

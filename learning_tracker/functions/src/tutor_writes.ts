@@ -540,18 +540,22 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
   // so only the size cap applies here (null = no key whitelist).
   assertAllowedFields(settingsData, "settingsData", null);
 
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, permKey,
-  );
-
-  const settingsRef = profilePath.collection("preferences").doc("gamification_settings");
-  const beforeSnap = await settingsRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await settingsRef.set(
-    { ...settingsData, synced_at: writtenAt },
-    { merge: true },
-  );
+  // Grant check and write in ONE transaction, so a revocation or permission
+  // change that commits first aborts the write (DNI-487 review).
+  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
+    const verified = await verifyTutorGrant(
+      callerUid, grantId, ownerUid, profileId, permKey, txn,
+    );
+    const settingsRef = verified.profilePath
+      .collection("preferences").doc("gamification_settings");
+    const beforeSnap = await txn.get(settingsRef);
+    txn.set(
+      settingsRef,
+      { ...settingsData, synced_at: verified.writtenAt },
+      { merge: true },
+    );
+    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,
@@ -600,18 +604,23 @@ export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "bookmarkData must be an object");
   assertAllowedFields(bookmarkData, "bookmarkData", BOOKMARK_ALLOWED_FIELDS);
 
-  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_learning",
-  );
-
-  const bookmarkRef = profilePath.collection("bookmarks").doc(bookmarkId);
-  const beforeSnap = await bookmarkRef.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
-  await bookmarkRef.set(
-    { ...bookmarkData, synced_at: writtenAt },
-    { merge: true },
-  );
+  // The grant check, the bookmark read and the write run in ONE transaction
+  // (AD-53, DNI-487 AC-6): a turn-off or revocation that commits first aborts
+  // the write (the grant is re-read on retry and denied), so a tutor whose
+  // editing was turned off can never land a bookmark.
+  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
+    const verified = await verifyTutorGrant(
+      callerUid, grantId, ownerUid, profileId, "can_edit_learning", txn,
+    );
+    const bookmarkRef = verified.profilePath.collection("bookmarks").doc(bookmarkId);
+    const beforeSnap = await txn.get(bookmarkRef);
+    txn.set(
+      bookmarkRef,
+      { ...bookmarkData, synced_at: verified.writtenAt },
+      { merge: true },
+    );
+    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,
