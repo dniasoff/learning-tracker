@@ -30,6 +30,8 @@ lib/core/providers/account_firebase_registry_provider.dart
 lib/core/providers/active_account_id_provider.dart
 lib/core/providers/active_profile_doc_id_provider.dart
 lib/core/providers/firebase_providers.dart
+lib/domain/learner_state/learner_state.dart
+lib/domain/learner_state/ports/ports.dart
 lib/features/account/account.dart
 lib/features/account/domain/repositories/auth_repository.dart
 lib/features/content_browsing/content_browsing.dart

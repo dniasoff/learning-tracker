@@ -140,3 +140,98 @@ export async function seedAuthUser({ uid, email, emailVerified = true, displayNa
     }
   }
 }
+
+// ── Governed-write fixtures (sub-tracks AD-38 / Story 1.10) ────────────────────
+
+/** Display name the account doc carries for the owner (actor.display_name). */
+export const PARENT_NAME = 'Parent Name';
+
+/**
+ * Deterministic test ULID: a fixed Crockford prefix plus a zero-padded
+ * counter, so ids sort in creation order and match the AD-38 ULID regex.
+ */
+export function ulid(n) {
+  return `01JTEST0000000000000${String(n).padStart(6, '0')}`;
+}
+
+/**
+ * Seed the learner-profile doc (writeWithChangeLog requires it to exist) and
+ * the owner's account doc (source of an owner actor's display_name).
+ */
+export async function seedProfile(fields = {}) {
+  await db.collection('users').doc(PARENT).set({ display_name: PARENT_NAME });
+  await profileRef().set({
+    display_name: 'Child',
+    avatar: 'lion',
+    mode: 'child',
+    time_zone: 'Asia/Jerusalem',
+    ...fields,
+  });
+}
+
+/** Seed an active grant carrying the AD-53 `can_edit_learning` permission. */
+export async function seedLearningGrant(overrides = {}) {
+  await seedActiveGrant({ can_edit_learning: true }, overrides);
+}
+
+/** All change_log entries of the fixture profile, ordered by id. */
+export async function changeLog(uid = PARENT, profileId = PROFILE) {
+  const snap = await profileRef(uid, profileId).collection('change_log').get();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/**
+ * Runs [fn] while recording every structured log line the Functions logger
+ * writes (it prints one JSON object per line to stdout/stderr), and returns
+ * `{ result, error, logs }`. Output still passes through to the terminal.
+ */
+export async function captureLogs(fn) {
+  const lines = [];
+  const origOut = process.stdout.write.bind(process.stdout);
+  const origErr = process.stderr.write.bind(process.stderr);
+  const record = (chunk) => {
+    for (const line of String(chunk).split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('{')) continue;
+      try { lines.push({ raw: trimmed, entry: JSON.parse(trimmed) }); } catch { /* not a log line */ }
+    }
+  };
+  process.stdout.write = (chunk, ...rest) => { record(chunk); return origOut(chunk, ...rest); };
+  process.stderr.write = (chunk, ...rest) => { record(chunk); return origErr(chunk, ...rest); };
+  let result;
+  let error;
+  try {
+    result = await fn();
+  } catch (err) {
+    error = err;
+  } finally {
+    process.stdout.write = origOut;
+    process.stderr.write = origErr;
+  }
+  return { result, error, logs: lines };
+}
+
+/**
+ * Asserts the AD-54 privacy contract for a rejected governed call: exactly
+ * one `governed_write_rejected` line, carrying only `{entity, code}` (plus the
+ * logger's own severity/message), and no uid, profile id or [secrets] text
+ * anywhere in what was logged.
+ */
+export function assertPrivacySafeRejectionLog(logs, { entity, code, secrets = [] }) {
+  const rejected = logs.filter((l) => l.entry.message === 'governed_write_rejected');
+  assert.equal(rejected.length, 1, `expected one governed_write_rejected log, got ${rejected.length}`);
+  const { entry } = rejected[0];
+  assert.deepEqual(
+    Object.keys(entry).sort(),
+    ['code', 'entity', 'message', 'severity'],
+    `rejection log must carry only {entity, code}: ${rejected[0].raw}`,
+  );
+  assert.equal(entry.entity, entity);
+  assert.equal(entry.code, code);
+  const allText = logs.map((l) => l.raw).join('\n');
+  for (const secret of [PARENT, TUTOR, String(PROFILE), PARENT_NAME, ...secrets]) {
+    assert.ok(!allText.includes(secret), `log output leaked learner data: ${secret}`);
+  }
+}
