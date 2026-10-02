@@ -21,6 +21,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 
 void main() {
@@ -247,5 +248,27 @@ void main() {
       final decoded = pointsLedgerEntryFromFirestore(data);
       expect(decoded.delta, 10);
     });
+  });
+
+  test('DNI-469: forAward is the pts_{eventId} entry with event_id and '
+      'created_at = the award instant, round-tripping', () {
+    final at = DateTime.utc(2026, 9, 1, 8);
+    final entry = PointsLedgerEntry.forAward(
+      PointsAward(eventId: '01ARZ3NDEKTSV4RRFFQ69G5FAA', amount: 5, createdAt: at),
+    );
+    final map = entry.toFirestore();
+    expect(map, {
+      'ulid': 'pts_01ARZ3NDEKTSV4RRFFQ69G5FAA',
+      'entry_kind': 'completion',
+      'delta': 5,
+      'created_at': at,
+      'source': 'live',
+      'event_id': '01ARZ3NDEKTSV4RRFFQ69G5FAA',
+    });
+    expect(
+      pointsLedgerEntryFromFirestore(map).eventId,
+      '01ARZ3NDEKTSV4RRFFQ69G5FAA',
+    );
+    expect(base.toFirestore().containsKey('event_id'), isFalse);
   });
 }

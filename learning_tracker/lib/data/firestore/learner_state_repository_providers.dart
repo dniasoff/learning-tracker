@@ -42,11 +42,13 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_points_amount_reader.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/c0_stub.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart';
@@ -200,13 +202,25 @@ final governedIntentRepositoryProvider =
     );
 
 /// [LearningWritePort] over the active account's Firestore handle, or null
-/// while not ready.
-///
-/// C0 stub, filled by DNI-469 (1.7).
-final learningWritePortProvider = FutureProvider<LearningWritePort?>(
-  (ref) => c0Stub('DNI-469', 'learningWritePortProvider'),
-  retry: (retryCount, error) => null,
-);
+/// while not ready. The chunked batch commit lives on
+/// [FirestoreLearningEventRepository] (DNI-469; ruling B4(a)).
+final learningWritePortProvider = FutureProvider<LearningWritePort?>((
+  ref,
+) async {
+  final handles = await _readyHandles(ref);
+  if (handles == null) return null;
+  return FirestoreLearningEventRepository(firestore: handles.firestore);
+}, retry: (retryCount, error) => null);
+
+/// The AD-50 [PointsAmountReader] over the active account's Firestore
+/// handle, or null while not ready (DNI-469).
+final pointsAmountReaderProvider = FutureProvider<PointsAmountReader?>((
+  ref,
+) async {
+  final handles = await _readyHandles(ref);
+  if (handles == null) return null;
+  return FirestorePointsAmountReader(firestore: handles.firestore);
+}, retry: (retryCount, error) => null);
 
 /// [OversizedGovernedWritePort] over the active account's callable
 /// handle, or null while not ready.
