@@ -352,13 +352,13 @@ function unlearnPlan(
     const events = ctx.profileRef.collection("learning_events");
 
     // (a) counted leaf learn events with ref ∈ leafSet.
-    const candidates = new Map<string, FirebaseFirestore.DocumentData>();
+    const candidates = new Set<string>();
     for (const refs of chunks(leafSet, IN_CHUNK)) {
       const snap = await ctx.txn.get(events.where("ref", "in", refs));
       for (const d of snap.docs) {
         const e = d.data();
         if (e.kind === "learn" && e.curriculum_id === curriculumId && e.source === MAIN_SOURCE) {
-          candidates.set(d.id, e);
+          candidates.add(d.id);
         }
       }
     }
@@ -378,7 +378,7 @@ function unlearnPlan(
     });
 
     // Counted = not already voided (voids form a set of target ids).
-    const toCheck = [...new Set([...candidates.keys(), ...nodeReissues.map((n) => n.targetEventId)])];
+    const toCheck = [...new Set([...candidates, ...nodeReissues.map((n) => n.targetEventId)])];
     const voided = new Set<string>();
     for (const ids of chunks(toCheck, IN_CHUNK)) {
       const snap = await ctx.txn.get(events.where("target_id", "in", ids));
@@ -397,7 +397,7 @@ function unlearnPlan(
       voidOnce.add(targetId);
       out.push({ id: newUlid(), fields: { kind: "void", target_id: targetId } });
     };
-    [...candidates.keys()].filter((id) => !voided.has(id)).sort().forEach(voidOf);
+    [...candidates].filter((id) => !voided.has(id)).sort().forEach(voidOf);
     nodeReissues.forEach((n, i) => {
       const t = targetSnaps[i].data()!;
       voidOf(n.targetEventId);
