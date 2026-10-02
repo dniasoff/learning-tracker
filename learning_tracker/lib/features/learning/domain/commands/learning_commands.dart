@@ -554,6 +554,20 @@ final class DefaultLearningCommands implements LearningCommands {
         );
       });
 
+  /// Undo of a capture, a void or an un-learn (AD-31, AD-38; DNI-514
+  /// AC-6, AC-7).
+  ///
+  /// Every target is validated before anything is written. A learn still
+  /// counted is voided, each void carrying `reverts_action_id` = the
+  /// capture's first (lowest) event id, so the capture reads *Undone*
+  /// everywhere and is never undone twice ([CaptureRejection.undoNotOffered]).
+  /// A target already voided needs nothing. A lock-ignored member is
+  /// skipped (never voided nor re-copied, so no undo launders it back into
+  /// the count); a capture of only lock-ignored members offers no undo
+  /// ([CaptureRejection.lockIgnoredTarget]). A void is undone by a learn
+  /// copy of its target with `original_recorded_at = effectiveAt(target)`,
+  /// unless such a copy is already counted. A void written by an undo is
+  /// final ([CaptureRejection.undoIsFinal]).
   @override
   Future<CaptureResult> undoEvents(List<String> eventIds) => _gated((
     stamp,
@@ -563,29 +577,43 @@ final class DefaultLearningCommands implements LearningCommands {
     if (targets.isEmpty) return const CaptureResult.success();
     if (!targets.every(isUlid)) return _invalid;
     final log = await _log(stamp, history);
+    final undoId = targets.reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
     // Validate every target before writing anything.
     final voids = <LearningEvent>[];
     final copies = <LearningEvent>[];
+    var lockIgnored = 0;
     for (final id in targets) {
       final e = log.byId[id];
       if (e == null) {
         return const CaptureResult.rejected(CaptureRejection.targetNotFound);
       }
+      if (e.isVoid && e.revertsActionId != null) {
+        return const CaptureResult.rejected(CaptureRejection.undoIsFinal);
+      }
       if (log.isLockIgnored(id)) {
-        return const CaptureResult.rejected(CaptureRejection.lockIgnoredTarget);
+        lockIgnored++;
+        continue;
       }
       if (e.isLearn) {
         if (!log.isVoided(id)) voids.add(e);
         continue;
       }
-      if (e.revertsActionId != null) {
-        return const CaptureResult.rejected(CaptureRejection.undoIsFinal);
-      }
       final t = log.byId[e.targetId];
       if (t == null || !t.isLearn) {
         return const CaptureResult.rejected(CaptureRejection.targetNotFound);
       }
-      if (log.isVoided(t.id) && !copies.contains(t)) copies.add(t);
+      if (log.isVoided(t.id) &&
+          !log.isLockIgnored(t.id) &&
+          !copies.contains(t) &&
+          !_hasCountedCopy(log, t)) {
+        copies.add(t);
+      }
+    }
+    if (lockIgnored == targets.length) {
+      return const CaptureResult.rejected(CaptureRejection.lockIgnoredTarget);
+    }
+    if (log.byId.values.any((e) => e.isVoid && e.revertsActionId == undoId)) {
+      return const CaptureResult.rejected(CaptureRejection.undoNotOffered);
     }
     final ids = stamp.ids(voids.length + copies.length);
     var i = 0;
@@ -594,7 +622,7 @@ final class DefaultLearningCommands implements LearningCommands {
       for (final e in voids) {
         units.add(
           WriteUnit([
-            voidEventOf(stamp, ids[i++], e.id, revertsActionId: targets.first),
+            voidEventOf(stamp, ids[i++], e.id, revertsActionId: undoId),
           ]),
         );
       }
@@ -824,6 +852,25 @@ final class DefaultLearningCommands implements LearningCommands {
     );
     return out.stream;
   }
+
+  /// Whether a counted learn other than [target] is its undo copy: the same
+  /// learn fields at `effectiveAt(target)` (`copyOf`), so undoing the void
+  /// again would only duplicate it.
+  static bool _hasCountedCopy(LearningLogView log, LearningEvent target) =>
+      log.byId.values.any(
+        (e) =>
+            e.isLearn &&
+            e.id != target.id &&
+            log.isCounted(e.id) &&
+            effectiveAt(e) == effectiveAt(target) &&
+            e.curriculumId == target.curriculumId &&
+            e.ref == target.ref &&
+            e.level == target.level &&
+            e.source == target.source &&
+            e.dateState == target.dateState &&
+            e.learnedOn == target.learnedOn &&
+            e.stage == target.stage,
+      );
 
   /// Encodes every event once (AD-52 validation) before any write.
   static void _validate(List<WriteUnit> units) {

@@ -6,20 +6,30 @@
 /// tutor's action field by field, a later change is left alone and named,
 /// a create is undoable again once every later change was undone, and a
 /// same-field race is decided by commit order with both actions kept.
+/// AC-6 / AC-7 (events): undo of a capture voids only its still-counted,
+/// unlocked members under the capture's first event id, once; undo of a
+/// void re-copies its target once.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/governed_action_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/undo_result.dart';
 
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/governed_harness.dart';
+import '../../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 
 const _cid = 'mishnayos';
@@ -67,6 +77,51 @@ const _days = GovernedEntity.mainTrackStudyDays;
 GovernedAction _deadline(String date) => oneEntity(_goal, _goalId, [
   patch(_goal, _goalId, {'target_date': date}),
 ]);
+
+/// Event commands over a fixed log (the SDK cache) at [now].
+final class _Events {
+  _Events(List<LearningEvent> log, {DateTime? now})
+    : reads = FakeLearningCommandReads(
+        history: c0SettingsHistory(),
+        log: log,
+        corpora: {engineCurriculum: mishnayosCorpus()},
+      ) {
+    commands = DefaultLearningCommands(
+      scope: c0Scope(),
+      actor: parentActor,
+      reads: reads,
+      writePort: port,
+      gate: const LockWindowCaptureGate(),
+      analytics: RecordingLearningAnalytics(),
+      failureReporter: RecordingLearningFailureReporter(),
+      clock: () => now ?? engineAt(600),
+      newUlid: (_) => engineUlid(_seq++),
+      ackWait: const Duration(milliseconds: 40),
+      pointsWait: const Duration(milliseconds: 40),
+    );
+    addTearDown(commands.dispose);
+  }
+
+  final FakeLearningCommandReads reads;
+  final port = InMemoryLearningWritePort();
+  late final DefaultLearningCommands commands;
+  int _seq = 30000;
+
+  List<LearningEvent> get written => [for (final c in port.chunks) ...c.events];
+
+  /// Shows everything committed so far in the read log.
+  void sync() {
+    final all = {...reads.eventLog, ...written};
+    reads.eventLog
+      ..clear()
+      ..addAll(all);
+  }
+
+  /// The engine's distinct learnt count over the current log.
+  int distinctLearnt() => const LearnerStateEngine()
+      .run(engineInputs(events: reads.eventLog))[engineCurriculum]!
+      .distinctLearnt;
+}
 
 /// A reader that hands out [store]'s current doc and, on the first read,
 /// runs [interleave] AFTER taking that snapshot: a write that commits
@@ -659,6 +714,96 @@ void main() {
         (reread as UndoNothingToUndo).changedSince.single,
         ChangedSinceField(_k('goals', _goalId, 'target_date'), parentActor),
       );
+    });
+  });
+
+  group('DNI-514 AC-6/AC-7: undo of a learning capture', () {
+    const b11 = 'Mishnah Berakhot 1:1';
+    const b12 = 'Mishnah Berakhot 1:2';
+    const b13 = 'Mishnah Berakhot 1:3';
+
+    test('voids each still-counted event under the first event id, once; '
+        'the counts recompute and those voids are final', () async {
+      final h = _Events([
+        engineLearn(1, b11),
+        engineLearn(2, b12, minutes: 1),
+        engineLearn(3, b13, minutes: 2),
+        engineVoid(4, 2, minutes: 3), // already voided before the undo
+      ]);
+      expect(h.distinctLearnt(), 2);
+
+      final result = UndoResult.of(
+        await h.commands.undoEvents([
+          engineUlid(3),
+          engineUlid(1),
+          engineUlid(2),
+        ]),
+      );
+
+      expect(result, isA<UndoApplied>());
+      final voids = h.written;
+      expect(voids.every((e) => e.isVoid), isTrue);
+      expect(voids.map((e) => e.targetId).toSet(), {
+        engineUlid(1),
+        engineUlid(3),
+      });
+      expect(voids.map((e) => e.revertsActionId).toSet(), {engineUlid(1)});
+      h.sync();
+      expect(h.distinctLearnt(), 0);
+
+      expect(
+        await h.commands.undoEvents([
+          engineUlid(1),
+          engineUlid(2),
+          engineUlid(3),
+        ]),
+        const CaptureResult.rejected(CaptureRejection.undoNotOffered),
+      );
+      expect(
+        await h.commands.undoEvents([voids.first.id]),
+        const CaptureResult.rejected(CaptureRejection.undoIsFinal),
+      );
+      expect(h.written, hasLength(2), reason: 'nothing more written');
+    });
+
+    test('a lock-ignored member is skipped, never voided or counted', () async {
+      final h = _Events([
+        engineLearn(1, b11),
+        engineLearn(3, b13, minutes: 6000), // inside the Shabbos lock
+      ], now: DateTime.utc(2026, 9, 7, 10));
+      expect(h.distinctLearnt(), 1);
+
+      await h.commands.undoEvents([engineUlid(1), engineUlid(3)]);
+
+      expect(h.written.single.targetId, engineUlid(1));
+      expect(h.written.single.revertsActionId, engineUlid(1));
+      h.sync();
+      expect(h.distinctLearnt(), 0);
+      expect(
+        await h.commands.undoEvents([engineUlid(3)]),
+        const CaptureResult.rejected(CaptureRejection.lockIgnoredTarget),
+      );
+    });
+
+    test('undo of a void writes one learn copy at the target instant; a '
+        'second undo writes nothing', () async {
+      final target = engineLearn(1, b11, minutes: 30);
+      final h = _Events([target, engineVoid(2, 1, minutes: 40)]);
+      expect(h.distinctLearnt(), 0);
+
+      await h.commands.undoEvents([engineUlid(2)]);
+
+      final copy = h.written.single;
+      expect(copy.isLearn, isTrue);
+      expect(copy.ref, b11);
+      expect(effectiveAt(copy), effectiveAt(target));
+      expect(copy.revertsActionId, isNull);
+      h.sync();
+      expect(h.distinctLearnt(), 1);
+
+      final again = UndoResult.of(await h.commands.undoEvents([engineUlid(2)]));
+      expect(again, isA<UndoNothingToUndo>());
+      expect(h.written, hasLength(1));
     });
   });
 }
