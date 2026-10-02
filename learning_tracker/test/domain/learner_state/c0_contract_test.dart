@@ -715,10 +715,6 @@ void main() {
         await settledAsync(container, learningCommandsProvider),
         const AsyncData<LearningCommands?>(null),
       );
-      expect(
-        await settledAsync(container, corporaProvider),
-        isAsyncC0Stub('DNI-474', 'corporaProvider'),
-      );
       expect(container.read(learnerStateEngineProvider), isNotNull);
     });
   });

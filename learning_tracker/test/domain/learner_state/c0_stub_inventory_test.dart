@@ -16,11 +16,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 /// The Stub map of DNI-524, one row per call site: `(owner, what)`.
-const _inventory = <(String, String)>[
-  // DNI-474 (1.12)
-  ('DNI-474', 'corporaProvider'),
-  ('DNI-474', 'learnerStateProvider'),
-];
+const _inventory = <(String, String)>[];
 
 /// The library that declares `c0Stub` (not a call site).
 const _definition = 'lib/domain/learner_state/c0_stub.dart';
