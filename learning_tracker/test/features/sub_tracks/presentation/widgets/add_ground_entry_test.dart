@@ -11,12 +11,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_assignment_rollbacks_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/add_ground_entry.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -51,12 +48,11 @@ GroundPickerWorld _world({
   bool parent = true,
   bool calendar = false,
   List<NodeEntry> ground = const [],
-  FakeLearningCommands? commands,
 }) => GroundPickerWorld(
   corpus: mishnayosCorpus(),
   parent: parent,
   calendarProgram: calendar,
-  commands: commands ?? FakeLearningCommands(),
+  commands: FakeLearningCommands(),
   tracks: [
     fixtureTrack(
       schoolId,
@@ -185,43 +181,6 @@ void main() {
       await tester.pumpAndSettle();
       verify(() => router.push<Object?>(any())).called(1);
       expect(find.text('Add ground to School'), findsNothing);
-    });
-  });
-
-  group('AC-4 late rollback (UX-DR-127)', () {
-    testWidgets('after the picker closed on a queued assignment, a server '
-        'refusal is announced once by Add ground', (tester) async {
-      final commands = FakeLearningCommands();
-      addTearDown(commands.dispose);
-      await _pump(tester, _world(commands: commands));
-      final container = ProviderScope.containerOf(
-        tester.element(find.text('Add ground')),
-      );
-      container
-          .read(groundAssignmentRollbacksProvider.notifier)
-          .trackQueued(
-            commands,
-            schoolId,
-            const CaptureSuccess(
-              changeIds: ['change-1'],
-              actionId: 'change-1',
-              queued: true,
-            ),
-          );
-      commands.pendingFailures.add([
-        const PendingFailure(
-          id: 'change-1',
-          eventIds: [],
-          changeIds: ['change-1'],
-          reason: PendingFailureReason.permissionDenied,
-        ),
-      ]);
-      await tester.pumpAndSettle();
-      expect(
-        find.text("Couldn't add the ground. Nothing was changed."),
-        findsOneWidget,
-      );
-      expect(container.read(groundAssignmentRollbacksProvider), isEmpty);
     });
   });
 }

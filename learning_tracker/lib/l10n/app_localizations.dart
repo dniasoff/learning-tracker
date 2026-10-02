@@ -5279,6 +5279,12 @@ abstract class AppLocalizations {
   /// **'Not selected'**
   String get groundPickerNotSelected;
 
+  /// Ground picker: snackbar when an assignment is refused because the device is offline; an append is never queued (DNI-498 AC-4, UX-DR-127). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. Ground can be added once you\'re back online. Nothing was changed.'**
+  String get groundPickerOnlineRequired;
+
   /// Ground picker: screen-reader selection state of a partly picked row (DNI-498 AC-9, UX-DR-157).
   ///
   /// In en, this message translates to:

@@ -2282,6 +2282,10 @@
   "@groundPickerNotSelected": {
     "description": "Ground picker: screen-reader selection state of an unpicked row (DNI-498 AC-9, UX-DR-157)."
   },
+  "groundPickerOnlineRequired": "You're offline. Ground can be added once you're back online. Nothing was changed.",
+  "@groundPickerOnlineRequired": {
+    "description": "Ground picker: snackbar when an assignment is refused because the device is offline; an append is never queued (DNI-498 AC-4, UX-DR-127). DRAFT copy, pending zc4."
+  },
   "groundPickerPartlySelected": "Partly selected",
   "@groundPickerPartlySelected": {
     "description": "Ground picker: screen-reader selection state of a partly picked row (DNI-498 AC-9, UX-DR-157)."

@@ -8,7 +8,7 @@
 /// [applyGovernedChangeToLatest] always derives from the server's current
 /// row, as the Firestore transaction does. With [InMemorySubTrackRepository.
 /// offline] set it throws [OnlineRequiredException] (a transaction needs
-/// the server) and the command queues the ordinary batch.
+/// the server) and the command refuses the append as online-required.
 library;
 
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';

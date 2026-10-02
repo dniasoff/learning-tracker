@@ -152,6 +152,27 @@ void main() {
       expect(world.subTracks.calls, isEmpty);
     });
 
+    testWidgets('offline (online required) says so, keeps the picks and '
+        'stays open', (tester) async {
+      var closed = 0;
+      commands.nextResult = const CaptureResult.onlineRequired();
+      await _pump(tester, world, onClose: () => closed++);
+      await tester.tap(_rowCheckbox('Seder Moed'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add 1 Seder to School'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          "You're offline. Ground can be added once you're back online. "
+          'Nothing was changed.',
+        ),
+        findsOneWidget,
+      );
+      expect(closed, 0);
+      expect(find.text('Add 1 Seder to School'), findsOneWidget);
+      expect(world.subTracks.calls, isEmpty);
+    });
+
     testWidgets('no commands (not ready) is a rejection, not a crash', (
       tester,
     ) async {

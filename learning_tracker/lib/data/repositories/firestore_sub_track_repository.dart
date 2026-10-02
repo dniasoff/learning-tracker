@@ -57,7 +57,8 @@
 ///   never overwrite a concurrent one: a write that lands in between makes
 ///   Firestore re-run the derivation on the new row. It needs the server;
 ///   `unavailable` / `deadline-exceeded` become [OnlineRequiredException]
-///   and the caller queues the ordinary batch instead.
+///   and the caller refuses the append as online-required (it is never
+///   queued as a stale whole-list batch).
 library;
 
 import 'dart:math' as math;
