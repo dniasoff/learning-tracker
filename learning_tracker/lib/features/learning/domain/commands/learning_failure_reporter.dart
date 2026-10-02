@@ -26,6 +26,12 @@ enum LearningCommandKind {
   /// `undoEvents`.
   undo('undo'),
 
+  /// `applyGovernedChange` (DNI-470).
+  governedChange('governed_change'),
+
+  /// `undoAction` (DNI-470).
+  undoAction('undo_action'),
+
   /// `retry` of a pending failure.
   retry('retry');
 

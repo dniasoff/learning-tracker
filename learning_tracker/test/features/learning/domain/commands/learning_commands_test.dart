@@ -126,6 +126,19 @@ final class _LoggedGoverned implements GovernedLearningCommands {
     log.add('governed');
     return const CaptureResult.success();
   }
+
+  /// The governed pending failures it reports.
+  List<PendingFailure> failures = const [];
+
+  @override
+  Stream<List<PendingFailure>> watchPendingFailures() => Stream.value(failures);
+
+  @override
+  Future<CaptureResult?> retry(String pendingFailureId) async {
+    if (!failures.any((f) => f.id == pendingFailureId)) return null;
+    log.add('governed retry');
+    return CaptureResult.success(changeIds: [pendingFailureId]);
+  }
 }
 
 final _governedAction = GovernedAction(const [
@@ -166,7 +179,7 @@ final class _Harness {
       },
       ackWait: const Duration(milliseconds: 40),
       pointsWait: const Duration(milliseconds: 40),
-      governed: governed ? _LoggedGoverned(log) : null,
+      governed: governed ? governedFake = _LoggedGoverned(log) : null,
     );
     addTearDown(commands.dispose);
   }
@@ -180,6 +193,7 @@ final class _Harness {
   final analytics = RecordingLearningAnalytics();
   final reporter = RecordingLearningFailureReporter();
   late final DefaultLearningCommands commands;
+  _LoggedGoverned? governedFake;
   int _seq = 20000;
   int minted = 0;
   int? idsMintedAtFirstCommit;
@@ -993,6 +1007,28 @@ void main() {
     h.log.clear();
     await h.commands.undoAction(engineUlid(1));
     expect(h.log, ['settings', 'gate', 'governed']);
+  });
+
+  test('governed pending failures are listed after the event ones, and '
+      'retried through the governed commands after the gate', () async {
+    final h = _Harness(governed: true);
+    final failure = PendingFailure(
+      id: engineUlid(7),
+      eventIds: const [],
+      changeIds: [engineUlid(7)],
+      reason: PendingFailureReason.permissionDenied,
+    );
+    h.governedFake!.failures = [failure];
+    expect(await h.commands.watchPendingFailures().first, [failure]);
+    expect(
+      await h.commands.retry(engineUlid(7)),
+      CaptureResult.success(changeIds: [engineUlid(7)]),
+    );
+    expect(h.log, ['settings', 'gate', 'governed retry']);
+    expect(
+      await h.commands.retry(engineUlid(8)),
+      const CaptureResult.rejected(CaptureRejection.targetNotFound),
+    );
   });
 
   test(
