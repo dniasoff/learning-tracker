@@ -1423,6 +1423,8 @@
   "searchTitle": "חיפוש",
   "searchHintEnterTerm": "הזינו מונח חיפוש למעלה",
   "loadingText": "טוען טקסט...",
+  "captureLockedNotice": "לא נרשם — האפליקציה סגורה בשבת וביום טוב.",
+  "captureNotSaved": "לא נשמר — הלימוד לא נרשם.",
   "markedComplete": "סומן כהושלם",
   "couldNotSave": "לא ניתן לשמור: {error}",
   "@couldNotSave": {

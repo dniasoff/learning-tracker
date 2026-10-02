@@ -4823,6 +4823,18 @@ abstract class AppLocalizations {
   /// **'Loading text...'**
   String get loadingText;
 
+  /// Snackbar when a capture is refused because a Shabbos/Yom Tov lock is in force; nothing was written (AD-36). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Not recorded — the app is closed for Shabbos and Yom Tov.'**
+  String get captureLockedNotice;
+
+  /// Snackbar when a learning write was rejected for good and rolled back (UX-DR-107/147, AD-54 Recovery). Shown with a Retry action. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Not saved — your learning was not recorded.'**
+  String get captureNotSaved;
+
   /// No description provided for @markedComplete.
   ///
   /// In en, this message translates to:

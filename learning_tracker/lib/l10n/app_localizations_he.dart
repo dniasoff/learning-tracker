@@ -2701,6 +2701,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get loadingText => 'טוען טקסט...';
 
   @override
+  String get captureLockedNotice => 'לא נרשם — האפליקציה סגורה בשבת וביום טוב.';
+
+  @override
+  String get captureNotSaved => 'לא נשמר — הלימוד לא נרשם.';
+
+  @override
   String get markedComplete => 'סומן כהושלם';
 
   @override
