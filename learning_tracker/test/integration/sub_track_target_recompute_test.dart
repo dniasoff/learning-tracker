@@ -4,16 +4,15 @@
 //
 // - AC-4: a future start is off Learn (`onHome` false) yet holds its
 //   ground now (`holdsGround`, prd-deviations #4); its capacity interval
-//   starts at `window_start`, so with a deadline before the start it is not
-//   in the forecast (AD-44).
+//   starts at `window_start` (AD-44, Story 2.3): with a deadline before the
+//   start it is not in the forecast and its capacity is 0; otherwise its
+//   capacity is prorated over `[window_start, deadline]` against the
+//   ongoing `windowLengthDays` of 365.
 // - AC-6: an edit that sets an end date before today returns the unlearnt
 //   ground to the main track and the daily target recomputes from the new
 //   intent.
 // - AC-5: two offline creates that both synced (six ongoing sub-tracks) are
 //   tolerated by the engine without error (AD-45).
-//
-// DNI-494 (Story 2.3 capacity) is not on `integ/sub-tracks`, so the
-// capacity number itself is not asserted here (follow-up bead).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -142,6 +141,27 @@ void main() {
         _run([future], deadline: '2026-12-31').subTracks[future.id]!.inForecast,
         isTrue,
       );
+    });
+
+    test('its capacity counts only from window_start (AD-44)', () {
+      const deadline = '2026-12-31';
+      // Empty interval: capacity 0, nothing credited to the main track.
+      final before = _run(
+        [future],
+        deadline: '2026-09-30',
+      ).subTracks[future.id]!;
+      expect(before.capacity, 0);
+      expect(before.expectedNewGround, 0);
+
+      // [2026-10-01, 2026-12-31] is 92 days, not the 116 from today:
+      // floor(5 × 52 × 92 ÷ 365) = 65.
+      final later = _run([future], deadline: deadline).subTracks[future.id]!;
+      expect(later.capacity, 65);
+
+      // The same track starting today counts from today:
+      // [2026-09-07, 2026-12-31] is 116 days, floor(5 × 52 × 116 ÷ 365) = 82.
+      final now = _created(12, _form());
+      expect(_run([now], deadline: deadline).subTracks[now.id]!.capacity, 82);
     });
 
     test('a start of today is on Learn the same day', () {
