@@ -11,18 +11,27 @@
 # functions/src/write_with_change_log.ts helper addresses it under
 # learner_profiles/{profileId ULID}, the same tree the Firestore repository
 # reads — not a genuine split.
+# learning_events, sub_tracks and change_log joined with Story 1.2 (DNI-464):
+# FirestoreLearningEventRepository / FirestoreSubTrackRepository read
+# users/{uid}/learner_profiles/{profileId ULID}/..., and writeWithChangeLog
+# (functions/src/write_with_change_log.ts) and the tutor learning callables
+# (functions/src/tutor_learning.ts) address the same profileRef
+# users/{ownerUid}/learner_profiles/{profileId ULID} — not a genuine split.
 # A new collection NOT listed here fails `make audit`/`make ci`.
 # Widening this file requires the same team sign-off any other ratchet
 # widening requires — a new entry here means a NEW collection became
 # genuinely production-split, not that this checker got noisier.
 bookmarks
+change_log
 completions
 curriculum_scopes
 curriculum_tracks
 goals
+learning_events
 learning_ledger
 learning_order
 profile_programs
 stage_definitions
 study_day_configs
+sub_tracks
 track_learning_order
