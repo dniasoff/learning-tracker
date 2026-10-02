@@ -683,6 +683,67 @@ void main() {
     expect(_text('Behind pace'), findsNothing);
   });
 
+  group('an unresolved session role (NFR-9, AC-6)', () {
+    final state = _state(
+      const Projection(
+        status: ProjectionStatus.behindPace,
+        deadline: '2029-09-10',
+      ),
+      dailyTarget: 3,
+    );
+
+    Future<Completer<bool>> pumpUnresolved(WidgetTester tester) async {
+      final role = Completer<bool>();
+      await tester.pumpWidget(
+        pumpApp(
+          theme: AppTheme.lightTheme(),
+          overrides: forecastOverrides(
+            parentSession: role.future,
+            state: state,
+          ),
+          child: const Scaffold(body: ParentForecastSection()),
+        ),
+      );
+      return role;
+    }
+
+    void expectNoParentSurface(WidgetTester tester) {
+      expect(find.byKey(const Key('onTrackCardLoading')), findsNothing);
+      expect(find.byKey(const Key('onTrackCardError')), findsNothing);
+      expect(find.byType(OnTrackCard), findsNothing);
+      expect(find.bySemanticsLabel('Loading pace status'), findsNothing);
+      expect(_text('Behind pace'), findsNothing);
+    }
+
+    testWidgets('a child session shows nothing from its first frame', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final role = await pumpUnresolved(tester);
+      expectNoParentSurface(tester);
+      await tester.pump();
+      expectNoParentSurface(tester);
+
+      role.complete(false);
+      await tester.pump();
+      await tester.pump();
+      expectNoParentSurface(tester);
+      semantics.dispose();
+    });
+
+    testWidgets('a parent session shows the card once confirmed', (
+      tester,
+    ) async {
+      final role = await pumpUnresolved(tester);
+      expectNoParentSurface(tester);
+
+      role.complete(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(OnTrackCard), findsOneWidget);
+      expect(_text('Behind pace'), findsOneWidget);
+    });
+  });
+
   testWidgets('loading is a static placeholder, not a spinner', (tester) async {
     final never = StreamController<LearnerState>();
     addTearDown(never.close);
