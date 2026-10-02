@@ -6,6 +6,7 @@ import { db, CALL_OPTS, buildAccessId } from "./shared";
 import {
   isDocIdSafe,
   removeTrackPlan,
+  removeTrackPlanKey,
   runGoverned,
   writeWithChangeLog,
 } from "./write_with_change_log";
@@ -198,7 +199,7 @@ export const deleteCurriculumTrack = onCall(CALL_OPTS, (request) => runGoverned(
     actionId,
     callerPolicy: "owner-only",
     plan: removeTrackPlan(curriculumId),
-    replayScope: [{ entity: "mainTrack", entityId: curriculumId }, { entity: "subTrack" }],
+    planKey: removeTrackPlanKey(curriculumId),
   });
 }));
 

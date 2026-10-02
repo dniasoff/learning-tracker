@@ -271,6 +271,21 @@ describe('deleteCurriculumTrack', () => {
     assert.equal((await changeLog()).length, 1);
   });
 
+  // Repair round 2 (codex HIGH): a no-op action leaves a durable receipt, so
+  // a retry after the state changed replays it instead of running anew.
+  test('a no-op remove is durable: a same-ULID retry after the track is recreated does not remove it', async () => {
+    const first = await call(fns.deleteCurriculumTrack, { ...goodArgs, actionId: ulid(1) }, parentAuth);
+    assert.equal(first.noop, true);
+    assert.equal(first.replayed, false);
+    await trackRef().set({ state: 'active', curriculum_id: C });
+    const retry = await call(fns.deleteCurriculumTrack, { ...goodArgs, actionId: ulid(1) }, parentAuth);
+    assert.equal(retry.replayed, true);
+    assert.equal(retry.noop, true, 'the stored no-op result is returned');
+    assert.deepEqual(retry.change_ids, []);
+    assert.equal((await trackRef().get()).get('ended_at'), undefined, 'the recreated track is untouched');
+    assert.deepEqual(await changeLog(), []);
+  });
+
   test('a ULID already used for a different track → already-exists', async () => {
     await trackRef().set({ state: 'active', curriculum_id: C });
     await lp().collection('curriculum_tracks').doc('exodus').set({ state: 'active', curriculum_id: 'exodus' });

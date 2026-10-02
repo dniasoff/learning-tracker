@@ -11,6 +11,7 @@ import {
   ULID_RE,
   isDocIdSafe,
   removeTrackPlan,
+  removeTrackPlanKey,
   runGoverned,
   writeWithChangeLog,
 } from "./write_with_change_log";
@@ -450,7 +451,7 @@ export const tutorDeleteTrack = onCall(CALL_OPTS, (request) => runGoverned("main
     actionId: args.actionId,
     auditAction: "track_deleted",
     plan: removeTrackPlan(args.targetId),
-    replayScope: [{ entity: "mainTrack", entityId: args.targetId }, { entity: "subTrack" }],
+    planKey: removeTrackPlanKey(args.targetId),
   });
 }));
 

@@ -29,10 +29,14 @@ import { db } from "./shared";
 //   5. runs everything — doc patches, one change_log entry per entity, learning
 //      events — in ONE Firestore transaction;
 //   6. is idempotent on the client action id (the request actionId, else the
-//      first entry's ULID): a retry finds every change_log entry carrying that
-//      action_id and, when actor, entity and payload match, returns the stored
-//      result (change ids, event ids, server times); a different
-//      actor/entity/payload under the same id is rejected (already-exists).
+//      first entry's ULID): every client action — no-ops included — leaves an
+//      immutable receipt at `governed_action_receipts/{actionId}` (Admin-only,
+//      default-denied by the rules) holding the actor, a canonical request
+//      fingerprint and the result. A retry with the same actor and fingerprint
+//      returns the stored result (change ids, event ids, server times) without
+//      re-planning; a different actor or ANY payload difference (entity ids,
+//      doc ids, modes, fields, plan, events) under the same id is rejected
+//      (already-exists).
 //
 // Writes are field-level (`mergeFields` of the changed fields only, including
 // first writes); removal is an `ended_at` tombstone, never a delete. A create
@@ -229,6 +233,8 @@ const EVENT_LEARN_FIELDS: Readonly<Record<string, Check>> = {
   level: either(str(64), int),
   source: (v) => v === "main" || (typeof v === "string" && ULID_RE.test(v)),
   date_state: oneOf("dated", "catch_up", "before_tracking"),
+  // AD-40 / AD-52: a civil date, required on dated and catch_up events (the
+  // streak and projection count on it); null/absent only on before_tracking.
   learned_on: nullable(date),
   stage: int,
   original_recorded_at: (v) => typeof v === "string" && !Number.isNaN(Date.parse(v)),
@@ -297,8 +303,13 @@ export interface GovernedWriteRequest {
    * appended after the static ones.
    */
   plan?: (ctx: PlanContext) => Promise<GovernedPlan>;
-  /** Entities a stored entry under this ULID may belong to for an idempotent replay. */
-  replayScope?: Array<{ entity: GovernedEntity; entityId?: string }>;
+  /**
+   * Stable identity of `plan` and its parameters (e.g. `removeTrack:{c}`),
+   * part of the replay fingerprint. Required whenever `plan` is set: the
+   * expansion depends on state at write time, so a replay compares the
+   * request that produced it, never a re-run of the plan.
+   */
+  planKey?: string;
   /** owner-only rejects every non-owner caller (ownerOversizedGovernedWrite). */
   callerPolicy?: "owner-or-tutor" | "owner-only";
   /** Security-audit action label for tutor writes (tutor_grants/{id}/audit_log). */
@@ -491,8 +502,11 @@ function validateEvents(raw: unknown): LearningEventIntent[] {
         if (fields[req] === undefined) reject("invalid-argument", `learn event requires ${req}`);
       }
       const beforeTracking = fields.date_state === "before_tracking";
-      if (!beforeTracking && (fields.level !== undefined || fields.learned_on !== undefined)) {
-        reject("invalid-argument", "level/learned_on are only allowed on before_tracking events");
+      if (!beforeTracking && fields.level !== undefined) {
+        reject("invalid-argument", "level is only allowed on before_tracking events");
+      }
+      if (!beforeTracking && !date(fields.learned_on)) {
+        reject("invalid-argument", "dated and catch_up events require learned_on");
       }
       if (fields.stage !== undefined && fields.source !== "main") {
         reject("invalid-argument", "stage is only allowed on source = main");
@@ -619,64 +633,76 @@ function timestampIso(v: unknown): string | null {
   return v instanceof admin.firestore.Timestamp ? v.toDate().toISOString() : null;
 }
 
-function replayMatches(
-  stored: FirebaseFirestore.DocumentData,
-  actor: Actor,
-  scope: Array<{ entity: GovernedEntity; entityId?: string }>,
-  staticEntries: GovernedEntryIntent[],
-): boolean {
-  if (stored.actor?.uid !== actor.uid || stored.actor?.role !== actor.role) return false;
-  const inScope = scope.some((s) =>
-    s.entity === stored.entity && (s.entityId === undefined || s.entityId === stored.entity_id));
-  if (!inScope) return false;
-  // Payload check: every stored after-value whose doc/field the replay also
-  // patches must carry the same value (server-stamped tombstones excepted).
-  const patched = new Map<string, unknown>();
-  for (const e of staticEntries) {
-    for (const d of e.docs) {
-      for (const [f, v] of Object.entries(d.fields)) patched.set(changeKey(d.collection, d.docId, f), v);
-    }
+/** JSON with object keys sorted, so equal requests serialise identically. */
+function canonicalJson(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonicalJson).join(",")}]`;
+  if (isPlainObject(v)) {
+    return `{${Object.keys(v).sort()
+      .filter((k) => v[k] !== undefined)
+      .map((k) => `${JSON.stringify(k)}:${canonicalJson(v[k])}`).join(",")}}`;
   }
-  if (patched.size === 0) return true;
-  for (const [key, value] of Object.entries((stored.after ?? {}) as Record<string, unknown>)) {
-    if (!patched.has(key)) continue;
-    const mine = patched.get(key);
-    if (key.endsWith(".ended_at")) {
-      if ((mine === null) !== (value === null)) return false;
-      continue;
-    }
-    if (!deepEqual(mine, value)) return false;
-  }
-  return true;
+  return JSON.stringify(v ?? null);
 }
 
-/** An existing learning event may be replayed only by its own actor, as the same kind. */
+/**
+ * The replay fingerprint: a hash of everything the client asked for — every
+ * entry's id, entity and entity id, every doc's collection, id, mode and
+ * fields, the plan identity, every event's id and fields, the revert target
+ * and the callable's audit action. Two requests alias one action only when
+ * this matches exactly.
+ */
+function requestFingerprint(
+  req: GovernedWriteRequest,
+  entries: GovernedEntryIntent[],
+  events: LearningEventIntent[],
+): string {
+  const canonical = canonicalJson({
+    v: 1,
+    audit: req.auditAction ?? null,
+    reverts: req.revertsActionId ?? null,
+    plan: req.planKey ?? null,
+    entries: entries.map((e) => ({
+      id: e.id ?? null,
+      entity: e.entity,
+      entityId: e.entityId ?? null,
+      docs: e.docs.map((d) => ({
+        collection: d.collection, docId: d.docId, mode: d.mode ?? "upsert", fields: d.fields,
+      })),
+    })),
+    events: events.map((ev) => ({ id: ev.id, fields: ev.fields })),
+  });
+  return crypto.createHash("sha256").update(canonical).digest("hex");
+}
+
+/** Server-only per-action receipt (AD-38 idempotency); never client-readable. */
+export const RECEIPTS_COLLECTION = "governed_action_receipts";
+
+/**
+ * An existing learning event may be replayed only by its own actor with the
+ * identical payload (events are immutable): every client field must match the
+ * stored doc and the stored doc may carry no other client field.
+ */
 function assertEventReplay(
   snap: FirebaseFirestore.DocumentSnapshot,
   ev: LearningEventIntent,
   actor: Actor,
 ): void {
-  if (snap.get("actor.uid") !== actor.uid || snap.get("kind") !== ev.fields.kind) {
-    reject("already-exists", "This event id was already used for a different event");
+  const stored = snap.data() ?? {};
+  const differs = () => reject("already-exists", "This event id was already used for a different event");
+  if (stored.actor?.uid !== actor.uid || stored.actor?.role !== actor.role) differs();
+  const storedKeys = Object.keys(stored).filter((k) => k !== "recorded_at" && k !== "actor");
+  const mineKeys = Object.keys(ev.fields);
+  if (storedKeys.length !== mineKeys.length || !mineKeys.every((k) => k in stored)) differs();
+  for (const k of mineKeys) {
+    const mine = ev.fields[k];
+    const theirs = stored[k];
+    if (k === "original_recorded_at") {
+      const iso = timestampIso(theirs);
+      if (iso === null || Date.parse(iso) !== Date.parse(String(mine))) differs();
+    } else if (!deepEqual(mine, theirs)) {
+      differs();
+    }
   }
-}
-
-/** The request's events that already exist (validated as replays of this actor's). */
-async function existingEventIds(
-  txn: FirebaseFirestore.Transaction,
-  profileRef: FirebaseFirestore.DocumentReference,
-  events: LearningEventIntent[],
-  actor: Actor,
-): Promise<string[]> {
-  if (events.length === 0) return [];
-  const snaps = await txn.getAll(...events.map((ev) => profileRef.collection("learning_events").doc(ev.id)));
-  const ids: string[] = [];
-  events.forEach((ev, i) => {
-    if (!snaps[i].exists) return;
-    assertEventReplay(snaps[i], ev, actor);
-    ids.push(ev.id);
-  });
-  return ids;
 }
 
 // ── The helper ────────────────────────────────────────────────────────────────
@@ -727,15 +753,22 @@ export async function writeWithChangeLog(
   // generates an id and there is no cross-call replay protection.
   const clientActionId: string | null = req.actionId ?? staticEntries[0]?.id ?? null;
   const actionId: string = clientActionId ?? newUlid();
-  const replayScope = req.replayScope ??
-    staticEntries.map((e) => ({ entity: e.entity, entityId: e.entityId }));
+  if (req.plan && (typeof req.planKey !== "string" || req.planKey.length === 0)) {
+    reject("invalid-argument", "A planned write needs a planKey");
+  }
+  const fingerprint = requestFingerprint(req, staticEntries, staticEvents);
 
   const profileRef = db.collection("users").doc(req.ownerUid)
     .collection("learner_profiles").doc(req.profileId);
 
+  const receiptRef = profileRef.collection(RECEIPTS_COLLECTION).doc(actionId);
+
   type Outcome =
-    | { kind: "replay"; changeIds: string[]; eventIds: string[] }
-    | { kind: "written"; changeIds: string[]; newEventIds: string[]; replayedEventIds: string[] };
+    | { kind: "replay"; changeIds: string[]; eventIds: string[]; noop: boolean }
+    | {
+      kind: "written"; changeIds: string[]; eventIds: string[];
+      newEventIds: string[]; replayedEventIds: string[];
+    };
 
   const outcome: Outcome = await db.runTransaction(async (txn): Promise<Outcome> => {
     // ── 1. Authorise (re-read every call, so revocation stops the next one) ──
@@ -744,26 +777,32 @@ export async function writeWithChangeLog(
     if (!profileSnap.exists) reject("not-found", "Learner profile not found");
 
     // ── 2. Idempotent replay on the client action id ─────────────────────────
+    // The receipt is the durable record of the action — written even when
+    // the action changed nothing — so a retry is recognised whatever the
+    // state has become since, and is never re-planned against new state.
     if (clientActionId) {
-      const members = await txn.get(
-        profileRef.collection("change_log").where("action_id", "==", actionId));
-      if (!members.empty) {
-        for (const m of members.docs) {
-          if (!replayMatches(m.data(), actor, replayScope, staticEntries)) {
-            reject("already-exists", "This change id was already used for a different change");
-          }
-        }
-        // The action's events are recovered from their own ULID docs.
-        const eventIds = await existingEventIds(txn, profileRef, staticEvents, actor);
-        // Every event of the original call was written with it, so a retry
-        // naming an event that does not exist is a different payload.
-        if (eventIds.length !== staticEvents.length) {
+      const receipt = await txn.get(receiptRef);
+      if (receipt.exists) {
+        const r = receipt.data()!;
+        if (r.actor?.uid !== actor.uid || r.actor?.role !== actor.role || r.fingerprint !== fingerprint) {
           reject("already-exists", "This change id was already used for a different change");
         }
-        return { kind: "replay", changeIds: members.docs.map((d) => d.id).sort(), eventIds };
+        return {
+          kind: "replay",
+          changeIds: Array.isArray(r.change_ids) ? r.change_ids.map(String) : [],
+          eventIds: Array.isArray(r.event_ids) ? r.event_ids.map(String) : [],
+          noop: r.noop === true,
+        };
       }
-      // No entry carries this action id, so none of its client ULIDs may
-      // already name an entry of a different action (never overwritten).
+      // No receipt: the id must not already belong to an action written
+      // elsewhere (e.g. an owner-path batch carrying this action_id) …
+      const members = await txn.get(
+        profileRef.collection("change_log").where("action_id", "==", actionId).limit(1));
+      if (!members.empty) {
+        reject("already-exists", "This change id was already used for a different change");
+      }
+      // … and none of its client ULIDs may already name an entry of a
+      // different action (never overwritten).
       const claimed = [...new Set([actionId, ...staticEntries.flatMap((e) => (e.id ? [e.id] : []))])];
       const claimedSnaps = await txn.getAll(
         ...claimed.map((id) => profileRef.collection("change_log").doc(id)));
@@ -943,8 +982,21 @@ export async function writeWithChangeLog(
     const ids = planned.map((p) => p.id);
     if (new Set(ids).size !== ids.length) reject("invalid-argument", "Duplicate change ids");
 
-    // ── 7. Write: docs + entries + events, all in this transaction ───────────
+    // ── 7. Write: docs + entries + events + receipt, all in this transaction ─
     const serverNow = admin.firestore.FieldValue.serverTimestamp();
+    const changeIds = [...ids].sort();
+    if (clientActionId) {
+      // Immutable: txn.create fails (and the transaction retries into the
+      // replay branch above) if a concurrent call claimed the id first.
+      txn.create(receiptRef, {
+        actor: { uid: actor.uid, role: actor.role },
+        fingerprint,
+        change_ids: changeIds,
+        event_ids: events.map((ev) => ev.id),
+        noop: changeIds.length === 0 && newEvents.length === 0 && replayedEventIds.length === 0,
+        at: serverNow,
+      });
+    }
     for (const p of planned) {
       for (const w of p.writes) {
         const data = { ...w.data, last_change_id: p.id };
@@ -984,8 +1036,9 @@ export async function writeWithChangeLog(
     }
     return {
       kind: "written",
-      // Sorted, exactly as a replay recovers them from change_log.
-      changeIds: [...ids].sort(),
+      // Sorted, exactly as the receipt stores them for a replay.
+      changeIds,
+      eventIds: events.map((ev) => ev.id),
       newEventIds: newEvents.map((e) => e.id),
       replayedEventIds,
     };
@@ -997,9 +1050,8 @@ export async function writeWithChangeLog(
   // an events-only action) its learning events — returns the stored result.
   const replayed = outcome.kind === "replay" ||
     (wroteNothing && outcome.replayedEventIds.length > 0);
-  const eventIds = outcome.kind === "replay"
-    ? outcome.eventIds
-    : [...outcome.newEventIds, ...outcome.replayedEventIds];
+  const noop = outcome.kind === "replay" ? outcome.noop : wroteNothing && !replayed;
+  const eventIds = outcome.eventIds;
 
   // Read back the server-stamped times (serverTimestamp resolves at commit).
   const firstChange = outcome.changeIds[0];
@@ -1016,7 +1068,7 @@ export async function writeWithChangeLog(
     at: changeSnap ? timestampIso(changeSnap.get("at")) : null,
     recorded_at: eventSnap ? timestampIso(eventSnap.get("recorded_at")) : null,
     replayed,
-    noop: wroteNothing && !replayed,
+    noop,
   };
 }
 
@@ -1030,6 +1082,11 @@ export async function writeWithChangeLog(
  * them as ended while the track has `ended_at`. Nothing is hard-deleted.
  * An already-ended or absent track is a no-op.
  */
+/** The replay identity of {@link removeTrackPlan} for a curriculum. */
+export function removeTrackPlanKey(curriculumId: string): string {
+  return `removeTrack:${curriculumId}`;
+}
+
 export function removeTrackPlan(curriculumId: string): (ctx: PlanContext) => Promise<GovernedPlan> {
   return async ({ txn, profileRef }) => {
     const track = await txn.get(profileRef.collection("curriculum_tracks").doc(curriculumId));

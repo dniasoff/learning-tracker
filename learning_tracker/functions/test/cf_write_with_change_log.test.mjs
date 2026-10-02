@@ -337,7 +337,11 @@ describe('writeWithChangeLog — AD-31 void targets', () => {
     ownerUid: PARENT, profileId: PROFILE, grantId: GRANT, events: evs,
   });
   const learn = (id) => ({
-    id, fields: { kind: 'learn', curriculum_id: C, ref: 'Berakhot 1:1', source: 'main', date_state: 'dated' },
+    id,
+    fields: {
+      kind: 'learn', curriculum_id: C, ref: 'Berakhot 1:1', source: 'main',
+      date_state: 'dated', learned_on: '2026-09-30',
+    },
   });
   const voidOf = (id, target) => ({ id, fields: { kind: 'void', target_id: target } });
 
@@ -403,6 +407,58 @@ describe('writeWithChangeLog — AD-31 void targets', () => {
     await expectHttpsError(
       helper.writeWithChangeLog(parentAuth, { ownerUid: PARENT, profileId: PROFILE, events: [learn(ulid(1))] }),
       'already-exists',
+    );
+  });
+});
+
+// ── AD-40 / AD-52: learned_on on learn events (repair round 2, codex HIGH) ─────
+
+describe('writeWithChangeLog — learn event learned_on', () => {
+  const events = () => profileRef().collection('learning_events');
+  const req = (fields) => ({
+    ownerUid: PARENT, profileId: PROFILE, grantId: GRANT,
+    events: [{ id: ulid(1), fields: { kind: 'learn', curriculum_id: C, ref: 'Berakhot 1:1', source: 'main', ...fields } }],
+  });
+
+  beforeEach(async () => {
+    await seedProfile();
+    await seedLearningGrant();
+  });
+
+  for (const state of ['dated', 'catch_up']) {
+    test(`${state} without learned_on → invalid-argument, nothing written`, async () => {
+      await expectHttpsError(helper.writeWithChangeLog(tutorAuth, req({ date_state: state })), 'invalid-argument');
+      await expectHttpsError(
+        helper.writeWithChangeLog(tutorAuth, req({ date_state: state, learned_on: null })), 'invalid-argument');
+      await expectHttpsError(
+        helper.writeWithChangeLog(tutorAuth, req({ date_state: state, learned_on: '2026-02-30' })), 'invalid-argument');
+      assert.equal((await events().doc(ulid(1)).get()).exists, false);
+    });
+
+    test(`${state} with learned_on is stored with its civil day (counts toward streak/velocity)`, async () => {
+      await helper.writeWithChangeLog(tutorAuth, req({ date_state: state, learned_on: '2026-09-30' }));
+      const stored = (await events().doc(ulid(1)).get()).data();
+      assert.equal(stored.date_state, state);
+      assert.equal(stored.learned_on, '2026-09-30');
+    });
+  }
+
+  test('before_tracking may omit learned_on or carry null, and may carry a node level', async () => {
+    await helper.writeWithChangeLog(tutorAuth, req({ date_state: 'before_tracking', level: 'chapter' }));
+    assert.equal((await events().doc(ulid(1)).get()).get('learned_on'), undefined);
+    await helper.writeWithChangeLog(tutorAuth, {
+      ...req({}),
+      events: [{ id: ulid(2), fields: {
+        kind: 'learn', curriculum_id: C, ref: 'Berakhot 1', source: 'main', date_state: 'before_tracking', learned_on: null,
+      } }],
+    });
+    assert.equal((await events().doc(ulid(2)).get()).get('learned_on'), null);
+  });
+
+  test('level stays before_tracking-only', async () => {
+    await expectHttpsError(
+      helper.writeWithChangeLog(tutorAuth, req({ date_state: 'dated', learned_on: '2026-09-30', level: 'chapter' })),
+      'invalid-argument',
     );
   });
 });
@@ -530,6 +586,85 @@ describe('writeWithChangeLog — idempotent replay', () => {
       'already-exists',
     );
     assert.equal((await profileRef().collection('curriculum_tracks').doc(C).get()).exists, false);
+  });
+
+  // Repair round 2 (codex HIGH): every client action — no-ops included —
+  // leaves an immutable receipt holding a canonical request fingerprint.
+
+  test('a no-op action leaves a receipt: a retry after the state changed replays, not re-runs', async () => {
+    await profileRef().collection('goals').doc(`${C}_deadline`).set(DEADLINE);
+    const first = await call(fns.tutorUpsertGoal, goalArgs(DEADLINE, { actionId: ulid(1) }));
+    assert.equal(first.noop, true);
+    const receipt = await profileRef().collection('governed_action_receipts').doc(ulid(1)).get();
+    assert.equal(receipt.exists, true);
+    assert.equal(receipt.get('noop'), true);
+    assert.deepEqual(receipt.get('actor'), { uid: TUTOR, role: 'tutor' });
+    assert.match(receipt.get('fingerprint'), /^[0-9a-f]{64}$/);
+    // Someone else moves the date; the tutor's retry must not write it back.
+    await profileRef().collection('goals').doc(`${C}_deadline`).update({ target_date: '2029-01-01' });
+    const retry = await call(fns.tutorUpsertGoal, goalArgs(DEADLINE, { actionId: ulid(1) }));
+    assert.equal(retry.replayed, true);
+    assert.equal(retry.noop, true);
+    assert.deepEqual(retry.change_ids, []);
+    const goal = (await profileRef().collection('goals').doc(`${C}_deadline`).get()).data();
+    assert.equal(goal.target_date, '2029-01-01');
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('same ULID against a different doc whose entity id is derived in the transaction → already-exists', async () => {
+    const configs = profileRef().collection('study_day_configs');
+    await configs.doc('cfg-a').set({ curriculum_id: C, day_of_week: 1, day_type: 'learn' });
+    await configs.doc('cfg-b').set({ curriculum_id: C, day_of_week: 2, day_type: 'learn' });
+    const args = (configId) => ({
+      grantId: GRANT, ownerUid: PARENT, profileId: PROFILE, configId,
+      configData: { day_type: 'rest' }, actionId: ulid(1),
+    });
+    const first = await call(fns.tutorUpsertStudyDayConfig, args('cfg-a'));
+    assert.equal(first.change_ids.length, 1);
+    await expectHttpsError(call(fns.tutorUpsertStudyDayConfig, args('cfg-b')), 'already-exists');
+    assert.equal((await configs.doc('cfg-b').get()).get('day_type'), 'learn', 'the second doc is not silently skipped');
+  });
+
+  test('same ULID with a different doc mode → already-exists', async () => {
+    await call(fns.ownerOversizedGovernedWrite,
+      ownerAction(ulid(1), 'goal', `${C}_deadline`, [goalDoc(DEADLINE)]), parentAuth);
+    await expectHttpsError(call(fns.ownerOversizedGovernedWrite,
+      ownerAction(ulid(1), 'goal', `${C}_deadline`, [goalDoc(DEADLINE, 'update')]), parentAuth), 'already-exists');
+  });
+
+  test('same ULID with an extra event or a different event payload → already-exists', async () => {
+    const ev = (id, ref) => ({ id, fields: {
+      kind: 'learn', curriculum_id: C, ref, source: 'main', date_state: 'dated', learned_on: '2026-09-30',
+    } });
+    const base = { ownerUid: PARENT, profileId: PROFILE, grantId: GRANT, actionId: ulid(9) };
+    await helper.writeWithChangeLog(tutorAuth, { ...base, events: [ev(ulid(1), 'Berakhot 1:1')] });
+    await expectHttpsError(helper.writeWithChangeLog(tutorAuth,
+      { ...base, events: [ev(ulid(1), 'Berakhot 1:2')] }), 'already-exists');
+    await expectHttpsError(helper.writeWithChangeLog(tutorAuth,
+      { ...base, events: [ev(ulid(1), 'Berakhot 1:1'), ev(ulid(2), 'Berakhot 1:2')] }), 'already-exists');
+    const replay = await helper.writeWithChangeLog(tutorAuth, { ...base, events: [ev(ulid(1), 'Berakhot 1:1')] });
+    assert.equal(replay.replayed, true);
+    assert.deepEqual(replay.event_ids, [ulid(1)]);
+  });
+
+  test('an event id reused (no action id) with a different payload → already-exists', async () => {
+    const ev = (ref) => ({ id: ulid(1), fields: {
+      kind: 'learn', curriculum_id: C, ref, source: 'main', date_state: 'dated', learned_on: '2026-09-30',
+    } });
+    const base = { ownerUid: PARENT, profileId: PROFILE, grantId: GRANT };
+    await helper.writeWithChangeLog(tutorAuth, { ...base, events: [ev('Berakhot 1:1')] });
+    await expectHttpsError(
+      helper.writeWithChangeLog(tutorAuth, { ...base, events: [ev('Berakhot 1:2')] }), 'already-exists');
+    assert.equal((await profileRef().collection('learning_events').doc(ulid(1)).get()).get('ref'), 'Berakhot 1:1');
+  });
+
+  test('an action id already carried by a change_log entry with no receipt → already-exists', async () => {
+    await profileRef().collection('change_log').doc(ulid(5)).set({
+      entity: 'goal', entity_id: `${C}_deadline`, action_id: ulid(1), before: {}, after: {}, actor: { uid: PARENT },
+    });
+    await expectHttpsError(
+      call(fns.tutorUpsertGoal, goalArgs(DEADLINE, { actionId: ulid(1) })), 'already-exists');
+    assert.equal((await profileRef().collection('goals').doc(`${C}_deadline`).get()).exists, false);
   });
 
   test('a malformed client ULID → invalid-argument', async () => {
