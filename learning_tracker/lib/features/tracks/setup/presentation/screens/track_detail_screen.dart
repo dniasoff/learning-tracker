@@ -1003,7 +1003,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // preferences alongside the track doc itself, a superset of Drift's
     // purgeHistory, not a narrower stand-in.
     final trackRepo = ref.read(curriculumTrackDetailRepositoryProvider);
-    await trackRepo.deleteTrackPermanently(track.curriculumId);
+    try {
+      await trackRepo.removeTrack(track.curriculumId);
+    } on StateError {
+      if (!mounted) return;
+      _showLastCurriculumError(AppLocalizations.of(context)!);
+      return;
+    }
     await onTrackChanged(ref);
     if (mounted) context.router.pop();
   }

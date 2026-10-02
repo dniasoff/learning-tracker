@@ -54,6 +54,9 @@ class ContentItemTile extends ConsumerWidget {
     this.reviewCount,
     this.showReviewBadge = true,
     this.showBreadcrumb = false,
+    this.tickState,
+    this.onTick,
+    this.onLongPress,
   });
 
   final ContentItem item;
@@ -79,6 +82,15 @@ class ContentItemTile extends ConsumerWidget {
   /// drill path already supplies parent context.
   final bool showBreadcrumb;
 
+  /// The row's learnt tri-state for free-tick capture.
+  final TriState? tickState;
+
+  /// Records this row; null hides the tick box.
+  final VoidCallback? onTick;
+
+  /// Replaces the default long-press action.
+  final VoidCallback? onLongPress;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -101,7 +113,9 @@ class ContentItemTile extends ConsumerWidget {
         context,
         state,
       ).withValues(alpha: learntTriStateTintAlpha),
-      leading: _buildLeadingIcon(theme, progress),
+      leading: onTick == null
+          ? _buildLeadingIcon(theme, progress)
+          : _TickBox(state: tickState ?? state, onTick: onTick!),
       title: CurriculumLabel.item(
         item,
         style: theme.textTheme.titleLarge?.copyWith(
@@ -129,9 +143,11 @@ class ContentItemTile extends ConsumerWidget {
           : null,
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
-      onLongPress: item.isLeaf && count > 0 && showReviewBadge
-          ? () => _showStageBreakdown(context, ref)
-          : null,
+      onLongPress:
+          onLongPress ??
+          (item.isLeaf && count > 0 && showReviewBadge
+              ? () => _showStageBreakdown(context, ref)
+              : null),
     );
     if (progress == null || l10n == null) return tile;
     return Semantics(
@@ -191,6 +207,36 @@ class ContentItemTile extends ConsumerWidget {
         color: theme.colorScheme.onSurfaceVariant,
       );
     }
+  }
+}
+
+/// Tri-state tick box used by free-tick rows (UX-DR-20, UX-DR-157).
+class _TickBox extends StatelessWidget {
+  const _TickBox({required this.state, required this.onTick});
+
+  final TriState state;
+  final VoidCallback onTick;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final label = l10n == null
+        ? null
+        : switch (state) {
+            TriState.complete => l10n.captureStateLearnt,
+            TriState.partial => l10n.captureStatePartial,
+            TriState.empty => l10n.captureStateNotLearnt,
+          };
+    return Checkbox(
+      tristate: true,
+      value: switch (state) {
+        TriState.complete => true,
+        TriState.partial => null,
+        TriState.empty => false,
+      },
+      semanticLabel: label,
+      onChanged: (_) => onTick(),
+    );
   }
 }
 

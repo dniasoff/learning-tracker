@@ -82,8 +82,8 @@ import 'package:mocktail/mocktail.dart';
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../helpers/firestore_governed_writer.dart';
-import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../../helpers/pump_app.dart';
 

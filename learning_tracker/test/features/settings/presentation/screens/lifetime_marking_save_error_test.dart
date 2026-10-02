@@ -41,9 +41,9 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
+import '../../../../helpers/pump_app.dart';
 
 // ── mocks / fakes ────────────────────────────────────────────────────────────
 
