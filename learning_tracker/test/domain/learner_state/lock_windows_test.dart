@@ -460,4 +460,63 @@ void main() {
       );
     });
   });
+
+  // DNI-481 (1.19) consumes lockWindows for the overlay, notifications and
+  // the capture gate (ruling B4(d): T1 is consume-only). These pin the
+  // boundary and calendar cases the 1.19 acceptance table names that the
+  // DNI-466 groups above do not already cover.
+  group('DNI-481: lock surfaces consumer cases', () {
+    test('no location, Israel vs diaspora: Sukkot on Shabbos locks one day '
+        'in Israel and chains the second day in the diaspora', () {
+      final israel = constantHistory(
+        lockSettings(timeZone: 'Asia/Jerusalem', inIsrael: true),
+      );
+      final diaspora = constantHistory(
+        lockSettings(timeZone: 'Asia/Jerusalem', inIsrael: false),
+      );
+      // 15 Tishrei 5787 is Shabbos 2026-09-26.
+      final at = DateTime.utc(2026, 9, 26, 12);
+      final (iStart, iEnd) = _fixed(
+        'Asia/Jerusalem',
+        _day(2026, 9, 26),
+        _day(2026, 9, 26),
+      );
+      final (dStart, dEnd) = _fixed(
+        'Asia/Jerusalem',
+        _day(2026, 9, 26),
+        _day(2026, 9, 27),
+      );
+      expect(_single(israel, at), LockWindow(iStart, iEnd));
+      expect(_single(diaspora, at), LockWindow(dStart, dEnd));
+    });
+
+    test('no location across a spring-forward Sunday: the fixed window ends '
+        'at 01:00 standard time', () {
+      final h = constantHistory(newYorkNoLocation);
+      // US DST starts 2026-03-08 02:00 local; 01:00 is still EST (UTC−5).
+      final lock = _single(h, DateTime.utc(2026, 3, 7, 12));
+      expect(
+        lock,
+        LockWindow(DateTime.utc(2026, 3, 6, 17), DateTime.utc(2026, 3, 8, 6)),
+      );
+    });
+
+    test('exact bounds: one microsecond either side of a lock is outside, '
+        'both bounds are inside', () {
+      final h = constantHistory(lakewood);
+      final lock = _single(h, DateTime.utc(2026, 9, 5, 12));
+      expect(lockWindows(h, lock.startUtc, lock.startUtc), [lock]);
+      expect(lockWindows(h, lock.endUtc, lock.endUtc), [lock]);
+      final before = lock.startUtc.subtract(_us);
+      final after = lock.endUtc.add(_us);
+      expect(
+        lockWindows(h, before, before).where((w) => w.contains(before)),
+        isEmpty,
+      );
+      expect(
+        lockWindows(h, after, after).where((w) => w.contains(after)),
+        isEmpty,
+      );
+    });
+  });
 }
