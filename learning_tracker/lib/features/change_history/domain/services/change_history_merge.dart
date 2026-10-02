@@ -14,8 +14,8 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/features/change_history/domain/models/history_item.dart';
-import 'package:learning_tracker/features/change_history/domain/repositories/change_history_repository.dart';
 
 /// The read state of one history source.
 final class HistorySourceState {

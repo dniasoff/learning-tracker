@@ -211,19 +211,26 @@ class ChangeHistoryController extends Notifier<ChangeHistoryState> {
       target: kChangeHistoryViewStep,
       loading: true,
     );
-    final repository = ref.watch(changeHistoryRepositoryProvider);
-    switch (repository) {
-      case AsyncData(value: final repo?):
-        final pager = ChangeHistoryPager(repository: repo, scope: scope);
-        _pager = pager;
-        scheduleMicrotask(_fill);
-        return initial._copy(buffer: pager.buffer);
-      case AsyncError(:final error, :final stackTrace):
+    // The C0 ports the engine and undo read (DNI-524): one read contract.
+    final changeLog = ref.watch(changeLogRepositoryProvider);
+    final events = ref.watch(learningEventRepositoryProvider);
+    switch ((changeLog, events)) {
+      case (AsyncError(:final error, :final stackTrace), _) ||
+          (_, AsyncError(:final error, :final stackTrace)):
         return initial._copy(
           loading: false,
           error: error,
           stackTrace: stackTrace,
         );
+      case (AsyncData(value: final log?), AsyncData(value: final learning?)):
+        final pager = ChangeHistoryPager(
+          changeLog: log,
+          events: learning,
+          scope: scope,
+        );
+        _pager = pager;
+        scheduleMicrotask(_fill);
+        return initial._copy(buffer: pager.buffer);
       default:
         return initial; // not ready yet: loading
     }
@@ -246,7 +253,9 @@ class ChangeHistoryController extends Notifier<ChangeHistoryState> {
   /// Retries the failed read (the same page; no row is duplicated).
   void retry() {
     if (_pager == null) {
-      ref.invalidate(changeHistoryRepositoryProvider);
+      ref
+        ..invalidate(changeLogRepositoryProvider)
+        ..invalidate(learningEventRepositoryProvider);
       return;
     }
     state = state._copy(clearError: true);

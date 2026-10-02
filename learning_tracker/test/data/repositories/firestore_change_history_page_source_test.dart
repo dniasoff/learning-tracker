@@ -1,5 +1,6 @@
 /// DNI-513 AC-2 and AC-7 at the repository level:
-/// `FirestoreChangeHistoryRepository` reads `change_log` and
+/// the C0 history reads — `FirestoreChangeLogRepository.historyPage` and
+/// `FirestoreLearningEventRepository.historyPage` — read `change_log` and
 /// `learning_events` independently, newest first, at most 100 per page,
 /// skips (and reports) a malformed document without losing the page, adds
 /// no Firestore index, and keeps both of two concurrent governed changes
@@ -12,15 +13,15 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/data/repositories/firestore_change_history_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_change_log_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/features/change_history/domain/repositories/change_history_repository.dart';
 
 import '../../helpers/change_history_fixtures.dart';
 import '../../helpers/learner_state_fixtures.dart';
@@ -70,11 +71,13 @@ Future<List<HistoryPage<T>>> _drain<T>(
 
 void main() {
   late FakeFirebaseFirestore db;
-  late FirestoreChangeHistoryRepository repo;
+  late FirestoreChangeLogRepository changeLog;
+  late FirestoreLearningEventRepository events;
 
   setUp(() {
     db = FakeFirebaseFirestore();
-    repo = FirestoreChangeHistoryRepository(firestore: db);
+    changeLog = FirestoreChangeLogRepository(firestore: db);
+    events = FirestoreLearningEventRepository(firestore: db);
   });
 
   group('AC-2 independent 100-row pages, newest first', () {
@@ -84,7 +87,7 @@ void main() {
         for (var n = 1; n <= 250; n++) historyEntry(n, minutes: (n * 37) % 251),
       ]);
       final pages = await _drain(
-        (after) => repo.changeLogPage(_scope, after: after),
+        (after) => changeLog.historyPage(_scope, after: after),
       );
       expect(pages.map((p) => p.items.length), [100, 100, 50]);
       expect(pages.map((p) => p.exhausted), [false, false, true]);
@@ -110,7 +113,7 @@ void main() {
             historyLearn(n, minutes: (n * 53) % 401),
         ]);
         final pages = await _drain(
-          (after) => repo.learningEventPage(_scope, after: after),
+          (after) => events.historyPage(_scope, after: after),
         );
         expect(pages.map((p) => p.items.length), [100, 100, 100, 100, 0]);
         expect(pages.last.exhausted, isTrue);
@@ -132,11 +135,11 @@ void main() {
       await _seedEvents(db, [
         for (var n = 1; n <= 30; n++) historyLearn(1000 + n, minutes: n),
       ]);
-      final log1 = await repo.changeLogPage(_scope);
-      final events = await repo.learningEventPage(_scope);
-      final log2 = await repo.changeLogPage(_scope, after: log1.next);
-      expect(events.exhausted, isTrue);
-      expect(events.items, hasLength(30));
+      final log1 = await changeLog.historyPage(_scope);
+      final learning = await events.historyPage(_scope);
+      final log2 = await changeLog.historyPage(_scope, after: log1.next);
+      expect(learning.exhausted, isTrue);
+      expect(learning.items, hasLength(30));
       expect(log1.exhausted, isFalse);
       expect(log2.items, hasLength(20));
       expect(log2.exhausted, isTrue);
@@ -147,7 +150,10 @@ void main() {
     });
 
     test('a page larger than 100 is refused', () {
-      expect(() => repo.changeLogPage(_scope, limit: 101), throwsArgumentError);
+      expect(
+        () => changeLog.historyPage(_scope, limit: 101),
+        throwsArgumentError,
+      );
     });
   });
 
@@ -161,11 +167,15 @@ void main() {
         'entity': 'nonsense',
         'at': Timestamp.fromDate(historyAt(1000)),
       });
-      final page = await repo.changeLogPage(_scope, limit: 3);
+      final page = await changeLog.historyPage(_scope, limit: 3);
       expect(page.items.map((e) => e.id), [historyId(5), historyId(4)]);
       expect(page.rejected.single.docId, historyId(99));
       expect(page.watermark, historyAt(40));
-      final next = await repo.changeLogPage(_scope, after: page.next, limit: 3);
+      final next = await changeLog.historyPage(
+        _scope,
+        after: page.next,
+        limit: 3,
+      );
       expect(next.items.map((e) => e.id), [
         historyId(3),
         historyId(2),
@@ -173,12 +183,12 @@ void main() {
       ]);
     });
 
-    test('learningEventsById returns only stored, decodable events', () async {
+    test('eventsById returns only stored, decodable events', () async {
       await _seedEvents(db, [historyLearn(1, minutes: 1)]);
       await db.collection('$_base/learning_events').doc(historyId(2)).set({
         'kind': 'bogus',
       });
-      final found = await repo.learningEventsById(_scope, {
+      final found = await events.eventsById(_scope, {
         historyId(1),
         historyId(2),
         historyId(3),
@@ -186,8 +196,8 @@ void main() {
       expect(found.map((e) => e.id), [historyId(1)]);
     });
 
-    test('changeLogEntriesOfActions returns every stored, decodable entry '
-        'of the named actions only', () async {
+    test('the reverted-action lookup is the undo path\'s entriesOfAction: '
+        'every entry of the named action only', () async {
       await _seedEntries(db, [
         historyEntry(1, minutes: 1, entity: GovernedEntity.mainTrack),
         historyEntry(
@@ -197,22 +207,15 @@ void main() {
           actionOf: 1,
         ),
         historyEntry(3, minutes: 2),
-        historyEntry(4, minutes: 3),
       ]);
-      await db.collection('$_base/change_log').doc(historyId(5)).set({
-        'action_id': historyId(1),
-        'entity': 'nonsense',
-      });
-      final found = await repo.changeLogEntriesOfActions(_scope, {
-        historyId(1),
-        historyId(4),
-        historyId(9),
-      });
-      expect(found.map((e) => e.id).toSet(), {
-        historyId(1),
-        historyId(2),
-        historyId(4),
-      });
+      expect(
+        (await changeLog.entriesOfAction(
+          _scope,
+          historyId(1),
+        )).map((e) => e.id),
+        [historyId(1), historyId(2)],
+      );
+      expect(await changeLog.entriesOfAction(_scope, historyId(9)), isEmpty);
     });
   });
 
@@ -234,7 +237,6 @@ void main() {
   test(
     'AC-7 concurrent parent and tutor changes: both kept, later wins',
     () async {
-      final log = FirestoreChangeLogRepository(firestore: db);
       const goalId = 'goal_deadline';
       const key = 'goals/$goalId.target_date';
       GovernedBatch batch(int n, Actor actor, String date, int seconds) =>
@@ -258,13 +260,16 @@ void main() {
             ],
           );
       // The parent writes first, the tutor a second later.
-      await log.commitGoverned(
+      await changeLog.commitGoverned(
         _scope,
         batch(1, historyParent, '2027-03-01', 0),
       );
-      await log.commitGoverned(_scope, batch(2, historyTutor, '2027-04-01', 1));
+      await changeLog.commitGoverned(
+        _scope,
+        batch(2, historyTutor, '2027-04-01', 1),
+      );
 
-      final page = await repo.changeLogPage(_scope);
+      final page = await changeLog.historyPage(_scope);
       expect(page.items.map((e) => (e.actor, e.at)), [
         (historyTutor, historyAt(0).add(const Duration(seconds: 1))),
         (historyParent, historyAt(0)),

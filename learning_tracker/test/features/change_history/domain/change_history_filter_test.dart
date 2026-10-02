@@ -11,7 +11,7 @@ import 'package:learning_tracker/features/change_history/domain/models/history_i
 import 'package:learning_tracker/features/change_history/domain/services/change_history_pager.dart';
 
 import '../../../helpers/change_history_fixtures.dart';
-import '../../../helpers/fake_change_history_repository.dart';
+import '../../../helpers/fake_history_ports.dart';
 import '../../../helpers/learner_state_fixtures.dart';
 
 final _scope = LearnerScope(ownerUid: 'owner-uid', profileId: profileUlid);
@@ -52,7 +52,7 @@ void main() {
   test('a filter with few rows keeps loading pages until its view is '
       'full', () async {
     // 150 newer parent changes hide the 5 tutor changes on page 2.
-    final repo = FakeChangeHistoryRepository(
+    final repo = FakeHistoryPorts(
       entries: [
         for (var n = 1; n <= 5; n++)
           historyEntry(n, minutes: n, actor: historyTutor),
@@ -60,7 +60,11 @@ void main() {
       ],
       events: [for (var n = 1; n <= 3; n++) historyLearn(500 + n, minutes: n)],
     );
-    final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+    final pager = ChangeHistoryPager(
+      changeLog: repo.changeLog,
+      events: repo.events,
+      scope: _scope,
+    );
     int tutorRows(List<HistoryItem> v) =>
         v.where(ChangeHistoryFilter.tutor.acceptsItem).length;
 
@@ -71,10 +75,14 @@ void main() {
 
   test('a filter that matches nothing reads both sources to the end, then '
       'stops', () async {
-    final repo = FakeChangeHistoryRepository(
+    final repo = FakeHistoryPorts(
       entries: [for (var n = 1; n <= 230; n++) historyEntry(n, minutes: n)],
     );
-    final pager = ChangeHistoryPager(repository: repo, scope: _scope);
+    final pager = ChangeHistoryPager(
+      changeLog: repo.changeLog,
+      events: repo.events,
+      scope: _scope,
+    );
     await pager.fill(
       (v) => v.where(ChangeHistoryFilter.learning.acceptsItem).length >= 10,
     );

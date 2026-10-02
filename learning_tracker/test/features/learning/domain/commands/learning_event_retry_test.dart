@@ -12,6 +12,7 @@ import 'package:learning_tracker/data/repositories/learner_state_firestore_value
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 
@@ -37,6 +38,17 @@ final class _FlakyRecordingRepository implements LearningEventRepository {
   @override
   Stream<CompleteRead<LearningEvent>> watchAll(LearnerScope scope) =>
       const Stream.empty();
+
+  @override
+  Future<HistoryPage<LearningEvent>> historyPage(
+    LearnerScope scope, {
+    HistoryCursor? after,
+    int limit = kChangeHistoryPageSize,
+  }) => throw UnimplementedError('not read by this test');
+
+  @override
+  Future<List<LearningEvent>> eventsById(LearnerScope scope, Set<String> ids) =>
+      throw UnimplementedError('not read by this test');
 }
 
 /// A clock that moves forward on every read, so any second read would be

@@ -9,8 +9,8 @@ import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/features/change_history/domain/models/change_history_row.dart';
-import 'package:learning_tracker/features/change_history/domain/repositories/change_history_repository.dart';
 import 'package:learning_tracker/features/change_history/domain/services/change_history_merge.dart';
 import 'package:learning_tracker/features/change_history/domain/services/change_history_row_mapper.dart';
 

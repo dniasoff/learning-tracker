@@ -7,6 +7,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 
@@ -28,6 +29,17 @@ final class _InMemory implements LearningEventRepository {
       for (final e in docs.entries) LearningEvent.fromStorage(e.key, e.value),
     ]);
   }
+
+  @override
+  Future<HistoryPage<LearningEvent>> historyPage(
+    LearnerScope scope, {
+    HistoryCursor? after,
+    int limit = kChangeHistoryPageSize,
+  }) => throw UnimplementedError('not read by this test');
+
+  @override
+  Future<List<LearningEvent>> eventsById(LearnerScope scope, Set<String> ids) =>
+      throw UnimplementedError('not read by this test');
 }
 
 void main() {

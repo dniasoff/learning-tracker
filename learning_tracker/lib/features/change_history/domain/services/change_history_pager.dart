@@ -9,11 +9,18 @@
 /// next [ChangeHistoryPager.fill] retries the same page, and the buffer's
 /// per-document de-duplication keeps a retried page from adding a row
 /// twice.
+///
+/// It reads through the C0 ports the engine and undo use — the history
+/// pages and `entriesOfAction` of [ChangeLogRepository], and the history
+/// pages and `eventsById` of [LearningEventRepository] — so history and
+/// undo share one read contract.
 library;
 
+import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 import 'package:learning_tracker/features/change_history/domain/models/history_item.dart';
-import 'package:learning_tracker/features/change_history/domain/repositories/change_history_repository.dart';
 import 'package:learning_tracker/features/change_history/domain/services/change_history_merge.dart';
 
 /// Whether the merged [visible] items fill the caller's view.
@@ -21,14 +28,17 @@ typedef HistoryViewFull = bool Function(List<HistoryItem> visible);
 
 /// Pages one learner's history into a [ChangeHistoryBuffer].
 final class ChangeHistoryPager {
-  /// Creates a pager over [repository] for [scope].
+  /// Creates a pager over [changeLog] and [events] for [scope].
   ChangeHistoryPager({
-    required ChangeHistoryRepository repository,
+    required ChangeLogRepository changeLog,
+    required LearningEventRepository events,
     required this.scope,
     this.pageSize = kChangeHistoryPageSize,
-  }) : _repository = repository;
+  }) : _changeLog = changeLog,
+       _events = events;
 
-  final ChangeHistoryRepository _repository;
+  final ChangeLogRepository _changeLog;
+  final LearningEventRepository _events;
 
   /// The learner whose history this is.
   final LearnerScope scope;
@@ -66,7 +76,7 @@ final class ChangeHistoryPager {
     switch (source) {
       case HistorySource.changeLog:
         buffer.addChangeLogPage(
-          await _repository.changeLogPage(
+          await _changeLog.historyPage(
             scope,
             after: buffer.changeLog.cursor,
             limit: pageSize,
@@ -74,7 +84,7 @@ final class ChangeHistoryPager {
         );
       case HistorySource.learningEvents:
         buffer.addLearningEventPage(
-          await _repository.learningEventPage(
+          await _events.historyPage(
             scope,
             after: buffer.learningEvents.cursor,
             limit: pageSize,
@@ -99,7 +109,7 @@ final class ChangeHistoryPager {
     };
     if (missing.isEmpty) return;
     try {
-      buffer.addLookups(await _repository.learningEventsById(scope, missing));
+      buffer.addLookups(await _events.eventsById(scope, missing));
       _lookedUp.addAll(missing);
     } on Object {
       // Retried on the next fill; see the method doc.
@@ -120,14 +130,20 @@ final class ChangeHistoryPager {
           if (item.revertsActionId case final target?)
             if (!_actionsLookedUp.contains(target)) target,
     };
-    if (missing.isEmpty) return;
-    try {
-      buffer.addActionLookups(
-        await _repository.changeLogEntriesOfActions(scope, missing),
-      );
-      _actionsLookedUp.addAll(missing);
-    } on Object {
-      // Retried on the next fill; see the method doc.
-    }
+    // One `entriesOfAction` read per action (the undo path's own lookup);
+    // each that fails is retried on the next fill, the others are kept.
+    await Future.wait([
+      for (final actionId in missing)
+        () async {
+          try {
+            buffer.addActionLookups(
+              await _changeLog.entriesOfAction(scope, actionId),
+            );
+            _actionsLookedUp.add(actionId);
+          } on Object {
+            // Retried on the next fill; see the method doc.
+          }
+        }(),
+    ]);
   }
 }

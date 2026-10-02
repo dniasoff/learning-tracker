@@ -112,10 +112,6 @@ import 'package:learning_tracker/features/learning/presentation/providers/learni
 // here rather than in each of the 13 providers it feeds.
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
-// DNI-513: parent Change history pages (declared in its own file, ruling).
-export 'package:learning_tracker/data/firestore/change_history_repository_providers.dart'
-    show changeHistoryRepositoryProvider;
-
 /// Holds the Firestore ULID doc-id of the "active" learner profile, or
 /// `null` when no profile is active.
 ///
