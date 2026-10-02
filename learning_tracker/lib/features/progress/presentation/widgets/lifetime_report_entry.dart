@@ -11,9 +11,15 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// PIN-locked or tutor session sees nothing here (AC-2) and keeps the rest
 /// of the Lifetime screen unchanged. While the session resolves nothing is
 /// shown (fail closed).
+///
+/// The report opens for [curriculumId], the curriculum the Lifetime screen
+/// has in view (AC-1); null leaves the choice to the report.
 class LifetimeReportEntry extends ConsumerWidget {
   /// Creates the entry.
-  const LifetimeReportEntry({super.key});
+  const LifetimeReportEntry({super.key, this.curriculumId});
+
+  /// The curriculum in view on Lifetime (a storage key), or null.
+  final String? curriculumId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +35,9 @@ class LifetimeReportEntry extends ConsumerWidget {
           style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
           icon: const Icon(Icons.assessment_outlined),
           label: Text(l10n.reportEntry),
-          onPressed: () => context.router.push(LifetimeReportRoute()),
+          onPressed: () => context.router.push(
+            LifetimeReportRoute(curriculumId: curriculumId),
+          ),
         ),
       ),
     );

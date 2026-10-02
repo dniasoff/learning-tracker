@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -50,6 +51,17 @@ class _LifetimeKnowledgeScreenState
   /// other screens too).
   _LifetimeSourceFilter _filter = _LifetimeSourceFilter.allSources;
 
+  /// The curriculum card the user last expanded and has not collapsed:
+  /// the curriculum in view, which the Report entry opens (Story 5.2 AC-1).
+  CurriculumId? _expandedCurriculum;
+
+  /// The curricula the tree lists, in app order: those with learning.
+  static List<CurriculumCompletionSummary> _withProgress(
+    List<CurriculumCompletionSummary> summaries,
+  ) =>
+      summaries.where((s) => s.learnedLeafCount > 0).toList()
+        ..sort((a, b) => a.curriculumId.index.compareTo(b.curriculumId.index));
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -82,6 +94,15 @@ class _LifetimeKnowledgeScreenState
     // branch reads the lifetime-tier union; the "Track only" branch reads
     // the same trackAchievement-filtered surface the body uses, so the
     // numbers on top match the per-curriculum tree below.
+    // Story 5.2 (DNI-517) AC-1: the report opens for the curriculum in
+    // view, the expanded card if one is open, else the first one listed.
+    final listed = _withProgress(
+      summariesAsync.value ?? const <CurriculumCompletionSummary>[],
+    ).map((s) => s.curriculumId).toList();
+    final inView = listed.contains(_expandedCurriculum)
+        ? _expandedCurriculum
+        : listed.firstOrNull;
+
     final headerAsync = _filter == _LifetimeSourceFilter.allSources
         ? ref.watch(lifetimeHeaderCountersProvider)
         : ref.watch(trackOnlyHeaderCountersProvider);
@@ -100,7 +121,7 @@ class _LifetimeKnowledgeScreenState
           ),
         ),
         // Story 5.2 (DNI-517): parent sessions only (AC-2).
-        actions: const [LifetimeReportEntry()],
+        actions: [LifetimeReportEntry(curriculumId: inView?.storageKey)],
       ),
       body: Theme(
         data: baseTheme.copyWith(textTheme: textTheme),
@@ -132,13 +153,7 @@ class _LifetimeKnowledgeScreenState
             Expanded(
               child: summariesAsync.when(
                 data: (summaries) {
-                  final withProgress =
-                      summaries.where((s) => s.learnedLeafCount > 0).toList()
-                        ..sort(
-                          (a, b) => a.curriculumId.index.compareTo(
-                            b.curriculumId.index,
-                          ),
-                        );
+                  final withProgress = _withProgress(summaries);
 
                   if (withProgress.isEmpty) {
                     return EmptyState(
@@ -150,6 +165,13 @@ class _LifetimeKnowledgeScreenState
                   return CurriculumBreakdownList(
                     summaries: withProgress,
                     showProvenance: true,
+                    onExpansionChanged: (curriculum, expanded) => setState(
+                      () => _expandedCurriculum = expanded
+                          ? curriculum
+                          : (_expandedCurriculum == curriculum
+                                ? null
+                                : _expandedCurriculum),
+                    ),
                     // Story 1.13 (AC-1, UX-DR-60): a leaf opens the shared
                     // Mishna history route. History reads the engine; this
                     // tree moves onto LearnerState in DNI-474, and both ship
