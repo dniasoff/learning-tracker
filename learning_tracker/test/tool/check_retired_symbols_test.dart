@@ -317,7 +317,7 @@ const $completionHistoryForCurriculumProvider = 1;
           'R16': [_entry('can_edit_goals', kind: 'field', owner: 'DNI-487')],
         },
         files: {
-          'functions/src/tutor_invites.ts': r'''
+          'functions/src/tutor_invites.ts': '''
 const grant = { can_edit_goals: false, other: 1 };
 if (perms.can_edit_goals) {}
 const x = perms?.can_edit_goals;
@@ -359,7 +359,7 @@ const u = { ...can_edit_goals };
           'R16': [_entry('purged', kind: 'field', owner: 'DNI-484')],
         },
         files: {
-          'lib/a.dart': r'''
+          'lib/a.dart': '''
 final t = Track(id: 'x', purged: true);
 if (track.purged) {}
 final c = Track()..purged = true;
@@ -643,12 +643,10 @@ match /users/{uid}/learner_profiles/{profileId}/completions/{id} {
 
       for (final bad in const [
         'match /completions/{id} { allow write: if true; }\n',
-        'match /completions/{id} {\n  allow read: if true;\n'
-            '  allow create: if isOwner(uid)\n    && x;\n}\n',
+        'match /completions/{id} {\n  allow read: if true;\n  allow create: if isOwner(uid)\n    && x;\n}\n',
         'match /completions/{id} { allow read, write; }\n',
         'match /completions/{id} { allow delete: if false || true; }\n',
-        'match /completions/{id} {\n  allow write: if false;\n'
-            '  match /sub/{s} { allow update: if isOwner(uid); }\n}\n',
+        'match /completions/{id} {\n  allow write: if false;\n  match /sub/{s} { allow update: if isOwner(uid); }\n}\n',
         'function f() { return exists(/databases/x/documents/completions/a); }\n',
       ]) {
         final result = await withRules(bad);
