@@ -8,7 +8,7 @@
 /// entry-kind/delta round-trip, `source` decode defaults, one-shot decode
 /// leniency, doc-id-ordered pagination past the 500-item page size, watch
 /// streams, and — the behavior unique to this repository — the DERIVED,
-/// CLAMPED balance ([FirestorePointsLedgerRepository.getBalance]) and its
+/// CLAMPED, AD-50 filtered totals ([FirestorePointsLedgerRepository.getTotals]) and its
 /// negative-raw-sum warning (owner decision 5,
 /// `docs/firestore-rewrite-map.md`).
 ///
@@ -33,6 +33,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
+import 'package:learning_tracker/domain/learner_state/points.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:talker/talker.dart';
 
@@ -59,6 +60,20 @@ void main() {
       .doc(_profileId)
       .collection('points_ledger')
       .doc(ulid);
+
+  Future<int> lifetime(FirestorePointsLedgerRepository repo) async =>
+      (await repo.getTotals(earningEventIds: const {})).lifetimeEarned;
+
+  /// Writes the AD-50 `pts_{eventId}` award of [eventId] as the capture
+  /// batch does.
+  Future<void> award(String eventId, int amount) => rawDoc('pts_$eventId').set({
+    'ulid': 'pts_$eventId',
+    'entry_kind': 'completion',
+    'delta': amount,
+    'created_at': DateTime.utc(2026, 6, 1),
+    'source': 'live',
+    'event_id': eventId,
+  });
 
   FirestorePointsLedgerRepository buildRepo() {
     return FirestorePointsLedgerRepository(
@@ -246,12 +261,12 @@ void main() {
         createdAt: DateTime.utc(2026, 6, 3),
       );
 
-      expect(await repo.getBalance(), 20);
+      expect(await repo.getBalance(earningEventIds: const {}), 20);
     });
 
     test('getBalance returns 0 for a profile with no ledger entries', () async {
       final repo = buildRepo();
-      expect(await repo.getBalance(), 0);
+      expect(await repo.getBalance(earningEventIds: const {}), 0);
     });
 
     test(
@@ -272,7 +287,7 @@ void main() {
           createdAt: DateTime.utc(2026, 6, 2),
         );
 
-        expect(await repo.getBalance(), 0);
+        expect(await repo.getBalance(earningEventIds: const {}), 0);
       },
     );
 
@@ -286,7 +301,7 @@ void main() {
           createdAt: DateTime.utc(2026, 6, 1),
         );
 
-        expect(await repo.getBalance(), 1 << 30);
+        expect(await repo.getBalance(earningEventIds: const {}), 1 << 30);
       },
     );
 
@@ -305,7 +320,7 @@ void main() {
         createdAt: DateTime.utc(2026, 6, 2),
       );
 
-      await repo.getBalance();
+      await repo.getBalance(earningEventIds: const {});
 
       expect(
         talker.history.any(
@@ -334,7 +349,7 @@ void main() {
         createdAt: DateTime.utc(2026, 6, 2),
       );
 
-      await repo.getBalance();
+      await repo.getBalance(earningEventIds: const {});
 
       expect(
         talker.history.any(
@@ -446,14 +461,14 @@ void main() {
           createdAt: DateTime.utc(2026, 6, 5),
         );
 
-        expect(await repo.getLifetimeEarned(), 150);
-        expect(await repo.getBalance(), 140);
+        expect(await lifetime(repo), 150);
+        expect(await repo.getBalance(earningEventIds: const {}), 140);
       },
     );
 
     test('returns 0 for a profile with no ledger entries', () async {
       final repo = buildRepo();
-      expect(await repo.getLifetimeEarned(), 0);
+      expect(await lifetime(repo), 0);
     });
   });
 
@@ -486,7 +501,65 @@ void main() {
 
         expect(all, hasLength(501));
         expect(all.map((e) => e.ulid).toSet(), ids.toSet());
-        expect(await repo.getBalance(), 501);
+        expect(await repo.getBalance(earningEventIds: const {}), 501);
+      },
+    );
+  });
+
+  group('AD-50 filtered totals (DNI-480)', () {
+    test('an event row counts only while its event earns; non-event rows '
+        'always count', () async {
+      final repo = buildRepo();
+      await award('evA', 10);
+      await award('evB', 5);
+      // An orphan / ineligible pts_ row: its event is not earning.
+      await award('evOrphan', 99);
+      await repo.append(
+        entryKind: 'parent_add',
+        delta: 3,
+        createdAt: DateTime.utc(2026, 6, 2),
+      );
+      await repo.append(
+        entryKind: 'redemption_debit',
+        delta: -4,
+        createdAt: DateTime.utc(2026, 6, 3),
+      );
+
+      expect(
+        await repo.getTotals(earningEventIds: {'evA', 'evB'}),
+        const PointsTotals(balance: 14, lifetimeEarned: 18),
+      );
+      // Voiding evB removes it from the earning set: both totals fall,
+      // with no reversal row written.
+      final before = (await repo.getLedger()).length;
+      expect(
+        await repo.getTotals(earningEventIds: {'evA'}),
+        const PointsTotals(balance: 9, lifetimeEarned: 13),
+      );
+      expect(await repo.getBalance(earningEventIds: {'evA'}), 9);
+      expect((await repo.getLedger()).length, before);
+    });
+
+    test(
+      'the negative-raw-sum warning is judged on the filtered sum',
+      () async {
+        final repo = buildRepo();
+        await award('evA', 10);
+        await repo.append(
+          entryKind: 'redemption_debit',
+          delta: -8,
+          createdAt: DateTime.utc(2026, 6, 2),
+        );
+
+        expect(await repo.getBalance(earningEventIds: const {}), 0);
+        expect(
+          talker.history.any(
+            (entry) => entry.generateTextMessage().contains(
+              'firestore_points_ledger_negative_raw_sum',
+            ),
+          ),
+          isTrue,
+        );
       },
     );
   });

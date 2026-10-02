@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -26,6 +27,8 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
+          // No learning events: only the non-event rows below count.
+          activeEarningEventIdsProvider.overrideWith((ref) async => const {}),
           firestorePointsLedgerRepositoryProvider.overrideWith(
             (ref) async => repository,
           ),

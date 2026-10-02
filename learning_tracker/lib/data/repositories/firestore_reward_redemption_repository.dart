@@ -111,12 +111,18 @@ class FirestoreRewardRedemptionRepository {
   /// `PointsBalanceDao.createRedemption`'s `null` = "declined for
   /// insufficient funds" contract exactly, so the child screen's existing
   /// "not enough points" branch needs no behavior change.
+  ///
+  /// Affordability is the AD-50 filtered balance: the caller passes the
+  /// engine's [earningEventIds] (`LearnerState.earningEventIds`), so points
+  /// of a voided or ineligible event cannot be spent (DNI-480). The debit
+  /// itself is unchanged: a non-event `redemption_debit` row.
   Future<RewardRedemptionEntity?> createRedemption({
     required String rewardTitle,
     required int iconIndex,
     required int pointsCost,
+    required Set<String> earningEventIds,
   }) async {
-    final balance = await _ledger.getBalance();
+    final balance = await _ledger.getBalance(earningEventIds: earningEventIds);
     if (balance < pointsCost) return null;
 
     final ulid = newUlid();

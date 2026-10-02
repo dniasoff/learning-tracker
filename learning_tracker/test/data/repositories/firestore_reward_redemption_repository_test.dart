@@ -63,6 +63,7 @@ void main() {
         rewardTitle: 'Ice cream',
         iconIndex: 2,
         pointsCost: 10,
+        earningEventIds: const {},
       );
 
       expect(result, isNull);
@@ -70,6 +71,46 @@ void main() {
       expect(pending, isEmpty);
       final ledger = await buildLedger().getLedger();
       expect(ledger, hasLength(1), reason: 'only the setup credit, no debit');
+    });
+  });
+
+  group('createRedemption — AD-50 filtered affordability (DNI-480)', () {
+    test('points of a non-earning (voided) event cannot be spent', () async {
+      final repo = buildRepo();
+      await firestore
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId)
+          .collection('points_ledger')
+          .doc('pts_evA')
+          .set({
+            'ulid': 'pts_evA',
+            'entry_kind': 'completion',
+            'delta': 20,
+            'created_at': DateTime.utc(2026, 1, 1),
+            'source': 'live',
+            'event_id': 'evA',
+          });
+
+      expect(
+        await repo.createRedemption(
+          rewardTitle: 'Ice cream',
+          iconIndex: 0,
+          pointsCost: 15,
+          earningEventIds: const {},
+        ),
+        isNull,
+        reason: 'evA is voided, so its 20 points are not spendable',
+      );
+      final created = await repo.createRedemption(
+        rewardTitle: 'Ice cream',
+        iconIndex: 0,
+        pointsCost: 15,
+        earningEventIds: const {'evA'},
+      );
+      expect(created, isNotNull);
+      expect(await buildLedger().getBalance(earningEventIds: {'evA'}), 5);
     });
   });
 
@@ -82,6 +123,7 @@ void main() {
         rewardTitle: 'Ice cream',
         iconIndex: 2,
         pointsCost: 15,
+        earningEventIds: const {},
       );
 
       expect(result, isNotNull);
@@ -90,7 +132,7 @@ void main() {
       expect(result.pointsCost, 15);
       expect(result.status, RewardRedemptionStatus.pendingFulfilment);
 
-      final balance = await buildLedger().getBalance();
+      final balance = await buildLedger().getBalance(earningEventIds: const {});
       expect(balance, 5, reason: '20 credited - 15 debited');
 
       final ledger = await buildLedger().getLedger();
@@ -109,6 +151,7 @@ void main() {
           rewardTitle: 'Ice cream',
           iconIndex: 0,
           pointsCost: 10,
+          earningEventIds: const {},
         );
 
         final expectedId = DocIds.rewardRedemptionDocId({'ulid': result!.ulid});
@@ -133,11 +176,13 @@ void main() {
         rewardTitle: 'Pending toy',
         iconIndex: 0,
         pointsCost: 10,
+        earningEventIds: const {},
       );
       final toFulfil = await repo.createRedemption(
         rewardTitle: 'Fulfilled toy',
         iconIndex: 0,
         pointsCost: 10,
+        earningEventIds: const {},
       );
       await repo.fulfilRedemption(toFulfil!.ulid);
 
@@ -162,6 +207,7 @@ void main() {
           rewardTitle: 'Toy',
           iconIndex: 0,
           pointsCost: 10,
+          earningEventIds: const {},
         );
 
         await done;
@@ -179,14 +225,19 @@ void main() {
           rewardTitle: 'Toy',
           iconIndex: 0,
           pointsCost: 30,
+          earningEventIds: const {},
         );
-        final balanceBefore = await buildLedger().getBalance();
+        final balanceBefore = await buildLedger().getBalance(
+          earningEventIds: const {},
+        );
 
         await repo.fulfilRedemption(created!.ulid);
 
         final pending = await repo.getPendingRedemptions();
         expect(pending, isEmpty);
-        final balanceAfter = await buildLedger().getBalance();
+        final balanceAfter = await buildLedger().getBalance(
+          earningEventIds: const {},
+        );
         expect(balanceAfter, balanceBefore);
       },
     );
@@ -202,13 +253,18 @@ void main() {
           rewardTitle: 'Toy',
           iconIndex: 0,
           pointsCost: 30,
+          earningEventIds: const {},
         );
-        final balanceAfterDebit = await buildLedger().getBalance();
+        final balanceAfterDebit = await buildLedger().getBalance(
+          earningEventIds: const {},
+        );
         expect(balanceAfterDebit, 70);
 
         await repo.declineRedemption(created!.ulid);
 
-        final balanceAfterRefund = await buildLedger().getBalance();
+        final balanceAfterRefund = await buildLedger().getBalance(
+          earningEventIds: const {},
+        );
         expect(
           balanceAfterRefund,
           100,

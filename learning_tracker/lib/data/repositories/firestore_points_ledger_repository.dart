@@ -15,6 +15,7 @@ import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/resilient_doc_stream.dart';
 import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
+import 'package:learning_tracker/domain/learner_state/points.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -38,21 +39,25 @@ CollectionReference<Map<String, dynamic>> pointsLedgerCollectionFor(
 Map<String, dynamic> pointsAwardDocument(PointsAward award) =>
     PointsLedgerEntry.forAward(award).toFirestore();
 
+/// The engine-side [PointsLedgerRow] of a stored [entry]: its doc id, its
+/// signed delta, its earning event (null for a non-event row) and its kind.
+PointsLedgerRow pointsLedgerRowOf(PointsLedgerEntry entry) => PointsLedgerRow(
+  id: entry.ulid,
+  amount: entry.delta,
+  eventId: entry.eventId,
+  entryKind: entry.entryKind,
+);
+
 /// Firestore-backed points-ledger repository: `users/{uid}/
 /// learner_profiles/{profileId}/points_ledger/{ulid}` — append-only,
 /// doc-id is the entry's own ULID (`docs/firestore-rewrite-map.md`,
 /// `firestore.rules` `match /points_ledger/{entryId}`).
 ///
-/// **Not wired into the app's production provider yet** — but
-/// `FirestorePointsRepository`
-/// (`lib/features/gamification/data/repositories/firestore_points_repository.dart`)
-/// exists and does read this class: its `getGlobalTotal` delegates to
-/// [getBalance] (see that file's class doc comment, "Partially unblocked").
-/// `FirestorePointsRepository` itself is not constructed by any real
-/// provider (it appears nowhere in `lib/` outside its own definition), so
-/// no screen reaches this repository through it yet; the existing
-/// Drift-backed `PointsBalanceDao`
-/// (`lib/core/database/daos/points_balance_dao.dart`) is untouched.
+/// **Readers (DNI-480, AD-50).** Every balance and lifetime-earned reader
+/// goes through [getTotals] with the engine's `earningEventIds`
+/// (`EnginePointsReader`, `lib/features/gamification/data/repositories/`),
+/// and redemption affordability through [getBalance]; there is no unfiltered
+/// sum left.
 ///
 /// **No interface, no `implements`** — same reasoning as
 /// `FirestoreBookmarkRepository`'s doc comment: the Drift implementation is
@@ -65,8 +70,8 @@ Map<String, dynamic> pointsAwardDocument(PointsAward award) =>
 /// `points_ledger`, then clamp to `[0, 2^30)` exactly as the Drift code
 /// does, so nothing a user sees changes... The balance is never stored — a
 /// stored counter drifting from its ledger is one of the two dangerous-class
-/// defects the ledger design exists to prevent."* [getBalance] is that
-/// derivation: it sums every entry's [PointsLedgerEntry.delta] on every call
+/// defects the ledger design exists to prevent."* [getTotals] is that
+/// derivation: it sums the counted entries' [PointsLedgerEntry.delta] on every call
 /// — there is no cached/stored counter anywhere in this class, deliberately
 /// (mirrors `PointsBalanceDao._applyDeltaInTransaction`/
 /// `.reDeriveBalanceFromLedger`'s clamp, `[0, 1 << 30]`, exactly).
@@ -75,9 +80,9 @@ Map<String, dynamic> pointsAwardDocument(PointsAward award) =>
 /// comment.** A raw (pre-clamp) sum below zero means more deductions than
 /// credits were ever recorded for this profile — always an app bug (a
 /// `redemption_debit` without a matching balance check, a double-deduct,
-/// etc.). The clamp in [getBalance]'s return value keeps the child's own
+/// etc.). The clamp in [getTotals]' return value keeps the child's own
 /// screen sane (never shows a negative balance), but must not silently hide
-/// that defect from us — so [getBalance] calls [AppLogger.warning] with the
+/// that defect from us — so [getTotals] calls [AppLogger.warning] with the
 /// raw sum whenever it is negative, before clamping.
 ///
 /// ## What's new here, beyond the learning-ledger/streak-event pattern
@@ -125,12 +130,6 @@ Map<String, dynamic> pointsAwardDocument(PointsAward award) =>
 /// a reference (that redemption's own stable ulid), exactly like
 /// `PointsBalanceDao._redemptionUlidFor`'s resolution on the Drift side.
 class FirestorePointsLedgerRepository {
-  /// Entry kinds that represent points earned toward lifetime milestones.
-  ///
-  /// Keep this allowlist explicit: `redemption_refund` has a positive delta,
-  /// but returns spent points and is not newly earned lifetime progress.
-  static const _lifetimeEarnedEntryKinds = <String>{'completion', 'parent_add'};
-
   FirestorePointsLedgerRepository({
     required FirebaseFirestore firestore,
     required String uid,
@@ -151,7 +150,7 @@ class FirestorePointsLedgerRepository {
   /// (`request.query.limit <= 500`) — every query this repository issues
   /// stays at or under this. See
   /// `firestore_learning_ledger_repository.dart`'s class doc comment for why
-  /// pagination (not `.count()`) is how [getLedger]/[getBalance] stay
+  /// pagination (not `.count()`) is how [getLedger]/[getTotals] stay
   /// correct past this cap for a long-lived profile.
   static const _maxPageSize = 500;
 
@@ -298,49 +297,52 @@ class FirestorePointsLedgerRepository {
   /// Returns the WHOLE points-ledger history for this profile. Paginated
   /// internally (see the class doc comment's parent-file references for the
   /// 500-item pagination cap) so a long-lived profile's history costs
-  /// multiple round trips rather than being silently truncated. [getBalance]
+  /// multiple round trips rather than being silently truncated. [getTotals]
   /// is built directly on this.
   Future<List<PointsLedgerEntry>> getLedger() async {
     final docs = await _fetchAllPages(_ledger);
     return _decodeAll(docs);
   }
 
-  /// Derives the debitable points balance for this profile — see the class
-  /// doc comment's "Owner decision 5" section for the full reasoning. Sums
-  /// every [getLedger] entry's [PointsLedgerEntry.delta], logs a warning
-  /// (`firestore_points_ledger_negative_raw_sum`) when that raw sum is
-  /// negative, then clamps the RETURNED value to `[0, 1 << 30]` — matching
-  /// `PointsBalanceDao._applyDeltaInTransaction`/
-  /// `.reDeriveBalanceFromLedger`'s clamp exactly, so nothing a user sees
-  /// changes.
-  Future<int> getBalance() async {
-    final entries = await getLedger();
-    final rawSum = entries.fold<int>(0, (total, entry) => total + entry.delta);
+  /// The AD-50 filtered totals of this profile: the WHOLE paged ledger
+  /// ([getLedger]) summed by `pointsTotals` against the engine's
+  /// [earningEventIds] (`LearnerState.earningEventIds`).
+  ///
+  /// * A `pts_{eventId}` row counts only while its event earns; a voided,
+  ///   ineligible or orphan event row counts nothing. No reversal rows
+  ///   exist, so a void lowers both totals.
+  /// * A non-event row (spend, refund, parent adjustment) always counts
+  ///   toward the balance, and toward lifetime only when it is a positive
+  ///   `completion`/`parent_add` row: spends and refunds never raise it.
+  /// * Both totals are clamped to `[0, 1 << 30]` (owner decision 5); a
+  ///   negative raw balance logs `firestore_points_ledger_negative_raw_sum`
+  ///   before the clamp.
+  ///
+  /// Lifetime earned is the same filtered sum and is not monotonic (AD-50).
+  Future<PointsTotals> getTotals({required Set<String> earningEventIds}) async {
+    final rows = [for (final e in await getLedger()) pointsLedgerRowOf(e)];
+    final totals = pointsTotals(rows, earningEventIds);
+    final seen = <String>{};
+    var rawSum = 0;
+    for (final row in rows) {
+      final eventId = row.eventId;
+      if (!seen.add(row.id)) continue;
+      if (eventId != null && !earningEventIds.contains(eventId)) continue;
+      rawSum += row.amount;
+    }
     if (rawSum < 0) {
       _logger.warning(
         event: 'firestore_points_ledger_negative_raw_sum',
         fields: {'profile_id': _profileId, 'raw_sum': rawSum},
       );
     }
-    return rawSum.clamp(0, 1 << 30);
+    return totals;
   }
 
-  /// Returns lifetime-earned points for milestone progression.
-  ///
-  /// Unlike [getBalance], this view intentionally ignores debits and refunds;
-  /// it is derived from the append-only ledger and therefore never decreases
-  /// when points are spent.
-  Future<int> getLifetimeEarned() async {
-    final entries = await getLedger();
-    final earned = entries.fold<int>(0, (total, entry) {
-      if (!_lifetimeEarnedEntryKinds.contains(entry.entryKind) ||
-          entry.delta <= 0) {
-        return total;
-      }
-      return total + entry.delta;
-    });
-    return earned.clamp(0, 1 << 30);
-  }
+  /// The debitable balance of [getTotals]: what redemption affordability
+  /// checks against.
+  Future<int> getBalance({required Set<String> earningEventIds}) async =>
+      (await getTotals(earningEventIds: earningEventIds)).balance;
 
   /// Live updates for one entry by [ulid], or `null` if it does not exist.
   /// Resubscribes with bounded exponential backoff on a stream-level error

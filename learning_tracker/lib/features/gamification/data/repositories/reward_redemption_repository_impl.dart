@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_redemption.dart';
 
 /// Thrown when `firestoreRewardRedemptionRepositoryProvider` resolves to
@@ -28,11 +29,18 @@ class FirestoreRewardRedemptionRepositoryAdapter {
   /// Returns `null` when the balance is insufficient (matching the
   /// underlying repository's D-E-honest contract) -- throws only when the
   /// backend itself is not ready.
+  ///
+  /// Affordability is the AD-50 filtered balance (DNI-480): the engine's
+  /// earning set of the active learner is read first, so a voided event's
+  /// points cannot be spent.
   Future<RewardRedemptionEntity?> createRedemption({
     required String rewardTitle,
     required int iconIndex,
     required int pointsCost,
   }) async {
+    final earningEventIds = await _ref.read(
+      activeEarningEventIdsProvider.future,
+    );
     final repo = await _ref.read(
       firestoreRewardRedemptionRepositoryProvider.future,
     );
@@ -43,6 +51,7 @@ class FirestoreRewardRedemptionRepositoryAdapter {
       rewardTitle: rewardTitle,
       iconIndex: iconIndex,
       pointsCost: pointsCost,
+      earningEventIds: earningEventIds,
     );
   }
 
