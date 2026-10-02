@@ -105,7 +105,7 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
-import 'package:learning_tracker/features/tracks/setup/presentation/goal_setup_launcher.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 /// Whether the current session may see and use sub-track write entry
 /// points (AC-3): a parent acting for the active learner.
@@ -430,17 +430,18 @@ String subTrackLeafUnitLabel(WidgetRef ref, String curriculumId) {
 }
 
 /// Opens the existing goal setup of [curriculum] from a sub-track form's
-/// no-deadline link (AC-6); resolves to whether a goal was saved.
+/// no-deadline link (AC-6) and saves it through the governed contract;
+/// resolves to what happened, for the form to report.
 typedef SubTrackGoalSetupLauncher =
-    Future<bool> Function(
+    Future<SubTrackGoalSetupOutcome> Function(
       BuildContext context,
       WidgetRef ref,
       CurriculumId curriculum,
     );
 
-/// The goal-setup flow the no-deadline link opens: the shared
-/// [openCurriculumGoalSetup]. A seam so form tests can observe the link
+/// The goal-setup flow the no-deadline link opens:
+/// [openSubTrackGoalSetup]. A seam so form tests can observe the link
 /// without the whole goal screen.
 final subTrackGoalSetupLauncherProvider = Provider<SubTrackGoalSetupLauncher>(
-  (ref) => openCurriculumGoalSetup,
+  (ref) => openSubTrackGoalSetup,
 );

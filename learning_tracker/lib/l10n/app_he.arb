@@ -2276,6 +2276,7 @@
   "subTrackFormSave": "שמירת תת-מסלול",
   "subTrackNoDeadlineNote": "ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.",
   "subTrackNoDeadlineLink": "הגדרת תאריך יעד",
+  "subTrackGoalSaveFailed": "לא ניתן היה לשמור את היעד.",
   "subTrackErrorNameRequired": "יש להזין שם",
   "subTrackErrorYearRequired": "יש לבחור שנת לימודים",
   "subTrackErrorYearUsed": "לשנת לימודים זו כבר יש תת-מסלול של בית ספר",

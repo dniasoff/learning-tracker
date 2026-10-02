@@ -16,6 +16,7 @@ import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/academic_year_picker.dart';
 
 import '../../../helpers/pump_app.dart';
@@ -25,6 +26,9 @@ const _existingId = '01JHARN0000000000000000001';
 
 final _launches = <CurriculumId>[];
 
+/// What the stubbed goal setup flow reports (AC-6).
+var _goalOutcome = SubTrackGoalSetupOutcome.cancelled;
+
 List<Override> _overrides(SubTrackHarness h, {bool parentSession = true}) => [
   ...h.overrides(parentSession: parentSession),
   subTrackGoalSetupLauncherProvider.overrideWithValue((
@@ -33,7 +37,7 @@ List<Override> _overrides(SubTrackHarness h, {bool parentSession = true}) => [
     curriculum,
   ) async {
     _launches.add(curriculum);
-    return false;
+    return _goalOutcome;
   }),
 ];
 
@@ -264,6 +268,35 @@ void main() {
       await _save(tester);
       expect(h.commands.creates, hasLength(1));
       expect(_formOpen(), isFalse);
+    });
+
+    testWidgets('a goal that could not be saved is reported; values stay', (
+      tester,
+    ) async {
+      h = SubTrackHarness();
+      _goalOutcome = SubTrackGoalSetupOutcome.failed;
+      addTearDown(() => _goalOutcome = SubTrackGoalSetupOutcome.cancelled);
+      await _pumpForm(tester, h);
+      await _enter(tester, 'subTrackFormName', 'Cheder');
+      await tester.ensureVisible(find.text('Set a deadline'));
+      await tester.tap(find.text('Set a deadline'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text("Couldn't save the goal."), findsOneWidget);
+      expect(find.widgetWithText(TextField, 'Cheder'), findsOneWidget);
+      expect(_formOpen(), isTrue);
+    });
+
+    testWidgets('a saved goal is confirmed', (tester) async {
+      h = SubTrackHarness();
+      _goalOutcome = SubTrackGoalSetupOutcome.saved;
+      addTearDown(() => _goalOutcome = SubTrackGoalSetupOutcome.cancelled);
+      await _pumpForm(tester, h);
+      await tester.ensureVisible(find.text('Set a deadline'));
+      await tester.tap(find.text('Set a deadline'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Goal saved'), findsOneWidget);
     });
 
     testWidgets('is absent when the curriculum has a deadline', (tester) async {

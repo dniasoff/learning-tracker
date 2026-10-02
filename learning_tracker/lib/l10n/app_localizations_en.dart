@@ -4101,6 +4101,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subTrackNoDeadlineLink => 'Set a deadline';
 
   @override
+  String get subTrackGoalSaveFailed => 'Couldn\'t save the goal.';
+
+  @override
   String get subTrackErrorNameRequired => 'Enter a name';
 
   @override

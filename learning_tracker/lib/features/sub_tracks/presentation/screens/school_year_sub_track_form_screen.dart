@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/learning/presentation/providers/learni
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/academic_year_picker.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/no_deadline_note.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -449,9 +450,7 @@ class _SchoolYearSubTrackFormState
       decoration: filled(label),
       items: [
         if (allowOpen)
-          DropdownMenuItem<int?>(
-            child: Text(l10n.subTrackFormEndMonthOpen),
-          ),
+          DropdownMenuItem<int?>(child: Text(l10n.subTrackFormEndMonthOpen)),
         for (var m = 1; m <= 12; m++)
           DropdownMenuItem<int?>(value: m, child: Text(monthName(m))),
       ],
@@ -611,7 +610,7 @@ class _SchoolYearSubTrackFormState
         InfoNote(text: l10n.subTrackFormGroundNote),
         if (showNoDeadlineNote) ...[
           const SizedBox(height: 12),
-          NoDeadlineNote(onOpenGoalSetup: _openGoalSetup),
+          NoDeadlineNote(onOpenGoalSetup: () => unawaited(_openGoalSetup())),
         ],
         const SizedBox(height: 24),
         FilledButton(
@@ -632,11 +631,50 @@ class _SchoolYearSubTrackFormState
     );
   }
 
-  void _openGoalSetup() {
+  bool _openingGoalSetup = false;
+
+  /// The no-deadline link (AC-6): opens the existing goal setup, waits for
+  /// its governed save and reports the outcome. The form keeps its values
+  /// either way; a saved deadline arrives through the live intent read.
+  Future<void> _openGoalSetup() async {
+    if (_openingGoalSetup) return;
     final curriculum = CurriculumId.fromStorageKey(widget.curriculumId);
     if (curriculum == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     final launch = ref.read(subTrackGoalSetupLauncherProvider);
-    unawaited(launch(context, ref, curriculum));
+    _openingGoalSetup = true;
+    SubTrackGoalSetupOutcome outcome;
+    try {
+      outcome = await launch(context, ref, curriculum);
+    } on Object catch (error, stack) {
+      _log.error(
+        event: 'sub_track_goal_setup_failed',
+        fields: {'curriculum_id': widget.curriculumId},
+        exception: error,
+        stackTrace: stack,
+      );
+      outcome = SubTrackGoalSetupOutcome.failed;
+    } finally {
+      _openingGoalSetup = false;
+    }
+    if (!mounted) return;
+    switch (outcome) {
+      case SubTrackGoalSetupOutcome.saved:
+        messenger.showSnackBar(SnackBar(content: Text(l10n.goalSavedSnack)));
+      case SubTrackGoalSetupOutcome.failed:
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.subTrackGoalSaveFailed),
+            action: SnackBarAction(
+              label: l10n.actionRetry,
+              onPressed: () => unawaited(_openGoalSetup()),
+            ),
+          ),
+        );
+      case SubTrackGoalSetupOutcome.cancelled:
+        break;
+    }
   }
 
   /// "2" for 2.0, "1.5" for 1.5, one decimal at most.
