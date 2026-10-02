@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/unlocked_achievements_source.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -23,7 +24,7 @@ class _Balance implements PointsBalanceReader, PointsLifetimeEarnedReader {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('classifies affordable and unaffordable global rewards', () async {
+  test('classifies unlocked rewards from the latch record only', () async {
     final service = RewardMilestoneService(
       balanceReader: _Balance(72),
       lifetimeEarnedReader: _Balance(72),
@@ -40,7 +41,12 @@ void main() {
       milestoneId: 'big',
     );
     final container = ProviderContainer(
-      overrides: [rewardMilestoneServiceProvider.overrideWithValue(service)],
+      overrides: [
+        rewardMilestoneServiceProvider.overrideWithValue(service),
+        unlockedAchievementIdsProvider.overrideWith(
+          (ref) async => const {'small'},
+        ),
+      ],
     );
     addTearDown(container.dispose);
 
@@ -71,7 +77,12 @@ void main() {
         milestoneId: 'stock',
       );
       final container = ProviderContainer(
-        overrides: [rewardMilestoneServiceProvider.overrideWithValue(service)],
+        overrides: [
+          rewardMilestoneServiceProvider.overrideWithValue(service),
+          unlockedAchievementIdsProvider.overrideWith(
+            (ref) async => const <String>{},
+          ),
+        ],
       );
       addTearDown(container.dispose);
       await container.read(achievementsOverviewProvider.future);

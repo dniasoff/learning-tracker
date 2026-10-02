@@ -5,7 +5,8 @@
 // learning-event log; each runs the real engine over the log. A void on
 // the log removes its event from `earningEventIds`, and every reader on
 // both devices re-reads lower balance and lifetime without any reversal
-// row. Spends lower the balance but not lifetime earned.
+// row. Spends lower the balance but not lifetime earned. Achievement
+// surfaces read only the latched `unlocked_achievement_ids` record.
 import 'dart:async';
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -15,15 +16,21 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_redemption_repository.dart';
+import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/points.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
+import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/learner_state/engine_fixtures.dart';
@@ -264,4 +271,65 @@ void main() {
       const PointsTotals(balance: 4, lifetimeEarned: 4),
     );
   });
+
+  test('achievement surfaces read only the latch record, and a latch on one '
+      'device reaches the other', () async {
+    SharedPreferences.setMockInitialValues({});
+    // Lifetime 500 crosses both thresholds, but only the latched id counts.
+    final service = RewardMilestoneService(
+      balanceReader: _Fixed(500),
+      lifetimeEarnedReader: _Fixed(500),
+      profileId: _profileId,
+    );
+    await service.upsertMilestone(
+      title: 'Bronze',
+      thresholdPoints: 20,
+      milestoneId: 'bronze',
+    );
+    await service.upsertMilestone(
+      title: 'Silver',
+      thresholdPoints: 300,
+      milestoneId: 'silver',
+    );
+    final settings = FirestoreRewardSettingsRepository(
+      firestore: firestore,
+      uid: _uid,
+      profileId: _profileId,
+    );
+    await settings.latchUnlockedAchievementIds({'bronze'});
+    final other = ProviderContainer.test(
+      overrides: [
+        rewardMilestoneServiceProvider.overrideWithValue(service),
+        firestoreRewardSettingsRepositoryProvider.overrideWith(
+          (ref) async => settings,
+        ),
+      ],
+    );
+    addTearDown(other.dispose);
+    other.listen(achievementsOverviewProvider, (_, _) {});
+
+    Future<Map<String, bool>> unlockedById() async {
+      await pumpEventQueue();
+      final o = await other.read(achievementsOverviewProvider.future);
+      return {for (final r in o.rows) r.milestone.id: r.isUnlocked};
+    }
+
+    expect(await unlockedById(), {'bronze': true, 'silver': false});
+
+    // The owner device latches silver: the other device's surface follows
+    // the record without any invalidation.
+    await settings.latchUnlockedAchievementIds({'silver'});
+    expect(await unlockedById(), {'bronze': true, 'silver': true});
+  });
+}
+
+final class _Fixed implements PointsBalanceReader, PointsLifetimeEarnedReader {
+  _Fixed(this.value);
+  final int value;
+
+  @override
+  Future<int> getBalance() async => value;
+
+  @override
+  Future<int> getLifetimeEarned() async => value;
 }

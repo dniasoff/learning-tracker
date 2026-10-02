@@ -275,12 +275,15 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   final globalPoints = await milestoneService
       .getGlobalLifetimeEarnedForRewards();
   final globalMilestones = await milestoneService.getMilestones();
+  if (!ref.mounted) return null;
+  final unlockedIds = await ref.watch(unlockedAchievementIdsProvider.future);
 
   const selector = NextRewardSelector();
   final result = selector.select(
     trackEntries: const [],
     globalPoints: globalPoints,
     globalMilestones: globalMilestones,
+    unlockedIds: unlockedIds,
   );
   if (result == null) return null;
 

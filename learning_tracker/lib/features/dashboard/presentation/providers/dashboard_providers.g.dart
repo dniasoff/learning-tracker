@@ -819,7 +819,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'e975de7cbf536ab6f39d7777574e64da506d82a8';
+    r'491c0d5c208a3958d96738f600d7b25c76f7ccb7';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 
