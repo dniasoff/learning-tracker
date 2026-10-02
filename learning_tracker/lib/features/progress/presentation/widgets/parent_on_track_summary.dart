@@ -12,7 +12,10 @@
 ///
 /// Parent only (UX-DR-48, NFR-9): outside a parent session (a child
 /// without the parent PIN, or a tutor) it paints nothing and reads no
-/// learner state. A curriculum the engine does not evaluate, or one with
+/// learner state. It fails closed: while the session or the learner scope
+/// re-resolves (a PIN lock, a profile switch, a tutor entry), and while the
+/// learner state reloads or has failed, it paints nothing, so a retained
+/// value of the previous learner (or a stale one) is never shown. A curriculum the engine does not evaluate, or one with
 /// no projection, gets no card.
 ///
 /// Seam: Story 2.11 (DNI-502, bead fyh.44) owns the full Dashboard
@@ -27,6 +30,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/pace_report_view.dart';
@@ -44,10 +48,26 @@ class ParentOnTrackSummary extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (curricula.isEmpty) return const SizedBox.shrink();
-    if (ref.watch(parentSessionProvider).value != true) {
+    // Fail closed: a session still resolving, or re-resolving after a PIN,
+    // profile or tutor change, is not a parent's yet, even while it retains
+    // an earlier `true`.
+    final session = ref.watch(parentSessionProvider);
+    if (session.isLoading || session.hasError || session.value != true) {
       return const SizedBox.shrink();
     }
-    final learner = ref.watch(activeLearnerStateProvider).value;
+    // The learner identity: while it re-resolves (a profile switch) the
+    // active state still serves the previous learner's scope, so nothing of
+    // it is painted until the new scope settles.
+    if (ref.watch(activeLearnerScopeProvider).isLoading) {
+      return const SizedBox.shrink();
+    }
+    // Riverpod keeps the previous value through a reload or an error; only
+    // a settled read of the current scope is painted, never a retained one.
+    final state = ref.watch(activeLearnerStateProvider);
+    if (state.isLoading || state.hasError || !state.hasValue) {
+      return const SizedBox.shrink();
+    }
+    final learner = state.requireValue;
     if (learner == null) return const SizedBox.shrink();
     final cards = <Widget>[
       for (final curriculum in curricula)
