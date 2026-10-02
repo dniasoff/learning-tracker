@@ -183,8 +183,6 @@ const _baseline = <String, int>{
   'test/features/scheduler/domain/study_day_trackid_fallback_test.dart': 1,
   'test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart':
       1,
-  'test/features/scheduler/presentation/providers/scheduler_contiguous_overdue_no_gap_test.dart':
-      1,
   'test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart':
       1,
   'test/features/scheduler/presentation/providers/scheduler_providers_test.dart':

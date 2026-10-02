@@ -17,7 +17,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 /// lists.
 ///
 /// Every invalidation that genuinely needed a profile identity (the
-/// daily-plan-snapshot clear, and every `lifetime_knowledge_providers.dart`/
+/// planned task list, and every `lifetime_knowledge_providers.dart`/
 /// `calendar_position_providers.dart` provider) resolves the CURRENTLY
 /// ACTIVE profile internally via `Ref` (AD-24) rather than taking one as a
 /// parameter — there is no "invalidate for another profile" use case.
@@ -27,14 +27,8 @@ Future<void> onTrackChanged(WidgetRef ref) async {
   ref.invalidate(dashboardActiveTracksStreamProvider);
   ref.invalidate(activeTracksProvider);
 
-  // Discard DailyPlanRepository's in-memory (profileId, localDate) snapshot
-  // cache so a new/changed track shows up immediately instead of waiting for
-  // the next local day — the post-AD-24 replacement for the old
-  // db.dailyPlanDao.deletePlanForDay call. dailyPlanRepositoryProvider is a
-  // plain (non-keepAlive) @riverpod function returning a fresh
-  // DailyPlanRepository() with an empty cache, so invalidating it here is
-  // equivalent to clearing just the current profile/day's entry.
-  ref.invalidate(dailyPlanRepositoryProvider);
+  // The planned task list is evaluated live over LearnerState (DNI-477):
+  // there is no daily-plan snapshot to discard any more.
   ref.invalidate(allDailyTasksProvider);
   ref.invalidate(dashboardActiveCurriculaStreamProvider);
   ref.invalidate(trackDualProgressMetricsProvider);

@@ -10,13 +10,13 @@
 ///        typical scope+window combination.
 ///   P3 — `derivePaceFromDeadline` falls back to (1, per_week) when the
 ///        window or scope is empty so the invariant holds in edge cases.
-///   P4 — Projection invariant: `selfPacedSchedule(pace: null, ...)` throws
-///        `MissingPaceError` — the projection's API guarantees that
-///        paceless tracks cannot quietly render zero.
+///
+/// The former P4 (the legacy projection's `MissingPaceError`) is deleted
+/// with the projection (DNI-477, AD-49): with no pace and no deadline the
+/// planner shows no new learning, which the planner tests pin.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_helpers.dart';
 
 /// Builds a simple study-day map with [n] study days per week (Mon–Sun order).
@@ -126,35 +126,4 @@ void main() {
       });
     },
   );
-
-  // ── P4 ── Projection API: null pace is a hard error ──────────────────────
-  //
-  // The pure projection enforces the invariant the setup UI is built to
-  // satisfy.  A caller cannot accidentally pass a null pace and get an
-  // empty-but-silent result — it raises MissingPaceError.
-  group('P4: selfPacedSchedule rejects null pace with MissingPaceError', () {
-    test('null pace → MissingPaceError', () {
-      final today = DateTime.utc(2026, 5, 19);
-      final anchor = today.subtract(const Duration(days: 7));
-      expect(
-        () => selfPacedSchedule(
-          anchor: anchor,
-          pace: null,
-          studyDayPattern: const StudyDayPattern({
-            DateTime.monday,
-            DateTime.tuesday,
-            DateTime.wednesday,
-            DateTime.thursday,
-            DateTime.friday,
-          }),
-          orderedRefs: List.generate(30, (i) => 'Mishnayos $i'),
-          today: today,
-        ),
-        throwsA(isA<MissingPaceError>()),
-        reason:
-            'P4: the projection rejects a null pace — the setup UI is the '
-            'single chokepoint that guarantees a pace exists.',
-      );
-    });
-  });
 }

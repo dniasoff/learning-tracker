@@ -6,27 +6,17 @@ import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/daily_plan_repository.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_content_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/daily_task_generator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/daily_task_projection_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
@@ -119,60 +109,6 @@ List<DailyTask> collapseDafTasks(
     if (seen.add('${t.curriculumId}|$dafKey|${t.stageOrder}')) out.add(t);
   }
   return out;
-}
-
-@riverpod
-SchedulerEngine schedulerEngine(Ref ref) {
-  // Use scope-aware content: returns scoped content if scopes are set,
-  // otherwise returns full curriculum content.
-  Future<List<ContentItem>> getScopedContent(CurriculumId curriculumId) async {
-    return ref.read(scopedCurriculumContentProvider(curriculumId).future);
-  }
-
-  return SchedulerEngine(
-    contentRepository: SchedulerContentRepositoryImpl(
-      getContent: getScopedContent,
-    ),
-    completionRepository: SchedulerFirestoreCompletionRepositoryAdapter(
-      ref: ref,
-    ),
-    stageRepository: SchedulerStageRepositoryImpl(
-      stageRepository: ref.watch(globalStageRepositoryProvider),
-    ),
-    // AD-33 / DNI-476: the main-track order is `orderedLeaves` over the
-    // curriculum's corpus (full, unscoped content tree) and its live
-    // `track_learning_order` docs; the engine filters it to the scoped
-    // leaves it schedules.
-    learningOrderRepository: SchedulerTrackOrderRepositoryAdapter(
-      ref: ref,
-      content: (curriculumId) => ref
-          .read(contentRepositoryProvider)
-          .getContentForCurriculum(curriculumId),
-    ),
-  );
-}
-
-@riverpod
-DailyTaskGenerator dailyTaskGenerator(Ref ref) {
-  final engine = ref.watch(schedulerEngineProvider);
-  return DailyTaskGenerator(engine: engine);
-}
-
-@riverpod
-Future<List<DailyTask>> dailyTasks(
-  Ref ref, {
-  required CurriculumId curriculumId,
-  required String trackLabel,
-  DateTime? goalDeadline,
-}) async {
-  final engine = ref.watch(schedulerEngineProvider);
-  final config = ScheduleConfig(
-    curriculumId: curriculumId,
-    trackLabel: trackLabel,
-    goalDeadline: goalDeadline,
-    currentDate: ref.watch(clockProvider),
-  );
-  return engine.generateDailyTasks(config);
 }
 
 /// Storage key constants for skipped-task persistence.
@@ -281,13 +217,6 @@ Future<Set<String>> previouslySkippedRefs(Ref ref) async {
   final prefs = await SharedPreferences.getInstance();
   final refs = prefs.getStringList(_previouslySkippedRefsKey) ?? [];
   return refs.toSet();
-}
-
-/// Repository that snapshots today's plan to DB so completions don't
-/// trigger regeneration.
-@riverpod
-DailyPlanRepository dailyPlanRepository(Ref ref) {
-  return DailyPlanRepository();
 }
 
 /// Thrown by [allDailyTasksProvider] when there is no active profile.
