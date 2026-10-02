@@ -129,13 +129,27 @@ final class OngoingSubTrackValues {
 
   /// The `editSubTrack` change from [current] to these values: only the
   /// fields that differ, or null when nothing changed (AC-6).
-  SubTrackEdit? editFrom(SubTrack current) {
-    final nameChanged = name != current.name;
-    final rateChanged = ratePerWeek != current.ratePerWeek;
-    final weeksChanged = weeksPerYear != current.weeksPerYear;
-    final startChanged = windowStart != current.windowStart;
-    final endChanged = windowEnd != current.windowEnd;
-    final shabbosChanged = learnsOnShabbos != current.learnsOnShabbos;
+  ///
+  /// [opened] is the row as the form was filled from. When given, a field
+  /// is carried only when the parent changed it from [opened] too: a field
+  /// the parent left alone never overwrites a change made elsewhere while
+  /// the form was open (a stale rate in an open form must not undo a
+  /// concurrent rate edit when the parent only renames the track).
+  SubTrackEdit? editFrom(SubTrack current, {SubTrack? opened}) {
+    final base = opened ?? current;
+    final nameChanged = name != current.name && name != base.name;
+    final rateChanged =
+        ratePerWeek != current.ratePerWeek && ratePerWeek != base.ratePerWeek;
+    final weeksChanged =
+        weeksPerYear != current.weeksPerYear &&
+        weeksPerYear != base.weeksPerYear;
+    final startChanged =
+        windowStart != current.windowStart && windowStart != base.windowStart;
+    final endChanged =
+        windowEnd != current.windowEnd && windowEnd != base.windowEnd;
+    final shabbosChanged =
+        learnsOnShabbos != current.learnsOnShabbos &&
+        learnsOnShabbos != base.learnsOnShabbos;
     if (!(nameChanged ||
         rateChanged ||
         weeksChanged ||

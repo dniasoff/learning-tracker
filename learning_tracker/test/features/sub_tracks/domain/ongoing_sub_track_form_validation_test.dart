@@ -214,6 +214,78 @@ void main() {
     });
   });
 
+  group(
+    'AC-6: an edit carries only the fields changed from the opened row',
+    () {
+      final opened = _track(1, start: '2026-09-01', end: '2027-01-01');
+
+      SubTrack changedElsewhere({
+        double rate = 5,
+        double weeks = 52,
+        String? end = '2027-01-01',
+        bool shabbos = false,
+      }) => SubTrack(
+        id: opened.id,
+        curriculumId: opened.curriculumId,
+        name: opened.name,
+        type: opened.type,
+        windowStart: opened.windowStart,
+        windowEnd: end,
+        ratePerWeek: rate,
+        weeksPerYear: weeks,
+        learnsOnShabbos: shabbos,
+        ground: opened.ground,
+        lastChangeId: opened.lastChangeId,
+      );
+
+      test(
+        'a rename keeps a rate, weeks, end and shabbos changed elsewhere',
+        () {
+          final v = _validate(
+            name: 'Renamed',
+            start: opened.windowStart,
+            end: opened.windowEnd,
+          ).values!;
+          final current = changedElsewhere(
+            rate: 9,
+            weeks: 40,
+            end: null,
+            shabbos: true,
+          );
+          final edit = v.editFrom(current, opened: opened)!;
+          expect(edit.name, 'Renamed');
+          expect(edit.ratePerWeek, isNull);
+          expect(edit.weeksPerYear, isNull);
+          expect(edit.windowStart, isNull);
+          expect(edit.windowEnd, isNull);
+          expect(edit.clearWindowEnd, isFalse);
+          expect(edit.learnsOnShabbos, isNull);
+        },
+      );
+
+      test('a field the parent changed is sent over a change elsewhere', () {
+        final v = _validate(
+          name: opened.name,
+          rate: '7',
+          start: opened.windowStart,
+          end: opened.windowEnd,
+        ).values!;
+        final edit = v.editFrom(changedElsewhere(rate: 9), opened: opened)!;
+        expect(edit.ratePerWeek, 7);
+        expect(edit.name, isNull);
+      });
+
+      test('nothing changed by the parent writes nothing', () {
+        final v = _validate(
+          name: opened.name,
+          start: opened.windowStart,
+          end: opened.windowEnd,
+        ).values!;
+        expect(v.editFrom(changedElsewhere(rate: 9), opened: opened), isNull);
+      });
+    },
+  );
+
   group('AC-5: ongoing usage count', () {
     test('counts live, current and future-start ongoing tracks only', () {
       final tracks = [

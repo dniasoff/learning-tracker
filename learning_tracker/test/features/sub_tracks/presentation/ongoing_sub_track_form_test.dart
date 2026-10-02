@@ -727,6 +727,41 @@ void main() {
       expect(_closed, isTrue);
     });
 
+    testWidgets('a rename keeps a rate changed elsewhere while open', (
+      tester,
+    ) async {
+      final existing = _track(1);
+      await _open(tester, tracks: [existing], existing: existing);
+      expect(_fieldText(tester, 'ongoingSubTrackRate'), '5');
+      // Another device sets the rate to 9 while this form still shows 5.
+      _setRows(tester, [
+        SubTrack(
+          id: existing.id,
+          curriculumId: existing.curriculumId,
+          name: existing.name,
+          type: existing.type,
+          windowStart: existing.windowStart,
+          ratePerWeek: 9,
+          weeksPerYear: existing.weeksPerYear,
+          learnsOnShabbos: existing.learnsOnShabbos,
+          ground: existing.ground,
+          lastChangeId: _ulid(900),
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      await tester.enterText(_field('ongoingSubTrackName'), 'Renamed');
+      await _save(tester);
+      final call = _commands.calls.single;
+      expect(call.name, 'editSubTrack');
+      final edit = call.args['edit']! as SubTrackEdit;
+      expect(edit.name, 'Renamed');
+      expect(edit.ratePerWeek, isNull);
+      expect(edit.weeksPerYear, isNull);
+      expect(edit.windowStart, isNull);
+      expect(edit.windowEnd, isNull);
+      expect(edit.learnsOnShabbos, isNull);
+    });
+
     testWidgets('the switch never overwrites the stored weeks', (tester) async {
       final existing = _track(1);
       await _open(tester, tracks: [existing], existing: existing);

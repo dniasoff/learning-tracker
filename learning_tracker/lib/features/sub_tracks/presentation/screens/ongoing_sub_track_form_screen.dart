@@ -128,7 +128,9 @@ class _OngoingSubTrackFormScreenState
   bool _closing = false;
 
   /// The edited sub-track as resolved from the bound learner's read; null
-  /// for a create, and for an edit until the read arrives.
+  /// for a create, and for an edit until the read arrives. It is the
+  /// baseline the parent's edits are measured from: only fields changed
+  /// from it are written.
   SubTrack? _existing;
 
   bool get _isEdit => widget.subTrackId != null;
@@ -333,7 +335,8 @@ class _OngoingSubTrackFormScreenState
       setState(() => _limitBlocked = true);
       return;
     }
-    if (existing != null && values.editFrom(existing) == null) {
+    if (existing != null &&
+        values.editFrom(existing, opened: _existing) == null) {
       Navigator.of(context).pop(OngoingSubTrackSaved(scope: bound));
       return;
     }
@@ -359,7 +362,12 @@ class _OngoingSubTrackFormScreenState
           ongoingSubTrackContextProvider(widget.curriculumId).future,
         );
         final current = latest == null ? null : _editable(latest);
-        final latestEdit = current == null ? null : values.editFrom(current);
+        // Only the fields the parent changed from the row the form opened
+        // with are sent, so a change made elsewhere while the form was
+        // open is kept unless the parent edited that same field.
+        final latestEdit = current == null
+            ? null
+            : values.editFrom(current, opened: _existing);
         if (current == null) {
           result = null;
         } else if (latestEdit == null) {
