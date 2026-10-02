@@ -4479,9 +4479,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get siyumimPreviouslyLearnedDate => 'Previously learned';
-
-  @override
   String get paceLiveLearningOnlyCaption => 'Pace tracks track learning only.';
 
   @override

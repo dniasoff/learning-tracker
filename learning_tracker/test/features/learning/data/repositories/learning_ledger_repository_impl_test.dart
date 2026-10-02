@@ -212,23 +212,25 @@ void main() {
         },
       );
 
-      test('writes the sentinel date for lifetime-only marks', () async {
+      // R10 (Story 1.11, DNI-473): the 2000-01-01 sentinel is retired; no
+      // source stamps it any more.
+      test('writes a real timestamp for lifetime-only marks', () async {
         final entries = await createRepo().recordCompletionsBatch([
           draft(unitIdentifier: 'A'),
           draft(unitIdentifier: 'B'),
         ]);
 
         expect(entries, hasLength(2));
-        expect(entries.every((e) => e.completedAt.year == 2000), isTrue);
+        expect(entries.every((e) => e.completedAt.year != 2000), isTrue);
       });
 
-      test('writes the sentinel date for bulk-in-track marks', () async {
+      test('writes a real timestamp for bulk-in-track marks', () async {
         final entries = await createRepo().recordCompletionsBatch([
           draft(unitIdentifier: 'A'),
           draft(unitIdentifier: 'B'),
         ], source: CompletionSource.bulkInTrack);
 
-        expect(entries.every((e) => e.completedAt.year == 2000), isTrue);
+        expect(entries.every((e) => e.completedAt.year != 2000), isTrue);
       });
 
       test('writes a real timestamp for live marks', () async {

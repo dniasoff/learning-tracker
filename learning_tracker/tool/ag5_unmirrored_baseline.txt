@@ -55,7 +55,6 @@ lib/core/labels/curriculum_label_providers.dart
 lib/core/labels/curriculum_level_name.dart
 lib/core/labels/curriculum_visuals.dart
 lib/core/labels/domain_term_labels.dart
-lib/core/learning/completion_constants.dart
 lib/core/logging/log_events.dart
 lib/core/navigation/guards/child_mode_guard.dart
 lib/core/navigation/guards/pin_guard.dart

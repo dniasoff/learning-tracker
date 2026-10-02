@@ -10,8 +10,8 @@
     {"symbol": "FirestoreCompletionPointsAwarder", "kind": "service", "state": "retired", "owner": "DNI-473", "note": "completion_points_awarder"},
     {"symbol": "BulkMarkCompletionUseCase", "kind": "service", "state": "retired", "owner": "DNI-473"},
     {"symbol": "ManualCompletionUseCase", "kind": "service", "state": "retired", "owner": "DNI-473"},
-    {"symbol": "BulkPriorCompletionService", "kind": "service", "state": "pending", "owner": "DNI-473"},
-    {"symbol": "BulkPriorCompletionResult", "kind": "type", "state": "pending", "owner": "DNI-473"},
+    {"symbol": "BulkPriorCompletionService", "kind": "service", "state": "retired", "owner": "DNI-473"},
+    {"symbol": "BulkPriorCompletionResult", "kind": "type", "state": "retired", "owner": "DNI-473"},
     {"symbol": "CompletionCommand", "kind": "type", "state": "retired", "owner": "DNI-473"}
   ]
 }

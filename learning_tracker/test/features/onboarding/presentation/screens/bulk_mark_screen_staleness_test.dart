@@ -28,18 +28,19 @@
 ///
 /// This test drives the REAL `BulkMarkScreen` UI (tap the checkbox, tap
 /// Next, tap Confirm — the actual `_executeBulkMark()` code path, backed by
-/// a fake Firestore and a real `BulkPriorCompletionService`) while an
+/// a fake Firestore and a real `BeforeTrackingRecorder` over fake learning
+/// commands — Story 1.11, DNI-473) while an
 /// already-established listener on `lifetimeTotalsAcrossAllCurriculaProvider`
 /// (mirroring a persistently-mounted Dashboard tile) is watching. It never
 /// calls `.increment()` itself — only the production code under test may.
 ///
-/// `bulkPriorCompletionServiceProvider`'s default graph still needs a live
-/// Firebase account. This test therefore overrides the account/profile
-/// seams with a `FakeFirebaseFirestore` handle and constructs the real
-/// Firestore repository adapters inside the provider override.
+/// The lifetime providers still need a live Firebase account. This test
+/// therefore overrides the account/profile seams with a
+/// `FakeFirebaseFirestore` handle and constructs the real Firestore
+/// repository adapters inside the provider overrides.
 ///
-/// `BulkPriorCompletionService.execute()` also calls
-/// `_bookmarkRepository.setBookmark(...)`, so the test supplies the real
+/// `BeforeTrackingRecorder.record()` also calls
+/// `BookmarkRepository.setBookmark(...)`, so the test supplies the real
 /// Firestore bookmark adapter against the same fake account.
 @Tags(['onboarding', 'bulk_mark', 'riverpod', 'contract'])
 library;
@@ -63,7 +64,7 @@ import 'package:learning_tracker/features/learning/data/repositories/completion_
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -71,6 +72,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/reactivity_contract.dart';
 
@@ -186,6 +188,8 @@ void main() {
     );
 
     final contentRepo = _TwoLeafContentRepository();
+    final commands = FakeLearningCommands();
+    addTearDown(commands.dispose);
 
     final container = ProviderContainer(
       overrides: [
@@ -207,16 +211,15 @@ void main() {
             activeProfileMode: ProfileMode.adult,
           ),
         ),
-        bulkPriorCompletionServiceProvider.overrideWith(
-          (ref) => BulkPriorCompletionService(
+        beforeTrackingRecorderProvider.overrideWith(
+          (ref) => BeforeTrackingRecorder(
             contentRepository: contentRepo,
-            completionRepository: FirestoreCompletionRepositoryAdapter(
-              ref: ref,
-            ),
             bookmarkRepository: FirestoreBookmarkRepositoryAdapter(
               ref: ref,
               contentRepository: contentRepo,
             ),
+            commands: () async => commands,
+            events: () async => const [],
           ),
         ),
       ],

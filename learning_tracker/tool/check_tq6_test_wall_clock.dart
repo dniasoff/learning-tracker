@@ -82,7 +82,6 @@ const _baseline = <String>{
   'test/features/notifications/domain/services/notification_gateway_test.dart',
   'test/features/notifications/domain/services/streak_alert_service_test.dart',
   'test/features/notifications/presentation/providers/notification_providers_deep_test.dart',
-  'test/features/onboarding/domain/services/bulk_prior_completion_service_test.dart',
   'test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart',
   'test/features/progress/data/repositories/progress_repository_test.dart',
   'test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart',

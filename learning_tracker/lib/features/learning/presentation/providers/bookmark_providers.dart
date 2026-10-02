@@ -13,8 +13,8 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 ///
 /// Construction stays synchronous: the adapter holds a `Ref` and resolves
 /// `firestoreBookmarkRepositoryProvider` per method call, so
-/// `completionOrchestratorProvider` and `bulkPriorCompletionServiceProvider`
-/// keep watching this as a plain `Provider`.
+/// `beforeTrackingRecorderProvider` keeps watching this as a plain
+/// `Provider` (the legacy bookmark co-write, retired by DNI-478).
 ///
 /// `ContentIndex` is passed through for the O(1) adjacent-item fast path
 /// (Story 26.14 / DNI-357); `null` while it is still warming up, which the

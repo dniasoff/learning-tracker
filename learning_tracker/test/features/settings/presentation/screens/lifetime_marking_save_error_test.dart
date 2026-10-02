@@ -15,8 +15,9 @@
 /// real _markSelections call" test — pump LifetimeCurriculumMarkingScreen
 /// with a fake ContentRepository (so "Select all in this list" populates a
 /// real selection without depending on the on-disk content database) and
-/// learningLedgerRepositoryProvider overridden to a repo whose
-/// recordCompletionsBatch throws a distinctive, developer-facing exception.
+/// the before-tracking recorder's commands seam throwing a distinctive,
+/// developer-facing exception (Story 1.11, DNI-473: Save is a
+/// `before_tracking` capture through LearningCommands).
 /// Tap Select-all then Save to drive the catch branch, then assert the
 /// SnackBar shows only the fixed ARB copy — in both English and Hebrew —
 /// and never the raw exception text.
@@ -30,10 +31,11 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:mocktail/mocktail.dart';
@@ -44,8 +46,7 @@ import '../../../../helpers/pump_app.dart';
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
-class _MockLearningLedgerRepository extends Mock
-    implements LearningLedgerRepository {}
+class _NoBookmarks extends Fake implements BookmarkRepository {}
 
 class _FakeActiveProfileId extends ActiveProfileId {
   @override
@@ -126,20 +127,26 @@ _MockContentRepository _makeFakeContentRepo() {
 
 // ── harness ───────────────────────────────────────────────────────────────────
 
-Widget _buildScreen({
-  required LearningLedgerRepository ledgerRepository,
-  Locale locale = const Locale('en'),
-}) {
+Widget _buildScreen({Locale locale = const Locale('en')}) {
+  final content = _makeFakeContentRepo();
   return pumpApp(
     locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
-      contentRepositoryProvider.overrideWithValue(_makeFakeContentRepo()),
+      contentRepositoryProvider.overrideWithValue(content),
       curriculumLedgerProvider.overrideWith(
         (ref, id) async => const <LearningLedgerEntry>[],
       ),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
-      learningLedgerRepositoryProvider.overrideWithValue(ledgerRepository),
+      beforeTrackingRecorderProvider.overrideWithValue(
+        BeforeTrackingRecorder(
+          contentRepository: content,
+          bookmarkRepository: _NoBookmarks(),
+          commands: () async =>
+              throw Exception('test-forced capture write failure'),
+          events: () async => const [],
+        ),
+      ),
     ],
     child: const LifetimeCurriculumMarkingScreen(curriculumId: 'mishnayos'),
   );
@@ -185,30 +192,16 @@ Future<void> _teardown(WidgetTester tester) async {
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
-    registerFallbackValue(<LedgerEntryDraft>[]);
-    registerFallbackValue(CompletionSource.lifetimeOnly);
     registerFallbackValue(0); // scopeLevel
     registerFallbackValue(<String>[]); // scopeValues
     registerFallbackValue(''); // query / sefariaRef
-  });
-
-  late _MockLearningLedgerRepository ledgerRepository;
-
-  setUp(() {
-    ledgerRepository = _MockLearningLedgerRepository();
-    when(
-      () => ledgerRepository.recordCompletionsBatch(
-        any<List<LedgerEntryDraft>>(),
-        source: any<CompletionSource>(named: 'source'),
-      ),
-    ).thenThrow(Exception('test-forced ledger write failure'));
   });
 
   testWidgets(
     'save failure -> SnackBar shows the fixed localized fallback, never the '
     'raw exception (AUD-settings-07, EH-5/ST-4)',
     (tester) async {
-      await tester.pumpWidget(_buildScreen(ledgerRepository: ledgerRepository));
+      await tester.pumpWidget(_buildScreen());
       await _selectAllAndSave(tester);
 
       expect(
@@ -216,7 +209,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.textContaining('test-forced ledger write failure'),
+        find.textContaining('test-forced capture write failure'),
         findsNothing,
         reason:
             'AUD-settings-07 (EH-5): the caught exception\'s raw message '
@@ -232,17 +225,12 @@ void main() {
     'save failure under Hebrew locale -> SnackBar shows only ARB-sourced '
     'Hebrew text, never the raw exception (AUD-settings-07)',
     (tester) async {
-      await tester.pumpWidget(
-        _buildScreen(
-          ledgerRepository: ledgerRepository,
-          locale: const Locale('he'),
-        ),
-      );
+      await tester.pumpWidget(_buildScreen(locale: const Locale('he')));
       await _selectAllAndSave(tester);
 
       expect(find.text('שמירת הסימונים נכשלה. נסו שוב.'), findsOneWidget);
       expect(
-        find.textContaining('test-forced ledger write failure'),
+        find.textContaining('test-forced capture write failure'),
         findsNothing,
       );
 

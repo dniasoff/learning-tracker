@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -21,8 +20,8 @@ class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
-class _MockBulkPriorCompletionService extends Mock
-    implements BulkPriorCompletionService {}
+class _MockBeforeTrackingRecorder extends Mock
+    implements BeforeTrackingRecorder {}
 
 const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
@@ -130,7 +129,7 @@ void main() {
       'shows confirmation toast naming the count after bulk-mark commits',
       (tester) async {
         final contentRepo = _MockContentRepository();
-        final service = _MockBulkPriorCompletionService();
+        final service = _MockBeforeTrackingRecorder();
 
         // Two leaves, only one is pre-ticked — needed so the "can't mark
         // everything" guard in _proceedToConfirmation doesn't bail out.
@@ -166,19 +165,9 @@ void main() {
 
         // Pre-tick leafA via a sentinel completion so we don't need to drive
         // the hierarchy panel UI to add a selection.
-        when(() => completionRepo.getCompletionsByCurriculum(any())).thenAnswer(
-          (_) async => [
-            CompletionEntity(
-              curriculumId: CurriculumId.mishnayos,
-              sefariaRef: leafA.sefariaRef,
-              stageId: 1,
-              trackType: 'personal',
-              source: CompletionSource.bulkInTrack,
-              completedAt: kBulkPriorSentinelDate,
-              points: 0,
-            ),
-          ],
-        );
+        when(
+          () => service.recordedRefs(any()),
+        ).thenAnswer((_) async => {leafA.sefariaRef});
 
         when(
           () => service.resolveSelections(
@@ -188,15 +177,11 @@ void main() {
         ).thenAnswer((_) async => [leafA]);
 
         when(
-          () => service.execute(
+          () => service.record(
             curriculumId: any(named: 'curriculumId'),
-            resolvedItems: any(named: 'resolvedItems'),
-            stageIds: any(named: 'stageIds'),
+            selections: any(named: 'selections'),
           ),
-        ).thenAnswer(
-          (_) async =>
-              const BulkPriorCompletionResult(itemCount: 7, completionCount: 7),
-        );
+        ).thenAnswer((_) async => _bt(7, 7));
 
         await tester.pumpWidget(
           pumpApp(
@@ -209,7 +194,7 @@ void main() {
                 (ref, args) => Future.value([]),
               ),
               completionRepositoryProvider.overrideWithValue(completionRepo),
-              bulkPriorCompletionServiceProvider.overrideWithValue(service),
+              beforeTrackingRecorderProvider.overrideWithValue(service),
               activeProfileIdProvider.overrideWithValue(_profileId),
             ],
             child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
@@ -270,3 +255,12 @@ void main() {
     });
   });
 }
+
+/// A successful before-tracking capture of [items] leaves in [events]
+/// learning events.
+BeforeTrackingResult _bt(int items, int events) => BeforeTrackingResult(
+  capture: CaptureResult.success(
+    eventIds: [for (var i = 0; i < events; i++) 'event-$i'],
+  ),
+  itemCount: items,
+);
