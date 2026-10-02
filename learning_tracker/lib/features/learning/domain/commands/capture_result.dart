@@ -1,0 +1,263 @@
+/// The outcome of every `LearningCommands` call (C0, DNI-524).
+///
+/// Imports only `lib/domain/learner_state/**` and `dart:` (AC-1).
+library;
+
+import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+
+/// What a command did.
+sealed class CaptureResult {
+  const CaptureResult();
+
+  /// The command was applied (or [queued] offline).
+  const factory CaptureResult.success({
+    List<String> eventIds,
+    List<String> changeIds,
+    String? actionId,
+    bool queued,
+    List<ChangedSinceField> changedSince,
+  }) = CaptureSuccess;
+
+  /// Refused: the learner is inside lock [window] (AD-36).
+  const factory CaptureResult.locked(LockWindow window) = CaptureLocked;
+
+  /// Refused: a child session may not do this.
+  const factory CaptureResult.childLimit() = CaptureChildLimit;
+
+  /// Refused: the command needs a connection.
+  const factory CaptureResult.onlineRequired() = CaptureOnlineRequired;
+
+  /// Refused for [reason].
+  const factory CaptureResult.rejected(CaptureRejection reason) =
+      CaptureRejected;
+}
+
+/// The command was applied.
+final class CaptureSuccess extends CaptureResult {
+  /// Creates a success.
+  const CaptureSuccess({
+    this.eventIds = const [],
+    this.changeIds = const [],
+    this.actionId,
+    this.queued = false,
+    this.changedSince = const [],
+  });
+
+  /// The learning events written.
+  final List<String> eventIds;
+
+  /// The change-log entries written.
+  final List<String> changeIds;
+
+  /// The governed action id, if any.
+  final String? actionId;
+
+  /// Whether the write is queued offline rather than confirmed.
+  final bool queued;
+
+  /// Fields someone else changed since the caller last read them.
+  final List<ChangedSinceField> changedSince;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CaptureSuccess &&
+      _listEquals(other.eventIds, eventIds) &&
+      _listEquals(other.changeIds, changeIds) &&
+      other.actionId == actionId &&
+      other.queued == queued &&
+      _listEquals(other.changedSince, changedSince);
+
+  @override
+  int get hashCode => Object.hash(
+    Object.hashAll(eventIds),
+    Object.hashAll(changeIds),
+    actionId,
+    queued,
+    Object.hashAll(changedSince),
+  );
+
+  @override
+  String toString() =>
+      'CaptureResult.success(${eventIds.length} events, '
+      '${changeIds.length} changes, queued: $queued)';
+}
+
+/// Refused inside a lock window.
+final class CaptureLocked extends CaptureResult {
+  /// Creates the refusal.
+  const CaptureLocked(this.window);
+
+  /// The lock in force.
+  final LockWindow window;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CaptureLocked && other.window == window;
+
+  @override
+  int get hashCode => window.hashCode;
+
+  @override
+  String toString() => 'CaptureResult.locked($window)';
+}
+
+/// Refused for a child session.
+final class CaptureChildLimit extends CaptureResult {
+  /// Creates the refusal.
+  const CaptureChildLimit();
+
+  @override
+  bool operator ==(Object other) => other is CaptureChildLimit;
+
+  @override
+  int get hashCode => (CaptureChildLimit).hashCode;
+
+  @override
+  String toString() => 'CaptureResult.childLimit()';
+}
+
+/// Refused offline.
+final class CaptureOnlineRequired extends CaptureResult {
+  /// Creates the refusal.
+  const CaptureOnlineRequired();
+
+  @override
+  bool operator ==(Object other) => other is CaptureOnlineRequired;
+
+  @override
+  int get hashCode => (CaptureOnlineRequired).hashCode;
+
+  @override
+  String toString() => 'CaptureResult.onlineRequired()';
+}
+
+/// Refused for [reason].
+final class CaptureRejected extends CaptureResult {
+  /// Creates the refusal.
+  const CaptureRejected(this.reason);
+
+  /// Why.
+  final CaptureRejection reason;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CaptureRejected && other.reason == reason;
+
+  @override
+  int get hashCode => reason.hashCode;
+
+  @override
+  String toString() => 'CaptureResult.rejected(${reason.name})';
+}
+
+/// Why a command was rejected.
+enum CaptureRejection {
+  /// The target event or action does not exist.
+  targetNotFound,
+
+  /// A void must target a `learn` event.
+  voidTargetNotLearn,
+
+  /// The target was recorded in a lock window and is ignored.
+  lockIgnoredTarget,
+
+  /// The target is itself an undo, which is final.
+  undoIsFinal,
+
+  /// Undo is not offered for the target.
+  undoNotOffered,
+
+  /// The command's arguments are invalid.
+  invalid,
+}
+
+/// A field someone else changed since the caller read it.
+final class ChangedSinceField {
+  /// Creates the record.
+  const ChangedSinceField(this.key, this.changedBy);
+
+  /// The changed field.
+  final ChangedFieldKey key;
+
+  /// Who changed it.
+  final Actor changedBy;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChangedSinceField &&
+      other.key == key &&
+      other.changedBy == changedBy;
+
+  @override
+  int get hashCode => Object.hash(key, changedBy);
+
+  @override
+  String toString() => 'ChangedSinceField($key, $changedBy)';
+}
+
+/// Why a queued write failed for good.
+enum PendingFailureReason {
+  /// `permission-denied`.
+  permissionDenied,
+
+  /// `invalid-argument`.
+  invalidArgument,
+
+  /// `failed-precondition`.
+  failedPrecondition,
+
+  /// Anything else.
+  other,
+}
+
+/// A queued write that the server rejected and the user must resolve.
+final class PendingFailure {
+  /// Creates the record.
+  const PendingFailure({
+    required this.id,
+    required this.eventIds,
+    required this.changeIds,
+    required this.reason,
+  });
+
+  /// The failure id (passed to `LearningCommands.retry`).
+  final String id;
+
+  /// The learning events in the failed write.
+  final List<String> eventIds;
+
+  /// The change-log entries in the failed write.
+  final List<String> changeIds;
+
+  /// Why it failed.
+  final PendingFailureReason reason;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PendingFailure &&
+      other.id == id &&
+      _listEquals(other.eventIds, eventIds) &&
+      _listEquals(other.changeIds, changeIds) &&
+      other.reason == reason;
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    Object.hashAll(eventIds),
+    Object.hashAll(changeIds),
+    reason,
+  );
+
+  @override
+  String toString() => 'PendingFailure($id, ${reason.name})';
+}
+
+bool _listEquals<T>(List<T> a, List<T> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
