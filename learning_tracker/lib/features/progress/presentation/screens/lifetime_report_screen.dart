@@ -27,10 +27,14 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// paging it shows [LoadingIndicator], never partial totals; a failed
 /// read shows [AppErrorView] with a retry of the whole input chain
 /// (AC-10). Per-source pace and *Export PDF* arrive with Story 5.3.
+@RoutePage()
 class LifetimeReportScreen extends ConsumerStatefulWidget {
   /// Creates the screen for [curriculumId] (a storage key); null picks
   /// the first curriculum with learning.
-  const LifetimeReportScreen({super.key, this.curriculumId});
+  const LifetimeReportScreen({
+    super.key,
+    @QueryParam('curriculum') this.curriculumId,
+  });
 
   /// The curriculum in view when the report was opened.
   final String? curriculumId;
