@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
+import 'package:learning_tracker/core/content/content_index_corpus.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -29,10 +30,14 @@ import 'package:learning_tracker/features/gamification/domain/models/streak_reco
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
+import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
+import '../../helpers/learner_state/engine_fixtures.dart';
+import '../../helpers/learner_state/fake_learner_state.dart';
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
@@ -321,12 +326,21 @@ void main() {
             anyActiveTrackHasChazaraProvider.overrideWith(
               (ref) => Future.value(true),
             ),
-            // Override completionCountProvider so the tile reads count=1 and
-            // activates the onLongPress (R-LC6: null when count=0).
-            completionCountProvider(
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: reviewRef,
-            ).overrideWith((ref) => Future.value(1)),
+            // DNI-474: the tile's count is the engine's counted learning of
+            // the leaf; one counted learn activates the onLongPress (R-LC6:
+            // null when count=0).
+            curriculumProgressIndexProvider(
+              CurriculumId.mishnayos,
+            ).overrideWith(
+              (ref) async => CurriculumProgressIndex.of(
+                fakeLearnerState(countedLearns: [engineLearn(1, reviewRef)]),
+                contentIndexCorpus(
+                  curriculumId: CurriculumId.mishnayos.storageKey,
+                  items: [reviewItem],
+                  levelLabels: const ['Seder'],
+                ),
+              ),
+            ),
             // Override itemStageBreakdownProvider to return {stageId:1, count:1}.
             itemStageBreakdownProvider((
               curriculumId: CurriculumId.mishnayos.storageKey,

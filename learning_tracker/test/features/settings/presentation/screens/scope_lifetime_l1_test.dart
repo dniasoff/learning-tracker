@@ -61,6 +61,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -82,6 +83,8 @@ import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../helpers/firestore_governed_writer.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../../helpers/pump_app.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -350,6 +353,11 @@ Widget _buildScopeApp({
       ),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
       contentRepositoryProvider.overrideWithValue(repo),
+      // DNI-474: saved rows read the engine's learnt set (none here).
+      ...learnerStateOverrides(
+        scope: c0Scope(),
+        state: LearnerState.empty(DateTime.utc(2026)),
+      ),
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
       else

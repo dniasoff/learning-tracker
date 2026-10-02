@@ -1,252 +1,101 @@
+// Mirror test for
+// `lib/features/progress/domain/services/lifetime_tree_builder.dart`
+// (DNI-474: the tree lays out the engine's learnt set; tri-state and counts
+// per node; provenance from counted learning).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
+import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 
-ContentItem leaf(
-  String sefariaRef, {
-  String level1 = 'Zeraim',
-  String? level2,
-  String? level3,
-  String? level4,
-  int sortOrder = 0,
-}) => ContentItem(
-  curriculumId: 'mishnayos',
-  level1: level1,
-  level2: level2,
-  level3: level3,
-  level4: level4,
-  displayNameHe: '',
-  displayNameEn: '',
-  sefariaRef: sefariaRef,
-  sortOrder: sortOrder,
-  isLeaf: true,
-);
+import '../../../../helpers/learner_state/progress_fixtures.dart';
 
 void main() {
-  late LifetimeTreeBuilder builder;
+  const builder = LifetimeTreeBuilder();
+  final leaves = progressContent().where((i) => i.isLeaf).toList();
 
-  setUp(() {
-    builder = const LifetimeTreeBuilder();
+  test('build counts the engine learnt leaves of the curriculum only', () {
+    final summary = builder.build(
+      curriculum: CurriculumId.mishnayos,
+      leaves: leaves,
+      learnedRefs: {'Mishnah Peah 1:1', 'Mishnah Peah 1:2', 'Not A Leaf'},
+      heLabelLookup: const {},
+    );
+    expect(summary.learnedLeafCount, 2);
+    expect(summary.totalLeafCount, 9);
+    expect(summary.percentage, closeTo(2 / 9, 1e-9));
+    expect(summary.learnedLeafRefs, {'Mishnah Peah 1:1', 'Mishnah Peah 1:2'});
+    expect(summary.allLeafRefs, hasLength(9));
   });
 
-  group('LifetimeTreeBuilder', () {
-    // -------------------------------------------------------------------------
-    // computeLearnedLeafRefs — basic cases
-    // -------------------------------------------------------------------------
-    group('computeLearnedLeafRefs', () {
-      test('returns empty set when no completions and no ledger', () {
-        final leaves = [leaf('Berakhot 1:1'), leaf('Berakhot 1:2')];
-        final result = builder.computeLearnedLeafRefs(
-          leaves: leaves,
-          completedRefs: {},
-          ledgerEntries: [],
-        );
-        expect(result, isEmpty);
-      });
-
-      test('includes directly completed refs', () {
-        final leaves = [leaf('Berakhot 1:1'), leaf('Berakhot 1:2')];
-        final result = builder.computeLearnedLeafRefs(
-          leaves: leaves,
-          completedRefs: {'Berakhot 1:1'},
-          ledgerEntries: [],
-        );
-        expect(result, {'Berakhot 1:1'});
-      });
-
-      test('does not include refs not in leaf set', () {
-        final leaves = [leaf('Berakhot 1:1')];
-        final result = builder.computeLearnedLeafRefs(
-          leaves: leaves,
-          completedRefs: {
-            'Berakhot 1:1',
-            'Shabbat 2a',
-          }, // Shabbat not in leaves
-          ledgerEntries: [],
-        );
-        expect(result, {'Berakhot 1:1'});
-        expect(result.contains('Shabbat 2a'), isFalse);
-      });
-
-      test('handles empty leaves gracefully', () {
-        final result = builder.computeLearnedLeafRefs(
-          leaves: [],
-          completedRefs: {'Berakhot 1:1'},
-          ledgerEntries: [],
-        );
-        expect(result, isEmpty);
-      });
+  test('every node carries its tri-state and learnt / total counts', () {
+    final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {
+      'Mishnah Peah 1:1',
+      'Mishnah Peah 1:2',
+      'Mishnah Berakhot 2:1',
     });
+    final zeraim = tree.first;
+    expect(zeraim.rawValue, 'Zeraim');
+    expect(zeraim.state, LifetimeNodeState.partial);
+    expect((zeraim.learntCount, zeraim.totalCount), (3, 7));
+    final peah = zeraim.children.last;
+    expect(peah.rawValue, 'Mishnah Peah');
+    expect(peah.state, LifetimeNodeState.full);
+    expect((peah.learntCount, peah.totalCount), (2, 2));
+    final moed = tree.last;
+    expect(moed.state, LifetimeNodeState.none);
+    expect((moed.learntCount, moed.totalCount), (0, 2));
+    final leaf = peah.children.single.children.first;
+    expect(leaf.leafRef, 'Mishnah Peah 1:1');
+    expect((leaf.learntCount, leaf.totalCount), (1, 1));
+  });
 
-    // -------------------------------------------------------------------------
-    // buildTree — structural tests
-    // -------------------------------------------------------------------------
-    group('buildTree', () {
-      test('returns empty list for empty leaves', () {
-        final tree = builder.buildTree(CurriculumId.mishnayos, [], {});
-        expect(tree, isEmpty);
-      });
+  test('node order follows ContentIndex sortOrder', () {
+    final tree = builder.buildTree(CurriculumId.mishnayos, leaves, const {});
+    expect(tree.map((n) => n.rawValue), ['Zeraim', 'Moed']);
+    expect(tree.first.children.map((n) => n.rawValue), [
+      'Mishnah Berakhot',
+      'Mishnah Peah',
+    ]);
+  });
 
-      test('DNI-475: a terminal node of one leaf carries its leafRef (the '
-          'Mishna-history target); aggregating nodes do not', () {
-        final leaves = [
-          leaf('Berakhot 1:1', level2: 'Berakhot', level3: '1', level4: '1'),
-          leaf(
-            'Berakhot 1:2',
-            level2: 'Berakhot',
-            level3: '1',
-            level4: '2',
-            sortOrder: 1,
-          ),
-        ];
-        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});
-        final perek = tree.single.children.single.children.single;
-        expect(tree.single.leafRef, isNull);
-        expect(perek.leafRef, isNull);
-        expect(perek.children.map((n) => n.leafRef), [
-          'Berakhot 1:1',
-          'Berakhot 1:2',
-        ]);
-      });
+  test('Hebrew labels come from the container lookup', () {
+    final tree = builder.buildTree(
+      CurriculumId.mishnayos,
+      leaves,
+      const {},
+      heLabelLookup: LifetimeTreeBuilder.buildHeLabelLookup(progressContent()),
+    );
+    expect(tree.first.hebrewName, 'he:Seder Zeraim');
+  });
 
-      test('single leaf creates single root node', () {
-        final leaves = [leaf('Berakhot 1:1', level1: 'Zeraim')];
-        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});
-        expect(tree.length, 1);
-        expect(tree.first.rawValue, 'Zeraim');
-        expect(tree.first.level, 1);
-        expect(tree.first.state, LifetimeNodeState.none);
-      });
+  test('provenance: first learnt before tracking with no tracked learning '
+      'is bulk-marked, otherwise live; chazaros counts every counted '
+      'event', () {
+    final state = progressState([
+      progressGround(1, 'Mishnah Peah', 'masechta'),
+      progressLearn(2, 'Mishnah Peah 1:1', minutes: 1),
+      progressLearn(3, 'Mishnah Berakhot 1:1', minutes: 2),
+      progressLearn(4, 'Mishnah Berakhot 1:1', minutes: 3),
+    ]);
+    final provenance = LifetimeTreeBuilder.provenanceFromActivity(
+      leafActivityOf(state, progressCorpus()),
+    );
+    expect(
+      provenance['Mishnah Peah 1:2'],
+      const LifetimeLeafProvenance(
+        source: LifetimeLeafSource.bulkMarked,
+        chazarosCount: 1,
+      ),
+    );
+    expect(provenance['Mishnah Peah 1:1']!.source, LifetimeLeafSource.live);
+    expect(provenance['Mishnah Berakhot 1:1']!.chazarosCount, 2);
+  });
 
-      test('learned leaf sets node state to full', () {
-        final leaves = [leaf('Berakhot 1:1', level1: 'Zeraim')];
-        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {
-          'Berakhot 1:1',
-        });
-        expect(tree.first.state, LifetimeNodeState.full);
-      });
-
-      test('partial completion sets partial state', () {
-        final leaves = [
-          leaf('Berakhot 1:1', level1: 'Zeraim', sortOrder: 1),
-          leaf('Berakhot 1:2', level1: 'Zeraim', sortOrder: 2),
-        ];
-        final tree = builder.buildTree(
-          CurriculumId.mishnayos,
-          leaves,
-          {'Berakhot 1:1'}, // Only first leaf learned
-        );
-        expect(tree.first.state, LifetimeNodeState.partial);
-      });
-
-      test('groups leaves by level1', () {
-        final leaves = [
-          leaf('Berakhot 1:1', level1: 'Zeraim', sortOrder: 1),
-          leaf('Shabbat 1:1', level1: 'Moed', sortOrder: 10),
-        ];
-        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});
-        expect(tree.length, 2);
-        expect(tree.map((n) => n.rawValue).toSet(), {'Zeraim', 'Moed'});
-      });
-
-      test('sorts by sortOrder within level', () {
-        final leaves = [
-          leaf('Shabbat 1:1', level1: 'Moed', sortOrder: 10),
-          leaf('Berakhot 1:1', level1: 'Zeraim', sortOrder: 1),
-        ];
-        final tree = builder.buildTree(CurriculumId.mishnayos, leaves, {});
-        expect(tree.first.rawValue, 'Zeraim'); // lower sortOrder first
-      });
-    });
-
-    // -------------------------------------------------------------------------
-    // buildHeLabelLookup — static helper
-    // -------------------------------------------------------------------------
-    group('buildHeLabelLookup', () {
-      test('returns empty map for empty content', () {
-        expect(LifetimeTreeBuilder.buildHeLabelLookup([]), isEmpty);
-      });
-
-      test('skips leaf items', () {
-        final items = [leaf('Berakhot 1:1')];
-        expect(LifetimeTreeBuilder.buildHeLabelLookup(items), isEmpty);
-      });
-
-      test('includes non-leaf items with Hebrew names', () {
-        final items = [
-          const ContentItem(
-            curriculumId: 'mishnayos',
-            level1: 'Zeraim',
-            level2: null,
-            displayNameHe: 'זרעים',
-            displayNameEn: 'Zeraim',
-            sefariaRef: 'Zeraim',
-            sortOrder: 0,
-            isLeaf: false,
-          ),
-        ];
-        final lookup = LifetimeTreeBuilder.buildHeLabelLookup(items);
-        expect(lookup['Zeraim'], 'זרעים');
-      });
-    });
-
-    // -------------------------------------------------------------------------
-    // computeLeafProvenance — F12 regression guard
-    //
-    // The classification "live if count > 0 && !hasImportRow" is correct ONLY
-    // because CompletionWriter._upgradePriorMarkRow DELETES the import row
-    // when a live event commits for an existing bulk natural key. This test
-    // simulates the post-upgrade state — an event row remains, but the import
-    // row has been removed — and asserts the ref classifies as `live`.
-    // If the deletion contract is ever broken, this test fails first.
-    // -------------------------------------------------------------------------
-    group('computeLeafProvenance — F12 upgrade case', () {
-      test('a ref with completion events AND no remaining import row '
-          'classifies as live (post-upgrade state)', () {
-        const ref = 'Mishnah Berakhot 1:1';
-
-        // Simulated post-upgrade state:
-        //   * completionEventRefs has both the original bulk-import event AND
-        //     the new live event for `ref` (count = 2).
-        //   * bulkImportedRefs is EMPTY — the import row was deleted by
-        //     CompletionWriter._upgradePriorMarkRow.
-        final provenance = LifetimeTreeBuilder.computeLeafProvenance(
-          completionEventRefs: [ref, ref],
-          bulkImportedRefs: const <String>{},
-          lifetimeImportedRefs: const <String>{},
-        );
-
-        expect(provenance, contains(ref));
-        expect(
-          provenance[ref]!.source,
-          LifetimeLeafSource.live,
-          reason:
-              'After upgrade the import row is gone, so Rule 1 (count > 0 '
-              '&& !hasImportRow) fires and the leaf is classified live',
-        );
-        expect(
-          provenance[ref]!.chazarosCount,
-          2,
-          reason: 'chazarosCount must reflect the total event count (2)',
-        );
-      });
-
-      test('a ref with completion events AND a bulk import row still present '
-          'classifies as bulkMarked (pre-upgrade state)', () {
-        const ref = 'Mishnah Berakhot 1:1';
-
-        // Pre-upgrade state: bulk row imported but no live event has hit
-        // it yet — the row in prior_completion_imports is still present.
-        final provenance = LifetimeTreeBuilder.computeLeafProvenance(
-          completionEventRefs: [ref],
-          bulkImportedRefs: const {ref},
-          lifetimeImportedRefs: const <String>{},
-        );
-
-        expect(provenance[ref]!.source, LifetimeLeafSource.bulkMarked);
-      });
-    });
+  test('lifetimeNodeStateOf / triStateOfNode round-trip', () {
+    for (final s in TriState.values) {
+      expect(triStateOfNode(lifetimeNodeStateOf(s)), s);
+    }
   });
 }

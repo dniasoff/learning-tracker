@@ -9,8 +9,8 @@
 // Behaviours covered:
 //
 //   ContentItemTile (widget):
-//     T1.  Leaf item with count=0 → radio_button_unchecked icon, no badge.
-//     T2.  Leaf item with pre-loaded reviewCount=3 → check_circle icon + "3x" badge.
+//     T1.  Leaf item with count=0 → empty tri-state box, no badge.
+//     T2.  Leaf item learnt, reviewCount=3 → complete tri-state box + "3x" badge.
 //     T3.  Container item → folder icon + chevron_right trailing.
 //     T4.  onTap callback fires when tile is tapped.
 //     T5.  Hebrew rendering: displayNameHe shown (RTL Text node present).
@@ -62,6 +62,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_index_corpus.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -72,12 +73,16 @@ import 'package:learning_tracker/features/content_browsing/presentation/screens/
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/learner_state/fake_learner_state.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -217,9 +222,24 @@ List<Override> _baseOverrides({
     curriculumContentProvider.overrideWith(
       (ref, CurriculumId cid) async => const <ContentItem>[],
     ),
-    completionCountProvider.overrideWith(
-      (ref, ({String curriculumId, String sefariaRef}) arg) async =>
-          completionCount,
+    // DNI-474: tile state comes from the engine's learnt set; a positive
+    // count marks the fixture leaf learnt.
+    curriculumProgressIndexProvider.overrideWith(
+      (ref, CurriculumId cid) async => CurriculumProgressIndex.of(
+        fakeLearnerState(
+          curricula: {
+            if (completionCount > 0)
+              'mishnayos': FakeCurriculumState(
+                learntLeaves: {_kLeafItem.sefariaRef},
+              ),
+          },
+        ),
+        contentIndexCorpus(
+          curriculumId: 'mishnayos',
+          items: const [_kLeafItem],
+          levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
+        ),
+      ),
     ),
   ];
 }
@@ -235,7 +255,11 @@ Widget _buildTileApp({
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
-      ..._baseOverrides(mockRepo: mockRepo, hebrewTerms: hebrewTerms),
+      ..._baseOverrides(
+        mockRepo: mockRepo,
+        hebrewTerms: hebrewTerms,
+        completionCount: reviewCount ?? 0,
+      ),
       // Override sheet providers so the long-press breakdown sheet never
       // reaches Firebase-dependent auth/sync chains.
       itemStageBreakdownProvider.overrideWith(
@@ -467,7 +491,7 @@ void main() {
   // ══════════════════════════════════════════════════════════════════════════
 
   group('ContentItemTile — leaf, uncompleted (count=0)', () {
-    testWidgets('T1. radio_button_unchecked icon shown; no review badge', (
+    testWidgets('T1. empty tri-state box shown; no review badge', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -480,7 +504,10 @@ void main() {
       );
       await _settle(tester);
 
-      expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
+      expect(
+        find.byIcon(Icons.check_box_outline_blank_rounded),
+        findsOneWidget,
+      );
       // ReviewCountBadge hides when count == 0 (AC-6).
       expect(find.textContaining('x'), findsNothing);
       await _teardown(tester);
@@ -488,7 +515,7 @@ void main() {
   });
 
   group('ContentItemTile — leaf, completed (count=3)', () {
-    testWidgets('T2. check_circle icon shown; "3x" badge visible', (
+    testWidgets('T2. complete tri-state box shown; "3x" badge visible', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -501,7 +528,7 @@ void main() {
       );
       await _settle(tester);
 
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Icons.check_box_rounded), findsOneWidget);
       expect(find.text('3x'), findsOneWidget);
       await _teardown(tester);
     });

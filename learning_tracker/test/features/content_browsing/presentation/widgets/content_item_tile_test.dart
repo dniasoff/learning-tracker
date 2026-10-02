@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/content/content_index_corpus.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learner_state.dart';
 
 void main() {
   Widget createTestWidget({
@@ -25,10 +30,29 @@ void main() {
         // bucket to the selected-profile provider; override the provider
         // directly so the widget sees the requested mode.
         useHebrewTermsProvider.overrideWithValue(hebrewTermsScript),
-        completionCountProvider(
-          curriculumId: item.curriculumId,
-          sefariaRef: item.sefariaRef,
-        ).overrideWith((ref) async => completionCount),
+        // DNI-474: the tile's state and count come from the engine's
+        // counted learning of the item (an index over its corpus).
+        curriculumProgressIndexProvider(CurriculumId.mishnayos).overrideWith(
+          (ref) async => CurriculumProgressIndex.of(
+            fakeLearnerState(
+              curricula: {
+                if (completionCount > 0)
+                  'mishnayos': FakeCurriculumState(
+                    learntLeaves: {item.sefariaRef},
+                  ),
+              },
+              countedLearns: [
+                for (var i = 1; i <= completionCount; i++)
+                  engineLearn(i, item.sefariaRef, minutes: i),
+              ],
+            ),
+            contentIndexCorpus(
+              curriculumId: 'mishnayos',
+              items: [item],
+              levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
+            ),
+          ),
+        ),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -154,8 +178,11 @@ void main() {
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
       await tester.pump();
 
-      // Leaf items show completion status icon (unchecked by default)
-      expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
+      // Leaf items show the engine's tri-state (empty by default).
+      expect(
+        find.byIcon(Icons.check_box_outline_blank_rounded),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows chevron for container items', (tester) async {

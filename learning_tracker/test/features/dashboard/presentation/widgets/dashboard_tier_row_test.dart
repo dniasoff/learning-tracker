@@ -9,25 +9,18 @@
 @Tags(['dashboard', 'tier_counter'])
 library;
 
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/data/firestore/repository_providers.dart'
-    show firestoreLearningLedgerRepositoryProvider;
-import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
-import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart'
-    show learningLedgerRepositoryProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
@@ -38,10 +31,8 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-import '../../../../helpers/firestore_fake.dart';
-import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/learner_state/progress_fixtures.dart';
 
-const _uid = 'dashboard-tier-uid';
 const _profileId = 'dashboard-tier-profile-ulid';
 
 // ── Overrides ──────────────────────────────────────────────────────────────
@@ -387,163 +378,20 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────────
 
   group('Dashboard — REAL journeyViewModelProvider integration (F23)', () {
-    // Mishnayos Seder Zeraim has 11 masechtas. Seeding all 11 produces
-    // 11 unit-level siyumim + 1 aggregate-level siyum (Zeraim complete) +
-    // 0 curriculum-level siyumim = 12 total siyumim on the counter row.
-    const zeraimMasechtos = [
-      'Berakhot',
-      'Peah',
-      'Demai',
-      'Kilayim',
-      'Sheviit',
-      'Terumot',
-      'Maasrot',
-      'Maaser Sheni',
-      'Challah',
-      'Orlah',
-      'Bikkurim',
-    ];
-
-    Future<void> seedMasechtaLedger(
-      FakeFirebaseFirestore firestore, {
-      required String masechta,
-      required DateTime at,
-      required String ulid,
-    }) {
-      return seedLedgerEntry(
-        firestore,
-        uid: _uid,
-        profileId: _profileId,
-        ulid: ulid,
-        curriculumId: CurriculumId.mishnayos,
-        entryScope: 'masechta',
-        unitIdentifier: masechta,
-        unitDisplayNameHe: masechta,
-        unitDisplayNameEn: masechta,
-        trackType: 'personal',
-        completedAt: at,
-      );
-    }
-
-    /// Representative Mishnayos content list — six sederim, full masechta
-    /// counts (11/12/7/10/11/12 = 63). Sufficient to exercise per-seder
-    /// detection. Lifted directly from `journey_providers_test.dart` and
-    /// kept inline so the test is self-contained.
-    List<ContentItem> mishnayosContent() {
-      final sederim = <String, List<String>>{
-        'Zeraim': zeraimMasechtos,
-        'Moed': [
-          'Shabbat',
-          'Eruvin',
-          'Pesachim',
-          'Shekalim',
-          'Yoma',
-          'Sukkah',
-          'Beitzah',
-          'Rosh Hashanah',
-          'Taanit',
-          'Megillah',
-          'Moed Katan',
-          'Chagigah',
-        ],
-        'Nashim': [
-          'Yevamot',
-          'Ketubot',
-          'Nedarim',
-          'Nazir',
-          'Sotah',
-          'Gittin',
-          'Kiddushin',
-        ],
-        'Nezikin': [
-          'Bava Kamma',
-          'Bava Metzia',
-          'Bava Batra',
-          'Sanhedrin',
-          'Makkot',
-          'Shevuot',
-          'Eduyot',
-          'Avodah Zarah',
-          'Avot',
-          'Horayot',
-        ],
-        'Kodashim': [
-          'Zevachim',
-          'Menachot',
-          'Chullin',
-          'Bekhorot',
-          'Arakhin',
-          'Temurah',
-          'Keritot',
-          'Meilah',
-          'Tamid',
-          'Middot',
-          'Kinnim',
-        ],
-        'Tahorot': [
-          'Kelim',
-          'Oholot',
-          'Negaim',
-          'Parah',
-          'Tahorot',
-          'Mikvaot',
-          'Niddah',
-          'Makhshirin',
-          'Zavim',
-          'Tevul Yom',
-          'Yadayim',
-          'Uktzin',
-        ],
-      };
-      final items = <ContentItem>[];
-      var sortOrder = 0;
-      for (final entry in sederim.entries) {
-        for (final masechta in entry.value) {
-          items.add(
-            ContentItem(
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              level1: entry.key,
-              level2: masechta,
-              displayNameHe: masechta,
-              displayNameEn: masechta,
-              sefariaRef: 'Mishnah $masechta 1.1',
-              sortOrder: sortOrder++,
-              isLeaf: true,
-            ),
-          );
-        }
-      }
-      return items;
-    }
-
-    /// Real-Firestore integration override builder — wires the fake Firestore and
-    /// the curriculum-content provider for Mishnayos, then keeps everything
-    /// else from [_overridesFor] EXCEPT the `journeyViewModelProvider`
-    /// override (which we deliberately omit so the REAL provider runs).
     List<Override> integrationOverrides({
-      required FakeFirebaseFirestore firestore,
+      required LearnerState state,
       required int currentStreak,
       required LifetimeTotals lifetime,
       required List<CurriculumTrackEntity> tracks,
       required List<TrackDualProgressMetric> dualMetrics,
     }) {
       return [
-        activeProfileIdProvider.overrideWith(
-          () => _ProfileIdOverride(_profileId),
-        ),
-        firestoreLearningLedgerRepositoryProvider.overrideWith(
-          (ref) async => FirestoreLearningLedgerRepository(
-            firestore: firestore,
-            uid: _uid,
-            profileId: _profileId,
-          ),
-        ),
-        learningLedgerRepositoryProvider.overrideWith(
-          (ref) => FirestoreLearningLedgerRepositoryAdapter(
-            ref: ref,
-            activeProfileMode: ProfileMode.adult,
-          ),
-        ),
+        // DNI-474: the REAL journey provider reads the engine's completed
+        // units of the active learner's state.
+        ...progressOverrides(state),
+        siyumGranularityProvider(
+          CurriculumId.mishnayos,
+        ).overrideWithValue(MilestoneLevel.unit),
         useHebrewTermsProvider.overrideWith(
           () => _UseHebrewTermsOverride(useHebrew: false),
         ),
@@ -556,7 +404,7 @@ void main() {
         ),
         curriculumContentProvider(
           CurriculumId.mishnayos,
-        ).overrideWith((ref) => Future.value(mishnayosContent())),
+        ).overrideWith((ref) => Future.value(progressContent())),
         // Dashboard scaffolding — the same shape as `_overridesFor` so the
         // body renders past the loading + empty-state gates.
         dashboardActiveCurriculaProvider.overrideWith(
@@ -619,30 +467,20 @@ void main() {
     }
 
     testWidgets(
-      'siyumim counter reflects the REAL three-level breakdown when the '
-      'ledger has Seder Zeraim fully complete (11 unit + 1 aggregate + 0 '
-      'curriculum = 12 total)',
+      'siyumim counter reflects the REAL engine breakdown when Seder Zeraim '
+      'is fully complete (2 unit + 1 aggregate + 0 curriculum = 3 total)',
       (tester) async {
-        final firestore = createFakeFirestore(authenticatedUid: _uid);
-
-        // Seed all 11 Zeraim masechtos into the ledger — the real journey
-        // provider should compute 11 unit-level siyumim + 1 aggregate-level
-        // (Zeraim complete) + 0 curriculum-level = 12 total.
-        final base = DateTime(2026, 1, 1);
-        for (var i = 0; i < zeraimMasechtos.length; i++) {
-          await seedMasechtaLedger(
-            firestore,
-            masechta: zeraimMasechtos[i],
-            at: base.add(Duration(days: i)),
-            ulid: 'ledger-$i',
-          );
-        }
+        // A before-tracking mark over the whole seder completes both of its
+        // masechtos and the seder itself.
+        final state = progressState([
+          progressGround(1, 'Seder Zeraim', 'seder'),
+        ]);
 
         final track = _track();
         await tester.pumpWidget(
           ProviderScope(
             overrides: integrationOverrides(
-              firestore: firestore,
+              state: state,
               currentStreak: 5,
               lifetime: _lifetimeTotals(learned: 200),
               tracks: [track],
@@ -671,12 +509,12 @@ void main() {
           matching: find.text(text),
         );
         expect(
-          inTileRow('12'),
+          inTileRow('3'),
           findsOneWidget,
           reason:
-              'real journeyViewModelProvider must report 11 unit + 1 '
-              'aggregate + 0 curriculum = 12 total siyumim from a fully-'
-              'seeded Seder Zeraim ledger',
+              'real journeyViewModelProvider must report 2 unit + 1 '
+              'aggregate + 0 curriculum = 3 siyumim from a completed '
+              'Seder Zeraim',
         );
         expect(inTileRow('Siyumim'), findsOneWidget);
 
@@ -693,55 +531,51 @@ void main() {
       },
     );
 
-    testWidgets(
-      'empty ledger → siyumim counter shows 0 even when the dashboard '
-      'is otherwise fully populated',
-      (tester) async {
-        final firestore = createFakeFirestore(authenticatedUid: _uid);
-        // Deliberately seed NO ledger entries — the real provider should
-        // emit a JourneyViewModel with all three counters at 0.
+    testWidgets('no learning → siyumim counter shows 0 even when the dashboard '
+        'is otherwise fully populated', (tester) async {
+      // No learning — the real provider emits all three counters at 0.
+      final state = progressState(const []);
 
-        final track = _track();
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: integrationOverrides(
-              firestore: firestore,
-              currentStreak: 0,
-              lifetime: _lifetimeTotals(),
-              tracks: [track],
-              dualMetrics: [_dualMetric(curriculum: CurriculumId.mishnayos)],
-            ),
-            child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: DashboardScreen(),
-            ),
+      final track = _track();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: integrationOverrides(
+            state: state,
+            currentStreak: 0,
+            lifetime: _lifetimeTotals(),
+            tracks: [track],
+            dualMetrics: [_dualMetric(curriculum: CurriculumId.mishnayos)],
           ),
-        );
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 100));
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: DashboardScreen(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
 
-        // The real provider returns 0/0/0 → every counter renders "0".
-        // The siyumim tile is identified by its 'Siyumim' label sitting
-        // next to a '0' value. Critically, this assertion uses the REAL
-        // provider — if a milestone tally regression produced a non-zero
-        // number for an empty ledger, the streak/lifetime/points tiles
-        // would still read 0 (stubbed) but siyumim would diverge.
-        // Scope to the tile row — the dashboard background may contain
-        // other '0' or 'Siyumim' strings (e.g. track rows).
-        Finder inTileRow(String text) => find.descendant(
-          of: find.byType(ProgressTierCounterRow),
-          matching: find.text(text),
-        );
-        expect(inTileRow('Siyumim'), findsOneWidget);
-        // Adult mode → 3 tiles (Streak / Siyumim / Lifetime), all reading '0'.
-        expect(inTileRow('0'), findsNWidgets(3));
+      // The real provider returns 0/0/0 → every counter renders "0".
+      // The siyumim tile is identified by its 'Siyumim' label sitting
+      // next to a '0' value. Critically, this assertion uses the REAL
+      // provider — if a milestone tally regression produced a non-zero
+      // number for an empty ledger, the streak/lifetime/points tiles
+      // would still read 0 (stubbed) but siyumim would diverge.
+      // Scope to the tile row — the dashboard background may contain
+      // other '0' or 'Siyumim' strings (e.g. track rows).
+      Finder inTileRow(String text) => find.descendant(
+        of: find.byType(ProgressTierCounterRow),
+        matching: find.text(text),
+      );
+      expect(inTileRow('Siyumim'), findsOneWidget);
+      // Adult mode → 3 tiles (Streak / Siyumim / Lifetime), all reading '0'.
+      expect(inTileRow('0'), findsNWidgets(3));
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(Duration.zero);
-      },
-    );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 }

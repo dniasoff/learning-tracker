@@ -366,58 +366,6 @@ void main() {
     });
   });
 
-  group('dashboardLastCompletionProvider', () {
-    test('returns null when no completions exist', () async {
-      final container = _container(firestore);
-      addTearDown(container.dispose);
-
-      expect(
-        await container.read(
-          dashboardLastCompletionProvider(CurriculumId.mishnayos).future,
-        ),
-        isNull,
-      );
-    });
-
-    test('returns the latest completion for its curriculum', () async {
-      final first = DateTime.utc(2026, 1, 1);
-      final latest = DateTime.utc(2026, 1, 3);
-      await seedCompletion(
-        firestore,
-        uid: _uid,
-        profileId: _adultProfileId,
-        curriculumId: CurriculumId.mishnayos,
-        sefariaRef: 'Mishnah 1',
-        completedAt: first,
-      );
-      await seedCompletion(
-        firestore,
-        uid: _uid,
-        profileId: _adultProfileId,
-        curriculumId: CurriculumId.mishnayos,
-        sefariaRef: 'Mishnah 2',
-        completedAt: latest,
-      );
-      await seedCompletion(
-        firestore,
-        uid: _uid,
-        profileId: _adultProfileId,
-        curriculumId: CurriculumId.bavli,
-        sefariaRef: 'Chullin 25a',
-        completedAt: DateTime.utc(2026, 1, 5),
-      );
-      final container = _container(firestore);
-      addTearDown(container.dispose);
-
-      expect(
-        await container.read(
-          dashboardLastCompletionProvider(CurriculumId.mishnayos).future,
-        ),
-        latest,
-      );
-    });
-  });
-
   group('dashboardActiveTracksStreamProvider', () {
     test('emits empty when no tracks exist', () async {
       final container = _container(firestore);
@@ -790,43 +738,5 @@ void main() {
         await expectLater(resultFuture, completes);
       },
     );
-
-    test(
-      'dashboardPaceStatus: container disposed mid-goals-read — no crash',
-      () async {
-        await seedGoal(
-          firestore,
-          uid: _uid,
-          profileId: _adultProfileId,
-          curriculumId: CurriculumId.mishnayos,
-          targetDate: DateTime.utc(2026, 6, 1),
-          createdAt: DateTime.utc(2026, 1, 1),
-        );
-        final container = _container(firestore);
-        final capturedRef = _captureRef(container);
-        final resultFuture = dashboardPaceStatus(
-          capturedRef,
-          CurriculumId.mishnayos,
-        );
-
-        container.dispose();
-        expect(capturedRef.mounted, isFalse);
-        await expectLater(resultFuture, completes);
-      },
-    );
-  });
-
-  group('dashboardPaceStatusProvider', () {
-    test('returns null when no Firestore goal exists', () async {
-      final container = _container(firestore);
-      addTearDown(container.dispose);
-
-      expect(
-        await container.read(
-          dashboardPaceStatusProvider(CurriculumId.mishnayos).future,
-        ),
-        isNull,
-      );
-    });
   });
 }

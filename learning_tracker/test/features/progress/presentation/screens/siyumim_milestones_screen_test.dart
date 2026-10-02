@@ -12,28 +12,39 @@
 @Tags(['progress', 'siyumim_milestones'])
 library;
 
+import 'dart:async';
+
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show ActiveProfileDocId, activeProfileDocIdProvider;
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/siyum_celebration.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/progress_fixtures.dart';
+import '../../../../helpers/learner_state_fixtures.dart';
 
 /// Test override for [ActiveProfileId] that returns a fixed id.
 const _uid = 'siyumim-milestones-screen-user';
@@ -410,5 +421,130 @@ void main() {
     expect(find.textContaining('bulkInTrack'), findsNothing);
     // The old per-row "Personal" track-type chip used to render provenance.
     expect(find.text('Personal'), findsNothing);
+  });
+
+  // ─── DNI-474 AC-4 — engine completion numbers and the celebration ──────
+  group('engine-backed siyumim (DNI-474 AC-4)', () {
+    final peahDone = [
+      progressLearn(1, 'Mishnah Peah 1:1', minutes: 1),
+      progressLearn(2, 'Mishnah Peah 1:2', minutes: 2),
+    ];
+    final peahTwice = [
+      ...peahDone,
+      progressLearn(3, 'Mishnah Peah 1:1', minutes: 3),
+      progressLearn(4, 'Mishnah Peah 1:2', minutes: 4),
+    ];
+
+    List<Override> engineOverrides(Stream<LearnerState> states) => [
+      ...progressOverrides(null, states: states),
+      useHebrewTermsProvider.overrideWith(
+        () => _UseHebrewTermsOverride(useHebrew: false),
+      ),
+      activeCurriculaProvider.overrideWith(
+        (ref) async => const [CurriculumId.mishnayos],
+      ),
+      curriculumContentProvider(
+        CurriculumId.mishnayos,
+      ).overrideWith((ref) async => progressContent()),
+      siyumGranularityProvider(
+        CurriculumId.mishnayos,
+      ).overrideWithValue(MilestoneLevel.unit),
+    ];
+
+    testWidgets('the timeline lists the engine completion numbers', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: engineOverrides(Stream.value(progressState(peahTwice))),
+      );
+      addTearDown(container.dispose);
+      container
+          .read(journeySortModeProvider.notifier)
+          .setMode(JourneySortModeValue.chronological);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SiyumimMilestonesScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('#2'), findsOneWidget);
+      expect(find.text('#1'), findsOneWidget);
+      final vm = await container.read(journeyViewModelProvider.future);
+      expect(vm.curricula.single.milestones.map((m) => m.completionNumber), [
+        2,
+        1,
+      ]);
+    });
+
+    testWidgets('celebration lifecycle: fires once per (profile, unit, '
+        'first completion); a void clears the key; the re-completion fires '
+        'again; reduced motion reaches the presenter', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        ProfileScopedPreferenceKeys.siyumShownSeeded(profileUlid): true,
+      });
+      final states = StreamController<LearnerState>.broadcast();
+      addTearDown(states.close);
+      final shown = <(DateTime, bool)>[];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...engineOverrides(states.stream),
+            siyumCelebrationPresenterProvider.overrideWithValue((
+              context,
+              siyumim, {
+              required reduceMotion,
+            }) async {
+              shown.add((siyumim.single.completedAt, reduceMotion));
+            }),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MediaQuery(
+              data: MediaQueryData(disableAnimations: true),
+              child: SiyumCelebrationListener(child: SiyumimMilestonesScreen()),
+            ),
+          ),
+        ),
+      );
+      // The screen is loading (an animating indicator) until a state
+      // arrives, so pump rather than settle.
+      await tester.pump();
+      await tester.pump();
+      Future<void> emit(List<LearningEvent> events) async {
+        states.add(progressState(events));
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      await emit(peahDone);
+      await emit(peahTwice); // a repeat full pass: same k = 1 instant
+      expect(shown, [(engineAt(2), true)]);
+      final prefs = await SharedPreferences.getInstance();
+      final first = ProfileScopedPreferenceKeys.siyumShown(
+        profileUlid,
+        'mishnayos',
+        'Mishnah Peah',
+        engineAt(2),
+      );
+      expect(prefs.getBool(first), isTrue);
+
+      await emit([...peahDone, engineVoid(5, 2, minutes: 5)]);
+      expect(prefs.getBool(first), isNull, reason: 'the void cleared it');
+
+      await emit([
+        ...peahDone,
+        engineVoid(5, 2, minutes: 5),
+        progressLearn(6, 'Mishnah Peah 1:2', minutes: 9),
+      ]);
+      expect(shown, [(engineAt(2), true), (engineAt(9), true)]);
+    });
   });
 }

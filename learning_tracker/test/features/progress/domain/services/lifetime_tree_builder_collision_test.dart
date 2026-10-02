@@ -1,14 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 
 import '../../../../fixtures/content_fixtures.dart';
-import '../../../../helpers/firestore_fixtures.dart';
 
 ContentItem _leaf(
   String sefariaRef, {
@@ -26,40 +20,6 @@ ContentItem _leaf(
   sefariaRef: sefariaRef,
   sortOrder: sortOrder,
 );
-
-const _uid = 'lifetime-tree-collision-test-user';
-const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
-const _ledgerUlid = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
-
-Future<LearningLedgerEntry> _ledger({
-  required String entryScope,
-  required String unitIdentifier,
-}) async {
-  final firestore = FakeFirebaseFirestore();
-  await seedLedgerEntry(
-    firestore,
-    uid: _uid,
-    profileId: _profileId,
-    ulid: _ledgerUlid,
-    curriculumId: CurriculumId.bavli,
-    entryScope: entryScope,
-    unitIdentifier: unitIdentifier,
-  );
-  final snapshot = await firestore
-      .collection('users')
-      .doc(_uid)
-      .collection('learner_profiles')
-      .doc(_profileId)
-      .collection('learning_ledger')
-      .doc(_ledgerUlid)
-      .get();
-  final data = snapshot.data()!;
-  final completedAt = data['completed_at'];
-  if (completedAt is Timestamp) {
-    data['completed_at'] = completedAt.toDate().toUtc();
-  }
-  return learningLedgerEntryFromFirestore(data);
-}
 
 void main() {
   group('scopeUnitIdentifier', () {
@@ -139,114 +99,5 @@ void main() {
       expect(scopeUnitIdentifier(level: 0, level1: 'X'), '');
       expect(scopeUnitIdentifier(level: 5, level1: 'X'), '');
     });
-  });
-
-  group('computeLearnedLeafRefs — level3 cross-masechta collision', () {
-    const builder = LifetimeTreeBuilder();
-
-    // Two masechtas, each with a daf '2'. A bare daf-'2' mark used to credit
-    // BOTH; a qualified level3 mark must credit ONLY the masechta it targets.
-    final leaves = [
-      _leaf('Berakhos 2a', level1: 'Zeraim', level2: 'Berakhos', level3: '2'),
-      _leaf('Berakhos 2b', level1: 'Zeraim', level2: 'Berakhos', level3: '2'),
-      _leaf('Shabbos 2a', level1: 'Moed', level2: 'Shabbos', level3: '2'),
-      _leaf('Shabbos 2b', level1: 'Moed', level2: 'Shabbos', level3: '2'),
-    ];
-
-    test('qualified level3 mark credits ONLY the targeted masechta', () async {
-      final markId = scopeUnitIdentifier(
-        level: 3,
-        level1: 'Zeraim',
-        level2: 'Berakhos',
-        level3: '2',
-      );
-      final result = builder.computeLearnedLeafRefs(
-        leaves: leaves,
-        completedRefs: const {},
-        ledgerEntries: [
-          await _ledger(entryScope: 'level3', unitIdentifier: markId),
-        ],
-      );
-
-      expect(result, {'Berakhos 2a', 'Berakhos 2b'});
-      expect(result.contains('Shabbos 2a'), isFalse);
-      expect(result.contains('Shabbos 2b'), isFalse);
-    });
-
-    test(
-      'a bare daf-2 mark no longer credits any leaf (legacy id ignored)',
-      () async {
-        // Legacy unqualified marks should not match the new qualified leaf ids.
-        final result = builder.computeLearnedLeafRefs(
-          leaves: leaves,
-          completedRefs: const {},
-          ledgerEntries: [
-            await _ledger(entryScope: 'level3', unitIdentifier: '2'),
-          ],
-        );
-        expect(result, isEmpty);
-      },
-    );
-
-    test(
-      'level1 (seder) scope mark still credits its whole seder (bare)',
-      () async {
-        final result = builder.computeLearnedLeafRefs(
-          leaves: leaves,
-          completedRefs: const {},
-          ledgerEntries: [
-            await _ledger(entryScope: 'level1', unitIdentifier: 'Moed'),
-          ],
-        );
-        expect(result, {'Shabbos 2a', 'Shabbos 2b'});
-      },
-    );
-  });
-
-  group('computeLearnedLeafRefs — level2 cross-sefer collision (Chumash)', () {
-    const builder = LifetimeTreeBuilder();
-
-    // Chumash hierarchy: level1 = sefer, level2 = perek, level3 = pasuk. Perek
-    // '1' exists in EVERY sefer, so a bare perek-'1' mark used to credit perek 1
-    // of all five chumashim (the +170-pesukim over-crediting the resweep found).
-    final chumashLeaves = [
-      _leaf('Genesis 1:1', level1: 'Bereishis', level2: '1', level3: '1'),
-      _leaf('Genesis 1:2', level1: 'Bereishis', level2: '1', level3: '2'),
-      _leaf('Exodus 1:1', level1: 'Shemos', level2: '1', level3: '1'),
-      _leaf('Exodus 1:2', level1: 'Shemos', level2: '1', level3: '2'),
-    ];
-
-    test('qualified level2 mark credits ONLY the targeted sefer', () async {
-      final markId = scopeUnitIdentifier(
-        level: 2,
-        level1: 'Bereishis',
-        level2: '1',
-      );
-      final result = builder.computeLearnedLeafRefs(
-        leaves: chumashLeaves,
-        completedRefs: const {},
-        ledgerEntries: [
-          await _ledger(entryScope: 'level2', unitIdentifier: markId),
-        ],
-      );
-
-      expect(result, {'Genesis 1:1', 'Genesis 1:2'});
-      expect(result.contains('Exodus 1:1'), isFalse);
-      expect(result.contains('Exodus 1:2'), isFalse);
-    });
-
-    test(
-      'a bare perek-1 mark no longer credits any leaf (legacy id ignored)',
-      () async {
-        final result = builder.computeLearnedLeafRefs(
-          leaves: chumashLeaves,
-          completedRefs: const {},
-          ledgerEntries: [
-            await _ledger(entryScope: 'level2', unitIdentifier: '1'),
-          ],
-        );
-        expect(result, isEmpty);
-      },
-    );
   });
 }
