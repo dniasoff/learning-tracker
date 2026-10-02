@@ -384,19 +384,36 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     final selection = ref.read(activeTutoredProfileSelectionProvider);
     if (selection != null) {
       final writes = await ref.read(tutorGovernedWritesProvider.future);
-      if (writes == null) {
-        throw StateError('Tutored context is not ready for a governed write');
+      try {
+        if (writes == null) {
+          throw StateError('Tutored context is not ready for a governed write');
+        }
+        await writes.setProfileProgram(
+          curriculumId: curriculum.storageKey,
+          data: {
+            'profile_id': selection.profileId,
+            'curriculum_id': curriculum.storageKey,
+            'program_id': enrollment.programId,
+            'tracking_start_date': todayUtc.toIso8601String(),
+            'tracking_start_ref': todayRef,
+            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+          },
+        );
+      } catch (e, st) {
+        // A refused or failed governed write changed nothing: show the
+        // existing save error; a retry reuses the frozen action id.
+        AppLogger.instance.error(
+          event: 'edit_track_clear_overdue_failed',
+          exception: e,
+          stackTrace: st,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.errorSaveTrackFailed)));
+        }
+        return;
       }
-      await writes.setProfileProgram(
-        curriculumId: curriculum.storageKey,
-        data: {
-          'profile_id': selection.profileId,
-          'curriculum_id': curriculum.storageKey,
-          'program_id': enrollment.programId,
-          'tracking_start_date': todayUtc.toIso8601String(),
-          'tracking_start_ref': todayRef,
-        },
-      );
     } else {
       await programRepo.setProgram(
         curriculumId: curriculum,
@@ -738,6 +755,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         ? _pendingDelays()
         : _currentChazaraDelays;
     final summary = _chazaraSummary(delays, l10n);
+    final tutored = ref.watch(activeTutoredProfileSelectionProvider) != null;
 
     return Row(
       children: [
@@ -755,14 +773,20 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             ],
           ),
         ),
-        OutlinedButton(
-          onPressed: () => _openChazaraSheet(context, l10n),
-          style: OutlinedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+        // DNI-486: the chazara stage set has no governed tutor path yet
+        // (learning-tracker-fyh.226), so a tutor sees it but cannot change
+        // it; TrackEditService refuses it before any write as well.
+        TutorDisabledControl(
+          blocked: tutored,
+          child: OutlinedButton(
+            onPressed: tutored ? null : () => _openChazaraSheet(context, l10n),
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
+            child: Text(l10n.trackEditChangeReview),
           ),
-          child: Text(l10n.trackEditChangeReview),
         ),
       ],
     );
@@ -817,20 +841,25 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   }
 
   Widget _buildClearOverdueSection(ThemeData theme, AppLocalizations l10n) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _hasOverdue ? _clearOverdue : null,
-        icon: const Icon(Icons.clear_all_rounded),
-        label: Text(l10n.trackEditClearOverdueButton),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _hasOverdue ? Colors.red.shade600 : null,
-          side: BorderSide(
-            color: _hasOverdue ? Colors.red.shade300 : theme.disabledColor,
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+    // DNI-486: a governed write for a tutor — gated like Save.
+    final canWrite = ref.watch(tutorWriteAvailabilityProvider).allowsWrite;
+    return TutorDisabledControl(
+      blocked: !canWrite,
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _hasOverdue && canWrite ? _clearOverdue : null,
+          icon: const Icon(Icons.clear_all_rounded),
+          label: Text(l10n.trackEditClearOverdueButton),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _hasOverdue ? Colors.red.shade600 : null,
+            side: BorderSide(
+              color: _hasOverdue ? Colors.red.shade300 : theme.disabledColor,
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
         ),
       ),
