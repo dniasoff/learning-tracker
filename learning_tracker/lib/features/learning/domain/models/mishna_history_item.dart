@@ -7,9 +7,11 @@
 /// - **Learnt** is the engine's `learntLeaves` membership;
 /// - **counted** is the engine's `countedEventIds` (and
 ///   `lockIgnoredEventIds`); a learn is *voided* when a loaded `void`
-///   targets it (AD-31 — a void of a void has no target here, so it is
-///   ignored), and *lock-ignored* when it is neither voided nor counted —
-///   no second lock-window calculation (AD-36);
+///   that is not itself lock-ignored targets it (AD-31 — a void of a void
+///   has no target here, so it is ignored; AD-36 — a lock-ignored event,
+///   void or learn, takes no part in voiding, exactly as the engine's
+///   `countEvents`), and *lock-ignored* when it is neither voided nor
+///   counted — no second lock-window calculation (AD-36);
 /// - the **Learning events** count is the number of non-voided events
 ///   (FR-30, AC-1) — counted and lock-ignored alike, repeats included —
 ///   while distinct goal progress stays the engine's `distinctLearnt`
@@ -198,10 +200,22 @@ final class MishnaHistory {
     }
 
     final learns = log.events.where(covers).toList();
-    final learnIds = {for (final e in learns) e.id};
+    // Mirror the engine's counted-event boundary (`countEvents`): a
+    // lock-ignored event takes no part at all, so a lock-ignored void
+    // cancels nothing and a void of a lock-ignored learn leaves it
+    // lock-ignored (AD-36). The lock decision itself is the engine's
+    // `lockIgnoredEventIds`; nothing is recalculated here.
+    final ignored = state.lockIgnoredEventIds;
+    final liveLearnIds = {
+      for (final e in learns)
+        if (!ignored.contains(e.id)) e.id,
+    };
     final voided = {
       for (final e in log.events)
-        if (e.isVoid && learnIds.contains(e.targetId)) e.targetId!,
+        if (e.isVoid &&
+            !ignored.contains(e.id) &&
+            liveLearnIds.contains(e.targetId))
+          e.targetId!,
     };
 
     MishnaHistoryStatus statusOf(LearningEvent e) {

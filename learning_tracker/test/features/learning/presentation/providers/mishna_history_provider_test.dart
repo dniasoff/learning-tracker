@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/counted_events.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
@@ -297,13 +298,70 @@ void main() {
       expect(byId[eid(2)]!.ordinal, isNull);
     });
 
-    test('a voided lock-ignored event leaves the count', () {
+    test('a void of a lock-ignored learn cancels nothing (the engine gives '
+        'a lock-ignored event no part in voiding): it stays a kept row', () {
       final history = _project(
         [historyLearn(1), historyLearn(2, day: 6), historyVoid(3, eid(2))],
         counted: {eid(1)},
         lockIgnored: {eid(2)},
       );
-      expect(history.eventCount, 1);
+      expect(history.eventCount, 2);
+      final byId = {for (final i in history.items) i.eventId: i};
+      expect(byId[eid(2)]!.status, MishnaHistoryStatus.lockIgnored);
+    });
+
+    test('a lock-ignored void cancels nothing: its target stays counted, '
+        'visible and in the count', () {
+      final history = _project(
+        [historyLearn(1), historyLearn(2, day: 4), historyVoid(3, eid(1))],
+        counted: {eid(1), eid(2)},
+        lockIgnored: {eid(3)},
+      );
+      expect(history.eventCount, 2);
+      final byId = {for (final i in history.items) i.eventId: i};
+      expect(byId[eid(1)]!.status, MishnaHistoryStatus.counted);
+      expect(byId[eid(1)]!.ordinal, 1);
+      expect(
+        history.visibleTo(MishnaHistoryViewer.child).map((i) => i.eventId),
+        [eid(2), eid(1)],
+      );
+    });
+
+    test('statuses and count agree with the engine counted-event boundary '
+        '(countEvents) for mixed lock-ignored learns and voids', () {
+      final events = [
+        historyLearn(1),
+        historyLearn(2, day: 4),
+        historyLearn(3, day: 6),
+        historyVoid(4, eid(1)),
+        historyVoid(5, eid(2)),
+        historyVoid(6, eid(3)),
+      ];
+      final ignored = {eid(3), eid(5)};
+      final engine = countEvents(
+        events,
+        isLockIgnored: (e) => ignored.contains(e.id),
+      );
+      final history = _project(
+        events,
+        counted: engine.countedIds,
+        lockIgnored: engine.lockIgnoredIds,
+      );
+      final byId = {for (final i in history.items) i.eventId: i};
+      for (final learn in events.where((e) => e.isLearn)) {
+        final expected = engine.voidedIds.contains(learn.id)
+            ? MishnaHistoryStatus.voided
+            : engine.countedIds.contains(learn.id)
+            ? MishnaHistoryStatus.counted
+            : MishnaHistoryStatus.lockIgnored;
+        expect(byId[learn.id]!.status, expected, reason: learn.id);
+      }
+      expect(
+        history.eventCount,
+        events
+            .where((e) => e.isLearn && !engine.voidedIds.contains(e.id))
+            .length,
+      );
     });
 
     test('with zero counted events, a lock-ignored event is still a row and '
