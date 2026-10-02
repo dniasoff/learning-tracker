@@ -44,6 +44,7 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
@@ -704,59 +705,88 @@ void main() {
     expect(find.text('בני'), findsOneWidget);
   });
 
-  // ── 15. Offline tap of expired-session cloud tile restores locally ──────────
+  // ── 15/16. Offline tap of a cloud tile with no usable named-app session ────
   //
-  // Offline-first regression: tapping a "SIGN IN AGAIN" (expired-session) cloud
-  // tile WHILE OFFLINE must restore the local data and land on AppShellRoute —
-  // never push SignInRoute (which would gate the user behind a network sign-in
-  // they cannot complete offline).
+  // DNI-520 (AD-1): a cloud account is usable only through its OWN named-app
+  // Auth session. Offline, with no restorable session (15) or a session for
+  // a different uid (16), the account must NOT be activated:
+  // `activeAccountFirebaseProvider` would throw for it and every repository
+  // would see an unauthenticated active account. The picker stays put, keeps
+  // the current account active, tells the user signing in needs the network,
+  // and never pushes the (network) SignInRoute.
+
+  Future<void> expectOfflineSwitchRefused(
+    WidgetTester tester,
+    _Fixture fixture,
+  ) async {
+    final checker = _MockInternetConnectionChecker();
+    when(() => checker.hasConnection).thenAnswer((_) async => false);
+
+    await tester.pumpWidget(fixture.buildSubject(connectivityChecker: checker));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('SIGN IN AGAIN'), findsOneWidget);
+
+    await tester.tap(find.text('Cloud User'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(find.text(l10n.signInOfflineHint), findsOneWidget);
+    expect(find.text(l10n.authLocalDataMissing), findsNothing);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AccountPickerScreen)),
+    );
+    expect(
+      container.read(activeAccountIdProvider),
+      isNull,
+      reason: 'an unauthenticated account must never become active',
+    );
+    verifyNever(() => fixture.router.replaceAll(any()));
+    verifyNever(() => fixture.router.push(any<PageRouteInfo>()));
+  }
 
   testWidgets(
-    '15. tapping an expired-session cloud tile WHILE OFFLINE restores local '
-    'data and routes to AppShell (never SignInRoute)',
+    '15. tapping a cloud tile WHILE OFFLINE with NO named-app session keeps '
+    'the current account active and shows the offline sign-in hint',
     (tester) async {
       final fixture = await _buildFixture();
       addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
-      // Seed the matching cloud-born profile row so the local restore resolves
-      // a profile without any network call.
       await fixture.seedCloudAccountDoc(firebaseUid: 'fb-uid-1');
 
-      // Expired session — Firebase currentUser is null → "SIGN IN AGAIN".
+      // No session to restore on the account's named app.
       when(() => fixture.auth.currentUser).thenReturn(null);
+      when(
+        () => fixture.auth.restoreSession(any()),
+      ).thenAnswer((_) async => null);
 
-      // Offline.
-      final checker = _MockInternetConnectionChecker();
-      when(() => checker.hasConnection).thenAnswer((_) async => false);
+      await expectOfflineSwitchRefused(tester, fixture);
+    },
+  );
 
-      await tester.pumpWidget(
-        fixture.buildSubject(connectivityChecker: checker),
+  testWidgets(
+    '16. tapping a cloud tile WHILE OFFLINE whose named-app session belongs '
+    'to a DIFFERENT uid keeps the current account active',
+    (tester) async {
+      final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
+      await fixture.registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
+      await fixture.seedCloudAccountDoc(firebaseUid: 'fb-uid-1');
+
+      when(() => fixture.auth.currentUser).thenReturn(null);
+      when(() => fixture.auth.restoreSession(any())).thenAnswer(
+        (_) async => const AppUser(
+          uid: 'fb-uid-someone-else',
+          email: 'cloud@example.test',
+          displayName: 'Cloud User',
+          emailVerified: true,
+          providers: ['google.com'],
+        ),
       );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('SIGN IN AGAIN'), findsOneWidget);
-
-      await tester.tap(find.text('Cloud User'));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      final calls = verify(
-        () => fixture.router.replaceAll(captureAny<List<PageRouteInfo>>()),
-      ).captured;
-      expect(
-        calls,
-        isNotEmpty,
-        reason: 'offline restore must navigate via replaceAll',
-      );
-      final routes = (calls.last as List).cast<PageRouteInfo>();
-      expect(
-        routes.any((r) => r is AppShellRoute),
-        isTrue,
-        reason: 'offline expired-session restore must land on AppShellRoute',
-      );
-      // The offline path must NOT push the network sign-in screen.
-      verifyNever(() => fixture.router.push(any<PageRouteInfo>()));
+      await expectOfflineSwitchRefused(tester, fixture);
     },
   );
 }

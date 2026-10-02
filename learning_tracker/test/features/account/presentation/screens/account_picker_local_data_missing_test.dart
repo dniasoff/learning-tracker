@@ -14,8 +14,10 @@
 // Firestore users/{uid} document.
 //
 // Covered cases:
-//   C1 — cloud account, offline, NO Firestore account doc → SnackBar shown,
-//        router.replaceAll NOT called (no navigation to AppShell).
+//   C1 — cloud account, offline, its named-app session restored (DNI-520),
+//        NO Firestore account doc → SnackBar shown, router.replaceAll NOT
+//        called (no navigation to AppShell), and the account is NOT left
+//        active (the previously active account is put back).
 //   C2 — local-born account, NO Firestore account doc → SnackBar shown,
 //        router.replaceAll NOT called.
 
@@ -33,7 +35,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -202,18 +206,29 @@ void main() {
 
   // ── C1: cloud account, offline, NO local profile ──────────────────────────
 
-  testWidgets('C1 — cloud account offline, Firestore account doc missing: '
-      'shows authLocalDataMissing SnackBar, does NOT navigate to AppShell', (
+  testWidgets('C1 — cloud account offline with a restored named-app session, '
+      'Firestore account doc missing: shows authLocalDataMissing SnackBar, '
+      'does NOT navigate to AppShell, does NOT leave the account active', (
     tester,
   ) async {
     // Seed the cloud account in the device registry.
     await registry.addAccount(_cloudAccountEntry());
 
-    // Simulate offline — no live Firebase session (stale), no internet.
+    // Offline, but the account's OWN named-app session restores from local
+    // persistence (DNI-520) — the instant-switch path, which then fails to
+    // resolve the account record.
     final offline = _MockInternetConnectionChecker();
     when(() => offline.hasConnection).thenAnswer((_) async => false);
-    // No live Firebase session → hasValidSession == false → offline path.
     when(() => auth.currentUser).thenReturn(null);
+    when(() => auth.restoreSession('acc-cloud-missing')).thenAnswer(
+      (_) async => const AppUser(
+        uid: 'fb-uid-missing',
+        email: 'cloud-missing@example.test',
+        displayName: 'Cloud Missing',
+        emailVerified: true,
+        providers: ['google.com'],
+      ),
+    );
 
     await tester.pumpWidget(
       _buildApp(
@@ -249,6 +264,13 @@ void main() {
     // No navigation away from the picker — the user remains on the picker
     // and can choose another account or connect to the internet.
     verifyNever(() => router.replaceAll(any()));
+
+    // The unresolved account must not stay active: the previously active
+    // account (none here) is restored.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AccountPickerScreen)),
+    );
+    expect(container.read(activeAccountIdProvider), isNull);
   });
 
   // ── C2: local-born account, NO local profile ──────────────────────────────

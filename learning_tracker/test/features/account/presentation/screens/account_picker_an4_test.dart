@@ -24,10 +24,12 @@
 //     rendered tile order (top-to-bottom) produced by AccountPickerScreen.build.
 //   - Tap guard: taps the real `_AccountTile`'s InkWell twice in quick
 //     succession. The re-entrancy window is held open by a slow-resolving
-//     fake [InternetConnectionChecker.hasConnection] — the first real await
-//     point inside `_AccountTileState._onTap` for a cloud account with no
-//     valid session — so the guard's `_switching` state is genuinely
-//     in-flight (not a synthetic delay) when the second tap lands.
+//     fake `AuthRepository.restoreSession` — the first real await point
+//     inside `_AccountTileState._onTap` for a cloud account (it re-attaches
+//     the account's own named-app session, DNI-520) — so the guard's
+//     `_switching` state is genuinely in-flight (not a synthetic delay)
+//     when the second tap lands. The gate then releases a VALID session, so
+//     the switch that runs is a real authenticated one.
 @Tags(['account', 'account_picker', 'an4'])
 library;
 
@@ -41,18 +43,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show SelectedProfileId, selectedProfileIdProvider;
@@ -67,9 +68,6 @@ import '../../../../mocks/mock_repositories.dart';
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
-
-class _MockInternetConnectionChecker extends Mock
-    implements InternetConnectionChecker {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
@@ -117,6 +115,15 @@ DeviceAccountsCompanion _localAccount({
   lastUsedAt: lastUsedAt,
 );
 
+/// The named-app session restored for `acc-cloud-1` (uid matches the row).
+const _cloudSession = AppUser(
+  uid: 'fb-uid-1',
+  email: 'cloud@example.test',
+  displayName: 'Cloud User',
+  emailVerified: true,
+  providers: ['google.com'],
+);
+
 DeviceAccountsCompanion _cloudAccount({
   String accountId = 'acc-cloud-1',
   String email = 'cloud@example.test',
@@ -156,7 +163,6 @@ Widget _buildApp({
   required MockAuthRepository auth,
   required _MockStackRouter router,
   required String activeAccountId,
-  InternetConnectionChecker? connectivity,
 }) {
   return ProviderScope(
     retry: (_, __) => null,
@@ -170,8 +176,6 @@ Widget _buildApp({
       activeAccountIdProvider.overrideWith(
         () => _StubActiveAccountId(activeAccountId),
       ),
-      if (connectivity != null)
-        internetConnectionCheckerProvider.overrideWithValue(connectivity),
       authStateProvider.overrideWith(
         () => _StubAuthStateNotifier(const AuthState.signedOut()),
       ),
@@ -322,14 +326,15 @@ void main() {
         firebaseUid: 'fb-uid-1',
       );
 
-      // No live Firebase session -> hasValidSession == false -> _onTap's
-      // first await is `internetConnectionCheckerProvider.hasConnection`.
-      // Hold it open with an uncompleted Completer so `_switching` is
+      // The tile's badge resolves the account's named-app session first
+      // (valid). Then _onTap's first await is that same session restore:
+      // hold it open with an uncompleted Completer so `_switching` is
       // genuinely true (not a synthetic timer) when the 2nd tap arrives.
       when(() => auth.currentUser).thenReturn(null);
-      final checker = _MockInternetConnectionChecker();
-      final gate = Completer<bool>();
-      when(() => checker.hasConnection).thenAnswer((_) => gate.future);
+      when(
+        () => auth.restoreSession('acc-cloud-1'),
+      ).thenAnswer((_) async => _cloudSession);
+      final gate = Completer<AppUser?>();
 
       await tester.pumpWidget(
         _buildApp(
@@ -338,7 +343,6 @@ void main() {
           auth: auth,
           router: router,
           activeAccountId: 'none',
-          connectivity: checker,
         ),
       );
       await tester.pump();
@@ -346,14 +350,20 @@ void main() {
 
       expect(find.text('Cloud User'), findsOneWidget);
 
+      // From here on, only taps call restoreSession; gate them.
+      clearInteractions(auth);
+      when(
+        () => auth.restoreSession('acc-cloud-1'),
+      ).thenAnswer((_) => gate.future);
+
       // First tap: starts the switch; _switching flips true synchronously
-      // (before the connectivity await), then the real _onTap suspends on
-      // `checker.hasConnection`.
+      // (before the session-restore await), then the real _onTap suspends on
+      // `auth.restoreSession`.
       await tester.tap(find.text('Cloud User'));
       await tester.pump();
 
-      // Exactly one real switch attempt has reached the connectivity check.
-      verify(() => checker.hasConnection).called(1);
+      // Exactly one real switch attempt has reached the session restore.
+      verify(() => auth.restoreSession('acc-cloud-1')).called(1);
 
       // Second tap while the guard is active: _AccountTile's InkWell.onTap
       // is null (guarded), so the tap has nothing to hit.
@@ -361,13 +371,14 @@ void main() {
       await tester.pump();
 
       // REGRESSION GUARD: the dropped tap must NOT have started a second
-      // switch attempt — no NEW call into the real _onTap's connectivity
-      // check since the first `verify` above (which already consumed that
-      // one matching invocation).
-      verifyNever(() => checker.hasConnection);
+      // switch attempt — no NEW call into the real _onTap's session restore
+      // since the first `verify` above (which already consumed that one
+      // matching invocation).
+      verifyNever(() => auth.restoreSession(any()));
 
-      // Release the first switch (offline -> local-data activation path).
-      gate.complete(false);
+      // Release the first switch with a valid named-app session (instant
+      // switch path).
+      gate.complete(_cloudSession);
       await tester.pumpAndSettle();
 
       // Exactly one navigation occurred, from the single switch that ran.
@@ -399,8 +410,9 @@ void main() {
       );
 
       when(() => auth.currentUser).thenReturn(null);
-      final checker = _MockInternetConnectionChecker();
-      when(() => checker.hasConnection).thenAnswer((_) async => false);
+      when(
+        () => auth.restoreSession('acc-cloud-1'),
+      ).thenAnswer((_) async => _cloudSession);
 
       await tester.pumpWidget(
         _buildApp(
@@ -409,7 +421,6 @@ void main() {
           auth: auth,
           router: router,
           activeAccountId: 'none',
-          connectivity: checker,
         ),
       );
       await tester.pump();
@@ -424,7 +435,6 @@ void main() {
       await tester.tap(find.text('Cloud User'));
       await tester.pumpAndSettle();
 
-      verify(() => checker.hasConnection).called(2);
       final calls = verify(
         () => router.replaceAll(captureAny<List<PageRouteInfo>>()),
       ).captured;

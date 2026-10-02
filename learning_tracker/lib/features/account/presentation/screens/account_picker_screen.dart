@@ -503,18 +503,22 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
       sessionUser = null;
     }
     if (sessionUser != null && sessionUser.uid == account.firebaseUid) {
-      // Instant switch — the account's own named-app session is valid.
+      // Instant switch — the account's own named-app session is valid. This
+      // is also the offline-first path: the session is restored from the
+      // named app's local persistence and Firestore serves its cache.
       if (!context.mounted) return;
-      await _activateCloudAccountFromLocalData(context, ref);
+      await _activateCloudAccountFromLocalData(
+        context,
+        ref,
+        sessionUser: sessionUser,
+      );
       return;
     }
 
     // Use the same configured/overridable checker the rest of the app reads
     // (the provider instance), NOT the package's static singleton — the
     // singleton is unconfigured and untestable, and on an offline device it
-    // could mis-probe and push the user to SignInRoute (a network sign-in)
-    // instead of restoring local data. Offline-first requires the local data
-    // activate without any network round-trip.
+    // could mis-probe and push the user to SignInRoute (a network sign-in).
     final isOnline = await ref
         .read(internetConnectionCheckerProvider)
         .hasConnection;
@@ -525,8 +529,18 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
       // already on the device); email/password asks for the password.
       await _reauthAndActivateCloudAccount(context, ref);
     } else {
-      // Offline-first cloud behavior: allow local access from the SDK cache.
-      await _activateCloudAccountFromLocalData(context, ref);
+      // Offline with no restorable (or a mismatched) named-app session: the
+      // account cannot be activated — `activeAccountFirebaseProvider` would
+      // throw `AccountNotAuthenticatedException` for it and every repository
+      // would see an unauthenticated active account. Keep the current
+      // account active and tell the user signing in needs the network.
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.signInOfflineHint),
+          ),
+        );
     }
   }
 
@@ -544,8 +558,9 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     final String pathUid;
+    final AppUser user;
     try {
-      final user = await ref
+      user = await ref
           .read(authRepositoryProvider)
           .ensureAnonymousSession(account.accountId);
       final reconciled = await ref
@@ -560,7 +575,12 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
       return;
     }
     if (!context.mounted) return;
-    await _activateCloudAccountFromLocalData(context, ref, pathUid: pathUid);
+    await _activateCloudAccountFromLocalData(
+      context,
+      ref,
+      sessionUser: user,
+      pathUid: pathUid,
+    );
   }
 
   /// Signs THIS cloud account's own named app in again, then activates it.
@@ -687,7 +707,11 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
 
     // Identity matched — activate the account.
     if (!context.mounted) return;
-    await _activateCloudAccountFromLocalData(context, ref);
+    await _activateCloudAccountFromLocalData(
+      context,
+      ref,
+      sessionUser: signedIn,
+    );
   }
 
   /// Whether a Google picker [email] is this account's (case-insensitive).
@@ -754,12 +778,36 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     }
   }
 
+  /// Activates this account. [sessionUser] is the PROOF that this account's
+  /// own named app is authenticated (restored, re-authed or anonymous
+  /// session) — there is deliberately no way to call this without one, so an
+  /// account with no named-app session is never made active (DNI-520).
+  ///
+  /// For a cloud account the session uid must equal the registry row's
+  /// `firebaseUid`; otherwise nothing is activated. `activeAccountIdProvider`
+  /// is switched only once the auth check has passed, and is restored to the
+  /// previously active account if the account record cannot be resolved.
   Future<void> _activateCloudAccountFromLocalData(
     BuildContext context,
     WidgetRef ref, {
+    required AppUser sessionUser,
     String? pathUid,
   }) async {
-    ref.read(activeAccountIdProvider.notifier).set(account.accountId);
+    final isCloudAccount =
+        account.firebaseUid != null && account.accountTier != AccountTier.local;
+    if (isCloudAccount && sessionUser.uid != account.firebaseUid) {
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
+      }
+      return;
+    }
+
+    final activeAccountId = ref.read(activeAccountIdProvider.notifier);
+    final previousAccountId = ref.read(activeAccountIdProvider);
+    activeAccountId.set(account.accountId);
 
     AccountEntity? accountEntity;
     final uid = pathUid ?? account.firebaseUid;
@@ -785,6 +833,11 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     }
 
     if (accountEntity == null) {
+      // Do not leave an account active whose record could not be resolved:
+      // put the previously active account back.
+      if (previousAccountId != account.accountId) {
+        activeAccountId.set(previousAccountId);
+      }
       // ACCTPICK-03 / SI-04: the account is in the device registry but its
       // Firestore record could not be resolved (offline with nothing cached
       // yet, or the account was only ever registered on this device and
