@@ -267,9 +267,8 @@ export function earnsPointsEntry(fields: Record<string, unknown>): boolean {
 
 /**
  * The default per-stage ladder used when a curriculum/stage has no
- * `point_configs` override — identical to the client's
- * `FirestoreCompletionPointsAwarder.pointsForStage` (Learn=10, Chazara1=5,
- * Chazara2=3, else 1).
+ * `point_configs` override — identical to the client app's default stage
+ * ladder (Learn=10, Chazara1=5, Chazara2=3, else 1).
  */
 export function defaultPointsForStage(stageOrder: number): number {
   switch (stageOrder) {
