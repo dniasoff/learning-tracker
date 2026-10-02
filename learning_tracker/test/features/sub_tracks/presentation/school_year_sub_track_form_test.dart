@@ -34,7 +34,7 @@ var _goalOutcome = SubTrackGoalSetupOutcome.cancelled;
 
 List<Override> _overrides(
   SubTrackHarness h, {
-  bool parentSession = true,
+  bool? parentSession = true,
   bool commands = true,
   bool subTrackRepository = true,
 }) => [
@@ -58,7 +58,7 @@ Future<void> _pumpForm(
   WidgetTester tester,
   SubTrackHarness h, {
   String? subTrackId,
-  bool parentSession = true,
+  bool? parentSession = true,
   List<Override> extra = const [],
   bool commands = true,
   bool subTrackRepository = true,
@@ -590,6 +590,84 @@ void main() {
       await _pumpForm(tester, h, parentSession: false);
       expect(find.byType(SchoolYearSubTrackForm), findsNothing);
       expect(find.text('Save sub-track'), findsNothing);
+    });
+
+    testWidgets('a locked session hides the form and keeps its values', (
+      tester,
+    ) async {
+      h = SubTrackHarness();
+      await _pumpForm(
+        tester,
+        h,
+        parentSession: null,
+        extra: [switchableParentSessionOverride()],
+      );
+      await _enter(tester, 'subTrackFormName', 'Cheder');
+      await tester.tap(_chip('2026–27'));
+      await tester.pump();
+
+      setParentSession(
+        tester,
+        find.byType(SchoolYearSubTrackForm),
+        live: false,
+      );
+      await tester.pumpAndSettle();
+      expect(_formOpen(), isFalse);
+      expect(find.text('Save sub-track'), findsNothing);
+      expect(
+        find.byType(SchoolYearSubTrackForm, skipOffstage: false),
+        findsOneWidget,
+      );
+
+      setParentSession(
+        tester,
+        find.byType(SchoolYearSubTrackForm, skipOffstage: false),
+        live: true,
+      );
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, 'Cheder'), findsOneWidget);
+      expect(tester.widget<ChoiceChip>(_chip('2026–27')).selected, isTrue);
+    });
+
+    testWidgets('a session that expires between render and save writes '
+        'nothing and keeps the values', (tester) async {
+      h = SubTrackHarness();
+      await _pumpForm(
+        tester,
+        h,
+        parentSession: null,
+        extra: [switchableParentSessionOverride()],
+      );
+      await _enter(tester, 'subTrackFormName', 'Cheder');
+      await tester.tap(_chip('2026–27'));
+      await tester.pump();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('subTrackFormSave')),
+      );
+      await tester.pumpAndSettle();
+
+      // The PIN session locks; the tap lands before the next frame.
+      setParentSession(
+        tester,
+        find.byType(SchoolYearSubTrackForm),
+        live: false,
+      );
+      await tester.tap(find.byKey(const ValueKey('subTrackFormSave')));
+      await tester.pump();
+      await settleCommands(tester);
+      await tester.pumpAndSettle();
+      expect(h.commands.creates, isEmpty);
+      expect(await tester.runAsync(h.stored), isEmpty);
+
+      setParentSession(
+        tester,
+        find.byType(SchoolYearSubTrackForm, skipOffstage: false),
+        live: true,
+      );
+      await tester.pumpAndSettle();
+      expect(_formOpen(), isTrue);
+      expect(find.widgetWithText(TextField, 'Cheder'), findsOneWidget);
+      expect(tester.widget<ChoiceChip>(_chip('2026–27')).selected, isTrue);
     });
   });
 

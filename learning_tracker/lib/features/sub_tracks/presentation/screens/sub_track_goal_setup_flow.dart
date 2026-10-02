@@ -7,6 +7,11 @@
 /// `LearningCommands.applyGovernedChange` (C0 / DNI-524), which writes the
 /// change-log entry with the doc. Nothing is written through the legacy
 /// goal repository, whose writes the governed rules refuse.
+///
+/// A governed goal write needs a live parent session (AC-3): it is checked
+/// before the goal screen opens and again just before the save, the goal
+/// screen is hidden while the session is locked, and a save after the
+/// session ended is refused with nothing written.
 library;
 
 import 'dart:async';
@@ -24,6 +29,8 @@ import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track
 import 'package:learning_tracker/features/sub_tracks/domain/governed_goal_change.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart'
     show civilDateOf;
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_parent_session_hold.dart';
 
 final _log = AppLogger.instance;
 
@@ -39,7 +46,8 @@ enum SubTrackGoalSetupOutcome {
   /// The parent closed the goal screen without saving.
   cancelled,
 
-  /// Nothing was written: the goal could not be read or saved.
+  /// Nothing was written: the goal could not be read or saved, or the
+  /// parent session ended before the save.
   failed,
 }
 
@@ -47,8 +55,12 @@ enum SubTrackGoalSetupOutcome {
 /// governed goals, and saves the result through
 /// `LearningCommands.applyGovernedChange`. The caller reports the outcome.
 ///
-/// Fails before the screen opens when the commands or the current goals are
-/// unavailable, so the parent never fills a form that cannot be saved.
+/// Fails before the screen opens when there is no parent session or the
+/// commands or the current goals are unavailable, so the parent never fills
+/// a form that cannot be saved. The goal screen shows only while the parent
+/// session is live ([SubTrackParentSessionHold]), and the session is read
+/// again just before the governed save: a session that ended in between
+/// fails the save with nothing written.
 Future<SubTrackGoalSetupOutcome> openSubTrackGoalSetup(
   BuildContext context,
   WidgetRef ref,
@@ -56,6 +68,9 @@ Future<SubTrackGoalSetupOutcome> openSubTrackGoalSetup(
 ) async {
   final navigator = Navigator.of(context);
   final curriculumKey = curriculum.storageKey;
+  if (!await _parentSessionLive(ref, curriculumKey, 'open')) {
+    return SubTrackGoalSetupOutcome.failed;
+  }
 
   final CurriculumGoals? current;
   final int? totalItems;
@@ -77,10 +92,18 @@ Future<SubTrackGoalSetupOutcome> openSubTrackGoalSetup(
   if (!context.mounted) return SubTrackGoalSetupOutcome.cancelled;
   final result = await navigator.push<GoalEntity>(
     MaterialPageRoute(
-      builder: (_) => GoalSetupScreen(
-        curriculumId: curriculum,
-        existingGoal: goalEntityOf(curriculum, current),
-        totalItems: totalItems,
+      builder: (_) => SubTrackParentSessionHold(
+        locked: Scaffold(
+          appBar: AppBar(),
+          body: const SizedBox.shrink(
+            key: ValueKey('subTrackParentSessionLocked'),
+          ),
+        ),
+        child: GoalSetupScreen(
+          curriculumId: curriculum,
+          existingGoal: goalEntityOf(curriculum, current),
+          totalItems: totalItems,
+        ),
       ),
     ),
   );
@@ -99,6 +122,11 @@ Future<SubTrackGoalSetupOutcome> openSubTrackGoalSetup(
   try {
     final commands = await ref.read(learningCommandsProvider.future);
     if (commands == null) return SubTrackGoalSetupOutcome.failed;
+    // The command boundary: the session may have ended while the goal
+    // screen was open.
+    if (!await _parentSessionLive(ref, curriculumKey, 'save')) {
+      return SubTrackGoalSetupOutcome.failed;
+    }
     final saved = await commands.applyGovernedChange(action);
     if (saved is CaptureSuccess) return SubTrackGoalSetupOutcome.saved;
     _log.warning(
@@ -118,6 +146,21 @@ Future<SubTrackGoalSetupOutcome> openSubTrackGoalSetup(
     );
     return SubTrackGoalSetupOutcome.failed;
   }
+}
+
+/// Whether the parent session is live at [stage] (`open` / `save`); logs
+/// the refusal.
+Future<bool> _parentSessionLive(
+  WidgetRef ref,
+  String curriculumKey,
+  String stage,
+) async {
+  if (await readSubTrackParentSession(ref)) return true;
+  _log.warning(
+    event: 'sub_track_goal_setup_no_parent_session',
+    fields: {'curriculum_id': curriculumKey, 'stage': stage},
+  );
+  return false;
 }
 
 /// The curriculum's governed goals from the complete intent read, or null

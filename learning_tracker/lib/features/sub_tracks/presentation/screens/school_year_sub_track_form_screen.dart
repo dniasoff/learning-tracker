@@ -21,6 +21,7 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/academic_year_picker.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/no_deadline_note.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_parent_session_hold.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 final _log = AppLogger.instance;
@@ -41,7 +42,9 @@ const kSubTrackFormMaxWidth = 600.0;
 /// Saving calls Story 2.1 `createSubTrack` / `editSubTrack` (only changed
 /// fields); the form never writes Firestore itself. The route is behind the
 /// parent-session guard, and the form renders nothing for a non-parent
-/// session as well (AC-3, defence in depth). It also renders nothing until
+/// session as well (AC-3, defence in depth). A session that ends while the
+/// form is open hides it with its values kept ([SubTrackParentSessionHold]),
+/// and a save re-checks the session first. It also renders nothing until
 /// the Story 2.1 commands are live, and no form until the sub-track and
 /// governed-intent reads have loaded (fail closed).
 @RoutePage()
@@ -62,7 +65,6 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final editing = subTrackId != null;
-    final parent = ref.watch(subTrackParentSessionProvider);
     return Scaffold(
       backgroundColor: context.colors.surfaceF5,
       appBar: AppBar(
@@ -75,16 +77,14 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
               : l10n.subTrackTypeSchoolYear,
         ),
       ),
-      body: switch (parent) {
-        AsyncData(value: true) => _CommandsGate(
+      body: SubTrackParentSessionHold(
+        child: _CommandsGate(
           child: _ReadsGate(
             curriculumId: curriculumId,
             builder: (tracks) => _formFor(ref, tracks),
           ),
         ),
-        AsyncLoading() => const Center(child: CircularProgressIndicator()),
-        _ => const SizedBox.shrink(),
-      },
+      ),
     );
   }
 
@@ -344,6 +344,11 @@ class _SchoolYearSubTrackFormState
       final commands = await ref.read(learningCommandsProvider.future);
       if (commands == null) {
         throw StateError('No active learner for the sub-track commands');
+      }
+      // The command boundary (AC-3): the parent session may have ended
+      // since the form opened. Nothing is written; the values stay.
+      if (!await readSubTrackParentSession(ref)) {
+        throw StateError('No parent session for the sub-track save');
       }
       final existing = widget.existing;
       if (existing == null) {

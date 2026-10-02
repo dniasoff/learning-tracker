@@ -13,6 +13,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
@@ -398,6 +399,37 @@ final class SubTrackHarness {
     await repo.dispose();
     await intent.dispose();
   }
+}
+
+/// A parent session a test can end (PIN lock) and restore while a sub-track
+/// screen is open (AC-3). Starts live.
+final class SwitchableParentSession extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  /// Ends (`false`) or restores (`true`) the session.
+  void set({required bool live}) => state = live;
+}
+
+/// The switch [switchableParentSessionOverride] answers from.
+final switchableParentSessionProvider =
+    NotifierProvider<SwitchableParentSession, bool>(
+      SwitchableParentSession.new,
+    );
+
+/// Answers [subTrackParentSessionProvider] from
+/// [switchableParentSessionProvider]. Pair with
+/// `SubTrackHarness.overrides(parentSession: null)`.
+Override switchableParentSessionOverride() => subTrackParentSessionProvider
+    .overrideWith((ref) async => ref.watch(switchableParentSessionProvider));
+
+/// Ends or restores the switchable parent session of the app under [at]
+/// without pumping, so the next gesture still hits the current frame.
+void setParentSession(WidgetTester tester, Finder at, {required bool live}) {
+  ProviderScope.containerOf(
+    tester.element(at.first),
+    listen: false,
+  ).read(switchableParentSessionProvider.notifier).set(live: live);
 }
 
 /// `01JHARN…` + a counter: valid, distinct, ascending ULIDs.
