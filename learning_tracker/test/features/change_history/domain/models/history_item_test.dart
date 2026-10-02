@@ -49,6 +49,20 @@ void main() {
       expect(item.revertsActionId, historyId(4));
     });
 
+    test('an imported action sorts by original_at, not the day it was '
+        'written', () {
+      final imported = historyEntry(1, minutes: 9000, originalMinutes: 10);
+      expect(changeAt(imported), historyAt(10));
+      expect(changeAt(historyEntry(2, minutes: 30)), historyAt(30));
+      final item = GovernedActionItem(historyId(1), [imported]);
+      expect(item.sortAt, historyAt(10));
+      final learning = LearningBatchItem([historyLearn(3, minutes: 20)]);
+      expect([item, learning]..sort(compareHistoryItems), [
+        learning,
+        item,
+      ], reason: 'learning at minute 20 is newer than the change it imports');
+    });
+
     test('an empty action is refused', () {
       expect(
         () => GovernedActionItem(historyId(1), const []),

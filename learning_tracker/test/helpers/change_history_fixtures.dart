@@ -46,7 +46,8 @@ String defaultHistoryKey(GovernedEntity entity, String entityId) =>
       _ => '${entity.collection}/$entityId.curriculum_id',
     };
 
-/// A governed entry numbered [n] at [minutes].
+/// A governed entry numbered [n] at [minutes]; imported from
+/// [originalMinutes] when given (`original_at`).
 ChangeLogEntry historyEntry(
   int n, {
   required int minutes,
@@ -57,6 +58,7 @@ ChangeLogEntry historyEntry(
   int? reverts,
   Map<String, Object?>? before,
   Map<String, Object?>? after,
+  int? originalMinutes,
 }) {
   final id =
       entityId ??
@@ -77,6 +79,7 @@ ChangeLogEntry historyEntry(
     after: after ?? {key: 'new$n'},
     at: historyAt(minutes),
     actor: actor,
+    originalAt: originalMinutes == null ? null : historyAt(originalMinutes),
   );
 }
 

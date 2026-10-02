@@ -54,6 +54,45 @@ void main() {
       );
     });
 
+    test('an imported entry waits for the frontier to pass its '
+        'original_at, then sorts there', () {
+      final buffer = ChangeHistoryBuffer()
+        ..addChangeLogPage(
+          HistoryPage(
+            // Written at minute 500, imported from minute 20.
+            items: [historyEntry(1, minutes: 500, originalMinutes: 20)],
+            next: null,
+            exhausted: true,
+            watermark: historyAt(500),
+          ),
+        )
+        ..addLearningEventPage(
+          HistoryPage(
+            items: [historyLearn(3, minutes: 60), historyLearn(5, minutes: 40)],
+            next: const HistoryCursor('page-2'),
+            exhausted: false,
+            watermark: historyAt(40),
+          ),
+        );
+      expect(buffer.visibleItems().map((i) => i.key), [
+        startsWith('events:'),
+      ], reason: 'an unread event at or below minute 40 may still come');
+      buffer.addLearningEventPage(
+        HistoryPage(
+          items: [historyLearn(4, minutes: 30)],
+          next: null,
+          exhausted: true,
+          watermark: historyAt(30),
+        ),
+      );
+      expect(buffer.visibleItems().map((i) => i.key), [
+        startsWith('events:'),
+        startsWith('events:'),
+        startsWith('events:'),
+        'action:${historyId(1)}',
+      ]);
+    });
+
     test('an item at a page boundary is neither lost nor duplicated, and '
         'the cursors advance independently', () async {
       // Three entries at the same instant straddle a 2-row page.

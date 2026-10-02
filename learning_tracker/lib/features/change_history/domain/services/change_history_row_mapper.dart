@@ -137,7 +137,7 @@ final class _Context {
         : lockWindows(mapper.settingsHistory, instants.first, instants.last);
     for (final e in buffer.entries) {
       if (e.revertsActionId case final target?) {
-        _keepEarliest(_reverts, target, e.actor, e.at);
+        _keepEarliest(_reverts, target, e.actor, changeAt(e));
       }
     }
     for (final e in buffer.events) {
@@ -159,7 +159,7 @@ final class _Context {
       if (e.after.containsKey(key)) (_renames[e.entityId] ??= []).add(e);
     }
     for (final list in _renames.values) {
-      list.sort((a, b) => a.at.compareTo(b.at));
+      list.sort((a, b) => changeAt(a).compareTo(changeAt(b)));
     }
   }
 
@@ -193,14 +193,14 @@ final class _Context {
       SubTrack.kName,
     ).key;
     for (final e in renames) {
-      if (e.at.isAfter(instant)) {
+      if (changeAt(e).isAfter(instant)) {
         final before = e.before[key];
         if (before is String) return before;
         break; // created after the instant: no earlier name is known
       }
     }
     for (final e in renames.reversed) {
-      if (!e.at.isAfter(instant) && e.after[key] is String) {
+      if (!changeAt(e).isAfter(instant) && e.after[key] is String) {
         return e.after[key]! as String;
       }
     }
@@ -281,7 +281,7 @@ final class _Context {
       change: change,
       fields: fields,
       subjectName: e.entity == GovernedEntity.subTrack
-          ? (newName is String ? newName : _nameAt(e.entityId, e.at))
+          ? (newName is String ? newName : _nameAt(e.entityId, changeAt(e)))
           : null,
       newDate:
           e.entity == GovernedEntity.goal &&
