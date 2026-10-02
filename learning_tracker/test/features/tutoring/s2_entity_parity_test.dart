@@ -134,11 +134,7 @@ void main() {
             ownerUid: _ownerUid,
             profileId: _profileId,
             stageId: '7_1',
-            stageData: {
-              ...stage,
-              'curriculum_id': 'mishnayos',
-              'track_id': 7,
-            },
+            stageData: {...stage, 'curriculum_id': 'mishnayos', 'track_id': 7},
           );
 
           expect(record.calls, hasLength(1));

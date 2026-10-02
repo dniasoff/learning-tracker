@@ -153,22 +153,19 @@ void main() {
       expect(second.activatedAt, first.activatedAt);
     });
 
-    test(
-      'reactivates a retired track, bumping activatedAt',
-      () async {
-        final repo = buildRepo();
-        await repo.activateTrack(CurriculumId.mishnayos);
-        await repo.activateTrack(CurriculumId.bavli); // keep >=1 active
-        await repo.retireTrack(CurriculumId.mishnayos);
-        final retired = await repo.getTrack(CurriculumId.mishnayos);
-        expect(retired!.isActive, isFalse);
+    test('reactivates a retired track, bumping activatedAt', () async {
+      final repo = buildRepo();
+      await repo.activateTrack(CurriculumId.mishnayos);
+      await repo.activateTrack(CurriculumId.bavli); // keep >=1 active
+      await repo.retireTrack(CurriculumId.mishnayos);
+      final retired = await repo.getTrack(CurriculumId.mishnayos);
+      expect(retired!.isActive, isFalse);
 
-        final reactivated = await repo.activateTrack(CurriculumId.mishnayos);
+      final reactivated = await repo.activateTrack(CurriculumId.mishnayos);
 
-        expect(reactivated.isActive, isTrue);
-        expect(reactivated.state, CurriculumTrackState.active.storageKey);
-      },
-    );
+      expect(reactivated.isActive, isTrue);
+      expect(reactivated.state, CurriculumTrackState.active.storageKey);
+    });
 
     test('R16 (DNI-484): a legacy pace_reset_date stamp is never read back '
         'or rewritten — pace intent is the goals/{c}_pace doc only', () async {
