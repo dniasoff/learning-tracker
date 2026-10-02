@@ -24,12 +24,23 @@
 ///   matches after trimming and case-folding form one [ReportGroup] (gap
 ///   G-5); each member is one [ReportMemberLine]. Events are grouped by
 ///   the sub-track's current name: there is no name history (gap G-4).
+/// * **Velocity** (evaluated curricula only; FR-32): per source, the
+///   distinct leaves whose first counted non-chazara `dated`/`catch_up`
+///   event *from that source* falls on a `learned_on` day (gap G-1), over
+///   the source's span since tracking and over the AD-35 trailing window
+///   ([ReportVelocity]). The all-sources figure is AD-35's own "newly
+///   learnt overall" rule, so its trailing figure is the dashboard
+///   projection's velocity exactly. Per-source rates may add up to more
+///   than it: a leaf one source learns after another counts for both
+///   sources but once overall.
 library;
 
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
+import 'package:learning_tracker/domain/learner_state/projection.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 bool _setEquals<T>(Set<T> a, Set<T> b) =>
@@ -70,6 +81,113 @@ enum ReportSourceKind {
   beforeTracking,
 }
 
+/// One velocity figure: [leaves] newly learnt over the inclusive civil
+/// days [from]–[through] ([days] days, at least one).
+final class ReportVelocityFigure {
+  /// Creates the figure.
+  const ReportVelocityFigure({
+    required this.from,
+    required this.through,
+    required this.days,
+    required this.leaves,
+  });
+
+  /// First day of the span.
+  final CivilDate from;
+
+  /// Last day of the span.
+  final CivilDate through;
+
+  /// Inclusive civil days in the span.
+  final int days;
+
+  /// Leaves newly learnt in the span.
+  final int leaves;
+
+  /// `leaves ÷ days`, unrounded; for the all-sources trailing figure this
+  /// is `Projection.velocityPerDay`.
+  double get leavesPerDay => leaves / days;
+
+  /// Leaves per week, to one decimal place.
+  double get leavesPerWeek => (leaves * 70 / days).round() / 10;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReportVelocityFigure &&
+      other.from == from &&
+      other.through == through &&
+      other.days == days &&
+      other.leaves == leaves;
+
+  @override
+  int get hashCode => Object.hash(from, through, days, leaves);
+
+  @override
+  String toString() =>
+      'ReportVelocityFigure($from..$through, $leaves / $days days)';
+}
+
+/// The velocity of one source (or of all sources) (FR-32, AD-35).
+final class ReportVelocity {
+  /// Creates the velocity.
+  const ReportVelocity({this.sinceTracking, this.trailing});
+
+  /// From tracking start (or the sub-track's later `window_start`) through
+  /// today (or the sub-track's end day); null with no tracking start or an
+  /// empty span.
+  final ReportVelocityFigure? sinceTracking;
+
+  /// The AD-35 window over the same span: the trailing 28 days, or all of
+  /// it with 14–27 days; null under 14 days ("Too early to tell").
+  final ReportVelocityFigure? trailing;
+
+  /// Whether the trailing figure is too early to tell.
+  bool get tooEarly => trailing == null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReportVelocity &&
+      other.sinceTracking == sinceTracking &&
+      other.trailing == trailing;
+
+  @override
+  int get hashCode => Object.hash(sinceTracking, trailing);
+
+  @override
+  String toString() => 'ReportVelocity($sinceTracking, $trailing)';
+}
+
+/// What the engine already derived for the velocity of an evaluated
+/// curriculum; [deriveReportProjection] takes none for a curriculum that
+/// is not evaluated (no velocity, no on-track status).
+final class ReportVelocityBasis {
+  /// Creates the basis.
+  const ReportVelocityBasis({
+    required this.newlyLearnt,
+    required this.trackingStart,
+    required this.today,
+    required this.firstStage,
+    this.projection,
+  });
+
+  /// AD-35 `newlyLearntOn`: the day each leaf was newly learnt overall.
+  final Map<LeafRef, CivilDate> newlyLearnt;
+
+  /// `trackedHistoryStart`: `tracking_start_date`, else the earliest
+  /// `learned_on`; null with neither.
+  final CivilDate? trackingStart;
+
+  /// The projection day (`projectionDay`: today, held at a lock's start
+  /// during a lock).
+  final CivilDate today;
+
+  /// The first review stage order (chazara is a later stage).
+  final int? firstStage;
+
+  /// The engine's projection, for the FR-18/FR-21 on-track status.
+  final Projection? projection;
+}
+
 /// The key of the Before-tracking bucket; never a valid `source` value.
 const reportBeforeTrackingKey = 'before_tracking';
 
@@ -81,12 +199,14 @@ final class ReportSourceTotals {
     required this.kind,
     required this.events,
     required Set<LeafRef> leaves,
+    this.velocity,
   }) : leaves = Set.unmodifiable(leaves);
 
   /// No events from [source].
   ReportSourceTotals.zero(this.source, this.kind)
     : events = 0,
-      leaves = const {};
+      leaves = const {},
+      velocity = null;
 
   /// `main`, a sub-track ULID, or [reportBeforeTrackingKey].
   final String source;
@@ -104,17 +224,27 @@ final class ReportSourceTotals {
   /// `leaves.length`.
   int get distinctLeaves => leaves.length;
 
+  /// The source's velocity; null for the Before-tracking bucket (FR-32)
+  /// and in a curriculum that is not evaluated.
+  final ReportVelocity? velocity;
+
   @override
   bool operator ==(Object other) =>
       other is ReportSourceTotals &&
       other.source == source &&
       other.kind == kind &&
       other.events == events &&
-      _setEquals(other.leaves, leaves);
+      _setEquals(other.leaves, leaves) &&
+      other.velocity == velocity;
 
   @override
-  int get hashCode =>
-      Object.hash(source, kind, events, Object.hashAllUnordered(leaves));
+  int get hashCode => Object.hash(
+    source,
+    kind,
+    events,
+    Object.hashAllUnordered(leaves),
+    velocity,
+  );
 
   @override
   String toString() =>
@@ -295,6 +425,8 @@ final class ReportProjection {
     required Map<String, ReportSourceTotals> sources,
     this.beforeTracking,
     List<ReportGroup> groups = const [],
+    this.allSources,
+    this.projectionStatus,
   }) : sources = Map.unmodifiable(sources),
        groups = List.unmodifiable(groups);
 
@@ -332,6 +464,15 @@ final class ReportProjection {
   /// sub-tracks.
   final List<ReportGroup> groups;
 
+  /// The all-sources velocity: AD-35 "newly learnt overall"; its
+  /// trailing figure equals the dashboard projection's velocity. Null when
+  /// the curriculum is not evaluated.
+  final ReportVelocity? allSources;
+
+  /// The FR-18/FR-21 on-track status the engine's projection computed;
+  /// null when the curriculum is not evaluated.
+  final ProjectionStatus? projectionStatus;
+
   /// The Home (`main`) totals.
   ReportSourceTotals get home => sources[LearningEvent.sourceMain]!;
 
@@ -343,7 +484,9 @@ final class ReportProjection {
       other.totalEvents == totalEvents &&
       _mapEquals(other.sources, sources) &&
       other.beforeTracking == beforeTracking &&
-      _listEquals(other.groups, groups);
+      _listEquals(other.groups, groups) &&
+      other.allSources == allSources &&
+      other.projectionStatus == projectionStatus;
 
   @override
   int get hashCode => Object.hash(
@@ -353,6 +496,8 @@ final class ReportProjection {
     Object.hashAllUnordered(sources.values),
     beforeTracking,
     Object.hashAll(groups),
+    allSources,
+    projectionStatus,
   );
 
   @override
@@ -364,6 +509,9 @@ final class ReportProjection {
 final class _SourceAcc {
   int events = 0;
   final Set<LeafRef> leaves = {};
+
+  /// The earliest velocity day of each leaf from this source.
+  final Map<LeafRef, CivilDate> firstDay = {};
 }
 
 /// The report projection of [curriculumId].
@@ -385,8 +533,10 @@ ReportProjection deriveReportProjection({
   required Set<LeafRef> learntLeaves,
   required List<SubTrack> subTracks,
   required CivilDate Function(DateTime instantUtc) civilDayOf,
+  ReportVelocityBasis? velocity,
 }) {
-  final known = {for (final s in subTracks) s.id};
+  final known = {for (final s in subTracks) s.id: s};
+  final knownBeforeTracking = <LeafRef>{};
   final bySource = <String, _SourceAcc>{LearningEvent.sourceMain: _SourceAcc()};
   _SourceAcc? before;
   var total = 0;
@@ -405,18 +555,40 @@ ReportProjection deriveReportProjection({
     acc.events += leaves.length;
     acc.leaves.addAll(leaves);
     total += leaves.length;
+    if (velocity == null) continue;
+    if (e.dateState == DateState.beforeTracking) {
+      knownBeforeTracking.addAll(leaves);
+    } else if (isVelocityEvent(e, velocity.firstStage)) {
+      final day = e.learnedOn!;
+      for (final leaf in leaves) {
+        final current = acc.firstDay[leaf];
+        if (current == null || day.compareTo(current) < 0) {
+          acc.firstDay[leaf] = day;
+        }
+      }
+    }
   }
-  ReportSourceTotals totalsOf(String source, _SourceAcc acc) =>
-      ReportSourceTotals(
-        source: source,
-        kind: source == LearningEvent.sourceMain
-            ? ReportSourceKind.main
-            : known.contains(source)
-            ? ReportSourceKind.subTrack
-            : ReportSourceKind.unknownSubTrack,
-        events: acc.events,
-        leaves: acc.leaves,
-      );
+  // As AD-35: a leaf known before tracking is never newly learnt.
+  for (final acc in bySource.values) {
+    acc.firstDay.removeWhere((leaf, _) => knownBeforeTracking.contains(leaf));
+  }
+  ReportSourceTotals totalsOf(String source, _SourceAcc acc) {
+    final track = known[source];
+    return ReportSourceTotals(
+      source: source,
+      kind: source == LearningEvent.sourceMain
+          ? ReportSourceKind.main
+          : track != null
+          ? ReportSourceKind.subTrack
+          : ReportSourceKind.unknownSubTrack,
+      events: acc.events,
+      leaves: acc.leaves,
+      velocity: velocity == null
+          ? null
+          : _sourceVelocity(acc.firstDay, velocity, track, civilDayOf),
+    );
+  }
+
   final listed = [
     for (final s in subTracks)
       if (s.endReason != SubTrackEndReason.undo || bySource.containsKey(s.id))
@@ -438,6 +610,14 @@ ReportProjection deriveReportProjection({
     totalEvents: total,
     sources: sources,
     groups: _groups(listed, sources, civilDayOf),
+    allSources: velocity == null
+        ? null
+        : _velocity(
+            velocity.newlyLearnt,
+            velocity.trackingStart,
+            velocity.today,
+          ),
+    projectionStatus: velocity?.projection?.status,
     beforeTracking: before == null
         ? null
         : ReportSourceTotals(
@@ -496,5 +676,60 @@ ReportGroup _group(
           totals: sources[s.id]!,
         ),
     ],
+  );
+}
+
+/// The velocity of one source from its first-learnt days [firstDay].
+///
+/// Its span runs from the curriculum's tracking start, or a sub-track's
+/// `window_start` when later, through today, or through the civil day of
+/// `ended_at` for an ended or deleted sub-track when earlier (AD-41).
+ReportVelocity _sourceVelocity(
+  Map<LeafRef, CivilDate> firstDay,
+  ReportVelocityBasis basis,
+  SubTrack? track,
+  CivilDate Function(DateTime instantUtc) civilDayOf,
+) {
+  var start = basis.trackingStart;
+  var end = basis.today;
+  if (track != null) {
+    if (start == null || track.windowStart.compareTo(start) > 0) {
+      start = track.windowStart;
+    }
+    final endedAt = track.endedAt;
+    if (endedAt != null) {
+      final endedOn = civilDayOf(endedAt);
+      if (endedOn.compareTo(end) < 0) end = endedOn;
+    }
+  }
+  return _velocity(firstDay, start, end);
+}
+
+/// Since-tracking and AD-35 trailing figures of [firstDay] over the
+/// inclusive span [start]–[end].
+ReportVelocity _velocity(
+  Map<LeafRef, CivilDate> firstDay,
+  CivilDate? start,
+  CivilDate end,
+) {
+  if (start == null) return const ReportVelocity();
+  ReportVelocityFigure figure(CivilDate from, int days) {
+    var leaves = 0;
+    for (final day in firstDay.values) {
+      if (day.compareTo(from) >= 0 && day.compareTo(end) <= 0) leaves++;
+    }
+    return ReportVelocityFigure(
+      from: from,
+      through: end,
+      days: days,
+      leaves: leaves,
+    );
+  }
+
+  final span = civilDaySpan(start, end);
+  final window = velocityWindow(historyStart: start, through: end);
+  return ReportVelocity(
+    sinceTracking: span == 0 ? null : figure(start, span),
+    trailing: window == null ? null : figure(window.from, window.days),
   );
 }

@@ -4,11 +4,13 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/report_projection.dart';
+import 'package:learning_tracker/domain/learner_state/study_days.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
@@ -100,6 +102,68 @@ int _historyCountSum(LearnerState state, List<LearningEvent> events) {
   }
   return sum;
 }
+
+/// Velocity fixtures: today is Thursday 2026-10-08 (no lock); every event
+/// is recorded then (10:00Z) and `learned_on` carries its day.
+final _vNow = DateTime.utc(2026, 10, 8, 12);
+const _vToday = '2026-10-08';
+final _vRecorded = DateTime.utc(
+  2026,
+  10,
+  8,
+  10,
+).difference(DateTime.utc(2026, 9)).inMinutes;
+
+/// [offset] days after [_vToday] (negative: before).
+String _vDay(int offset) => shiftCivilDate(_vToday, offset);
+
+LearningEvent _on(
+  int id,
+  String ref,
+  String day, {
+  String source = LearningEvent.sourceMain,
+  DateState dateState = DateState.dated,
+  int? stage,
+  int? recordedMinutes,
+}) => engineLearn(
+  id,
+  ref,
+  minutes: recordedMinutes ?? _vRecorded,
+  learnedOn: day,
+  source: source,
+  dateState: dateState,
+  stage: stage,
+);
+
+MainTrackIntent _tracked(
+  String? trackingStartDate, {
+  MainTrackState state = MainTrackState.active,
+}) => MainTrackIntent(
+  curriculumId: engineCurriculum,
+  track: MainTrack(curriculumId: engineCurriculum, state: state),
+  program: trackingStartDate == null
+      ? null
+      : MainTrackProgram(
+          curriculumId: engineCurriculum,
+          trackingStartDate: trackingStartDate,
+        ),
+);
+
+CurriculumState _vRun(
+  List<LearningEvent> events, {
+  String? trackingStartDate = '2026-09-01',
+  List<SubTrack> subTracks = const [],
+  DeadlineGoal? deadline,
+  MainTrackState state = MainTrackState.active,
+}) => const LearnerStateEngine().run(
+  engineInputs(
+    events: events,
+    subTracks: subTracks,
+    nowUtc: _vNow,
+    intents: {engineCurriculum: _tracked(trackingStartDate, state: state)},
+    goals: {engineCurriculum: CurriculumGoals(deadline: deadline)},
+  ),
+)[engineCurriculum]!;
 
 void main() {
   group('AC-1: the engine builds a pure per-curriculum projection', () {
@@ -502,5 +566,236 @@ void main() {
     expect(group.name, 'Morning seder');
     expect(group.events, 2);
     expect(group.members.single.name, 'Morning seder');
+  });
+
+  group('AC-9: per-source and all-source velocity', () {
+    test('a source counts the leaves it first learnt; all-sources counts '
+        'each leaf once, on its first day overall', () {
+      final school = _sub(10, start: '2026-09-01');
+      final c = _vRun(
+        subTracks: [school],
+        [
+          _on(1, _b11, _vDay(-5)),
+          // School learns 1:1 after Home did: it counts for School too.
+          _on(2, _b11, _vDay(-3), source: school.id),
+          _on(3, _b12, _vDay(-3), source: school.id),
+        ],
+      );
+      final report = c.report;
+      expect(report.home.velocity!.trailing!.leaves, 1);
+      expect(report.sources[school.id]!.velocity!.trailing!.leaves, 2);
+      expect(report.allSources!.trailing!.leaves, 2);
+      // Per-source figures may add up to more than all-sources.
+      expect(
+        report.home.velocity!.trailing!.leaves +
+            report.sources[school.id]!.velocity!.trailing!.leaves,
+        greaterThan(report.allSources!.trailing!.leaves),
+      );
+    });
+
+    test('a source\'s first event counts even after its own repeat', () {
+      final c = _vRun([
+        _on(1, _b11, _vDay(-10), stage: 1),
+        _on(2, _b11, _vDay(-2), stage: 2),
+        _on(3, _b12, _vDay(-2), stage: 2),
+      ]);
+      // 1:1 once (stage 1); 1:2 only as chazara (stage 2): not new.
+      expect(c.report.home.velocity!.trailing!.leaves, 1);
+      expect(c.report.allSources!.trailing!.leaves, 1);
+    });
+
+    test('before_tracking never contributes to any velocity', () {
+      final school = _sub(10);
+      final c = _vRun(
+        subTracks: [school],
+        [
+          engineGround(1, peah),
+          _on(2, _p11, _vDay(-2), source: school.id),
+          _on(3, _p12, _vDay(-2)),
+          _on(4, _b11, _vDay(-2)),
+        ],
+      );
+      final report = c.report;
+      expect(report.beforeTracking!.velocity, isNull);
+      expect(report.sources[school.id]!.velocity!.trailing!.leaves, 0);
+      expect(report.home.velocity!.trailing!.leaves, 1);
+      expect(report.allSources!.trailing!.leaves, 1);
+      // Its events still count in the totals.
+      expect(report.sources[school.id]!.events, 1);
+    });
+
+    test('a catch_up event counts on learned_on, not on recorded_at', () {
+      // Recorded today; learned 28 days ago (just outside the trailing
+      // window, which starts 27 days ago) and 27 days ago (inside).
+      final c = _vRun([
+        _on(1, _b11, _vDay(-28), dateState: DateState.catchUp),
+        _on(2, _b12, _vDay(-27), dateState: DateState.catchUp),
+      ]);
+      final trailing = c.report.allSources!.trailing!;
+      expect(trailing.from, _vDay(-27));
+      expect(trailing.through, _vToday);
+      expect(trailing.days, 28);
+      expect(trailing.leaves, 1);
+      expect(c.report.home.velocity!.trailing!.leaves, 1);
+      // Since tracking (2026-09-01) both count.
+      expect(c.report.home.velocity!.sinceTracking!.leaves, 2);
+    });
+
+    test('since-tracking span: tracking start through today, as leaves '
+        'per week to one decimal', () {
+      final c = _vRun([
+        _on(1, _b11, '2026-09-01'),
+        _on(2, _b12, '2026-09-15'),
+        _on(3, _b13, _vToday),
+      ]);
+      final since = c.report.home.velocity!.sinceTracking!;
+      expect(since.from, '2026-09-01');
+      expect(since.through, _vToday);
+      expect(since.days, 38);
+      expect(since.leaves, 3);
+      // 3 × 7 ÷ 38 = 0.5526… → 0.6.
+      expect(since.leavesPerWeek, 0.6);
+      expect(since.leavesPerDay, 3 / 38);
+    });
+
+    test('a later sub-track window_start starts its span; an ended '
+        'sub-track\'s span stops at its ended_at day', () {
+      final late = _sub(10, name: 'Late', start: '2026-09-20');
+      final early = _sub(20, name: 'Early', start: '2026-08-01');
+      final ended = _sub(
+        30,
+        name: 'Ended',
+        start: '2026-09-01',
+        endedAt: DateTime.utc(2026, 10, 1, 9),
+        endReason: SubTrackEndReason.deleted,
+      );
+      final c = _vRun(
+        subTracks: [late, early, ended],
+        [
+          _on(1, _b11, '2026-09-25', source: late.id),
+          _on(2, _b12, '2026-09-05', source: early.id),
+          _on(3, _b13, '2026-09-30', source: ended.id),
+        ],
+      );
+      final lateV = c.report.sources[late.id]!.velocity!;
+      expect(lateV.sinceTracking!.from, '2026-09-20');
+      expect(lateV.sinceTracking!.days, 19);
+      expect(lateV.trailing!.from, '2026-09-20');
+      final earlyV = c.report.sources[early.id]!.velocity!;
+      expect(earlyV.sinceTracking!.from, '2026-09-01');
+      final endedV = c.report.sources[ended.id]!.velocity!;
+      expect(endedV.sinceTracking!.through, '2026-10-01');
+      expect(endedV.sinceTracking!.days, 31);
+      expect(endedV.trailing!.through, '2026-10-01');
+      expect(endedV.trailing!.from, '2026-09-04');
+      expect(endedV.trailing!.leaves, 1);
+    });
+
+    test('a future sub-track has no span yet', () {
+      final future = _sub(10, start: '2026-11-01');
+      final v = _vRun(
+        subTracks: [future],
+        const [],
+      ).report.sources[future.id]!.velocity!;
+      expect(v.sinceTracking, isNull);
+      expect(v.tooEarly, isTrue);
+    });
+
+    group('trailing window thresholds (28; 14–27 all; under 14 too early)', () {
+      ReportVelocity homeFrom(String start) => _vRun(trackingStartDate: start, [
+        _on(1, _b11, _vToday),
+      ]).report.home.velocity!;
+
+      test('13 days: too early to tell', () {
+        final v = homeFrom(_vDay(-12));
+        expect(v.tooEarly, isTrue);
+        expect(v.sinceTracking!.days, 13);
+      });
+
+      test('14 days: all of the history', () {
+        final v = homeFrom(_vDay(-13));
+        expect(v.trailing!.days, 14);
+        expect(v.trailing!.from, _vDay(-13));
+        // 1 × 7 ÷ 14 = 0.5.
+        expect(v.trailing!.leavesPerWeek, 0.5);
+      });
+
+      test('27 days: all of the history', () {
+        expect(homeFrom(_vDay(-26)).trailing!.days, 27);
+      });
+
+      test('28 days and more: the trailing 28 days', () {
+        expect(homeFrom(_vDay(-27)).trailing!.days, 28);
+        final v = homeFrom(_vDay(-100));
+        expect(v.trailing!.days, 28);
+        expect(v.trailing!.from, _vDay(-27));
+        // 1 × 7 ÷ 28 = 0.25 → 0.3.
+        expect(v.trailing!.leavesPerWeek, 0.3);
+      });
+
+      test('a sub-track uses the same rule over its own span', () {
+        final recent = _sub(10, start: _vDay(-5));
+        final v = _vRun(
+          subTracks: [recent],
+          [_on(1, _b11, _vToday, source: recent.id)],
+        ).report.sources[recent.id]!.velocity!;
+        expect(v.tooEarly, isTrue);
+        expect(v.sinceTracking!.days, 6);
+      });
+    });
+
+    test('the all-sources trailing velocity is the engine projection '
+        'velocity exactly', () {
+      final school = _sub(10);
+      final c = _vRun(
+        subTracks: [school],
+        deadline: const DeadlineGoal(
+          curriculumId: engineCurriculum,
+          targetDate: '2026-12-31',
+        ),
+        [
+          engineGround(1, peah),
+          _on(2, _b11, _vDay(-40), stage: 1),
+          _on(3, _b12, _vDay(-20), stage: 1),
+          _on(4, _b12, _vDay(-10), stage: 2),
+          _on(5, _b13, _vDay(-3), source: school.id),
+          _on(6, _b21, _vDay(-1), dateState: DateState.catchUp),
+          _on(7, _p11, _vDay(-1)),
+        ],
+      );
+      final projection = c.projection!;
+      expect(projection.velocityPerDay, isNotNull);
+      expect(
+        c.report.allSources!.trailing!.leavesPerDay,
+        projection.velocityPerDay,
+      );
+      expect(c.report.allSources!.trailing!.leaves, 3);
+      expect(c.report.projectionStatus, projection.status);
+      expect(c.report.projectionStatus, isNot(ProjectionStatus.noDeadline));
+    });
+
+    test('too early for the projection is too early for the report', () {
+      final c = _vRun(trackingStartDate: _vDay(-3), [_on(1, _b11, _vToday)]);
+      expect(c.projection!.status, ProjectionStatus.tooEarly);
+      expect(c.report.allSources!.tooEarly, isTrue);
+      expect(c.report.projectionStatus, ProjectionStatus.tooEarly);
+    });
+
+    test('a curriculum that is not evaluated has totals but no velocity '
+        'or status', () {
+      final school = _sub(10);
+      final c = _vRun(
+        subTracks: [school],
+        state: MainTrackState.retired,
+        [_on(1, _b11, _vDay(-2)), _on(2, _b12, _vDay(-2), source: school.id)],
+      );
+      expect(c.evaluated, isFalse);
+      expect(c.report.totalEvents, 2);
+      expect(c.report.groups.single.events, 1);
+      expect(c.report.allSources, isNull);
+      expect(c.report.projectionStatus, isNull);
+      expect(c.report.home.velocity, isNull);
+      expect(c.report.sources[school.id]!.velocity, isNull);
+    });
   });
 }

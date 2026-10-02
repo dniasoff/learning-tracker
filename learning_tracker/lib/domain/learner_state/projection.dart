@@ -47,13 +47,8 @@ Map<LeafRef, CivilDate> newlyLearntOn({
       known.addAll(coveredLeaves(e, corpus));
       continue;
     }
-    final day = e.learnedOn;
-    final stage = e.stage;
-    if (day == null ||
-        (e.dateState != DateState.dated && e.dateState != DateState.catchUp) ||
-        (stage != null && firstStage != null && stage > firstStage)) {
-      continue;
-    }
+    if (!isVelocityEvent(e, firstStage)) continue;
+    final day = e.learnedOn!;
     for (final leaf in coveredLeaves(e, corpus)) {
       if (!inScope(leaf)) continue;
       final current = firstDay[leaf];
@@ -62,6 +57,36 @@ Map<LeafRef, CivilDate> newlyLearntOn({
   }
   firstDay.removeWhere((leaf, _) => known.contains(leaf));
   return firstDay;
+}
+
+/// Whether counted [e] can newly learn a leaf for the velocity (AD-35,
+/// FR-32): a `dated` or `catch_up` event with a `learned_on` that is not
+/// chazara (`stage` ≤ [firstStage]; an event without a stage counts).
+/// `before_tracking` events never do. The one predicate the projection and
+/// the report velocities (`report_projection.dart`) share.
+bool isVelocityEvent(LearningEvent e, int? firstStage) {
+  final stage = e.stage;
+  return e.learnedOn != null &&
+      (e.dateState == DateState.dated || e.dateState == DateState.catchUp) &&
+      !(stage != null && firstStage != null && stage > firstStage);
+}
+
+/// The AD-35 velocity window of history running from [historyStart]
+/// through [through]: the trailing [projectionWindowDays] days, or all of
+/// it with [projectionMinHistoryDays]–27 days; null under
+/// [projectionMinHistoryDays] days or with no history ("too early").
+({CivilDate from, int days})? velocityWindow({
+  required CivilDate? historyStart,
+  required CivilDate through,
+}) {
+  final start = historyStart;
+  if (start == null) return null;
+  final history = civilDaySpan(start, through);
+  if (history < projectionMinHistoryDays) return null;
+  final from = history >= projectionWindowDays
+      ? shiftCivilDate(through, 1 - projectionWindowDays)
+      : start;
+  return (from: from, days: civilDaySpan(from, through));
 }
 
 /// The projection of one curriculum on [today].
@@ -91,16 +116,10 @@ Projection deriveProjection({
   required int remaining,
   required DeadlineGoal? deadline,
 }) {
-  final start = historyStart;
-  if (start == null) return const Projection(status: ProjectionStatus.tooEarly);
-  final history = _days(start, today);
-  if (history < projectionMinHistoryDays) {
+  final window = velocityWindow(historyStart: historyStart, through: today);
+  if (window == null)
     return const Projection(status: ProjectionStatus.tooEarly);
-  }
-  final windowStart = history >= projectionWindowDays
-      ? shiftCivilDate(today, 1 - projectionWindowDays)
-      : start;
-  final windowDays = _days(windowStart, today);
+  final (from: windowStart, days: windowDays) = window;
   var learnt = 0;
   for (final day in newlyLearnt.values) {
     if (day.compareTo(windowStart) >= 0 && day.compareTo(today) <= 0) {
@@ -167,8 +186,9 @@ CivilDate? trackedHistoryStart(
   return earliest;
 }
 
-/// `days([a, b]) = b − a + 1` if `a ≤ b`, else 0 (AD-44).
-int _days(CivilDate a, CivilDate b) {
+/// `days([a, b]) = b − a + 1` if `a ≤ b`, else 0 (AD-44): inclusive
+/// civil days.
+int civilDaySpan(CivilDate a, CivilDate b) {
   final diff = parseCivilDay(b).difference(parseCivilDay(a)).inDays;
   return diff < 0 ? 0 : diff + 1;
 }

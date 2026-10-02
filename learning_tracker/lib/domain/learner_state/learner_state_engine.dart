@@ -130,6 +130,13 @@ final class LearnerStateInputs {
   final DateTime nowUtc;
 }
 
+/// The AD-35 velocity inputs of one evaluated curriculum.
+typedef _VelocityInputs = ({
+  Map<LeafRef, CivilDate> newlyLearnt,
+  CivilDate? historyStart,
+  CivilDate today,
+});
+
 /// How far before `nowUtc` locks are computed: enough for every catch-up
 /// window that can still be open (AD-40 streak pending days).
 const Duration _streakLookBack = Duration(days: 21);
@@ -219,6 +226,19 @@ final class LearnerStateEngine {
       scopedLeaves: scoped,
       learntLeaves: learntLeaves(learns, corpus, scopedSet.contains),
     );
+    // The AD-35 velocity inputs, shared by the projection (stage 6) and
+    // the report velocities (stage 8) so both read one rule.
+    final velocity = evaluated
+        ? _velocityInputs(
+            inputs,
+            intent,
+            corpus,
+            learnt,
+            learns,
+            firstStage,
+            locks,
+          )
+        : null;
     final mainTrack = evaluated
         ? _mainTrack(
             curriculumId,
@@ -259,6 +279,22 @@ final class LearnerStateEngine {
           ? null
           : (t) => configHistory.at(t).firstStageOrder ?? firstStage,
     );
+    final plan = evaluated
+        ? _plan(
+            curriculumId,
+            inputs,
+            intent,
+            corpus,
+            learnt,
+            learns,
+            firstStage,
+            mainTrack,
+            locks,
+            configHistory!,
+            reviews!,
+            velocity!,
+          )
+        : const PlanRecord.none();
     final state = DerivedCurriculumState(
       curriculumId: curriculumId,
       evaluated: evaluated,
@@ -270,21 +306,7 @@ final class LearnerStateEngine {
         countedLearns: learns,
         firstStage: firstStage,
       ),
-      plan: evaluated
-          ? _plan(
-              curriculumId,
-              inputs,
-              intent,
-              corpus,
-              learnt,
-              learns,
-              firstStage,
-              mainTrack,
-              locks,
-              configHistory!,
-              reviews!,
-            )
-          : const PlanRecord.none(),
+      plan: plan,
       streak: evaluated
           ? curriculumStreak(
               learns,
@@ -304,9 +326,50 @@ final class LearnerStateEngine {
             if (s.curriculumId == curriculumId) s,
         ],
         civilDayOf: (instant) => civilDate(instant, inputs.settingsHistory),
+        velocity: velocity == null
+            ? null
+            : ReportVelocityBasis(
+                newlyLearnt: velocity.newlyLearnt,
+                trackingStart: velocity.historyStart,
+                today: velocity.today,
+                firstStage: firstStage,
+                projection: plan.projection,
+              ),
       ),
     );
     return (state, earners);
+  }
+
+  /// The AD-35 velocity inputs of an evaluated curriculum: the day each
+  /// leaf was newly learnt, the start of tracked history and the
+  /// projection day (held at a lock's start during a lock; NFR-9, FR-23).
+  _VelocityInputs _velocityInputs(
+    LearnerStateInputs inputs,
+    MainTrackIntent intent,
+    Corpus corpus,
+    LearntRecord learnt,
+    List<LearningEvent> learns,
+    int? firstStage,
+    List<LockWindow> locks,
+  ) {
+    final program = intent.program;
+    return (
+      newlyLearnt: newlyLearntOn(
+        countedLearns: learns,
+        corpus: corpus,
+        inScope: learnt.inScope,
+        firstStage: firstStage,
+      ),
+      historyStart: trackedHistoryStart(
+        program?.endedAt == null ? program?.trackingStartDate : null,
+        learns,
+      ),
+      today: projectionDay(
+        locks: locks,
+        nowUtc: inputs.nowUtc,
+        settingsHistory: inputs.settingsHistory,
+      ),
+    );
   }
 
   /// The AD-33 main-track stage of an evaluated curriculum.
@@ -356,6 +419,7 @@ final class LearnerStateEngine {
     List<LockWindow> locks,
     MainTrackConfigHistory configHistory,
     ReviewSchedule reviews,
+    _VelocityInputs velocity,
   ) {
     final today = civilDate(inputs.nowUtc, inputs.settingsHistory);
     final errors = <CurriculumValidationError>{};
@@ -381,24 +445,11 @@ final class LearnerStateEngine {
       today: today,
       deadline: deadline?.targetDate,
     );
-    final program = intent.program;
     final projection = deriveProjection(
-      newlyLearnt: newlyLearntOn(
-        countedLearns: learns,
-        corpus: corpus,
-        inScope: learnt.inScope,
-        firstStage: firstStage,
-      ),
-      historyStart: trackedHistoryStart(
-        program?.endedAt == null ? program?.trackingStartDate : null,
-        learns,
-      ),
+      newlyLearnt: velocity.newlyLearnt,
+      historyStart: velocity.historyStart,
       // NFR-9/FR-23: during a lock, as evaluated at the lock's start.
-      today: projectionDay(
-        locks: locks,
-        nowUtc: inputs.nowUtc,
-        settingsHistory: inputs.settingsHistory,
-      ),
+      today: velocity.today,
       remaining: learnt.scopedLeaves.length - learnt.learntLeaves.length,
       deadline: deadline,
     );
