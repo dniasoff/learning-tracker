@@ -17,6 +17,8 @@
 ///    (`calendar_plan.dart`), reviews (`review_schedule.dart` over
 ///    `main_track_config_history.dart`), goal target and pace
 ///    (`goal_target.dart`) and projection (`projection.dart`);
+///    Sub-track states (`sub_track_positions.dart`, DNI-493): each
+///    sub-track's own position, ticked count and remaining path;
 /// 7. points (DNI-468).
 ///
 /// No I/O, clock read or global state: every input is in
@@ -50,6 +52,7 @@ import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track_positions.dart';
 
 /// One calendar program assignment: [node] is assigned on [date].
 final class CalendarAssignment {
@@ -307,6 +310,15 @@ final class LearnerStateEngine {
     );
     final goals = inputs.goals[curriculumId];
     final deadline = calendar == null ? liveDeadline(goals) : null;
+    // DNI-493: each sub-track's own position, ticked count and remaining
+    // path; evaluated curricula only (AD-35).
+    final subTracks = subTrackStates(
+      subTracks: inputs.subTracks,
+      corpus: corpus,
+      countedLearns: learns,
+      today: today,
+      deadline: deadline?.targetDate,
+    );
     final program = intent.program;
     final projection = deriveProjection(
       newlyLearnt: newlyLearntOn(
@@ -325,6 +337,7 @@ final class LearnerStateEngine {
     );
     if (calendar != null) {
       return PlanRecord(
+        subTracks: subTracks,
         calendar: calendar,
         reviews: reviews,
         projection: projection,
@@ -342,6 +355,7 @@ final class LearnerStateEngine {
     final pace = livePace(goals);
     final studyDays = configHistory.current.studyDays;
     return PlanRecord(
+      subTracks: subTracks,
       reviews: reviews,
       dailyTarget: deadline == null
           ? null
