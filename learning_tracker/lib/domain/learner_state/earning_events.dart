@@ -14,8 +14,9 @@
 ///   leaf under its node, so it blocks earning for all of them.
 /// * a **scheduled review**: per (leaf, stage above the first), the earliest
 ///   counted `source = main` `dated`/`catch_up` event carrying that stage
-///   whose pair is in `reviewsDue` on the event's earning date
-///   ([reviewEarners]). The review schedule computes every step under the
+///   whose pair is due on the event's earning date ([reviewEarners]); an
+///   earlier attempt that was not due, even one the schedule took as the
+///   step's completion, does not use the pair up. The review schedule computes every step under the
 ///   stage and study-day settings in force at the time (AD-35), so changing
 ///   the settings later never changes past earning.
 ///
@@ -98,10 +99,12 @@ CivilDate reviewEarningDate(
 ///
 /// Per (leaf, stage) with stage above the first stage order in force at
 /// the event ([firstStageAt]), the earliest counted [canEarn] leaf event
-/// carrying that stage earns when (leaf, stage) is in
-/// `reviews.dueOn(reviewEarningDate(e))`. An attempt that is not due does
-/// not use up the pair: a later due attempt can still earn it. Once a pair
-/// has earned, its repeats never do.
+/// carrying that stage earns when it comes after the event that opened the
+/// step and the step is due on `reviewEarningDate(e)`
+/// ([ReviewSchedule.dueForAttempt]). An attempt that is not due does not
+/// use up the pair, even when the schedule took it as the step's
+/// completion: a later due attempt can still earn it. Once a pair has
+/// earned, its repeats never do.
 Set<String> reviewEarners({
   required Iterable<LearningEvent> countedLearns,
   required Corpus corpus,
@@ -110,7 +113,6 @@ Set<String> reviewEarners({
   required LearnerSettingsHistory settingsHistory,
 }) {
   final ordered = [...countedLearns]..sort(compareEventsByEffectiveAt);
-  final dueByDate = <CivilDate, Set<ReviewDue>>{};
   final earned = <ReviewDue>{};
   final out = <String>{};
   for (final e in ordered) {
@@ -125,9 +127,11 @@ Set<String> reviewEarners({
     if (first == null || stage <= first) continue;
     final pair = ReviewDue(ref, stage);
     if (earned.contains(pair)) continue;
-    final date = reviewEarningDate(e, settingsHistory);
-    final due = dueByDate.putIfAbsent(date, () => reviews.dueOn(date).toSet());
-    if (due.contains(pair)) {
+    final step = reviews.stepFor(ref, stage);
+    if (step == null) continue;
+    final at = effectiveAt(e).compareTo(step.openedAt);
+    if (at < 0 || (at == 0 && e.id.compareTo(step.openedBy) <= 0)) continue;
+    if (reviews.dueForAttempt(step, reviewEarningDate(e, settingsHistory))) {
       earned.add(pair);
       out.add(e.id);
     }

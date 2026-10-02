@@ -932,6 +932,35 @@ void main() {
       );
     });
 
+    test('an early attempt the schedule takes as the step completion does '
+        'not use up the pair', () {
+      // Stage 2 is due from the 2nd. The attempt on the 1st is not due but
+      // closes the step in the schedule; the due attempt on the 2nd still
+      // earns.
+      expect(
+        earning([review(1, 1, 1), review(2, 2, 1, hour: 12), review(3, 2, 2)]),
+        ids([1, 3]),
+      );
+    });
+
+    test('an attempt made before the step opened does not earn', () {
+      // Stage 2 has delay 0 and is due the day it opens; the stage-2
+      // attempt at 09:00 comes before the stage-1 learn at 10:00 that
+      // opens the step, so only the one after it earns.
+      expect(
+        earning(
+          [
+            review(1, 2, 1, hour: 9),
+            review(2, 1, 1),
+            review(3, 2, 1, hour: 11),
+          ],
+          stages: [stageDoc(1), stageDoc(2), stageDoc(3, delay: 7)],
+        ),
+        // 1 is the first event on 1:1, so it earns as first learning.
+        ids([1, 3]),
+      );
+    });
+
     test('only the earliest due event of a (leaf, stage) pair earns', () {
       expect(
         earning([
