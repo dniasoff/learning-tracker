@@ -15,6 +15,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.
 import 'package:learning_tracker/domain/learner_state/streak.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
@@ -233,10 +234,7 @@ void main() {
       final retried = await h.commands.retry(failure.id);
       expect(retried, isA<CaptureSuccess>());
       expect(h.written.map((e) => e.id), failure.eventIds);
-      expect(
-        h.written.map(effectiveAt),
-        attempted.map(effectiveAt),
-      );
+      expect(h.written.map(effectiveAt), attempted.map(effectiveAt));
       await pumpEventQueue();
       expect(failures.last, isEmpty);
     });
@@ -265,6 +263,45 @@ void main() {
         const CaptureResult.rejected(CaptureRejection.targetNotFound),
       );
       expect(h.port.attempts, isEmpty);
+    });
+  });
+
+  group('T6: the capture analytics event replaces the retired writers\' '
+      'events (AD-47: enums and a count only)', () {
+    test(
+      'a Browse / bulk-mark batch emits ONE capture event per batch',
+      () async {
+        final h = _Harness();
+        await h.capture(nodes: [berakhot], dateState: DateState.beforeTracking);
+        await h.capture(refs: [_b11, _b12], source: engineUlid(7));
+        expect(h.analytics.captures, [
+          (
+            curriculumId: engineCurriculum,
+            sourceKind: CaptureSourceKind.main,
+            dateState: DateState.beforeTracking,
+            count: 1,
+          ),
+          (
+            curriculumId: engineCurriculum,
+            sourceKind: CaptureSourceKind.subTrack,
+            dateState: DateState.dated,
+            count: 2,
+          ),
+        ]);
+      },
+    );
+
+    test('a locked or rejected batch emits nothing', () async {
+      final locked = _Harness(now: _shabbos);
+      await locked.capture(refs: [_b11]);
+      expect(locked.analytics.captures, isEmpty);
+
+      final rejected = _Harness();
+      rejected.port.failNextWith(
+        const PermanentWriteRejection('permission-denied'),
+      );
+      await rejected.capture(refs: [_b11]);
+      expect(rejected.analytics.captures, isEmpty);
     });
   });
 }
