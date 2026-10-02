@@ -3749,16 +3749,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String goalTargetPercentOnly(int percent) {
-    return 'Complete $percent% of the material';
-  }
-
-  @override
-  String goalTargetPercentWithCount(int percent, int done, int total) {
-    return 'Complete $percent% of the material ($done of $total items)';
-  }
-
-  @override
   String get goalLearningUnitLabel => 'Learning unit';
 
   @override

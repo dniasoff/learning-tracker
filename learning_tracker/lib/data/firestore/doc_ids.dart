@@ -40,10 +40,9 @@
 /// defines the target formula new writes must land on — and, by
 /// construction, retires the `resolveLocalTrackId` remap
 /// (`local_track_id_resolver.dart`, MCF-4) for these two collections: there
-/// is no per-device id left for it to resolve. `goals` is untouched by this
-/// re-key: unlike the two collections above, its doc-id formula
-/// ([goalDocId]) never embedded `track_id` in the first place — see that
-/// function's doc comment for why. The pre-rekey shape is not discarded:
+/// is no per-device id left for it to resolve. `goals` was never part of
+/// this re-key (its legacy id never embedded `track_id`); since AD-43 it
+/// uses fixed per-kind ids instead. The pre-rekey shape is not discarded:
 /// [legacyStageDefinitionDocId] and [legacyStudyDayConfigDocId] keep it
 /// byte-for-byte, explicitly named as legacy and never for new writes, so
 /// the Phase-5 backfill (and its verifier) can locate and confirm existing
@@ -323,51 +322,12 @@ final class DocIds {
       data['curriculum_id']?.toString() ?? '';
 
   // ── goals ────────────────────────────────────────────────────────────
-
-  /// `goals/{id|goal_id|fallback natural key}` doc-id formula.
-  ///
-  /// Mirrors `FirestoreGatewayImpl.pushGoal`
-  /// (`firestore_gateway_impl.dart:647-668`): prefers the caller-supplied
-  /// `id`, then `goal_id`, then falls back to [fallbackGoalDocId] — never
-  /// `collection.add()` (AUD-core-sync-24 / FB-4: a random doc-id on retry
-  /// would duplicate a goal on every lost-ack outbox retry).
-  ///
-  /// **Not an AD-25 track-scoped reformulation target.** AD-25's binding
-  /// list names `goals` alongside `stage_definitions`/`study_day_configs`
-  /// as a "track-scoped child", but unlike those two, `goals`' *doc-id*
-  /// formula (this function) never embeds `track_id` today — only the
-  /// row's `track_id` *payload field* is subject to the separate
-  /// `resolveLocalTrackId` FK-remap at merge time (MCF-4), which is outside
-  /// this doc-id-formula module's scope. So `goalDocId` needs no
-  /// pre-/post-rekey carve-out; it is reproduced byte-for-byte with no
-  /// caveat, same as every non-track-scoped collection.
-  static String goalDocId(Map<String, dynamic> data) =>
-      data['id']?.toString() ??
-      data['goal_id']?.toString() ??
-      fallbackGoalDocId(data);
-
-  /// Deterministic fallback goal doc-id for the (unreachable in practice)
-  /// case where a caller omits both `id` and `goal_id`.
-  ///
-  /// Mirrors `FirestoreGatewayImpl._fallbackGoalDocId`
-  /// (`firestore_gateway_impl.dart:690-702`) exactly, including the
-  /// snake_case/camelCase legacy-alias fallback for each component.
-  ///
-  /// `curriculum_targetPercent_createdAt`, each component percent-encoded
-  /// via [encodeKeyComponent] and joined with `_`.
-  static String fallbackGoalDocId(Map<String, dynamic> data) {
-    final curriculum = (data['curriculum_id'] ?? data['curriculumId'] ?? '')
-        .toString();
-    final pct = (data['target_percent'] ?? data['targetPercent'] ?? '')
-        .toString();
-    final createdAt = (data['created_at'] ?? data['createdAt'] ?? '')
-        .toString();
-    return [
-      encodeKeyComponent(curriculum),
-      encodeKeyComponent(pct),
-      encodeKeyComponent(createdAt),
-    ].join('_');
-  }
+  //
+  // No formula here since DNI-484 (R16): the legacy
+  // `{id|goal_id|curriculum_targetPercent_createdAt}` id read the retired
+  // `target_percent`. AD-43 goals live at the fixed ids
+  // `goals/{curriculumId}_deadline` / `goals/{curriculumId}_pace`
+  // (`goalDocId` in `owner_governed_intents.dart`).
 
   // ── import_metadata ──────────────────────────────────────────────────
 

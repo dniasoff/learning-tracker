@@ -3703,16 +3703,6 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String goalTargetPercentOnly(int percent) {
-    return 'השלם $percent% מהחומר';
-  }
-
-  @override
-  String goalTargetPercentWithCount(int percent, int done, int total) {
-    return 'השלם $percent% מהחומר ($done מתוך $total פריטים)';
-  }
-
-  @override
   String get goalLearningUnitLabel => 'יחידת לימוד';
 
   @override

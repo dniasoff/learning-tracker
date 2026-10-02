@@ -1969,28 +1969,6 @@
       }
     }
   },
-  "goalTargetPercentOnly": "השלם {percent}% מהחומר",
-  "@goalTargetPercentOnly": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "goalTargetPercentWithCount": "השלם {percent}% מהחומר ({done} מתוך {total} פריטים)",
-  "@goalTargetPercentWithCount": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      },
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "goalLearningUnitLabel": "יחידת לימוד",
   "goalNoPressureLabel": "למד בקצב שלך, ללא לחץ זמן.",
   "trackSetGoalLabel": "הגדרת יעד",

@@ -319,7 +319,6 @@ void main() {
           uid: 'parent-uid',
           profileId: _profileId,
           curriculumId: CurriculumId.chumash,
-          targetPercent: 50,
         );
         await firestore.collection('tutor_grants').doc('grant-1').set({
           'state': 'active',
@@ -360,7 +359,7 @@ void main() {
         expect(repo, isA<FirestoreGoalRepository>());
         final goals = await repo!.getGoals(CurriculumId.chumash);
         expect(goals, hasLength(1));
-        expect(goals.single.targetPercent, 50);
+        expect(goals.single.curriculumId, CurriculumId.chumash);
       },
     );
 

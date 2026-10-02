@@ -108,8 +108,8 @@ void main() {
   // ── Stage parity ──────────────────────────────────────────────────────────────
   //
   // StageDefinitionMerger reads via StageDefinitionCodec.decode:
-  //   curriculum_id, track_id, stage_order, stage_name, schedule, is_default,
-  //   updated_at.
+  //   curriculum_id, track_id, stage_order, stage_name, schedule, is_default.
+  //   (R16, DNI-484: the governed updated_at is retired.)
   // The current callable seam receives the already-enriched stage data;
   // stageId = "{trackId}_{stageOrder}".
 
@@ -122,7 +122,6 @@ void main() {
           final record = _InvokerRecord();
           final service = _service(record);
 
-          final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
           final stage = {
             'stage_order': 1,
             'stage_name': 'Learn',
@@ -139,7 +138,6 @@ void main() {
               ...stage,
               'curriculum_id': 'mishnayos',
               'track_id': 7,
-              'updated_at': now.toIso8601String(),
             },
           );
 
@@ -180,9 +178,9 @@ void main() {
             reason: 'StageDefinitionCodec reads is_default',
           );
           expect(
-            stageData['updated_at'],
-            now.toIso8601String(),
-            reason: 'StageDefinitionMerger uses updated_at as LWW timestamp',
+            stageData,
+            isNot(contains('updated_at')),
+            reason: 'R16: governed updated_at is retired',
           );
 
           // Doc-id.
@@ -200,7 +198,8 @@ void main() {
   // ── StudyDay parity ───────────────────────────────────────────────────────────
   //
   // StudyDayConfigMerger reads via StudyDayConfigCodec.decode:
-  //   profile_id, curriculum_id, track_id, day_of_week, day_type, updated_at.
+  //   profile_id, curriculum_id, track_id, day_of_week, day_type.
+  //   (R16, DNI-484: the governed updated_at is retired.)
   // Doc-id = "{curriculum_id}_{day_of_week}_{track_id}" and is supplied as
   // the callable's configId argument.
 
@@ -213,14 +212,12 @@ void main() {
           final record = _InvokerRecord();
           final service = _service(record);
 
-          final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
           final payload = {
             'profile_id': _profileId,
             'curriculum_id': 'mishnayos',
             'track_id': 7,
             'day_of_week': 1,
             'day_type': 'study',
-            'updated_at': now.toIso8601String(),
           };
 
           await service.upsertStudyDayConfig(
@@ -258,9 +255,9 @@ void main() {
             reason: 'StudyDayConfigCodec reads day_type',
           );
           expect(
-            configData['updated_at'],
-            now.toIso8601String(),
-            reason: 'StudyDayConfigMerger uses updated_at as LWW timestamp',
+            configData,
+            isNot(contains('updated_at')),
+            reason: 'R16: governed updated_at is retired',
           );
 
           // Doc-id.
@@ -277,9 +274,9 @@ void main() {
 
   // ── Goal parity ───────────────────────────────────────────────────────────────
   //
-  // GoalMerger reads: curriculum_id, track_id, created_at, updated_at,
-  //   description, target_percent, target_date, date_type, goal_type,
-  //   pace_value, pace_unit.
+  // GoalMerger reads: curriculum_id, track_id, created_at, description,
+  //   target_date, date_type, goal_type, pace_value, pace_unit.
+  //   (R16, DNI-484: target_percent and the governed updated_at are retired.)
   //
   // GoalEntity.toFirestore() outputs snake_case to match these field names.
   // R2-H1 fix: GoalEntity now has a trackId field; _toEntity passes goal.trackId
@@ -294,13 +291,11 @@ void main() {
           final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
           final goal = GoalEntity(
             curriculumId: CurriculumId.mishnayos,
-            targetPercent: 100.0,
             targetDate: now,
             description: 'Finish by Pesach',
             dateType: 'gregorian',
             goalType: 'deadline',
             createdAt: now,
-            updatedAt: now,
           );
 
           final data = goal.toFirestore();
@@ -314,8 +309,8 @@ void main() {
           );
           expect(
             data.containsKey('target_percent'),
-            isTrue,
-            reason: 'GoalMerger reads target_percent',
+            isFalse,
+            reason: 'R16: target_percent is retired (AD-43)',
           );
           expect(
             data.containsKey('target_date'),
@@ -354,16 +349,14 @@ void main() {
           );
           expect(
             data.containsKey('updated_at'),
-            isTrue,
-            reason: 'GoalMerger reads updated_at (LWW timestamp)',
+            isFalse,
+            reason: 'R16: governed updated_at is retired',
           );
 
           // Values are correct.
           expect(data['curriculum_id'], CurriculumId.mishnayos.storageKey);
-          expect(data['target_percent'], 100.0);
           expect(data['description'], 'Finish by Pesach');
           expect(data['goal_type'], 'deadline');
-          expect(data['updated_at'], now.toIso8601String());
 
           // Verify no camelCase leakage.
           expect(
@@ -383,28 +376,24 @@ void main() {
         final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
         final original = GoalEntity(
           curriculumId: CurriculumId.mishnayos,
-          targetPercent: 80.0,
           description: 'Round-trip test',
           dateType: 'hebrew',
           goalType: 'pace',
           paceValue: 2,
           pacePeriod: 'per_week',
           createdAt: now,
-          updatedAt: now,
         );
 
         final data = original.toFirestore();
         final restored = GoalEntity.fromFirestore(data);
 
         expect(restored.curriculumId, original.curriculumId);
-        expect(restored.targetPercent, original.targetPercent);
         expect(restored.description, original.description);
         expect(restored.dateType, original.dateType);
         expect(restored.goalType, original.goalType);
         expect(restored.paceValue, original.paceValue);
         expect(restored.pacePeriod, original.pacePeriod);
         expect(restored.createdAt, original.createdAt);
-        expect(restored.updatedAt, original.updatedAt);
       });
 
       // R2-H1 fix: GoalEntity now has trackId; toFirestore emits track_id when set.
@@ -416,7 +405,6 @@ void main() {
             curriculumId: CurriculumId.mishnayos,
             trackId: 7,
             createdAt: now,
-            updatedAt: now,
           );
 
           final data = goal.toFirestore();
@@ -435,7 +423,6 @@ void main() {
         final goal = GoalEntity(
           curriculumId: CurriculumId.mishnayos,
           createdAt: now,
-          updatedAt: now,
         );
 
         final data = goal.toFirestore();
@@ -453,12 +440,10 @@ void main() {
         final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
         final goal = GoalEntity(
           curriculumId: CurriculumId.mishnayos,
-          targetPercent: 100.0,
           description: 'Test',
           goalType: 'deadline',
           targetDate: now,
           createdAt: now,
-          updatedAt: now,
         );
         final payload = goal.toFirestore();
         payload['id'] = goal.firestoreId;
@@ -480,7 +465,7 @@ void main() {
         expect(args['goalId'], goal.firestoreId);
         final goalData = args['goalData'] as Map<String, dynamic>;
         expect(goalData['curriculum_id'], CurriculumId.mishnayos.storageKey);
-        expect(goalData['updated_at'], now.toIso8601String());
+        expect(goalData, isNot(contains('updated_at')));
       });
     },
   );

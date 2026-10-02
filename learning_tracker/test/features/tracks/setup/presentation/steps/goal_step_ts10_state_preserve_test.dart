@@ -172,7 +172,6 @@ void main() {
           paceValue: 7,
           pacePeriod: 'per_week',
           createdAt: _fixedNow,
-          updatedAt: _fixedNow,
         );
 
         GoalEntity? emitted;

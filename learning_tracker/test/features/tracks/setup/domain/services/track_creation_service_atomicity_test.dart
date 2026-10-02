@@ -108,7 +108,6 @@ void main() {
           goalType: 'deadline',
           targetDate: DateTime.utc(2027, 6, 1),
           createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
         ),
       ),
     );

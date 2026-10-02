@@ -35,7 +35,7 @@
 /// ```dart
 /// write: () async {
 ///   final repo = await container.read(firestoreGoalRepositoryProvider.future);
-///   await repo!.createGoal(curriculumId: CurriculumId.mishnayos, targetPercent: 50);
+///   await repo!.createGoal(curriculumId: CurriculumId.mishnayos);
 /// },
 /// ```
 ///

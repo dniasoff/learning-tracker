@@ -98,8 +98,6 @@ class _CurrentFirestoreWriter {
           DocIds.profileProgramDocId(data),
           data,
         );
-      case #pushGoal:
-        return _write('goals', DocIds.goalDocId(data), data);
       case #pushCurriculumImportMetadata:
         return _write(
           'import_metadata',
@@ -299,38 +297,6 @@ void main() {
       expect(DocIds.profileProgramDocId(data), equals(live));
     });
 
-    test('goals: explicit "id" field is byte-for-byte', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{'id': '99', 'target': 5};
-      await _gw(fs).pushGoal(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'goals');
-      expect(DocIds.goalDocId(data), equals(live));
-    });
-
-    test('goals: "goal_id" fallback is byte-for-byte', () async {
-      final fs = createFakeFirestore(authenticatedUid: _uid);
-      final data = <String, dynamic>{'goal_id': '77', 'target': 3};
-      await _gw(fs).pushGoal(profileId: _profileId, data: data);
-      final live = await _liveDocId(fs, 'goals');
-      expect(DocIds.goalDocId(data), equals(live));
-    });
-
-    test(
-      'goals: id-less payload derives the SAME deterministic fallback key '
-      'as the current deterministic path (AUD-core-sync-24 — never add())',
-      () async {
-        final fs = createFakeFirestore(authenticatedUid: _uid);
-        final data = <String, dynamic>{
-          'curriculum_id': 'mishnayos',
-          'target_percent': 50,
-          'created_at': '2026-01-01T00:00:00.000Z',
-        };
-        await _gw(fs).pushGoal(profileId: _profileId, data: data);
-        final live = await _liveDocId(fs, 'goals');
-        expect(DocIds.goalDocId(data), equals(live));
-      },
-    );
-
     test('import_metadata: curriculum_id payload is byte-for-byte', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
       final data = <String, dynamic>{'curriculum_id': 'daf_yomi'};
@@ -525,19 +491,6 @@ void main() {
       expect(currentDocId, equals('mishnayos_1'));
       expect(DocIds.studyDayConfigDocId(data), isNot(equals('mishnayos_1_5')));
       expect(DocIds.studyDayConfigDocId(data), equals('mishnayos_1'));
-    });
-
-    test('goals is NOT re-keyed here — its doc-id formula never embedded '
-        'track_id in the first place', () {
-      expect(
-        DocIds.goalDocId({
-          'curriculum_id': 'mishnayos',
-          'target_percent': 50,
-          'created_at': '2026-01-01T00:00:00.000Z',
-          'track_id': 999, // present in the payload but NOT in the doc-id
-        }),
-        isNot(contains('999')),
-      );
     });
   });
 

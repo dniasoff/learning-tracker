@@ -166,7 +166,6 @@ final class FirestoreAddTrackActionRepository
               curriculumId: curriculumId,
               goalType: 'none',
               createdAt: now,
-              updatedAt: now,
             ),
       ),
     ];

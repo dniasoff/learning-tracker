@@ -128,7 +128,6 @@ void main() {
       goal: GoalEntity(
         curriculumId: CurriculumId.bavli,
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       ),
       curriculum: CurriculumId.bavli,
       studyDays: const {3: 'rest'},

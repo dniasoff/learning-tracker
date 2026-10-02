@@ -234,7 +234,6 @@ Future<String> seedGoal(
   required String uid,
   required String profileId,
   required CurriculumId curriculumId,
-  double targetPercent = 100,
   DateTime? targetDate,
   String description = 'Test goal',
   String dateType = 'gregorian',
@@ -244,11 +243,9 @@ Future<String> seedGoal(
   PaceGranularity? paceGranularity,
   String? rawLearningUnit,
   DateTime? createdAt,
-  DateTime? updatedAt,
 }) async {
   final goal = GoalEntity(
     curriculumId: curriculumId,
-    targetPercent: targetPercent,
     targetDate: targetDate,
     description: description,
     dateType: dateType,
@@ -258,9 +255,8 @@ Future<String> seedGoal(
     paceGranularity: paceGranularity,
     rawLearningUnit: rawLearningUnit,
     createdAt: _fixtureTime(createdAt),
-    updatedAt: _fixtureTime(updatedAt ?? createdAt),
   );
-  final docId = DocIds.goalDocId({'id': goal.firestoreId});
+  final docId = goal.firestoreId;
   await firestore
       .collection('users')
       .doc(uid)

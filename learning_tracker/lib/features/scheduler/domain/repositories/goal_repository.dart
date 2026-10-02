@@ -12,7 +12,6 @@ abstract class GoalRepository {
   ///
   Future<GoalEntity> createGoal({
     required CurriculumId curriculumId,
-    required double targetPercent,
     PaceTarget? paceTarget,
     String description,
     String dateType,
@@ -39,7 +38,6 @@ abstract class GoalRepository {
   /// `GoalProfileMismatchException` (AUD-scheduler-03) otherwise.
   Future<GoalEntity> updateGoal({
     required GoalEntity goal,
-    double? targetPercent,
     PaceTarget? paceTarget,
     bool clearPaceTarget,
     String? description,

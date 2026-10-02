@@ -870,7 +870,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     if (existingEntity == null) {
       await repo.createGoal(
         curriculumId: curriculum,
-        targetPercent: result.targetPercent,
         paceTarget: paceTarget,
         description: result.description,
         dateType: result.dateType,
@@ -879,7 +878,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     } else {
       await repo.updateGoal(
         goal: existingEntity,
-        targetPercent: result.targetPercent,
         paceTarget: paceTarget,
         // 'none' goals clear the pace target entirely.
         clearPaceTarget: paceTarget == null,

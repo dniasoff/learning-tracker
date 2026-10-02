@@ -352,14 +352,12 @@ void main() {
       GoalEntity paceGoal({required DateTime createdAt}) => GoalEntity(
         id: 1,
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 100.0,
         description: '',
         dateType: 'gregorian',
         goalType: 'pace',
         paceValue: 10,
         pacePeriod: 'per_week',
         createdAt: createdAt,
-        updatedAt: createdAt,
       );
 
       test(

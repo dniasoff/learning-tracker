@@ -131,10 +131,8 @@ void main() {
       uid: _uid,
       profileId: _profileId,
       curriculumId: CurriculumId.mishnayos,
-      targetPercent: 80,
       description: 'Finish the tractate',
       createdAt: _time,
-      updatedAt: _time,
     );
     await seedBookmark(
       firestore,
@@ -152,7 +150,8 @@ void main() {
         .doc(_profileId);
     final goal = await profilePath.collection('goals').doc(goalId).get();
     expect(goal.data(), containsPair('curriculum_id', 'mishnayos'));
-    expect(goal.data(), containsPair('target_percent', 80));
+    expect(goal.data(), isNot(contains('target_percent')));
+    expect(goal.data(), isNot(contains('updated_at')));
     expect(goal.data(), containsPair('description', 'Finish the tractate'));
 
     final bookmark = await profilePath

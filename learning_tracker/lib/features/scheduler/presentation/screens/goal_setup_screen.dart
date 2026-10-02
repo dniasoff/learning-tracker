@@ -86,7 +86,6 @@ class GoalSetupForm extends ConsumerStatefulWidget {
 }
 
 class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
-  late double _targetPercent;
   DateTime? _targetDate;
   late TextEditingController _descriptionController;
   String? _deadlineError;
@@ -102,7 +101,6 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   @override
   void initState() {
     super.initState();
-    _targetPercent = widget.existingGoal?.targetPercent ?? 100.0;
     _targetDate = widget.existingGoal?.targetDate;
     _descriptionController = TextEditingController(
       text: widget.existingGoal?.description ?? '',
@@ -321,7 +319,6 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     widget.onComplete(
       GoalEntity(
         curriculumId: widget.curriculumId,
-        targetPercent: _targetPercent,
         targetDate: _goalType == 'deadline' ? _targetDate : null,
         description: _goalType == 'deadline' ? _descriptionController.text : '',
         dateType: ref.read(useHebrewDateProvider) ? 'hebrew' : 'gregorian',
@@ -333,7 +330,6 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
             : null,
         rawLearningUnit: _showUnitPicker ? _paceGranularity : null,
         createdAt: now,
-        updatedAt: now,
       ),
     );
   }
@@ -427,8 +423,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   ),
                 );
               }
-              final remainingItems = (_effectiveTotal! * _targetPercent / 100)
-                  .ceil();
+              // AD-43: a goal always covers the whole corpus
+              // (`target_percent` is retired, DNI-484).
+              final remainingItems = _effectiveTotal!;
               final pace = (remainingItems / daysRemaining).ceil();
               return Card(
                 child: Padding(
@@ -549,8 +546,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
           const SizedBox(height: 16),
           Builder(
             builder: (context) {
-              final remainingItems = (_effectiveTotal! * _targetPercent / 100)
-                  .ceil();
+              // AD-43: a goal always covers the whole corpus
+              // (`target_percent` is retired, DNI-484).
+              final remainingItems = _effectiveTotal!;
               final dailyRate = _paceUnit == 'per_day'
                   ? _paceValue.toDouble()
                   : _paceValue / 7.0;
@@ -615,32 +613,6 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Target percentage slider
-                  Text(
-                    // R1-(7): use l10n so Hebrew sees translated text.
-                    _effectiveTotal != null
-                        ? AppLocalizations.of(
-                            context,
-                          )!.goalTargetPercentWithCount(
-                            _targetPercent.round(),
-                            (_effectiveTotal! * _targetPercent / 100).ceil(),
-                            _effectiveTotal!,
-                          )
-                        : AppLocalizations.of(
-                            context,
-                          )!.goalTargetPercentOnly(_targetPercent.round()),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Slider(
-                    value: _targetPercent,
-                    min: 1,
-                    max: 100,
-                    divisions: 99,
-                    label: '${_targetPercent.round()}%',
-                    semanticFormatterCallback: (v) => '${v.round()}%',
-                    onChanged: (v) => setState(() => _targetPercent = v),
-                  ),
-                  const SizedBox(height: 24),
                   // Unit picker — Amud/Daf for Talmud, Pasuk/Perek for
                   // Tanakh + Mussar. Lets the user choose whether the
                   // pace count is in chapter-sized or verse-sized units.

@@ -421,7 +421,6 @@ void main() {
       GoalEntity(
         curriculumId: CurriculumId.mishnayos,
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       ),
     );
   });

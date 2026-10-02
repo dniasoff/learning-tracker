@@ -113,7 +113,6 @@ void main() {
           targetDate: DateTime.utc(2027, 6, 1),
           description: 'Siyum',
           createdAt: governedTestNow,
-          updatedAt: governedTestNow,
         ),
       ),
     )).actionId;
@@ -182,7 +181,6 @@ void main() {
           description: 'Siyum',
           dateType: 'hebrew',
           createdAt: governedTestNow,
-          updatedAt: governedTestNow,
         ),
       ),
     )).actionId;
@@ -220,7 +218,6 @@ void main() {
           goalType: 'deadline',
           targetDate: DateTime.utc(2027, 6, 1),
           createdAt: governedTestNow,
-          updatedAt: governedTestNow,
         ),
       ),
     );
@@ -301,7 +298,6 @@ void main() {
             targetDate: DateTime.utc(2027, 6, 1),
             description: 'Siyum',
             createdAt: governedTestNow,
-            updatedAt: governedTestNow,
           ),
         ),
       );

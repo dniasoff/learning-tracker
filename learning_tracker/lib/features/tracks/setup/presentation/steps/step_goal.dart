@@ -290,7 +290,6 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       widget.onComplete(
         GoalEntity(
           curriculumId: widget.curriculumId,
-          targetPercent: 100,
           goalType: 'deadline',
           targetDate: _deadline!.toUtc(),
           dateType: useHebrew ? 'hebrew' : 'gregorian',
@@ -300,7 +299,6 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
           paceGranularity: PaceGranularity.fromStorageKey(_paceGranularity),
           rawLearningUnit: _paceGranularity,
           createdAt: now,
-          updatedAt: now,
         ),
       );
       return;
@@ -309,7 +307,6 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     widget.onComplete(
       GoalEntity(
         curriculumId: widget.curriculumId,
-        targetPercent: 100,
         goalType: 'pace',
         paceValue: _paceValue,
         pacePeriod: _paceUnit,
@@ -317,7 +314,6 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         paceGranularity: PaceGranularity.fromStorageKey(_paceGranularity),
         rawLearningUnit: _paceGranularity,
         createdAt: now,
-        updatedAt: now,
       ),
     );
   }

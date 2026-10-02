@@ -64,7 +64,6 @@ void main() {
       uid: testUid,
       profileId: testProfileId,
       curriculumId: CurriculumId.mishnayos,
-      targetPercent: 80,
       description: 'Finish the tract',
       createdAt: DateTime.utc(2026, 1, 1),
     );
@@ -74,7 +73,7 @@ void main() {
     );
     final goals = collectionDocuments(profile, 'goals');
     expect(goals, hasLength(1));
-    expect(documentData(goals.single)['target_percent'], 80);
+    expect(documentData(goals.single), isNot(contains('target_percent')));
     expect(documentData(goals.single)['description'], 'Finish the tract');
   });
 

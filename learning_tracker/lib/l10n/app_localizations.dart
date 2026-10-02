@@ -6515,18 +6515,6 @@ abstract class AppLocalizations {
   /// **'{items} {unit} in ~{days} days'**
   String goalPaceItemsInDays(int items, String unit, int days);
 
-  /// No description provided for @goalTargetPercentOnly.
-  ///
-  /// In en, this message translates to:
-  /// **'Complete {percent}% of the material'**
-  String goalTargetPercentOnly(int percent);
-
-  /// No description provided for @goalTargetPercentWithCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Complete {percent}% of the material ({done} of {total} items)'**
-  String goalTargetPercentWithCount(int percent, int done, int total);
-
   /// No description provided for @goalLearningUnitLabel.
   ///
   /// In en, this message translates to:
