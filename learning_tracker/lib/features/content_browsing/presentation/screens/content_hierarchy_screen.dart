@@ -556,7 +556,7 @@ class _ContentHierarchyScreenState
       if (result case CaptureSuccess(
         :final eventIds,
         :final rejectedEventIds,
-        :final keptNotCounted,
+ :final keptNotCounted,
       )) {
         final saved = recordedBatch(
           refs: asNode ? null : refs,
@@ -572,7 +572,8 @@ class _ContentHierarchyScreenState
         savedLeaves = {for (final refs in batch.values) ...refs}.length;
         setState(() {
           _refsByEvent.addAll(batch);
-          _ticked.addAll({for (final r in batch.values) ...r});        });
+          _ticked.addAll({for (final r in batch.values) ...r});
+        });
       }
       showCaptureOutcome(
         context,
