@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../helpers/learner_state/provider_settle.dart';
 import '../../helpers/learner_state_fixtures.dart';
 
 class _MockApp extends Mock implements FirebaseApp {}
@@ -337,5 +338,31 @@ void main() {
       container.read(activeLearnerScopeProvider.future),
       throwsFormatException,
     );
+  });
+
+  group('C0 (DNI-524) contract providers are stubs resolving to '
+      'AsyncError', () {
+    for (final (provider, owner, what) in [
+      (changeLogRepositoryProvider, 'DNI-470', 'changeLogRepositoryProvider'),
+      (
+        governedIntentRepositoryProvider,
+        'DNI-470',
+        'governedIntentRepositoryProvider',
+      ),
+      (learningWritePortProvider, 'DNI-469', 'learningWritePortProvider'),
+      (
+        oversizedGovernedWritePortProvider,
+        'DNI-470',
+        'oversizedGovernedWritePortProvider',
+      ),
+    ]) {
+      test(what, () async {
+        final container = ProviderContainer.test();
+        expect(
+          await settledAsync<Object?>(container, provider),
+          isAsyncC0Stub(owner, what),
+        );
+      });
+    }
   });
 }
