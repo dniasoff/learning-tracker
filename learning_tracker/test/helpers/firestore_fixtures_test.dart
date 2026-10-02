@@ -171,7 +171,6 @@ void main() {
       uid: _uid,
       profileId: _profileId,
       curriculumId: CurriculumId.mishnayos,
-      updatedAt: _time,
     );
 
     final stages = await firestore
@@ -196,7 +195,7 @@ void main() {
     expect(byOrder[2], containsPair('stage_name', 'חזרה א׳'));
     expect(byOrder[3], containsPair('stage_name', 'חזרה ב׳'));
     expect(byOrder[1], containsPair('curriculum_id', 'mishnayos'));
-    expect(byOrder[1]!['updated_at'], _time.toIso8601String());
+    expect(byOrder[1], isNot(contains('updated_at')));
     expect(byOrder[1], isNot(contains('track_id')));
   });
 }

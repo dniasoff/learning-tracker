@@ -623,7 +623,6 @@ void main() {
             curriculumId: _c,
             programId: dafYomi.id,
             trackingStartDate: DateTime(2026, 9, 6),
-            updatedAt: DateTime.utc(2026),
           ),
         )).programDayLabels;
         expect(labels, {
@@ -642,7 +641,6 @@ void main() {
           curriculumId: _c,
           programId: dafYomi.id,
           trackingStartDate: DateTime(2026, 9, 10),
-          updatedAt: DateTime.utc(2026),
         ),
       )).programDayLabels;
       expect(labels, isEmpty);

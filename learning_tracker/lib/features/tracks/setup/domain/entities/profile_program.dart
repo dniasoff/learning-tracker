@@ -24,10 +24,8 @@ class ProfileProgramEntity {
   const ProfileProgramEntity({
     required this.curriculumId,
     required this.programId,
-    required this.updatedAt,
     this.trackingStartDate,
     this.trackingStartRef,
-    this.syncedAt,
   });
 
   final CurriculumId curriculumId;
@@ -47,23 +45,10 @@ class ProfileProgramEntity {
   /// Sefaria ref of the first item in the tracking window.
   final String? trackingStartRef;
 
-  /// Client LWW timestamp — always written (`firestore.rules`' comment:
-  /// "The client always writes it, so omitting it from the allowlist
-  /// denied every enrolment push with permission-denied even for the
-  /// owner").
-  final DateTime updatedAt;
-
-  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
-  /// push time (client-supplied `synced_at` is never written — see the
-  /// repository's [toFirestore] caller). Decode-only.
-  final DateTime? syncedAt;
-
   /// Encodes this assignment for a Firestore write. [profileId] is the
   /// String learner-profile ULID (AD-24) — kept as a param rather than a
-  /// field on this entity for the same reason [updatedAt] on
-  /// `StageDefinitionFirestoreCodec.toFirestore` is a param: this entity
-  /// does not otherwise need to know which profile it belongs to, the path
-  /// already does. Included in the write (unlike `BookmarkEntity`/
+  /// field on this entity: this entity does not otherwise need to know
+  /// which profile it belongs to, the path already does. Included in the write (unlike `BookmarkEntity`/
   /// `StageDefinition`, which omit path-derived identity entirely) because
   /// `profile_id` is part of the `.hasOnly()` whitelist AND
   /// `FirestoreGatewayImpl.pushProfileProgram`/`TrackCreationService`
@@ -75,6 +60,9 @@ class ProfileProgramEntity {
   /// `FieldValue.delete()` before merging (see its doc comment); this
   /// function stays free of `cloud_firestore` so it is usable/testable
   /// outside Firebase, matching every other entity codec in this codebase.
+  ///
+  /// R16 (DNI-484): the governed `updated_at` / `synced_at` are retired
+  /// (AD-38: `last_change_id` replaces them) and never written.
   Map<String, dynamic> toFirestore({required String profileId}) => {
     'profile_id': profileId,
     'curriculum_id': curriculumId.storageKey,
@@ -82,7 +70,6 @@ class ProfileProgramEntity {
     if (trackingStartDate != null)
       'tracking_start_date': FirestoreCodec.encodeDateTime(trackingStartDate),
     if (trackingStartRef != null) 'tracking_start_ref': trackingStartRef,
-    'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
   };
 }
 
@@ -101,8 +88,8 @@ ProfileProgramEntity profileProgramFromFirestore(Map<String, dynamic> data) {
     throw ArgumentError('Unknown curriculumId: ${data['curriculum_id']}');
   }
 
-  // `program_id` is an AD-52 string or a legacy int; `updated_at` is
-  // retired from governed docs (AD-38, DNI-476), so it may be absent.
+  // `program_id` is an AD-52 string or a legacy int. The governed
+  // `updated_at` / `synced_at` are retired (R16) and ignored if present.
   final programId = FirestoreCodec.parseInt(data['program_id']);
   if (programId == null) {
     throw FormatException(
@@ -117,8 +104,5 @@ ProfileProgramEntity profileProgramFromFirestore(Map<String, dynamic> data) {
       data['tracking_start_date'],
     ),
     trackingStartRef: data['tracking_start_ref'] as String?,
-    updatedAt:
-        FirestoreCodec.parseDateTime(data['updated_at']) ?? DateTime.utc(1970),
-    syncedAt: FirestoreCodec.parseDateTime(data['synced_at']),
   );
 }

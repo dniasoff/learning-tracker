@@ -308,7 +308,6 @@ Future<void> seedStageDefinitions(
   required String profileId,
   required CurriculumId curriculumId,
   List<StageDefinition>? stages,
-  DateTime? updatedAt,
 }) async {
   final definitions =
       stages ??
@@ -327,7 +326,6 @@ Future<void> seedStageDefinitions(
             scheduleType: ScheduleType.delay,
           ),
       ];
-  final timestamp = _fixtureTime(updatedAt);
   final batch = firestore.batch();
   for (final definition in definitions) {
     if (definition.curriculumId != curriculumId) {
@@ -348,7 +346,7 @@ Future<void> seedStageDefinitions(
               'stage_order': definition.stageOrder,
             }),
           ),
-      definition.toFirestore(updatedAt: timestamp),
+      definition.toFirestore(),
     );
   }
   await batch.commit();

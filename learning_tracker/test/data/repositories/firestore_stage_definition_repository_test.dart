@@ -176,7 +176,7 @@ void main() {
       await rawDoc(
         curriculumId: CurriculumId.bavli,
         stageOrder: 4,
-      ).set(custom.toFirestore(updatedAt: DateTime.utc(2026, 1, 1)));
+      ).set(custom.toFirestore());
       final repo = buildRepo();
 
       final stages = await repo.getStagesForCurriculum(CurriculumId.bavli);
@@ -199,7 +199,7 @@ void main() {
       await rawDoc(
         curriculumId: CurriculumId.bavli,
         stageOrder: 5,
-      ).set(custom.toFirestore(updatedAt: DateTime.utc(2026, 1, 1)));
+      ).set(custom.toFirestore());
       final repo = buildRepo();
 
       final stages = await repo.getStagesForCurriculum(CurriculumId.bavli);

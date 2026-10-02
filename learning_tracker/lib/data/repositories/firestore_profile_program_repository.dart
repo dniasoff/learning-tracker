@@ -171,7 +171,6 @@ class FirestoreProfileProgramRepository {
       programId: programId,
       trackingStartDate: trackingStartDate,
       trackingStartRef: trackingStartRef,
-      updatedAt: _clock(),
     );
     await _apply([planSetProgram(entity)]);
     return entity;

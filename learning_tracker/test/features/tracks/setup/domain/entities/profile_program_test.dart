@@ -11,8 +11,9 @@
 /// **`profile_programs` is the one of these four collections with a real
 /// `.hasOnly()` field whitelist** (`firestore.rules`, `match
 /// /profile_programs/{curriculumId}`): `profile_id`, `curriculum_id`,
-/// `program_id`, `tracking_start_date`, `tracking_start_ref`, `synced_at`,
-/// `updated_at`. The field-name test below asserts `toFirestore`'s key set
+/// `program_id`, `tracking_start_date`, `tracking_start_ref` plus the AD-38
+/// keys (R16, DNI-484: the governed `updated_at` / `synced_at` are retired).
+/// The field-name test below asserts `toFirestore`'s key set
 /// is a subset of exactly that list — a key outside it would be silently
 /// accepted by every local test (`fake_cloud_firestore`'s rules companion
 /// cannot evaluate `request.resource`) while failing with permission-denied
@@ -30,8 +31,8 @@ const _rulesWhitelist = <String>{
   'program_id',
   'tracking_start_date',
   'tracking_start_ref',
-  'synced_at',
-  'updated_at',
+  'last_change_id',
+  'ended_at',
 };
 
 void main() {
@@ -40,7 +41,6 @@ void main() {
     programId: 7,
     trackingStartDate: DateTime.utc(2026, 1, 1),
     trackingStartRef: 'Genesis.1.1',
-    updatedAt: DateTime.utc(2026, 1, 2),
   );
 
   group('round-trip', () {
@@ -54,15 +54,13 @@ void main() {
       expect(decoded.programId, base.programId);
       expect(decoded.trackingStartDate, base.trackingStartDate);
       expect(decoded.trackingStartRef, base.trackingStartRef);
-      expect(decoded.updatedAt, base.updatedAt);
     });
 
     test('no tracking window: both fields are omitted from the payload and '
         'decode back to null', () {
-      final noWindow = ProfileProgramEntity(
+      const noWindow = ProfileProgramEntity(
         curriculumId: CurriculumId.bavli,
         programId: 3,
-        updatedAt: DateTime.utc(2026, 1, 3),
       );
 
       final payload = noWindow.toFirestore(
@@ -76,32 +74,19 @@ void main() {
       expect(decoded.trackingStartRef, isNull);
     });
 
-    test('syncedAt is decode-only — never written by toFirestore even when '
-        'set on the entity, but decodes back when the doc already has it '
-        '(e.g. a tutor-CF-stamped value)', () {
-      final withSynced = ProfileProgramEntity(
-        curriculumId: CurriculumId.nach,
-        programId: 1,
-        updatedAt: DateTime.utc(2026, 1, 4),
-        syncedAt: DateTime.utc(2026, 1, 5),
-      );
-
-      final payload = withSynced.toFirestore(
-        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
-      );
-      expect(
-        payload,
-        isNot(contains('synced_at')),
-        reason:
-            'the repository doc comment: "client-supplied synced_at is '
-            'never written — see the repository\'s toFirestore caller"',
-      );
-
+    test('R16: the governed updated_at / synced_at are never written and '
+        'are ignored on decode', () {
       final decoded = profileProgramFromFirestore({
-        ...payload,
+        'curriculum_id': 'nach',
+        'program_id': 1,
+        'updated_at': '2026-01-04T00:00:00.000Z',
         'synced_at': '2026-01-06T00:00:00.000Z',
       });
-      expect(decoded.syncedAt, DateTime.utc(2026, 1, 6));
+      final payload = decoded.toFirestore(
+        profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
+      );
+      expect(payload, isNot(contains('updated_at')));
+      expect(payload, isNot(contains('synced_at')));
     });
   });
 
@@ -116,17 +101,15 @@ void main() {
         'program_id',
         'tracking_start_date',
         'tracking_start_ref',
-        'updated_at',
       });
     });
 
     test('every key toFirestore can ever emit is inside the rules '
         '.hasOnly() whitelist', () {
       final full = base.toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB');
-      final minimal = ProfileProgramEntity(
+      final minimal = const ProfileProgramEntity(
         curriculumId: CurriculumId.bavli,
         programId: 1,
-        updatedAt: DateTime.utc(2026, 1, 1),
       ).toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB');
 
       expect(_rulesWhitelist.containsAll(full.keys), isTrue);
@@ -149,12 +132,11 @@ void main() {
     });
   });
 
-  group('tracking_start_date/updated_at are ISO-8601 Strings — documented-safe '
+  group('tracking_start_date is an ISO-8601 String — documented-safe '
       'here: profile_programs has no is-timestamp rules guard at all', () {
-    test('toFirestore encodes both date fields as String, not DateTime', () {
+    test('toFirestore encodes tracking_start_date as String, not DateTime', () {
       final payload = base.toFirestore(profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB');
       expect(payload['tracking_start_date'], isA<String>());
-      expect(payload['updated_at'], isA<String>());
     });
   });
 
@@ -195,7 +177,7 @@ void main() {
     test('a governed doc without the retired updated_at decodes (AD-38, '
         'DNI-476)', () {
       final data = validMap()..remove('updated_at');
-      expect(profileProgramFromFirestore(data).updatedAt, DateTime.utc(1970));
+      expect(profileProgramFromFirestore(data).programId, 7);
     });
 
     test('decodes the AD-52 shapes: a string program_id and a civil-date '

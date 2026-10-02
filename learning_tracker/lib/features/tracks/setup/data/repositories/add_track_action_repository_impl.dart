@@ -157,7 +157,6 @@ final class FirestoreAddTrackActionRepository
             programId: program.programId,
             trackingStartDate: program.trackingStartDate,
             trackingStartRef: program.trackingStartRef,
-            updatedAt: now,
           ),
         ),
       ...await goals.planSetGoal(

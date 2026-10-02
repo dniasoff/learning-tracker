@@ -20,10 +20,10 @@ abstract class StudyDayConfigEntry with _$StudyDayConfigEntry {
 /// [StudyDayConfigEntry] carries no `curriculumId` field — every existing
 /// caller (`StudyDayConfigDao.getConfigsByCurriculumAndProfile`, and now
 /// `FirestoreStudyDayConfigRepository`) already scopes it externally, one
-/// curriculum's configs at a time. So, exactly like
-/// `StageDefinitionFirestoreCodec.toFirestore`'s `updatedAt` parameter,
-/// [curriculumId] is supplied by the caller at encode time rather than
-/// stored on the entry itself.
+/// curriculum's configs at a time. So [curriculumId] is supplied by the
+/// caller at encode time rather than stored on the entry itself. R16
+/// (DNI-484): the governed `updated_at` / `synced_at` are retired and never
+/// written.
 ///
 /// Deliberately omits `track_id` — AD-25 retires the per-device track id
 /// for this collection; `curriculum_id` (supplied here) is the sole
@@ -36,15 +36,11 @@ extension StudyDayConfigEntryFirestoreCodec on StudyDayConfigEntry {
   /// omitted — the path (`users/{uid}/learner_profiles/{profileId}/
   /// study_day_configs/…`) already carries it, matching
   /// `StageDefinition`/`BookmarkEntity`'s write shapes.
-  Map<String, dynamic> toFirestore({
-    required CurriculumId curriculumId,
-    required DateTime updatedAt,
-  }) {
+  Map<String, dynamic> toFirestore({required CurriculumId curriculumId}) {
     return {
       'curriculum_id': curriculumId.storageKey,
       'day_of_week': dayOfWeek,
       'day_type': dayType.storageKey,
-      'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
     };
   }
 }

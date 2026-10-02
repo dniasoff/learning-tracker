@@ -657,10 +657,9 @@ void main() {
     });
 
     test('returns true when an enrollment is present', () async {
-      final enrollment = ProfileProgramEntity(
+      const enrollment = ProfileProgramEntity(
         curriculumId: CurriculumId.mishnayos,
         programId: 1,
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       await firestore
           .collection('users')
