@@ -29,3 +29,9 @@ export 'presentation/widgets/sub_track_home_row.dart';
 export 'presentation/widgets/sub_track_read_only.dart';
 export 'presentation/widgets/up_to_picker.dart'
     show UpToActionButton, openUpToAndRecord, showUpToPicker;
+
+// Detail navigation, hub rows and the tablet list-detail layout.
+export 'presentation/providers/sub_track_detail_actions.dart';
+export 'presentation/screens/sub_track_detail_screen.dart';
+export 'presentation/widgets/sub_track_hub_rows.dart';
+export 'presentation/widgets/sub_track_list_detail_layout.dart';
