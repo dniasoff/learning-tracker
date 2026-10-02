@@ -11,6 +11,7 @@ import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 
 /// The fixed instant [fakeLearnerState] uses when none is given (TQ-6: no
 /// wall clock in tests).
@@ -47,7 +48,9 @@ final class FakeCurriculumState implements CurriculumState {
     this.completedUnits = const [],
     this.streak,
     this.validationErrors = const {},
-  }) : distinctLearnt = distinctLearnt ?? learntLeaves.length;
+    ReportProjection? report,
+  }) : distinctLearnt = distinctLearnt ?? learntLeaves.length,
+       report = report ?? ReportProjection.empty(curriculumId);
 
   @override
   final String curriculumId;
@@ -108,6 +111,9 @@ final class FakeCurriculumState implements CurriculumState {
 
   @override
   final Set<CurriculumValidationError> validationErrors;
+
+  @override
+  final ReportProjection report;
 
   @override
   TriState triState(NodeEntry node) => triStates[node] ?? TriState.empty;
