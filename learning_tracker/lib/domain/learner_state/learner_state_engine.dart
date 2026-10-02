@@ -17,6 +17,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/completed_units.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/counted_events.dart';
 import 'package:learning_tracker/domain/learner_state/derived_curriculum_state.dart';
@@ -172,6 +173,12 @@ final class LearnerStateEngine {
       mainTrack: evaluated
           ? _mainTrack(curriculumId, inputs, intent, corpus, learnt, learns)
           : const MainTrackRecord.none(),
+      completedUnits: completedUnits(
+        corpus: corpus,
+        inScope: learnt.inScope,
+        countedLearns: learns,
+        firstStage: firstStageOrder(live?.stages ?? const [], learns),
+      ),
     );
   }
 
