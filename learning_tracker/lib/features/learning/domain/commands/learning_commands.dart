@@ -859,9 +859,16 @@ final class DefaultLearningCommands implements LearningCommands {
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {
     final events = _dispatcher.watchPendingFailures();
+    Stream<List<PendingFailure>> latest = events;
     final governed = _governed;
-    if (governed == null) return events;
-    return _concatLatest(events, governed.watchPendingFailures());
+    if (governed != null) {
+      latest = _concatLatest(latest, governed.watchPendingFailures());
+    }
+    final subTracks = _subTrackCommands;
+    if (subTracks != null) {
+      latest = _concatLatest(latest, subTracks.watchPendingFailures());
+    }
+    return latest;
   }
 
   @override
@@ -870,8 +877,10 @@ final class DefaultLearningCommands implements LearningCommands {
         final outcome = await _dispatcher.retry(pendingFailureId);
         if (outcome == null) {
           final governed = await _governed?.retry(pendingFailureId);
-          return governed ??
-              const CaptureResult.rejected(CaptureRejection.targetNotFound);
+          if (governed != null) return governed;
+          final subTracks = _subTrackCommands;
+          if (subTracks != null) return subTracks.retry(pendingFailureId);
+          return const CaptureResult.rejected(CaptureRejection.targetNotFound);
         }
         if (outcome.allRejected) {
           return const CaptureResult.rejected(CaptureRejection.notSaved);

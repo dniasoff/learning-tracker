@@ -192,6 +192,7 @@ final class _Harness {
       ackWait: const Duration(milliseconds: 40),
       pointsWait: const Duration(milliseconds: 40),
       governed: governed ? governedFake = _LoggedGoverned(log) : null,
+      subTrackCommands: subTrackCommands,
     );
     addTearDown(commands.dispose);
   }
