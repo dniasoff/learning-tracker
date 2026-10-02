@@ -13,7 +13,10 @@ import 'dart:convert';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
+
+import '../../helpers/learner_state/fake_learning_commands.dart';
 
 const _grantId = 'grant_1';
 const _ownerUid = 'parent_uid';
@@ -36,8 +39,8 @@ final class _Invoker {
   }
 }
 
-TutorWriteService _service(_Invoker invoker) =>
-    TutorWriteService(invoker: invoker.call);
+TutorWriteService _service(_Invoker invoker, {LearningAnalytics? analytics}) =>
+    TutorWriteService(invoker: invoker.call, analytics: analytics);
 
 const _dated1 = TutorLearnEvent(
   id: _e1,
@@ -348,6 +351,90 @@ void main() {
         goalId: 'mishnayos_pace',
       );
       expect(invoker.calls.single.args.containsKey('actionId'), isFalse);
+    });
+  });
+  group('AC-1: capture analytics after a successful callable only', () {
+    Map<String, Object?> written({bool replayed = false}) => {
+      'action_id': _e1,
+      'event_ids': [_e1, _e2],
+      'recorded_at': '2026-10-02T15:20:00.000Z',
+      'replayed': replayed,
+    };
+
+    test('success emits ONE registered capture event: enums and a count, '
+        'no ref or learner identity', () async {
+      final analytics = RecordingLearningAnalytics();
+      await _record(
+        _service(_Invoker((_, __) => written()), analytics: analytics),
+      );
+      expect(analytics.captures, [
+        (
+          curriculumId: 'mishnayos',
+          sourceKind: CaptureSourceKind.main,
+          dateState: DateState.dated,
+          count: 2,
+        ),
+      ]);
+    });
+
+    test('a failed callable emits nothing', () async {
+      final analytics = RecordingLearningAnalytics();
+      await _record(
+        _service(
+          _Invoker((_, __) {
+            throw FirebaseFunctionsException(
+              code: 'permission-denied',
+              message: 'denied',
+            );
+          }),
+          analytics: analytics,
+        ),
+      );
+      expect(analytics.captures, isEmpty);
+    });
+
+    test('a replayed action (retry after a lost answer) emits no second '
+        'capture', () async {
+      final analytics = RecordingLearningAnalytics();
+      await _record(
+        _service(
+          _Invoker((_, __) => written(replayed: true)),
+          analytics: analytics,
+        ),
+      );
+      expect(analytics.captures, isEmpty);
+    });
+
+    test('voids, replacements and un-learns are not captures', () async {
+      final analytics = RecordingLearningAnalytics();
+      final service = _service(
+        _Invoker((_, __) => written()),
+        analytics: analytics,
+      );
+      await service.voidLearning(
+        grantId: _grantId,
+        ownerUid: _ownerUid,
+        profileId: _profileId,
+        eventId: _void,
+        targetId: _e1,
+      );
+      await service.replaceLearning(
+        grantId: _grantId,
+        ownerUid: _ownerUid,
+        profileId: _profileId,
+        eventId: _void,
+        targetId: _e1,
+        replacement: _dated2,
+      );
+      await service.unlearn(
+        grantId: _grantId,
+        ownerUid: _ownerUid,
+        profileId: _profileId,
+        actionId: _action,
+        curriculumId: 'mishnayos',
+        leafSet: const ['Mishnah Berakhot 2:1'],
+      );
+      expect(analytics.captures, isEmpty);
     });
   });
 }

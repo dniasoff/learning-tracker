@@ -27,6 +27,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 
 /// Result type for tutor write operations.
 sealed class TutorWriteResult {
@@ -228,16 +229,22 @@ TutorCallableInvoker _accountInvoker(AccountFunctionsResolver resolve) =>
 class TutorWriteService {
   /// Pass [invoker] (tests) or [resolveFunctions] (production: the active
   /// account's named-app Cloud Functions client).
+  ///
+  /// [analytics] receives the registered `capture` event after a
+  /// successful learning capture (AD-47: the callables emit nothing).
   TutorWriteService({
     TutorCallableInvoker? invoker,
     AccountFunctionsResolver? resolveFunctions,
+    LearningAnalytics? analytics,
   }) : assert(
          invoker != null || resolveFunctions != null,
          'TutorWriteService needs an invoker or a functions resolver',
        ),
-       _invoker = invoker ?? _accountInvoker(resolveFunctions!);
+       _invoker = invoker ?? _accountInvoker(resolveFunctions!),
+       _analytics = analytics;
 
   final TutorCallableInvoker _invoker;
+  final LearningAnalytics? _analytics;
 
   // ── Internal helper ──────────────────────────────────────────────────────────
 
@@ -351,22 +358,50 @@ class TutorWriteService {
   /// Records [events] (`learn`, `source = main`) for the talmid through
   /// `tutorRecordLearning`. [actionId] defaults, on the server, to the first
   /// event's id — the same value is passed here so a retry is stable.
+  ///
+  /// After a successful, newly written capture it emits the registered
+  /// `capture` event through [LearningAnalytics] — once per curriculum and
+  /// date state, enums and a count only (AD-47). A failure, or a replay of
+  /// an already-stored action (a retry after a lost answer), emits nothing.
   Future<TutorWriteResult> recordLearning({
     required String grantId,
     required String ownerUid,
     required String profileId,
     required List<TutorLearnEvent> events,
     String? actionId,
-  }) {
+  }) async {
     assert(events.isNotEmpty, 'recordLearning needs at least one event');
     final action = actionId ?? events.first.id;
-    return _callLearning('tutorRecordLearning', {
+    final result = await _callLearning('tutorRecordLearning', {
       'grantId': grantId,
       'ownerUid': ownerUid,
       'profileId': profileId,
       'actionId': action,
       'events': [for (final e in events) e.toWire()],
     }, actionId: action);
+    if (result is TutorLearningWritten && !result.replayed) {
+      _emitCapture(events);
+    }
+    return result;
+  }
+
+  void _emitCapture(List<TutorLearnEvent> events) {
+    final analytics = _analytics;
+    if (analytics == null) return;
+    final counts = <(String, DateState), int>{};
+    for (final e in events) {
+      final key = (e.curriculumId, e.dateState);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    for (final MapEntry(key: (curriculumId, dateState), value: count)
+        in counts.entries) {
+      analytics.capture(
+        curriculumId: curriculumId,
+        sourceKind: CaptureSourceKind.main,
+        dateState: dateState,
+        count: count,
+      );
+    }
   }
 
   /// Voids the `learn` event [targetId] with the void event [eventId]
