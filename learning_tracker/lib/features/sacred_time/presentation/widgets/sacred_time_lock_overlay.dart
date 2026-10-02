@@ -70,7 +70,16 @@ class TutoredLearnerLockOverlay extends ConsumerWidget {
 /// Shows [child] while [window] is null; otherwise keeps it in the tree
 /// but offstage (no paint, touch or semantics, tickers paused) under the
 /// opaque lock screen of [window].
-class _LockCover extends ConsumerWidget {
+///
+/// The root `ScaffoldMessenger` (from `MaterialApp.router`) sits ABOVE the
+/// builder slot this cover is mounted in. Its snack bars and material
+/// banners are painted by the Scaffolds of the covered routes, so they are
+/// offstage with them; still, when the lock engages the cover dismisses
+/// them and drops the queue, so no snack bar (and no action of one — e.g.
+/// the after-lock location prompt) is pending behind the lock, resurfaces
+/// when it lifts, or paints on any Scaffold outside the cover (AC-1 touch
+/// and semantics boundary).
+class _LockCover extends ConsumerStatefulWidget {
   const _LockCover({
     required this.window,
     required this.child,
@@ -82,8 +91,43 @@ class _LockCover extends ConsumerWidget {
   final VoidCallback? onExitTutoredSession;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeWindow = window;
+  ConsumerState<_LockCover> createState() => _LockCoverState();
+}
+
+class _LockCoverState extends ConsumerState<_LockCover> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.window != null) _dismissMessengerSurfaces();
+  }
+
+  @override
+  void didUpdateWidget(_LockCover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.window == null && widget.window != null) {
+      _dismissMessengerSurfaces();
+    }
+  }
+
+  /// Removes every snack bar and material banner of the enclosing (root)
+  /// messenger, current and queued, at once — after this frame, since the
+  /// messenger rebuilds its scaffolds.
+  void _dismissMessengerSurfaces() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
+      messenger
+        ..clearSnackBars()
+        ..removeCurrentSnackBar()
+        ..clearMaterialBanners()
+        ..removeCurrentMaterialBanner();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activeWindow = widget.window;
     final locked = activeWindow != null;
     // Resolve the variant-aware Shabbos term once here (this is the Consumer
     // layer) and hand the composed greeting/subtitle down to the plain
@@ -101,13 +145,13 @@ class _LockCover extends ConsumerWidget {
         // (router, navigation stack) is kept, only hidden.
         Offstage(
           offstage: locked,
-          child: TickerMode(enabled: !locked, child: child),
+          child: TickerMode(enabled: !locked, child: widget.child),
         ),
         if (locked)
           _LockScreen(
             window: activeWindow,
             shabbos: shabbos!,
-            onExitTutoredSession: onExitTutoredSession,
+            onExitTutoredSession: widget.onExitTutoredSession,
           ),
       ],
     );

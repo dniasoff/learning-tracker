@@ -280,6 +280,82 @@ void main() {
       expect(find.text('DIALOG'), findsNothing);
       expect(find.text('Good Shabbos'), findsOneWidget);
     });
+    testWidgets('(f) root SnackBars: hidden and inert under the lock, and '
+        'dismissed so they do not resurface when it lifts', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final messengerKey = GlobalKey<ScaffoldMessengerState>();
+      final container = ProviderContainer(
+        overrides: [
+          ..._ashkenaziEnglishTerms,
+          currentSacredWindowProvider.overrideWithValue(null),
+        ],
+      );
+      addTearDown(container.dispose);
+      var actions = 0;
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            // As in learning_tracker_app.dart: the ROOT messenger sits above
+            // the builder slot the lock is mounted in.
+            scaffoldMessengerKey: messengerKey,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => SacredTimeLockOverlay(
+              child: TutoredLearnerLockOverlay(onExit: () {}, child: child!),
+            ),
+            home: const Scaffold(body: Text('DASHBOARD')),
+          ),
+        ),
+      );
+      messengerKey.currentState!
+        ..showSnackBar(
+          SnackBar(
+            duration: const Duration(minutes: 1),
+            content: const Text('PROMPT'),
+            action: SnackBarAction(label: 'ACT', onPressed: () => actions++),
+          ),
+        )
+        ..showSnackBar(const SnackBar(content: Text('QUEUED')))
+        ..showMaterialBanner(
+          const MaterialBanner(
+            content: Text('BANNER'),
+            actions: [SizedBox.shrink()],
+          ),
+        );
+      await tester.pumpAndSettle();
+      expect(find.text('PROMPT'), findsOneWidget);
+      final actionAt = tester.getCenter(find.text('ACT'));
+
+      container.updateOverrides([
+        ..._ashkenaziEnglishTerms,
+        currentSacredWindowProvider.overrideWithValue(_activeShabbosWindow()),
+      ]);
+      await tester.pump();
+      expect(find.text('Good Shabbos'), findsOneWidget);
+      expect(find.text('PROMPT'), findsNothing, reason: 'not painted');
+      expect(find.bySemanticsLabel('PROMPT'), findsNothing);
+      expect(find.bySemanticsLabel('ACT'), findsNothing);
+      await tester.tapAt(actionAt);
+      expect(actions, 0, reason: 'not actionable under the lock');
+
+      await tester.pumpAndSettle();
+      for (final text in ['PROMPT', 'QUEUED', 'BANNER']) {
+        expect(find.text(text, skipOffstage: false), findsNothing);
+      }
+
+      container.updateOverrides([
+        ..._ashkenaziEnglishTerms,
+        currentSacredWindowProvider.overrideWithValue(null),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.text('DASHBOARD'), findsOneWidget);
+      for (final text in ['PROMPT', 'QUEUED', 'BANNER']) {
+        expect(find.text(text), findsNothing, reason: '$text resurfaced');
+      }
+      expect(actions, 0);
+      semantics.dispose();
+    });
   });
 
   group('the union of the account learners (AD-36)', () {
