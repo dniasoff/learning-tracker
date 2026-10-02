@@ -143,26 +143,48 @@ async function expirePendingInviteIfUnchanged(
       !freshSnap.exists ||
       fresh!.state !== "pending" ||
       fresh!.invite_token !== observedToken ||
-      !(expiresAt instanceof admin.firestore.Timestamp) ||
-      expiresAt.toMillis() > now.toMillis()
+      !isPastExpiry(expiresAt, now)
     ) {
       return false;
     }
 
-    txn.update(grantRef, {
-      state: "expired",
-      updated_at: now,
-      invite_token: admin.firestore.FieldValue.delete(),
-    });
-    txn.set(grantRef.collection("audit_log").doc(), {
-      tutor_uid: null,
-      tutor_name_snapshot: fresh!.tutor_email ?? "",
-      action: "invite_expired",
-      target: `grant/${grantRef.id}`,
-      after_value: JSON.stringify({ state: "expired" }),
-      timestamp: now.toDate().toISOString(),
-    });
+    applyInviteExpiry(txn, grantRef, fresh!, now);
     return true;
+  });
+}
+
+function isPastExpiry(
+  expiresAt: unknown,
+  now: admin.firestore.Timestamp
+): boolean {
+  return (
+    expiresAt instanceof admin.firestore.Timestamp &&
+    expiresAt.toMillis() <= now.toMillis()
+  );
+}
+
+/**
+ * Transition a pending grant the caller has just re-read inside [txn] to
+ * `expired`, with its invite_expired audit entry in the same transaction.
+ */
+function applyInviteExpiry(
+  txn: admin.firestore.Transaction,
+  grantRef: admin.firestore.DocumentReference,
+  fresh: admin.firestore.DocumentData,
+  now: admin.firestore.Timestamp
+): void {
+  txn.update(grantRef, {
+    state: "expired",
+    updated_at: now,
+    invite_token: admin.firestore.FieldValue.delete(),
+  });
+  txn.set(grantRef.collection("audit_log").doc(), {
+    tutor_uid: null,
+    tutor_name_snapshot: fresh.tutor_email ?? "",
+    action: "invite_expired",
+    target: `grant/${grantRef.id}`,
+    after_value: JSON.stringify({ state: "expired" }),
+    timestamp: now.toDate().toISOString(),
   });
 }
 
@@ -355,14 +377,14 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
     );
   }
 
-  const now = admin.firestore.Timestamp.now();
+  let now = admin.firestore.Timestamp.now();
   // Capture tutor display name for audit log snapshot (fixes H3).
   const tutorNameSnapshot = callerRecord.displayName ?? callerEmail;
   const profileId = String(grant.child_profile_id);
   const parentUid = String(grant.parent_uid);
   const accessId = buildAccessId(callerUid, parentUid, profileId);
 
-  await db.runTransaction(async (txn) => {
+  const outcome = await db.runTransaction(async (txn) => {
     // 0. Re-read the grant inside the transaction (DNI-487): a concurrent
     //    re-invite or revoke that committed after the pre-checks above must
     //    not be activated blindly. Require the same pending invite that was
@@ -378,6 +400,16 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
         "failed-precondition",
         `Grant ${grantId} changed while accepting; reopen the invite`
       );
+    }
+
+    // Re-check expiry against the time of this attempt (DNI-487 review): the
+    // invite may have expired after the pre-check above (getUser() and any
+    // transaction retry sit in between). Expire this exact invite atomically
+    // instead of activating it.
+    now = admin.firestore.Timestamp.now();
+    if (isPastExpiry(fresh!.expires_at, now)) {
+      applyInviteExpiry(txn, grantRef, fresh!, now);
+      return "expired" as const;
     }
 
     // 1. Update the grant document.
@@ -399,7 +431,15 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
       grant_id: grantId,
       created_at: now,
     });
+    return "accepted" as const;
   });
+
+  if (outcome === "expired") {
+    throw new HttpsError(
+      "failed-precondition",
+      `Grant ${grantId} has expired`
+    );
+  }
 
   // Write audit log entry (outside transaction — audit is best-effort).
   try {

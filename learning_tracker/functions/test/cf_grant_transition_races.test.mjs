@@ -144,6 +144,44 @@ describe('stale grant transitions vs re-invite', () => {
     assert.equal(after.invite_token, undefined);
   });
 
+  test('acceptTutorInvite: an invite that expires after the pre-check is expired, not activated', async () => {
+    const grantId = await invite();
+    await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: true });
+    const token = (await readGrant(grantId)).invite_token;
+
+    // The expiry passes between the pre-transaction check and the write.
+    interleaveBeforeNextTransaction(() => makeExpired(grantId));
+    await expectHttpsError(
+      call(fns.acceptTutorInvite, { grantId }),
+      'failed-precondition',
+    );
+
+    const after = await readGrant(grantId);
+    assert.equal(after.state, 'expired', 'expired invite must not become active');
+    assert.equal(after.tutor_uid ?? null, null, 'tutor must not be bound');
+    assert.equal(after.accepted_at ?? null, null);
+    assert.equal(after.invite_token, undefined);
+    assert.ok(token, 'precondition: invite had a token');
+    const access = await db
+      .collection('tutor_active_access')
+      .where('grant_id', '==', grantId)
+      .get();
+    assert.equal(access.size, 0, 'no tutor_active_access for an expired invite');
+    const audit = await grantRef(grantId).collection('audit_log').get();
+    assert.deepEqual(audit.docs.map((d) => d.data().action), ['invite_expired']);
+  });
+
+  test('acceptTutorInvite: an unexpired invite with no race is accepted', async () => {
+    const grantId = await invite();
+    await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: true });
+
+    await call(fns.acceptTutorInvite, { grantId });
+
+    const after = await readGrant(grantId);
+    assert.equal(after.state, 'active');
+    assert.equal(after.tutor_uid, TUTOR);
+  });
+
   test('declineTutorInvite: a re-invite after the identity check is rejected, not declined', async () => {
     const grantId = await invite();
     await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: true });
