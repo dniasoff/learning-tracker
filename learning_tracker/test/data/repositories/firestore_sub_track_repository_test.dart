@@ -47,7 +47,7 @@ final class _SpyBatch implements WriteBatch {
   }
 
   @override
-  void update(DocumentReference<Object?> document, Map<Object, Object?> data) {
+  void update<T>(DocumentReference<T> document, T data) {
     ops.add('update ${document.path}');
     _inner.update(document, data);
   }
