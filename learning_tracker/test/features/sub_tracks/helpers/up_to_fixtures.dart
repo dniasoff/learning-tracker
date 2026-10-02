@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -101,3 +102,11 @@ void useSurface(WidgetTester tester, Size size) {
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 }
+
+/// A one-masechta corpus ("Mishnah Long") of [leaves], in order.
+InMemoryCorpus longCorpus(List<String> leaves) =>
+    InMemoryCorpus(engineCurriculum, [
+      CorpusNode(const NodeEntry(level: 'masechta', ref: 'Mishnah Long'), [
+        for (final l in leaves) CorpusNode(NodeEntry(level: 'mishnah', ref: l)),
+      ]),
+    ]);
