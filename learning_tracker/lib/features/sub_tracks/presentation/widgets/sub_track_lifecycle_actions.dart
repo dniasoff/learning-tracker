@@ -9,30 +9,17 @@
 /// same no-op. On success the detail returns to the hub and a snackbar
 /// confirms; the schedule and target recompute from the stored tombstone.
 ///
-/// A write the server has not acknowledged yet (`success(queued: true)`,
-/// AD-54) is not reported as done: the detail still returns to the hub,
-/// which now shows the local tombstone, but the snackbar says it is saved
-/// on this device only, and the write is handed to
-/// `subTrackLifecycleSyncProvider`, which keeps it visibly pending and
-/// shows the confirmation only once the server accepts it, or "not saved"
-/// with Retry when the server refuses it.
-///
-/// [subTrackLifecycleDetailMenuActions] are the two entries DNI-499 adds to
-/// DNI-497's detail ⋮ registry (`subTrackDetailMenuActionsProvider`; keys
-/// `subTrackMenu:{id}`), shown only to the parent on a sub-track that is
-/// not ended (AC-5 read-only).
+/// [subTrackLifecycleMenuActions] is registry-ready for DNI-497's detail
+/// overflow registry (`subTrackMenu:{id}` keys); [SubTrackLifecycleMenu]
+/// renders the same actions as a stand-alone ⋮ until that lands.
 library;
-
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// One explicit lifecycle action of the parent's ⋮ menu.
@@ -62,55 +49,13 @@ enum SubTrackLifecycleMenuAction {
 /// The ⋮ actions, in menu order.
 const subTrackLifecycleMenuActions = SubTrackLifecycleMenuAction.values;
 
-/// DNI-499's entries in DNI-497's detail ⋮ registry: *End sub-track now*
-/// and *Delete track* for the parent on a sub-track that is not ended
-/// (tombstoned or past its window, [SubTrackDetail.isEnded]). The child and
-/// the tutor never see them (tutor sub-track writes are Epic 4).
-List<SubTrackDetailMenuAction> get subTrackLifecycleDetailMenuActions => [
-  for (final action in subTrackLifecycleMenuActions)
-    SubTrackDetailMenuAction(
-      id: action.id,
-      icon: action.icon,
-      label: action.label,
-      visibleFor: (detail) =>
-          detail.role == SubTrackDetailRole.parent && !detail.isEnded,
-      onSelected: (context, detail) async {
-        final read = ProviderScope.containerOf(context, listen: false).read;
-        await runSubTrackLifecycleAction(
-          context,
-          read,
-          detail.track,
-          action,
-          onReturnToHub: subTrackHubReturn(context, read),
-        );
-      },
-    ),
-];
-
-/// What "return to the hub" means from the detail at [context], resolved
-/// now (the menu that ran the action may be gone by the time it is called):
-/// inside the tablet list-detail split the hub is already on screen, so the
-/// selection clears; on a phone the pushed detail pops.
-VoidCallback subTrackHubReturn(
-  BuildContext context,
-  SubTrackLifecycleReader read,
-) {
-  if (SubTrackSplitScope.of(context)) {
-    return () => read(subTrackHubSelectionProvider.notifier).clear();
-  }
-  final navigator = Navigator.of(context);
-  return () => unawaited(navigator.maybePop());
-}
-
 /// Confirms and runs [action] on [track]. Returns true when the command
 /// succeeded (written, or queued offline per AD-54); [onReturnToHub] then
-/// runs before the snackbar, which confirms an acknowledged write and says
-/// a queued one is saved on this device only (it stays pending in
-/// `subTrackLifecycleSyncProvider`). A cancelled or dismissed dialog
+/// runs before the confirmation snackbar. A cancelled or dismissed dialog
 /// issues no command.
 Future<bool> runSubTrackLifecycleAction(
   BuildContext context,
-  SubTrackLifecycleReader read,
+  WidgetRef ref,
   SubTrack track,
   SubTrackLifecycleMenuAction action, {
   required VoidCallback onReturnToHub,
@@ -135,13 +80,8 @@ Future<bool> runSubTrackLifecycleAction(
   if (!confirmed || !context.mounted) return false;
   final messenger = ScaffoldMessenger.of(context);
   CaptureResult? result;
-  SubTrackLifecycleOrigin? origin;
   try {
-    // The learner and its commands are captured before the command runs,
-    // so a queued result tracks under that learner even if the parent
-    // switches learners while it awaits the server.
-    origin = await resolveSubTrackLifecycleOrigin(read);
-    final commands = origin?.commands;
+    final commands = await ref.read(learningCommandsProvider.future);
     result = await switch (action) {
       SubTrackLifecycleMenuAction.end => commands?.endSubTrack(track.id),
       SubTrackLifecycleMenuAction.delete => commands?.deleteSubTrack(track.id),
@@ -155,23 +95,6 @@ Future<bool> runSubTrackLifecycleAction(
     );
     return false;
   }
-  if (result.queued && result.changeIds.isNotEmpty && origin != null) {
-    read(subTrackLifecycleSyncProvider.notifier).track(
-      SubTrackLifecycleSync(
-        changeId: result.changeIds.first,
-        write: delete
-            ? SubTrackLifecycleWrite.delete
-            : SubTrackLifecycleWrite.end,
-        name: track.name,
-      ),
-      origin,
-    );
-    onReturnToHub();
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.subTrackLifecycleQueued)),
-    );
-    return true;
-  }
   onReturnToHub();
   messenger.showSnackBar(
     SnackBar(
@@ -183,4 +106,71 @@ Future<bool> runSubTrackLifecycleAction(
     ),
   );
   return true;
+}
+
+/// The parent's ⋮ on a live sub-track's detail. The host shows it only for
+/// the parent on a sub-track that is not ended (AC-5 read-only).
+class SubTrackLifecycleMenu extends ConsumerStatefulWidget {
+  /// Creates the menu for [track].
+  const SubTrackLifecycleMenu({
+    super.key,
+    required this.track,
+    required this.onReturnToHub,
+  });
+
+  /// The detail's sub-track.
+  final SubTrack track;
+
+  /// Leaves the detail for the hub after a successful action.
+  final VoidCallback onReturnToHub;
+
+  @override
+  ConsumerState<SubTrackLifecycleMenu> createState() =>
+      _SubTrackLifecycleMenuState();
+}
+
+class _SubTrackLifecycleMenuState extends ConsumerState<SubTrackLifecycleMenu> {
+  bool _running = false;
+
+  Future<void> _run(SubTrackLifecycleMenuAction action) async {
+    if (_running) return;
+    setState(() => _running = true);
+    try {
+      await runSubTrackLifecycleAction(
+        context,
+        ref,
+        widget.track,
+        action,
+        onReturnToHub: widget.onReturnToHub,
+      );
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return PopupMenuButton<SubTrackLifecycleMenuAction>(
+      key: const ValueKey('subTrackLifecycleMenu'),
+      enabled: !_running,
+      tooltip: l10n.subTrackLifecycleMoreOptions,
+      icon: const Icon(Icons.more_vert),
+      onSelected: _run,
+      itemBuilder: (context) => [
+        for (final action in subTrackLifecycleMenuActions)
+          PopupMenuItem(
+            key: ValueKey('subTrackMenu:${action.id}'),
+            value: action,
+            child: Row(
+              children: [
+                Icon(action.icon, size: 20),
+                const SizedBox(width: 12),
+                Text(action.label(l10n)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }

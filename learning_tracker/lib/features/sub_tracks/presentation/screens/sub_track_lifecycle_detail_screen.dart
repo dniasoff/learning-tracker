@@ -26,6 +26,7 @@ import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/next_year_sub_track_form_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/add_next_year_action.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_actions.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Pushes the lifecycle detail of [subTrackId].
@@ -76,6 +77,14 @@ class SubTrackLifecycleDetailScreen extends ConsumerWidget {
             color: colors.brandBlueDeep,
           ),
         ),
+        actions: [
+          // AC-3, AC-4: the parent's ⋮ on a live sub-track only (AC-5).
+          if (found != null && parent && !ended)
+            SubTrackLifecycleMenu(
+              track: found,
+              onReturnToHub: () => Navigator.of(context).maybePop(),
+            ),
+        ],
       ),
       body: switch (groups) {
         AsyncValue(:final error?, :final stackTrace) when value == null =>
