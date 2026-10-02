@@ -4832,6 +4832,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'The tutor can change tracks, the deadline and learning records. Every change is recorded.';
 
   @override
+  String get inviteTutorCanViewProgressLabel => 'Can view progress';
+
+  @override
+  String get inviteTutorCanViewContentLabel => 'Can view learning content';
+
+  @override
+  String get inviteTutorCanEditRewardsLabel => 'Can edit rewards';
+
+  @override
+  String get inviteTutorCanEditPointsLabel => 'Can edit points';
+
+  @override
   String get manageGrantsAppBarTitle => 'My Tutoring Grants';
 
   @override

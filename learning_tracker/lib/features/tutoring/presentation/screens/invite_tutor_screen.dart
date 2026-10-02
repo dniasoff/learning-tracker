@@ -16,7 +16,10 @@
 // AD-53 / DNI-487: one "Can edit learning" checkbox, pre-checked, with a
 // one-line explanation. Its value is sent as the grant's
 // `permissions.can_edit_learning`. The five legacy per-operation edit toggles
-// are gone. The route is parent-only (childModeGuard + pinGuard).
+// are gone. The retained view-progress, view-content, edit-rewards and
+// edit-points permissions keep their own checkboxes (AC-3), defaulting to the
+// TutorPermissions defaults, and are sent in the same invite. The route is
+// parent-only (childModeGuard + pinGuard).
 
 import 'dart:async';
 
@@ -27,6 +30,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
@@ -53,6 +57,12 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
   /// AD-53: the parent's "Can edit learning" choice — pre-checked
   /// (prd-deviations #7).
   bool _canEditLearning = true;
+
+  /// The retained, non-learning permissions (AC-3): view progress, view
+  /// content, edit rewards, edit points. Starts at the model defaults (all
+  /// on). Its `canEditLearning` field is ignored — [_canEditLearning] is the
+  /// one source for that choice.
+  TutorPermissions _retainedPermissions = TutorPermissions.defaults();
 
   /// Account-level error (e.g. "cloud account required"), shown as a banner
   /// above the form — NOT as email-field errorText, which would imply the
@@ -122,6 +132,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
         tutorEmail: email,
         childProfileId: widget.childProfileId,
         canEditLearning: _canEditLearning,
+        permissions: _retainedPermissions,
         childName: childName,
         parentName: parentName,
       );
@@ -219,6 +230,64 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
       TutorGrantPreconditionCode.cannotUpdatePermissions =>
         l10n.inviteTutorErrorGeneric,
     };
+  }
+
+  /// One checkbox per retained permission (view progress, view content,
+  /// edit rewards, edit points), disabled while the invite is sending.
+  List<Widget> _retainedPermissionTiles(
+    AppLocalizations l10n,
+    ThemeData theme,
+  ) {
+    final p = _retainedPermissions;
+    Widget tile({
+      required String key,
+      required String label,
+      required bool value,
+      required TutorPermissions Function(bool v) update,
+    }) {
+      return CheckboxListTile(
+        key: ValueKey('inviteTutor.$key'),
+        value: value,
+        onChanged: _isLoading
+            ? null
+            : (v) => setState(() => _retainedPermissions = update(v ?? false)),
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: EdgeInsets.zero,
+        title: Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: context.colors.brandInk,
+          ),
+        ),
+      );
+    }
+
+    return [
+      tile(
+        key: 'canViewProgress',
+        label: l10n.inviteTutorCanViewProgressLabel,
+        value: p.canViewProgress,
+        update: (v) => p.copyWith(canViewProgress: v),
+      ),
+      tile(
+        key: 'canViewContent',
+        label: l10n.inviteTutorCanViewContentLabel,
+        value: p.canViewContent,
+        update: (v) => p.copyWith(canViewContent: v),
+      ),
+      tile(
+        key: 'canEditRewards',
+        label: l10n.inviteTutorCanEditRewardsLabel,
+        value: p.canEditRewards,
+        update: (v) => p.copyWith(canEditRewards: v),
+      ),
+      tile(
+        key: 'canEditPoints',
+        label: l10n.inviteTutorCanEditPointsLabel,
+        value: p.canEditPoints,
+        update: (v) => p.copyWith(canEditPoints: v),
+      ),
+    ];
   }
 
   @override
@@ -341,6 +410,8 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                   ),
                 ),
               ),
+              // AC-3: the retained permissions keep their own controls.
+              ..._retainedPermissionTiles(l10n, theme),
               const SizedBox(height: 20),
               // Send invite button
               FilledButton.icon(

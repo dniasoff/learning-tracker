@@ -226,6 +226,38 @@ describe('inviteTutor — can_edit_learning (DNI-487)', () => {
     });
   }
 
+  // AC-3 retained controls: each of the four retained permissions the parent
+  // sets on the invite form is persisted as sent and survives acceptance.
+  const RETAINED_KEYS = [
+    'can_view_progress',
+    'can_view_content',
+    'can_edit_rewards',
+    'can_edit_points',
+  ];
+  for (const off of RETAINED_KEYS) {
+    test(`retained control: ${off}=false is persisted and survives acceptance`, async () => {
+      const sent = {
+        can_view_progress: true,
+        can_view_content: true,
+        can_edit_learning: true,
+        can_edit_rewards: true,
+        can_edit_points: true,
+        [off]: false,
+      };
+      const { grantId } = await call(fns.inviteTutor, args(sent), parentAuth);
+
+      await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: true });
+      await call(fns.acceptTutorInvite, { grantId }, { uid: TUTOR, token: {} });
+
+      const active = await grantOf(grantId);
+      assert.equal(active.state, 'active');
+      for (const key of [...RETAINED_KEYS, 'can_edit_learning']) {
+        assert.equal(active.permissions[key], sent[key], `${key} must survive acceptance`);
+      }
+      assertNoLegacyKeys(active.permissions);
+    });
+  }
+
   test('an old client sending legacy keys: they are stripped, never persisted', async () => {
     const { grantId } = await call(fns.inviteTutor, args({
       can_view_progress: true,

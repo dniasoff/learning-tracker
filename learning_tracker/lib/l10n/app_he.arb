@@ -2860,6 +2860,10 @@
   "inviteTutorErrorGeneric": "לא הצלחנו לשלוח את ההזמנה. נסו שוב.",
   "inviteTutorCanEditLearningLabel": "יכול לערוך למידה",
   "inviteTutorCanEditLearningExplanation": "המורה יוכל לשנות מסלולים, את תאריך היעד ורשומות למידה. כל שינוי נרשם.",
+  "inviteTutorCanViewProgressLabel": "יכול לצפות בהתקדמות",
+  "inviteTutorCanViewContentLabel": "יכול לצפות בתוכן הלימוד",
+  "inviteTutorCanEditRewardsLabel": "יכול לערוך פרסים",
+  "inviteTutorCanEditPointsLabel": "יכול לערוך נקודות",
   "manageGrantsAppBarTitle": "ההדרכות שלי",
   "manageGrantsActiveSection": "פעילות ({count})",
   "@manageGrantsActiveSection": {

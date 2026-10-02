@@ -4783,6 +4783,18 @@ class AppLocalizationsHe extends AppLocalizations {
       'המורה יוכל לשנות מסלולים, את תאריך היעד ורשומות למידה. כל שינוי נרשם.';
 
   @override
+  String get inviteTutorCanViewProgressLabel => 'יכול לצפות בהתקדמות';
+
+  @override
+  String get inviteTutorCanViewContentLabel => 'יכול לצפות בתוכן הלימוד';
+
+  @override
+  String get inviteTutorCanEditRewardsLabel => 'יכול לערוך פרסים';
+
+  @override
+  String get inviteTutorCanEditPointsLabel => 'יכול לערוך נקודות';
+
+  @override
   String get manageGrantsAppBarTitle => 'ההדרכות שלי';
 
   @override

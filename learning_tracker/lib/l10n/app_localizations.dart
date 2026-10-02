@@ -8132,6 +8132,30 @@ abstract class AppLocalizations {
   /// **'The tutor can change tracks, the deadline and learning records. Every change is recorded.'**
   String get inviteTutorCanEditLearningExplanation;
 
+  /// No description provided for @inviteTutorCanViewProgressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Can view progress'**
+  String get inviteTutorCanViewProgressLabel;
+
+  /// No description provided for @inviteTutorCanViewContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Can view learning content'**
+  String get inviteTutorCanViewContentLabel;
+
+  /// No description provided for @inviteTutorCanEditRewardsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Can edit rewards'**
+  String get inviteTutorCanEditRewardsLabel;
+
+  /// No description provided for @inviteTutorCanEditPointsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Can edit points'**
+  String get inviteTutorCanEditPointsLabel;
+
   /// No description provided for @manageGrantsAppBarTitle.
   ///
   /// In en, this message translates to:

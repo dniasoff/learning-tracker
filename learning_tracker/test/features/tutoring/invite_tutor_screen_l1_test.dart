@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/account/domain/models/auth_state.dart'
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
@@ -116,6 +117,15 @@ Widget _buildApp({
   );
 }
 
+/// Sizes the test view like a typical phone (411x914 logical px, Pixel 7).
+/// The form carries five permission checkboxes (DNI-487 AC-3), so the
+/// default 800x600 test surface pushes the Send button below the fold.
+void _usePhoneViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 2.625;
+  addTearDown(tester.view.reset);
+}
+
 /// Pumps the widget then flushes the event queue without pumpAndSettle to
 /// avoid timer issues from open async operations.
 ///
@@ -128,6 +138,7 @@ Future<void> _pumpScreen(
   String childProfileId = _childProfileId,
   Locale locale = const Locale('en'),
 }) async {
+  _usePhoneViewport(tester);
   await tester.pumpWidget(
     _buildApp(
       useCase: useCase,
@@ -152,6 +163,10 @@ Future<void> _tearDown(WidgetTester tester) async {
 
 void main() {
   late _MockInviteTutorUseCase mockUseCase;
+
+  setUpAll(() {
+    registerFallbackValue(TutorPermissions.defaults());
+  });
 
   setUp(() {
     mockUseCase = _MockInviteTutorUseCase();
@@ -385,6 +400,7 @@ void main() {
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -422,6 +438,7 @@ void main() {
             tutorEmail: 'tutor@example.com',
             childProfileId: _childProfileId,
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -439,6 +456,7 @@ void main() {
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -469,6 +487,7 @@ void main() {
             tutorEmail: 'rebbe@school.com',
             childProfileId: _childProfileId,
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: captureAny(named: 'childName'),
             parentName: captureAny(named: 'parentName'),
           ),
@@ -499,6 +518,7 @@ void main() {
           tutorEmail: any(named: 'tutorEmail'),
           childProfileId: any(named: 'childProfileId'),
           canEditLearning: any(named: 'canEditLearning'),
+          permissions: any(named: 'permissions'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -526,6 +546,7 @@ void main() {
           tutorEmail: any(named: 'tutorEmail'),
           childProfileId: any(named: 'childProfileId'),
           canEditLearning: any(named: 'canEditLearning'),
+          permissions: any(named: 'permissions'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -533,6 +554,7 @@ void main() {
 
       // Push the invite screen onto a Navigator so there is something to pop
       // back to (the "Manage Tutors" stand-in below).
+      _usePhoneViewport(tester);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -612,6 +634,7 @@ void main() {
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -653,6 +676,7 @@ void main() {
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -694,6 +718,7 @@ void main() {
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -735,6 +760,7 @@ void main() {
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -768,6 +794,7 @@ void main() {
           tutorEmail: 'bad@fail.com',
           childProfileId: any(named: 'childProfileId'),
           canEditLearning: any(named: 'canEditLearning'),
+          permissions: any(named: 'permissions'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -780,6 +807,7 @@ void main() {
           tutorEmail: 'ok@example.com',
           childProfileId: any(named: 'childProfileId'),
           canEditLearning: any(named: 'canEditLearning'),
+          permissions: any(named: 'permissions'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -833,6 +861,7 @@ void main() {
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
             canEditLearning: any(named: 'canEditLearning'),
+            permissions: any(named: 'permissions'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -914,6 +943,7 @@ void main() {
           tutorEmail: any(named: 'tutorEmail'),
           childProfileId: any(named: 'childProfileId'),
           canEditLearning: any(named: 'canEditLearning'),
+          permissions: any(named: 'permissions'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -931,6 +961,7 @@ void main() {
           tutorEmail: any(named: 'tutorEmail'),
           childProfileId: any(named: 'childProfileId'),
           canEditLearning: captureAny(named: 'canEditLearning'),
+          permissions: any(named: 'permissions'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -964,8 +995,9 @@ void main() {
     ) async {
       await _pumpScreen(tester, useCase: mockUseCase);
 
-      // Exactly one permission control on the form: the AD-53 checkbox.
-      expect(find.byType(Checkbox), findsOneWidget);
+      // Five permission controls: the AD-53 checkbox plus the four retained
+      // ones (view progress, view content, edit rewards, edit points).
+      expect(find.byType(Checkbox), findsNWidgets(5));
       expect(find.byType(Switch), findsNothing);
       for (final legacy in const [
         'goals',
@@ -983,6 +1015,104 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    const retainedKeys = <String>[
+      'canViewProgress',
+      'canViewContent',
+      'canEditRewards',
+      'canEditPoints',
+    ];
+
+    testWidgets('AC-3: the retained view-progress, view-content, '
+        'edit-rewards and edit-points controls are shown, pre-checked', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, useCase: mockUseCase);
+
+      for (final key in retainedKeys) {
+        final tile = find.byKey(ValueKey('inviteTutor.$key'));
+        expect(tile, findsOneWidget, reason: '$key control must be shown');
+        expect(tester.widget<CheckboxListTile>(tile).value, isTrue);
+        expect(tester.getSize(tile).height, greaterThanOrEqualTo(48));
+      }
+      for (final label in const [
+        'Can view progress',
+        'Can view learning content',
+        'Can edit rewards',
+        'Can edit points',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+
+      await _tearDown(tester);
+    });
+
+    Future<TutorPermissions> sendAndCapturePermissions(
+      WidgetTester tester,
+    ) async {
+      await tester.enterText(find.byType(TextFormField), 'tutor@example.com');
+      await tester.pump();
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      final captured = verify(
+        () => mockUseCase(
+          tutorEmail: any(named: 'tutorEmail'),
+          childProfileId: any(named: 'childProfileId'),
+          canEditLearning: any(named: 'canEditLearning'),
+          permissions: captureAny(named: 'permissions'),
+          childName: any(named: 'childName'),
+          parentName: any(named: 'parentName'),
+        ),
+      ).captured;
+      return captured.single as TutorPermissions;
+    }
+
+    testWidgets('AC-3: untouched retained controls send the defaults', (
+      tester,
+    ) async {
+      stubSuccess();
+      await _pumpScreen(tester, useCase: mockUseCase);
+
+      final sent = await sendAndCapturePermissions(tester);
+      expect(sent.canViewProgress, isTrue);
+      expect(sent.canViewContent, isTrue);
+      expect(sent.canEditRewards, isTrue);
+      expect(sent.canEditPoints, isTrue);
+
+      await _tearDown(tester);
+    });
+
+    for (final key in retainedKeys) {
+      testWidgets('AC-3: unchecking $key sends it as false and leaves the '
+          'others on', (tester) async {
+        stubSuccess();
+        await _pumpScreen(tester, useCase: mockUseCase);
+
+        final tile = find.byKey(ValueKey('inviteTutor.$key'));
+        await tester.ensureVisible(tile);
+        await tester.tap(tile);
+        await tester.pump();
+        expect(tester.widget<CheckboxListTile>(tile).value, isFalse);
+
+        final sent = await sendAndCapturePermissions(tester);
+        final values = <String, bool>{
+          'canViewProgress': sent.canViewProgress,
+          'canViewContent': sent.canViewContent,
+          'canEditRewards': sent.canEditRewards,
+          'canEditPoints': sent.canEditPoints,
+        };
+        for (final entry in values.entries) {
+          expect(
+            entry.value,
+            entry.key == key ? isFalse : isTrue,
+            reason: '${entry.key} after unchecking $key',
+          );
+        }
+
+        await _tearDown(tester);
+      });
+    }
 
     testWidgets('AC-4: sending with the box checked sends '
         'canEditLearning=true', (tester) async {

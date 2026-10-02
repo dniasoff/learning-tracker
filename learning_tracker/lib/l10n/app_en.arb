@@ -3209,6 +3209,10 @@
   "inviteTutorErrorGeneric": "Couldn't send the invitation. Please try again.",
   "inviteTutorCanEditLearningLabel": "Can edit learning",
   "inviteTutorCanEditLearningExplanation": "The tutor can change tracks, the deadline and learning records. Every change is recorded.",
+  "inviteTutorCanViewProgressLabel": "Can view progress",
+  "inviteTutorCanViewContentLabel": "Can view learning content",
+  "inviteTutorCanEditRewardsLabel": "Can edit rewards",
+  "inviteTutorCanEditPointsLabel": "Can edit points",
   "manageGrantsAppBarTitle": "My Tutoring Grants",
   "manageGrantsActiveSection": "Active ({count})",
   "@manageGrantsActiveSection": {
