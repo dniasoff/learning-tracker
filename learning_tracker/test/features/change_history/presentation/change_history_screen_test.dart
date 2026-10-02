@@ -10,8 +10,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -512,6 +513,55 @@ void main() {
     );
     expect(_tile('Changed the deadline to Nov 3'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  group('E-2 and accessibility', () {
+    testWidgets('an actor with no display name is shown by role', (
+      tester,
+    ) async {
+      const nameless = Actor(uid: 't', role: ActorRole.tutor, displayName: '');
+      final repo = FakeChangeHistoryRepository(
+        entries: [historyEntry(1, minutes: 60, actor: nameless)],
+      );
+      await pumpChangeHistory(tester, changeHistoryOverrides(repository: repo));
+      final row = find.byType(ChangeHistoryRowTile);
+      expect(
+        find.descendant(of: row, matching: find.text('Tutor')),
+        findsNWidgets(2), // the name fallback and the role tag
+      );
+    });
+
+    testWidgets('Hebrew, right to left, at 2x text: no overflow', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final repo = FakeChangeHistoryRepository(
+        entries: [_deadline()],
+        events: [historyLearn(2, minutes: 600, actor: historyChild)],
+      );
+      await pumpChangeHistory(
+        tester,
+        changeHistoryOverrides(repository: repo),
+        locale: const Locale('he'),
+        size: const Size(360, 800),
+      );
+      expect(find.text('היסטוריית שינויים'), findsOneWidget);
+      expect(find.text('מורה'), findsWidgets);
+      expect(
+        Directionality.of(
+          tester.element(find.byType(ChangeHistoryRowTile).first),
+        ),
+        TextDirection.rtl,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('chips and rows meet the 48dp target', (tester) async {
+      final repo = FakeChangeHistoryRepository(entries: [_deadline()]);
+      await pumpChangeHistory(tester, changeHistoryOverrides(repository: repo));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    });
   });
 }
 
