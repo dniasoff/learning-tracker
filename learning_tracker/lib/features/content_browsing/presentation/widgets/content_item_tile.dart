@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -153,9 +154,10 @@ class ContentItemTile extends ConsumerWidget {
     return Semantics(
       label: learntTriStateSemantics(
         l10n,
-        name: item.displayNameHe.isNotEmpty && domainTermLabels(ref).isHebrew
-            ? item.displayNameHe
-            : item.displayNameEn,
+        name: CurriculumLabelRenderer.renderForItem(
+          item,
+          useHebrew: domainTermLabels(ref).isHebrew,
+        ),
         state: state,
         learnt: progress.learnt,
         total: progress.total,

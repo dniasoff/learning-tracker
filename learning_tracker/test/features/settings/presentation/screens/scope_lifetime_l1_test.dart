@@ -327,6 +327,8 @@ Future<void> _pump(WidgetTester tester, Widget app) async {
   await tester.pumpWidget(app);
   await tester.pump();
   await tester.pump(const Duration(seconds: 1));
+  await tester.pump();
+  await tester.pumpAndSettle();
 }
 
 Future<void> _tearDown(WidgetTester tester) async {
@@ -353,11 +355,6 @@ Widget _buildScopeApp({
       ),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
       contentRepositoryProvider.overrideWithValue(repo),
-      // DNI-474: saved rows read the engine's learnt set (none here).
-      ...learnerStateOverrides(
-        scope: c0Scope(),
-        state: LearnerState.empty(DateTime.utc(2026)),
-      ),
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
       else
@@ -422,6 +419,11 @@ Widget _buildCurriculumMarkingApp({
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
       contentRepositoryProvider.overrideWithValue(repo),
+      // DNI-474: saved rows read the engine's learnt set (none here).
+      ...learnerStateOverrides(
+        scope: c0Scope(),
+        state: LearnerState.empty(DateTime.utc(2026)),
+      ),
       learningLedgerRepositoryProvider.overrideWithValue(ledger),
       // Story 1.11 (DNI-473): Save records one before_tracking capture.
       beforeTrackingRecorderProvider.overrideWithValue(

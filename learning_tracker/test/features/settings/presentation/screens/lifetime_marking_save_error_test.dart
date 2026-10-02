@@ -170,6 +170,8 @@ final _selectAllButton = find.byWidgetPredicate(
 Future<void> _selectAllAndSave(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 100));
+  await tester.pump(const Duration(seconds: 1));
+  await tester.pumpAndSettle();
 
   await tester.tap(_selectAllButton);
   await tester.pump();

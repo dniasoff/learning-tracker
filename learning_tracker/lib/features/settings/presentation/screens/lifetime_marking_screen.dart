@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
@@ -16,10 +17,8 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart'
-    show LedgerEntryDraft;
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -561,25 +560,13 @@ class _LifetimeCurriculumMarkingScreenState
     final l10n = AppLocalizations.of(context)!;
     setState(() => _saving = true);
     try {
-      final repo = ref.read(learningLedgerRepositoryProvider);
-      // D-E: this is ACHIEVEMENT-shaped data (real lifetime-learning marks) —
-      // a missing active profile must fail loudly rather than silently
-      // stamping a placeholder marker onto the ledger.
-      final profileId = ref.read(activeProfileIdProvider);
-      if (profileId == null) {
-        throw const LifetimeMarkingNoActiveProfileException();
-      }
       final unique = <String>{};
-      final batchItems = <LedgerEntryDraft>[];
+      final scopes = <({int level, String unitId})>[];
       for (final selection in selections) {
         final key = '${selection.level}:${selection.value}';
         if (!unique.add(key)) continue;
-        // P0 over-credit guard: never persist a blanket mark on a composite
-        // curriculum's SYNTHETIC level1 container (e.g. Tanach→'Torah'). Such a
-        // row credits every leaf beneath the synthetic section (the whole Torah
-        // from a single mark). The real learning belongs in the source
-        // curriculum (Chumash), which propagates up to the composite by
-        // canonical leaf. Drilling in and marking the concrete books still works.
+        // Never persist a blanket mark on a composite curriculum's synthetic
+        // level-one container; source-curriculum leaves provide that progress.
         if (selection.level == 1 &&
             CompositeCurriculumStrategy.isSyntheticContainerLevel1(
               _curriculum.storageKey,
@@ -587,35 +574,20 @@ class _LifetimeCurriculumMarkingScreenState
             )) {
           continue;
         }
-        batchItems.add(
-          LedgerEntryDraft(
-            curriculumId: _curriculum,
-            entryScope: 'level${selection.level}',
-            unitIdentifier: selection.value,
-            unitDisplayNameHe: selection.value,
-            unitDisplayNameEn: selection.value,
-            trackType: 'personal',
-            markedBy: profileId,
-            isManual: true,
-          ),
-        );
+        scopes.add((level: selection.level, unitId: selection.value));
       }
 
-      await repo.recordCompletionsBatch(batchItems);
+      await ref
+          .read(beforeTrackingRecorderProvider)
+          .recordScopes(curriculumId: _curriculum, scopes: scopes);
 
       _invalidateComputedViews();
       if (!mounted) return;
-      // PP-3 fix: clear the session selection after a successful save so the
-      // user does not see lingering green checkmarks on already-persisted rows
-      // (the persisted state is now reflected by the ledger, not _selections).
       setState(() => _selections.clear());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.lifetimeMarkSavedCount(batchItems.length))),
+        SnackBar(content: Text(l10n.lifetimeMarkSavedCount(scopes.length))),
       );
     } catch (e, stackTrace) {
-      // EH-5/ST-4: never surface the raw exception's toString() in the UI —
-      // log it for diagnostics and show only the fixed, localized fallback
-      // copy instead.
       AppLogger.instance.error(
         event: 'lifetime_mark_save_failed',
         fields: {'curriculumId': _curriculum.storageKey},
@@ -908,12 +880,12 @@ class _LifetimeCurriculumMarkingScreenState
                               // panel is displaying.
                               _navPathLength = path.length;
                             }),
-                            onDisplayItemsChanged: (items) =>
-                                // PP-10 fix: call setState so the select-all
-                                // toggle re-evaluates _allCurrentSelected when
-                                // the displayed item list changes (e.g. drilled
-                                // into a folder).
-                                setState(() => _currentDisplayItems = items),
+                            onDisplayItemsChanged: (items) {
+                              if (listEquals(_currentDisplayItems, items)) {
+                                return;
+                              }
+                              setState(() => _currentDisplayItems = items);
+                            },
                             tileBuilder: (item, currentPath, onDrill) {
                               final currentLevel = currentPath.length + 1;
                               final rawValue =
