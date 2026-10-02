@@ -44,6 +44,7 @@ import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/ground_picker_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -181,6 +182,16 @@ class AppRouter extends RootStackRouter {
         authGuard,
         parentSessionGuard.redirectingTo(() => const LifetimeKnowledgeRoute()),
       ],
+    ),
+
+    // Sub-tracks. Ground picker (Story 2.7, DNI-498): a parent write
+    // surface. A child, PIN-locked or tutored session — a deep link
+    // included — is refused by the shared parent-session guard; the picker
+    // also fails closed on a calendar-program curriculum (AC-7, AC-8).
+    AutoRoute(
+      path: '/sub-tracks/:subTrackId/ground',
+      page: GroundPickerRoute.page,
+      guards: [authGuard, parentSessionGuard],
     ),
 
     // Content browsing routes

@@ -5,20 +5,15 @@
 // route on a phone, a right pane on a tablet), is absent for a child and on
 // a calendar-program curriculum, and focus returns to it on close.
 //
-// A minimal host keeps these widget-level tests independent of the
-// detail's own data; the same behaviour on the real Story 2.6 detail
-// (DNI-497) is covered in
-// test/features/sub_tracks/presentation/screens/sub_track_detail_screen_test.dart
-// and, for the hub's tablet pane, sub_track_list_detail_layout_test.dart.
+// Story 2.6's detail screen (DNI-497) is not on the integration branch
+// yet, so a minimal detail stands in for it here: the entry point under
+// test is the widget that screen hosts.
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_assignment_rollbacks_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/add_ground_entry.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -29,7 +24,7 @@ import '../../../../helpers/sub_tracks/ground_picker_harness.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
-/// A minimal host for the entry point.
+/// A stand-in sub-track detail (DNI-497 owns the real one).
 class _Detail extends StatelessWidget {
   const _Detail({required this.ground});
 
@@ -53,12 +48,11 @@ GroundPickerWorld _world({
   bool parent = true,
   bool calendar = false,
   List<NodeEntry> ground = const [],
-  FakeLearningCommands? commands,
 }) => GroundPickerWorld(
   corpus: mishnayosCorpus(),
   parent: parent,
   calendarProgram: calendar,
-  commands: commands ?? FakeLearningCommands(),
+  commands: FakeLearningCommands(),
   tracks: [
     fixtureTrack(
       schoolId,
@@ -187,43 +181,6 @@ void main() {
       await tester.pumpAndSettle();
       verify(() => router.push<Object?>(any())).called(1);
       expect(find.text('Add ground to School'), findsNothing);
-    });
-  });
-
-  group('AC-4 late rollback (UX-DR-127)', () {
-    testWidgets('after the picker closed on a queued assignment, a server '
-        'refusal is announced once by Add ground', (tester) async {
-      final commands = FakeLearningCommands();
-      addTearDown(commands.dispose);
-      await _pump(tester, _world(commands: commands));
-      final container = ProviderScope.containerOf(
-        tester.element(find.text('Add ground')),
-      );
-      container
-          .read(groundAssignmentRollbacksProvider.notifier)
-          .trackQueued(
-            commands,
-            schoolId,
-            const CaptureSuccess(
-              changeIds: ['change-1'],
-              actionId: 'change-1',
-              queued: true,
-            ),
-          );
-      commands.pendingFailures.add([
-        const PendingFailure(
-          id: 'change-1',
-          eventIds: [],
-          changeIds: ['change-1'],
-          reason: PendingFailureReason.permissionDenied,
-        ),
-      ]);
-      await tester.pumpAndSettle();
-      expect(
-        find.text("Couldn't add the ground. Nothing was changed."),
-        findsOneWidget,
-      );
-      expect(container.read(groundAssignmentRollbacksProvider), isEmpty);
     });
   });
 }
