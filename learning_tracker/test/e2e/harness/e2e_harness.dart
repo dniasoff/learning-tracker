@@ -132,7 +132,10 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+<<<<<<< HEAD
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+=======
+>>>>>>> b0e002468 (test(sub-tracks): DNI-501 T3 headless journeys stub the Learn-tab sub-track read)
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -800,13 +803,18 @@ class E2EHarness {
         (ref) => const Stream<void>.empty(),
       ),
 
+<<<<<<< HEAD
 // ── Learn-tab sub-track rows (DNI-501) ────────────────────────────────
+=======
+      // ── Learn-tab sub-track rows (DNI-501) ────────────────────────────────
+>>>>>>> b0e002468 (test(sub-tracks): DNI-501 T3 headless journeys stub the Learn-tab sub-track read)
       // No headless journey seeds sub-tracks; resolving the learner scope
       // for an empty section only leaves the device-account stream loading
       // at teardown. A sub-track journey overrides this with its tracks.
       activeSubTracksProvider.overrideWith(
         (ref) => Stream.value(const <SubTrack>[]),
       ),
+<<<<<<< HEAD
       // ── Dashboard / Learn forecast (DNI-502) ──────────────────────────────
       // No headless journey seeds a learner state; resolving the learner
       // scope for these sections only leaves the device-account stream
@@ -818,6 +826,8 @@ class E2EHarness {
         (ref) => const AsyncData(<CurriculumToday>[]),
       ),
       ),
+=======
+>>>>>>> b0e002468 (test(sub-tracks): DNI-501 T3 headless journeys stub the Learn-tab sub-track read)
     ];
   }
 
