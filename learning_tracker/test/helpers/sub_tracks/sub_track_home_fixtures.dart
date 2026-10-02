@@ -2,6 +2,8 @@
 /// (Story 2.9, DNI-500).
 library;
 
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -82,3 +84,25 @@ LearnerState homeLearnerState(
   countedEventIds: countedEventIds,
   lockIgnoredEventIds: lockIgnoredEventIds,
 );
+
+/// School's next leaf in the fixtures.
+const berachos14 = 'Mishnah_Berakhot_1.4';
+
+/// Rebbe's next leaf in the fixtures.
+const peah21 = 'Mishnah_Peah_2.1';
+
+/// Display labels for the fixture leaves, so no test reaches the content
+/// database for a position label.
+const fixturePositionLabels = <String, String>{
+  berachos14: 'Berachos 1:4',
+  'Mishnah_Berakhot_1.5': 'Berachos 1:5',
+  peah21: 'Peah 2:1',
+};
+
+/// Overrides `renderedDisplayForRefProvider` for [labels].
+List<Override> positionLabelOverrides([
+  Map<String, String> labels = fixturePositionLabels,
+]) => [
+  for (final MapEntry(:key, :value) in labels.entries)
+    renderedDisplayForRefProvider(key).overrideWith((ref) async => value),
+];
