@@ -315,6 +315,14 @@ service cloud.firestore {
           && d.rate_per_week is number && d.rate_per_week >= 0
           && d.weeks_per_year is number && d.weeks_per_year >= 0
           && d.learns_on_shabbos is bool
+          // AD-52 `ground` is list<NodeEntry{level, ref}>. Only the list
+          // type and length are enforceable here: rules cannot iterate, and
+          // per-element checks exhaust the per-document 1,000-expression
+          // budget at about a dozen entries (measured on the emulator), while
+          // AD-33 bounds ground only by the curriculum and story 2.7 appends
+          // to it over time. Element shape belongs to the SubTrack codec
+          // (encode, tolerant decode) and to writeWithChangeLog on the Admin
+          // path (bead learning-tracker-fyh.83).
           && d.ground is list && d.ground.size() <= 500
           && hasValidEndedAt(d)
           && (!('end_reason' in d) || d.end_reason in ['ended', 'deleted', 'undo', 'track_deleted']);

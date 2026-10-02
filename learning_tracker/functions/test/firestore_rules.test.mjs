@@ -1974,18 +1974,24 @@ describe('DNI-471 AC-4 — timestamp skew boundary for event and governed writes
 // at 0, and caps a batch at 20 calls, so an owner batch carries ≤ 10
 // governed docs and the 11th is over budget.
 //
-// The 10/11 boundary is asserted under PRODUCTION-EQUIVALENT ACCOUNTING:
-// every access call the rules actually evaluate for a batch is counted from
-// the emulator's per-expression evaluation report (`:ruleCoverage`, the
-// same data the TQ-9 gate reads), and the batch is admitted iff that count
-// is ≤ AD54_BATCH_CALL_LIMIT. This is deterministic and independent of the
-// emulator's own limit enforcement, which under-counts: it does not count
-// `getAfter()` on a document written in the same batch, so its platform
-// denial only starts at the 21st governed doc (pinned below as
-// supplemental evidence). Production counting of `getAfter` is verified at
-// release (bead learning-tracker-fyh.72); the rules keep AD-38's exact
-// 2-call shape and never add an artificial third call (that would break
-// legitimate 10-doc batches if production counts getAfter).
+// What this block PROVES on the emulator: the rules evaluate exactly 2
+// document-access calls per governed doc (counted from the emulator's
+// per-expression evaluation report, `:ruleCoverage`, the same data the TQ-9
+// gate reads), events / change_log / `pts_` entries evaluate 0, and a batch
+// of exactly 10 governed docs (20 calls) commits.
+//
+// What it does NOT prove: that the platform DENIES an 11th governed doc.
+// The emulator's own limit enforcement under-counts — it does not count
+// `getAfter()` on a document written in the same batch, so it admits 20
+// governed docs and first denies the 21st (pinned below as supplemental
+// evidence) — and Firebase does not document whether production counts that
+// call. AC-5's 11th-doc denial is therefore recorded as UNVERIFIED for this
+// story and goes to release verification (bead learning-tracker-fyh.72).
+// The rules keep AD-38's exact 2-call shape and never add an artificial
+// third call (that would break legitimate 10-doc batches if production
+// counts getAfter). Shipped clients never send an 11th governed doc: the
+// owner command path splits at 10 and routes larger writes online through
+// writeWithChangeLog (DNI-470 / story 1.10).
 const AD54_BATCH_CALL_LIMIT = 20;
 const ACCESS_CALL_RE = /(?<![.\w])(get|getAfter|exists|existsAfter)\s*\(/g;
 
@@ -2092,10 +2098,18 @@ describe('DNI-471 AC-5 — AD-38 access-call budget (10 governed docs per owner 
     assert.ok(calls <= AD54_BATCH_CALL_LIMIT, '10 governed docs fit the 20-call batch budget');
   });
 
-  test('an 11th governed doc in the same batch is denied under AD-54 accounting: 22 calls exceed the 20-call budget', async () => {
+  // NOT a denial proof. The emulator COMMITS this batch (it does not count
+  // same-batch getAfter calls; see block comment), and production counting
+  // is undocumented, so AC-5's "11th doc is denied" is UNVERIFIED here and
+  // tracked for release verification by bead learning-tracker-fyh.72. The
+  // ≤ 10 guarantee in shipped code is the owner command path's own batch
+  // split (DNI-470: 11+ governed docs go online through writeWithChangeLog).
+  // This test pins only the arithmetic the budget rests on: the rules
+  // evaluate 2 access calls per governed doc, so 11 docs need 22 > 20.
+  test('accounting only (11th-doc denial unverified on emulator, fyh.72): 11 governed docs evaluate 22 access calls, over the 20-call budget', async () => {
     const calls = await accountedBatch(11);
     assert.equal(calls, 22, 'each governed doc costs exactly 2 access calls (AD-54)');
-    assert.ok(calls > AD54_BATCH_CALL_LIMIT, 'the 11-doc batch is over the AD-54 budget and is denied');
+    assert.ok(calls > AD54_BATCH_CALL_LIMIT, '11 governed docs exceed the AD-54 batch budget');
   });
 
   test('learning events, change_log and pts_ entries cost zero: the full 10-doc batch still commits with 20 of them added', async () => {
