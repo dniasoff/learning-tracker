@@ -2396,3 +2396,38 @@ describe('DNI-476 — owner governed order docs, tombstones and fixed goal ids',
     await assertFails(deleteDoc(doc(owner(), GOAL)));
   });
 });
+
+describe('DNI-514 AC-1 — an undo (reverts_action_id) is a parent action', () => {
+  const GOAL = `${GOALS}/g`;
+  const GOAL_DOC = { goal_id: 'g', profile_id: PROFILE, target_percent: 80 };
+  const CHILD_ACTOR = { uid: OWNER, role: 'child', display_name: 'Child' };
+
+  test('a parent undo entry and its governed restore are accepted', async () => {
+    await assertSucceeds(
+      governedWrite(owner(), GOAL, GOAL_DOC, 'goal', 'g', {
+        entry: { reverts_action_id: nextUlid() },
+      }),
+    );
+  });
+
+  test('a child entry carrying reverts_action_id is denied, alone or in a governed batch', async () => {
+    const id = nextUlid();
+    await assertFails(setDoc(doc(owner(), `${CHANGE_LOG}/${id}`), changeEntry('goal', 'g', id, {
+      reverts_action_id: nextUlid(),
+      actor: CHILD_ACTOR,
+    })));
+    await assertFails(
+      governedWrite(owner(), GOAL, GOAL_DOC, 'goal', 'g', {
+        entry: { reverts_action_id: nextUlid(), actor: CHILD_ACTOR },
+      }),
+    );
+  });
+
+  test('a child entry without reverts_action_id is still accepted', async () => {
+    await assertSucceeds(
+      governedWrite(owner(), GOAL, GOAL_DOC, 'goal', 'g', {
+        entry: { actor: CHILD_ACTOR },
+      }),
+    );
+  });
+});
