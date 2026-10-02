@@ -59,6 +59,8 @@ class ContentItemTile extends ConsumerWidget {
     this.onTick,
     this.onLongPress,
     this.tickDisabled = false,
+    this.heldBy = const [],
+    this.heldWhole = false,
   });
 
   final ContentItem item;
@@ -97,6 +99,14 @@ class ContentItemTile extends ConsumerWidget {
   /// still SEES the tick box, drawn at 40% opacity and disabled (no
   /// handler, disabled semantics); "Tick up to here" is off too.
   final bool tickDisabled;
+  /// Story 2.7 (DNI-498 AC-6, UX-DR-63, UX-DR-93): the names of the
+  /// sub-tracks holding ground under this row. Each is a tag; the row stays
+  /// visible and tappable.
+  final List<String> heldBy;
+
+  /// Every leaf under the row is held: the row is greyed (it is not on the
+  /// home schedule) and says so to a screen reader.
+  final bool heldWhole;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -113,6 +123,45 @@ class ContentItemTile extends ConsumerWidget {
     final count = reviewCount ?? progress?.events ?? 0;
     final state = progress?.state ?? TriState.empty;
 
+    final held = heldBy.isEmpty
+        ? null
+        : Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final name in heldBy)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.colors.brandBlueSoft,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      child: Text(
+                        name,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: context.colors.brandInk,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+    final breadcrumb = showBreadcrumb
+        ? CurriculumLabel.parent(
+            item.sefariaRef,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          )
+        : null;
     final tile = ListTile(
       minLeadingWidth: 48,
       minVerticalPadding: 14,
@@ -136,24 +185,37 @@ class ContentItemTile extends ConsumerWidget {
         ),
         textAlign: TextAlign.start,
       ),
-      subtitle: showBreadcrumb
-          ? CurriculumLabel.parent(
-              item.sefariaRef,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          : (l10n != null &&
-                !item.isLeaf &&
-                progress != null &&
-                progress.total > 0)
-          ? Text(
-              l10n.learnerProgressCount(progress.learnt, progress.total),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          : null,
+      subtitle: held == null
+          ? (breadcrumb ??
+                (l10n != null &&
+                        !item.isLeaf &&
+                        progress != null &&
+                        progress.total > 0
+                    ? Text(
+                        l10n.learnerProgressCount(progress.learnt, progress.total),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    : null))
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ?breadcrumb,
+                if (l10n != null &&
+                    !item.isLeaf &&
+                    progress != null &&
+                    progress.total > 0)
+                  Text(
+                    l10n.learnerProgressCount(progress.learnt, progress.total),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                held,
+              ],
+            ),
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
       onLongPress: tickDisabled && onLongPress != null
@@ -163,20 +225,37 @@ class ContentItemTile extends ConsumerWidget {
                     ? () => _showStageBreakdown(context, ref)
                     : null),
     );
-    if (progress == null || l10n == null) return tile;
-    return Semantics(
-      label: learntTriStateSemantics(
-        l10n,
-        name: CurriculumLabelRenderer.renderForItem(
-          item,
-          useHebrew: domainTermLabels(ref).isHebrew,
+    Widget result = tile;
+    if (heldBy.isNotEmpty) {
+      result = Semantics(
+        hint: heldWhole && l10n != null
+            ? l10n.groundHeldTagSemantics(heldBy.join(', '))
+            : null,
+        child: heldWhole
+            ? Opacity(
+                key: const ValueKey('heldGroundGreyed'),
+                opacity: 0.55,
+                child: result,
+              )
+            : result,
+      );
+    }
+    if (progress != null && l10n != null) {
+      result = Semantics(
+        label: learntTriStateSemantics(
+          l10n,
+          name: CurriculumLabelRenderer.renderForItem(
+            item,
+            useHebrew: domainTermLabels(ref).isHebrew,
+          ),
+          state: state,
+          learnt: progress.learnt,
+          total: progress.total,
         ),
-        state: state,
-        learnt: progress.learnt,
-        total: progress.total,
-      ),
-      child: tile,
-    );
+        child: result,
+      );
+    }
+    return result;
   }
 
   void _showStageBreakdown(BuildContext context, WidgetRef ref) {
