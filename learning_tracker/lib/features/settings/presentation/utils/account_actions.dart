@@ -193,6 +193,10 @@ Future<void> showSignOutConfirmation(
     // Hard sign-out: clear Firebase session so the user must re-authenticate
     // on next launch rather than being silently resumed via cached token.
     await ref.read(authRepositoryProvider).signOut();
+    // The active account's named app is now signed out (DNI-520): drop it as
+    // the active account so no repository keeps reading through a session
+    // that no longer carries request.auth.
+    ref.read(activeAccountIdProvider.notifier).set(null);
     ref.read(authStateProvider.notifier).signOut();
     router.pinGuard.lock();
 

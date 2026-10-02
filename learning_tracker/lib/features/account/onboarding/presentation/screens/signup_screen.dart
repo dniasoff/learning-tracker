@@ -9,12 +9,14 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
-import 'package:learning_tracker/core/providers/account_firebase_registry_provider.dart';
 import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
+import 'package:learning_tracker/core/providers/path_uid_resolver_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/domain/services/named_app_sign_in.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -116,10 +118,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   ) async {
     setState(() => _isLoading = true);
     try {
+      // Sign-up happens on a fresh account id's OWN named app (AD-1,
+      // DNI-520). The user signs in again after verifying the email; that
+      // sign-in registers the account on this device, so this transient app
+      // is torn down right away.
       final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.signUp(email, password, displayName);
-      await authRepo.sendEmailVerification();
-      await authRepo.signOut();
+      final accountId = const Uuid().v4();
+      try {
+        await authRepo.createAccountWithEmail(
+          accountId,
+          email,
+          password,
+          displayName,
+        );
+        final accountAuth = authRepo.forAccount(accountId);
+        await accountAuth.sendEmailVerification();
+        await accountAuth.signOut();
+      } finally {
+        await _discardQuietly(authRepo, accountId);
+      }
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -176,85 +193,79 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     setState(() => _isLoading = true);
     try {
       final authRepo = ref.read(authRepositoryProvider);
-      final idToken = await authRepo.signInWithGoogleAndGetIdToken();
+      // The Google picker only — no Firebase sign-in yet.
+      final pick = await authRepo.pickGoogleAccount();
       if (!mounted) return;
+      final idToken = pick.idToken;
+      if (idToken == null) return;
 
-      final googleUser = ref.read(authRepositoryProvider).currentUser;
-      // A null idToken alongside a signed-in user means the AccountFirebase
-      // session below (Root Cause A) cannot be established — treat the same
-      // as the pre-existing null-user bail-out rather than proceeding half-
-      // signed-in.
-      if (googleUser == null || idToken == null) return;
-
-      // Epic 21.6: check 5-account cap before adding
+      // One sign-in, on the account's own named app (AD-1, DNI-520).
       final registry = ref.read(deviceRegistryProvider);
-      final accounts = await registry.getAllAccounts();
-      // Only count if this is genuinely a NEW account on this device
-      final existingEntry = await registry.findByFirebaseUid(googleUser.uid);
-      if (existingEntry == null && accounts.length >= kMaxDeviceAccounts) {
-        if (mounted) {
-          _showError(
-            AppLocalizations.of(
-              context,
-            )!.authMaxDeviceAccounts(kMaxDeviceAccounts),
-          );
+      final signIn = NamedAppSignIn(
+        auth: authRepo,
+        registry: registry,
+        pathUids: ref.read(pathUidResolverProvider),
+      );
+      final session = await signIn.signIn(
+        emailHint: pick.email,
+        authenticate: (accountId) =>
+            authRepo.signInToAccountWithGoogle(accountId, idToken),
+      );
+      final googleUser = session.user;
+      final existingEntry = session.registryRow;
+
+      // Epic 21.6: check 5-account cap before adding — only a genuinely NEW
+      // account on this device counts.
+      if (session.isNewToDevice) {
+        final accounts = await registry.getAllAccounts();
+        if (accounts.length >= kMaxDeviceAccounts) {
+          if (mounted) {
+            _showError(
+              AppLocalizations.of(
+                context,
+              )!.authMaxDeviceAccounts(kMaxDeviceAccounts),
+            );
+          }
+          // Sign the just-signed-in named app out and tear it down.
+          await signIn.abandon(session);
+          return;
         }
-        // Sign out the just-signed-in Google user to avoid orphan state
-        await ref.read(authRepositoryProvider).signOut();
-        return;
       }
 
-      // Epic 21: register a per-account DB for brand-new Google
-      // accounts. Returning-user flows (existingEntry != null) keep
-      // the existing DB file — the registry row already points at it.
-      if (existingEntry == null) {
-        final accountId = const Uuid().v4();
-        // dbFileName is vestigial post-P3-5 (no per-account Drift DB is ever
-        // opened again) but the registry row still carries it so
-        // AccountLifecycleService can defensively delete a stale on-disk
-        // .sqlite file left over from before the archival.
-        final dbFileName = 'user_acc_$accountId.db';
-        await ref
-            .read(accountFirebaseRegistryProvider)
-            .signInCloudAccountWithGoogleIdToken(accountId, idToken: idToken);
-        ref.read(activeAccountIdProvider.notifier).set(accountId);
-
-        await ref
-            .read(authStateProvider.notifier)
-            .setCloudBornSessionFromFirebaseUser(googleUser);
-
-        final prefsForReg = await SharedPreferences.getInstance();
-        final session = SessionPersistenceService(
-          prefs: prefsForReg,
-          registry: registry,
-        );
-        await session.registerAccount(
-          accountId: accountId,
+      final prefsForReg = await SharedPreferences.getInstance();
+      final persistence = SessionPersistenceService(
+        prefs: prefsForReg,
+        registry: registry,
+      );
+      if (session.isNewToDevice) {
+        // Epic 21: register the new account BEFORE activating it — the
+        // active account's repositories read their users/{uid} path from
+        // this persisted row (AD-24). dbFileName is vestigial post-P3-5 (no
+        // per-account Drift DB is ever opened again) but the registry row
+        // still carries it so AccountLifecycleService can defensively delete
+        // a stale on-disk .sqlite file left over from before the archival.
+        await persistence.registerAccount(
+          accountId: session.accountId,
           email: googleUser.email ?? '',
           displayName: googleUser.displayName ?? '',
           tier: 'cloudBorn',
           firebaseUid: googleUser.uid,
-          dbFileName: dbFileName,
+          dbFileName: 'user_acc_${session.accountId}.db',
         );
-      } else {
-        // Existing account on this device — refresh lastUsedAt so session
-        // persistence stays coherent.
-        await ref
-            .read(accountFirebaseRegistryProvider)
-            .signInCloudAccountWithGoogleIdToken(
-              existingEntry.accountId,
-              idToken: idToken,
-            );
-        ref.read(activeAccountIdProvider.notifier).set(existingEntry.accountId);
+        ref.read(activeAccountIdProvider.notifier).set(session.accountId);
         await ref
             .read(authStateProvider.notifier)
             .setCloudBornSessionFromFirebaseUser(googleUser);
-        final prefsForReg = await SharedPreferences.getInstance();
-        final session = SessionPersistenceService(
-          prefs: prefsForReg,
-          registry: registry,
-        );
-        await session.setActiveAccount(existingEntry.accountId);
+      } else {
+        // Existing account on this device — reconcile its persisted path
+        // uid (AD-24) and refresh lastUsedAt so session persistence stays
+        // coherent.
+        await signIn.reconcilePathUid(session);
+        ref.read(activeAccountIdProvider.notifier).set(session.accountId);
+        await ref
+            .read(authStateProvider.notifier)
+            .setCloudBornSessionFromFirebaseUser(googleUser);
+        await persistence.setActiveAccount(session.accountId);
       }
       if (!mounted) return;
 
@@ -310,6 +321,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Tears a transient sign-up named app down, best-effort: a cleanup
+  /// failure must never replace the sign-up's own outcome.
+  Future<void> _discardQuietly(AuthRepository authRepo, String accountId) async {
+    try {
+      await authRepo.discardAccountSession(accountId);
+    } on Exception catch (_) {
+      // Leaves at most one idle named app until the next app start.
     }
   }
 

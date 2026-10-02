@@ -8,13 +8,14 @@ import 'package:learning_tracker/app/bootstrap/crashlytics_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/firebase_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/notifications_bootstrap.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
+import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
+import 'package:learning_tracker/core/auth/auth_providers.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
@@ -25,8 +26,9 @@ typedef BootstrapResult = ({
   CrashlyticsService crashlytics,
 });
 
-/// Seeds the restored account only when the live default-app Firebase session
-/// matches that account's persisted registry [firebaseUid].
+/// Seeds the restored account only when its OWN named-app Firebase session
+/// (re-attached in [bootstrap], DNI-520) matches that account's persisted
+/// registry [firebaseUid] (its AD-24 path uid).
 ///
 /// The device registry is local persistence and can outlive Firebase Auth
 /// (for example after sign-out, reinstall, or an auth-session reset). Seeding
@@ -132,7 +134,20 @@ Future<BootstrapResult> bootstrap() async {
   // bootstrapAccount completed before runApp so this is effectively
   // synchronous from the provider tree's perspective.
   if (accountBootstrap.accountId != null) {
-    final bootstrapUser = container.read(authRepositoryProvider).currentUser;
+    // Re-attach the restored account's OWN named-app session (local, works
+    // offline; AD-1, DNI-520). There is no default-app session to consult.
+    AuthGatewayUser? bootstrapUser;
+    try {
+      bootstrapUser = await container
+          .read(accountAuthGatewayProvider)
+          .restoreSession(accountBootstrap.accountId!);
+    } on Exception catch (error, stackTrace) {
+      log.warning(
+        event: 'active_account_session_restore_failed',
+        exception: error,
+        stackTrace: stackTrace,
+      );
+    }
     String? restoredFirebaseUid;
     if (bootstrapUser != null) {
       try {

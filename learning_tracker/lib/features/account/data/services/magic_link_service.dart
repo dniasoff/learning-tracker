@@ -45,16 +45,31 @@ const kPendingVerifyEmailOobCode = 'pending_verify_email_oob_code';
 ///   add the host used in [AuthRepositoryImpl.sendSignInLinkToEmail]
 ///   (currently `torah-study-tracker.firebaseapp.com`).
 /// - The AndroidManifest already declares the matching intent-filter.
+/// Signs a device account's named app in with an email [emailLink]
+/// (DNI-520: there is no default-app sign-in), applying [displayName] to the
+/// new user when one is pending, and returns the signed-in user.
+typedef MagicLinkSignIn =
+    Future<AppUser?> Function(
+      String email,
+      String emailLink, {
+      String? displayName,
+    });
+
 class MagicLinkService {
   MagicLinkService({
     required AuthRepository authRepository,
+    required MagicLinkSignIn signInWithEmailLink,
     required Future<void> Function(AppUser user) onSignedIn,
     AppLinks? appLinks,
   }) : _authRepository = authRepository,
+       _signInWithEmailLink = signInWithEmailLink,
        _onSignedIn = onSignedIn,
        _appLinks = appLinks ?? AppLinks();
 
+  /// Used only for account-free calls (link checks, verify-email action
+  /// codes) and the post-verification reload.
   final AuthRepository _authRepository;
+  final MagicLinkSignIn _signInWithEmailLink;
   final Future<void> Function(AppUser user) _onSignedIn;
   final AppLinks _appLinks;
 
@@ -180,13 +195,17 @@ class MagicLinkService {
     }
 
     try {
-      final user = await _authRepository.signInWithEmailLink(email, link);
+      // The pending display name (if any) is applied by the sign-in itself,
+      // on the account's named app, before auth state is promoted.
+      final pendingName = prefs.getString(kMagicLinkPendingDisplayName);
+      final user = await _signInWithEmailLink(
+        email,
+        link,
+        displayName: (pendingName == null || pendingName.isEmpty)
+            ? null
+            : pendingName,
+      );
       if (user != null) {
-        // Apply pending display name (if any) before promoting auth state.
-        final pendingName = prefs.getString(kMagicLinkPendingDisplayName);
-        if (pendingName != null && pendingName.isNotEmpty) {
-          await _authRepository.updateDisplayName(pendingName);
-        }
         await _onSignedIn(user);
       }
     } catch (e, stack) {

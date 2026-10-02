@@ -41,19 +41,23 @@ class AccountLifecycleService {
       throw StateError('removeCloudFromDevice requires a cloud-born account.');
     }
 
-    // If we're removing the Firebase user whose token is currently
-    // cached, clear it — otherwise the picker would still show the
-    // removed account as having a "valid session" via currentUser
-    // on the next launch. Swallow failures so this works in unit
-    // tests without a real app.
-    try {
-      final currentUser = _authRepository?.currentUser;
-      if (currentUser != null && currentUser.uid == account.firebaseUid) {
-        await _authRepository?.signOut();
+    // The account has its own named app (AD-1, DNI-520): sign that app's
+    // Auth out — otherwise the picker would still show the removed account
+    // as having a "valid session" on the next launch — and tear the app
+    // down to free its slot. Swallow failures so this works in unit tests
+    // without a real app.
+    final authRepository = _authRepository;
+    if (authRepository != null) {
+      try {
+        await authRepository.forAccount(accountId).signOut();
+      } catch (_) {
+        // Auth not initialized (tests, or Firebase init failed at startup).
       }
-    } catch (_) {
-      // Auth not initialized (tests, or Firebase init failed at
-      // startup). Nothing to clean up on the auth side.
+      try {
+        await authRepository.discardAccountSession(accountId);
+      } catch (_) {
+        // Same: nothing to tear down without a live app.
+      }
     }
 
     _deleteDbFile(account.dbFileName);
