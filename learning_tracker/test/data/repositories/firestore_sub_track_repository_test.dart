@@ -266,6 +266,62 @@ void main() {
       expect(firestore.ops, isEmpty);
     });
 
+    test('an unknown target throws SubTrackNotFoundException and writes '
+        'nothing (no partial row, no audit entry)', () async {
+      final firestore = _SpyFirestore();
+      final repo = FirestoreSubTrackRepository(firestore: firestore);
+      await expectLater(
+        repo.applyGovernedChange(
+          scope,
+          SubTrackChange.fields(
+            subTrackId: ulidB,
+            changedFields: {'rate_per_week': 9},
+            entry: _entry(ulidB, {'sub_tracks/$ulidB.rate_per_week': 9}),
+          ),
+        ),
+        throwsA(
+          isA<SubTrackNotFoundException>().having(
+            (e) => e.subTrackId,
+            'subTrackId',
+            ulidB,
+          ),
+        ),
+      );
+      expect(firestore.ops, isEmpty);
+      expect((await repo.collectionFor(scope).doc(ulidB).get()).exists, false);
+    });
+
+    for (final (label, fields) in <(String, Map<String, Object?>)>[
+      ('type school_year without academic_year', {'type': 'school_year'}),
+      ('window_end before window_start', {'window_end': '2026-08-01'}),
+    ]) {
+      test('a merged-state invariant break ($label) throws and writes '
+          'nothing', () async {
+        final firestore = _SpyFirestore();
+        final repo = FirestoreSubTrackRepository(firestore: firestore);
+        final doc = repo.collectionFor(scope).doc(ulidB);
+        await doc.set(_storedSubTrack(0));
+        firestore.ops.clear();
+
+        await expectLater(
+          repo.applyGovernedChange(
+            scope,
+            SubTrackChange.fields(
+              subTrackId: ulidB,
+              changedFields: fields,
+              entry: _entry(ulidB, {
+                for (final e in fields.entries)
+                  'sub_tracks/$ulidB.${e.key}': e.value,
+              }),
+            ),
+          ),
+          throwsA(isA<StorageFormatException>()),
+        );
+        expect(firestore.ops, isEmpty);
+        expect((await doc.get()).data(), _storedSubTrack(0));
+      });
+    }
+
     test('codec golden keys match the schema', () {
       final track = SubTrack.fromStorage(ulidB, _storedSubTrack(0));
       expect(
