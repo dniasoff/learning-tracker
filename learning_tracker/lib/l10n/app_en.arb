@@ -1152,6 +1152,223 @@
   "enterNewPinSubtitle": "Choose a new 4-digit PIN.",
   "confirmNewPinSubtitle": "Enter the same PIN again to confirm.",
   "changeParentPin": "Change Parent PIN",
+  "changeHistoryAlsoChanged": "{count, plural, =1{+1 more change in this action} other{+{count} more changes in this action}}",
+  "@changeHistoryAlsoChanged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeHistoryBeforeTracking": "Before tracking",
+  "changeHistoryDateCatchUp": "catch-up",
+  "changeHistoryDayToday": "Today",
+  "changeHistoryDayYesterday": "Yesterday",
+  "changeHistoryDeadlineSet": "Changed the deadline to {date}",
+  "@changeHistoryDeadlineSet": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryDetailsTitle": "Change details",
+  "changeHistoryDetailsWhat": "What changed",
+  "changeHistoryDetailsWhen": "When",
+  "changeHistoryDetailsWho": "Changed by",
+  "changeHistoryEmpty": "No changes yet.",
+  "changeHistoryFieldDates": "dates",
+  "changeHistoryFieldGround": "what it covers",
+  "changeHistoryFieldLocation": "location",
+  "changeHistoryFieldName": "name",
+  "changeHistoryFieldOther": "settings",
+  "changeHistoryFieldPace": "pace",
+  "changeHistoryFieldShabbos": "Shabbos learning",
+  "changeHistoryFieldTimeZone": "time zone",
+  "changeHistoryFilterAll": "All",
+  "changeHistoryFilterLabel": "Show",
+  "changeHistoryFilterLearning": "Learning",
+  "changeHistoryFilterParent": "Parent",
+  "changeHistoryFilterTutor": "Tutor",
+  "changeHistoryGoalChanged": "Changed the goal",
+  "changeHistoryGoalCreated": "Set a goal",
+  "changeHistoryGoalEnded": "Removed the goal",
+  "changeHistoryLearned": "Learned {refs} · {source}",
+  "@changeHistoryLearned": {
+    "placeholders": {
+      "refs": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryLockIgnored": "kept, not counted — recorded during Shabbos/Yom Tov",
+  "changeHistoryMainTrackChanged": "Changed the main track",
+  "changeHistoryMainTrackCreated": "Added the main track",
+  "changeHistoryMainTrackEnded": "Removed the main track",
+  "changeHistoryNoMatches": "No changes match this filter.",
+  "changeHistoryNotAvailable": "Change history is open to the parent only.",
+  "changeHistoryNotified": "Parent notified",
+  "changeHistoryOrderChanged": "Changed the learning order",
+  "changeHistoryProgramChanged": "Changed the program",
+  "changeHistoryRefList": "{first}, {second}",
+  "@changeHistoryRefList": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "second": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryRefRange": "{first} – {last} ({count})",
+  "@changeHistoryRefRange": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeHistoryRemovedLearning": "Removed {refs} · {source}",
+  "@changeHistoryRemovedLearning": {
+    "placeholders": {
+      "refs": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryRemovedUnknown": "Removed an earlier learning record",
+  "changeHistoryReverted": "Reverted change: {summary}",
+  "@changeHistoryReverted": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryRoleChild": "Child",
+  "changeHistoryRoleParent": "Parent",
+  "changeHistoryRoleTutor": "Tutor",
+  "changeHistoryScopeChanged": "Changed what the main track covers",
+  "changeHistorySelectPrompt": "Select a change to see its details.",
+  "changeHistorySettingsChanged": "Changed learner settings: {fields}",
+  "@changeHistorySettingsChanged": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySettingsSubtitle": "Every change to tracks, goals and learning, by anyone",
+  "changeHistorySourceMain": "Main track",
+  "changeHistoryStagesChanged": "Changed the review stages",
+  "changeHistoryStudyDaysChanged": "Changed the study days",
+  "changeHistorySubTrackChanged": "Changed {name}: {fields}",
+  "@changeHistorySubTrackChanged": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackCreated": "Added {name}",
+  "@changeHistorySubTrackCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackEnded": "Ended {name}",
+  "@changeHistorySubTrackEnded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackRemoved": "Removed {name}",
+  "@changeHistorySubTrackRemoved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackRenamed": "Renamed a sub-track to {name}",
+  "@changeHistorySubTrackRenamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackUnnamed": "a sub-track",
+  "changeHistoryTitle": "Change history",
+  "changeHistoryUndo": "Undo",
+  "changeHistoryUndone": "Undone",
+  "changeHistoryUndoneBy": "Undone by {name} · {time}",
+  "@changeHistoryUndoneBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUpdates": "{count, plural, =1{1 update} other{{count} updates}}",
+  "@changeHistoryUpdates": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeHistoryVoidedBy": "Removed by {name} · {time}",
+  "@changeHistoryVoidedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryVoidedSome": "{count} of {total} removed by {name} · {time}",
+  "@changeHistoryVoidedSome": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "pinChangedSuccessfully": "PIN changed successfully",
   "pinFlowSetupSubtitle": "Set a new 4-digit PIN to enable parent mode.",
   "pinFlowSetupDeviceLocalBanner": "Parent PINs live only on this device. Set a new 4-digit PIN to enable parent mode here. Other devices keep their own PIN.",
