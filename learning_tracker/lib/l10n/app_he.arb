@@ -523,6 +523,8 @@
   "subTrackLifecycleWindowReversed": "חודש הסיום לפני חודש ההתחלה",
   "subTrackLifecycleNextYearSaved": "{name} נוסף לשנת {yearLabel}",
   "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב.",
+  "subTrackLifecycleLoadFailed": "לא ניתן היה לטעון את מסלולי המשנה.",
+  "subTrackLifecycleLoading": "טוען מסלולי משנה",
   "subTrackLifecycleQueued": "נשמר במכשיר. יסונכרן כשתחזרו לרשת.",
   "subTrackLifecycleSyncAddNextYear": "הוספת {name} לשנת {yearLabel}",
   "subTrackLifecycleSyncDelete": "מחיקת {name}",

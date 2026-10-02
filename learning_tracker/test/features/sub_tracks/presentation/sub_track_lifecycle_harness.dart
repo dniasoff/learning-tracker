@@ -165,14 +165,19 @@ final class SubTrackLifecycleCommands implements LearningCommands {
 /// commands' complete-read wait) would time out. These views cancel without
 /// awaiting the inner subscription; writes go straight through.
 final class _FakeAsyncSubTracks implements SubTrackRepository {
-  _FakeAsyncSubTracks(this.inner);
+  _FakeAsyncSubTracks(this.inner, {this.readOverride});
 
   final InMemorySubTrackRepository inner;
 
+  /// When it returns a stream, the reads use it instead of [inner].
+  final Stream<CompleteRead<SubTrack>>? Function()? readOverride;
+
   @override
-  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) => inner
-      .watchAll(scope)
-      .asBroadcastStream(onCancel: (s) => unawaited(s.cancel()));
+  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) =>
+      readOverride?.call() ??
+      inner
+          .watchAll(scope)
+          .asBroadcastStream(onCancel: (s) => unawaited(s.cancel()));
 
   @override
   Future<void> applyGovernedChange(LearnerScope scope, SubTrackChange change) =>
@@ -239,6 +244,10 @@ final class LifecycleWorld {
   /// The learner's civil today.
   final String today;
 
+  /// When set, the lifecycle READS (not the commands) see this stream
+  /// instead of the store: a failing or never-completing read.
+  Stream<CompleteRead<SubTrack>> Function()? readOverride;
+
   var _n = 0;
 
   /// The lifecycle commands.
@@ -265,7 +274,8 @@ final class LifecycleWorld {
   List<Override> get overrides => [
     activeLearnerScopeProvider.overrideWith((ref) async => scope),
     subTrackRepositoryProvider.overrideWith(
-      (ref) async => _FakeAsyncSubTracks(repo),
+      (ref) async =>
+          _FakeAsyncSubTracks(repo, readOverride: () => readOverride?.call()),
     ),
     subTrackLifecycleTodayProvider.overrideWith((ref) => today),
     subTrackLifecycleViewerProvider.overrideWith((ref) => viewer),

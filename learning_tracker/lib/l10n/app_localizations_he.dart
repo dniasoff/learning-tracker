@@ -1056,6 +1056,13 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא ניתן היה לשמור את מסלול המשנה. נסו שוב.';
 
   @override
+  String get subTrackLifecycleLoadFailed =>
+      'לא ניתן היה לטעון את מסלולי המשנה.';
+
+  @override
+  String get subTrackLifecycleLoading => 'טוען מסלולי משנה';
+
+  @override
   String get subTrackLifecycleQueued => 'נשמר במכשיר. יסונכרן כשתחזרו לרשת.';
 
   @override

@@ -1061,6 +1061,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save the sub-track. Try again.';
 
   @override
+  String get subTrackLifecycleLoadFailed => 'Couldn\'t load sub-tracks.';
+
+  @override
+  String get subTrackLifecycleLoading => 'Loading sub-tracks';
+
+  @override
   String get subTrackLifecycleQueued =>
       'Saved on this device. It will sync when you\'re back online.';
 

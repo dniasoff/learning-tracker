@@ -21,6 +21,21 @@ import 'package:learning_tracker/features/learning/domain/commands/sub_track_com
 bool isEndedSubTrack(SubTrack track, CivilDate today) =>
     !holdsGround(track, today);
 
+/// The complete sub-track read held rows that failed strict decode
+/// (`CompleteReadReady.rejected`). The lifecycle surfaces show it as a
+/// read failure with retry instead of silently dropping the rows (AD-35):
+/// a missing row could hide a used academic year or a live sub-track.
+final class SubTrackReadRejectedException implements Exception {
+  /// Creates the failure for [count] undecodable rows.
+  const SubTrackReadRejectedException(this.count);
+
+  /// How many rows failed decode.
+  final int count;
+
+  @override
+  String toString() => 'SubTrackReadRejectedException($count rows)';
+}
+
 /// A learner's sub-tracks split into the hub's active and ended groups.
 final class SubTrackLifecycleGroups {
   /// Creates the groups.

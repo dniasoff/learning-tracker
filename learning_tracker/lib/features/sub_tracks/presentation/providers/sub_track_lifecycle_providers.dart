@@ -25,6 +25,8 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 /// Every sub-track of the active learner, live and ended, from the
 /// complete read (loading until it is complete, never partial). Empty
 /// while no learner is active or the sub-track repository is not ready.
+/// A read failure is an error, never an empty list; so is a complete read
+/// with undecodable rows ([SubTrackReadRejectedException], AD-35).
 final subTrackLifecycleTracksProvider =
     StreamProvider.autoDispose<List<SubTrack>>((ref) async* {
       final scope = await ref.watch(activeLearnerScopeProvider.future);
@@ -36,7 +38,13 @@ final subTrackLifecycleTracksProvider =
       yield* repository
           .watchAll(scope)
           .where((read) => read is CompleteReadReady<SubTrack>)
-          .map((read) => (read as CompleteReadReady<SubTrack>).items);
+          .map((read) {
+            final ready = read as CompleteReadReady<SubTrack>;
+            if (!ready.isClean) {
+              throw SubTrackReadRejectedException(ready.rejected.length);
+            }
+            return ready.items;
+          });
     });
 
 /// The learner's civil today (AD-41): the current instant in the

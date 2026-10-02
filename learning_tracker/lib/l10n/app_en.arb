@@ -999,6 +999,14 @@
   "@subTrackLifecycleSaveFailed": {
     "description": "Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4."
   },
+  "subTrackLifecycleLoadFailed": "Couldn't load sub-tracks.",
+  "@subTrackLifecycleLoadFailed": {
+    "description": "Manage tracks: the sub-track read failed (network, permission or an unreadable sub-track); shown with Retry. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleLoading": "Loading sub-tracks",
+  "@subTrackLifecycleLoading": {
+    "description": "Screen-reader label of the sub-track section's loading indicator on Manage tracks. DRAFT copy, pending zc4."
+  },
   "subTrackLifecycleQueued": "Saved on this device. It will sync when you're back online.",
   "@subTrackLifecycleQueued": {
     "description": "Snackbar when an End, Delete or Add next year is queued offline and not yet accepted by the server (AD-54). DRAFT copy, pending zc4."

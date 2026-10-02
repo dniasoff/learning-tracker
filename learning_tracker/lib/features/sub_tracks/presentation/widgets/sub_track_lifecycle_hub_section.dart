@@ -25,17 +25,32 @@ import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_tr
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The hub's sub-track rows, under the lifecycle writes still waiting for
-/// the server ([SubTrackLifecycleSyncPanel]); no rows while there are
-/// none, while loading, or when the read fails (the curriculum list stays
-/// usable).
+/// the server ([SubTrackLifecycleSyncPanel]). While the first read loads
+/// it shows a compact loading row; a failed read (network, permission or
+/// an undecodable sub-track) shows "Couldn't load sub-tracks" with Retry —
+/// never an empty section that looks like no sub-tracks. The curriculum
+/// list above stays usable either way. No rows when there are none.
 class SubTrackLifecycleHubSection extends ConsumerWidget {
   /// Creates the section.
   const SubTrackLifecycleHubSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final groups = ref.watch(subTrackLifecycleGroupsProvider).value;
-    if (groups == null || (groups.active.isEmpty && groups.ended.isEmpty)) {
+    final read = ref.watch(subTrackLifecycleGroupsProvider);
+    if (read.hasError) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SubTrackLifecycleSyncPanel(),
+          _LoadFailed(
+            onRetry: () => ref.invalidate(subTrackLifecycleTracksProvider),
+          ),
+        ],
+      );
+    }
+    final groups = read.value;
+    if (groups == null) return const _Loading();
+    if (groups.active.isEmpty && groups.ended.isEmpty) {
       return const SubTrackLifecycleSyncPanel();
     }
     final l10n = AppLocalizations.of(context)!;
@@ -92,6 +107,65 @@ class SubTrackLifecycleHubSection extends ConsumerWidget {
           onOpen: (track) => openSubTrackLifecycleDetail(context, track.id),
         ),
       ],
+    );
+  }
+}
+
+/// The first sub-track read is still loading.
+class _Loading extends StatelessWidget {
+  const _Loading();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    key: const ValueKey('subTrackLifecycleHubLoading'),
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Center(
+      child: Semantics(
+        label: AppLocalizations.of(context)!.subTrackLifecycleLoading,
+        child: const SizedBox.square(
+          dimension: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+    ),
+  );
+}
+
+/// The sub-track read failed; Retry reads it again.
+class _LoadFailed extends StatelessWidget {
+  const _LoadFailed({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
+      child: Material(
+        key: const ValueKey('subTrackLifecycleHubError'),
+        color: colors.brandCreamCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colors.brandOutline),
+        ),
+        child: Semantics(
+          liveRegion: true,
+          child: ListTile(
+            leading: Icon(Icons.error_outline, color: colors.brandInkMuted),
+            title: Text(
+              l10n.subTrackLifecycleLoadFailed,
+              style: TextStyle(color: colors.brandInk),
+            ),
+            trailing: TextButton(
+              key: const ValueKey('subTrackLifecycleHubRetry'),
+              onPressed: onRetry,
+              child: Text(l10n.actionRetry),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

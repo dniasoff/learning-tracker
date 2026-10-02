@@ -3,8 +3,11 @@
 /// the read-only ended detail.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/predicates.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_hub_section.dart';
@@ -168,5 +171,72 @@ void main() {
       expect(onHome(t, lifecycleToday), isFalse, reason: t.name);
     }
     expect(onHome(tracks().first, lifecycleToday), isTrue);
+  });
+
+  group('the read is never mistaken for no sub-tracks', () {
+    final error = find.byKey(const ValueKey('subTrackLifecycleHubError'));
+    final retry = find.byKey(const ValueKey('subTrackLifecycleHubRetry'));
+
+    testWidgets('a failed read shows Could not load with Retry, and Retry '
+        'reads again', (tester) async {
+      final world = LifecycleWorld(tracks())
+        ..readOverride = () => Stream.error(StateError('permission-denied'));
+      addTearDown(world.dispose);
+      await _pumpHub(tester, world);
+      expect(error, findsOneWidget);
+      expect(find.text("Couldn't load sub-tracks."), findsOneWidget);
+      expect(_active(1), findsNothing);
+
+      world.readOverride = null;
+      await tester.tap(retry);
+      await tester.pumpAndSettle();
+      expect(error, findsNothing);
+      expect(_active(1), findsOneWidget);
+      expect(find.text('Ended sub-tracks (3)'), findsOneWidget);
+    });
+
+    testWidgets('a complete read with an undecodable sub-track is a read '
+        'failure, not a shorter list', (tester) async {
+      final world = LifecycleWorld(tracks());
+      addTearDown(world.dispose);
+      world.repo.seedRejected(world.scope, [
+        RejectedRow(lifecycleId(9), const FormatException('bad ground')),
+      ]);
+      await _pumpHub(tester, world);
+      expect(error, findsOneWidget);
+      expect(_active(1), findsNothing);
+
+      world.repo.seedRejected(world.scope, const []);
+      await tester.tap(retry);
+      await tester.pumpAndSettle();
+      expect(error, findsNothing);
+      expect(_active(1), findsOneWidget);
+    });
+
+    testWidgets('while the first read loads, a loading row shows', (
+      tester,
+    ) async {
+      final pending = StreamController<CompleteRead<SubTrack>>();
+      addTearDown(pending.close);
+      final world = LifecycleWorld(tracks())
+        ..readOverride = () => pending.stream;
+      addTearDown(world.dispose);
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: world.overrides,
+          child: Scaffold(
+            body: ListView(children: const [SubTrackLifecycleHubSection()]),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('subTrackLifecycleHubLoading')),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Loading sub-tracks'), findsOneWidget);
+      expect(error, findsNothing);
+    });
   });
 }

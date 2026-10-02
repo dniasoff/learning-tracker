@@ -1871,6 +1871,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save the sub-track. Try again.'**
   String get subTrackLifecycleSaveFailed;
 
+  /// Manage tracks: the sub-track read failed (network, permission or an unreadable sub-track); shown with Retry. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load sub-tracks.'**
+  String get subTrackLifecycleLoadFailed;
+
+  /// Screen-reader label of the sub-track section's loading indicator on Manage tracks. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading sub-tracks'**
+  String get subTrackLifecycleLoading;
+
   /// Snackbar when an End, Delete or Add next year is queued offline and not yet accepted by the server (AD-54). DRAFT copy, pending zc4.
   ///
   /// In en, this message translates to:
