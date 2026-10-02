@@ -31,12 +31,14 @@ SubTrack _t(
   String name, {
   required List<NodeEntry> ground,
   bool ended = false,
+  String? windowEnd,
 }) => fixtureTrack(
   id,
   name,
   curriculumId: engineCurriculum,
   ground: ground,
   ended: ended,
+  windowEnd: windowEnd,
 );
 
 void main() {
@@ -77,6 +79,48 @@ void main() {
             onHome: false,
           ),
         },
+      ),
+    );
+    expect(held, isEmpty);
+  });
+
+  test(
+    'an expired window the engine says no longer holds is not shown',
+    () async {
+      // Not ended, but its window closed (AD-34: today > window_end).
+      final held = await _held(
+        GroundPickerWorld(
+          corpus: corpus,
+          tracks: [
+            _t(
+              schoolId,
+              'School',
+              ground: const [berakhot2],
+              windowEnd: '2026-09-15',
+            ),
+          ],
+          subTrackStates: {
+            schoolId: const SubTrackState(
+              subTrackId: schoolId,
+              holdsGround: false,
+              inForecast: false,
+              onHome: false,
+            ),
+          },
+        ),
+      );
+      expect(held, isEmpty);
+    },
+  );
+
+  test('a live sub-track with no engine state holds nothing', () async {
+    final held = await _held(
+      GroundPickerWorld(
+        corpus: corpus,
+        tracks: [
+          _t(schoolId, 'School', ground: const [berakhot2]),
+        ],
+        subTrackStates: const {},
       ),
     );
     expect(held, isEmpty);

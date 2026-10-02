@@ -50,12 +50,14 @@ SubTrack fixtureTrack(
   required String curriculumId,
   List<NodeEntry> ground = const [],
   bool ended = false,
+  String? windowEnd,
 }) => SubTrack(
   id: id,
   curriculumId: curriculumId,
   name: name,
   type: SubTrackType.ongoing,
   windowStart: '2026-09-01',
+  windowEnd: windowEnd,
   ratePerWeek: 10,
   weeksPerYear: 39,
   learnsOnShabbos: false,
@@ -106,7 +108,7 @@ final class GroundPickerWorld {
     required this.corpus,
     List<SubTrack> tracks = const [],
     Set<LeafRef> learnt = const {},
-    Map<String, SubTrackState> subTrackStates = const {},
+    Map<String, SubTrackState>? subTrackStates,
     this.parent = true,
     this.calendarProgram = false,
     this.commands,
@@ -121,11 +123,25 @@ final class GroundPickerWorld {
         corpus.curriculumId: FakeCurriculumState(
           curriculumId: corpus.curriculumId,
           learntLeaves: learnt,
-          subTracks: subTrackStates,
+          subTracks: subTrackStates ?? _liveStates(tracks),
         ),
       },
     );
   }
+
+  /// The engine's default answer when a test gives no [SubTrackState]s:
+  /// every non-ended sub-track holds its ground (a window still open). A
+  /// test of an expired window or of missing engine state passes its own
+  /// map, since the providers read `holdsGround` from the engine only.
+  static Map<String, SubTrackState> _liveStates(List<SubTrack> tracks) => {
+    for (final t in tracks)
+      t.id: SubTrackState(
+        subTrackId: t.id,
+        holdsGround: !t.isEnded,
+        inForecast: false,
+        onHome: false,
+      ),
+  };
 
   /// The curriculum tree.
   final Corpus corpus;

@@ -14,7 +14,7 @@ import 'package:learning_tracker/domain/learner_state/append_ground.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/expand_ground.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart'
-    show TriState;
+    show CurriculumState, TriState;
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/tri_state.dart';
@@ -38,6 +38,15 @@ final class GroundHolder {
   /// Its stored ground, as entered.
   final List<NodeEntry> ground;
 }
+
+/// The AD-34 `holdsGround` answer for each sub-track, taken only from the
+/// engine's [state] (`SubTrackState.holdsGround`, which applies
+/// `!ended_at && today ≤ window_end`). A sub-track the engine has no state
+/// for — or a curriculum with no state at all — counts as *not* holding:
+/// the view never re-derives the predicate itself, so an expired window or
+/// a not-yet-computed track is never greyed, tagged or filtered out.
+bool Function(SubTrack track) engineHoldsGround(CurriculumState? state) =>
+    (track) => state?.subTracks[track.id]?.holdsGround ?? false;
 
 /// The sub-tracks of [curriculumId] among [tracks] that hold ground, other
 /// than [exceptId], in [tracks] order.

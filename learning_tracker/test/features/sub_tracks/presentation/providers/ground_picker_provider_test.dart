@@ -161,6 +161,59 @@ void main() {
       expect(model.rowOf(peah, GroundDraft.empty(model)).inUseBy, isEmpty);
     });
 
+    test(
+      'an expired window the engine says no longer holds is not in use',
+      () async {
+        // Not ended, but its window closed (AD-34: today > window_end).
+        start(
+          GroundPickerWorld(
+            corpus: mishnayosCorpus(),
+            tracks: [
+              _school(),
+              fixtureTrack(
+                rebbeId,
+                'Rebbe',
+                curriculumId: engineCurriculum,
+                ground: const [peah],
+                windowEnd: '2026-09-15',
+              ),
+            ],
+            subTrackStates: {
+              rebbeId: const SubTrackState(
+                subTrackId: rebbeId,
+                holdsGround: false,
+                inForecast: false,
+                onHome: false,
+              ),
+            },
+          ),
+        );
+        final model = (await ready()).model;
+        final draft = GroundDraft.empty(model);
+        expect(model.rowOf(peah, draft).inUseBy, isEmpty);
+      },
+    );
+
+    test('a live sub-track with no engine state is not in use', () async {
+      start(
+        GroundPickerWorld(
+          corpus: mishnayosCorpus(),
+          tracks: [
+            _school(),
+            fixtureTrack(
+              rebbeId,
+              'Rebbe',
+              curriculumId: engineCurriculum,
+              ground: const [peah],
+            ),
+          ],
+          subTrackStates: const {},
+        ),
+      );
+      final model = (await ready()).model;
+      expect(model.rowOf(peah, GroundDraft.empty(model)).inUseBy, isEmpty);
+    });
+
     test('a stored ground change recomputes the inputs', () async {
       start(GroundPickerWorld(corpus: mishnayosCorpus(), tracks: [_school()]));
       expect((await ready()).model.ownGround, isEmpty);
