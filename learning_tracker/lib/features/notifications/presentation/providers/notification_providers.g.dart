@@ -961,7 +961,7 @@ final class AllProfilesReminderBootstrapProvider
 }
 
 String _$allProfilesReminderBootstrapHash() =>
-    r'14e5d4458b36890abbc456266c8b51531fbc5535';
+    r'1c7efc5a8183e9c1dedd081250cfda116675f2fb';
 
 /// Watches the streak-alert settings and the active learner's state, and
 /// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
