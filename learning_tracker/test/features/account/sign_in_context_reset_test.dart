@@ -398,9 +398,17 @@ void main() {
           ),
         );
         when(() => checker.hasConnection).thenAnswer((_) async => true);
+        when(() => authRepo.forAccount(any<String>())).thenReturn(authRepo);
         when(
-          () => authRepo.signInWithEmail(any<String>(), any<String>()),
+          () => authRepo.discardAccountSession(any<String>()),
         ).thenAnswer((_) async {});
+        when(
+          () => authRepo.signInToAccountWithEmail(
+            any<String>(),
+            any<String>(),
+            any<String>(),
+          ),
+        ).thenAnswer((_) async => authRepo.currentUser!);
         const verifiedUser = AppUser(
           uid: 'fb-uid-reset-1',
           email: 'reset-cloud@example.com',
@@ -554,6 +562,10 @@ void main() {
       );
 
       when(() => auth.currentUser).thenReturn(cloudUser);
+      // DNI-520: the target account's OWN named-app session is valid.
+      when(
+        () => auth.restoreSession('acc-switch-instant'),
+      ).thenAnswer((_) async => cloudUser);
       when(
         () => auth.onAuthStateChanged(),
       ).thenAnswer((_) => Stream.value(cloudUser));

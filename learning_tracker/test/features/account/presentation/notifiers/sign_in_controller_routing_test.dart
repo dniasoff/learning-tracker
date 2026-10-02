@@ -41,6 +41,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/active_account_id_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/account_firebase_providers.dart';
@@ -302,9 +303,17 @@ void main() {
           when(() => checker.hasConnection).thenAnswer((_) async => true);
 
           // Successful Firebase sign-in.
+          when(() => authRepo.forAccount(any<String>())).thenReturn(authRepo);
           when(
-            () => authRepo.signInWithEmail(any<String>(), any<String>()),
+            () => authRepo.discardAccountSession(any<String>()),
           ).thenAnswer((_) async {});
+          when(
+            () => authRepo.signInToAccountWithEmail(
+              any<String>(),
+              any<String>(),
+              any<String>(),
+            ),
+          ).thenAnswer((_) async => authRepo.currentUser!);
 
           // Verified user.
           const verifiedUser = AppUser(
@@ -343,10 +352,23 @@ void main() {
             formKey: formKey,
           );
 
-          // Firebase sign-in must have been called exactly once.
+          // DNI-520 AC-1: exactly ONE sign-in, on the registered account's
+          // own named app — no default-app sign-in precedes it.
           verify(
-            () => authRepo.signInWithEmail('cloud@example.com', 'p@ssword1'),
+            () => authRepo.signInToAccountWithEmail(
+              'acc-cloud-1',
+              'cloud@example.com',
+              'p@ssword1',
+            ),
           ).called(1);
+          verifyNever(
+            () => authRepo.signInToAccountWithEmail(
+              any(that: isNot('acc-cloud-1')),
+              any<String>(),
+              any<String>(),
+            ),
+          );
+          expect(container.read(activeAccountIdProvider), 'acc-cloud-1');
 
           // Navigation must have occurred.
           expect(
@@ -536,9 +558,17 @@ void main() {
           when(() => checker.hasConnection).thenAnswer((_) async => true);
 
           // Firebase sign-in succeeds.
+          when(() => authRepo.forAccount(any<String>())).thenReturn(authRepo);
           when(
-            () => authRepo.signInWithEmail(any<String>(), any<String>()),
+            () => authRepo.discardAccountSession(any<String>()),
           ).thenAnswer((_) async {});
+          when(
+            () => authRepo.signInToAccountWithEmail(
+              any<String>(),
+              any<String>(),
+              any<String>(),
+            ),
+          ).thenAnswer((_) async => authRepo.currentUser!);
 
           // Unverified password user (stays unverified on all reloads).
           const unverifiedUser = AppUser(
@@ -637,9 +667,17 @@ void main() {
       final tutorGrantRepo = _MockTutorGrantRepository();
 
       when(() => checker.hasConnection).thenAnswer((_) async => true);
+      when(() => authRepo.forAccount(any<String>())).thenReturn(authRepo);
       when(
-        () => authRepo.signInWithEmail(any<String>(), any<String>()),
+        () => authRepo.discardAccountSession(any<String>()),
       ).thenAnswer((_) async {});
+      when(
+        () => authRepo.signInToAccountWithEmail(
+          any<String>(),
+          any<String>(),
+          any<String>(),
+        ),
+      ).thenAnswer((_) async => authRepo.currentUser!);
 
       const verifiedUser = AppUser(
         uid: 'fb-uid-1',

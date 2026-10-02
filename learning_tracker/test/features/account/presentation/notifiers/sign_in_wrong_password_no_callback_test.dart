@@ -184,6 +184,10 @@ void main() {
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
         final registry = _MockDeviceRegistryDatabase();
+        when(() => registry.dedupeByEmail()).thenAnswer((_) async => 0);
+        when(
+          () => registry.findByFirebaseUid(any()),
+        ).thenAnswer((_) async => null);
         final account = _cloudAccount();
         when(
           () => registry.findByEmail(account.email),
@@ -196,8 +200,16 @@ void main() {
         when(() => checker.hasConnection).thenAnswer((_) async => true);
         // Firebase throws invalid-credential for a wrong password on
         // projects with email-enumeration-protection enabled.
+        when(() => authRepo.forAccount(any<String>())).thenReturn(authRepo);
         when(
-          () => authRepo.signInWithEmail(any<String>(), any<String>()),
+          () => authRepo.discardAccountSession(any<String>()),
+        ).thenAnswer((_) async {});
+        when(
+          () => authRepo.signInToAccountWithEmail(
+            any<String>(),
+            any<String>(),
+            any<String>(),
+          ),
         ).thenThrow(
           Exception('[firebase_auth/invalid-credential] bad password'),
         );
@@ -270,6 +282,10 @@ void main() {
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
         final registry = _MockDeviceRegistryDatabase();
+        when(() => registry.dedupeByEmail()).thenAnswer((_) async => 0);
+        when(
+          () => registry.findByFirebaseUid(any()),
+        ).thenAnswer((_) async => null);
         final account = _cloudAccount();
         when(
           () => registry.findByEmail(account.email),
@@ -280,8 +296,16 @@ void main() {
         final tutorGrantRepo = _MockTutorGrantRepository();
 
         when(() => checker.hasConnection).thenAnswer((_) async => true);
+        when(() => authRepo.forAccount(any<String>())).thenReturn(authRepo);
         when(
-          () => authRepo.signInWithEmail(any<String>(), any<String>()),
+          () => authRepo.discardAccountSession(any<String>()),
+        ).thenAnswer((_) async {});
+        when(
+          () => authRepo.signInToAccountWithEmail(
+            any<String>(),
+            any<String>(),
+            any<String>(),
+          ),
         ).thenThrow(
           Exception('[firebase_auth/invalid-credential] bad password'),
         );
@@ -348,6 +372,10 @@ void main() {
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
         final registry = _MockDeviceRegistryDatabase();
+        when(() => registry.dedupeByEmail()).thenAnswer((_) async => 0);
+        when(
+          () => registry.findByFirebaseUid(any()),
+        ).thenAnswer((_) async => null);
         final account = _cloudAccount();
         when(
           () => registry.findByEmail(account.email),
@@ -358,8 +386,16 @@ void main() {
         final tutorGrantRepo = _MockTutorGrantRepository();
 
         when(() => checker.hasConnection).thenAnswer((_) async => true);
+        when(() => authRepo.forAccount(any<String>())).thenReturn(authRepo);
         when(
-          () => authRepo.signInWithEmail(any<String>(), any<String>()),
+          () => authRepo.discardAccountSession(any<String>()),
+        ).thenAnswer((_) async {});
+        when(
+          () => authRepo.signInToAccountWithEmail(
+            any<String>(),
+            any<String>(),
+            any<String>(),
+          ),
         ).thenThrow(Exception('[firebase_auth/wrong-password] wrong password'));
         when(() => authRepo.currentUser).thenReturn(null);
         when(() => authRepo.signOut()).thenAnswer((_) async {});

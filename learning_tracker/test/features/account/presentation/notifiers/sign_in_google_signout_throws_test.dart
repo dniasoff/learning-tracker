@@ -28,6 +28,7 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -113,6 +114,7 @@ void main() {
       test('shows max-accounts error (not generic) and logs warning', () async {
         // Registry already full (kMaxDeviceAccounts = 5).
         final registry = _MockDeviceRegistryDatabase();
+        when(() => registry.dedupeByEmail()).thenAnswer((_) async => 0);
         when(
           () => registry.findByFirebaseUid(_googleUser.uid),
         ).thenAnswer((_) async => null);
@@ -121,12 +123,23 @@ void main() {
         ).thenAnswer((_) async => _seedAccounts(kMaxDeviceAccounts));
 
         final mockAuth = MockAuthRepository();
+        when(() => mockAuth.pickGoogleAccount()).thenAnswer(
+          (_) async => const GoogleAccountPick(
+            idToken: 'fake-google-id-token',
+            email: null,
+          ),
+        );
         when(
-          () => mockAuth.signInWithGoogleAndGetIdToken(),
-        ).thenAnswer((_) async => 'fake-google-id-token');
+          () => mockAuth.signInToAccountWithGoogle(any(), any()),
+        ).thenAnswer((_) async => _googleUser);
+        when(() => mockAuth.forAccount(any())).thenReturn(mockAuth);
+        when(
+          () => mockAuth.discardAccountSession(any()),
+        ).thenAnswer((_) async {});
         // After Google sign-in, currentUser returns the Google account.
         when(() => mockAuth.currentUser).thenReturn(_googleUser);
-        // Device full → signOut() to clean up; it throws.
+        // Device full → the new account's named app is signed out (and torn
+        // down) to clean up; the sign-out throws.
         when(() => mockAuth.signOut()).thenThrow(
           PlatformException(
             code: 'Clear Failed',
@@ -185,12 +198,12 @@ void main() {
             .toList();
         expect(
           history.any(
-            (m) => m.contains('sign_in_google_max_accounts_sign_out_failed'),
+            (m) => m.contains('named_app_sign_in_release_sign_out_failed'),
           ),
           isTrue,
           reason:
               'Expected warning('
-              'event: "sign_in_google_max_accounts_sign_out_failed") '
+              'event: "named_app_sign_in_release_sign_out_failed") '
               'in talker history.',
         );
       });

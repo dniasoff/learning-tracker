@@ -23,10 +23,14 @@
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/account_firebase_providers.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
@@ -95,6 +99,31 @@ AccountFirebase _fakeRegistry({
   );
 }
 
+/// An in-memory device registry holding a row per entry of [pathUids]
+/// (account id → persisted path uid, `null` = not bound yet). DNI-520:
+/// [activeAccountFirebaseProvider] reads the persisted path uid from here.
+Future<DeviceRegistryDatabase> _deviceRegistry(
+  Map<String, String?> pathUids,
+) async {
+  final db = DeviceRegistryDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  for (final entry in pathUids.entries) {
+    await db.addAccount(
+      DeviceAccountsCompanion.insert(
+        accountId: entry.key,
+        email: '${entry.key}@example.com',
+        displayName: entry.key,
+        tier: 'cloudBorn',
+        firebaseUid: Value(entry.value),
+        dbFileName: 'user_acc_${entry.key}.db',
+        createdAt: DateTime.utc(2026),
+        lastUsedAt: DateTime.utc(2026),
+      ),
+    );
+  }
+  return db;
+}
+
 /// Triggers [activeAccountFirebaseProvider]'s build via [read] if one is
 /// pending, then drains the event queue so [AccountFirebase.resolve]'s
 /// async chain settles, and returns the settled [AsyncValue]. See the
@@ -106,6 +135,10 @@ Future<AsyncValue<AccountFirebaseHandles?>> _readSettled(
   await pumpEventQueue();
   return container.read(activeAccountFirebaseProvider);
 }
+
+/// Rows for every account id these tests activate, none bound yet (the
+/// provider binds each to the live uid on first resolve).
+late DeviceRegistryDatabase _testDb;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -138,10 +171,19 @@ void main() {
   });
 
   group('activeAccountFirebaseProvider', () {
+    setUp(() async {
+      _testDb = await _deviceRegistry({
+        'acc-1': null,
+        'acc-2': null,
+        'never-created': null,
+      });
+    });
+
     test('resolves to null when no account is active', () async {
       final container = ProviderContainer(
         overrides: [
           accountFirebaseRegistryProvider.overrideWithValue(_fakeRegistry()),
+          deviceRegistryProvider.overrideWithValue(_testDb),
         ],
       );
       addTearDown(container.dispose);
@@ -157,6 +199,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           accountFirebaseRegistryProvider.overrideWithValue(registry),
+          deviceRegistryProvider.overrideWithValue(_testDb),
         ],
       );
       addTearDown(container.dispose);
@@ -181,6 +224,7 @@ void main() {
           accountFirebaseRegistryProvider.overrideWithValue(
             _fakeRegistry(authenticated: false),
           ),
+          deviceRegistryProvider.overrideWithValue(_testDb),
         ],
       );
       addTearDown(container.dispose);
@@ -204,6 +248,7 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             accountFirebaseRegistryProvider.overrideWithValue(registry),
+            deviceRegistryProvider.overrideWithValue(_testDb),
           ],
         );
         addTearDown(container.dispose);
@@ -229,6 +274,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           accountFirebaseRegistryProvider.overrideWithValue(registry),
+          deviceRegistryProvider.overrideWithValue(_testDb),
         ],
       );
       addTearDown(container.dispose);
@@ -243,6 +289,50 @@ void main() {
       container.read(activeAccountIdProvider.notifier).set('acc-2');
       final second = await _readSettled(container);
       expect(second.value!.app.name, 'account_acc-2');
+    });
+
+    // ── DNI-520 AC-4: repositories get the PERSISTED path uid ───────────
+
+    test('AC-4: handles.uid is the persisted path uid, not the live user\'s '
+        '(the live uid stays available as authUid)', () async {
+      final registry = _fakeRegistry(uid: 'live-uid');
+      final container = ProviderContainer(
+        overrides: [
+          accountFirebaseRegistryProvider.overrideWithValue(registry),
+          deviceRegistryProvider.overrideWithValue(
+            await _deviceRegistry({'acc-1': 'persisted-uid'}),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await registry.createAnonymousAccount('acc-1');
+
+      container.read(activeAccountIdProvider.notifier).set('acc-1');
+      final value = await _readSettled(container);
+
+      expect(value.value!.uid, 'persisted-uid');
+      expect(value.value!.authUid, 'live-uid');
+    });
+
+    test('AC-4: an account row with no path uid yet gets a one-time initial '
+        'bind, then reads it back from the registry', () async {
+      final registry = _fakeRegistry(uid: 'anon-uid');
+      final db = await _deviceRegistry({'acc-1': null});
+      final container = ProviderContainer(
+        overrides: [
+          accountFirebaseRegistryProvider.overrideWithValue(registry),
+          deviceRegistryProvider.overrideWithValue(db),
+        ],
+      );
+      addTearDown(container.dispose);
+      await registry.createAnonymousAccount('acc-1');
+
+      container.read(activeAccountIdProvider.notifier).set('acc-1');
+      final value = await _readSettled(container);
+
+      expect(value.value!.uid, 'anon-uid');
+      expect((await db.findById('acc-1'))!.firebaseUid, 'anon-uid');
+      expect((await db.findById('acc-1'))!.previousFirebaseUid, isNull);
     });
   });
 }

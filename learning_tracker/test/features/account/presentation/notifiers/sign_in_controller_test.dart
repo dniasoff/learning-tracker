@@ -43,10 +43,6 @@ class _ThrowingAuthRepository implements AuthRepository {
   int sendCount = 0;
 
   @override
-  Future<String?> getIdToken({bool forceRefresh = false}) =>
-      throw UnimplementedError();
-
-  @override
   Future<void> sendEmailVerification() async {
     sendCount++;
     throw Exception('simulated send-verification failure');
@@ -56,23 +52,7 @@ class _ThrowingAuthRepository implements AuthRepository {
   AppUser? get currentUser => null;
 
   @override
-  Future<void> applyActionCode(String oobCode) => throw UnimplementedError();
-
-  @override
-  Future<void> changePassword(String newPassword) => throw UnimplementedError();
-
-  @override
-  Future<void> checkActionCode(String oobCode) => throw UnimplementedError();
-
-  @override
-  Future<String> createUserAccount(String email, String password) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> deleteAccount() => throw UnimplementedError();
-
-  @override
-  Future<void> deleteCurrentFirebaseUser() => throw UnimplementedError();
+  String? get accountId => null;
 
   @override
   List<String> getLinkedProviders() => const <String>[];
@@ -81,64 +61,19 @@ class _ThrowingAuthRepository implements AuthRepository {
   bool isSignInWithEmailLink(String link) => false;
 
   @override
-  Future<void> linkEmailProvider(String email, String password) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> linkGoogleProvider() => throw UnimplementedError();
-
-  @override
   Stream<AppUser?> onAuthStateChanged() => const Stream<AppUser?>.empty();
-
-  @override
-  Future<AppUser?> reauthenticateWithGoogle() => throw UnimplementedError();
-
-  @override
-  Future<void> reauthenticateWithEmail(String email, String password) =>
-      throw UnimplementedError();
 
   @override
   Future<AppUser?> reloadCurrentUser() async => null;
 
   @override
-  Future<void> sendPasswordResetEmail(String email) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> sendSignInLinkToEmail(String email) =>
-      throw UnimplementedError();
-
-  @override
-  Future<AppUser?> signInAndGetUser(String email, String password) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> signInWithEmail(String email, String password) =>
-      throw UnimplementedError();
-
-  @override
-  Future<AppUser?> signInWithEmailLink(String email, String emailLink) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> signInWithGoogle() => throw UnimplementedError();
-
-  @override
-  Future<String?> signInWithGoogleAndGetIdToken() => throw UnimplementedError();
-
-  @override
-  Future<AppUser?> reauthWithGoogleSilently() => throw UnimplementedError();
-
-  @override
   Future<void> signOut() async {}
 
+  // Every other member is unused by these tests.
   @override
-  Future<void> signUp(String email, String password, String displayName) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> updateDisplayName(String displayName) =>
-      throw UnimplementedError();
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_ThrowingAuthRepository.${invocation.memberName}',
+  );
 }
 
 /// Sentinel exception so the catch-path test can assert "saw OUR exception".
@@ -261,6 +196,10 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final authRepo = MockAuthRepository();
       final registry = _MockDeviceRegistryDatabase();
+      when(() => registry.dedupeByEmail()).thenAnswer((_) async => 0);
+      when(
+        () => registry.findByFirebaseUid(any()),
+      ).thenAnswer((_) async => null);
       final checker = _MockInternetConnectionChecker();
       const unverifiedUser = AppUser(
         uid: 'fb-uid-unverified',
@@ -273,9 +212,17 @@ void main() {
         () => registry.findByEmail(any<String>()),
       ).thenAnswer((_) async => null);
       when(() => checker.hasConnection).thenAnswer((_) async => true);
+      when(() => authRepo.forAccount(any<String>())).thenReturn(authRepo);
       when(
-        () => authRepo.signInWithEmail(any<String>(), any<String>()),
+        () => authRepo.discardAccountSession(any<String>()),
       ).thenAnswer((_) async {});
+      when(
+        () => authRepo.signInToAccountWithEmail(
+          any<String>(),
+          any<String>(),
+          any<String>(),
+        ),
+      ).thenAnswer((_) async => authRepo.currentUser!);
       when(() => authRepo.currentUser).thenReturn(unverifiedUser);
       when(
         () => authRepo.reloadCurrentUser(),
@@ -336,7 +283,7 @@ void main() {
       'returns to SignInIdle when GoogleSignInException(canceled) is thrown',
       () async {
         final mockAuth = MockAuthRepository();
-        when(() => mockAuth.signInWithGoogleAndGetIdToken()).thenThrow(
+        when(() => mockAuth.pickGoogleAccount()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.canceled,
             description: 'user canceled',
@@ -352,7 +299,7 @@ void main() {
 
         // Canceled flow must return to idle — no error shown.
         expect(container.read(signInControllerProvider), isA<SignInIdle>());
-        verify(() => mockAuth.signInWithGoogleAndGetIdToken()).called(1);
+        verify(() => mockAuth.pickGoogleAccount()).called(1);
       },
     );
 
@@ -360,7 +307,7 @@ void main() {
       'returns to SignInIdle when GoogleSignInException(interrupted) is thrown',
       () async {
         final mockAuth = MockAuthRepository();
-        when(() => mockAuth.signInWithGoogleAndGetIdToken()).thenThrow(
+        when(() => mockAuth.pickGoogleAccount()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.interrupted,
             description: 'interrupted',
@@ -390,11 +337,11 @@ void main() {
       () async {
         final mockAuth = MockAuthRepository();
         // signInWithGoogle() completes without throwing (no user-cancel).
-        when(
-          () => mockAuth.signInWithGoogleAndGetIdToken(),
-        ).thenAnswer((_) async => 'fake-google-id-token');
-        // currentUser is null immediately after — simulates a silent JWT
-        // exchange failure or GMS returning without a live Firebase session.
+        // The picker returns without a token — the silent-failure shape
+        // (GMS returning without a usable credential) under named-app auth.
+        when(() => mockAuth.pickGoogleAccount()).thenAnswer(
+          (_) async => const GoogleAccountPick(idToken: null, email: null),
+        );
         when(() => mockAuth.currentUser).thenReturn(null);
 
         final container = _makeContainer(authRepo: mockAuth);
@@ -433,7 +380,7 @@ void main() {
       'transitions to SignInError for non-cancel GoogleSignInException',
       () async {
         final mockAuth = MockAuthRepository();
-        when(() => mockAuth.signInWithGoogleAndGetIdToken()).thenThrow(
+        when(() => mockAuth.pickGoogleAccount()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.unknownError,
             description: 'unknown error',
@@ -466,7 +413,7 @@ void main() {
         final mockAuth = MockAuthRepository();
         // Throw a Firebase-style exception with a code embedded in toString.
         when(
-          () => mockAuth.signInWithGoogleAndGetIdToken(),
+          () => mockAuth.pickGoogleAccount(),
         ).thenThrow(Exception('[network-request-failed] Network error'));
         final container = _makeContainer(authRepo: mockAuth);
         addTearDown(container.dispose);
@@ -490,9 +437,7 @@ void main() {
       final states = <SignInState>[];
 
       // Track every state change.
-      when(() => mockAuth.signInWithGoogleAndGetIdToken()).thenAnswer((
-        _,
-      ) async {
+      when(() => mockAuth.pickGoogleAccount()).thenAnswer((_) async {
         throw const GoogleSignInException(
           code: GoogleSignInExceptionCode.canceled,
           description: 'user canceled',
@@ -534,9 +479,9 @@ void main() {
     test('signInWithGoogle: disposing the container mid-await does not let '
         'UnmountedRefException escape', () async {
       final mockAuth = MockAuthRepository();
-      final completer = Completer<String?>();
+      final completer = Completer<GoogleAccountPick>();
       when(
-        () => mockAuth.signInWithGoogleAndGetIdToken(),
+        () => mockAuth.pickGoogleAccount(),
       ).thenAnswer((_) => completer.future);
 
       final container = _makeContainer(authRepo: mockAuth);
@@ -556,7 +501,7 @@ void main() {
 
       // The pending signInWithGoogle() call now resolves, resuming the
       // controller's code with a disposed `ref`.
-      completer.complete();
+      completer.complete(const GoogleAccountPick(idToken: null, email: null));
 
       // Must complete WITHOUT throwing. Pre-fix, the resumed continuation's
       // `_ref.read(authRepositoryProvider)` (and, once caught, the catch
@@ -567,9 +512,9 @@ void main() {
     test('signInWithGoogle: a GoogleSignInException thrown after the container '
         'is disposed does not let UnmountedRefException escape', () async {
       final mockAuth = MockAuthRepository();
-      final completer = Completer<String?>();
+      final completer = Completer<GoogleAccountPick>();
       when(
-        () => mockAuth.signInWithGoogleAndGetIdToken(),
+        () => mockAuth.pickGoogleAccount(),
       ).thenAnswer((_) => completer.future);
 
       final container = _makeContainer(authRepo: mockAuth);
@@ -605,7 +550,7 @@ void main() {
       final mockAuth = MockAuthRepository();
       // Embed the Firebase code in the exception's toString.
       when(
-        () => mockAuth.signInWithGoogleAndGetIdToken(),
+        () => mockAuth.pickGoogleAccount(),
       ).thenThrow(Exception('[$firebaseCode] message'));
       final container = _makeContainer(authRepo: mockAuth);
       addTearDown(container.dispose);
@@ -642,7 +587,7 @@ void main() {
         'previously broke code extraction → generic error)', () async {
       final mockAuth = MockAuthRepository();
       when(
-        () => mockAuth.signInWithGoogleAndGetIdToken(),
+        () => mockAuth.pickGoogleAccount(),
       ).thenThrow(Exception('[firebase_auth/wrong-password] bad password'));
       final container = _makeContainer(authRepo: mockAuth);
       addTearDown(container.dispose);
@@ -660,7 +605,7 @@ void main() {
         'authErrWrongPassword', () async {
       final mockAuth = MockAuthRepository();
       when(
-        () => mockAuth.signInWithGoogleAndGetIdToken(),
+        () => mockAuth.pickGoogleAccount(),
       ).thenThrow(Exception('[firebase_auth/invalid-credential] bad creds'));
       final container = _makeContainer(authRepo: mockAuth);
       addTearDown(container.dispose);
@@ -711,7 +656,7 @@ void main() {
       () async {
         final mockAuth = MockAuthRepository();
         when(
-          () => mockAuth.signInWithGoogleAndGetIdToken(),
+          () => mockAuth.pickGoogleAccount(),
         ).thenThrow(Exception('no code here'));
         final container = _makeContainer(authRepo: mockAuth);
         addTearDown(container.dispose);
@@ -734,7 +679,7 @@ void main() {
       '_showError callback is invoked when signInWithGoogle errors',
       () async {
         final mockAuth = MockAuthRepository();
-        when(() => mockAuth.signInWithGoogleAndGetIdToken()).thenThrow(
+        when(() => mockAuth.pickGoogleAccount()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.unknownError,
             description: 'fail',
@@ -765,7 +710,7 @@ void main() {
       '_showError is NOT called when GoogleSignInException is canceled',
       () async {
         final mockAuth = MockAuthRepository();
-        when(() => mockAuth.signInWithGoogleAndGetIdToken()).thenThrow(
+        when(() => mockAuth.pickGoogleAccount()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.canceled,
             description: 'user canceled',
@@ -912,7 +857,7 @@ void main() {
       test('state sequence is Idle → Submitting → SignInError '
           'for a non-cancel exception', () async {
         final mockAuth = MockAuthRepository();
-        when(() => mockAuth.signInWithGoogleAndGetIdToken()).thenThrow(
+        when(() => mockAuth.pickGoogleAccount()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.unknownError,
             description: 'server error',
@@ -960,9 +905,12 @@ void main() {
         '(registry.findByEmail) still resolves to SignInError — never left '
         'at SignInSubmitting or silently reset to SignInIdle', () async {
       final mockAuth = MockAuthRepository();
-      when(
-        () => mockAuth.signInWithGoogleAndGetIdToken(),
-      ).thenAnswer((_) async => 'fake-google-id-token');
+      when(() => mockAuth.pickGoogleAccount()).thenAnswer(
+        (_) async => const GoogleAccountPick(
+          idToken: 'fake-google-id-token',
+          email: 'guard-test@example.com',
+        ),
+      );
       const googleUser = AppUser(
         uid: 'fb-uid-guard-test',
         email: 'guard-test@example.com',
@@ -973,6 +921,10 @@ void main() {
       when(() => mockAuth.currentUser).thenReturn(googleUser);
 
       final mockRegistry = _MockDeviceRegistryDatabase();
+      when(() => mockRegistry.dedupeByEmail()).thenAnswer((_) async => 0);
+      when(
+        () => mockRegistry.findByFirebaseUid(any()),
+      ).thenAnswer((_) async => null);
       when(
         () => mockRegistry.findByFirebaseUid(any()),
       ).thenAnswer((_) async => null);
