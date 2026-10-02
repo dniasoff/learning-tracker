@@ -22,6 +22,17 @@
 ///   validates against its cached row; a merge stays queueable offline
 ///   (AD-38), so this is a client-side check, not a transaction — the
 ///   AD-46 rules (Story 1.9) are the atomic server-side guarantee.
+/// - **Truthful audit baseline** (AD-38: an owner-path entry's `before` is
+///   the writer's cached value per field, `null` when absent). Every
+///   `entry.before` field is compared to the same pre-read row, an absent
+///   field counting as `null`; a mismatch throws
+///   [ChangeBaselineMismatchException] and nothing is written, so a later
+///   undo can never "restore" a value the doc never held. Like the target
+///   check this is a client-side precondition against the writer's view
+///   (cache, then server); a concurrent remote edit landing after the read
+///   is resolved by AD-38 per-field LWW, and the server-side owner rule
+///   (Story 1.9) / `writeWithChangeLog` transaction (Story 1.10) own the
+///   atomic guarantees.
 /// - **Append-only change log** (AD-6, AD-38, AD-46). `change_log/{entryId}`
 ///   is create-only: before the batch, the entry is read through
 ///   [readExistingForCreate] (cache, then server). An identical entry means
@@ -44,6 +55,7 @@ import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 /// `sub_tracks` collection name.
@@ -136,15 +148,32 @@ final class FirestoreSubTrackRepository implements SubTrackRepository {
     final trackDoc = collectionFor(scope).doc(change.subTrackId);
     final current = await _targetRead(trackDoc);
     if (current == null) throw SubTrackNotFoundException(change.subTrackId);
+    final stored = fromFirestoreMap(current);
+    _requireTruthfulBaseline(change, stored);
     // Validate the full merged row; throws StorageFormatException.
     SubTrack.fromStorage(change.subTrackId, {
-      ...fromFirestoreMap(current),
+      ...stored,
       ...change.toMergePatch(),
     });
     final batch = _firestore.batch()
       ..set(trackDoc, patch, SetOptions(merge: true))
       ..set(entryDoc, entryPayload);
     await batch.commit();
+  }
+
+  /// Every `entry.before` field must equal the stored value (absent ⇒
+  /// `null`). [SubTrackChange] already guarantees `before` covers exactly
+  /// the changed `sub_tracks/{subTrackId}.{field}` keys.
+  static void _requireTruthfulBaseline(
+    SubTrackChange change,
+    Map<String, Object?> stored,
+  ) {
+    for (final MapEntry(:key, :value) in change.entry.before.entries) {
+      final field = ChangedFieldKey.tryParse(key)!.field;
+      if (!storageValueEquals(stored[field], value)) {
+        throw ChangeBaselineMismatchException(change.subTrackId, field);
+      }
+    }
   }
 
   static bool _decodesTo(ChangeLogEntry entry, Map<String, dynamic> data) {

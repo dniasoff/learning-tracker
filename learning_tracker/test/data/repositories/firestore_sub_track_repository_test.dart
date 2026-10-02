@@ -75,17 +75,27 @@ Map<String, Object?> _storedSubTrack(int n) => {
   'last_change_id': ulidC,
 };
 
-ChangeLogEntry _entry(String subTrackId, Map<String, Object?> after) =>
-    ChangeLogEntry(
-      id: ulidD,
-      entity: GovernedEntity.subTrack,
-      entityId: subTrackId,
-      actionId: ulidD,
-      before: {for (final k in after.keys) k: null},
-      after: after,
-      at: t0,
-      actor: parentActor,
-    );
+/// An entry whose `before` is, by default, the truthful baseline against
+/// `_storedSubTrack(0)` (absent ⇒ null); pass [before] to override.
+ChangeLogEntry _entry(
+  String subTrackId,
+  Map<String, Object?> after, {
+  Map<String, Object?>? before,
+}) => ChangeLogEntry(
+  id: ulidD,
+  entity: GovernedEntity.subTrack,
+  entityId: subTrackId,
+  actionId: ulidD,
+  before:
+      before ??
+      {
+        for (final k in after.keys)
+          k: _storedSubTrack(0)[ChangedFieldKey.tryParse(k)!.field],
+      },
+  after: after,
+  at: t0,
+  actor: parentActor,
+);
 
 Future<List<CompleteRead<SubTrack>>> _firstComplete(
   Stream<CompleteRead<SubTrack>> stream,
@@ -321,6 +331,80 @@ void main() {
         expect((await doc.get()).data(), _storedSubTrack(0));
       });
     }
+
+    for (final (label, before) in <(String, Map<String, Object?>)>[
+      ('a wrong stored value', {'sub_tracks/$ulidB.rate_per_week': 3}),
+      ('null for a present field', {'sub_tracks/$ulidB.rate_per_week': null}),
+    ]) {
+      test('a false audit baseline ($label) throws '
+          'ChangeBaselineMismatchException and writes nothing', () async {
+        final firestore = _SpyFirestore();
+        final repo = FirestoreSubTrackRepository(firestore: firestore);
+        final doc = repo.collectionFor(scope).doc(ulidB);
+        await doc.set(_storedSubTrack(0));
+        firestore.ops.clear();
+
+        await expectLater(
+          repo.applyGovernedChange(
+            scope,
+            SubTrackChange.fields(
+              subTrackId: ulidB,
+              changedFields: {'rate_per_week': 9},
+              entry: _entry(ulidB, {
+                'sub_tracks/$ulidB.rate_per_week': 9,
+              }, before: before),
+            ),
+          ),
+          throwsA(
+            isA<ChangeBaselineMismatchException>()
+                .having((e) => e.subTrackId, 'subTrackId', ulidB)
+                .having((e) => e.field, 'field', 'rate_per_week'),
+          ),
+        );
+        expect(firestore.ops, isEmpty);
+        expect((await doc.get()).data(), _storedSubTrack(0));
+        expect(
+          (await firestore
+                  .doc(
+                    'users/$_owner/learner_profiles/$profileUlid/'
+                    'change_log/$ulidD',
+                  )
+                  .get())
+              .exists,
+          isFalse,
+        );
+      });
+    }
+
+    test('a baseline of null for an ABSENT field and a stored timestamp '
+        'compared as an instant both pass', () async {
+      final firestore = FakeFirebaseFirestore();
+      final repo = FirestoreSubTrackRepository(firestore: firestore);
+      final doc = repo.collectionFor(scope).doc(ulidB);
+      await doc.set(_storedSubTrack(0));
+
+      // ended_at/end_reason are absent → before null.
+      await repo.applyGovernedChange(
+        scope,
+        SubTrackChange.tombstone(
+          subTrackId: ulidB,
+          endedAt: t1,
+          reason: SubTrackEndReason.deleted,
+          entry: _entry(
+            ulidB,
+            {
+              'sub_tracks/$ulidB.ended_at': t1,
+              'sub_tracks/$ulidB.end_reason': 'deleted',
+            },
+            before: {
+              'sub_tracks/$ulidB.ended_at': null,
+              'sub_tracks/$ulidB.end_reason': null,
+            },
+          ),
+        ),
+      );
+      expect((await doc.get()).data()!['end_reason'], 'deleted');
+    });
 
     test('codec golden keys match the schema', () {
       final track = SubTrack.fromStorage(ulidB, _storedSubTrack(0));
