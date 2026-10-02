@@ -29,6 +29,11 @@
 ///    `sub_track_capacity.dart`, DNI-494): per-sub-track capacity,
 ///    expected new ground and shortfall feeding the FR-19 `dailyTarget`;
 /// 7. points (DNI-468).
+/// 7. points (`earning_events.dart`, DNI-468): the profile-wide
+///    `earningEventIds`, from every curriculum with a corpus.
+/// 8. report projection (`report_projection.dart`, DNI-516): lifetime and
+///    per-source totals of every curriculum with a corpus, from the
+///    counted events and learnt set above (AD-48).
 ///
 /// No I/O, clock read or global state: every input is in
 /// [LearnerStateInputs], and identical inputs give equal outputs.
@@ -58,6 +63,7 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ordered_leaves.dart';
 import 'package:learning_tracker/domain/learner_state/predicates.dart';
 import 'package:learning_tracker/domain/learner_state/projection.dart';
+import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
@@ -295,6 +301,17 @@ final class LearnerStateEngine {
               nowUtc: inputs.nowUtc,
             )
           : null,
+      report: deriveReportProjection(
+        curriculumId: curriculumId,
+        countedLearns: learns,
+        corpus: corpus,
+        inScope: learnt.inScope,
+        learntLeaves: learnt.learntLeaves,
+        subTracks: [
+          for (final s in inputs.subTracks)
+            if (s.curriculumId == curriculumId) s,
+        ],
+      ),
     );
     return (state, earners);
   }

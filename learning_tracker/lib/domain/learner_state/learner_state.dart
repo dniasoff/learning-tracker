@@ -14,6 +14,7 @@ import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 
 /// How much of a node is learnt.
 enum TriState {
@@ -499,6 +500,11 @@ abstract interface class CurriculumState {
 
   /// Invalid intent found while planning (DNI-467); empty when valid.
   Set<CurriculumValidationError> get validationErrors;
+
+  /// The report projection (AD-48, FR-31, FR-32; DNI-516): lifetime and
+  /// per-source totals for every curriculum with a corpus, retired ones
+  /// included. The only input of any report total, count or velocity.
+  ReportProjection get report;
 }
 
 /// The whole learner's state at [nowUtc] (AD-35).
