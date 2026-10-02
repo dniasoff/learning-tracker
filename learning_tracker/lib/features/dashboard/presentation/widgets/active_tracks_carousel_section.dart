@@ -50,6 +50,49 @@ class _ActiveTracksCarouselSectionState
     _controller = PageController(initialPage: _activeIndex);
   }
 
+  /// Keeps the visible page on the curriculum it shows when the tracks
+  /// change: a reorder follows that curriculum to its new page; a removal
+  /// stays on the same page, clamped to the last one. The curriculum in
+  /// view is then whatever the visible page shows, so the streak shown and
+  /// the visible card agree.
+  @override
+  void didUpdateWidget(covariant ActiveTracksCarouselSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final tracks = widget.activeTracks;
+    if (tracks.isEmpty) {
+      _activeIndex = 0;
+      return;
+    }
+    final old = oldWidget.activeTracks;
+    final shown = _activeIndex < old.length
+        ? old[_activeIndex].curriculumId
+        : null;
+    final kept = tracks.indexWhere((t) => t.curriculumId == shown);
+    if (kept == _activeIndex) return;
+    _activeIndex = kept >= 0 ? kept : _activeIndex.clamp(0, tracks.length - 1);
+    _showActivePage();
+  }
+
+  /// After this frame, moves the carousel to [_activeIndex] and puts its
+  /// curriculum in view. Deferred: neither the page controller nor the
+  /// provider may change while the tree is building.
+  void _showActivePage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final tracks = widget.activeTracks;
+      if (_activeIndex >= tracks.length) return;
+      // Refresh the arrows, which follow [_activeIndex].
+      setState(() {});
+      if (_controller.hasClients && _controller.page?.round() != _activeIndex) {
+        _controller.jumpToPage(_activeIndex);
+      }
+      ref
+          .read(dashboardCurriculumInViewProvider.notifier)
+          .show(tracks[_activeIndex].curriculumId);
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -58,6 +101,19 @@ class _ActiveTracksCarouselSectionState
 
   @override
   Widget build(BuildContext context) {
+    // The curriculum in view changed elsewhere (e.g. reset on a profile
+    // switch): show the page the streak now follows.
+    ref.listen(dashboardCurriculumInViewProvider, (_, selected) {
+      final target = curriculumInView(selected, [
+        for (final t in widget.activeTracks) t.curriculumId,
+      ]);
+      final index = widget.activeTracks.indexWhere(
+        (t) => t.curriculumId == target,
+      );
+      if (index < 0 || index == _activeIndex) return;
+      _activeIndex = index;
+      _showActivePage();
+    });
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     return Column(
