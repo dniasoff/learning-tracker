@@ -283,6 +283,7 @@ void main() {
         await useCase.call(
           tutorEmail: 'tutor@example.com',
           childProfileId: 'child-1',
+          canEditLearning: true,
         );
         expectDirectCallNoPiiIn(AnalyticsEvent.tutorInviteSent);
       });

@@ -384,6 +384,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
+            canEditLearning: any(named: 'canEditLearning'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -420,6 +421,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: 'tutor@example.com',
             childProfileId: _childProfileId,
+            canEditLearning: any(named: 'canEditLearning'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -436,6 +438,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
+            canEditLearning: any(named: 'canEditLearning'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -465,6 +468,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: 'rebbe@school.com',
             childProfileId: _childProfileId,
+            canEditLearning: any(named: 'canEditLearning'),
             childName: captureAny(named: 'childName'),
             parentName: captureAny(named: 'parentName'),
           ),
@@ -494,6 +498,7 @@ void main() {
         () => mockUseCase(
           tutorEmail: any(named: 'tutorEmail'),
           childProfileId: any(named: 'childProfileId'),
+          canEditLearning: any(named: 'canEditLearning'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -520,6 +525,7 @@ void main() {
         () => mockUseCase(
           tutorEmail: any(named: 'tutorEmail'),
           childProfileId: any(named: 'childProfileId'),
+          canEditLearning: any(named: 'canEditLearning'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -605,6 +611,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
+            canEditLearning: any(named: 'canEditLearning'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -645,6 +652,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
+            canEditLearning: any(named: 'canEditLearning'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -685,6 +693,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
+            canEditLearning: any(named: 'canEditLearning'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -725,6 +734,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
+            canEditLearning: any(named: 'canEditLearning'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -757,6 +767,7 @@ void main() {
         () => mockUseCase(
           tutorEmail: 'bad@fail.com',
           childProfileId: any(named: 'childProfileId'),
+          canEditLearning: any(named: 'canEditLearning'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -768,6 +779,7 @@ void main() {
         () => mockUseCase(
           tutorEmail: 'ok@example.com',
           childProfileId: any(named: 'childProfileId'),
+          canEditLearning: any(named: 'canEditLearning'),
           childName: any(named: 'childName'),
           parentName: any(named: 'parentName'),
         ),
@@ -820,6 +832,7 @@ void main() {
           () => mockUseCase(
             tutorEmail: any(named: 'tutorEmail'),
             childProfileId: any(named: 'childProfileId'),
+            canEditLearning: any(named: 'canEditLearning'),
             childName: any(named: 'childName'),
             parentName: any(named: 'parentName'),
           ),
@@ -889,6 +902,135 @@ void main() {
             'in invite_tutor_screen.dart — route through AppLocalizations/ARB '
             '(AX-2):\n${violations.join('\n')}',
       );
+    });
+  });
+
+  // ── DNI-487: "Can edit learning" (AD-53) ────────────────────────────────────
+
+  group('InviteTutorScreen — Can edit learning (DNI-487 AC-3/AC-4)', () {
+    void stubSuccess() {
+      when(
+        () => mockUseCase(
+          tutorEmail: any(named: 'tutorEmail'),
+          childProfileId: any(named: 'childProfileId'),
+          canEditLearning: any(named: 'canEditLearning'),
+          childName: any(named: 'childName'),
+          parentName: any(named: 'parentName'),
+        ),
+      ).thenAnswer((_) async => const TutorGrantSuccess(grantId: 'g-1'));
+    }
+
+    Future<bool> sendAndCaptureCanEditLearning(WidgetTester tester) async {
+      await tester.enterText(find.byType(TextFormField), 'tutor@example.com');
+      await tester.pump();
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      final captured = verify(
+        () => mockUseCase(
+          tutorEmail: any(named: 'tutorEmail'),
+          childProfileId: any(named: 'childProfileId'),
+          canEditLearning: captureAny(named: 'canEditLearning'),
+          childName: any(named: 'childName'),
+          parentName: any(named: 'parentName'),
+        ),
+      ).captured;
+      return captured.single as bool;
+    }
+
+    testWidgets('AC-3: checkbox is shown pre-checked with its one-line '
+        'explanation', (tester) async {
+      await _pumpScreen(tester, useCase: mockUseCase);
+
+      final tile = find.byKey(const ValueKey('inviteTutor.canEditLearning'));
+      expect(tile, findsOneWidget);
+      expect(tester.widget<CheckboxListTile>(tile).value, isTrue);
+      expect(find.text('Can edit learning'), findsOneWidget);
+      expect(
+        find.text(
+          'The tutor can change tracks, the deadline and learning records. '
+          'Every change is recorded.',
+        ),
+        findsOneWidget,
+      );
+      // Full-size touch target (UX-DR 156).
+      expect(tester.getSize(tile).height, greaterThanOrEqualTo(48));
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('AC-3: none of the five legacy edit toggles is shown', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, useCase: mockUseCase);
+
+      // Exactly one permission control on the form: the AD-53 checkbox.
+      expect(find.byType(Checkbox), findsOneWidget);
+      expect(find.byType(Switch), findsNothing);
+      for (final legacy in const [
+        'goals',
+        'stages',
+        'study days',
+        'reset completion',
+        'bulk',
+      ]) {
+        expect(
+          find.textContaining(RegExp(legacy, caseSensitive: false)),
+          findsNothing,
+          reason: 'legacy "$legacy" permission control must not be shown',
+        );
+      }
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('AC-4: sending with the box checked sends '
+        'canEditLearning=true', (tester) async {
+      stubSuccess();
+      await _pumpScreen(tester, useCase: mockUseCase);
+
+      expect(await sendAndCaptureCanEditLearning(tester), isTrue);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('AC-4: sending with the box unchecked sends '
+        'canEditLearning=false', (tester) async {
+      stubSuccess();
+      await _pumpScreen(tester, useCase: mockUseCase);
+
+      await tester.tap(
+        find.byKey(const ValueKey('inviteTutor.canEditLearning')),
+      );
+      await tester.pump();
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.byKey(const ValueKey('inviteTutor.canEditLearning')),
+            )
+            .value,
+        isFalse,
+      );
+
+      expect(await sendAndCaptureCanEditLearning(tester), isFalse);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('he locale + large text: checkbox and explanation render '
+        'without overflow', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _pumpScreen(
+        tester,
+        useCase: mockUseCase,
+        locale: const Locale('he'),
+      );
+
+      expect(find.text('יכול לערוך למידה'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await _tearDown(tester);
     });
   });
 

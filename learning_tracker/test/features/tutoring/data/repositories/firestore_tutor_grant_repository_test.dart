@@ -889,6 +889,32 @@ void main() {
       expect(capturedParams!['permissions'], isA<Map<String, dynamic>>());
     });
 
+    test('DNI-487 AC-4: permissions payload carries the explicit '
+        'can_edit_learning choice and none of the legacy edit keys', () async {
+      for (final value in [true, false]) {
+        Map<String, dynamic>? capturedParams;
+        final repo = _buildRepo((name, params) async {
+          if (name == 'inviteTutor') {
+            capturedParams = (params as Map).cast<String, dynamic>();
+          }
+          return <String, dynamic>{};
+        });
+
+        await repo.inviteTutor(
+          tutorEmail: 'tutor@example.com',
+          childProfileId: 'profile_1',
+          permissions: TutorPermissions(canEditLearning: value),
+        );
+
+        final perms = (capturedParams!['permissions'] as Map)
+            .cast<String, dynamic>();
+        expect(perms['can_edit_learning'], value);
+        for (final legacy in kLegacyTutorEditPermissionKeys) {
+          expect(perms.containsKey(legacy), isFalse, reason: legacy);
+        }
+      }
+    });
+
     test('omits childName/parentName when null', () async {
       Map<String, dynamic>? capturedParams;
       final repo = _buildRepo((name, params) async {

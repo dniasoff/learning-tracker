@@ -956,6 +956,15 @@
   "tutorWriteForbiddenTitle": "Action not allowed",
   "tutorWriteForbiddenMessage": "Tutors cannot mark live forward completions. This action would credit the child's streak and rewards, which is reserved for the parent or child.",
   "tutorPermissionDenied": "You don't have permission to make this edit",
+  "tutorEditingTurnedOff": "{learner}'s parent has turned off editing",
+  "@tutorEditingTurnedOff": {
+    "description": "DNI-487 AC-6: shown to a tutor whose write was rejected because the parent turned off the Can edit learning permission. Read access is unchanged.",
+    "placeholders": {
+      "learner": {
+        "type": "String"
+      }
+    }
+  },
   "addProfile": "Add Profile",
   "createProfile": "Create Profile",
   "enterNameHint": "Enter name",
@@ -3198,6 +3207,8 @@
   "inviteTutorErrorLocalOnly": "Tutoring requires a cloud account — upgrade to invite a tutor.",
   "inviteTutorErrorUnauthenticated": "Couldn't send the invitation. Please sign in and try again.",
   "inviteTutorErrorGeneric": "Couldn't send the invitation. Please try again.",
+  "inviteTutorCanEditLearningLabel": "Can edit learning",
+  "inviteTutorCanEditLearningExplanation": "The tutor can change tracks, the deadline and learning records. Every change is recorded.",
   "manageGrantsAppBarTitle": "My Tutoring Grants",
   "manageGrantsActiveSection": "Active ({count})",
   "@manageGrantsActiveSection": {
@@ -3276,6 +3287,9 @@
   "manageTutorsRescind": "Rescind",
   "manageTutorsRescindErrorGeneric": "Could not rescind. Please try again.",
   "manageTutorsViewAuditLog": "View audit log",
+  "manageTutorsCanEditLearningLabel": "Can edit learning",
+  "manageTutorsCanEditLearningOnlineRequired": "Online required",
+  "manageTutorsCanEditLearningErrorGeneric": "Couldn't change editing permission. Please try again.",
   "tutorFallbackParent": "Parent",
   "auditLogTitle": "Audit Log",
   "auditLogClearFilters": "Clear filters",

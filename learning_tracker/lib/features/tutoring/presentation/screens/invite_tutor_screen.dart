@@ -12,6 +12,11 @@
 // Wire to InviteTutorUseCase (W4.31). The grant repository implementation
 // (data layer / Cloud Function call) is not in scope for this UI task;
 // the screen calls through the use case and surfaces the result.
+//
+// AD-53 / DNI-487: one "Can edit learning" checkbox, pre-checked, with a
+// one-line explanation. Its value is sent as the grant's
+// `permissions.can_edit_learning`. The five legacy per-operation edit toggles
+// are gone. The route is parent-only (childModeGuard + pinGuard).
 
 import 'dart:async';
 
@@ -44,6 +49,10 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+
+  /// AD-53: the parent's "Can edit learning" choice — pre-checked
+  /// (prd-deviations #7).
+  bool _canEditLearning = true;
 
   /// Account-level error (e.g. "cloud account required"), shown as a banner
   /// above the form — NOT as email-field errorText, which would imply the
@@ -112,6 +121,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
       final result = await useCase(
         tutorEmail: email,
         childProfileId: widget.childProfileId,
+        canEditLearning: _canEditLearning,
         childName: childName,
         parentName: parentName,
       );
@@ -302,6 +312,31 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                   hintText: l10n.inviteTutorEmailHint,
                   prefixIcon: const Icon(Icons.email_rounded),
                   errorText: _errorMessage,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // AD-53: the single learning-edit permission, pre-checked.
+              CheckboxListTile(
+                key: const ValueKey('inviteTutor.canEditLearning'),
+                value: _canEditLearning,
+                onChanged: _isLoading
+                    ? null
+                    : (v) => setState(() => _canEditLearning = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  l10n.inviteTutorCanEditLearningLabel,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: context.colors.brandInk,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: Text(
+                  l10n.inviteTutorCanEditLearningExplanation,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: context.colors.brandInkMuted,
+                    height: 1.4,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),

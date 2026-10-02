@@ -32,9 +32,14 @@ class InviteTutorUseCase {
   final TutorGrantRepository _repository;
   final AnalyticsService? _analytics;
 
+  /// [canEditLearning] is the parent's explicit "Can edit learning" choice
+  /// (AD-53, pre-checked on the invite form). It always overrides the
+  /// matching field of [permissions], so a grant's learning-edit authority is
+  /// set only by this parent action.
   Future<TutorGrantResult> call({
     required String tutorEmail,
     required String childProfileId,
+    required bool canEditLearning,
     TutorPermissions? permissions,
     String? childName,
     String? parentName,
@@ -48,7 +53,9 @@ class InviteTutorUseCase {
     final result = await _repository.inviteTutor(
       tutorEmail: email,
       childProfileId: childProfileId,
-      permissions: permissions ?? TutorPermissions.defaults(),
+      permissions: (permissions ?? TutorPermissions.defaults()).copyWith(
+        canEditLearning: canEditLearning,
+      ),
       childName: childName,
       parentName: parentName,
     );
