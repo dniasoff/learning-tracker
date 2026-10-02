@@ -24,6 +24,9 @@ final class _RecordingNavigator implements SubTrackNavigator {
   int hub = 0;
 
   @override
+  bool canOpen(SubTrackDestination destination) => true;
+
+  @override
   void openDetail(BuildContext context, SubTrackHomeItem item) =>
       details.add(item.subTrackId);
 
@@ -41,6 +44,7 @@ Future<_RecordingNavigator> _pump(
   WidgetTester tester, {
   SubTrackViewerRole role = SubTrackViewerRole.parent,
   Stream<LearnerState> Function()? states,
+  bool wired = true,
 }) async {
   await tester.binding.setSurfaceSize(const Size(400, 3200));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -57,7 +61,8 @@ Future<_RecordingNavigator> _pump(
           role: role,
           states: states,
         ),
-        subTrackNavigatorProvider.overrideWithValue(navigator),
+        // Unwired: the production HubOnlySubTrackNavigator.
+        if (wired) subTrackNavigatorProvider.overrideWithValue(navigator),
       ],
     ),
   );
@@ -110,6 +115,19 @@ void main() {
     await tester.tap(find.text('Rebbe'));
     await tester.pump();
     expect(navigator.details, [rebbeId]);
+  });
+
+  testWidgets('production navigator: with no detail built yet a card is '
+      'not tappable, and Manage still opens the hub', (tester) async {
+    await _pump(tester, wired: false);
+    final card = tester.widget<InkWell>(
+      find.byKey(const Key('dashboardSubTrackCard-$rebbeId')),
+    );
+    expect(card.onTap, isNull);
+    final manage = tester.widget<TextButton>(
+      find.byKey(const Key('dashboardSubTracksManage')),
+    );
+    expect(manage.onPressed, isNotNull);
   });
 
   testWidgets('Manage opens the hub for a parent', (tester) async {

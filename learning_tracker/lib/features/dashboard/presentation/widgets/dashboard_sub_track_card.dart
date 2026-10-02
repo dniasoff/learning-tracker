@@ -91,7 +91,9 @@ class DashboardSubTracksSection extends ConsumerWidget {
             DashboardSubTrackCard(
               key: ValueKey('dashboardSubTrack-${item.subTrackId}'),
               item: item,
-              onOpen: () => navigator.openDetail(context, item),
+              onOpen: navigator.canOpen(SubTrackDestination.detail)
+                  ? () => navigator.openDetail(context, item)
+                  : null,
             ),
             const SizedBox(height: 12),
           ],
@@ -115,8 +117,9 @@ class DashboardSubTrackCard extends ConsumerWidget {
   /// The engine projection of the track.
   final SubTrackHomeItem item;
 
-  /// Opens the detail.
-  final VoidCallback onOpen;
+  /// Opens the detail; null while the detail destination is not wired, and
+  /// the card is then not tappable.
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
