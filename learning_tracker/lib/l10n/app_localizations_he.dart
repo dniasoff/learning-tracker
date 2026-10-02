@@ -3928,6 +3928,171 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String subTrackHubHeader(int count) {
+    return 'תתי-מסלולים · $count פעילים';
+  }
+
+  @override
+  String get subTrackHubHelper =>
+      'לימוד שמתקיים מחוץ לבית — בית ספר, רב, חברותא.';
+
+  @override
+  String get subTrackHubAdd => 'הוספת תת-מסלול';
+
+  @override
+  String get subTrackTypeSchoolYear => 'שנת לימודים';
+
+  @override
+  String get subTrackTypeOngoing => 'מתמשך';
+
+  @override
+  String subTrackRowSchoolYearSubtitle(
+    String startMonth,
+    String endMonth,
+    String rate,
+  ) {
+    return 'שנת לימודים · $startMonth–$endMonth · $rate בשבוע';
+  }
+
+  @override
+  String subTrackRowOngoingSubtitle(String rate) {
+    return 'מתמשך · $rate בשבוע';
+  }
+
+  @override
+  String subTrackHubDailyTarget(int count, String unit) {
+    return 'יעד יומי: $count $unit';
+  }
+
+  @override
+  String get subTrackSyncRejected => 'לא ניתן היה לשמור את השינוי.';
+
+  @override
+  String get subTrackSaveFailed => 'לא ניתן היה לשמור את תת-המסלול.';
+
+  @override
+  String get subTrackCalendarProgramRejected =>
+      'מסלול זה עוקב אחר תוכנית לוח שנה, ולכן אי אפשר להוסיף לו תתי-מסלולים.';
+
+  @override
+  String get subTrackFormEditSchoolYearTitle => 'עריכת שנת לימודים';
+
+  @override
+  String get subTrackFormNameLabel => 'שם תת-המסלול';
+
+  @override
+  String get subTrackFormAcademicYearLabel => 'שנת לימודים';
+
+  @override
+  String get subTrackYearUsed => 'בשימוש';
+
+  @override
+  String get subTrackYearActive => 'פעילה';
+
+  @override
+  String get subTrackYearOpen => 'פנויה';
+
+  @override
+  String get subTrackFormStartMonthLabel => 'חודש התחלה';
+
+  @override
+  String get subTrackFormEndMonthLabel => 'חודש סיום';
+
+  @override
+  String subTrackFormRateLabel(String unit) {
+    return '$unit בשבוע';
+  }
+
+  @override
+  String subTrackFormPerSchoolDay(String count, String unit) {
+    return '~$count $unit ליום לימודים';
+  }
+
+  @override
+  String subTrackFormRateDecrease(String unit) {
+    return 'הפחתת $unit בשבוע';
+  }
+
+  @override
+  String subTrackFormRateIncrease(String unit) {
+    return 'הגדלת $unit בשבוע';
+  }
+
+  @override
+  String get subTrackFormWeeksLabel => 'שבועות בשנה';
+
+  @override
+  String get subTrackFormWeeksHelper =>
+      'ממולא מראש — יש לערוך אם שנת הלימודים קצרה יותר';
+
+  @override
+  String get subTrackFormShabbosLabel => 'לומד בשבת / יום טוב';
+
+  @override
+  String get subTrackFormShabbosHelper =>
+      'לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת';
+
+  @override
+  String get subTrackFormGroundNote =>
+      'אפשר להוסיף חומר לימוד מאוחר יותר — אין צורך לדעת עדיין את המסכתות של בית הספר.';
+
+  @override
+  String get subTrackFormSave => 'שמירת תת-מסלול';
+
+  @override
+  String get subTrackNoDeadlineNote =>
+      'ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.';
+
+  @override
+  String get subTrackNoDeadlineLink => 'הגדרת תאריך יעד';
+
+  @override
+  String get subTrackErrorNameRequired => 'יש להזין שם';
+
+  @override
+  String get subTrackErrorYearRequired => 'יש לבחור שנת לימודים';
+
+  @override
+  String get subTrackErrorYearUsed =>
+      'לשנת לימודים זו כבר יש תת-מסלול של בית ספר';
+
+  @override
+  String get subTrackErrorWindowOverlap =>
+      'החודשים האלה חופפים לתת-מסלול אחר של בית ספר';
+
+  @override
+  String get subTrackErrorWindowReversed =>
+      'חודש הסיום חייב לבוא אחרי חודש ההתחלה';
+
+  @override
+  String get subTrackErrorPositiveNumber => 'יש להזין מספר גדול מ-0';
+
+  @override
+  String get subTrackSummaryTitle => 'תתי-מסלולים';
+
+  @override
+  String get subTrackSummaryEmpty => 'אין עדיין תתי-מסלולים';
+
+  @override
+  String subTrackSummaryCapacity(
+    int count,
+    String unit,
+    String rate,
+    String weeks,
+  ) {
+    return 'קיבולת $count $unit ($rate בשבוע × $weeks שבועות)';
+  }
+
+  @override
+  String subTrackSummaryPlan(String rate, String weeks) {
+    return '$rate בשבוע × $weeks שבועות';
+  }
+
+  @override
+  String get onboardingSubTrackMention =>
+      'אפשר להוסיף מאוחר יותר תתי-מסלולים של בית ספר ורב דרך הגדרות → ניהול מסלולים.';
+
+  @override
   String get startingPositionTitle => 'מיקום התחלתי';
 
   @override

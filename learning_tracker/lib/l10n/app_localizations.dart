@@ -6856,6 +6856,267 @@ abstract class AppLocalizations {
   /// **'Study days set by {programName}'**
   String studyDaysSetByProgram(String programName);
 
+  /// Manage tracks hub: Sub-tracks group header with the number of non-ended sub-tracks (DNI-495 AC-1, screens.md #04).
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-tracks · {count} active'**
+  String subTrackHubHeader(int count);
+
+  /// Manage tracks hub: helper under the Sub-tracks header (DNI-495 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Learning that happens outside home — school, a rebbe, a chavrusa.'**
+  String get subTrackHubHelper;
+
+  /// Manage tracks hub: action that opens the sub-track type chooser (DNI-495 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Add sub-track'**
+  String get subTrackHubAdd;
+
+  /// Sub-track type chooser option and school-year form title (DNI-495 AC-1, AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'School year'**
+  String get subTrackTypeSchoolYear;
+
+  /// Sub-track type chooser option for an ongoing sub-track (form in DNI-496) (DNI-495 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing'**
+  String get subTrackTypeOngoing;
+
+  /// Manage tracks hub: subtitle of a school-year sub-track row (screens.md #04).
+  ///
+  /// In en, this message translates to:
+  /// **'School year · {startMonth}–{endMonth} · {rate}/week'**
+  String subTrackRowSchoolYearSubtitle(
+    String startMonth,
+    String endMonth,
+    String rate,
+  );
+
+  /// Manage tracks hub: subtitle of an ongoing sub-track row (screens.md #04).
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing · {rate}/week'**
+  String subTrackRowOngoingSubtitle(String rate);
+
+  /// Manage tracks hub: the curriculum's recomputed daily target shown under its sub-tracks (DNI-495 AC-7/AC-8). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'Daily target: {count} {unit}'**
+  String subTrackHubDailyTarget(int count, String unit);
+
+  /// Snackbar when a queued sub-track change is permanently rejected at sync (UX-DR-119, UX-DR-121).
+  ///
+  /// In en, this message translates to:
+  /// **'Your change couldn\'t be saved.'**
+  String get subTrackSyncRejected;
+
+  /// Retryable snackbar when saving the sub-track form fails; the form keeps its values (UX-DR-120). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the sub-track.'**
+  String get subTrackSaveFailed;
+
+  /// Snackbar when a create is refused because the curriculum follows a calendar program (AD-45). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'This track follows a calendar program, so it can\'t have sub-tracks.'**
+  String get subTrackCalendarProgramRejected;
+
+  /// School-year sub-track form title while editing (DNI-495 AC-8). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'Edit school year'**
+  String get subTrackFormEditSchoolYearTitle;
+
+  /// School-year form: name field label (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-track name'**
+  String get subTrackFormNameLabel;
+
+  /// School-year form: academic-year chip row label (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Academic year'**
+  String get subTrackFormAcademicYearLabel;
+
+  /// Academic-year chip state: the year already has a school-year sub-track; the chip is disabled (UX-DR-32).
+  ///
+  /// In en, this message translates to:
+  /// **'Used'**
+  String get subTrackYearUsed;
+
+  /// Academic-year chip state: the current academic year (UX-DR-32).
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get subTrackYearActive;
+
+  /// Academic-year chip state: a future year with no school-year sub-track (UX-DR-32).
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get subTrackYearOpen;
+
+  /// School-year form: start month field label (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Start month'**
+  String get subTrackFormStartMonthLabel;
+
+  /// School-year form: end month field label (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'End month'**
+  String get subTrackFormEndMonthLabel;
+
+  /// School-year form: rate stepper label in the curriculum's leaf unit, e.g. 'Mishnayos per week' (DNI-495 AC-4, prd-deviations #12).
+  ///
+  /// In en, this message translates to:
+  /// **'{unit} per week'**
+  String subTrackFormRateLabel(String unit);
+
+  /// School-year form: per-school-day helper under the rate stepper (DNI-495 AC-4). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'~{count} {unit} / school day'**
+  String subTrackFormPerSchoolDay(String count, String unit);
+
+  /// Accessibility label for the rate stepper's minus button.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease {unit} per week'**
+  String subTrackFormRateDecrease(String unit);
+
+  /// Accessibility label for the rate stepper's plus button.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase {unit} per week'**
+  String subTrackFormRateIncrease(String unit);
+
+  /// School-year form: weeks-per-year field label (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Weeks per year'**
+  String get subTrackFormWeeksLabel;
+
+  /// School-year form: helper under weeks per year (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Prefilled — edit if the school year is shorter'**
+  String get subTrackFormWeeksHelper;
+
+  /// School-year form: shabbos switch label (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Learns on shabbos / yom tov'**
+  String get subTrackFormShabbosLabel;
+
+  /// School-year form: shabbos switch helper (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Include this source on the catch-up card after shabbos'**
+  String get subTrackFormShabbosHelper;
+
+  /// School-year form: info note about adding ground later (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'You can add ground later — the school\'s masechtos don\'t need to be known yet.'**
+  String get subTrackFormGroundNote;
+
+  /// School-year form: save pill (DNI-495 AC-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Save sub-track'**
+  String get subTrackFormSave;
+
+  /// Sub-track forms: inline note when the curriculum has no deadline goal (DNI-495 AC-6, SPEC CAP-3). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'Without a deadline, a sub-track can\'t lower the daily target.'**
+  String get subTrackNoDeadlineNote;
+
+  /// Sub-track forms: link from the no-deadline note to the curriculum's goal setup (DNI-495 AC-6). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'Set a deadline'**
+  String get subTrackNoDeadlineLink;
+
+  /// Sub-track form inline error: blank name (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name'**
+  String get subTrackErrorNameRequired;
+
+  /// Sub-track form inline error: no academic year selected (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an academic year'**
+  String get subTrackErrorYearRequired;
+
+  /// Sub-track form inline error: the academic year is used (AD-45, UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'This academic year already has a school sub-track'**
+  String get subTrackErrorYearUsed;
+
+  /// Sub-track form inline error: overlapping school-year windows (AD-45, UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'These months overlap another school sub-track'**
+  String get subTrackErrorWindowOverlap;
+
+  /// Sub-track form inline error: window start after window end (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'The end month must come after the start month'**
+  String get subTrackErrorWindowReversed;
+
+  /// Sub-track form inline error: blank, zero, negative or non-numeric rate or weeks (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number greater than 0'**
+  String get subTrackErrorPositiveNumber;
+
+  /// Tablet summary panel title next to the sub-track form (UX-DR-162).
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-tracks'**
+  String get subTrackSummaryTitle;
+
+  /// Tablet summary panel when the curriculum has no sub-tracks. DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'No sub-tracks yet'**
+  String get subTrackSummaryEmpty;
+
+  /// Tablet summary panel: one sub-track's capacity (AD-44, UX-DR-162).
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity {count} {unit} ({rate}/wk × {weeks} weeks)'**
+  String subTrackSummaryCapacity(
+    int count,
+    String unit,
+    String rate,
+    String weeks,
+  );
+
+  /// Tablet summary panel: a sub-track's rate plan when capacity is not computed (no deadline, AD-44).
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}/wk × {weeks} weeks'**
+  String subTrackSummaryPlan(String rate, String weeks);
+
+  /// Onboarding goal step: the one passive sub-track mention; no button, link or field (FR-4a, UX-DR-33). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).
+  ///
+  /// In en, this message translates to:
+  /// **'School and rebbe sub-tracks can be added later from Settings → Manage tracks.'**
+  String get onboardingSubTrackMention;
+
   /// No description provided for @startingPositionTitle.
   ///
   /// In en, this message translates to:

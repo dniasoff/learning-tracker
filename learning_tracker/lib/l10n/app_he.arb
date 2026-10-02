@@ -2176,6 +2176,142 @@
       }
     }
   },
+  "subTrackHubHeader": "תתי-מסלולים · {count} פעילים",
+  "@subTrackHubHeader": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackHubHelper": "לימוד שמתקיים מחוץ לבית — בית ספר, רב, חברותא.",
+  "subTrackHubAdd": "הוספת תת-מסלול",
+  "subTrackTypeSchoolYear": "שנת לימודים",
+  "subTrackTypeOngoing": "מתמשך",
+  "subTrackRowSchoolYearSubtitle": "שנת לימודים · {startMonth}–{endMonth} · {rate} בשבוע",
+  "@subTrackRowSchoolYearSubtitle": {
+    "placeholders": {
+      "startMonth": {
+        "type": "String"
+      },
+      "endMonth": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowOngoingSubtitle": "מתמשך · {rate} בשבוע",
+  "@subTrackRowOngoingSubtitle": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHubDailyTarget": "יעד יומי: {count} {unit}",
+  "@subTrackHubDailyTarget": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackSyncRejected": "לא ניתן היה לשמור את השינוי.",
+  "subTrackSaveFailed": "לא ניתן היה לשמור את תת-המסלול.",
+  "subTrackCalendarProgramRejected": "מסלול זה עוקב אחר תוכנית לוח שנה, ולכן אי אפשר להוסיף לו תתי-מסלולים.",
+  "subTrackFormEditSchoolYearTitle": "עריכת שנת לימודים",
+  "subTrackFormNameLabel": "שם תת-המסלול",
+  "subTrackFormAcademicYearLabel": "שנת לימודים",
+  "subTrackYearUsed": "בשימוש",
+  "subTrackYearActive": "פעילה",
+  "subTrackYearOpen": "פנויה",
+  "subTrackFormStartMonthLabel": "חודש התחלה",
+  "subTrackFormEndMonthLabel": "חודש סיום",
+  "subTrackFormRateLabel": "{unit} בשבוע",
+  "@subTrackFormRateLabel": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormPerSchoolDay": "~{count} {unit} ליום לימודים",
+  "@subTrackFormPerSchoolDay": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormRateDecrease": "הפחתת {unit} בשבוע",
+  "@subTrackFormRateDecrease": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormRateIncrease": "הגדלת {unit} בשבוע",
+  "@subTrackFormRateIncrease": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormWeeksLabel": "שבועות בשנה",
+  "subTrackFormWeeksHelper": "ממולא מראש — יש לערוך אם שנת הלימודים קצרה יותר",
+  "subTrackFormShabbosLabel": "לומד בשבת / יום טוב",
+  "subTrackFormShabbosHelper": "לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת",
+  "subTrackFormGroundNote": "אפשר להוסיף חומר לימוד מאוחר יותר — אין צורך לדעת עדיין את המסכתות של בית הספר.",
+  "subTrackFormSave": "שמירת תת-מסלול",
+  "subTrackNoDeadlineNote": "ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.",
+  "subTrackNoDeadlineLink": "הגדרת תאריך יעד",
+  "subTrackErrorNameRequired": "יש להזין שם",
+  "subTrackErrorYearRequired": "יש לבחור שנת לימודים",
+  "subTrackErrorYearUsed": "לשנת לימודים זו כבר יש תת-מסלול של בית ספר",
+  "subTrackErrorWindowOverlap": "החודשים האלה חופפים לתת-מסלול אחר של בית ספר",
+  "subTrackErrorWindowReversed": "חודש הסיום חייב לבוא אחרי חודש ההתחלה",
+  "subTrackErrorPositiveNumber": "יש להזין מספר גדול מ-0",
+  "subTrackSummaryTitle": "תתי-מסלולים",
+  "subTrackSummaryEmpty": "אין עדיין תתי-מסלולים",
+  "subTrackSummaryCapacity": "קיבולת {count} {unit} ({rate} בשבוע × {weeks} שבועות)",
+  "@subTrackSummaryCapacity": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackSummaryPlan": "{rate} בשבוע × {weeks} שבועות",
+  "@subTrackSummaryPlan": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSubTrackMention": "אפשר להוסיף מאוחר יותר תתי-מסלולים של בית ספר ורב דרך הגדרות → ניהול מסלולים.",
   "startingPositionTitle": "מיקום התחלתי",
   "startingPositionHint": "ניתן להתחיל עד 30 ימים אחורה מהיום",
   "startingPositionWhereAreYou": "איפה אתה ב{programName}?",
