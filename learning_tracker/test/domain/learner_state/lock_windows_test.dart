@@ -460,4 +460,43 @@ void main() {
       );
     });
   });
+
+  group('DNI-504 AC-4/AC-6: the erev view reads these windows', () {
+    test('diaspora yom tov Thu+Fri chained into Shabbos is ONE lock', () {
+      final h = constantHistory(lakewood);
+      final wed = LearnerZone.of(
+        'America/New_York',
+      ).at(_day(2027, 4, 21), hour: 12);
+      final windows = lockWindows(h, wed, wed.add(const Duration(days: 4)));
+      expect(windows, hasLength(1));
+      expect(lockedDays(windows.single, h), {
+        '2027-04-22',
+        '2027-04-23',
+        '2027-04-24',
+      });
+    });
+
+    test('Israel: the same week is two locks with a free Friday', () {
+      final h = constantHistory(jerusalem);
+      final wed = LearnerZone.of(
+        'Asia/Jerusalem',
+      ).at(_day(2027, 4, 21), hour: 12);
+      final windows = lockWindows(h, wed, wed.add(const Duration(days: 4)));
+      expect(windows, hasLength(2));
+      expect(lockedDays(windows.first, h), {'2027-04-22'});
+      expect(lockedDays(windows.last, h), {'2027-04-24'});
+    });
+
+    test('no location: a plain Shabbos starts Friday 12:00 local', () {
+      final h = constantHistory(newYorkNoLocation);
+      final zone = LearnerZone.of('America/New_York');
+      final friday = zone.at(_day(2026, 10, 9), hour: 9);
+      final window = lockWindows(
+        h,
+        friday,
+        friday.add(const Duration(days: 1)),
+      ).single;
+      expect(window.startUtc, zone.at(_day(2026, 10, 9), hour: 12));
+    });
+  });
 }
