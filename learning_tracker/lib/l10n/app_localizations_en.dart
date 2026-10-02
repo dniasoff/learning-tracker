@@ -3112,6 +3112,99 @@ class AppLocalizationsEn extends AppLocalizations {
   String get captureTickUpToHere => 'Tick up to here';
 
   @override
+  String get subTrackRowAllRecorded => 'All ground recorded';
+
+  @override
+  String subTrackRowNext(String position) {
+    return 'Next: $position';
+  }
+
+  @override
+  String get subTrackRowNoGround => 'No ground yet';
+
+  @override
+  String get subTrackRowPlusOne => '+1';
+
+  @override
+  String subTrackRowPlusOneSemantics(String unit, String name) {
+    return 'Record one $unit for $name';
+  }
+
+  @override
+  String subTrackRowSemantics(String name, String position) {
+    return '$name, next $position';
+  }
+
+  @override
+  String subTrackRowsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sub-tracks',
+      one: '1 sub-track',
+    );
+    return 'Also learning · $_temp0';
+  }
+
+  @override
+  String get upToPickerAction => 'Up to…';
+
+  @override
+  String upToPickerActionSemantics(String name) {
+    return 'Record up to, $name';
+  }
+
+  @override
+  String upToPickerExhausted(String units, String name) {
+    return 'No more $units in $name\'s ground.';
+  }
+
+  @override
+  String upToPickerInstruction(String unit) {
+    return 'Tap the last $unit you learnt';
+  }
+
+  @override
+  String upToPickerRecord(int count, String unit) {
+    return 'Record $count $unit';
+  }
+
+  @override
+  String upToPickerRecorded(int count) {
+    return 'Recorded $count';
+  }
+
+  @override
+  String upToPickerRowSemantics(String label, String status) {
+    return '$label, $status';
+  }
+
+  @override
+  String upToPickerRowTargetSemantics(String label, String status) {
+    return '$label, $status, last one learnt';
+  }
+
+  @override
+  String get upToPickerStatusAlreadyRecorded => 'already recorded';
+
+  @override
+  String get upToPickerStatusIncluded => 'included';
+
+  @override
+  String get upToPickerStatusNextUp => 'next up';
+
+  @override
+  String get upToPickerStatusNotSelected => 'not selected';
+
+  @override
+  String get upToPickerStatusSkipped => 'skipped';
+
+  @override
+  String upToPickerTitle(String name) {
+    return '$name · up to…';
+  }
+
+  @override
   String get markedComplete => 'Marked complete';
 
   @override

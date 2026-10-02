@@ -5410,6 +5410,132 @@ abstract class AppLocalizations {
   /// **'Tick up to here'**
   String get captureTickUpToHere;
 
+  /// DNI-501 seam for the Story 2.9 (DNI-500) Learn row: every ground leaf is ticked in this sub-track. [ASSUMPTION copy] from DNI-500 AC-4.
+  ///
+  /// In en, this message translates to:
+  /// **'All ground recorded'**
+  String get subTrackRowAllRecorded;
+
+  /// Learn-tab sub-track row: the sub-track's next leaf (UX-DR-16).
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {position}'**
+  String subTrackRowNext(String position);
+
+  /// Learn-tab sub-track row of a sub-track with no ground; its actions are disabled (Story 2.9, UX-DR-88).
+  ///
+  /// In en, this message translates to:
+  /// **'No ground yet'**
+  String get subTrackRowNoGround;
+
+  /// Learn-tab sub-track row action: record the next leaf (UX-DR-17).
+  ///
+  /// In en, this message translates to:
+  /// **'+1'**
+  String get subTrackRowPlusOne;
+
+  /// Screen-reader label of the +1 action (UX-DR-157); unit is the curriculum's singular leaf unit.
+  ///
+  /// In en, this message translates to:
+  /// **'Record one {unit} for {name}'**
+  String subTrackRowPlusOneSemantics(String unit, String name);
+
+  /// Screen-reader label of a Learn-tab sub-track row (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, next {position}'**
+  String subTrackRowSemantics(String name, String position);
+
+  /// Header of the Learn-tab sub-track rows under today's tasks (UX-DR-46).
+  ///
+  /// In en, this message translates to:
+  /// **'Also learning · {count, plural, =1{1 sub-track} other{{count} sub-tracks}}'**
+  String subTrackRowsTitle(int count);
+
+  /// Action on a Learn-tab sub-track row and on the main-track today list: opens the Up to… picker (UX-DR-18).
+  ///
+  /// In en, this message translates to:
+  /// **'Up to…'**
+  String get upToPickerAction;
+
+  /// Screen-reader label of the Up to… action (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Record up to, {name}'**
+  String upToPickerActionSemantics(String name);
+
+  /// Up to… on a track with no leaves left after its position (UX-DR-108); units is the curriculum's plural leaf unit.
+  ///
+  /// In en, this message translates to:
+  /// **'No more {units} in {name}\'s ground.'**
+  String upToPickerExhausted(String units, String name);
+
+  /// Up to… picker instruction (UX-DR-18); unit is the curriculum's singular leaf unit.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the last {unit} you learnt'**
+  String upToPickerInstruction(String unit);
+
+  /// Up to… picker confirm button with the live count of included rows (UX-DR-72, UX-DR-157); unit is the leaf unit, singular for 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Record {count} {unit}'**
+  String upToPickerRecord(int count, String unit);
+
+  /// Snackbar after an Up to… capture, shown with Undo that voids all of its events (UX-DR-154).
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded {count}'**
+  String upToPickerRecorded(int count);
+
+  /// Screen-reader label of an Up to… picker row: the leaf and its state (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {status}'**
+  String upToPickerRowSemantics(String label, String status);
+
+  /// Screen-reader label of the highlighted target row of the Up to… picker (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {status}, last one learnt'**
+  String upToPickerRowTargetSemantics(String label, String status);
+
+  /// Up to… row state: ticked in this track before; not selectable (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'already recorded'**
+  String get upToPickerStatusAlreadyRecorded;
+
+  /// Up to… row state: will be recorded (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'included'**
+  String get upToPickerStatusIncluded;
+
+  /// Up to… row state: the track position, before a target is chosen (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'next up'**
+  String get upToPickerStatusNextUp;
+
+  /// Up to… row state: after the target (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'not selected'**
+  String get upToPickerStatusNotSelected;
+
+  /// Up to… row state: unticked inside the run; gets no event (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'skipped'**
+  String get upToPickerStatusSkipped;
+
+  /// Up to… picker title (UX-DR-18).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · up to…'**
+  String upToPickerTitle(String name);
+
   /// No description provided for @markedComplete.
   ///
   /// In en, this message translates to:

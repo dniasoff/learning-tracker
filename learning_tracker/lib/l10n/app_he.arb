@@ -1749,6 +1749,129 @@
   "captureStateNotLearnt": "טרם נלמד",
   "captureStatePartial": "נלמד בחלקו",
   "captureTickUpToHere": "סימון עד כאן",
+  "subTrackRowAllRecorded": "כל התחום נרשם",
+  "subTrackRowNext": "הבא: {position}",
+  "@subTrackRowNext": {
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowNoGround": "עדיין אין תחום",
+  "subTrackRowPlusOne": "+1",
+  "subTrackRowPlusOneSemantics": "רישום {unit} אחת עבור {name}",
+  "@subTrackRowPlusOneSemantics": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowSemantics": "{name}, הבא {position}",
+  "@subTrackRowSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowsTitle": "לומד גם · {count, plural, =1{תת-מסלול אחד} other{{count} תתי-מסלולים}}",
+  "@subTrackRowsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToPickerAction": "עד…",
+  "upToPickerActionSemantics": "רישום עד, {name}",
+  "@upToPickerActionSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerExhausted": "אין עוד {units} בתחום של {name}.",
+  "@upToPickerExhausted": {
+    "placeholders": {
+      "units": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerInstruction": "הקש על ה{unit} האחרונה שלמדת",
+  "@upToPickerInstruction": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRecord": "רישום {count} {unit}",
+  "@upToPickerRecord": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRecorded": "נרשמו {count}",
+  "@upToPickerRecorded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToPickerRowSemantics": "{label}, {status}",
+  "@upToPickerRowSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRowTargetSemantics": "{label}, {status}, האחרון שנלמד",
+  "@upToPickerRowTargetSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerStatusAlreadyRecorded": "כבר נרשם",
+  "upToPickerStatusIncluded": "כלול",
+  "upToPickerStatusNextUp": "הבא בתור",
+  "upToPickerStatusNotSelected": "לא נבחר",
+  "upToPickerStatusSkipped": "דולג",
+  "upToPickerTitle": "{name} · עד…",
+  "@upToPickerTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "markedComplete": "סומן כהושלם",
   "couldNotSave": "לא ניתן לשמור: {error}",
   "@couldNotSave": {
