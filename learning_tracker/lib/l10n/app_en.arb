@@ -2355,6 +2355,168 @@
   "@captureTickUpToHere": {
     "description": "Title of the Browse free-tick sheet opened by long-pressing a row: records that item and every earlier one of its masechta (UX-DR-20). DRAFT copy, pending zc4."
   },
+  "subTrackRowAllRecorded": "All ground recorded",
+  "@subTrackRowAllRecorded": {
+    "description": "DNI-501 seam for the Story 2.9 (DNI-500) Learn row: every ground leaf is ticked in this sub-track. [ASSUMPTION copy] from DNI-500 AC-4."
+  },
+  "subTrackRowNext": "Next: {position}",
+  "@subTrackRowNext": {
+    "description": "Learn-tab sub-track row: the sub-track's next leaf (UX-DR-16).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowNoGround": "No ground yet",
+  "@subTrackRowNoGround": {
+    "description": "Learn-tab sub-track row of a sub-track with no ground; its actions are disabled (Story 2.9, UX-DR-88)."
+  },
+  "subTrackRowPlusOne": "+1",
+  "@subTrackRowPlusOne": {
+    "description": "Learn-tab sub-track row action: record the next leaf (UX-DR-17)."
+  },
+  "subTrackRowPlusOneSemantics": "Record one {unit} for {name}",
+  "@subTrackRowPlusOneSemantics": {
+    "description": "Screen-reader label of the +1 action (UX-DR-157); unit is the curriculum's singular leaf unit.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowSemantics": "{name}, next {position}",
+  "@subTrackRowSemantics": {
+    "description": "Screen-reader label of a Learn-tab sub-track row (UX-DR-157).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowsTitle": "Also learning · {count, plural, =1{1 sub-track} other{{count} sub-tracks}}",
+  "@subTrackRowsTitle": {
+    "description": "Header of the Learn-tab sub-track rows under today's tasks (UX-DR-46).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToPickerAction": "Up to…",
+  "@upToPickerAction": {
+    "description": "Action on a Learn-tab sub-track row and on the main-track today list: opens the Up to… picker (UX-DR-18)."
+  },
+  "upToPickerActionSemantics": "Record up to, {name}",
+  "@upToPickerActionSemantics": {
+    "description": "Screen-reader label of the Up to… action (UX-DR-157).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerExhausted": "No more {units} in {name}'s ground.",
+  "@upToPickerExhausted": {
+    "description": "Up to… on a track with no leaves left after its position (UX-DR-108); units is the curriculum's plural leaf unit.",
+    "placeholders": {
+      "units": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerInstruction": "Tap the last {unit} you learnt",
+  "@upToPickerInstruction": {
+    "description": "Up to… picker instruction (UX-DR-18); unit is the curriculum's singular leaf unit.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRecord": "Record {count} {unit}",
+  "@upToPickerRecord": {
+    "description": "Up to… picker confirm button with the live count of included rows (UX-DR-72, UX-DR-157); unit is the leaf unit, singular for 1.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRecorded": "Recorded {count}",
+  "@upToPickerRecorded": {
+    "description": "Snackbar after an Up to… capture, shown with Undo that voids all of its events (UX-DR-154).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToPickerRowSemantics": "{label}, {status}",
+  "@upToPickerRowSemantics": {
+    "description": "Screen-reader label of an Up to… picker row: the leaf and its state (UX-DR-157).",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRowTargetSemantics": "{label}, {status}, last one learnt",
+  "@upToPickerRowTargetSemantics": {
+    "description": "Screen-reader label of the highlighted target row of the Up to… picker (UX-DR-157).",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerStatusAlreadyRecorded": "already recorded",
+  "@upToPickerStatusAlreadyRecorded": {
+    "description": "Up to… row state: ticked in this track before; not selectable (UX-DR-157)."
+  },
+  "upToPickerStatusIncluded": "included",
+  "@upToPickerStatusIncluded": {
+    "description": "Up to… row state: will be recorded (UX-DR-157)."
+  },
+  "upToPickerStatusNextUp": "next up",
+  "@upToPickerStatusNextUp": {
+    "description": "Up to… row state: the track position, before a target is chosen (UX-DR-157)."
+  },
+  "upToPickerStatusNotSelected": "not selected",
+  "@upToPickerStatusNotSelected": {
+    "description": "Up to… row state: after the target (UX-DR-157)."
+  },
+  "upToPickerStatusSkipped": "skipped",
+  "@upToPickerStatusSkipped": {
+    "description": "Up to… row state: unticked inside the run; gets no event (UX-DR-157)."
+  },
+  "upToPickerTitle": "{name} · up to…",
+  "@upToPickerTitle": {
+    "description": "Up to… picker title (UX-DR-18).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "markedComplete": "Marked complete",
   "couldNotSave": "Couldn't save: {error}",
   "@couldNotSave": {

@@ -3207,6 +3207,99 @@ class AppLocalizationsHe extends AppLocalizations {
   String get captureTickUpToHere => 'סימון עד כאן';
 
   @override
+  String get subTrackRowAllRecorded => 'כל התחום נרשם';
+
+  @override
+  String subTrackRowNext(String position) {
+    return 'הבא: $position';
+  }
+
+  @override
+  String get subTrackRowNoGround => 'עדיין אין תחום';
+
+  @override
+  String get subTrackRowPlusOne => '+1';
+
+  @override
+  String subTrackRowPlusOneSemantics(String unit, String name) {
+    return 'רישום $unit אחת עבור $name';
+  }
+
+  @override
+  String subTrackRowSemantics(String name, String position) {
+    return '$name, הבא $position';
+  }
+
+  @override
+  String subTrackRowsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count תתי-מסלולים',
+      one: 'תת-מסלול אחד',
+    );
+    return 'לומד גם · $_temp0';
+  }
+
+  @override
+  String get upToPickerAction => 'עד…';
+
+  @override
+  String upToPickerActionSemantics(String name) {
+    return 'רישום עד, $name';
+  }
+
+  @override
+  String upToPickerExhausted(String units, String name) {
+    return 'אין עוד $units בתחום של $name.';
+  }
+
+  @override
+  String upToPickerInstruction(String unit) {
+    return 'הקש על ה$unit האחרונה שלמדת';
+  }
+
+  @override
+  String upToPickerRecord(int count, String unit) {
+    return 'רישום $count $unit';
+  }
+
+  @override
+  String upToPickerRecorded(int count) {
+    return 'נרשמו $count';
+  }
+
+  @override
+  String upToPickerRowSemantics(String label, String status) {
+    return '$label, $status';
+  }
+
+  @override
+  String upToPickerRowTargetSemantics(String label, String status) {
+    return '$label, $status, האחרון שנלמד';
+  }
+
+  @override
+  String get upToPickerStatusAlreadyRecorded => 'כבר נרשם';
+
+  @override
+  String get upToPickerStatusIncluded => 'כלול';
+
+  @override
+  String get upToPickerStatusNextUp => 'הבא בתור';
+
+  @override
+  String get upToPickerStatusNotSelected => 'לא נבחר';
+
+  @override
+  String get upToPickerStatusSkipped => 'דולג';
+
+  @override
+  String upToPickerTitle(String name) {
+    return '$name · עד…';
+  }
+
+  @override
   String get markedComplete => 'סומן כהושלם';
 
   @override
