@@ -254,7 +254,8 @@ final class ConnectivityFeed {
 /// [tutorFixtureScope]: the selection (null: the tutor's own app), the
 /// connectivity probe ([online] or a [connectivity] feed; an
 /// `Exception` makes it error), the talmid's settings history and gate,
-/// a fixed clock at [tutorFixtureNow] and the talmid's profile name.
+/// a fixed clock at [now] (default [tutorFixtureNow]; [clock] replaces it
+/// with a moving one) and the talmid's profile name.
 /// Pass `withScope: false` when another helper overrides the active scope.
 List<Override> tutoredOverrides({
   TutoredProfileSelection? selection,
@@ -265,6 +266,7 @@ List<Override> tutoredOverrides({
   Stream<LearnerSettingsHistory>? lockSettingsStream,
   CaptureGate? gate,
   DateTime? now,
+  DateTime Function()? clock,
   bool withScope = true,
 }) => [
   activeTutoredProfileSelectionProvider.overrideWith(
@@ -281,7 +283,9 @@ List<Override> tutoredOverrides({
         lockSettingsStream ?? Stream.value(lockSettings ?? c0SettingsHistory()),
   ),
   captureGateProvider.overrideWithValue(gate ?? FakeCaptureGate.open()),
-  learningCommandClockProvider.overrideWithValue(() => now ?? tutorFixtureNow),
+  learningCommandClockProvider.overrideWithValue(
+    clock ?? () => now ?? tutorFixtureNow,
+  ),
   tutorLearnerNameOverride(),
 ];
 
