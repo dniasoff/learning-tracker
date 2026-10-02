@@ -59,7 +59,7 @@ describe('tutorResetCompletion', () => {
 
   test('grant not active → permission-denied', async () => {
     await seedActiveGrant(
-      { can_reset_completion: true },
+      { can_edit_learning: true },
       { state: 'revoked_by_parent' },
     );
     await expectHttpsError(
@@ -69,14 +69,14 @@ describe('tutorResetCompletion', () => {
   });
 
   test('caller is not the grant tutor → permission-denied', async () => {
-    await seedActiveGrant({ can_reset_completion: true });
+    await seedActiveGrant({ can_edit_learning: true });
     await expectHttpsError(
       call(fns.tutorResetCompletion, goodArgs, strangerAuth),
       'permission-denied',
     );
   });
 
-  test('grant lacks can_reset_completion → permission-denied', async () => {
+  test('grant lacks can_edit_learning → permission-denied', async () => {
     await seedActiveGrant({}); // permission absent
     await expectHttpsError(
       call(fns.tutorResetCompletion, goodArgs),
@@ -85,7 +85,7 @@ describe('tutorResetCompletion', () => {
   });
 
   test('happy path → deletes completion + writes one audit-log entry', async () => {
-    await seedActiveGrant({ can_reset_completion: true });
+    await seedActiveGrant({ can_edit_learning: true });
     const compRef = profileRef().collection('completions').doc('c1');
     await compRef.set({ points: 10, sefaria_ref: 'Berakhot.2a' });
 
@@ -108,7 +108,7 @@ describe('tutorResetCompletion', () => {
   // logical mutation, same idempotencyKey) must coalesce into exactly one
   // audit_log entry instead of a duplicate from the old auto-ID .add().
   test('AUD-firebase-08: repeated call with the same idempotencyKey writes exactly one audit-log entry', async () => {
-    await seedActiveGrant({ can_reset_completion: true });
+    await seedActiveGrant({ can_edit_learning: true });
     const compRef = profileRef().collection('completions').doc('c1');
     await compRef.set({ points: 10, sefaria_ref: 'Berakhot.2a' });
 
@@ -135,7 +135,7 @@ describe('tutorResetCompletion', () => {
   });
 
   test('AUD-firebase-08: different idempotencyKeys produce distinct audit-log entries', async () => {
-    await seedActiveGrant({ can_reset_completion: true });
+    await seedActiveGrant({ can_edit_learning: true });
     const compRef = profileRef().collection('completions').doc('c1');
     await compRef.set({ points: 10, sefaria_ref: 'Berakhot.2a' });
 

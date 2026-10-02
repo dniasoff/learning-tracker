@@ -241,7 +241,7 @@ async function writeAuditLog(
 // ── tutorResetCompletion ──────────────────────────────────────────────────────
 //
 // Deletes a completion document from the child's profile as a correction path.
-// Requires canResetCompletion permission.
+// Requires can_edit_learning (AD-53, DNI-487). Retired by Story 1.26 (DNI-488).
 //
 // Expects:
 //   {
@@ -269,7 +269,7 @@ export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "completionId must be a non-empty string");
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_reset_completion",
+    callerUid, grantId, ownerUid, profileId, "can_edit_learning",
   );
 
   const completionRef = profilePath.collection("completions").doc(completionId);
@@ -566,8 +566,8 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
 // ── tutorUpsertBookmark ───────────────────────────────────────────────────────
 //
 // Creates or updates a bookmark document in the child's profile.
-// Requires canEditStages permission (bookmarks are part of the programme
-// enrolment path which is gated by can_edit_stages).
+// Requires can_edit_learning (AD-53, DNI-487): bookmarks are part of the
+// learning position. Retired by Story 1.16 (DNI-478).
 //
 // Expects:
 //   {
@@ -596,7 +596,7 @@ export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
   assertAllowedFields(bookmarkData, "bookmarkData", BOOKMARK_ALLOWED_FIELDS);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
-    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
+    callerUid, grantId, ownerUid, profileId, "can_edit_learning",
   );
 
   const bookmarkRef = profilePath.collection("bookmarks").doc(bookmarkId);

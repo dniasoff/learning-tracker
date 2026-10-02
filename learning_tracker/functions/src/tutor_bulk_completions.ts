@@ -126,16 +126,17 @@ export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
     );
   }
 
-  // ── 4. Permission check: canBulkPriorCompletion ────────────────────────
-  // The TutorPermissions model (W4.28) stores permissions as a nested map
-  // in the grant document. Default: tutor can mark bulk-prior completions
-  // unless explicitly disabled by the parent.
+  // ── 4. Permission check: can_edit_learning (AD-53, DNI-487) ────────────
+  // Recording prior learning is a learning write, so it follows the single
+  // parent-set `can_edit_learning` permission and fails closed: a grant
+  // without it (every pre-AD-53 grant) is read-only. The legacy
+  // `can_bulk_prior_completion` key is no longer consulted. This callable is
+  // itself retired by Story 1.26 (DNI-488).
   const permissions = grant.permissions ?? {};
-  const canBulkPrior = permissions.can_bulk_prior_completion !== false; // default true
-  if (!canBulkPrior) {
+  if (permissions.can_edit_learning !== true) {
     throw new HttpsError(
       "permission-denied",
-      "This tutor does not have bulk-prior completion permission for this grant"
+      "Grant lacks can_edit_learning"
     );
   }
 

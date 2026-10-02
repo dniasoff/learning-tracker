@@ -537,9 +537,9 @@ describe('tutorEditProfile', () => {
 
 // ── tutorBulkPriorCompletions ─────────────────────────────────────────────────
 //
-// NOTE ON PERMISSION SEMANTICS:
-// can_bulk_prior_completion defaults to TRUE (absent key = allowed).
-// The permission is denied only when explicitly set to false.
+// NOTE ON PERMISSION SEMANTICS (AD-53, DNI-487):
+// requires permissions.can_edit_learning === true; the legacy
+// can_bulk_prior_completion key is ignored.
 describe('tutorBulkPriorCompletions', () => {
   // A valid past date (well before today's UTC midnight).
   const PAST_DATE = '2020-01-01T00:00:00.000Z';
@@ -611,7 +611,7 @@ describe('tutorBulkPriorCompletions', () => {
   // tutorBulkPriorCompletions does grant verification before the per-item loop,
   // so we must seed the grant to reach the per-item checks.
   test('invalid completedAt inside item → invalid-argument', async () => {
-    await seedActiveGrant({});
+    await seedActiveGrant({ can_edit_learning: true });
     await expectHttpsError(
       call(fns.tutorBulkPriorCompletions, {
         ...goodArgs,
@@ -622,7 +622,7 @@ describe('tutorBulkPriorCompletions', () => {
   });
 
   test('points out of range (> 100) inside item → invalid-argument', async () => {
-    await seedActiveGrant({});
+    await seedActiveGrant({ can_edit_learning: true });
     await expectHttpsError(
       call(fns.tutorBulkPriorCompletions, {
         ...goodArgs,
@@ -633,7 +633,7 @@ describe('tutorBulkPriorCompletions', () => {
   });
 
   test('stageId non-integer inside item → invalid-argument', async () => {
-    await seedActiveGrant({});
+    await seedActiveGrant({ can_edit_learning: true });
     await expectHttpsError(
       call(fns.tutorBulkPriorCompletions, {
         ...goodArgs,
@@ -651,7 +651,7 @@ describe('tutorBulkPriorCompletions', () => {
   });
 
   test('grant not active → permission-denied', async () => {
-    await seedActiveGrant({}, { state: 'revoked_by_parent' });
+    await seedActiveGrant({ can_edit_learning: true }, { state: 'revoked_by_parent' });
     await expectHttpsError(
       call(fns.tutorBulkPriorCompletions, goodArgs),
       'permission-denied',
@@ -659,16 +659,24 @@ describe('tutorBulkPriorCompletions', () => {
   });
 
   test('caller is not the grant tutor → permission-denied', async () => {
-    await seedActiveGrant({});
+    await seedActiveGrant({ can_edit_learning: true });
     await expectHttpsError(
       call(fns.tutorBulkPriorCompletions, goodArgs, strangerAuth),
       'permission-denied',
     );
   });
 
-  // Permission is default-true; denied only when explicitly false.
-  test('grant has can_bulk_prior_completion=false → permission-denied', async () => {
-    await seedActiveGrant({ can_bulk_prior_completion: false });
+  // AD-53 (DNI-487): prior marking follows can_edit_learning and fails closed.
+  test('grant without can_edit_learning (legacy can_bulk_prior_completion=true) → permission-denied', async () => {
+    await seedActiveGrant({ can_bulk_prior_completion: true });
+    await expectHttpsError(
+      call(fns.tutorBulkPriorCompletions, goodArgs),
+      'permission-denied',
+    );
+  });
+
+  test('grant has can_edit_learning=false → permission-denied', async () => {
+    await seedActiveGrant({ can_edit_learning: false });
     await expectHttpsError(
       call(fns.tutorBulkPriorCompletions, goodArgs),
       'permission-denied',
@@ -679,7 +687,7 @@ describe('tutorBulkPriorCompletions', () => {
   // The CF computes todayUtcMidnight and rejects any completedAt >= that value.
 
   test('completedAt = today UTC midnight → permission-denied (today is not prior)', async () => {
-    await seedActiveGrant({});
+    await seedActiveGrant({ can_edit_learning: true });
     // Compute today's UTC midnight the same way the CF does.
     const todayMidnight = new Date();
     todayMidnight.setUTCHours(0, 0, 0, 0);
@@ -693,7 +701,7 @@ describe('tutorBulkPriorCompletions', () => {
   });
 
   test('completedAt in the future → permission-denied', async () => {
-    await seedActiveGrant({});
+    await seedActiveGrant({ can_edit_learning: true });
     const future = new Date();
     future.setUTCFullYear(future.getUTCFullYear() + 1);
     await expectHttpsError(
@@ -706,7 +714,7 @@ describe('tutorBulkPriorCompletions', () => {
   });
 
   test('happy path → writes completions + one audit entry, returns success+written', async () => {
-    await seedActiveGrant({});
+    await seedActiveGrant({ can_edit_learning: true });
 
     const res = await call(fns.tutorBulkPriorCompletions, goodArgs);
 

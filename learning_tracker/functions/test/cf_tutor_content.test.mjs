@@ -261,7 +261,7 @@ describe('tutorUpsertBookmark', () => {
 
   test('grant not active → permission-denied', async () => {
     await seedActiveGrant(
-      { can_edit_stages: true },
+      { can_edit_learning: true },
       { state: 'revoked_by_parent' },
     );
     await expectHttpsError(
@@ -271,14 +271,14 @@ describe('tutorUpsertBookmark', () => {
   });
 
   test('caller is not the grant tutor → permission-denied', async () => {
-    await seedActiveGrant({ can_edit_stages: true });
+    await seedActiveGrant({ can_edit_learning: true });
     await expectHttpsError(
       call(fns.tutorUpsertBookmark, goodArgs, strangerAuth),
       'permission-denied',
     );
   });
 
-  test('grant lacks can_edit_stages → permission-denied', async () => {
+  test('grant lacks can_edit_learning → permission-denied', async () => {
     await seedActiveGrant({});
     await expectHttpsError(
       call(fns.tutorUpsertBookmark, goodArgs),
@@ -287,7 +287,7 @@ describe('tutorUpsertBookmark', () => {
   });
 
   test('happy path → upserts bookmarks doc + writes one audit-log entry', async () => {
-    await seedActiveGrant({ can_edit_stages: true });
+    await seedActiveGrant({ can_edit_learning: true });
 
     const res = await call(fns.tutorUpsertBookmark, goodArgs);
 
