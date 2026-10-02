@@ -27,8 +27,6 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/held_ground_provider.dart';
-import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
-import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -63,11 +61,6 @@ class _ContentHierarchyScreenState
   /// back exactly that batch.
   final _ticked = <String>{};
   final _refsByEvent = <String, List<String>>{};
-
-  /// Event ids the server rejected for good and no retry has saved yet. A
-  /// rejection can be reported before the capture call returns, so a
-  /// batch never ticks the leaves of these ids (AD-54 Recovery).
-  final _failedEvents = <String>{};
   bool _capturing = false;
 
   @override
@@ -100,11 +93,6 @@ class _ContentHierarchyScreenState
   Widget build(BuildContext context) {
     final curriculum = _curriculumOrNull;
 
-    if (curriculum != null) {
-      // Story 2.10 (AC-9): keep the sub-track sources ready for the
-      // free-tick sheet (empty on a tutor device, AC-11).
-      ref.watch(subTrackSourceChoicesProvider(curriculum.storageKey));
-    }
     if (curriculum == null) {
       final l10nEarly = AppLocalizations.of(context)!;
       return Scaffold(
@@ -189,14 +177,8 @@ class _ContentHierarchyScreenState
         }
       },
       child: PendingCaptureFailureListener(
-        onFailure: (failure) {
-          _failedEvents.addAll(failure.eventIds);
-          _rollBack(failure.eventIds);
-        },
-        onRetried: (failure) {
-          _failedEvents.removeAll(failure.eventIds);
-          _reapply(failure.eventIds);
-        },
+        onFailure: (failure) => _rollBack(failure.eventIds),
+        onRetried: (failure) => _reapply(failure.eventIds),
         child: Scaffold(
           appBar: AppBar(
             title: AppBarTitle(
@@ -303,9 +285,6 @@ class _ContentHierarchyScreenState
                 ),
               ),
 
-              // Story 1.24 (DNI-486): why a tutor's ticks are disabled.
-              const TutorWriteNote(padding: EdgeInsets.fromLTRB(16, 8, 16, 0)),
-
               // Content list
               Expanded(
                 child: itemsAsync.when(
@@ -373,7 +352,9 @@ class _ContentHierarchyScreenState
                     bool isLearnt(String leaf) =>
                         _ticked.contains(leaf) ||
                         (learnt?.contains(leaf) ?? false);
-                    // Held ground remains visible with its sub-track holders.
+                    // Story 2.7 (DNI-498 AC-6): ground a sub-track holds
+                    // stays listed, greyed and tagged with its holder; an
+                    // unresolved read shows nothing held.
                     final held =
                         ref
                             .watch(
@@ -409,11 +390,6 @@ class _ContentHierarchyScreenState
                       itemBuilder: (context, index) {
                         final item = groupedItems[index];
                         final ready = allItems != null && !_capturing;
-                        // DNI-486: a tutor without editing access, offline,
-                        // or with the talmid locked sees the tick disabled.
-                        final tutorBlocked = ref
-                            .watch(tutorWriteAvailabilityProvider)
-                            .blocksTutor;
                         final (heldBy, heldWhole) = heldOf(item);
                         return ContentItemTile(
                           item: item,
@@ -431,8 +407,7 @@ class _ContentHierarchyScreenState
                           onTick: ready
                               ? () => _tick(curriculum, allItems, item)
                               : null,
-                          tickDisabled: tutorBlocked,
-                          onLongPress: ready && !tutorBlocked
+                          onLongPress: ready
                               ? () => _tickUpToHere(curriculum, allItems, item)
                               : null,
                         );
@@ -515,14 +490,6 @@ class _ContentHierarchyScreenState
       title: title,
       count: leaves.length,
       today: ref.read(localDayClockProvider).today(),
-      // Home (default), each onHome sub-track of this curriculum by name,
-      // then Before tracking (FR-3, UX-DR-20; Story 2.10 AC-9).
-      extraSources: [
-        for (final s in ref.read(
-          subTrackSourceChoicesProvider(curriculum.storageKey),
-        ))
-          FreeTickSourceOption(id: s.id, label: s.name),
-      ],
     );
     if (choice == null || !mounted) return;
     setState(() => _capturing = true);
@@ -550,38 +517,29 @@ class _ContentHierarchyScreenState
       );
       if (!mounted) return;
       final batch = <String, List<String>>{};
-      var savedLeaves = leaves.length;
-      if (result case CaptureSuccess(
-        :final eventIds,
-        :final rejectedEventIds,
-        :final keptNotCounted,
-      )) {
-        final saved = recordedBatch(
-          refs: asNode ? null : refs,
-          nodeRefs: refs,
-          eventIds: eventIds
-              .where((id) => !keptNotCounted.contains(id))
-              .toList(),
-          rejectedEventIds: rejectedEventIds,
-          failed: _failedEvents,
-        );
-        batch.addAll(saved.byEvent);
-        savedLeaves = saved.ticked.length;
+      if (result case CaptureSuccess(:final eventIds)) {
+        if (eventIds.length == refs.length && !asNode) {
+          for (var i = 0; i < refs.length; i++) {
+            batch[eventIds[i]] = [refs[i]];
+          }
+        } else {
+          for (final id in eventIds) {
+            batch[id] = refs;
+          }
+        }
         setState(() {
-          _refsByEvent.addAll(saved.byEvent);
-          _ticked.addAll(saved.ticked);
+          _refsByEvent.addAll(batch);
+          _ticked.addAll(refs);
         });
       }
       showCaptureOutcome(
         context,
         result: result,
         commands: commands,
-        // Never claim the leaves of a rejected chunk (AD-54).
         message: AppLocalizations.of(
           context,
-        )!.captureRecordedCount(savedLeaves),
+        )!.captureRecordedCount(leaves.length),
         onUndone: () => _rollBack(batch.keys),
-        learnerName: ref.read(tutorLearnerNameProvider),
       );
     } on Exception {
       if (mounted) {
@@ -798,46 +756,4 @@ class _RootCurriculumChip extends StatelessWidget {
       child: chip,
     );
   }
-}
-
-/// The leaves one Browse capture recorded, keyed by event id, and the
-/// leaves to show ticked now.
-///
-/// [refs] is the per-leaf batch in leaf order, or null for a node capture
-/// (its events each cover all of [nodeRefs]). `LearningCommands.capture`
-/// writes one event per leaf with ascending ids, so the sorted union of
-/// [eventIds] and [rejectedEventIds] lines up with [refs]. Every planned
-/// event is keyed (a retry of a rejected chunk re-ticks its leaves), but
-/// only the leaves of saved or queued events that are not in [failed] are
-/// ticked. A plan that does not line up ticks nothing: the learner state
-/// then shows what was saved.
-@visibleForTesting
-({Map<String, List<String>> byEvent, Set<String> ticked}) recordedBatch({
-  required List<String>? refs,
-  required List<String> nodeRefs,
-  required List<String> eventIds,
-  required List<String> rejectedEventIds,
-  required Set<String> failed,
-}) {
-  final notSaved = {...rejectedEventIds, ...failed};
-  final planned = [...eventIds, ...rejectedEventIds]..sort();
-  if (refs == null) {
-    final saved = eventIds.any((id) => !notSaved.contains(id));
-    return (
-      byEvent: {for (final id in planned) id: nodeRefs},
-      ticked: saved && rejectedEventIds.isEmpty ? nodeRefs.toSet() : const {},
-    );
-  }
-  if (planned.length != refs.length) {
-    return (byEvent: const {}, ticked: const {});
-  }
-  return (
-    byEvent: {
-      for (final (i, id) in planned.indexed) id: [refs[i]],
-    },
-    ticked: {
-      for (final (i, id) in planned.indexed)
-        if (!notSaved.contains(id)) refs[i],
-    },
-  );
 }

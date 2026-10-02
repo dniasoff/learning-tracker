@@ -110,7 +110,9 @@ final class GroundPickerWorld {
     this.parent = true,
     this.calendarProgram = false,
     this.commands,
+    this.commandsOverride,
     this.labelItems,
+    this.stateStream,
   }) : scope = c0Scope() {
     subTracks.seed(scope, tracks);
     intent.emit(scope, _intent());
@@ -139,6 +141,14 @@ final class GroundPickerWorld {
 
   /// The commands; null resolves `learningCommandsProvider` to null.
   final LearningCommands? commands;
+
+  /// Commands built after the world (they need its repositories); wins
+  /// over [commands].
+  final LearningCommands Function()? commandsOverride;
+
+  /// A live learner state (e.g. the real engine over [subTracks]); wins
+  /// over [state].
+  final Stream<LearnerState> Function(GroundPickerWorld world)? stateStream;
 
   /// ContentIndex rows for labels (default: none, names fall back to refs).
   final Map<CurriculumId, List<ContentItem>>? labelItems;
@@ -193,8 +203,12 @@ final class GroundPickerWorld {
       }
       return {corpus.curriculumId: corpus};
     }),
-    learnerStateProvider.overrideWith((ref, _) => Stream.value(state)),
-    learningCommandsProvider.overrideWith((ref) async => commands),
+    learnerStateProvider.overrideWith(
+      (ref, _) => stateStream?.call(this) ?? Stream.value(state),
+    ),
+    learningCommandsProvider.overrideWith(
+      (ref) async => commandsOverride?.call() ?? commands,
+    ),
     contentIndexProvider.overrideWith(
       (ref) async => ContentIndex.fromCurricula(labelItems ?? const {}),
     ),
