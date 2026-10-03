@@ -24,8 +24,9 @@ import {
 //                         `dated` (leaf ref + learned_on) or `before_tracking`
 //                         (leaf, or node ref + level; learned_on null). Covers
 //                         task tick, tick-to-here and before-tracking marking.
-//   tutorVoidLearning   — one `void` of a learn event, or REPLACE: the void
-//                         plus a corrected learn copy, in one transaction.
+//   tutorVoidLearning   — one `void` of a stored `source = main` learn event,
+//                         or REPLACE: the void plus a corrected learn copy on
+//                         the target's curriculum, in one transaction.
 //   tutorUnlearn        — AD-31 un-learn of a leaf set, executing the client's
 //                         unlearn plan (ruling B9): void every counted main
 //                         learn event of the curriculum whose ref is in the
@@ -231,16 +232,33 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
   if (replacement) assertUniqueIds([voidId, targetId, replacement.id]);
   else if (voidId === targetId) bad("event ids must be unique");
 
+  // Both shapes read the stored target in the transaction and require a
+  // counted-source learn event a tutor may void: `kind = learn` (AD-31) and
+  // `source = main` (Epic 1 tutors write main-track learning only, so they
+  // may not void a sub-track event either). A replacement must stay on the
+  // target's curriculum: a correction never moves learning to another track.
+  const readTarget = async (ctx: PlanContext): Promise<FirebaseFirestore.DocumentData> => {
+    const snap = await ctx.txn.get(ctx.profileRef.collection("learning_events").doc(targetId));
+    if (!snap.exists) throw new HttpsError("not-found", "Void target does not exist");
+    const stored = snap.data()!;
+    if (stored.kind !== "learn") bad("A void must target a learn event");
+    if (stored.source !== MAIN_SOURCE) bad("A tutor may void only a main-track learn event");
+    return stored;
+  };
+
   if (!replacement) {
-    // A plain void: the helper rejects a target that is not a learn event
-    // (AD-31); an absent target is not an error.
+    const plan = async (ctx: PlanContext): Promise<GovernedPlan> => {
+      await readTarget(ctx);
+      return { entries: [], events: [voidEvent] };
+    };
     return writeWithChangeLog(request.auth, {
       ownerUid: target.ownerUid,
       profileId: target.profileId,
       grantId: target.grantId as string | null | undefined,
       actionId: target.actionId ?? voidId,
       auditAction: "learning_voided",
-      events: [voidEvent],
+      plan,
+      planKey: `tutorVoidLearning:${JSON.stringify([voidId, targetId])}`,
     });
   }
 
@@ -250,10 +268,10 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
   // move the learning to "now" for lock, streak or earning order.
   const replacementEvent = replacement;
   const plan = async (ctx: PlanContext): Promise<GovernedPlan> => {
-    const snap = await ctx.txn.get(ctx.profileRef.collection("learning_events").doc(targetId));
-    if (!snap.exists) throw new HttpsError("not-found", "Replace target does not exist");
-    const stored = snap.data()!;
-    if (stored.kind !== "learn") bad("A void must target a learn event");
+    const stored = await readTarget(ctx);
+    if (replacementEvent.fields.curriculum_id !== stored.curriculum_id) {
+      bad("A replacement must keep the target's curriculum");
+    }
     if (await isVoided(ctx, targetId)) {
       throw new HttpsError("failed-precondition", "Replace target is already voided");
     }
