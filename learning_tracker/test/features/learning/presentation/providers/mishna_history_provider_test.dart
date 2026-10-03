@@ -444,7 +444,18 @@ void main() {
       );
     });
 
-    test('voided, node and in-flight rows, and tutors, get no action', () {
+    test('a tutor gets the parent\'s corrections (DNI-486, deviation #7)', () {
+      expect(
+        allowedCorrections(
+          dated,
+          MishnaHistoryViewer.tutor,
+          hasPlaceChoices: true,
+        ),
+        MishnaCorrection.values.toSet(),
+      );
+    });
+
+    test('voided, node and in-flight rows get no action', () {
       expect(
         allowedCorrections(
           dated.copyWith(status: MishnaHistoryStatus.voided),
@@ -459,7 +470,6 @@ void main() {
         ),
         isEmpty,
       );
-      expect(allowedCorrections(dated, MishnaHistoryViewer.tutor), isEmpty);
       final node = MishnaHistoryItem(
         event: historyLearn(
           2,

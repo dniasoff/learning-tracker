@@ -98,6 +98,44 @@ final class EventReplacement {
       'EventReplacement($ref, $source, $learnedOn, ${dateState?.name})';
 }
 
+/// The fields of the replacement of [t] by [r] at [nowUtc], or null when
+/// they are invalid (FR-4). The single rule both the owner commands and the
+/// tutor commands (DNI-486) apply: a move to Before tracking clears
+/// `learned_on`; an unchanged ref keeps the node `level`; `stage` is kept
+/// only on the main source.
+ResolvedReplacement? resolveReplacement(
+  LearningEvent t,
+  EventReplacement r,
+  DateTime nowUtc,
+  LearnerSettingsHistory history,
+) {
+  final source = r.source ?? t.source!;
+  if (source != LearningEvent.sourceMain && !isUlid(source)) return null;
+  final state = r.dateState ?? t.dateState!;
+  final redate =
+      (r.dateState != null && r.dateState != t.dateState) ||
+      (r.learnedOn != null && r.learnedOn != t.learnedOn);
+  final learnedOn = state == DateState.beforeTracking
+      ? null
+      : r.learnedOn ?? t.learnedOn ?? civilDate(nowUtc, history);
+  if (learnedOn != null && !isCivilDate(learnedOn)) return null;
+  final level = r.ref != null && r.ref != t.ref ? null : t.level;
+  if (level != null && state != DateState.beforeTracking) return null;
+  final ref = r.ref ?? t.ref!;
+  if (ref.isEmpty) return null;
+  if (r.stage != null && source != LearningEvent.sourceMain) return null;
+  final stage = source == LearningEvent.sourceMain ? r.stage ?? t.stage : null;
+  return ResolvedReplacement(
+    ref: ref,
+    level: level,
+    source: source,
+    dateState: state,
+    learnedOn: learnedOn,
+    stage: stage,
+    redate: redate,
+  );
+}
+
 /// Every learning write: events (AD-31) and governed changes (AD-38).
 abstract interface class LearningCommands {
   /// Records [refs] (leaves) and [nodes] as learnt for [curriculumId].
@@ -450,35 +488,7 @@ final class DefaultLearningCommands implements LearningCommands {
     EventReplacement r,
     CommandStamp stamp,
     LearnerSettingsHistory history,
-  ) {
-    final source = r.source ?? t.source!;
-    if (!_validSource(source)) return null;
-    final state = r.dateState ?? t.dateState!;
-    final redate =
-        (r.dateState != null && r.dateState != t.dateState) ||
-        (r.learnedOn != null && r.learnedOn != t.learnedOn);
-    final learnedOn = state == DateState.beforeTracking
-        ? null
-        : r.learnedOn ?? t.learnedOn ?? civilDate(stamp.nowUtc, history);
-    if (learnedOn != null && !isCivilDate(learnedOn)) return null;
-    final level = r.ref != null && r.ref != t.ref ? null : t.level;
-    if (level != null && state != DateState.beforeTracking) return null;
-    final ref = r.ref ?? t.ref!;
-    if (ref.isEmpty) return null;
-    if (r.stage != null && source != LearningEvent.sourceMain) return null;
-    final stage = source == LearningEvent.sourceMain
-        ? r.stage ?? t.stage
-        : null;
-    return ResolvedReplacement(
-      ref: ref,
-      level: level,
-      source: source,
-      dateState: state,
-      learnedOn: learnedOn,
-      stage: stage,
-      redate: redate,
-    );
-  }
+  ) => resolveReplacement(t, r, stamp.nowUtc, history);
 
   @override
   Future<CaptureResult> unlearn(String curriculumId, Set<LeafRef> leafSet) =>

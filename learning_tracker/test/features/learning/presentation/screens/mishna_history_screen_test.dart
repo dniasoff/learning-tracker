@@ -641,9 +641,8 @@ void main() {
       expect(action('changeDate'), findsOneWidget);
     });
 
-    testWidgets('a lock-ignored row has no Undo; a tutor gets no actions', (
-      tester,
-    ) async {
+    testWidgets('a lock-ignored row has no Undo; a tutor gets the parent '
+        'actions (DNI-486)', (tester) async {
       _seedLearnt(ports);
       await _pump(
         tester,
@@ -666,7 +665,8 @@ void main() {
         ),
       );
       await openActions(tester, 5);
-      expect(action('remove'), findsNothing);
+      expect(action('remove'), findsOneWidget);
+      expect(action('changeSource'), findsOneWidget);
     });
 
     testWidgets('a rejected correction restores the original row before the '

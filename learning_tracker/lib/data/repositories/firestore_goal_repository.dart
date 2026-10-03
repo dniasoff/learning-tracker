@@ -194,7 +194,7 @@ class FirestoreGoalRepository {
     final (goalType, targetDate, paceValue, pacePeriod) = _decomposePaceTarget(
       paceTarget,
     );
-    final entity = GoalEntity(
+    return GoalEntity(
       curriculumId: curriculumId,
       targetDate: targetDate,
       description: description,

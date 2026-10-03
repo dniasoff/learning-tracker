@@ -54,7 +54,6 @@ import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
-import 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 
@@ -387,7 +386,13 @@ void main() {
     // the catalog member is kept (Cloud Functions still write the
     // server-side audit trail under the same name) but nothing in `lib/`
     // fires it, so there is no live parameter shape to assert against.
-    const deadCatalogEvents = <String>{AnalyticsEvent.tutorActionRecorded};
+    // `AnalyticsEvent.tutorLiveMarkBlocked` lost its only emitter when Story
+    // 1.24 (DNI-486) deleted the legacy tutor-rejection branch of
+    // MarkLiveCompletionUseCase: tutors now record through the callables.
+    const deadCatalogEvents = <String>{
+      AnalyticsEvent.tutorActionRecorded,
+      AnalyticsEvent.tutorLiveMarkBlocked,
+    };
     // AnalyticsEvent members genuinely covered by a real PV-1 assertion in
     // another suite — each verified by reading the cited test. A prior
     // version of this list (~12 entries) claimed coverage that did not

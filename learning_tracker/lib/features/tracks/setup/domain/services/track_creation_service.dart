@@ -57,7 +57,10 @@ class TrackCreationService {
   }) : _actionRepository = actionRepository,
        _wizardService = wizardService,
        _bookmarkRepository = bookmarkRepository,
-       _analytics = analytics ?? const NullAnalyticsService();
+       _analytics = analytics ?? const NullAnalyticsService(),
+       _isTutoredSession = isTutoredSession;
+
+  static bool _ownerSession() => false;
 
   final AddTrackActionRepository _actionRepository;
   final LearningProcessWizardService _wizardService;
@@ -65,6 +68,7 @@ class TrackCreationService {
   // (Firestore-backed, ULID-profile-keyed — see bookmark_providers.dart).
   final BookmarkRepository _bookmarkRepository;
   final AnalyticsService _analytics;
+  final bool Function() _isTutoredSession;
 
   /// Persist all track configuration from the AddTrackFlow result as one
   /// governed action.
@@ -243,4 +247,16 @@ class TrackCreationService {
 
     return (bookmarkRef: bookmarkRef, trackingStartDate: trackingStartDate);
   }
+}
+
+/// A tutor tried to add a track for the talmid, which has no governed tutor
+/// path yet (DNI-486). Thrown before any write.
+final class TutorTrackCreationUnsupportedException implements Exception {
+  /// Creates the exception.
+  const TutorTrackCreationUnsupportedException();
+
+  @override
+  String toString() =>
+      'TutorTrackCreationUnsupportedException: a tutor cannot add a track '
+      'yet';
 }

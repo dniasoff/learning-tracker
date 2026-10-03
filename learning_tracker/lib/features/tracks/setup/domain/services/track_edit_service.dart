@@ -20,18 +20,33 @@ import 'package:learning_tracker/features/tracks/setup/domain/repositories/study
 /// LearningProcessWizardService's module doc comment for the same
 /// trade-off). Each piece is only written when its corresponding parameter
 /// is non-null, same as before.
+///
+/// **Tutored session (Story 1.24, DNI-486).** The study-day and goal writes
+/// route to governed tutor callables inside their repositories; each is one
+/// governed action whose id stays frozen until a definitive receipt, so a
+/// failed save is retried as a whole and every committed action replays.
+/// The chazara stage set has no governed tutor path yet (the wizard writes
+/// stage and program docs straight to Firestore), so a tutor edit carrying
+/// [WizardResult] is refused with [TutorChazaraEditUnsupportedException]
+/// BEFORE any write begins — never half-applied. Follow-up:
+/// learning-tracker-fyh.226 (tutor chazara stage-set callable).
 class TrackEditService {
   TrackEditService({
     required LearningProcessWizardService wizardService,
     required GoalRepository goalRepository,
     required StudyDayWriteRepository studyDayRepository,
+    bool Function() isTutoredSession = _ownerSession,
   }) : _wizardService = wizardService,
        _goalRepository = goalRepository,
-       _studyDayRepository = studyDayRepository;
+       _studyDayRepository = studyDayRepository,
+       _isTutoredSession = isTutoredSession;
+
+  static bool _ownerSession() => false;
 
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
   final StudyDayWriteRepository _studyDayRepository;
+  final bool Function() _isTutoredSession;
 
   Future<void> editTrack({
     /// The goal being edited, by value (owner decision 4,
@@ -51,6 +66,11 @@ class TrackEditService {
     bool clearPaceTarget = false,
     String? paceGranularity,
   }) async {
+    // DNI-486: refuse a tutor chazara edit before anything is written.
+    if (chazarahWizard != null && _isTutoredSession()) {
+      throw const TutorChazaraEditUnsupportedException();
+    }
+
     // 1. Study days — full replace (delete is rules-legal for this
     // collection, unlike stage_definitions).
     if (studyDays != null) {
@@ -91,4 +111,16 @@ class TrackEditService {
       event: 'TrackEditService: track edited for ${curriculum.storageKey}',
     );
   }
+}
+
+/// A tutor tried to change a track's chazara stage set, which has no
+/// governed tutor callable yet (DNI-486). Thrown before any write.
+final class TutorChazaraEditUnsupportedException implements Exception {
+  /// Creates the exception.
+  const TutorChazaraEditUnsupportedException();
+
+  @override
+  String toString() =>
+      'TutorChazaraEditUnsupportedException: a tutor cannot change the '
+      'chazara stages yet';
 }

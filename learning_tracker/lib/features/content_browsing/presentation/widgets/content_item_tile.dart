@@ -243,6 +243,36 @@ class _TickBox extends StatelessWidget {
 }
 
 /// Widget showing per-stage completion status for a leaf item.
+/// The tri-state tick box of a free-tick row (UX-DR-20, UX-DR-157).
+class _TickBox extends StatelessWidget {
+  const _TickBox({required this.state, required this.onTick});
+
+  final TriState state;
+
+  /// Null draws the box disabled.
+  final VoidCallback? onTick;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final label = switch (state) {
+      TriState.complete => l10n.captureStateLearnt,
+      TriState.partial => l10n.captureStatePartial,
+      TriState.empty => l10n.captureStateNotLearnt,
+    };
+    return Checkbox(
+      tristate: true,
+      value: switch (state) {
+        TriState.complete => true,
+        TriState.partial => null,
+        TriState.empty => false,
+      },
+      semanticLabel: label,
+      onChanged: onTick == null ? null : (_) => onTick!(),
+    );
+  }
+}
+
 class StageCompletionIndicators extends StatelessWidget {
   const StageCompletionIndicators({super.key, required this.stages});
 

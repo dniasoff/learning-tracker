@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 
 /// Thrown by [FirestoreGoalRepositoryAdapter]'s write methods when
 /// `firestoreGoalRepositoryProvider` resolves to `null` — see
@@ -108,8 +111,29 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
     String dateType = 'gregorian',
     String? paceGranularity,
   }) async {
-    final repo = await _resolve();
     final granularity = PaceGranularity.fromStorageKey(paceGranularity);
+    // Story 1.24 (DNI-486): a tutor's first goal on a track is the governed
+    // `tutorUpsertGoal` callable, with the same creation rule — never a
+    // client write into the talmid's tree.
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      final created = FirestoreGoalRepository.buildNewGoal(
+        curriculumId: curriculumId,
+        now: DateTimeFactory.nowUtc(),
+        targetPercent: targetPercent,
+        paceTarget: paceTarget,
+        description: description,
+        dateType: dateType,
+        paceGranularity: granularity,
+        rawLearningUnit: granularity == null ? paceGranularity : null,
+      );
+      final writes = await requireTutorGovernedWrites(_ref);
+      await writes.upsertGoal(
+        goalId: created.firestoreId,
+        data: created.toFirestore(),
+      );
+      return created;
+    }
+    final repo = await _resolve();
     return repo.createGoal(
       curriculumId: curriculumId,
       paceTarget: paceTarget,
@@ -133,6 +157,27 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
     String? rawLearningUnit,
     bool clearLearningUnit = false,
   }) async {
+    // Story 1.24 (DNI-486): a tutor's goal edit is the governed
+    // `tutorUpsertGoal` callable, with the same update rule.
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      final updated = FirestoreGoalRepository.resolveGoalUpdate(
+        goal: goal,
+        now: DateTimeFactory.nowUtc(),
+        targetPercent: targetPercent,
+        paceTarget: paceTarget,
+        clearPaceTarget: clearPaceTarget,
+        description: description,
+        paceGranularity: paceGranularity,
+        rawLearningUnit: rawLearningUnit,
+        clearLearningUnit: clearLearningUnit,
+      );
+      final writes = await requireTutorGovernedWrites(_ref);
+      await writes.upsertGoal(
+        goalId: updated.firestoreId,
+        data: updated.toFirestore(),
+      );
+      return updated;
+    }
     final repo = await _resolve();
     return repo.updateGoal(
       goal: goal,
@@ -149,6 +194,12 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
   /// [GoalRepositoryNotReadyException] when not ready.
   @override
   Future<void> deleteGoal(GoalEntity goal) async {
+    // Story 1.24 (DNI-486): a tutor ends a goal through the governed
+    // `tutorDeleteGoal` callable (an `ended_at` tombstone).
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      final writes = await requireTutorGovernedWrites(_ref);
+      return writes.endGoal(goal.firestoreId);
+    }
     final repo = await _resolve();
     await repo.deleteGoal(goal);
   }

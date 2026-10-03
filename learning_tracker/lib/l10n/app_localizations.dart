@@ -2489,6 +2489,30 @@ abstract class AppLocalizations {
   /// **'Tutors cannot mark live completions'**
   String get tutorCannotMarkLiveCompletion;
 
+  /// DNI-486 AC-7: a tutor capture the server stamped inside the learner's lock window. The event is stored but does not count.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept, not counted — Shabbos / Yom Tov had started'**
+  String get tutorCaptureKeptNotCounted;
+
+  /// DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data.
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos / Yom Tov'**
+  String get tutorCaptureLearnerLocked;
+
+  /// DNI-486 AC-4: note under a tutor's disabled write controls when the grant's can_edit_learning is false.
+  ///
+  /// In en, this message translates to:
+  /// **'{learner}\'s parent hasn\'t given you editing access'**
+  String tutorCaptureNoEditAccess(String learner);
+
+  /// DNI-486 AC-5: tutor writes are online-only (AD-53); shown on disabled tutor write controls while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online required'**
+  String get tutorCaptureOnlineRequired;
+
   /// No description provided for @tutorWriteForbiddenTitle.
   ///
   /// In en, this message translates to:

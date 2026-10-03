@@ -1380,6 +1380,21 @@ class AppLocalizationsHe extends AppLocalizations {
       'מדריכים אינם יכולים לסמן השלמות חיות';
 
   @override
+  String get tutorCaptureKeptNotCounted =>
+      'נשמר, לא נספר — שבת / יום טוב כבר התחילו';
+
+  @override
+  String get tutorCaptureLearnerLocked => 'שבת / יום טוב';
+
+  @override
+  String tutorCaptureNoEditAccess(String learner) {
+    return 'ההורה של $learner לא נתן לך הרשאת עריכה';
+  }
+
+  @override
+  String get tutorCaptureOnlineRequired => 'נדרש חיבור לאינטרנט';
+
+  @override
   String get tutorWriteForbiddenTitle => 'פעולה לא מורשית';
 
   @override

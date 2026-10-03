@@ -298,28 +298,36 @@ void main() {
       );
     });
 
-    test('AC3: learning_screen reads activeTutorPermissionsProvider', () {
-      expect(
-        learningSrc,
-        contains('activeTutorPermissionsProvider'),
-        reason:
-            'learning_screen.dart must read activeTutorPermissionsProvider '
-            'so that tutors with canEditLearning can see the Add Track CTA',
-      );
-    });
-
+    // DNI-486 (learning-tracker-fyh.212): adding a track has no governed
+    // tutor path yet, so a tutored session never gets the Add Track CTA,
+    // whatever the grant's canEditLearning says. The behavioural assertion
+    // lives in learning_screen_l1_test.dart ("empty state (tutor,
+    // canEditLearning=true): no Add Track button"); this source check pins
+    // the gate expression.
     test(
-      'AC3: learning_screen gates Add Track CTA on canEditLearning for tutors',
+      'AC3 (DNI-486): Add Track CTA is never offered in a tutored session',
       () {
         expect(
-          learningSrc,
-          contains('canEditLearning'),
+          RegExp(
+            r'canAddTrack\s*=\s*!isChildMode\s*&&\s*!isTutoredSession\s*;',
+          ).hasMatch(learningSrc),
+          isTrue,
           reason:
-              'learning_screen.dart must gate the Add Track CTA on '
-              'tutorPerms.canEditLearning (parent-equivalent for track management)',
+              'learning_screen.dart must hide the Add Track CTA for every '
+              'tutored session (canAddTrack = !isChildMode && !isTutoredSession)',
         );
       },
     );
+
+    test('AC3 (DNI-486): Add Track CTA no longer reads tutor permissions', () {
+      expect(
+        learningSrc,
+        isNot(contains('activeTutorPermissionsProvider')),
+        reason:
+            'canEditLearning must not re-open the Add Track CTA for tutors '
+            'until a governed add-track path exists (fyh.212)',
+      );
+    });
   });
 
   group(
@@ -377,55 +385,34 @@ void main() {
       },
     );
 
-    test('AC5: live-mark button disabled when isTutor is true', () {
+    test('AC5 / DNI-486: the live-mark button is gated on the tutor\'s '
+        'can_edit_learning, not disabled for every tutor', () {
       expect(
         textDisplaySrc,
-        contains('isTutor'),
+        contains('tutorWriteAvailabilityProvider'),
         reason:
-            'text_display_screen.dart must derive an isTutor flag and gate '
-            'onPressed on it (D5: canMarkLiveCompletion always false)',
+            'deviation #7: a tutor with editing access may record learning; '
+            'without it (or offline, or with the talmid locked) the button '
+            'stays visible but disabled',
       );
     });
 
-    test('AC5: MarkLiveCompletionUseCase is used for domain-layer enforcement', () {
+    test('AC5: MarkLiveCompletionUseCase is used for domain-layer routing', () {
       expect(
         textDisplaySrc,
         contains('MarkLiveCompletionUseCase'),
         reason:
             'text_display_screen.dart must route through MarkLiveCompletionUseCase '
-            'so the domain guard is enforced even if the UI button is bypassed',
+            'so a tutor session never reaches the owner (client) write',
       );
     });
 
-    // AUD-content_browsing-03: the sole production construction site of
-    // MarkLiveCompletionUseCase omitted the optional `analytics:` argument,
-    // so `_analytics` stayed null inside the use case and the null-aware
-    // `_analytics?.logEvent(...)` silently no-op'd — tutor_live_mark_blocked
-    // (W7.11) never fired anywhere in production, leaving ops with zero
-    // dashboard visibility into how often the tutor write-boundary is hit.
-    // A behavioral widget test can't drive this branch: the FilledButton's
-    // onPressed is unconditionally null whenever isTutor is true (see the
-    // "AC5: live-mark button disabled" test above), so the tutor-guard
-    // branch inside MarkLiveCompletionUseCase.call() is unreachable via any
-    // real UI interaction today — it exists purely as defense-in-depth for
-    // a future call site (keyboard shortcut, notification action) that
-    // bypasses the UI, per the construction site's own comment. This
-    // source-content check is therefore the regression guard tied to the
-    // actual site; the paired behavioral assertion (that the
-    // analyticsServiceProvider-sourced value, once wired in, fires
-    // tutor_live_mark_blocked exactly once for a tutor attempt) lives in
-    // test/features/tutoring/mark_live_completion_invariant_test.dart.
-    test('AUD-content_browsing-03: MarkLiveCompletionUseCase construction '
-        'injects analyticsServiceProvider', () {
-      expect(
-        textDisplaySrc,
-        contains('analytics: ref.read(analyticsServiceProvider)'),
-        reason:
-            'the sole production construction site of '
-            'MarkLiveCompletionUseCase must inject analyticsServiceProvider '
-            'so tutor_live_mark_blocked (W7.11) actually fires — otherwise '
-            '`_analytics` stays null and the event silently never fires',
-      );
+    // DNI-486: the legacy tutor-rejection branch (and its
+    // tutor_live_mark_blocked analytics) is deleted; the tutor branch is the
+    // tutor capture → TutorWriteService.recordLearning.
+    test('DNI-486: the tutor branch of the live mark is the tutor capture', () {
+      expect(textDisplaySrc, contains('tutorWrite:'));
+      expect(textDisplaySrc, contains('tutorLearningCommandsProvider'));
     });
   });
 
