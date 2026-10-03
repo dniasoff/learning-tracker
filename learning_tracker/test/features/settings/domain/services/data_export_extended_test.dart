@@ -22,7 +22,7 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.bavli,
     );
-// A leftover document in the retired `completions` collection (R1) must
+    // A leftover document in the retired `completions` collection (R1) must
     // never be exported.
     await firestore
         .collection('users')
@@ -38,26 +38,7 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.bavli,
     );
-    await firestore
-        .collection('users')
-        .doc(testUid)
-        .collection('learner_profiles')
-        .doc(testProfileId)
-<<<<<<< HEAD
-        .collection('bookmarks')
-        .doc('bavli')
-        .set({'curriculum_id': 'bavli'});
-=======
-        .collection('completions')
-        .doc('retired-completion')
-        .set({'curriculum_id': CurriculumId.bavli.storageKey});
-    await seedBookmark(
-      firestore,
-      uid: testUid,
-      profileId: testProfileId,
-      curriculumId: CurriculumId.bavli,
-    );
->>>>>>> c8b009d4b (refactor(sub-tracks): DNI-483 T2,T4 delete R1 completion stack and its tests)
+
 
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
