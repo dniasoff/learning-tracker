@@ -1,5 +1,7 @@
 // CF tests — tutor learning callables (sub-tracks Story 1.23 / DNI-485):
 // tutorRecordLearning, tutorVoidLearning (void / replace) and tutorUnlearn.
+// Story 4.1 (DNI-509) AC-2 adds the sub-track `source` capture at the end;
+// tutorUpsertSubTrack has its own file (cf_tutor_sub_tracks.test.mjs).
 // Acceptance tests AC-1..AC-5, run against the Firestore emulator through the
 // real exported handlers (see _cf_helpers.mjs). `make test-functions` picks
 // this file up through its existing `cf_*.test.mjs` glob.
@@ -95,8 +97,8 @@ describe('AC-1 — exports and three callable write paths', () => {
     const src = readFileSync(new URL('../src/tutor_learning.ts', import.meta.url), 'utf8');
     const code = src.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
     assert.match(code, /from "\.\/write_with_change_log"/);
-    assert.equal((code.match(/writeWithChangeLog\(request\.auth/g) ?? []).length, 4,
-      'record, void, replace and unlearn each call the helper');
+    assert.equal((code.match(/writeWithChangeLog\(request\.auth/g) ?? []).length, 5,
+      'record, void, replace, unlearn and the sub-track upsert each call the helper');
     for (const forbidden of [
       /\.set\(/, /\.create\(/, /\.update\(/, /\.delete\(/, /\.batch\(/, /runTransaction/,
       /tutor_grants/, /verifyTutorGrant/, /can_edit_learning/, /permissions/,
@@ -106,11 +108,19 @@ describe('AC-1 — exports and three callable write paths', () => {
     }
   });
 
-  test('source is limited to main: a sub-track source is rejected, nothing written', async () => {
+  test('source is main or a sub-track ULID: any other source is rejected, nothing written', async () => {
     const { error, logs } = await captureLogs(() =>
-      record([dated(ulid(1), 'Berakhot 2:1', { source: ulid(50) })]));
+      record([dated(ulid(1), 'Berakhot 2:1', { source: 'school' })]));
     await expectHttpsError(Promise.reject(error), 'invalid-argument');
     assertPrivacySafeRejectionLog(logs, { entity: LOG_ENTITY, code: 'invalid-argument' });
+    await assertNothingWritten();
+  });
+
+  test('a sub-track source must name an existing sub-track (DNI-509): unknown → not-found', async () => {
+    const { error, logs } = await captureLogs(() =>
+      record([dated(ulid(1), 'Berakhot 2:1', { source: ulid(50) })]));
+    await expectHttpsError(Promise.reject(error), 'not-found');
+    assertPrivacySafeRejectionLog(logs, { entity: LOG_ENTITY, code: 'not-found' });
     await assertNothingWritten();
   });
 
@@ -552,5 +562,86 @@ describe('writeWithChangeLog — AD-50 pts_ attachment (shared helper)', () => {
       ],
     });
     assert.deepEqual([...(await allPoints()).keys()].sort(), [`pts_${ulid(1)}`, `pts_${ulid(2)}`]);
+  });
+});
+
+// ── DNI-509 (Story 4.1) AC-2: a capture on the tutor's sub-track row ─────────
+
+describe('DNI-509 AC-2 — tutorRecordLearning with a sub-track source', () => {
+  const SUB = ulid(70);
+  const BEITZAH = ['Beitzah 3:1', 'Beitzah 3:2', 'Beitzah 3:4'];
+
+  beforeEach(async () => {
+    await profileRef().collection('sub_tracks').doc(SUB).set({
+      curriculum_id: C, name: 'Rebbe', type: 'ongoing', window_start: '2026-09-01',
+      rate_per_week: 5, weeks_per_year: 40, learns_on_shabbos: false,
+      ground: [{ level: 'masechta', ref: 'Beitzah' }], last_change_id: ulid(0),
+    });
+  });
+
+  test('"Up to Beitzah 3:4" from 3:1 with 3:3 unticked: one transaction writes 3:1, 3:2 and 3:4 only', async () => {
+    const res = await record(BEITZAH.map((ref, i) => dated(ulid(i + 1), ref, { source: SUB })));
+    assert.equal(res.success, true);
+    assert.deepEqual(res.event_ids, [ulid(1), ulid(2), ulid(3)]);
+    assert.deepEqual(res.change_ids, []);
+    assert.ok(res.recorded_at);
+
+    const events = await allEvents();
+    assert.deepEqual([...events.values()].map((e) => e.ref).sort(), BEITZAH);
+    const stamps = new Set();
+    for (const e of events.values()) {
+      assert.equal(e.kind, 'learn');
+      assert.equal(e.source, SUB, 'source is the sub-track ULID');
+      assert.equal(e.date_state, 'dated');
+      assert.equal(e.learned_on, '2026-10-01');
+      assert.equal(e.stage, undefined);
+      assert.deepEqual(e.actor, TUTOR_ACTOR, 'server-derived tutor actor');
+      assert.ok(e.recorded_at instanceof admin.firestore.Timestamp, 'server-stamped recorded_at');
+      stamps.add(e.recorded_at.toMillis());
+    }
+    assert.equal(stamps.size, 1, 'one commit stamps every event');
+    assert.equal(Date.parse(res.recorded_at), [...stamps][0]);
+    assert.equal((await pointsCol().get()).size, 0, 'no pts_ entry for a sub-track event (AD-50)');
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('a mixed capture earns pts_ only for its main-track events', async () => {
+    await record([dated(ulid(1), 'Beitzah 3:1', { source: SUB }), dated(ulid(2), 'Berakhot 2:1')]);
+    assert.deepEqual([...(await allPoints()).keys()], [`pts_${ulid(2)}`]);
+  });
+
+  test('an identical retry replays the stored capture', async () => {
+    const events = BEITZAH.map((ref, i) => dated(ulid(i + 1), ref, { source: SUB }));
+    const first = await record(events);
+    const second = await record(events);
+    assert.equal(second.replayed, true);
+    assert.equal(second.recorded_at, first.recorded_at);
+    assert.equal((await allEvents()).size, 3);
+  });
+
+  for (const [name, extra, code] of [
+    ['a sub-track of another curriculum', { curriculum_id: 'shas' }, 'invalid-argument'],
+    ['a stage on a sub-track event', { stage: 2 }, 'invalid-argument'],
+    ['a before_tracking sub-track event', { date_state: 'before_tracking', learned_on: null }, 'invalid-argument'],
+  ]) {
+    test(`${name} → ${code}, nothing written`, async () => {
+      await expectHttpsError(record([dated(ulid(1), 'Beitzah 3:1', { source: SUB, ...extra })]), code);
+      await assertNothingWritten();
+    });
+  }
+
+  test('another learner\'s sub-track is not a source for this learner', async () => {
+    await profileRef().collection('sub_tracks').doc(SUB).delete();
+    await profileRef(PARENT, '01J8XKQ2M3N4P5R6S7T8V9W0ZZ').collection('sub_tracks').doc(SUB).set({
+      curriculum_id: C, name: 'Other', last_change_id: ulid(0),
+    });
+    await expectHttpsError(record([dated(ulid(1), 'Beitzah 3:1', { source: SUB })]), 'not-found');
+    await assertNothingWritten();
+  });
+
+  test('a grant without can_edit_learning cannot record on a sub-track', async () => {
+    await seedActiveGrant({ can_edit_learning: false });
+    await expectHttpsError(record([dated(ulid(1), 'Beitzah 3:1', { source: SUB })]), 'permission-denied');
+    await assertNothingWritten();
   });
 });
