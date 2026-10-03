@@ -13,13 +13,7 @@ void main() {
     await seedAccount(source, uid: testUid);
     await seedProfile(source, uid: testUid, profileId: testProfileId);
     final profileRef = profileRefFor(source);
-    const raw = [
-      'settings',
-      'point_configs',
-      'bookmarks',
-      'preferences',
-      'import_metadata',
-    ];
+    const raw = ['settings', 'point_configs', 'preferences', 'import_metadata'];
     for (final collection in raw) {
       await profileRef.collection(collection).doc('document-1').set({
         'collection': collection,

@@ -48,7 +48,9 @@ void main() {
     expect(collections['curriculum_tracks'], hasLength(1));
     expect(collections['stage_definitions'], hasLength(3));
     expect(collections.containsKey('completions'), isFalse);
-    expect(collections['bookmarks'], hasLength(1));
+    // Bookmarks are retired (R8, DNI-478): a stray legacy doc is not
+    // part of the learning record.
+    expect(collections.containsKey('bookmarks'), isFalse);
   });
 
   test('import writes the same nested document ids and values', () async {

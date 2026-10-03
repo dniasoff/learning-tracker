@@ -75,7 +75,6 @@ void main() {
           'stage_definitions',
           'point_configs',
           'curriculum_tracks',
-          'bookmarks',
           'track_learning_order',
           'preferences',
           'goals',
@@ -178,7 +177,7 @@ void main() {
             .doc(testUid)
             .collection('learner_profiles')
             .doc(secondTestProfileId)
-            .collection('bookmarks')
+            .collection('point_configs')
             .doc('bavli')
             .set({'curriculum_id': 'bavli'});
         await seedStageDefinitions(
@@ -210,7 +209,7 @@ void main() {
             'curriculum_tracks',
             'goals',
             'stage_definitions',
-            'bookmarks',
+            'point_configs',
           ]) {
             expect(
               collectionDocuments(now, name).map((d) => d['id']),

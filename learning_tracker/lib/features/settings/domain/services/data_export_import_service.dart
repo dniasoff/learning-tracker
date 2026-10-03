@@ -29,7 +29,6 @@ class ImportPreview {
     required this.goalCount,
     required this.stageCount,
     required this.pointConfigCount,
-    required this.bookmarkCount,
     required this.learningOrderCount,
     required this.curriculumTrackCount,
     required this.userProfileCount,
@@ -43,7 +42,6 @@ class ImportPreview {
   final int goalCount;
   final int stageCount;
   final int pointConfigCount;
-  final int bookmarkCount;
   final int learningOrderCount;
   final int curriculumTrackCount;
   final int userProfileCount;
@@ -172,12 +170,12 @@ class DataExportImportService {
 
   /// Profile collections outside the learning record, restored as raw
   /// documents. The retired completion stores (`completions`,
-  /// `learning_ledger`, `streak_events`, `learning_order`) are neither
-  /// exported nor restored (AD-49, R1/R5/R6/R13).
+  /// `learning_ledger`, `streak_events`, `learning_order`) and the retired
+  /// position store (R8, DNI-478: position is derived from the learner
+  /// state) are neither exported nor restored (AD-49, R1/R5/R6/R8/R13).
   static const List<String> rawProfileCollections = [
     'settings',
     'point_configs',
-    'bookmarks',
     'preferences',
     'import_metadata',
   ];
@@ -359,7 +357,6 @@ class DataExportImportService {
       goalCount: counts['goals'] ?? 0,
       stageCount: counts['stage_definitions'] ?? 0,
       pointConfigCount: counts['point_configs'] ?? 0,
-      bookmarkCount: counts['bookmarks'] ?? 0,
       learningOrderCount: counts['track_learning_order'] ?? 0,
       curriculumTrackCount: counts['curriculum_tracks'] ?? 0,
       userProfileCount: profiles.length,
