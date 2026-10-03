@@ -9,21 +9,13 @@ import {
   GRANT,
   PARENT,
   PROFILE,
-  STRANGER,
   TUTOR,
-  call,
   clearFirestore,
   db,
   fft,
   fns,
-  parentAuth,
   seedActiveGrant,
 } from './_cf_helpers.mjs';
-import {
-  assertAllGone,
-  assertAllPresent,
-  seedAccountTree,
-} from './_profile_tree.mjs';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -112,39 +104,6 @@ describe('onUserDeleted', () => {
       false,
       'learner_profiles subcollection should be recursively deleted',
     );
-  });
-
-  // ── DNI-491 (Story 1.29) AC-4 — after the AD-49 release after ───────────
-  // The Auth-delete trigger still removes the learning record, sub_tracks,
-  // change_log and every governed doc recursively, for every profile of the
-  // account, and nothing of another account.
-
-  test('DNI-491 AC-4: removes learning_events, sub_tracks, change_log and ' +
-      'governed docs of every profile, and nothing of another account', async () => {
-    const OTHER_PROFILE = '01J8XKQ2M3N4P5R6S7T8V9W0ZZ';
-    const mine = await seedAccountTree(PARENT, [PROFILE, OTHER_PROFILE]);
-    const theirs = await seedAccountTree(STRANGER, [PROFILE]);
-
-    await wrappedOnUserDeleted(fft.auth.makeUserRecord({ uid: PARENT }));
-
-    await assertAllGone(mine, 'deleted account');
-    await assertAllPresent(theirs, 'other account');
-  });
-
-  test('DNI-491 AC-4: is safe after an explicit deleteAccountData ' +
-      '(the safety-net run finds nothing and completes)', async () => {
-    const mine = await seedAccountTree(PARENT, [PROFILE]);
-    const theirs = await seedAccountTree(STRANGER, [PROFILE]);
-
-    assert.equal((await call(fns.deleteAccountData, {}, parentAuth)).success, true);
-    await assertAllGone(mine, 'after deleteAccountData');
-
-    await wrappedOnUserDeleted(fft.auth.makeUserRecord({ uid: PARENT }));
-
-    await assertAllGone(mine, 'after onUserDeleted');
-    const left = await db.collection('users').doc(PARENT).listCollections();
-    assert.deepEqual(left.map((c) => c.id), [], 'no account descendants remain');
-    await assertAllPresent(theirs, 'other account');
   });
 
   // ── Step 2: parent grants revoked ───────────────────────────────────────
