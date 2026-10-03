@@ -22,16 +22,30 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/talm
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/talmid_roster_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/talmid_row_state_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/talmid_row_card.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorDisabledControl;
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+/// The window width from which the roster and the selected learner sit
+/// side by side (AC-8, UX-DR-162).
+const double talmidimSplitBreakpoint = 840;
 
 /// The tutor's My talmidim screen.
 @RoutePage()
-class MyTalmidimScreen extends ConsumerWidget {
+class MyTalmidimScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const MyTalmidimScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyTalmidimScreen> createState() => _MyTalmidimScreenState();
+}
+
+class _MyTalmidimScreenState extends ConsumerState<MyTalmidimScreen> {
+  /// The tablet pane's selection, by grant id.
+  String? _selectedGrantId;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final roster = ref.watch(talmidRosterProvider);
     return Scaffold(
@@ -52,9 +66,193 @@ class MyTalmidimScreen extends ConsumerWidget {
           ),
           data: (entries) => entries.isEmpty
               ? const _EmptyRoster()
-              : TalmidRosterList(entries: entries),
+              : LayoutBuilder(
+                  builder: (context, constraints) =>
+                      constraints.maxWidth >= talmidimSplitBreakpoint
+                      ? _split(entries)
+                      : TalmidRosterList(entries: entries),
+                ),
         ),
       ),
+    );
+  }
+
+  /// The tablet composition: the list (5 columns) beside the selected
+  /// learner (7 columns). The selection is kept by grant id while that
+  /// grant stays on the roster, and cleared the moment it leaves.
+  Widget _split(List<TalmidRosterEntry> entries) {
+    TalmidRosterEntry? selected;
+    for (final entry in entries) {
+      if (entry.grantId == _selectedGrantId) selected = entry;
+    }
+    if (selected == null && _selectedGrantId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _selectedGrantId != null) {
+          setState(() => _selectedGrantId = null);
+        }
+      });
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          flex: 5,
+          child: TalmidRosterList(
+            entries: entries,
+            selectedGrantId: selected?.grantId,
+            onSelect: (entry) =>
+                setState(() => _selectedGrantId = entry.grantId),
+          ),
+        ),
+        VerticalDivider(width: 1, color: context.colors.brandOutline),
+        Expanded(
+          flex: 7,
+          child: selected == null
+              ? const _NoSelection()
+              : TalmidDetailPane(
+                  key: ValueKey('talmidDetail-${selected.grantId}'),
+                  entry: selected,
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoSelection extends StatelessWidget {
+  const _NoSelection();
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Text(
+        AppLocalizations.of(context)!.talmidimSelectPrompt,
+        key: const Key('talmidimSelectPrompt'),
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyLarge?.copyWith(color: context.colors.brandInkMuted),
+      ),
+    ),
+  );
+}
+
+/// The tablet pane of the selected talmid: his standing, *Add ground* on a
+/// groundless track, and *Open {name}* through the tutor PIN gate. A
+/// learner who becomes locked shows only "Shabbos / Yom Tov" here too.
+class TalmidDetailPane extends ConsumerWidget {
+  /// Creates the pane for [entry].
+  const TalmidDetailPane({super.key, required this.entry});
+
+  /// The selected roster entry.
+  final TalmidRosterEntry entry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = context.colors;
+    final theme = Theme.of(context);
+    final row = watchTalmidRow(ref, entry);
+    if (!row.identityVisible) {
+      return Center(
+        child: Text(
+          row is TalmidRowLocked ? l10n.talmidimLocked : l10n.onTrackLoading,
+          key: const Key('talmidDetailRedacted'),
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: colors.brandInkMuted,
+          ),
+        ),
+      );
+    }
+    final name = talmidName(l10n, entry);
+    final ready = row is TalmidRowReady ? row : null;
+    final status = ready?.status;
+    final line = ready?.line;
+    final addGroundEnabled = talmidAddGroundEnabled(ref, entry);
+    final opener = ref.read(talmidContextOpenerProvider);
+    return ListView(
+      key: const Key('talmidDetailPane'),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: colors.brandBlueSoft,
+              child: Text(
+                talmidInitials(name),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colors.brandBlueDeep,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    key: const Key('talmidDetailName'),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: colors.brandInk,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (status != null) ...[
+                    const SizedBox(height: 6),
+                    TalmidStatusChip(status: status),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (line != null) ...[
+          const SizedBox(height: 20),
+          Text(
+            talmidLineText(ref, l10n, line),
+            key: const Key('talmidDetailLine'),
+            style: theme.textTheme.bodyLarge?.copyWith(color: colors.brandInk),
+          ),
+        ],
+        if (line is TalmidTrackNoGround) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TutorDisabledControl(
+              blocked: !addGroundEnabled,
+              child: TextButton.icon(
+                key: const Key('talmidDetailAddGround'),
+                onPressed: addGroundEnabled
+                    ? () => opener.open(
+                        context,
+                        entry,
+                        groundSubTrackId: line.subTrackId,
+                      )
+                    : null,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text(l10n.subTrackHomeAddGround),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: FilledButton(
+            key: const Key('talmidDetailOpen'),
+            onPressed: row.opensLearner
+                ? () => opener.open(context, entry)
+                : null,
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+            child: Text(l10n.talmidimOpen(name)),
+          ),
+        ),
+      ],
     );
   }
 }

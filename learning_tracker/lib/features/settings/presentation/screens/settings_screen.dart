@@ -820,6 +820,25 @@ class _PendingInvitesSection extends ConsumerWidget {
           _TutorGrantTile(grant: grant, isPending: false),
           const SizedBox(height: 8),
         ],
+        // Story 4.3 (DNI-511): the tutor's active roster with each talmid's
+        // standing. Grant management ("View all") stays as it is.
+        if (activeGrants.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: OutlinedButton.icon(
+              key: const Key('settingsMyTalmidim'),
+              onPressed: () => context.pushRoute(const MyTalmidimRoute()),
+              icon: const Icon(Icons.groups_outlined),
+              label: Text(l10n.talmidimTitle),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: context.colors.brandBlue,
+                side: BorderSide(
+                  color: context.colors.brandBlue.withValues(alpha: 0.5),
+                ),
+                minimumSize: const Size(double.infinity, 48),
+              ),
+            ),
+          ),
         if (hiddenCount > 0)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),

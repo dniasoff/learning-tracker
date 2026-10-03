@@ -454,6 +454,17 @@ void main() {
       );
     });
   });
+
+  group('DNI-511 — My talmidim route', () {
+    test('/tutor/talmidim is registered beside /tutor/my-grants', () {
+      final flat = _flatten(_buildRouterForInspection().routes);
+      final talmidim = flat.singleWhere((r) => r.path == '/tutor/talmidim');
+      expect(talmidim.name, MyTalmidimRoute.name);
+      expect(talmidim.guards.whereType<AuthGuard>(), hasLength(1));
+      // Grant management stays reachable (replace-vs-extend left open).
+      expect(flat.where((r) => r.path == '/tutor/my-grants'), hasLength(1));
+    });
+  });
 }
 
 class _MockStackRouter extends Mock implements StackRouter {}

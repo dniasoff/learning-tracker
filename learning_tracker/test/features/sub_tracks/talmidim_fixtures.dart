@@ -108,15 +108,19 @@ final class FakeTalmidInputs {
   final Map<LearnerScope, int> stateReads = {};
 
   /// The overrides feeding the row providers from this object.
-  List<Override> get overrides => [
-    talmidLearnerStateProvider.overrideWith((ref, scope) {
-      stateReads[scope] = (stateReads[scope] ?? 0) + 1;
-      return states[scope] ?? const AsyncLoading<LearnerState>();
-    }),
-    talmidLockProvider.overrideWith(
-      (ref, scope) => locks[scope] ?? defaultLock,
-    ),
-  ];
+  List<Override> get overrides => [stateOverride, lockOverride];
+
+  /// The engine-state seam alone (a test may keep the real lock path).
+  Override get stateOverride =>
+      talmidLearnerStateProvider.overrideWith((ref, scope) {
+        stateReads[scope] = (stateReads[scope] ?? 0) + 1;
+        return states[scope] ?? const AsyncLoading<LearnerState>();
+      });
+
+  /// The lock seam alone.
+  Override get lockOverride => talmidLockProvider.overrideWith(
+    (ref, scope) => locks[scope] ?? defaultLock,
+  );
 }
 
 /// Records every row timeout diagnostic.
@@ -186,10 +190,12 @@ List<Override> talmidimOverrides({
   TalmidContextOpener? opener,
   bool online = true,
   TalmidRowDiagnostics? diagnostics,
+  bool realLock = false,
 }) => [
   tutorRosterRepositoryProvider.overrideWithValue(repo),
   talmidRosterAccountKeyProvider.overrideWithValue('tutor-uid'),
-  ...inputs.overrides,
+  inputs.stateOverride,
+  if (!realLock) inputs.lockOverride,
   connectivityStreamProvider.overrideWith((ref) => Stream.value(online)),
   renderedDisplayForRefProvider.overrideWith(
     (ref, sefariaRef) async => talmidRenderedRef(sefariaRef),
@@ -214,6 +220,8 @@ Future<void> pumpTalmidim(
   ThemeData? theme,
   Locale locale = const Locale('en'),
   List<Override> extra = const [],
+  bool realLock = false,
+  Widget Function(Widget screen)? wrap,
 }) async {
   tester.view
     ..physicalSize = size
@@ -221,7 +229,9 @@ Future<void> pumpTalmidim(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     pumpApp(
-      child: const MyTalmidimScreen(),
+      child: wrap == null
+          ? const MyTalmidimScreen()
+          : wrap(const MyTalmidimScreen()),
       theme: theme,
       locale: locale,
       overrides: [
@@ -230,6 +240,7 @@ Future<void> pumpTalmidim(
           inputs: inputs,
           opener: opener,
           online: online,
+          realLock: realLock,
         ),
         ...extra,
       ],

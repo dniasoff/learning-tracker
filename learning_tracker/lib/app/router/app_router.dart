@@ -45,6 +45,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/curricul
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ground_picker_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/my_talmidim_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -384,6 +385,15 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/tutor/my-grants',
       page: ManageGrantsRoute.page,
+      guards: [authGuard],
+    ),
+    // Story 4.3 (DNI-511): My talmidim, the tutor's active roster with each
+    // learner's standing. Incoming invite and grant management above stays
+    // reachable (the design leaves replace-vs-extend open). A row opens its
+    // learner through the tutor PIN gate where one is configured.
+    AutoRoute(
+      path: '/tutor/talmidim',
+      page: MyTalmidimRoute.page,
       guards: [authGuard],
     ),
     AutoRoute(
