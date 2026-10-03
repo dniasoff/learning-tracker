@@ -2,11 +2,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_writer_providers.g.dart';
 
-// NOTE: this file no longer provides a completion WRITER. `CompletionWriter`
-// was Drift-bound and had zero production consumers — the live write path is
-// `FirestoreCompletionRepositoryAdapter.markComplete`
-// (`features/learning/data/repositories/completion_repository_impl.dart`).
-// The file keeps its name only because 43 call sites import
+// NOTE: this file no longer provides a completion WRITER. Every learning
+// write goes through `LearningCommands` (`learning_events`, AD-31); the file
+// keeps its name only because many call sites import
 // `completionCommittedProvider` from this path.
 
 /// Monotonically-increasing counter that increments once per successfully

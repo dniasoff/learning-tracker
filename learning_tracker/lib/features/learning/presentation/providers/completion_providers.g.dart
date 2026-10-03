@@ -8,263 +8,6 @@ part of 'completion_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provides the legacy completion repository — storage and reads only.
-/// Story 1.11 (DNI-473) moved every owner learning write onto
-/// `LearningCommands` (`learning_events`); the R1 story retires this
-/// repository with its readers.
-///
-/// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
-/// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
-/// deprecated and will be removed in Phase 4.
-
-@ProviderFor(completionRepository)
-final completionRepositoryProvider = CompletionRepositoryProvider._();
-
-/// Provides the legacy completion repository — storage and reads only.
-/// Story 1.11 (DNI-473) moved every owner learning write onto
-/// `LearningCommands` (`learning_events`); the R1 story retires this
-/// repository with its readers.
-///
-/// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
-/// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
-/// deprecated and will be removed in Phase 4.
-
-final class CompletionRepositoryProvider
-    extends
-        $FunctionalProvider<
-          CompletionRepository,
-          CompletionRepository,
-          CompletionRepository
-        >
-    with $Provider<CompletionRepository> {
-  /// Provides the legacy completion repository — storage and reads only.
-  /// Story 1.11 (DNI-473) moved every owner learning write onto
-  /// `LearningCommands` (`learning_events`); the R1 story retires this
-  /// repository with its readers.
-  ///
-  /// **Firestore-backed** via [FirestoreCompletionRepositoryAdapter] (wired
-  /// Phase 3, T-20). The Drift-backed [CompletionRepositoryImpl] is
-  /// deprecated and will be removed in Phase 4.
-  CompletionRepositoryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'completionRepositoryProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$completionRepositoryHash();
-
-  @$internal
-  @override
-  $ProviderElement<CompletionRepository> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  CompletionRepository create(Ref ref) {
-    return completionRepository(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(CompletionRepository value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<CompletionRepository>(value),
-    );
-  }
-}
-
-String _$completionRepositoryHash() =>
-    r'50a66b9ac044d5347a9d015c7b7c346fff3a641b';
-
-/// Provides the number of completions for a specific content item,
-/// scoped to the active profile.
-
-@ProviderFor(completionCount)
-final completionCountProvider = CompletionCountFamily._();
-
-/// Provides the number of completions for a specific content item,
-/// scoped to the active profile.
-
-final class CompletionCountProvider
-    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
-    with $FutureModifier<int>, $FutureProvider<int> {
-  /// Provides the number of completions for a specific content item,
-  /// scoped to the active profile.
-  CompletionCountProvider._({
-    required CompletionCountFamily super.from,
-    required ({String curriculumId, String sefariaRef}) super.argument,
-  }) : super(
-         retry: null,
-         name: r'completionCountProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$completionCountHash();
-
-  @override
-  String toString() {
-    return r'completionCountProvider'
-        ''
-        '$argument';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<int> create(Ref ref) {
-    final argument =
-        this.argument as ({String curriculumId, String sefariaRef});
-    return completionCount(
-      ref,
-      curriculumId: argument.curriculumId,
-      sefariaRef: argument.sefariaRef,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is CompletionCountProvider && other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$completionCountHash() => r'2fed986edd27df92631c47e2c071949e59e457cf';
-
-/// Provides the number of completions for a specific content item,
-/// scoped to the active profile.
-
-final class CompletionCountFamily extends $Family
-    with
-        $FunctionalFamilyOverride<
-          FutureOr<int>,
-          ({String curriculumId, String sefariaRef})
-        > {
-  CompletionCountFamily._()
-    : super(
-        retry: null,
-        name: r'completionCountProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  /// Provides the number of completions for a specific content item,
-  /// scoped to the active profile.
-
-  CompletionCountProvider call({
-    required String curriculumId,
-    required String sefariaRef,
-  }) => CompletionCountProvider._(
-    argument: (curriculumId: curriculumId, sefariaRef: sefariaRef),
-    from: this,
-  );
-
-  @override
-  String toString() => r'completionCountProvider';
-}
-
-/// Batch review counts for all items in a curriculum (AC-3, AC-7).
-
-@ProviderFor(reviewCountsForCurriculum)
-final reviewCountsForCurriculumProvider = ReviewCountsForCurriculumFamily._();
-
-/// Batch review counts for all items in a curriculum (AC-3, AC-7).
-
-final class ReviewCountsForCurriculumProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<Map<String, int>>,
-          Map<String, int>,
-          FutureOr<Map<String, int>>
-        >
-    with $FutureModifier<Map<String, int>>, $FutureProvider<Map<String, int>> {
-  /// Batch review counts for all items in a curriculum (AC-3, AC-7).
-  ReviewCountsForCurriculumProvider._({
-    required ReviewCountsForCurriculumFamily super.from,
-    required String super.argument,
-  }) : super(
-         retry: null,
-         name: r'reviewCountsForCurriculumProvider',
-         isAutoDispose: true,
-         dependencies: null,
-         $allTransitiveDependencies: null,
-       );
-
-  @override
-  String debugGetCreateSourceHash() => _$reviewCountsForCurriculumHash();
-
-  @override
-  String toString() {
-    return r'reviewCountsForCurriculumProvider'
-        ''
-        '($argument)';
-  }
-
-  @$internal
-  @override
-  $FutureProviderElement<Map<String, int>> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<Map<String, int>> create(Ref ref) {
-    final argument = this.argument as String;
-    return reviewCountsForCurriculum(ref, argument);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is ReviewCountsForCurriculumProvider &&
-        other.argument == argument;
-  }
-
-  @override
-  int get hashCode {
-    return argument.hashCode;
-  }
-}
-
-String _$reviewCountsForCurriculumHash() =>
-    r'efc2d8599ea58559682239919131b9d4247a63cb';
-
-/// Batch review counts for all items in a curriculum (AC-3, AC-7).
-
-final class ReviewCountsForCurriculumFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<Map<String, int>>, String> {
-  ReviewCountsForCurriculumFamily._()
-    : super(
-        retry: null,
-        name: r'reviewCountsForCurriculumProvider',
-        dependencies: null,
-        $allTransitiveDependencies: null,
-        isAutoDispose: true,
-      );
-
-  /// Batch review counts for all items in a curriculum (AC-3, AC-7).
-
-  ReviewCountsForCurriculumProvider call(String curriculumId) =>
-      ReviewCountsForCurriculumProvider._(argument: curriculumId, from: this);
-
-  @override
-  String toString() => r'reviewCountsForCurriculumProvider';
-}
-
 /// Per-stage breakdown for a single item (AC-1, AC-5).
 
 @ProviderFor(itemStageBreakdown)
@@ -327,7 +70,7 @@ final class ItemStageBreakdownProvider
 }
 
 String _$itemStageBreakdownHash() =>
-    r'ff0d5cd62793d0c2be2a74efbf3e8190b8aebc7a';
+    r'08487435fa9b62340402a8b18f9e64e3ccf598e4';
 
 /// Per-stage breakdown for a single item (AC-1, AC-5).
 
@@ -354,4 +97,157 @@ final class ItemStageBreakdownFamily extends $Family
 
   @override
   String toString() => r'itemStageBreakdownProvider';
+}
+
+/// Provides the legacy completion repository (R1). No screen reads it any
+/// more; Story 1.21 (DNI-483) deletes it with its tests.
+
+@ProviderFor(completionRepository)
+final completionRepositoryProvider = CompletionRepositoryProvider._();
+
+/// Provides the legacy completion repository (R1). No screen reads it any
+/// more; Story 1.21 (DNI-483) deletes it with its tests.
+
+final class CompletionRepositoryProvider
+    extends
+        $FunctionalProvider<
+          CompletionRepository,
+          CompletionRepository,
+          CompletionRepository
+        >
+    with $Provider<CompletionRepository> {
+  /// Provides the legacy completion repository (R1). No screen reads it any
+  /// more; Story 1.21 (DNI-483) deletes it with its tests.
+  CompletionRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'completionRepositoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$completionRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<CompletionRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CompletionRepository create(Ref ref) {
+    return completionRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CompletionRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CompletionRepository>(value),
+    );
+  }
+}
+
+String _$completionRepositoryHash() =>
+    r'50a66b9ac044d5347a9d015c7b7c346fff3a641b';
+
+/// Legacy per-item completion count (R1, no production reader); deleted
+/// with [completionRepository].
+
+@ProviderFor(completionCount)
+final completionCountProvider = CompletionCountFamily._();
+
+/// Legacy per-item completion count (R1, no production reader); deleted
+/// with [completionRepository].
+
+final class CompletionCountProvider
+    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
+    with $FutureModifier<int>, $FutureProvider<int> {
+  /// Legacy per-item completion count (R1, no production reader); deleted
+  /// with [completionRepository].
+  CompletionCountProvider._({
+    required CompletionCountFamily super.from,
+    required ({String curriculumId, String sefariaRef}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'completionCountProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$completionCountHash();
+
+  @override
+  String toString() {
+    return r'completionCountProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<int> create(Ref ref) {
+    final argument =
+        this.argument as ({String curriculumId, String sefariaRef});
+    return completionCount(
+      ref,
+      curriculumId: argument.curriculumId,
+      sefariaRef: argument.sefariaRef,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CompletionCountProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$completionCountHash() => r'2fed986edd27df92631c47e2c071949e59e457cf';
+
+/// Legacy per-item completion count (R1, no production reader); deleted
+/// with [completionRepository].
+
+final class CompletionCountFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<int>,
+          ({String curriculumId, String sefariaRef})
+        > {
+  CompletionCountFamily._()
+    : super(
+        retry: null,
+        name: r'completionCountProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Legacy per-item completion count (R1, no production reader); deleted
+  /// with [completionRepository].
+
+  CompletionCountProvider call({
+    required String curriculumId,
+    required String sefariaRef,
+  }) => CompletionCountProvider._(
+    argument: (curriculumId: curriculumId, sefariaRef: sefariaRef),
+    from: this,
+  );
+
+  @override
+  String toString() => r'completionCountProvider';
 }

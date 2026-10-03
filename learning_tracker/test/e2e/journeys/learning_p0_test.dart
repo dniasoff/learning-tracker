@@ -108,6 +108,7 @@ List<Override> _learningScreenOverrides({
   required List<DailyTask> tasks,
 }) {
   return [
+    activeLearnerStateFutureProvider.overrideWith((ref) async => null),
     dashboardActiveCurriculaStreamProvider.overrideWith(
       (ref) => Stream.value(curricula),
     ),
@@ -167,6 +168,9 @@ List<Override> _textContentOverrides(String sefariaRef) => [
 ///    this override stage labels render in Hebrew script, breaking label
 ///    assertions.
 List<Override> _textDisplayBaseOverrides() => [
+  // DNI-483: the reader's stage-completed read derives from LearnerState;
+  // no learner is active in these journeys.
+  activeLearnerStateFutureProvider.overrideWith((ref) async => null),
   dashboardStreakProvider.overrideWith(
     (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
   ),

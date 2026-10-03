@@ -37,7 +37,6 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_t
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
 import '../../helpers/firestore_fake.dart';
-import '../../helpers/firestore_fixtures.dart';
 import '../../helpers/firestore_governed_writer.dart';
 
 const _uid = 'uid-1';
@@ -387,38 +386,6 @@ void main() {
       expect(raw.keys, isNot(contains('synced_at')));
       expect(raw['last_change_id'], isA<String>());
       expect(raw['curriculum_id'], 'bavli');
-    });
-  });
-
-  group('hasCompletionsForStage', () {
-    test('detects active and absent stage-order completions', () async {
-      await seedCompletion(
-        firestore,
-        uid: _uid,
-        profileId: _profileId,
-        stageId: 1,
-      );
-      final repo = buildRepo();
-
-      expect(await repo.hasCompletionsForStage(1), isTrue);
-      expect(await repo.hasCompletionsForStage(2), isFalse);
-    });
-
-    test('throws when a matching completion cannot be decoded', () async {
-      await firestore
-          .collection('users')
-          .doc(_uid)
-          .collection('learner_profiles')
-          .doc(_profileId)
-          .collection('completions')
-          .doc('malformed')
-          .set({'stage_id': 1});
-      final repo = buildRepo();
-
-      expect(
-        () => repo.hasCompletionsForStage(1),
-        throwsA(isA<ArgumentError>()),
-      );
     });
   });
 }
