@@ -60,10 +60,13 @@ final class CatchUpCardActions {
   recordAdjusted;
 }
 
-/// The actions of the catch-up card: *Yes, all of it* (Story 3.3); Story
-/// 3.4 adds *Adjust…*.
+/// The actions of the catch-up card: *Yes, all of it* (Story 3.3) and
+/// the *Adjust…* panel's *Record {n}* (Story 3.4).
 final catchUpCardActionsProvider = Provider<CatchUpCardActions>(
-  (ref) => CatchUpCardActions(recordAll: catchUpRecordAllOf(ref)),
+  (ref) => CatchUpCardActions(
+    recordAll: catchUpRecordAllOf(ref),
+    recordAdjusted: catchUpRecordAdjustedOf(ref),
+  ),
 );
 
 /// The pending catch-up cards, or nothing.

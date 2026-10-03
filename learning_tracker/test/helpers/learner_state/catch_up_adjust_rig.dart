@@ -111,9 +111,12 @@ final class AdjustRig {
   /// When true, every Up to… slice fails to load (AC-7).
   bool failSlices = false;
 
-  /// The overrides; [actions] replaces the recording card actions.
+  /// The overrides; [actions] replaces the recording card actions, and
+  /// [realActions] keeps the production ones (then the caller overrides
+  /// `learningCommandsProvider`).
   List<Override> overrides({
     CatchUpCardActions? actions,
+    bool realActions = false,
     bool hebrewTerms = false,
     bool realLabels = false,
   }) => [
@@ -169,12 +172,13 @@ final class AdjustRig {
         ),
       };
     }),
-    catchUpCardActionsProvider.overrideWithValue(
-      actions ??
-          CatchUpCardActions(
-            recordAdjusted: (_, _, action) => recorded.add(action),
-          ),
-    ),
+    if (!realActions)
+      catchUpCardActionsProvider.overrideWithValue(
+        actions ??
+            CatchUpCardActions(
+              recordAdjusted: (_, _, action) => recorded.add(action),
+            ),
+      ),
   ];
 }
 

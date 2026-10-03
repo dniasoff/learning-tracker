@@ -2,7 +2,8 @@
 // card — the action it records (AC-1), the undo snackbar and the card
 // returning (AC-7), the ended refusal (AC-3), the not-saved state (AC-8),
 // the processing state, and no streak-loss copy for an expired card (AC-4,
-// NFR-18).
+// NFR-18). DNI-507 (Story 3.4) T4: the Adjust panel's Record goes through
+// the same path as one adjusted action, never empty and never twice.
 @Tags(['learning'])
 library;
 
@@ -26,6 +27,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/learner_state/catch_up_adjust_rig.dart';
 import '../../../../helpers/learner_state/catch_up_card_harness.dart';
 import '../../../../helpers/learner_state/fake_learner_state.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
@@ -322,5 +324,97 @@ void main() {
     );
     expect(find.text('Below'), findsOneWidget);
     await _unmount(tester);
+  });
+
+  group('DNI-507 T4: Record of the Adjust panel', () {
+    List<Override> adjustOverrides(
+      AdjustRig rig,
+      LearningCommands commands,
+    ) => [
+      ...rig.overrides(realActions: true),
+      learningCommandsProvider.overrideWith((ref) => Future.value(commands)),
+    ];
+
+    Future<void> untick33AndRecord(WidgetTester tester) async {
+      await openAdjust(tester);
+      final row = adjustRow(rigRebbe, rigLeaf(3, 3));
+      await tester.ensureVisible(row);
+      await tester.tap(row);
+      await settleAdjust(tester);
+      await tester.ensureVisible(adjustRecord);
+      await tester.tap(adjustRecord);
+      await settleAdjust(tester);
+    }
+
+    testWidgets('records one adjusted action of the ticked leaves', (
+      tester,
+    ) async {
+      final rig = AdjustRig();
+      final commands = FakeLearningCommands();
+      await pumpAdjustCard(tester, adjustOverrides(rig, commands));
+      await untick33AndRecord(tester);
+      final call = commands.calls.singleWhere((c) => c.name == 'recordCatchUp');
+      final action = call.args['action']! as CatchUpAction;
+      expect(action.mode, CatchUpMode.adjusted);
+      expect(action.lockedDaysOffered, 1);
+      expect(action.leaves, hasLength(13));
+      expect(action.leaves.any((l) => l.ref == rigLeaf(3, 3)), isFalse);
+      await unmountAdjust(tester);
+    });
+
+    testWidgets('a second tap while recording writes nothing more; a '
+        'not-saved result keeps the card and the panel\'s selection', (
+      tester,
+    ) async {
+      final rig = AdjustRig();
+      final commands = _HeldCommands();
+      await pumpAdjustCard(tester, adjustOverrides(rig, commands));
+      await untick33AndRecord(tester);
+      expect(commands.calls, 1);
+      expect(tester.widget<ButtonStyleButton>(adjustRecord).onPressed, isNull);
+      await tester.tap(adjustRecord, warnIfMissed: false);
+      await settleAdjust(tester);
+      expect(commands.calls, 1);
+      commands.release.complete(
+        const CaptureResult.rejected(CaptureRejection.notSaved),
+      );
+      await settleAdjust(tester);
+      expect(_saveFailed, findsOneWidget);
+      expect(adjustPanel, findsOneWidget);
+      expect(
+        find.descendant(
+          of: adjustRecord,
+          matching: find.text('Record 13 mishnayos'),
+        ),
+        findsOneWidget,
+      );
+      await unmountAdjust(tester);
+    });
+
+    testWidgets('an empty adjusted action never reaches the command', (
+      tester,
+    ) async {
+      final rig = AdjustRig();
+      final commands = FakeLearningCommands();
+      await pumpAdjustCard(tester, adjustOverrides(rig, commands));
+      final element = tester.element(_card);
+      final card = tester.widget<CatchUpCardView>(_card).card;
+      ProviderScope.containerOf(
+        element,
+      ).read(catchUpCardActionsProvider).recordAdjusted!(
+        element,
+        card,
+        CatchUpAction(
+          lock: card.window.lock,
+          mode: CatchUpMode.adjusted,
+          lockedDaysOffered: 1,
+          leaves: const [],
+        ),
+      );
+      await settleAdjust(tester);
+      expect(commands.calls, isEmpty);
+      expect(_card, findsOneWidget);
+      await unmountAdjust(tester);
+    });
   });
 }

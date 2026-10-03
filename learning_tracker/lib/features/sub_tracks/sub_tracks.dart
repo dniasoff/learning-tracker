@@ -14,8 +14,10 @@ export 'presentation/providers/catch_up_record_controller.dart'
     show
         CatchUpRecordPhase,
         CatchUpRecordStatus,
+        catchUpRecordAdjustedOf,
         catchUpRecordAllOf,
         catchUpRecordStatusProvider,
+        recordCatchUpAdjusted,
         recordCatchUpAll;
 export 'presentation/providers/sub_track_capture_providers.dart'
     show

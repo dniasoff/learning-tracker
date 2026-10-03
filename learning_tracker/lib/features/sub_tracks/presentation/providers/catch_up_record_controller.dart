@@ -1,9 +1,12 @@
-/// *Yes, all of it* on a catch-up card (Story 3.3, DNI-506 T6; screen #10,
-/// UX-DR-37, UX-DR-133, UX-DR-154).
+/// *Yes, all of it* (Story 3.3, DNI-506 T6) and *Adjust…* then *Record
+/// {n}* (Story 3.4, DNI-507 T4) on a catch-up card (screen #10, UX-DR-37,
+/// UX-DR-133, UX-DR-154).
 ///
-/// One tap expands the card ([buildCatchUpAllAction]) and records it
-/// through `LearningCommands.recordCatchUp`, which owns every rule (window,
-/// events, points, chunking, compensation, analytics). This file is the
+/// One tap expands the card ([buildCatchUpAllAction]), or the Adjust panel
+/// hands its adjusted action, and it is recorded through
+/// `LearningCommands.recordCatchUp`, which owns every rule (window,
+/// events, points, chunking, compensation, analytics). An adjusted action
+/// with no leaf never reaches the command (DNI-507 AC-4). This file is the
 /// card's state around that call:
 ///
 /// * **Recording**: the card's actions are disabled until the command
@@ -80,6 +83,40 @@ Future<void> recordCatchUpAll(
   BuildContext context,
   Ref ref,
   CatchUpTaskCard card,
+) => _recordCatchUp(
+  context,
+  ref,
+  card,
+  () => buildCatchUpAllAction(
+    card,
+    refOf: (task) => task.contentItemSefariaRef,
+    stageOf: (task) => task.stageOrder,
+  ),
+);
+
+/// Records the Adjust panel's [action] for [card] (*Record {n}*, Story
+/// 3.4, DNI-507 AC-3) and shows the outcome as [recordCatchUpAll] does.
+/// An action with no leaf writes nothing and leaves the card pending
+/// (AC-4); an action of another card's lock is refused the same way.
+Future<void> recordCatchUpAdjusted(
+  BuildContext context,
+  Ref ref,
+  CatchUpTaskCard card,
+  CatchUpAction action,
+) async {
+  if (action.leaves.isEmpty ||
+      action.mode != CatchUpMode.adjusted ||
+      action.lock != card.window.lock) {
+    return;
+  }
+  await _recordCatchUp(context, ref, card, () => action);
+}
+
+Future<void> _recordCatchUp(
+  BuildContext context,
+  Ref ref,
+  CatchUpTaskCard card,
+  CatchUpAction Function() actionOf,
 ) async {
   final key = card.window.key;
   final status = ref.read(catchUpRecordStatusProvider.notifier);
@@ -109,13 +146,7 @@ Future<void> recordCatchUpAll(
       status.set(key, null);
       return;
     }
-    result = await commands.recordCatchUp(
-      buildCatchUpAllAction(
-        card,
-        refOf: (task) => task.contentItemSefariaRef,
-        stageOf: (task) => task.stageOrder,
-      ),
-    );
+    result = await commands.recordCatchUp(actionOf());
   } on Exception {
     status.set(key, CatchUpRecordPhase.failed);
     return;
@@ -165,3 +196,10 @@ void Function(BuildContext context, CatchUpTaskCard card) catchUpRecordAllOf(
   Ref ref,
 ) =>
     (context, card) => unawaited(recordCatchUpAll(context, ref, card));
+
+/// The *Record {n}* handler of the Adjust panel the catch-up card plugs in
+/// (`catchUpCardActionsProvider`, DNI-507).
+void Function(BuildContext context, CatchUpTaskCard card, CatchUpAction action)
+catchUpRecordAdjustedOf(Ref ref) =>
+    (context, card, action) =>
+        unawaited(recordCatchUpAdjusted(context, ref, card, action));
