@@ -25,13 +25,19 @@ import '../../../helpers/sub_tracks/sub_track_harness.dart';
 
 void main() {
   late SubTrackHarness h;
+  // Only the widget tests build a harness; the plain test() cases never do,
+  // and with randomized ordering they can run first.
+  var built = false;
   SubTrackGoalSetupOutcome? outcome;
 
   setUp(() {
+    built = false;
     outcome = null;
     SharedPreferences.setMockInitialValues({});
   });
-  tearDown(() async => h.dispose());
+  tearDown(() async {
+    if (built) await h.dispose();
+  });
 
   Future<void> pumpFlow(WidgetTester tester, {bool withCommands = true}) async {
     await tester.pumpWidget(
@@ -84,6 +90,7 @@ void main() {
     tester,
   ) async {
     h = SubTrackHarness();
+    built = true;
     await pumpFlow(tester);
     expect(screen(tester).curriculumId, CurriculumId.mishnayos);
     expect(screen(tester).existingGoal, isNull);
@@ -97,6 +104,7 @@ void main() {
     tester,
   ) async {
     h = SubTrackHarness();
+    built = true;
     await pumpFlow(tester);
     await complete(tester, deadline(DateTime(2028, 6, 1)));
     expect(outcome, SubTrackGoalSetupOutcome.saved);
@@ -123,6 +131,7 @@ void main() {
 
   testWidgets('a refused governed save is reported as failed', (tester) async {
     h = SubTrackHarness();
+    built = true;
     h.commands.nextGovernedResult = const CaptureResult.onlineRequired();
     await pumpFlow(tester);
     await complete(tester, deadline(DateTime(2028, 6, 1)));
@@ -132,6 +141,7 @@ void main() {
 
   testWidgets('without commands the goal screen never opens', (tester) async {
     h = SubTrackHarness();
+    built = true;
     await pumpFlow(tester, withCommands: false);
     await tester.pumpAndSettle();
     expect(find.byType(GoalSetupScreen, skipOffstage: false), findsNothing);
