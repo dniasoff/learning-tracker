@@ -1,4 +1,4 @@
 {
-  "description": "AD-49 cutover allowlist. DNI-490 filled it with the R14 remnants (the five deny-all firestore.rules matches and the streak_events and learning_order indexes) and switched CI to --enforce; the release after (DNI-491) removed those remnants and emptied it. It stays empty: a retired name anywhere the gate scans fails CI. Each entry is {symbol, path, count, reason, owner?}; count is the exact number of hits allowed.",
+  "description": "AD-49 cutover allowlist: exactly the deny-all match blocks for the retired collections in firestore.rules and their entries in functions/src/deletes.ts and firestore.indexes.json. DNI-490 fills it and switches CI to --enforce; DNI-491 empties it. Each entry is {symbol, path, count, reason, owner?}; count is the exact number of hits allowed. functions/src/deletes.ts names no retired collection (profile and account deletion use recursiveDelete), so it has no entry.",
   "entries": []
 }

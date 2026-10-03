@@ -1,12 +1,12 @@
 {
   "group": "R14",
   "title": "Rules, indexes, deletion list",
-  "description": "Action: deny writes in the cutover release (allowlisted in allowlist.json by DNI-490), remove in the release after (DNI-491: the rules matches and indexes are gone and the allowlist is empty). Governed-collection matches are amended per AD-38, never removed. The entries stay pending only so tool/check_retired_test_references.dart lets the rules and deletion tests name the retired paths they prove are default-denied; CI's --enforce treats them as retired, so any hit in their scope fails.",
+  "description": "Action: deny writes in the cutover release (allowlisted in allowlist.json by DNI-490), remove in the release after (DNI-491 empties the allowlist). Governed-collection matches are amended per AD-38, never removed.",
   "entries": [
-    {"symbol": "completions", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant, removed by DNI-491"},
-    {"symbol": "learning_ledger", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant, removed by DNI-491"},
-    {"symbol": "streak_events", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant, removed by DNI-491"},
-    {"symbol": "bookmarks", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant, removed by DNI-491"},
-    {"symbol": "learning_order", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant, removed by DNI-491"}
+    {"symbol": "completions", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"},
+    {"symbol": "learning_ledger", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"},
+    {"symbol": "streak_events", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"},
+    {"symbol": "bookmarks", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"},
+    {"symbol": "learning_order", "kind": "collection", "state": "pending", "owner": "DNI-490", "paths": {"include": ["firestore.rules", "firestore.indexes.json", "functions/src/deletes.ts"]}, "note": "AD-49 cutover remnant"}
   ]
 }

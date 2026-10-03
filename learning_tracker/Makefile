@@ -1264,7 +1264,7 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	  cat /tmp/profile_path_keying_check.$$$$.log; \
 	  rm -f /tmp/profile_path_keying_check.$$$$.log; \
 	fi; \
-	echo "105/105 — AD-49 RETIRED-SYMBOLS (DNI-521, --enforce since the DNI-490 cutover): no symbol from tool/retired_symbols/R1-R16.json remains in lib/, functions/src/, firestore.rules or firestore.indexes.json outside tool/retired_symbols/allowlist.json, which is empty since the release after the cutover (DNI-491)"; \
+	echo "105/105 — AD-49 RETIRED-SYMBOLS (DNI-521, --enforce since the DNI-490 cutover): no symbol from tool/retired_symbols/R1-R16.json remains in lib/, functions/src/, firestore.rules or firestore.indexes.json outside tool/retired_symbols/allowlist.json, and the allowlist matches the R14 remnants exactly"; \
 	if ! dart run tool/check_retired_symbols.dart --enforce > /tmp/retired_symbols_check.$$$$.log 2>&1; then \
 	  cat /tmp/retired_symbols_check.$$$$.log; \
 	  rm -f /tmp/retired_symbols_check.$$$$.log; \
