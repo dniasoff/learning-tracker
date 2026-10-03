@@ -19,5 +19,8 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
     wizardService: ref.watch(learningProcessWizardServiceProvider),
     bookmarkRepository: ref.watch(bookmarkRepositoryProvider),
     analytics: ref.watch(analyticsServiceProvider),
+    // DNI-486: a tutor's add-track is refused before any write.
+    isTutoredSession: () =>
+        ref.read(activeTutoredProfileSelectionProvider) != null,
   );
 });

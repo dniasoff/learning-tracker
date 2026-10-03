@@ -147,6 +147,7 @@ Widget _buildScreen({Locale locale = const Locale('en')}) {
       ),
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
+          ownsBookmark: () => true,
           contentRepository: content,
           bookmarkRepository: _NoBookmarks(),
           commands: () async =>

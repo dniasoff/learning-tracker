@@ -1,30 +1,19 @@
 // Story 1.11 (DNI-473) AC-6: `MarkLiveCompletionUseCase` routes the owner
-// branch through `LearningCommands.capture`; the tutor branch is unchanged
-// (it still rejects with `TutorWriteForbiddenException`, logs
-// `tutor_live_mark_blocked` and never reaches the commands) until the
-// tutor-capture story reroutes it to `TutorWriteService`.
+// branch through `LearningCommands.capture`.
+// Story 1.24 (DNI-486) AC-1: the tutor branch is rerouted to the tutor
+// capture, whose only write is `TutorWriteService.recordLearning` (the
+// `tutorRecordLearning` callable); the legacy rejection is deleted.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
 
 import '../../helpers/learner_state/fake_learning_commands.dart';
+import '../../helpers/tutoring/tutor_learning_harness.dart';
 
-final class _RecordingAnalytics extends NullAnalyticsService {
-  final events = <String>[];
-
-  @override
-  Future<void> logEvent(
-    String name, {
-    Map<String, Object?>? parameters,
-  }) async => events.add(name);
-}
-
-Future<CaptureResult> _ownerCapture(FakeLearningCommands commands) =>
+Future<CaptureResult> _ownerCapture(LearningCommands commands) =>
     commands.capture(
       curriculumId: 'mishnayos',
       refs: const ['Mishnah Berakhot 1:1'],
@@ -35,13 +24,16 @@ Future<CaptureResult> _ownerCapture(FakeLearningCommands commands) =>
 
 void main() {
   late FakeLearningCommands commands;
-  late _RecordingAnalytics analytics;
+  late TutorHarness tutor;
 
   setUp(() {
     commands = FakeLearningCommands();
-    analytics = _RecordingAnalytics();
+    tutor = TutorHarness();
   });
-  tearDown(() => commands.dispose());
+  tearDown(() {
+    commands.dispose();
+    tutor.dispose();
+  });
 
   test('the owner branch delegates to LearningCommands.capture and returns '
       'its result', () async {
@@ -50,10 +42,12 @@ void main() {
         selection: const OwnProfileSelection(profileId: 'p1', ownerUid: 'u1'),
         isChildMode: false,
       ),
-      analytics: analytics,
     );
 
-    final result = await useCase.call(() => _ownerCapture(commands));
+    final result = await useCase.call(
+      () => _ownerCapture(commands),
+      tutorWrite: () => _ownerCapture(tutor.commands),
+    );
 
     expect(result, isA<CaptureSuccess>());
     expect((result as CaptureSuccess).eventIds, hasLength(1));
@@ -61,28 +55,35 @@ void main() {
     expect(call.name, 'capture');
     expect(call.args['source'], LearningEvent.sourceMain);
     expect(call.args['dateState'], DateState.dated);
-    expect(analytics.events, isEmpty);
+    expect(tutor.invoker.calls, isEmpty);
   });
 
-  test('the tutor branch is unchanged: it throws TutorWriteForbidden, logs '
-      'tutor_live_mark_blocked and never calls the commands', () async {
+  test('the tutor branch records through TutorWriteService.recordLearning '
+      '(tutorRecordLearning) and never reaches the owner commands', () async {
     final useCase = MarkLiveCompletionUseCase<CaptureResult>(
-      session: ResolvedSession.forTutor(
-        selection: const TutoredProfileSelection(
-          profileId: 'p1',
-          ownerUid: 'u1',
-          grantId: 'g1',
-          permissions: TutorPermissions(),
-        ),
-      ),
-      analytics: analytics,
+      session: ResolvedSession.forTutor(selection: tutor.selection),
     );
 
-    await expectLater(
-      useCase.call(() => _ownerCapture(commands)),
-      throwsA(isA<TutorWriteForbiddenException>()),
+    final result = await useCase.call(
+      () => _ownerCapture(commands),
+      tutorWrite: () => _ownerCapture(tutor.commands),
     );
-    expect(commands.calls, isEmpty, reason: 'no tutor path on the commands');
-    expect(analytics.events, [AnalyticsEvent.tutorLiveMarkBlocked]);
+
+    expect(result, isA<CaptureSuccess>());
+    expect(commands.calls, isEmpty, reason: 'no owner write for a tutor');
+    final call = tutor.invoker.calls.single;
+    expect(call.fn, 'tutorRecordLearning');
+    expect(call.args['grantId'], tutorFixtureGrantId);
+    expect(call.args['ownerUid'], tutorFixtureOwnerUid);
+    final event = (call.args['events'] as List).single as Map;
+    expect(event['fields'], {
+      'kind': 'learn',
+      'curriculum_id': 'mishnayos',
+      'ref': 'Mishnah Berakhot 1:1',
+      'source': 'main',
+      'date_state': 'dated',
+      'learned_on': '2026-10-01',
+      'stage': 1,
+    });
   });
 }

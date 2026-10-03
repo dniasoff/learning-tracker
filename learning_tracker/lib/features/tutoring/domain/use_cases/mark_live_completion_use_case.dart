@@ -10,19 +10,14 @@
 //     `tutorRecordLearning` callable (AD-53, deviation #7: a tutor with
 //     `can_edit_learning` may record learning).
 //
-// Design: the use case is session-aware. It receives a [ResolvedSession] that
-// identifies whether the caller is an owner or a tutor. Tutors are always
-// rejected; owners are passed through to the delegate.
-//
-// Story 1.11 (DNI-473, AC-6): the owner delegate is the owner capture,
-// `LearningCommands.capture` (the reader's Mark complete). The tutor branch
-// below is unchanged until the tutor-capture story reroutes it to
-// `TutorWriteService`.
+// The legacy tutor branch (reject with TutorWriteForbiddenException and log
+// `tutor_live_mark_blocked`) is gone. The tutor write is authorized on the
+// server (writeWithChangeLog's grant check); the tutor delegate's preflight
+// adds the immediate permission, online and lock checks.
 
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 
-/// Delegate signature — the actual owner write: `LearningCommands.capture`
-/// (Story 1.11, DNI-473).
+/// Delegate signature — one session's capture write.
 ///
 /// This avoids a hard dependency on the learning feature from the tutoring
 /// feature domain (cross-feature deep imports are forbidden by coding
@@ -42,7 +37,8 @@ typedef LiveCompletionDelegate<T> = Future<T> Function();
 ///   session: resolvedSession,
 /// );
 /// final result = await useCase.call(
-///   () => commands.capture(curriculumId: id, refs: refs, ...),
+///   () => ownerCommands.capture(...),
+///   tutorWrite: () => tutorCommands.capture(...), // → recordLearning
 /// );
 /// ```
 class MarkLiveCompletionUseCase<T> {

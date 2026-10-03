@@ -167,6 +167,7 @@ final class _Capture {
       pointsWait: const Duration(milliseconds: 40),
     );
     recorder = BeforeTrackingRecorder(
+      ownsBookmark: () => true,
       contentRepository: content,
       bookmarkRepository: _Bookmarks(),
       commands: () async => commands,

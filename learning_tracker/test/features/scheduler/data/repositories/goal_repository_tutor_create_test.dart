@@ -9,6 +9,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
@@ -41,7 +42,6 @@ void main() {
         .read(goalRepositoryProvider)
         .createGoal(
           curriculumId: CurriculumId.mishnayos,
-          targetPercent: 100,
           paceTarget: const PacePeriodTarget(rate: 2, period: 'per_week'),
           description: 'Seder Moed',
           paceGranularity: 'mishna',
@@ -49,12 +49,18 @@ void main() {
 
     expect(h.invoker.calls.map((c) => c.fn), ['tutorUpsertGoal']);
     final args = h.invoker.calls.single.args;
-    expect(args['goalId'], created.firestoreId);
+    // AD-43: the pace goal lives at its fixed id.
+    expect(args['goalId'], '${CurriculumId.mishnayos.storageKey}_pace');
     expect(args['ownerUid'], tutorFixtureOwnerUid);
     expect(args['grantId'], tutorFixtureGrantId);
     expect(args['actionId'], isA<String>());
     final data = args['goalData'] as Map<String, dynamic>;
-    expect(data, created.toFirestore());
+    expect(
+      data,
+      FirestoreGoalRepository.tutorUpsertFields(created, create: true),
+    );
+    expect(data['goal_type'], 'pace');
+    expect(data.containsKey('target_percent'), isFalse);
     expect(created.curriculumId, CurriculumId.mishnayos);
     expect(created.goalType, 'pace');
     expect(created.paceValue, 2);
@@ -68,7 +74,10 @@ void main() {
     await expectLater(
       container
           .read(goalRepositoryProvider)
-          .createGoal(curriculumId: CurriculumId.mishnayos, targetPercent: 100),
+          .createGoal(
+            curriculumId: CurriculumId.mishnayos,
+            paceTarget: const PacePeriodTarget(rate: 2, period: 'per_week'),
+          ),
       throwsA(isA<TutorGovernedWriteException>()),
     );
     expect(h.invoker.calls, isEmpty);

@@ -392,23 +392,44 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     // after the tutor preflight (Story 1.24, DNI-486).
     final selection = ref.read(activeTutoredProfileSelectionProvider);
     if (selection != null) {
-      final result = await ref
-          .read(tutorWriteServiceProvider)
-          .setProfileProgram(
-        grantId: selection.grantId,
-        ownerUid: selection.ownerUid,
-        profileId: selection.profileId,
-        programId: curriculum.storageKey,
-        programData: {
-          'profile_id': selection.profileId,
-          'curriculum_id': curriculum.storageKey,
-          'program_id': enrollment.programId,
-          'tracking_start_date': todayUtc.toIso8601String(),
-          'tracking_start_ref': todayRef,
-        },
-      );
-      if (result is TutorWriteFailure) {
-        throw StateError(result.message);
+      final writes = await ref.read(tutorGovernedWritesProvider.future);
+      try {
+        if (writes == null) {
+          throw StateError('Tutored context is not ready for a governed write');
+        }
+        await writes.setProfileProgram(
+          curriculumId: curriculum.storageKey,
+          data: {
+            'profile_id': selection.profileId,
+            'curriculum_id': curriculum.storageKey,
+            'program_id': enrollment.programId,
+            'tracking_start_date': todayUtc.toIso8601String(),
+            'tracking_start_ref': todayRef,
+          },
+        );
+      } catch (e, st) {
+        // A refused or failed governed write changed nothing: show the
+        // existing save error; a retry reuses the frozen action id.
+        AppLogger.instance.error(
+          event: 'edit_track_clear_overdue_failed',
+          exception: e,
+          stackTrace: st,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                tutorSaveErrorText(
+                  l10n,
+                  e,
+                  fallback: l10n.errorSaveTrackFailed,
+                  learnerName: ref.read(tutorLearnerNameProvider),
+                ),
+              ),
+            ),
+          );
+        }
+        return;
       }
     } else {
       await programRepo.setProgram(

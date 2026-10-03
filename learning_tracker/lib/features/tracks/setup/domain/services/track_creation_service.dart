@@ -48,12 +48,23 @@ const kDefaultStudyDays = <int, String>{
 /// the post-success `logTrackAdded` analytics event follows — both only
 /// once the track is confirmed (deferred for an action queued offline, see
 /// [createTrack]).
+///
+/// **Tutored session (Story 1.24, DNI-486).** A tutor reaches the talmid's
+/// governed docs only through governed callables, and adding a track has no
+/// tutor governed path yet: the add-track action is an owner batch into the
+/// talmid's tree, which the rules deny (tutor writes are Admin-SDK only). So
+/// a tutor [createTrack] is refused with
+/// [TutorTrackCreationUnsupportedException] BEFORE any write begins — never
+/// half-applied, never a pending offline write. Follow-up:
+/// learning-tracker-fyh.212 (route the add-track writes through
+/// TutorGovernedWrites) and learning-tracker-fyh.226 (stage set).
 class TrackCreationService {
   TrackCreationService({
     required AddTrackActionRepository actionRepository,
     required LearningProcessWizardService wizardService,
     required BookmarkRepository bookmarkRepository,
     AnalyticsService? analytics,
+    bool Function() isTutoredSession = _ownerSession,
   }) : _actionRepository = actionRepository,
        _wizardService = wizardService,
        _bookmarkRepository = bookmarkRepository,
@@ -79,7 +90,13 @@ class TrackCreationService {
   /// server accepts it — never if it refuses it (AD-54: the refused action
   /// is rolled back and surfaces as a pending failure), so no bookmark or
   /// analytics event outlives a track that was never added.
+  ///
+  /// Throws [TutorTrackCreationUnsupportedException] in a tutored session,
+  /// before anything is written (see the class doc comment).
   Future<void> createTrack({required AddTrackResult result}) async {
+    if (_isTutoredSession()) {
+      throw const TutorTrackCreationUnsupportedException();
+    }
     final plan = planFor(result);
     final outcome = await _actionRepository.applyAddTrack(plan);
     if (!outcome.queued) {

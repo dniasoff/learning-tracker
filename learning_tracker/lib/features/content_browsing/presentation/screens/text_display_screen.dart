@@ -748,18 +748,16 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         markRefs.toSet(),
       );
 
-      // H1 fix: route the live completion write through MarkLiveCompletionUseCase
-      // so the domain guard (TutorWriteForbiddenException) is enforced at the
-      // application layer — not just by the UI button being disabled.
-      // AUD-content_browsing-03: inject analytics so tutor_live_mark_blocked
-      // (W7.11) fires when the domain guard rejects a tutor session.
-      // AC-6 (DNI-473): the owner branch writes through
-      // LearningCommands.capture; the tutor branch is unchanged.
+      // H1: the live completion routes through MarkLiveCompletionUseCase by
+      // session role. AC-6 (DNI-473): the owner branch writes through
+      // LearningCommands.capture. DNI-486: the tutor branch is the talmid's
+      // TutorLearningCommands.capture, whose one write is
+      // TutorWriteService.recordLearning (no client Firestore write, and no
+      // result before the callable answers).
       final markLiveUseCase = MarkLiveCompletionUseCase<CaptureResult>(
         session: session,
       );
-      final result = await markLiveUseCase.call(() async {
-        final commands = await ref.read(learningCommandsProvider.future);
+      Future<CaptureResult> capture(LearningCommands? commands) {
         if (commands == null) throw const _NoActiveLearnerException();
         _commands = commands;
         return commands.capture(
@@ -769,7 +767,13 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           dateState: DateState.dated,
           stage: task.stageOrder,
         );
-      });
+      }
+
+      final result = await markLiveUseCase.call(
+        () async => capture(await ref.read(learningCommandsProvider.future)),
+        tutorWrite: () async =>
+            capture(await ref.read(tutorLearningCommandsProvider.future)),
+      );
       final commands = _commands!;
 
       final keys = [
@@ -780,6 +784,8 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             trackType: trackType,
           ),
       ];
+      // A tutor capture stamped inside the learner's lock is kept but not
+      // counted (DNI-486 AC-7): it changes nothing on screen.
       final recorded = result is CaptureSuccess
           ? {
               for (
@@ -787,40 +793,24 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                 i < result.eventIds.length && i < keys.length;
                 i++
               )
-                result.eventIds[i]: keys[i],
+                if (!result.keptNotCounted.contains(result.eventIds[i]))
+                  result.eventIds[i]: keys[i],
             }
           : const <String, String>{};
       if (recorded.isNotEmpty) {
         _recordedKeys.addAll(recorded);
         _applyOptimistic(recorded);
-        // Legacy planner position (R4, retired by DNI-478): the bookmark
-        // still advances so today's list moves on exactly as before.
-        await _advanceBookmark(task, markRefs.last);
+        // Legacy planner position (R4, retired by DNI-478): the owner's
+        // bookmark still advances as before. A tutor never writes it: the
+        // bookmark is owner-only by the Firestore rules and the tutor's one
+        // write is the callable, whose validated receipt is [result]
+        // (DNI-486). Today's list derives from the learning events, so the
+        // tutor's reader moves on without it.
+        if (!session.isTutorSession) {
+          await _advanceBookmark(task, markRefs.last);
+        }
       }
 
-      if (mounted) {
-        setState(() => _saving = false);
-      }
-      if (!mounted) return;
-
-      final messenger = ScaffoldMessenger.of(context);
-      showCaptureOutcome(
-        context,
-        result: result,
-        commands: commands,
-        message: AppLocalizations.of(context)!.markedComplete,
-        messenger: messenger,
-        onUndone: () => _rollBack(recorded.keys),
-      );
-
-      if (recorded.isNotEmpty && mounted && nextAfterComplete != null) {
-        await context.router.replace(
-          TextDisplayRoute(sefariaRef: nextAfterComplete.contentItemSefariaRef),
-        );
-      }
-    } on TutorWriteForbiddenException {
-      // W6.19: Catch the domain-layer guard and surface a friendly dialog
-      // explaining the permission boundary (FR-3 / FR-6.2).
       if (mounted) {
         setState(() => _saving = false);
       }

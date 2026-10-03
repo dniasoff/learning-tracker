@@ -50,8 +50,6 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/exceptions/permission_exception.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
@@ -318,25 +316,6 @@ void main() {
         await useCase.call(grant: activeGrant());
         expectDirectCallNoPiiIn(AnalyticsEvent.tutorResigned);
       });
-
-      test('tutor_live_mark_blocked — no parameters at all', () async {
-        final useCase = MarkLiveCompletionUseCase<void>(
-          session: ResolvedSession.forTutor(
-            selection: const TutoredProfileSelection(
-              profileId: 'child-1',
-              ownerUid: 'parent-uid',
-              grantId: 'grant-1',
-              permissions: TutorPermissions(),
-            ),
-          ),
-          analytics: analytics,
-        );
-        await expectLater(
-          useCase.call(() async {}),
-          throwsA(isA<TutorWriteForbiddenException>()),
-        );
-        expectDirectCallNoPiiIn(AnalyticsEvent.tutorLiveMarkBlocked);
-      });
     },
   );
 
@@ -356,7 +335,6 @@ void main() {
       AnalyticsEvent.tutorGrantRescinded,
       AnalyticsEvent.tutorGrantRevoked,
       AnalyticsEvent.tutorResigned,
-      AnalyticsEvent.tutorLiveMarkBlocked,
     };
     expect(
       _exercisedDirectCallEvents,
@@ -377,7 +355,6 @@ void main() {
       AnalyticsEvent.tutorGrantRescinded,
       AnalyticsEvent.tutorGrantRevoked,
       AnalyticsEvent.tutorResigned,
-      AnalyticsEvent.tutorLiveMarkBlocked,
     };
     // AnalyticsEvent members with zero lib/ emitters — verified by grep,
     // nothing to sweep. `AnalyticsEvent.tutorActionRecorded` was the sole

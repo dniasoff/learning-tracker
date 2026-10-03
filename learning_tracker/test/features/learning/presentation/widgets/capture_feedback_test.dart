@@ -30,6 +30,7 @@ Widget _outcomeHost(
   CaptureResult result, {
   VoidCallback? onUndone,
   void Function(List<String>)? onShown,
+  String? learnerName,
 }) => pumpApp(
   overrides: learnerStateOverrides(scope: c0Scope(), commands: commands),
   child: Scaffold(
@@ -42,6 +43,7 @@ Widget _outcomeHost(
             commands: commands,
             message: 'Recorded 2',
             onUndone: onUndone,
+            learnerName: learnerName,
           );
           onShown?.call(ids);
         },
@@ -80,6 +82,40 @@ void main() {
       expect(commands.calls.single.name, 'undoEvents');
       expect(commands.calls.single.args['eventIds'], _ids);
       expect(undone, 1);
+    });
+
+    testWidgets('a tutor write refused because the parent turned editing '
+        'off names the learner (DNI-487 AC-6)', (tester) async {
+      await tester.pumpWidget(
+        _outcomeHost(
+          commands,
+          const CaptureResult.rejected(CaptureRejection.editingTurnedOff),
+          learnerName: 'Moshe',
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Moshe's parent has turned off editing"),
+        findsOneWidget,
+      );
+      expect(find.text('Undo'), findsNothing);
+    });
+
+    testWidgets('editing turned off without a learner name falls back to '
+        'the generic permission copy', (tester) async {
+      await tester.pumpWidget(
+        _outcomeHost(
+          commands,
+          const CaptureResult.rejected(CaptureRejection.editingTurnedOff),
+        ),
+      );
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("You don't have permission to make this edit"),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a success that wrote nothing offers no Undo', (tester) async {

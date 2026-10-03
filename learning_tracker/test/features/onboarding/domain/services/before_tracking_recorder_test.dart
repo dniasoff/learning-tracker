@@ -118,6 +118,21 @@ class _Bookmarks extends Fake implements BookmarkRepository {
   }
 }
 
+/// The owner-only bookmark seen from a tutored session: every write is
+/// refused by the Firestore rules.
+class _ForbiddenBookmarks extends Fake implements BookmarkRepository {
+  var attempts = 0;
+
+  @override
+  Future<BookmarkEntity> setBookmark({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async {
+    attempts++;
+    throw StateError('permission-denied: bookmarks are owner-only');
+  }
+}
+
 LearningEvent _learn(
   String id,
   String ref, {
@@ -223,6 +238,7 @@ void main() {
 
     BeforeTrackingRecorder recorder({bool noLearner = false}) =>
         BeforeTrackingRecorder(
+          ownsBookmark: () => true,
           contentRepository: _Content(),
           bookmarkRepository: bookmarks,
           commands: () async => noLearner ? null : commands,
@@ -277,6 +293,27 @@ void main() {
       );
       expect(bookmarks.set, ['Mishnah Shabbat 1:1']);
       expect(result.bookmarkSefariaRef, 'Mishnah Shabbat 1:1');
+    });
+
+    test('a session that does not own the bookmark (a tutor) gets the '
+        "capture's success alone: no bookmark write follows", () async {
+      final forbidden = _ForbiddenBookmarks();
+      final result =
+          await BeforeTrackingRecorder(
+            contentRepository: _Content(),
+            bookmarkRepository: forbidden,
+            commands: () async => commands,
+            events: () async => events,
+            ownsBookmark: () => false,
+          ).record(
+            curriculumId: _m,
+            selections: const [
+              HierarchySelection(level1: 'Zeraim', level2: 'Berakhot'),
+            ],
+          );
+      expect(result.capture, isA<CaptureSuccess>());
+      expect(result.bookmarkSefariaRef, isNull);
+      expect(forbidden.attempts, 0);
     });
 
     test('a locked or failed capture moves no bookmark', () async {

@@ -626,10 +626,7 @@ class _LifetimeCurriculumMarkingScreenState
   }
 
   @override
-  Widget build(BuildContext context) =>
-      PendingCaptureFailureListener(child: _buildScreen(context));
-
-  Widget _buildScreen(BuildContext context) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     // DNI-474: the saved state of every row is the engine's learnt set
     // (`LearnerState`, AD-32) — never the old ledger. A learner-state error
@@ -1039,4 +1036,23 @@ class _LifetimeCurriculumMarkingScreenState
       ),
     );
   }
+}
+
+/// Thrown by [_LifetimeCurriculumMarkingScreenState._markSelections] when the
+/// save is attempted with no active profile.
+///
+/// D-E: a lifetime mark is ACHIEVEMENT-shaped (a real learning-progress
+/// record) — `markedBy` (AD-24: a learner-profile ULID) has no honest
+/// placeholder value, so a missing active profile must fail loudly rather
+/// than stamping the batch with an empty/fake marker. Mirrors
+/// `ItemsLearnedNoActiveProfileException` (`items_learned_providers.dart`)
+/// and its siblings across this migration.
+class LifetimeMarkingNoActiveProfileException implements Exception {
+  const LifetimeMarkingNoActiveProfileException();
+
+  @override
+  String toString() =>
+      'LifetimeMarkingNoActiveProfileException: lifetime marks were saved '
+      'with no active profile — the learning ledger is scoped to the active '
+      'profile and there is no ULID to stamp `markedBy` with.';
 }

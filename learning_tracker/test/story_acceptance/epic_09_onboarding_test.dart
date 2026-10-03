@@ -56,6 +56,7 @@ void main() {
       final commands = FakeLearningCommands();
       addTearDown(commands.dispose);
       final recorder = BeforeTrackingRecorder(
+        ownsBookmark: () => true,
         contentRepository: _Mishnayos(),
         bookmarkRepository: _NoBookmarks(),
         commands: () async => commands,

@@ -190,7 +190,31 @@ class FirestoreGoalRepository {
     PaceGranularity? paceGranularity,
     String? rawLearningUnit,
   }) async {
-    final now = _clock();
+    final entity = buildNewGoal(
+      curriculumId: curriculumId,
+      now: _clock(),
+      paceTarget: paceTarget,
+      description: description,
+      dateType: dateType,
+      paceGranularity: paceGranularity,
+      rawLearningUnit: rawLearningUnit,
+    );
+    await _apply(await planSetGoal(entity));
+    return entity;
+  }
+
+  /// The goal [createGoal] sets, computed without writing: the single
+  /// creation rule the owner path and the tutor path (Story 1.24, DNI-486:
+  /// `tutorUpsertGoal`) share. [now] stamps `createdAt`.
+  static GoalEntity buildNewGoal({
+    required CurriculumId curriculumId,
+    required DateTime now,
+    PaceTarget? paceTarget,
+    String description = '',
+    String dateType = 'gregorian',
+    PaceGranularity? paceGranularity,
+    String? rawLearningUnit,
+  }) {
     final (goalType, targetDate, paceValue, pacePeriod) = _decomposePaceTarget(
       paceTarget,
     );
@@ -206,19 +230,12 @@ class FirestoreGoalRepository {
       rawLearningUnit: paceGranularity == null ? rawLearningUnit : null,
       createdAt: now,
     );
-    await _apply(await planSetGoal(entity));
-    return entity;
   }
 
-  /// Updates [goal]. Pass [paceTarget] to change the goal's mode, or
-  /// [clearPaceTarget] == `true` to make it a `'none'` goal; omitting both
-  /// keeps the mode. [clearLearningUnit] == `true` removes the learning
-  /// unit; omitting [paceGranularity] / [rawLearningUnit] keeps it.
-  ///
-  /// A mode change ends the old kind's doc and sets the new kind's doc in
-  /// one action; otherwise only the changed fields of the same doc are
-  /// written.
-  Future<GoalEntity> updateGoal({
+  /// The goal [updateGoal] sets, computed without writing: the single
+  /// update rule the owner path and the tutor path (Story 1.24, DNI-486:
+  /// `tutorUpsertGoal`) share.
+  static GoalEntity resolveGoalUpdate({
     required GoalEntity goal,
     PaceTarget? paceTarget,
     bool clearPaceTarget = false,
@@ -226,7 +243,7 @@ class FirestoreGoalRepository {
     PaceGranularity? paceGranularity,
     String? rawLearningUnit,
     bool clearLearningUnit = false,
-  }) async {
+  }) {
     final String resolvedGoalType;
     final DateTime? resolvedTargetDate;
     final int? resolvedPaceValue;
@@ -273,6 +290,35 @@ class FirestoreGoalRepository {
       pacePeriod: resolvedPacePeriod,
       paceGranularity: resolvedGranularity,
       rawLearningUnit: resolvedRawUnit,
+    );
+    return updated;
+  }
+
+  /// Updates [goal]. Pass [paceTarget] to change the goal's mode, or
+  /// [clearPaceTarget] == `true` to make it a `'none'` goal; omitting both
+  /// keeps the mode. [clearLearningUnit] == `true` removes the learning
+  /// unit; omitting [paceGranularity] / [rawLearningUnit] keeps it.
+  ///
+  /// A mode change ends the old kind's doc and sets the new kind's doc in
+  /// one action; otherwise only the changed fields of the same doc are
+  /// written.
+  Future<GoalEntity> updateGoal({
+    required GoalEntity goal,
+    PaceTarget? paceTarget,
+    bool clearPaceTarget = false,
+    String? description,
+    PaceGranularity? paceGranularity,
+    String? rawLearningUnit,
+    bool clearLearningUnit = false,
+  }) async {
+    final updated = resolveGoalUpdate(
+      goal: goal,
+      paceTarget: paceTarget,
+      clearPaceTarget: clearPaceTarget,
+      description: description,
+      paceGranularity: paceGranularity,
+      rawLearningUnit: rawLearningUnit,
+      clearLearningUnit: clearLearningUnit,
     );
     await _apply(await planSetGoal(updated));
     return updated;
@@ -335,6 +381,32 @@ class FirestoreGoalRepository {
     return {
       for (final doc in snapshot.docs)
         if (_isLive(doc.data())) doc.id,
+    };
+  }
+
+  /// The AD-43 doc id of [goal]'s kind (`{curriculumId}_deadline` or
+  /// `{curriculumId}_pace`); null for a `'none'` goal, which has no doc.
+  static String? goalDocIdOf(GoalEntity goal) {
+    final kind = GoalKind.byStorage[goal.goalType];
+    return kind == null ? null : goalDocId(goal.curriculumId.storageKey, kind);
+  }
+
+  /// The storage fields a tutor's governed `tutorUpsertGoal` sets for
+  /// [goal] at [goalDocIdOf] (Story 1.24, DNI-486): the same AD-52 fields
+  /// the owner path writes, plus `goal_type` / `curriculum_id` (the
+  /// callable validates the final doc against its fixed id) and, when
+  /// [create], `created_at`. Empty for a `'none'` goal.
+  static Map<String, dynamic> tutorUpsertFields(
+    GoalEntity goal, {
+    bool create = false,
+  }) {
+    final kind = GoalKind.byStorage[goal.goalType];
+    if (kind == null) return const {};
+    return {
+      'curriculum_id': goal.curriculumId.storageKey,
+      'goal_type': kind.storage,
+      ..._fieldsOf(goal, kind),
+      if (create) 'created_at': goal.createdAt.toUtc().toIso8601String(),
     };
   }
 

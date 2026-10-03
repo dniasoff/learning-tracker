@@ -8,7 +8,6 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
@@ -193,7 +192,6 @@ Future<void> tutorReplaceStudyDays(
   required List<StudyDayConfigEntry> existing,
 }) async {
   final writes = await requireTutorGovernedWrites(ref);
-  final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
   String docId(int day) => DocIds.studyDayConfigDocId({
     'curriculum_id': curriculumId.storageKey,
     'day_of_week': day,
@@ -207,7 +205,7 @@ Future<void> tutorReplaceStudyDays(
           data: StudyDayConfigEntry(
             dayOfWeek: day,
             dayType: type,
-          ).toFirestore(curriculumId: curriculumId, updatedAt: now),
+          ).toFirestore(curriculumId: curriculumId),
         ),
     ],
     removedDocIds: [

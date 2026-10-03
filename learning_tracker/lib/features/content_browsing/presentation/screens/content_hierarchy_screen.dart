@@ -26,6 +26,7 @@ import 'package:learning_tracker/features/learner_state/presentation/providers/l
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -284,6 +285,9 @@ class _ContentHierarchyScreenState
                 ),
               ),
 
+              // Story 1.24 (DNI-486): why a tutor's ticks are disabled.
+              const TutorWriteNote(padding: EdgeInsets.fromLTRB(16, 8, 16, 0)),
+
               // Content list
               Expanded(
                 child: itemsAsync.when(
@@ -358,6 +362,11 @@ class _ContentHierarchyScreenState
                       itemBuilder: (context, index) {
                         final item = groupedItems[index];
                         final ready = allItems != null && !_capturing;
+                        // DNI-486: a tutor without editing access, offline,
+                        // or with the talmid locked sees the tick disabled.
+                        final tutorBlocked = ref
+                            .watch(tutorWriteAvailabilityProvider)
+                            .blocksTutor;
                         return ContentItemTile(
                           item: item,
                           curriculum: curriculum,
@@ -372,7 +381,8 @@ class _ContentHierarchyScreenState
                           onTick: ready
                               ? () => _tick(curriculum, allItems, item)
                               : null,
-                          onLongPress: ready
+                          tickDisabled: tutorBlocked,
+                          onLongPress: ready && !tutorBlocked
                               ? () => _tickUpToHere(curriculum, allItems, item)
                               : null,
                         );
@@ -482,7 +492,7 @@ class _ContentHierarchyScreenState
       );
       if (!mounted) return;
       final batch = <String, List<String>>{};
-      if (result case CaptureSuccess(:final eventIds)) {
+      if (result case CaptureSuccess(:final eventIds, :final keptNotCounted)) {
         if (eventIds.length == refs.length && !asNode) {
           for (var i = 0; i < refs.length; i++) {
             batch[eventIds[i]] = [refs[i]];
@@ -492,9 +502,12 @@ class _ContentHierarchyScreenState
             batch[id] = refs;
           }
         }
+        // A tutor capture stamped inside the learner's lock is kept but
+        // not counted (DNI-486 AC-7): it ticks nothing.
+        keptNotCounted.forEach(batch.remove);
         setState(() {
           _refsByEvent.addAll(batch);
-          _ticked.addAll(refs);
+          _ticked.addAll({for (final r in batch.values) ...r});
         });
       }
       showCaptureOutcome(
@@ -505,6 +518,7 @@ class _ContentHierarchyScreenState
           context,
         )!.captureRecordedCount(leaves.length),
         onUndone: () => _rollBack(batch.keys),
+        learnerName: ref.read(tutorLearnerNameProvider),
       );
     } on Exception {
       if (mounted) {

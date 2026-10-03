@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
@@ -838,7 +839,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                           ref.invalidate(
                             _trackGoalProvider(track.curriculumId),
                           );
-                          ref.invalidate(_trackPaceCalcProvider(track));
+                          ref.invalidate(_trackLearnerStateProvider(track));
                           // B-EDIT-NAME: refresh the resolved title so an edited name
                           // surfaces immediately in the header on return.
                           ref.invalidate(
@@ -847,22 +848,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                         }
                       },
               ),
-              title: Text(AppLocalizations.of(context)!.trackEditLabel),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () async {
-                await Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => EditTrackScreen(track: track),
-                  ),
-                );
-                if (mounted) {
-                  ref.invalidate(_trackGoalProvider(track.curriculumId));
-                  ref.invalidate(_trackLearnerStateProvider(track));
-                  // B-EDIT-NAME: refresh the resolved title so an edited name
-                  // surfaces immediately in the header on return.
-                  ref.invalidate(trackCustomNameProvider(track.curriculumId));
-                }
-              },
             ),
             const Divider(height: 1, indent: 56),
             TutorDisabledControl(
@@ -937,23 +922,34 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final repo = ref.read(goalRepositoryProvider);
     final paceTarget = result.paceTarget;
 
-    if (existingEntity == null) {
-      await repo.createGoal(
-        curriculumId: curriculum,
-        paceTarget: paceTarget,
-        description: result.description,
-        dateType: result.dateType,
-        paceGranularity: result.paceGranularityKey,
-      );
-    } else {
-      await repo.updateGoal(
-        goal: existingEntity,
-        paceTarget: paceTarget,
-        // 'none' goals clear the pace target entirely.
-        clearPaceTarget: paceTarget == null,
-        description: result.description,
-        paceGranularity: result.paceGranularity,
-        clearLearningUnit: result.paceGranularityKey == null,
+    try {
+      if (existingEntity == null) {
+        await repo.createGoal(
+          curriculumId: curriculum,
+          paceTarget: paceTarget,
+          description: result.description,
+          dateType: result.dateType,
+          paceGranularity: result.paceGranularityKey,
+        );
+      } else {
+        await repo.updateGoal(
+          goal: existingEntity,
+          paceTarget: paceTarget,
+          // 'none' goals clear the pace target entirely.
+          clearPaceTarget: paceTarget == null,
+          description: result.description,
+          paceGranularity: result.paceGranularity,
+          clearLearningUnit: result.paceGranularityKey == null,
+        );
+      }
+    } on Exception catch (e, st) {
+      // A failed save changed nothing (a tutor's governed goal write is one
+      // callable): say so — naming a parent who turned editing off
+      // (DNI-487 AC-6) — instead of leaving an unhandled error.
+      AppLogger.instance.error(
+        event: 'track_detail_goal_save_failed',
+        exception: e,
+        stackTrace: st,
       );
       if (mounted) {
         messenger.showSnackBar(
