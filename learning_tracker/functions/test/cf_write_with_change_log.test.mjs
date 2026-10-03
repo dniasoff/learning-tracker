@@ -1008,7 +1008,7 @@ describe('writeWithChangeLog — sub-track create claim, replay and AD-45 (DNI-4
 
   test('ended and passed-window sub-tracks do not count toward the cap', async () => {
     await seedTracks(4);
-    await subTracks().doc(ulid(950)).set({ ...track({ window_end: '2000-01-01' }), last_change_id: ulid(0) });
+    await subTracks().doc(ulid(950)).set({ ...track({ window_end: '2020-06-30' }), last_change_id: ulid(0) });
     await subTracks().doc(ulid(951)).set({
       ...track(), ended_at: new Date('2021-01-01T00:00:00Z'), end_reason: 'ended', last_change_id: ulid(0),
     });
