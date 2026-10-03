@@ -3703,6 +3703,46 @@ class AppLocalizationsHe extends AppLocalizations {
   String get calendarOffsetToday => 'היום';
 
   @override
+  String get catchUpCardAdjust => 'התאמה…';
+
+  @override
+  String catchUpCardAvailableUntil(String day) {
+    return 'זמין עד סוף $day';
+  }
+
+  @override
+  String get catchUpCardContentsError => 'לא ניתן היה לטעון את מה שתוכנן.';
+
+  @override
+  String catchUpCardQuestion(String day, int count, String units) {
+    return '$day · $count $units תוכננו — למדת את כולם?';
+  }
+
+  @override
+  String catchUpCardQuestionItems(String day, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count פריטים',
+      one: 'פריט אחד',
+    );
+    return '$day · $_temp0 תוכננו — למדת את כולם?';
+  }
+
+  @override
+  String catchUpCardQuestionNoCount(String day) {
+    return '$day · למדת את מה שתוכנן?';
+  }
+
+  @override
+  String catchUpCardSourceLine(String source, int count, String units) {
+    return '$source · $count $units';
+  }
+
+  @override
+  String get catchUpCardYesAll => 'כן, הכול';
+
+  @override
   String get dayNameShabbos => 'שבת';
 
   @override
