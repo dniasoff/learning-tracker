@@ -1933,6 +1933,18 @@
   "catchUpCardSourceLine": "{source} · {count} {units}",
   "catchUpCardYesAll": "כן, הכול",
   "catchUpEnded": "ההשלמה הזו הסתיימה — עדיין אפשר לסמן לימוד בעיון.",
+  "catchUpReminderBody": "{name}, לרשום מה שלמדת?",
+  "@catchUpReminderBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpReminderTitleShabbos": "השבת הסתיימה",
+  "catchUpReminderTitleYomKippur": "יום הכיפורים הסתיים",
+  "catchUpReminderTitleYomTov": "החג הסתיים",
+  "catchUpReminderTitleYomTovAndShabbos": "החג והשבת הסתיימו",
   "dayNameShabbos": "שבת",
   "statusPendingTapToAccept": "ממתין — הקישו לאישור",
   "calendarOffsetDay": "יום {offset}",

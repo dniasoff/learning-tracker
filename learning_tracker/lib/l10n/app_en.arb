@@ -3048,6 +3048,31 @@
   "@catchUpEnded": {
     "description": "DRAFT copy, pending zc4. Snackbar when a catch-up card is confirmed after its window ended (e.g. a stale screen at 00:01); nothing was recorded and the card disappears (DNI-506 AC-3). Never mentions the streak (NFR-18)."
   },
+  "catchUpReminderBody": "{name}, record what you learnt?",
+  "@catchUpReminderBody": {
+    "description": "DRAFT copy, pending zc4. Body of the one catch-up reminder notification at a lock's end (DNI-508 AC-9, A-6): neutral and forward-looking, never the streak or being behind. {name} is the learner profile's display name, the only learner data allowed.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpReminderTitleShabbos": "Shabbos is over",
+  "@catchUpReminderTitleShabbos": {
+    "description": "DRAFT copy, pending zc4. Title of the catch-up reminder after a Shabbos lock (DNI-508 AC-9)."
+  },
+  "catchUpReminderTitleYomKippur": "Yom Kippur is over",
+  "@catchUpReminderTitleYomKippur": {
+    "description": "DRAFT copy, pending zc4. Title of the catch-up reminder after Yom Kippur (DNI-508 AC-9)."
+  },
+  "catchUpReminderTitleYomTov": "Yom Tov is over",
+  "@catchUpReminderTitleYomTov": {
+    "description": "DRAFT copy, pending zc4. Title of the catch-up reminder after a Yom Tov lock (DNI-508 AC-9)."
+  },
+  "catchUpReminderTitleYomTovAndShabbos": "Yom Tov and Shabbos are over",
+  "@catchUpReminderTitleYomTovAndShabbos": {
+    "description": "DRAFT copy, pending zc4. Title of the catch-up reminder after Yom Tov chained into Shabbos, one continuous lock (DNI-508 AC-2, AC-9)."
+  },
   "dayNameShabbos": "Shabbos",
   "statusPendingTapToAccept": "Pending — tap to accept",
   "calendarOffsetDay": "Day {offset}",

@@ -3753,6 +3753,23 @@ class AppLocalizationsHe extends AppLocalizations {
       'ההשלמה הזו הסתיימה — עדיין אפשר לסמן לימוד בעיון.';
 
   @override
+  String catchUpReminderBody(String name) {
+    return '$name, לרשום מה שלמדת?';
+  }
+
+  @override
+  String get catchUpReminderTitleShabbos => 'השבת הסתיימה';
+
+  @override
+  String get catchUpReminderTitleYomKippur => 'יום הכיפורים הסתיים';
+
+  @override
+  String get catchUpReminderTitleYomTov => 'החג הסתיים';
+
+  @override
+  String get catchUpReminderTitleYomTovAndShabbos => 'החג והשבת הסתיימו';
+
+  @override
   String get dayNameShabbos => 'שבת';
 
   @override

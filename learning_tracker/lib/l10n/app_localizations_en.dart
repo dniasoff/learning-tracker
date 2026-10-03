@@ -3801,6 +3801,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'This catch-up has ended — you can still tick learning in Browse.';
 
   @override
+  String catchUpReminderBody(String name) {
+    return '$name, record what you learnt?';
+  }
+
+  @override
+  String get catchUpReminderTitleShabbos => 'Shabbos is over';
+
+  @override
+  String get catchUpReminderTitleYomKippur => 'Yom Kippur is over';
+
+  @override
+  String get catchUpReminderTitleYomTov => 'Yom Tov is over';
+
+  @override
+  String get catchUpReminderTitleYomTovAndShabbos =>
+      'Yom Tov and Shabbos are over';
+
+  @override
   String get dayNameShabbos => 'Shabbos';
 
   @override

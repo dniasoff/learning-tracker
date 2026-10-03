@@ -6436,6 +6436,36 @@ abstract class AppLocalizations {
   /// **'This catch-up has ended — you can still tick learning in Browse.'**
   String get catchUpEnded;
 
+  /// DRAFT copy, pending zc4. Body of the one catch-up reminder notification at a lock's end (DNI-508 AC-9, A-6): neutral and forward-looking, never the streak or being behind. {name} is the learner profile's display name, the only learner data allowed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, record what you learnt?'**
+  String catchUpReminderBody(String name);
+
+  /// DRAFT copy, pending zc4. Title of the catch-up reminder after a Shabbos lock (DNI-508 AC-9).
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos is over'**
+  String get catchUpReminderTitleShabbos;
+
+  /// DRAFT copy, pending zc4. Title of the catch-up reminder after Yom Kippur (DNI-508 AC-9).
+  ///
+  /// In en, this message translates to:
+  /// **'Yom Kippur is over'**
+  String get catchUpReminderTitleYomKippur;
+
+  /// DRAFT copy, pending zc4. Title of the catch-up reminder after a Yom Tov lock (DNI-508 AC-9).
+  ///
+  /// In en, this message translates to:
+  /// **'Yom Tov is over'**
+  String get catchUpReminderTitleYomTov;
+
+  /// DRAFT copy, pending zc4. Title of the catch-up reminder after Yom Tov chained into Shabbos, one continuous lock (DNI-508 AC-2, AC-9).
+  ///
+  /// In en, this message translates to:
+  /// **'Yom Tov and Shabbos are over'**
+  String get catchUpReminderTitleYomTovAndShabbos;
+
   /// No description provided for @dayNameShabbos.
   ///
   /// In en, this message translates to:
