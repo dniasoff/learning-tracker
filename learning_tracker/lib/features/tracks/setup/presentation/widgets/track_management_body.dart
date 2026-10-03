@@ -174,8 +174,6 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
                 ),
                 // DNI-495: the parent-only group provides its count and Add action.
                 SubTrackHubSection(curriculumId: track.curriculumId.storageKey),
-                // DNI-497 detail navigation plus DNI-499 active/ended lifecycle rows.
-                const SubTrackHubRows(),
                 const SubTrackLifecycleHubSection(),
               ],
             ],

@@ -9,6 +9,7 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_type_chooser.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -26,8 +27,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///   (UX-DR-117).
 /// - A load error shows the shared [AppErrorView] with retry (UX-DR-118),
 ///   inside the group, so the main-track list keeps working.
-/// - Tapping a school-year row opens its edit form (Story 2.6 later routes
-///   rows to the detail screen).
+/// - Tapping a row opens the sub-track detail (Story 2.6 / DNI-497 AC-1,
+///   UX-DR-53): pushed on a phone; inside the >=840dp split the row is
+///   selected and the detail pane updates in place. Metadata *Edit* is in
+///   the detail's ⋮.
 class SubTrackHubSection extends ConsumerWidget {
   const SubTrackHubSection({required this.curriculumId, super.key});
 
@@ -76,6 +79,7 @@ class SubTrackHubSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colors = context.colors;
+    final selected = ref.watch(subTrackHubSelectionProvider);
     final dailyTarget = ref
         .watch(activeLearnerStateProvider)
         .value?[curriculumId]
@@ -107,14 +111,8 @@ class SubTrackHubSection extends ConsumerWidget {
                 padding: const EdgeInsetsDirectional.only(bottom: 8),
                 child: SubTrackHubRow(
                   track: s,
-                  onTap: s.type == SubTrackType.schoolYear
-                      ? () => context.router.push(
-                          SchoolYearSubTrackFormRoute(
-                            curriculumId: curriculumId,
-                            subTrackId: s.id,
-                          ),
-                        )
-                      : null,
+                  selected: s.id == selected,
+                  onTap: () => openSubTrackDetail(context, ref, s.id),
                 ),
               ),
             if (dailyTarget != null)
@@ -156,14 +154,26 @@ class SubTrackHubSection extends ConsumerWidget {
 
 /// One sub-track row: a flat card with a 1px outline at elevation 0
 /// (UX-DR-15, UX-DR-150), its name and a type/window/rate subtitle.
+///
+/// [selected] marks the sub-track whose detail the >=840dp split shows
+/// (UX-DR-163, UX-DR-164); the chevron follows the text direction, so it
+/// mirrors in RTL (UX-DR-161).
 class SubTrackHubRow extends StatelessWidget {
-  const SubTrackHubRow({required this.track, this.onTap, super.key});
+  const SubTrackHubRow({
+    required this.track,
+    this.onTap,
+    this.selected = false,
+    super.key,
+  });
 
   /// The sub-track.
   final SubTrack track;
 
-  /// Opens the sub-track; null when its form is not available yet.
+  /// Opens the sub-track's detail; null renders the row inert.
   final VoidCallback? onTap;
+
+  /// Whether this row is the hub's selected sub-track.
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +205,10 @@ class SubTrackHubRow extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
+        key: ValueKey('subTrackHubRow:${track.id}'),
         minTileHeight: 56,
+        selected: selected,
+        selectedTileColor: colors.brandBlue.withValues(alpha: 0.12),
         onTap: onTap,
         leading: Icon(
           track.type == SubTrackType.schoolYear

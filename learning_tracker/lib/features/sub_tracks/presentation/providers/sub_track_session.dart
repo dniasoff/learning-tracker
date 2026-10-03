@@ -105,7 +105,7 @@ abstract interface class SubTrackNavigator {
 /// ship hold).
 final class RoutedSubTrackNavigator implements SubTrackNavigator {
   /// Creates the navigator.
-  const HubOnlySubTrackNavigator();
+  const RoutedSubTrackNavigator();
 
   @override
   bool canOpen(SubTrackDestination destination) => switch (destination) {
@@ -113,9 +113,11 @@ final class RoutedSubTrackNavigator implements SubTrackNavigator {
     SubTrackDestination.upTo => false,
   };
 
+  /// Any role opens the detail (DNI-497 AC-1); the child and tutor see it
+  /// read-only.
   @override
   void openDetail(BuildContext context, SubTrackHomeItem item) =>
-      throw UnsupportedError('Sub-track detail is not wired (DNI-497)');
+      context.router.push(SubTrackDetailRoute(subTrackId: item.subTrackId));
 
   /// The phone ground-picker route (DNI-498 AC-2). Its parent-session
   /// guard and the picker's own access check refuse any other session;
@@ -135,5 +137,5 @@ final class RoutedSubTrackNavigator implements SubTrackNavigator {
 
 /// The active [SubTrackNavigator].
 final subTrackNavigatorProvider = Provider<SubTrackNavigator>(
-  (ref) => const HubOnlySubTrackNavigator(),
+  (ref) => const RoutedSubTrackNavigator(),
 );

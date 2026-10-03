@@ -111,7 +111,7 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final navigator = container.read(subTrackNavigatorProvider);
-    expect(navigator, isA<HubOnlySubTrackNavigator>());
+    expect(navigator, isA<RoutedSubTrackNavigator>());
     for (final destination in SubTrackDestination.values) {
       expect(
         navigator.canOpen(destination),

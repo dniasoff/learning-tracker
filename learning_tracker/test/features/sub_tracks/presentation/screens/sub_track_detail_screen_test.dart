@@ -189,14 +189,17 @@ void main() {
 
   group('⋮ actions', () {
     final launched = <String>[];
-    final launcher = subTrackFormLauncherProvider.overrideWithValue(
-      (context, track) async => launched.add(track.id),
-    );
+    final launcher = [
+      subTrackFormLauncherProvider.overrideWithValue(
+        (context, track) async => launched.add(track.id),
+      ),
+      subTrackFormTypesProvider.overrideWithValue(SubTrackType.values.toSet()),
+    ];
     setUp(launched.clear);
 
     testWidgets('the parent edits metadata from ⋮ → Edit', (tester) async {
       h.seed(subTracks: [school]);
-      await pump(tester, extra: [launcher]);
+      await pump(tester, extra: launcher);
       await tester.tap(find.byKey(const ValueKey('subTrackDetailMenu')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Edit'));
@@ -204,7 +207,8 @@ void main() {
       expect(launched, [school.id]);
     });
 
-    testWidgets('the menu is hidden while no action is bound', (tester) async {
+    testWidgets('the menu is hidden while no action applies (the ongoing '
+        'form is DNI-496, so Edit has no form to open yet)', (tester) async {
       h.seed(subTracks: [school]);
       await pump(tester);
       expect(find.byKey(const ValueKey('subTrackDetailMenu')), findsNothing);
@@ -222,6 +226,9 @@ void main() {
       extra: [
         subTrackFormLauncherProvider.overrideWithValue(
           (context, track) async {},
+        ),
+        subTrackFormTypesProvider.overrideWithValue(
+          SubTrackType.values.toSet(),
         ),
       ],
     );

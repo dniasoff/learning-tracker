@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -45,6 +46,7 @@ Future<_RecordingNavigator> _pump(
   SubTrackViewerRole role = SubTrackViewerRole.parent,
   Stream<LearnerState> Function()? states,
   bool wired = true,
+  DashboardMockRouter? router,
 }) async {
   await tester.binding.setSurfaceSize(const Size(400, 3200));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -53,7 +55,7 @@ Future<_RecordingNavigator> _pump(
   final navigator = _RecordingNavigator();
   await tester.pumpWidget(
     dashboardApp(
-      router: acceptingRouter(),
+      router: router ?? acceptingRouter(),
       subTracks: [
         ...subTrackEngineOverrides(
           engine: engine,
@@ -61,7 +63,7 @@ Future<_RecordingNavigator> _pump(
           role: role,
           states: states,
         ),
-        // Unwired: the production HubOnlySubTrackNavigator.
+        // Unwired: the production RoutedSubTrackNavigator.
         if (wired) subTrackNavigatorProvider.overrideWithValue(navigator),
       ],
     ),
@@ -117,13 +119,26 @@ void main() {
     expect(navigator.details, [rebbeId]);
   });
 
-  testWidgets('production navigator: with no detail built yet a card is '
-      'not tappable, and Manage still opens the hub', (tester) async {
-    await _pump(tester, wired: false);
-    final card = tester.widget<InkWell>(
-      find.byKey(const Key('dashboardSubTrackCard-$rebbeId')),
+  testWidgets('production navigator: a card opens the sub-track detail '
+      'route (DNI-497), and Manage still opens the hub', (tester) async {
+    final router = acceptingRouter();
+    await _pump(tester, wired: false, router: router);
+    await tester.tap(find.text('Rebbe'));
+    await tester.pump();
+    final pushed = verify(
+      () => router.push<Object?>(
+        captureAny(),
+        onFailure: any(named: 'onFailure'),
+      ),
+    ).captured;
+    expect(
+      pushed.single,
+      isA<SubTrackDetailRoute>().having(
+        (r) => r.args?.subTrackId,
+        'subTrackId',
+        rebbeId,
+      ),
     );
-    expect(card.onTap, isNull);
     final manage = tester.widget<TextButton>(
       find.byKey(const Key('dashboardSubTracksManage')),
     );
