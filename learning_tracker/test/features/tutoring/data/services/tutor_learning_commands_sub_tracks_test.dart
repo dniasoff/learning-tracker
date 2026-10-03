@@ -3,7 +3,8 @@
 // TutorWriteService methods (Story 4.1): create / edit (reorder, remove,
 // ground append) / end / delete → `tutorUpsertSubTrack`; a capture on a
 // sub-track → `tutorRecordLearning` with the sub-track ULID as source; a
-// correction of a main-track event to a sub-track → void + record. The
+// correction of a main-track event to a sub-track → ONE atomic
+// `tutorVoidLearning` replace whose copy carries the sub-track source. The
 // result comes only from the callable's answer, the preflight blocks any
 // call first, and a retried save replays the same client ULIDs.
 
@@ -466,7 +467,7 @@ void main() {
     },
   );
 
-  group('Correct source → void + record on the sub-track', () {
+  group('Correct source → one atomic replace onto the sub-track', () {
     LearningEvent mainLearn({String source = LearningEvent.sourceMain}) =>
         engineLearn(
           1,
@@ -475,8 +476,8 @@ void main() {
           learnedOn: '2026-09-30',
         );
 
-    test('a main-track event corrected to a sub-track voids it and records '
-        'the corrected event on the sub-track, keeping its date', () async {
+    test('a main-track event corrected to a sub-track is ONE replace call '
+        'whose copy is on the sub-track, keeping its date', () async {
       final h = _harness(events: [mainLearn()]);
 
       final result = await h.commands.replace(
@@ -484,16 +485,65 @@ void main() {
         const EventReplacement(source: _rebbeId),
       );
 
+      final call = h.invoker.calls.single;
+      expect(call.fn, 'tutorVoidLearning');
+      expect(call.args['targetId'], engineUlid(1));
+      final copy = Map<String, Object?>.from(
+        (call.args['replacement'] as Map)['fields'] as Map,
+      );
+      expect(copy['source'], _rebbeId);
+      expect(copy['learned_on'], '2026-09-30');
+      expect(copy['ref'], 'Mishnah Peah 1:1');
+      expect(copy['date_state'], 'dated');
+      expect(copy.containsKey('stage'), isFalse);
+      expect(result, isA<CaptureSuccess>());
+    });
+
+    test(
+      'the server refusing the sub-track (ended since the sheet opened) '
+      'rejects the correction and sends no separate void or capture',
+      () async {
+        final h = _harness(events: [mainLearn()]);
+        h.invoker.respond = (_) => throw FirebaseFunctionsException(
+          code: 'failed-precondition',
+          message: 'Sub-track source has ended',
+        );
+
+        final result = await h.commands.replace(
+          engineUlid(1),
+          const EventReplacement(source: _rebbeId),
+        );
+
+        expect(result, isA<CaptureRejected>());
+        expect([for (final c in h.invoker.calls) c.fn], ['tutorVoidLearning']);
+      },
+    );
+
+    test('a retryable failure answers notSaved and parks the whole replace; '
+        'the retry re-sends the identical call, never a lone void', () async {
+      final h = _harness(events: [mainLearn()]);
+      h.invoker.respond = (_) => throw FirebaseFunctionsException(
+        code: 'deadline-exceeded',
+        message: 'timeout',
+      );
+
+      expect(
+        await h.commands.replace(
+          engineUlid(1),
+          const EventReplacement(source: _rebbeId),
+        ),
+        const CaptureResult.rejected(CaptureRejection.notSaved),
+      );
+      final pending = (await h.commands.watchPendingFailures().first).single;
+      final first = h.invoker.calls.single;
+      h.invoker.respond = null;
+
+      expect(await h.commands.retry(pending.id), isA<CaptureSuccess>());
       expect(
         [for (final c in h.invoker.calls) c.fn],
-        ['tutorVoidLearning', 'tutorRecordLearning'],
+        ['tutorVoidLearning', 'tutorVoidLearning'],
       );
-      expect(h.invoker.calls.first.args['targetId'], engineUlid(1));
-      final fields = _eventFields(h.invoker.calls.last).single;
-      expect(fields['source'], _rebbeId);
-      expect(fields['learned_on'], '2026-09-30');
-      expect(fields['ref'], 'Mishnah Peah 1:1');
-      expect(result, isA<CaptureSuccess>());
+      expect(h.invoker.calls.last.args, first.args);
     });
 
     test('a sub-track event is not corrected from a tutor device (Story 4.1 '

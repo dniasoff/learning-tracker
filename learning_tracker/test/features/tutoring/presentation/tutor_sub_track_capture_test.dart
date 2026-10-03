@@ -4,8 +4,8 @@
 // (`tutorRecordLearning` with the sub-track ULID as source); the Browse
 // free-tick and Mishna-history Correct source choices list only this
 // learner's onHome sub-tracks of the curriculum; the "coming soon" note is
-// gone. The correction itself (void + record on the sub-track) is pinned in
-// tutor_learning_commands_sub_tracks_test.dart.
+// gone. The correction itself (one atomic replace onto the sub-track) is
+// pinned in tutor_learning_commands_sub_tracks_test.dart.
 
 @Tags(['tutor_mode'])
 library;

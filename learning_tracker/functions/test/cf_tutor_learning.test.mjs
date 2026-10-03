@@ -755,6 +755,67 @@ describe('DNI-509 AC-2 — tutorRecordLearning with a sub-track source', () => {
     assert.equal((await eventsCol().doc(ulid(4)).get()).exists, false);
   });
 
+  // DNI-510 review: *Correct source* of a main-track event to a sub-track
+  // is ONE replace — the void and the sub-track copy commit together or
+  // not at all, so a refused correction never loses the counted original.
+  const toSub = (id, extra = {}) => dated(id, 'Beitzah 3:1', { source: SUB, ...extra });
+
+  test('a replace may move a main-track event to a live sub-track: void and copy in one transaction', async () => {
+    const original = await record([dated(ulid(1), 'Beitzah 3:1', { learned_on: '2026-09-29' })]);
+    const res = await call(fns.tutorVoidLearning, routing({
+      eventId: ulid(2), targetId: ulid(1), replacement: toSub(ulid(3), { learned_on: '2026-09-29' }),
+    }));
+    assert.deepEqual(res.event_ids, [ulid(2), ulid(3)]);
+    const events = await allEvents();
+    assert.equal(events.get(ulid(2)).target_id, ulid(1));
+    const copy = events.get(ulid(3));
+    assert.equal(copy.source, SUB);
+    assert.equal(copy.learned_on, '2026-09-29');
+    assert.equal(copy.stage, undefined);
+    assert.ok(events.get(ulid(2)).recorded_at.isEqual(copy.recorded_at), 'one transaction, one stamp');
+    assert.equal(copy.original_recorded_at.toDate().toISOString(), original.recorded_at);
+    assert.ok(!(await allPoints()).has(`pts_${ulid(3)}`), 'a sub-track copy earns no pts_ entry (AD-50)');
+  });
+
+  for (const [name, setup, replacement, code] of [
+    ['an ended sub-track', { ended_at: 'now', end_reason: 'ended' }, () => toSub(ulid(3)), 'failed-precondition'],
+    ['a deleted sub-track', { ended_at: 'now', end_reason: 'deleted' }, () => toSub(ulid(3)), 'failed-precondition'],
+    ['an unknown sub-track', null, () => dated(ulid(3), 'Beitzah 3:1', { source: ulid(71) }), 'not-found'],
+    ['a sub-track of another curriculum', { curriculum_id: 'shas' }, () => toSub(ulid(3)), 'invalid-argument'],
+    ['a before_tracking copy on a sub-track', null,
+      () => toSub(ulid(3), { date_state: 'before_tracking', learned_on: null }), 'invalid-argument'],
+  ]) {
+    test(`a replace onto ${name} → ${code}: the original stays counted, nothing else written`, async () => {
+      await record([dated(ulid(1), 'Beitzah 3:1')]);
+      if (setup) {
+        const fields = { ...setup };
+        if (fields.ended_at === 'now') fields.ended_at = admin.firestore.Timestamp.now();
+        await profileRef().collection('sub_tracks').doc(SUB).set(fields, { merge: true });
+      }
+      await expectHttpsError(call(fns.tutorVoidLearning, routing({
+        eventId: ulid(2), targetId: ulid(1), replacement: replacement(),
+      })), code);
+      assert.deepEqual([...(await allEvents()).keys()], [ulid(1)], 'no void and no copy');
+    });
+  }
+
+  // Read-lock ordering is production Firestore's; see the capture race above.
+  test('a replace racing an end of its sub-track is applied whole or refused whole', async () => {
+    await record([dated(ulid(1), 'Beitzah 3:1')]);
+    const [replaced, ended] = await Promise.allSettled([
+      call(fns.tutorVoidLearning, routing({ eventId: ulid(2), targetId: ulid(1), replacement: toSub(ulid(3)) })),
+      call(fns.tutorUpsertSubTrack, routing({ op: 'end', subTrackId: SUB, actionId: ulid(4) })),
+    ]);
+    assert.equal(ended.status, 'fulfilled', 'the end always commits');
+    const stored = [...(await allEvents()).keys()].sort();
+    if (replaced.status === 'fulfilled') {
+      assert.deepEqual(stored, [ulid(1), ulid(2), ulid(3)], 'void and copy both stored');
+    } else {
+      await expectHttpsError(Promise.reject(replaced.reason), 'failed-precondition');
+      assert.deepEqual(stored, [ulid(1)], 'neither the void nor the copy');
+    }
+  });
+
   test('a grant without can_edit_learning cannot record on a sub-track', async () => {
     await seedActiveGrant({ can_edit_learning: false });
     await expectHttpsError(record([dated(ulid(1), 'Beitzah 3:1', { source: SUB })]), 'permission-denied');

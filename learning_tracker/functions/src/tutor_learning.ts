@@ -35,7 +35,11 @@ import {
 //                         (AD-50).
 //   tutorVoidLearning   — one `void` of a stored `source = main` learn event,
 //                         or REPLACE: the void plus a corrected learn copy on
-//                         the target's curriculum, in one transaction.
+//                         the target's curriculum, in one transaction. Story
+//                         4.2 (DNI-510): the copy's `source` may be a live
+//                         sub-track of that curriculum (`dated` only), so a
+//                         *Correct source* to a sub-track is one atomic
+//                         replace, never a void and a separate capture.
 //   tutorUnlearn        — AD-31 un-learn of a leaf set, executing the client's
 //                         unlearn plan (ruling B9): void every counted main
 //                         learn event of the curriculum whose ref is in the
@@ -75,7 +79,8 @@ import {
 //                        ref, source: "main" | <sub-track ULID>, date_state,
 //                        learned_on, level?, stage?}}]}
 //   tutorVoidLearning   {grantId, ownerUid, profileId, actionId?, eventId,
-//                        targetId, replacement?: {id, fields: <learn fields>}}
+//                        targetId, replacement?: {id, fields: <learn fields,
+//                        source "main" | live sub-track ULID>}}
 //   tutorUnlearn        {grantId, ownerUid, profileId, actionId (required),
 //                        curriculumId, leafSet: string[], leafEventIds?:
 //                        string[], nodeReissues?: [{targetEventId, reissues:
@@ -199,7 +204,8 @@ function parseTutorLearnEvent(
   if (fields.source !== MAIN_SOURCE) {
     // Story 4.1 (DNI-509): a capture on the tutor's sub-track row carries
     // the sub-track's ULID; it is a dated leaf event with no stage (stage is
-    // main-track only, AD-52). Corrections stay main-only.
+    // main-track only, AD-52). A replace may also carry one (Story 4.2
+    // *Correct source*); its target stays a main-track event.
     if (!allowSubTrackSource || !isUlid(fields.source)) bad("source must be main or a sub-track ULID");
     if (fields.date_state !== "dated") bad("a sub-track capture is dated");
   }
@@ -314,7 +320,7 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
   const voidEvent: LearningEventIntent = { id: voidId, fields: { kind: "void", target_id: targetId } };
   const replacement = data.replacement === undefined || data.replacement === null
     ? null
-    : parseTutorLearnEvent(data.replacement);
+    : parseTutorLearnEvent(data.replacement, { allowSubTrackSource: true });
   if (replacement) assertUniqueIds([voidId, targetId, replacement.id]);
   else if (voidId === targetId) bad("event ids must be unique");
 
@@ -323,6 +329,8 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
   // `source = main` (Epic 1 tutors write main-track learning only, so they
   // may not void a sub-track event either). A replacement must stay on the
   // target's curriculum: a correction never moves learning to another track.
+  // It may move it to a live sub-track of that curriculum (Story 4.2
+  // *Correct source*), checked in the same transaction as the void.
   const readTarget = async (ctx: PlanContext): Promise<FirebaseFirestore.DocumentData> => {
     const snap = await ctx.txn.get(ctx.profileRef.collection("learning_events").doc(targetId));
     if (!snap.exists) throw new HttpsError("not-found", "Void target does not exist");
@@ -358,6 +366,7 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
     if (replacementEvent.fields.curriculum_id !== stored.curriculum_id) {
       bad("A replacement must keep the target's curriculum");
     }
+    await assertLiveSubTrackSources(ctx, [replacementEvent]);
     if (await isVoided(ctx, targetId)) {
       throw new HttpsError("failed-precondition", "Replace target is already voided");
     }
