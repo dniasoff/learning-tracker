@@ -73,7 +73,6 @@ void main() {
   final goal = GoalEntity(
     curriculumId: CurriculumId.mishnayos,
     createdAt: DateTime.utc(2026, 1, 1),
-    updatedAt: DateTime.utc(2026, 1, 1),
   );
   const chazara = WizardResult(
     curriculumId: CurriculumId.mishnayos,
