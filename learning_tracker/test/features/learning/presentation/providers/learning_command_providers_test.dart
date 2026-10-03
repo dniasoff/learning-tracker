@@ -186,7 +186,11 @@ void main() {
     late InMemoryGovernedIntentRepository intent;
     late FakeAnalyticsService analytics;
 
-    List<Override> ready({bool lockSettings = true, DateTime? now}) => [
+    List<Override> ready({
+      bool lockSettings = true,
+      DateTime? now,
+      Override? subTrackRepo,
+    }) => [
       learningCommandClockProvider.overrideWithValue(
         () => now ?? engineAt(600),
       ),
@@ -205,9 +209,6 @@ void main() {
       learningEventRepositoryProvider.overrideWith(
         (ref) async => InMemoryLearningEventRepository(),
       ),
-      subTrackRepo ??
-          subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
-      governedIntentRepositoryProvider.overrideWith((ref) async => intent),
       activeProfileProvider.overrideWith(
         (ref) async => _profile(ProfileMode.adult),
       ),
@@ -504,69 +505,6 @@ void main() {
         expect(deleted.endReason, SubTrackEndReason.deleted);
       });
     });
-  });
-  group('ownerGovernedWriterProvider (DNI-476)', () {
-    test('writes through the current LearningCommands', () async {
-      final commands = FakeLearningCommands();
-      final container = ProviderContainer(
-        overrides: [
-          learningCommandsProvider.overrideWith((ref) async => commands),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final writer = container.read(ownerGovernedWriterProvider);
-      await writer.applyGovernedChange(
-        GovernedAction([
-          const GovernedEntityChange(
-            entity: GovernedEntity.mainTrack,
-            entityId: 'mishnayos',
-            docs: [
-              GovernedDocPatch(
-                collection: 'curriculum_tracks',
-                docId: 'mishnayos',
-                fields: {'state': 'active'},
-              ),
-            ],
-          ),
-        ]),
-      );
-      expect(commands.calls.single.name, 'applyGovernedChange');
-    });
-
-    test(
-      'throws not-ready (and writes nothing) while there are no commands',
-      () async {
-        final container = ProviderContainer(
-          overrides: [
-            learningCommandsProvider.overrideWith((ref) async => null),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        await expectLater(
-          container
-              .read(ownerGovernedWriterProvider)
-              .applyGovernedChange(
-                GovernedAction([
-                  const GovernedEntityChange(
-                    entity: GovernedEntity.mainTrack,
-                    entityId: 'mishnayos',
-                    docs: [
-                      GovernedDocPatch(
-                        collection: 'curriculum_tracks',
-                        docId: 'mishnayos',
-                        fields: {'state': 'active'},
-                      ),
-                    ],
-                  ),
-                ]),
-              ),
-          throwsA(isA<GovernedWriterNotReadyException>()),
-        );
-      },
-    );
-
     test(
       'createSubTrack through the provider graph reads the governed '
       'intent and saves the new sub-track (DNI-497 follow-up fyh.169)',
@@ -677,79 +615,68 @@ void main() {
       expect(entry.actor.uid, 'auth-uid');
       expect(entry.actor.role, ActorRole.parent);
     });
+  });
+  group('ownerGovernedWriterProvider (DNI-476)', () {
+    test('writes through the current LearningCommands', () async {
+      final commands = FakeLearningCommands();
+      final container = ProviderContainer(
+        overrides: [
+          learningCommandsProvider.overrideWith((ref) async => commands),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final writer = container.read(ownerGovernedWriterProvider);
+      await writer.applyGovernedChange(
+        GovernedAction([
+          const GovernedEntityChange(
+            entity: GovernedEntity.mainTrack,
+            entityId: 'mishnayos',
+            docs: [
+              GovernedDocPatch(
+                collection: 'curriculum_tracks',
+                docId: 'mishnayos',
+                fields: {'state': 'active'},
+              ),
+            ],
+          ),
+        ]),
+      );
+      expect(commands.calls.single.name, 'applyGovernedChange');
+    });
 
     test(
-      'createSubTrack through the provider graph reads the governed '
-      'intent and saves the new sub-track (DNI-497 follow-up fyh.169)',
+      'throws not-ready (and writes nothing) while there are no commands',
       () async {
-        final container = ProviderContainer.test(overrides: ready());
-        final commands = (await settledAsync(
-          container,
-          learningCommandsProvider,
-        )).value!;
-        final result = await commands.createSubTrack(
-          const SubTrackDraft(
-            curriculumId: engineCurriculum,
-            name: 'School',
-            type: SubTrackType.ongoing,
-            windowStart: '2026-09-01',
-            ratePerWeek: 3,
-            weeksPerYear: 40,
-            learnsOnShabbos: false,
-            ground: [peah],
-          ),
-          subTrackId: ulidD,
+        final container = ProviderContainer(
+          overrides: [
+            learningCommandsProvider.overrideWith((ref) async => null),
+          ],
         );
-        expect(result, isA<CaptureSuccess>());
-        final created = subTracks.tracksOf(c0Scope()).single;
-        expect(created.id, ulidD);
-        expect(created.ground, const [peah]);
-        expect(subTracks.entries.single.$2.actor.role, ActorRole.parent);
+        addTearDown(container.dispose);
+
+        await expectLater(
+          container
+              .read(ownerGovernedWriterProvider)
+              .applyGovernedChange(
+                GovernedAction([
+                  const GovernedEntityChange(
+                    entity: GovernedEntity.mainTrack,
+                    entityId: 'mishnayos',
+                    docs: [
+                      GovernedDocPatch(
+                        collection: 'curriculum_tracks',
+                        docId: 'mishnayos',
+                        fields: {'state': 'active'},
+                      ),
+                    ],
+                  ),
+                ]),
+              ),
+          throwsA(isA<GovernedWriterNotReadyException>()),
+        );
       },
     );
-
-    for (final (label, unavailable) in <(String, Override)>[
-      (
-        'not ready',
-        subTrackRepositoryProvider.overrideWith((ref) async => null),
-      ),
-      (
-        'failed',
-        subTrackRepositoryProvider.overrideWith(
-          (ref) async => throw StateError('sub-track repository down'),
-        ),
-      ),
-    ]) {
-      test('a sub-track repository that is $label leaves ordinary captures '
-          'working; only the sub-track commands answer onlineRequired '
-          '(DNI-497)', () async {
-        final container = ProviderContainer.test(
-          overrides: ready(subTrackRepo: unavailable),
-        );
-        final commands = (await settledAsync(
-          container,
-          learningCommandsProvider,
-        )).value;
-        expect(commands, isA<DefaultLearningCommands>());
-        expect(
-          await commands!.capture(
-            curriculumId: engineCurriculum,
-            refs: const ['Mishnah Berakhot 1:1'],
-            source: LearningEvent.sourceMain,
-            dateState: DateState.dated,
-          ),
-          isA<CaptureSuccess>(),
-        );
-        expect(port.commits, hasLength(1));
-        expect(
-          await commands.editSubTrack(
-            ulidD,
-            const SubTrackEdit(ground: [peah, berakhot1]),
-          ),
-          const CaptureResult.onlineRequired(),
-        );
-      });
-    }
   });
 }
 

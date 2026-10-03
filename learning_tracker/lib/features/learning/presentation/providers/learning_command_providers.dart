@@ -251,7 +251,8 @@ final class _DeferredSubTrackRepository
       return writer.applyGovernedChangeToLatest(scope, subTrackId, build);
     }
     throw const OnlineRequiredException();
-  }}
+  }
+}
 
 /// The commands bound to the active learner's scope and session actor, or
 /// null while no learner is active or the account is not ready.
@@ -368,7 +369,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     achievements: achievements,
     subTrackCommands: subTrackCommands,
     // A sub-track source must be live in this learner's scope and curriculum.
-    sourceCheck: subTrackSourceCheckFrom(subTracks, scope),
+    sourceCheck: subTrackSourceCheckFrom(deferredSubTracks, scope),
   );
   // Recover any latch a failed check left absent (app start, learner
   // switch); runs in the background and retries its own failures.
@@ -377,7 +378,8 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   ref
     ..onDispose(commands.dispose)
     ..onDispose(governed.dispose)
-    ..onDispose(subTrackCommands.dispose);  return commands;
+    ..onDispose(subTrackCommands.dispose);
+  return commands;
 }, retry: (retryCount, error) => null);
 
 /// The session's queued sub-track writes of [LearnerScope] (DNI-499): kept

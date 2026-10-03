@@ -528,13 +528,9 @@ final class SubTrackCommands {
     }
     final track = written;
     if (change == null || track == null) return const CaptureResult.success();
-    return _emitOnSuccess(
-      CaptureResult.success(
-        changeIds: [change.entry.id],
-        actionId: change.entry.actionId,
-      ),
-      track,
-      SubTrackLifecycleAction.edit,
+    return _commit(
+      change,
+      onConfirmed: _emitter(track, SubTrackLifecycleAction.edit),
     );
   }
 

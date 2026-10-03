@@ -167,7 +167,7 @@ class _DetailBody extends ConsumerWidget {
             MishnaHistoryRoute(curriculumId: track.curriculumId, leafRef: leaf),
           ),
         ),
-// *+ Add ground* (Story 2.7 / DNI-498 AC-1, UX-DR-54, UX-DR-122):
+        // *+ Add ground* (Story 2.7 / DNI-498 AC-1, UX-DR-54, UX-DR-122):
         // under the ground list, groundless included, for a parent on a
         // sub-track that has not ended. The button also hides itself for a
         // non-parent session and on a calendar-program curriculum (AD-45).
@@ -186,7 +186,6 @@ class _DetailBody extends ConsumerWidget {
         if (detail.role == SubTrackDetailRole.parent) ...[
           const SizedBox(height: 20),
           SubTrackLifecycleFooter(track: track),
-        ],
         ],
       ],
     );
