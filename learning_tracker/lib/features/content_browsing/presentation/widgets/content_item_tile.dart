@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -12,6 +13,9 @@ import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/learnt_tri_state.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -54,6 +58,7 @@ class ContentItemTile extends ConsumerWidget {
     this.tickState,
     this.onTick,
     this.onLongPress,
+    this.tickDisabled = false,
     this.heldBy = const [],
     this.heldWhole = false,
   });
@@ -81,18 +86,19 @@ class ContentItemTile extends ConsumerWidget {
   /// drill path already supplies parent context.
   final bool showBreadcrumb;
 
-  /// Story 1.11 (DNI-473; UX-DR-20): the row's learnt tri-state. With
-  /// [onTick] set, the leading slot is a tri-state tick box (check / dash /
-  /// empty, and a spoken state — never colour alone, UX-DR-157) that records
-  /// the row instead of the plain status icon.
+  /// The row's learnt tri-state for free-tick capture.
   final TriState? tickState;
 
-  /// Records this row (opens the free-tick sheet); null hides the tick box.
+  /// Records this row; null hides the tick box.
   final VoidCallback? onTick;
 
-  /// Replaces the default long-press (the stage breakdown) — the Browse
-  /// "Tick up to here".
+  /// Replaces the default long-press action.
   final VoidCallback? onLongPress;
+
+  /// Story 1.24 (DNI-486, AC-4/AC-5): a tutor who may not write right now
+  /// still SEES the tick box, drawn at 40% opacity and disabled (no
+  /// handler, disabled semantics); "Tick up to here" is off too.
+  final bool tickDisabled;
 
   /// Story 2.7 (DNI-498 AC-6, UX-DR-63, UX-DR-93): the names of the
   /// sub-tracks holding ground under this row. Each is a tag; the row stays
@@ -106,19 +112,17 @@ class ContentItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // Nullable: some hosts render the tile without app localizations.
+    final l10n = AppLocalizations.of(context);
 
-    // Use batch-loaded count if available, otherwise watch per-item provider.
-    final count =
-        reviewCount ??
-        ref
-            .watch(
-              completionCountProvider(
-                curriculumId: curriculum.storageKey,
-                sefariaRef: item.sefariaRef,
-              ),
-            )
-            .value ??
-        0;
+    // DNI-474 (FR-15): the node's empty / partial / complete state, counts
+    // and the leaf's counted learning come from the engine's LearnerState.
+    final progress = ref
+        .watch(curriculumProgressIndexProvider(curriculum))
+        .value
+        ?.nodeProgress(item.sefariaRef);
+    final count = reviewCount ?? progress?.events ?? 0;
+    final state = progress?.state ?? TriState.empty;
 
     final held = heldBy.isEmpty
         ? null
@@ -151,20 +155,41 @@ class ContentItemTile extends ConsumerWidget {
               ],
             ),
           );
-    final breadcrumb = showBreadcrumb
+    final baseSubtitle = showBreadcrumb
         ? CurriculumLabel.parent(
             item.sefariaRef,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           )
+        : (l10n != null &&
+              !item.isLeaf &&
+              progress != null &&
+              progress.total > 0)
+        ? Text(
+            l10n.learnerProgressCount(progress.learnt, progress.total),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          )
         : null;
+
     final tile = ListTile(
       minLeadingWidth: 48,
       minVerticalPadding: 14,
+      tileColor: learntTriStateColor(
+        context,
+        state,
+      ).withValues(alpha: learntTriStateTintAlpha),
       leading: onTick == null
-          ? _buildLeadingIcon(theme, count)
-          : _TickBox(state: tickState ?? TriState.empty, onTick: onTick!),
+          ? _buildLeadingIcon(theme, progress)
+          : tickDisabled
+          ? Opacity(
+              key: const Key('contentItemTickDisabled'),
+              opacity: 0.4,
+              child: _TickBox(state: tickState ?? state, onTick: null),
+            )
+          : _TickBox(state: tickState ?? state, onTick: onTick),
       title: CurriculumLabel.item(
         item,
         style: theme.textTheme.titleLarge?.copyWith(
@@ -173,31 +198,48 @@ class ContentItemTile extends ConsumerWidget {
         textAlign: TextAlign.start,
       ),
       subtitle: held == null
-          ? breadcrumb
+          ? baseSubtitle
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: [?breadcrumb, held],
+              children: [?baseSubtitle, held],
             ),
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
-      onLongPress:
-          onLongPress ??
-          (item.isLeaf && count > 0 && showReviewBadge
-              ? () => _showStageBreakdown(context, ref)
-              : null),
+      onLongPress: tickDisabled && onLongPress != null
+          ? null
+          : onLongPress ??
+                (item.isLeaf && count > 0 && showReviewBadge
+                    ? () => _showStageBreakdown(context, ref)
+                    : null),
     );
-    if (heldBy.isEmpty) return tile;
-    final l10n = AppLocalizations.of(context)!;
+    final row = progress == null || l10n == null
+        ? tile
+        : Semantics(
+            label: learntTriStateSemantics(
+              l10n,
+              name: CurriculumLabelRenderer.renderForItem(
+                item,
+                useHebrew: domainTermLabels(ref).isHebrew,
+              ),
+              state: state,
+              learnt: progress.learnt,
+              total: progress.total,
+            ),
+            child: tile,
+          );
+    if (heldBy.isEmpty) return row;
     return Semantics(
-      hint: heldWhole ? l10n.groundHeldTagSemantics(heldBy.join(', ')) : null,
+      hint: heldWhole && l10n != null
+          ? l10n.groundHeldTagSemantics(heldBy.join(', '))
+          : null,
       child: heldWhole
           ? Opacity(
               key: const ValueKey('heldGroundGreyed'),
               opacity: 0.55,
-              child: tile,
+              child: row,
             )
-          : tile,
+          : row,
     );
   }
 
@@ -218,18 +260,17 @@ class ContentItemTile extends ConsumerWidget {
     );
   }
 
-  Widget _buildLeadingIcon(ThemeData theme, int completionCount) {
-    if (item.isLeaf) {
-      final isCompleted = completionCount > 0;
-      return Icon(
-        isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-        color: isCompleted
-            ? theme.colorScheme.primary
-            : theme.colorScheme.outline,
-      );
-    } else {
-      return Icon(Icons.folder, color: theme.colorScheme.primary, size: 32);
+  Widget _buildLeadingIcon(ThemeData theme, NodeProgress? progress) {
+    if (progress != null) {
+      return LearntTriStateBox(state: progress.state, size: 28);
     }
+    if (item.isLeaf) {
+      return Icon(
+        Icons.check_box_outline_blank_rounded,
+        color: theme.colorScheme.outline,
+      );
+    }
+    return Icon(Icons.folder, color: theme.colorScheme.primary, size: 32);
   }
 
   Widget? _buildTrailing(ThemeData theme, int completionCount) {
@@ -248,22 +289,25 @@ class ContentItemTile extends ConsumerWidget {
   }
 }
 
-/// Widget showing per-stage completion status for a leaf item.
-/// The tri-state tick box of a free-tick row (UX-DR-20, UX-DR-157).
+/// Tri-state tick box used by free-tick rows (UX-DR-20, UX-DR-157).
 class _TickBox extends StatelessWidget {
   const _TickBox({required this.state, required this.onTick});
 
   final TriState state;
-  final VoidCallback onTick;
+
+  /// Null draws the box disabled.
+  final VoidCallback? onTick;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final label = switch (state) {
-      TriState.complete => l10n.captureStateLearnt,
-      TriState.partial => l10n.captureStatePartial,
-      TriState.empty => l10n.captureStateNotLearnt,
-    };
+    final l10n = AppLocalizations.of(context);
+    final label = l10n == null
+        ? null
+        : switch (state) {
+            TriState.complete => l10n.captureStateLearnt,
+            TriState.partial => l10n.captureStatePartial,
+            TriState.empty => l10n.captureStateNotLearnt,
+          };
     return Checkbox(
       tristate: true,
       value: switch (state) {
@@ -272,11 +316,12 @@ class _TickBox extends StatelessWidget {
         TriState.empty => false,
       },
       semanticLabel: label,
-      onChanged: (_) => onTick(),
+      onChanged: onTick == null ? null : (_) => onTick!(),
     );
   }
 }
 
+/// Widget showing per-stage completion status for a leaf item.
 class StageCompletionIndicators extends StatelessWidget {
   const StageCompletionIndicators({super.key, required this.stages});
 

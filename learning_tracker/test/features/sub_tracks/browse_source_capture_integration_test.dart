@@ -18,7 +18,6 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/on_home_sub_tracks.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
@@ -143,9 +142,6 @@ Future<CaptureRig> _pump(
         contentTreeProvider.overrideWith((ref) async => tree),
         curriculumContentProvider.overrideWith(
           (ref, id) => content.getContentForCurriculum(id),
-        ),
-        completionCountProvider.overrideWith(
-          (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
         ),
         anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
         localDayClockProvider.overrideWithValue(FakeLocalDayClock(_tuesday)),

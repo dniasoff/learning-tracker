@@ -18,7 +18,6 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/held_ground_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -93,9 +92,6 @@ Future<void> _pump(WidgetTester tester, Map<String, List<String>> held) async {
         contentTreeProvider.overrideWith((ref) async => tree),
         curriculumContentProvider.overrideWith(
           (ref, id) => content.getContentForCurriculum(id),
-        ),
-        completionCountProvider.overrideWith(
-          (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
         ),
         anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
         mainTrackHeldGroundProvider.overrideWith((ref, _) => AsyncData(held)),
