@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,16 +5,15 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_route.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_start_status.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ended_sub_tracks_section.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_type_chooser.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -33,8 +30,15 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///   (UX-DR-117).
 /// - A load error shows the shared [AppErrorView] with retry (UX-DR-118),
 ///   inside the group, so the main-track list keeps working.
-/// - School-year rows open the sub-track detail (Story 2.6 / DNI-497 AC-1);
-///   ongoing rows retain DNI-496's direct edit entry point.
+/// - Tapping a row opens the sub-track detail (Story 2.6 / DNI-497 AC-1,
+///   UX-DR-53): pushed on a phone; inside the >=840dp split the row is
+///   selected and the detail pane updates in place. Metadata *Edit* is in
+///   the detail's ⋮.
+/// - Story 2.8 (DNI-499, AC-5, AC-6): the rows and the header count are the
+///   sub-tracks active on the learner's civil today (AD-41); a tombstoned
+///   one and one whose window passed (no write, AD-33) are listed instead
+///   in the collapsed *Ended sub-tracks ({n})* group at the foot
+///   ([EndedSubTracksSection]), whose rows open the read-only detail.
 class SubTrackHubSection extends ConsumerWidget {
   const SubTrackHubSection({required this.curriculumId, super.key});
 
@@ -76,10 +80,12 @@ class SubTrackHubSection extends ConsumerWidget {
     if (intentValue == null || all == null) return const SizedBox.shrink();
     if (intentValue.followsCalendarProgram) return const SizedBox.shrink();
 
-    final live = [
-      for (final s in all)
-        if (s.curriculumId == curriculumId && !s.isEnded) s,
-    ];
+    final groups = groupSubTracksByLifecycle(
+      all,
+      ref.watch(subTrackLifecycleTodayProvider),
+      curriculumId: curriculumId,
+    );
+    final live = groups.active;
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colors = context.colors;
@@ -88,10 +94,6 @@ class SubTrackHubSection extends ConsumerWidget {
         .watch(activeLearnerStateProvider)
         .value?[curriculumId]
         ?.dailyTarget;
-    // The ongoing usage and learner's civil today (AD-41) are shared with
-    // the ongoing form. Until they load, the Ongoing entry stays disabled.
-    final ongoing = ref.watch(ongoingSubTrackContextProvider(curriculumId));
-    final ongoingRead = ongoing.hasError ? null : ongoing.value;
 
     return Padding(
       padding: const EdgeInsetsDirectional.only(start: 4, bottom: 16),
@@ -119,17 +121,8 @@ class SubTrackHubSection extends ConsumerWidget {
                 padding: const EdgeInsetsDirectional.only(bottom: 8),
                 child: SubTrackHubRow(
                   track: s,
-                  today: ongoingRead?.today,
                   selected: s.id == selected,
-                  onTap: s.type == SubTrackType.ongoing
-                      ? () => unawaited(
-                          openOngoingSubTrackForm(
-                            context,
-                            curriculumId: curriculumId,
-                            subTrackId: s.id,
-                          ),
-                        )
-                      : () => openSubTrackDetail(context, ref, s.id),
+                  onTap: () => openSubTrackDetail(context, ref, s.id),
                 ),
               ),
             if (dailyTarget != null)
@@ -154,15 +147,6 @@ class SubTrackHubSection extends ConsumerWidget {
               onSchoolYear: () => context.router.push(
                 SchoolYearSubTrackFormRoute(curriculumId: curriculumId),
               ),
-              onOngoing: ongoingRead == null
-                  ? null
-                  : () => unawaited(
-                      openOngoingSubTrackForm(
-                        context,
-                        curriculumId: curriculumId,
-                      ),
-                    ),
-              ongoingInUse: ongoingRead?.ongoingInUse(),
             ),
             icon: const Icon(Icons.add),
             label: Text(l10n.subTrackHubAdd),
@@ -171,6 +155,10 @@ class SubTrackHubSection extends ConsumerWidget {
               shape: const StadiumBorder(),
               side: BorderSide(color: colors.brandOutline),
             ),
+          ),
+          EndedSubTracksSection(
+            tracks: groups.ended,
+            onOpen: (track) => openSubTrackDetail(context, ref, track.id),
           ),
         ],
       ),
@@ -188,16 +176,12 @@ class SubTrackHubRow extends StatelessWidget {
   const SubTrackHubRow({
     required this.track,
     this.onTap,
-    this.today,
     this.selected = false,
     super.key,
   });
 
   /// The sub-track.
   final SubTrack track;
-
-  /// The learner's civil today, or null while it is unknown.
-  final CivilDate? today;
 
   /// Opens the sub-track's detail; null renders the row inert.
   final VoidCallback? onTap;
@@ -223,10 +207,7 @@ class SubTrackHubRow extends StatelessWidget {
         rate,
       );
     } else {
-      final day = today;
-      subtitle =
-          (day == null ? null : subTrackStartsLabel(context, track, day)) ??
-          l10n.subTrackRowOngoingSubtitle(rate);
+      subtitle = l10n.subTrackRowOngoingSubtitle(rate);
     }
     return Card(
       elevation: 0,
