@@ -10,6 +10,7 @@ import 'dart:async';
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/domain/learner_state/catch_up_card_projection.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -36,6 +37,48 @@ enum StreakAlertOutcome {
 
   /// Now or the alert time is inside a lock window: no alert.
   lockSuppressed,
+
+  /// The streak's only gap is locked days whose catch-up card is still
+  /// pending at the alert time: no alert, so the child gets the one
+  /// catch-up reminder and no streak pressure (DNI-508 AC-10, NFR-18).
+  catchUpPending,
+}
+
+/// Whether [curriculumId]'s [streak] is at risk only because of locked
+/// days whose catch-up is still pending at [atUtc] (DNI-508 AC-10): every
+/// civil day after the streak's last day and before [today] is a locked
+/// day of a catch-up card pending at [atUtc] ([catchUpCardWindowsAt],
+/// AD-40) that this curriculum has not caught up ([catchUpRecorded]), and
+/// there is at least one such day (or [today] is one, on the night the
+/// lock ends). A gap with any other day — or no gap at all — is not
+/// covered, so other curricula and other gaps follow the independent
+/// alert rule.
+bool catchUpCoversStreakGap({
+  required String curriculumId,
+  required CurriculumStreak streak,
+  required CivilDate today,
+  required LearnerSettingsHistory settingsHistory,
+  required LearnerState state,
+  required DateTime atUtc,
+}) {
+  final last = streak.lastDay;
+  if (last == null) return false;
+  final end = parseCivilDay(today);
+  final gap = <CivilDate>[
+    for (
+      var d = addCivilDays(parseCivilDay(last), 1);
+      d.isBefore(end);
+      d = addCivilDays(d, 1)
+    )
+      formatCivilDay(d),
+  ];
+  final pending = <CivilDate>{
+    for (final card in catchUpCardWindowsAt(settingsHistory, atUtc))
+      if (!catchUpRecorded(card, curriculumId, state)) ...card.allLockedDays,
+  };
+  // Motzei Shabbos: today is itself the pending locked day.
+  if (gap.isEmpty && !pending.contains(today)) return false;
+  return gap.every(pending.contains);
 }
 
 /// Evaluates and schedules one profile's per-curriculum streak alerts.
@@ -87,6 +130,7 @@ class StreakAlertService {
       outcomes[curriculumId] = await evaluate(
         curriculumId: curriculumId,
         streak: curriculum.streak,
+        state: state,
         settingsHistory: settingsHistory,
         hour: hour,
         minute: minute,
@@ -114,10 +158,13 @@ class StreakAlertService {
   /// from `LearnerState`, DNI-482). A lock window holding now or the alert time
   /// suppresses the alert; a failure computing the lock windows cancels it
   /// and is rethrown (fail closed). Re-evaluating on the same civil day at
-  /// the same time schedules nothing new.
+  /// the same time schedules nothing new. With [state], a streak whose
+  /// only gap is a pending catch-up is not alerted ([catchUpCoversStreakGap],
+  /// DNI-508 AC-10).
   Future<StreakAlertOutcome> evaluate({
     required String curriculumId,
     required CurriculumStreak? streak,
+    LearnerState? state,
     required LearnerSettingsHistory settingsHistory,
     required int hour,
     required int minute,
@@ -160,6 +207,19 @@ class StreakAlertService {
         (_isLockedAt?.call(fireAt) ?? false)) {
       await cancel(curriculumId);
       return StreakAlertOutcome.lockSuppressed;
+    }
+
+    if (state != null &&
+        catchUpCoversStreakGap(
+          curriculumId: curriculumId,
+          streak: streak,
+          today: today,
+          settingsHistory: settingsHistory,
+          state: state,
+          atUtc: fireAt,
+        )) {
+      await cancel(curriculumId);
+      return StreakAlertOutcome.catchUpPending;
     }
 
     final marker = '$today@$hour:$minute';

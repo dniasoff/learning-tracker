@@ -29,6 +29,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/domain/learner_state/catch_up_card_projection.dart';
 import 'package:learning_tracker/domain/learner_state/erev_window.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/learning/learning.dart';
 import 'package:learning_tracker/features/notifications/notifications.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
@@ -81,10 +82,11 @@ final catchUpReminderSchedulerProvider = Provider<CatchUpReminderScheduler>(
 typedef CatchUpCardContentReader =
     Future<bool> Function(Ref ref, LearnerScope scope, CatchUpCardWindow card);
 
-/// The card-content reader; null when no reader is wired (every card then
-/// counts as having content).
+/// The card-content reader: the Learn tab's own card projection
+/// (`catchUpCardHasContent`, Story 3.2). Null means every card counts as
+/// having content.
 final catchUpReminderCardContentReaderProvider =
-    Provider<CatchUpCardContentReader?>((ref) => null);
+    Provider<CatchUpCardContentReader?>((ref) => catchUpCardHasContent);
 
 /// Counts app resumes, so the reconcile re-runs and re-arms on each
 /// (AC-7). Tests override it.

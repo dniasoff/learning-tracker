@@ -27,6 +27,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/domain/learner_state/catch_up_card_projection.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/erev_planned_tasks_provider.dart';
@@ -159,4 +160,33 @@ void retryCatchUpCards(WidgetRef ref) {
   ref
     ..invalidate(subTracksForScopeProvider)
     ..invalidate(catchUpCardsProvider);
+}
+
+/// Whether [card] — a lock of the active learner [scope] that has not
+/// ended yet — would list anything once it is pending (Story 3.5, DNI-508
+/// AC-3): [projectCatchUpCards] over the shared planner's lists for its
+/// locked days, the live `LearnerState` and the complete `sub_tracks`
+/// read, exactly as [catchUpCardsProvider] will show it. False means the
+/// card would be empty (UX-DR-131), so the catch-up reminder is withdrawn
+/// before it fires. Every input is watched through [ref], so a plan or
+/// flag change re-runs the reminder reconcile.
+Future<bool> catchUpCardHasContent(
+  Ref ref,
+  LearnerScope scope,
+  CatchUpCardWindow card,
+) async {
+  final planner = ref.watch(catchUpSequencePlannerProvider);
+  final stateFuture = ref.watch(learnerStateProvider(scope).future);
+  final tracksFuture = ref.watch(subTracksForScopeProvider(scope).future);
+  final mainTasks = await planner(ref, [
+    for (final d in card.lockedDays) d.date,
+  ]);
+  final cards = projectCatchUpCards<DailyTask>(
+    windows: [card],
+    mainTasksByDay: mainTasks,
+    curriculumOf: (task) => task.curriculumId.storageKey,
+    state: await stateFuture,
+    subTracks: await tracksFuture,
+  );
+  return cards.isNotEmpty;
 }
