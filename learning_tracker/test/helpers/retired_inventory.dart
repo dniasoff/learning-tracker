@@ -17,7 +17,7 @@ final RegExp _camelKey = RegExp(r'^[a-z][a-z0-9]*([A-Z][a-z0-9]*)+$');
 /// The retired Firestore keys of the code at [libPath] in inventory
 /// [group]: every retired snake_case `field` entry whose `paths` scope
 /// covers [libPath], plus the group's unscoped ones, in inventory order.
-/// [aliases] adds the group's retired camelCase spellings.
+/// [aliases] adds the retired camelCase spelling of each of those keys.
 List<String> retiredKeysOf(
   String libPath, {
   String group = 'R16',
@@ -28,11 +28,15 @@ List<String> retiredKeysOf(
       (jsonDecode(file.readAsStringSync()) as Map<String, dynamic>)['entries']
           as List;
   final keys = <String>{};
+  final camelSpellings = <String>{};
   for (final entry in entries.cast<Map<String, dynamic>>()) {
     if (entry['kind'] != 'field' || entry['state'] != 'retired') continue;
     final symbol = entry['symbol'] as String;
-    final camel = _camelKey.hasMatch(symbol);
-    if (!_snakeKey.hasMatch(symbol) && !(aliases && camel)) continue;
+    if (_camelKey.hasMatch(symbol)) {
+      camelSpellings.add(symbol);
+      continue;
+    }
+    if (!_snakeKey.hasMatch(symbol)) continue;
     final paths = entry['paths'];
     if (paths is Map<String, dynamic> && paths['include'] is List) {
       final covered = (paths['include'] as List).cast<String>().any(
@@ -41,6 +45,15 @@ List<String> retiredKeysOf(
       if (!covered) continue;
     }
     keys.add(symbol);
+  }
+  if (aliases) {
+    for (final key in keys.toList()) {
+      final camel = key.replaceAllMapped(
+        RegExp('_([a-z0-9])'),
+        (m) => m.group(1)!.toUpperCase(),
+      );
+      if (camel != key && camelSpellings.contains(camel)) keys.add(camel);
+    }
   }
   if (keys.isEmpty) {
     throw StateError('No retired $group keys cover $libPath');
