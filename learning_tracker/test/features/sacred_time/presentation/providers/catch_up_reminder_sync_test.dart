@@ -60,6 +60,9 @@ void main() {
   late LiveSource<List<LearnerProfileEntity>> profiles;
   late LiveSource<List<LearnerScope>> scopes;
   late ProviderContainer container;
+  // Only tests that call build() own a container; the T8 source checks never
+  // do, and with randomized ordering they can run first.
+  var built = false;
 
   setUp(() {
     notifications = FakeCatchUpNotifications();
@@ -75,7 +78,10 @@ void main() {
     scopes = LiveSource([catchUpScope, catchUpOtherScope]);
   });
 
-  tearDown(() => container.dispose());
+  tearDown(() {
+    if (built) container.dispose();
+    built = false;
+  });
 
   ProviderContainer build({bool tutored = false}) {
     final ownerScopes = StreamProvider<List<LearnerScope>>(
@@ -99,6 +105,7 @@ void main() {
         currentAppLocaleProvider.overrideWithValue(const Locale('en')),
       ],
     );
+    built = true;
     return container;
   }
 

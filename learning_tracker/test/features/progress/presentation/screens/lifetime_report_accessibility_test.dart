@@ -11,6 +11,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
+    show TransliterationVariant;
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -55,6 +57,12 @@ ReportProjection _hebrewReport() {
 List<Override> _overrides(LearnerState state, {required bool hebrewTerms}) => [
   parentSessionProvider.overrideWith((ref) async => true),
   effectiveUseHebrewTermsProvider.overrideWithValue(hebrewTerms),
+  // The curriculum switcher's labels read the transliteration preference;
+  // pin it so no test depends on SharedPreferences having been mocked by an
+  // earlier test (randomized ordering).
+  currentTransliterationVariantProvider.overrideWithValue(
+    TransliterationVariant.ashkenazi,
+  ),
   activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
   learnerStateProvider.overrideWith((ref, _) => Stream.value(state)),
 ];
