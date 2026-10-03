@@ -1770,6 +1770,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get switchIntoChildConfirm => 'Switch in';
 
   @override
+  String tutorAccessEnded(String name) {
+    return 'Access to $name has ended.';
+  }
+
+  @override
+  String get tutorAccessEndedUnnamed => 'Access to this learner has ended.';
+
+  @override
   String get tutorCannotMarkLiveCompletion =>
       'Tutors cannot mark live completions';
 

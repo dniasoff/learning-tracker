@@ -1540,6 +1540,19 @@
     }
   },
   "switchIntoChildConfirm": "Switch in",
+  "tutorAccessEnded": "Access to {name} has ended.",
+  "@tutorAccessEnded": {
+    "description": "DNI-512 AC-4 (UX-DR-136): shown to a tutor whose access to the open learner ended (the parent revoked it); the app then returns to the tutor's roster. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorAccessEndedUnnamed": "Access to this learner has ended.",
+  "@tutorAccessEndedUnnamed": {
+    "description": "DNI-512 AC-4: the access-ended notice when the learner's name is not known. DRAFT copy, pending zc4."
+  },
   "tutorCannotMarkLiveCompletion": "Tutors cannot mark live completions",
   "tutorWriteForbiddenTitle": "Action not allowed",
   "tutorWriteForbiddenMessage": "Tutors cannot mark live forward completions. This action would credit the child's streak and rewards, which is reserved for the parent or child.",

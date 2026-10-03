@@ -268,15 +268,22 @@ class TutorWriteService {
   ///
   /// [analytics] receives the registered `capture` event after a
   /// successful learning capture (AD-47: the callables emit nothing).
+  ///
+  /// [onAccessLost] hears every rejection that means the grant no longer
+  /// authorizes the learner (DNI-512; see [isTutorAccessLost]).
   TutorWriteService({
     TutorCallableInvoker? invoker,
     AccountFunctionsResolver? resolveFunctions,
     LearningAnalytics? analytics,
+    TutorAccessLostListener? onAccessLost,
   }) : assert(
          invoker != null || resolveFunctions != null,
          'TutorWriteService needs an invoker or a functions resolver',
        ),
-       _invoker = invoker ?? _accountInvoker(resolveFunctions!),
+       _invoker = _reportingAccessLoss(
+         invoker ?? _accountInvoker(resolveFunctions!),
+         onAccessLost,
+       ),
        _analytics = analytics;
 
   final TutorCallableInvoker _invoker;
@@ -1093,4 +1100,40 @@ class TutorWriteService {
       if (mode != null) 'mode': mode,
     });
   }
+}
+
+// ── Story 4.4 (DNI-512): revoked-session signal ──────────────────────────────
+
+/// Hears that the grant [grantId] (the call's routing grant; null when the
+/// call carried none) no longer authorizes the tutor (DNI-512).
+typedef TutorAccessLostListener = void Function(String? grantId);
+
+/// Whether a callable rejection means the tutor's grant no longer authorizes
+/// the learner: `permission-denied` that is not the AD-53 "editing turned
+/// off" refusal nor another permission the grant lacks (`Grant lacks …`).
+/// writeWithChangeLog and the legacy grant check answer a revoked, missing
+/// or foreign grant this way, live on every call (AD-53), whatever the
+/// device still believes. The failure the caller gets is unchanged.
+bool isTutorAccessLost(FirebaseFunctionsException e) =>
+    e.code == 'permission-denied' &&
+    !(e.message ?? '').startsWith('Grant lacks ');
+
+/// [inner], telling [listener] about an access-lost rejection before the
+/// shared failure mapping sees the (rethrown) exception.
+TutorCallableInvoker _reportingAccessLoss(
+  TutorCallableInvoker inner,
+  TutorAccessLostListener? listener,
+) {
+  if (listener == null) return inner;
+  return (functionName, args) async {
+    try {
+      return await inner(functionName, args);
+    } on FirebaseFunctionsException catch (e) {
+      if (isTutorAccessLost(e)) {
+        final grantId = args['grantId'];
+        listener(grantId is String ? grantId : null);
+      }
+      rethrow;
+    }
+  };
 }

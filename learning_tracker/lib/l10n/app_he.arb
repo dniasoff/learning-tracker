@@ -918,6 +918,19 @@
   "switchIntoChildTitle": "מעבר לתצוגת ילד",
   "switchIntoChildMessage": "אתה עומד להיכנס לחוויה המלאה של {name}. ניתן לצאת בכל עת מהפס שבראש המסך.",
   "switchIntoChildConfirm": "כניסה",
+  "tutorAccessEnded": "הגישה אל {name} הסתיימה.",
+  "@tutorAccessEnded": {
+    "description": "DNI-512 AC-4 (UX-DR-136): shown to a tutor whose access to the open learner ended (the parent revoked it); the app then returns to the tutor's roster. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorAccessEndedUnnamed": "הגישה אל הלומד הזה הסתיימה.",
+  "@tutorAccessEndedUnnamed": {
+    "description": "DNI-512 AC-4: the access-ended notice when the learner's name is not known. DRAFT copy, pending zc4."
+  },
   "tutorCannotMarkLiveCompletion": "מדריכים אינם יכולים לסמן השלמות חיות",
   "tutorWriteForbiddenTitle": "פעולה לא מורשית",
   "tutorWriteForbiddenMessage": "מדריכים אינם יכולים לסמן השלמות חיות. פעולה זו מזכה את הרצף והפרסים של הילד, ושמורה להורה או לילד.",

@@ -3023,6 +3023,18 @@ abstract class AppLocalizations {
   /// **'Switch in'**
   String get switchIntoChildConfirm;
 
+  /// DNI-512 AC-4 (UX-DR-136): shown to a tutor whose access to the open learner ended (the parent revoked it); the app then returns to the tutor's roster. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Access to {name} has ended.'**
+  String tutorAccessEnded(String name);
+
+  /// DNI-512 AC-4: the access-ended notice when the learner's name is not known. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Access to this learner has ended.'**
+  String get tutorAccessEndedUnnamed;
+
   /// No description provided for @tutorCannotMarkLiveCompletion.
   ///
   /// In en, this message translates to:

@@ -1756,6 +1756,14 @@ class AppLocalizationsHe extends AppLocalizations {
   String get switchIntoChildConfirm => 'כניסה';
 
   @override
+  String tutorAccessEnded(String name) {
+    return 'הגישה אל $name הסתיימה.';
+  }
+
+  @override
+  String get tutorAccessEndedUnnamed => 'הגישה אל הלומד הזה הסתיימה.';
+
+  @override
   String get tutorCannotMarkLiveCompletion =>
       'מדריכים אינם יכולים לסמן השלמות חיות';
 
