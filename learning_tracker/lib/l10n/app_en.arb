@@ -6307,28 +6307,6 @@
   "@subTrackDetailSelectPrompt": {
     "description": "Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4."
   },
-  "goalTargetPercentOnly": "Complete {percent}% of the material",
-  "@goalTargetPercentOnly": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "goalTargetPercentWithCount": "Complete {percent}% of the material ({done} of {total} items)",
-  "@goalTargetPercentWithCount": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      },
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "siyumimPreviouslyLearnedDate": "Previously learned",
   "@siyumimPreviouslyLearnedDate": {
     "description": "Data-consistency fix (run-9 audit): replaces the achievement date on a Siyumim & Milestones row (and the timeline's month-group header) when the milestone's achievedAt is the bulk-mark-prior sentinel (kBulkPriorSentinelDate, 2000-01-01 UTC) rather than a real completion moment. Bulk-marked-as-previously-learned sections have no real completion date to show; formatting the sentinel through DateFormat rendered the nonsensical 'Jan 1, 2000' to the user. Do NOT change the stored sentinel — this only changes its presentation."

@@ -442,7 +442,7 @@ final subTrackDetailProvider = Provider.autoDispose
       final learner = state.requireValue;
       final rejected = <String>[
         if (!read.isClean) 'sub_tracks',
-        if (!events.requireValue.isClean) 'learning_events',
+        if (!events.requireValue.isClean) 'events',
         if (learner.rejectedRows.isNotEmpty) 'learner_state',
       ];
       if (rejected.isNotEmpty) {

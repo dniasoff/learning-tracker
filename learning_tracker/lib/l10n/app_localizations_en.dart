@@ -7619,16 +7619,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select a sub-track to see its details';
 
   @override
-  String goalTargetPercentOnly(int percent) {
-    return 'Complete $percent% of the material';
-  }
-
-  @override
-  String goalTargetPercentWithCount(int percent, int done, int total) {
-    return 'Complete $percent% of the material ($done of $total items)';
-  }
-
-  @override
   String get siyumimPreviouslyLearnedDate => 'Previously learned';
 
   @override

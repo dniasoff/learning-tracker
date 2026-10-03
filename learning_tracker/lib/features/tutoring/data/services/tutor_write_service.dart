@@ -651,21 +651,6 @@ class TutorWriteService {
     );
   }
 
-  // ── Completion reset (canEditLearning, AD-53) ────────────────────────────────────
-
-  /// Deletes a completion document from the child's profile as a correction.
-  Future<TutorWriteResult> resetCompletion({
-    required String grantId,
-    required String ownerUid,
-    required String profileId,
-    required String completionId,
-  }) => _call('tutorResetCompletion', {
-    'grantId': grantId,
-    'ownerUid': ownerUid,
-    'profileId': profileId,
-    'completionId': completionId,
-  });
-
   // ── Main-track governed (Story 1.10 callables via writeWithChangeLog) ──────
   //
   // Each governed method takes an optional client [actionId] ULID: pass the
@@ -1020,23 +1005,6 @@ class TutorWriteService {
     'profileId': profileId,
     'permKey': permKey,
     'settingsData': settingsData,
-  });
-
-  // ── Bookmark (canEditLearning, AD-53) ─────────────────────────────────────────────────
-
-  /// Creates or updates a bookmark document in the child's profile.
-  Future<TutorWriteResult> upsertBookmark({
-    required String grantId,
-    required String ownerUid,
-    required String profileId,
-    required String bookmarkId,
-    required Map<String, dynamic> bookmarkData,
-  }) => _call('tutorUpsertBookmark', {
-    'grantId': grantId,
-    'ownerUid': ownerUid,
-    'profileId': profileId,
-    'bookmarkId': bookmarkId,
-    'bookmarkData': bookmarkData,
   });
 
   // ── Profile program (canEditLearning, AD-53) ──────────────────────────────────────────

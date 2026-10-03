@@ -24,6 +24,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
@@ -209,6 +210,9 @@ class _ChildHarness {
         ),
         effectiveUseHebrewTermsProvider.overrideWithValue(false),
         currentSacredWindowProvider.overrideWithValue(null),
+        // The shell's DNI-512 access watch listens to connectivity; a static
+        // online stream keeps the plugin's safety-net timer out of the test.
+        connectivityStreamProvider.overrideWith((ref) => Stream.value(true)),
         activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
         learnerStateProvider.overrideWith((ref, _) {
           return Stream.value(paceState([paceCurriculumState(paceReport())]));

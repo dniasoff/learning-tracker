@@ -7538,16 +7538,6 @@ class AppLocalizationsHe extends AppLocalizations {
       'יש לבחור תת-מסלול כדי לראות את פרטיו';
 
   @override
-  String goalTargetPercentOnly(int percent) {
-    return 'השלם $percent% מהחומר';
-  }
-
-  @override
-  String goalTargetPercentWithCount(int percent, int done, int total) {
-    return 'השלם $percent% מהחומר ($done מתוך $total פריטים)';
-  }
-
-  @override
   String get siyumimPreviouslyLearnedDate => 'נלמד בעבר';
 
   @override
