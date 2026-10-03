@@ -145,6 +145,19 @@ final class CommandsBackupLearningPort implements BackupLearningPort {
   }
 
   @override
+  Future<List<LearningEvent>> readLearningEvents(String profileId) async {
+    final read = await _events
+        .watchAll(_scope(profileId))
+        .firstWhere((r) => r is CompleteReadReady<LearningEvent>)
+        .timeout(backupReadWait);
+    final ready = read as CompleteReadReady<LearningEvent>;
+    if (!ready.isClean) {
+      throw StateError('learning_events of $profileId hold undecodable rows');
+    }
+    return ready.items;
+  }
+
+  @override
   Future<BackupReplayResult> replay(String profileId, BackupReplayInput input) {
     _inputs[profileId] = input;
     return _commandsFor(profileId).importBackup(input);

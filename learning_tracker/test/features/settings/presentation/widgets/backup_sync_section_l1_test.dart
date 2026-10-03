@@ -10,6 +10,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -50,6 +51,10 @@ class _ScriptedPort implements BackupLearningPort {
 
   BackupReplayResult result;
   final List<String> retried = [];
+
+  @override
+  Future<List<LearningEvent>> readLearningEvents(String profileId) async =>
+      const [];
 
   @override
   Future<List<SubTrack>> readSubTracks(String profileId) async => const [];

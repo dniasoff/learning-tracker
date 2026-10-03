@@ -5,6 +5,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 
+/// The backup payload key of a profile's learning events (AD-49). The
+/// payload names the collection it was read from; only the repository
+/// layer names that collection (AD-35 "Reads",
+/// `tool/check_learning_event_read_boundary.dart`), and the backup service
+/// reads the events through `BackupLearningPort.readLearningEvents`, never
+/// through this gateway.
+const String backupLearningEventsKey = 'learning_events';
+
 /// The persistence contract used by the settings backup service.
 ///
 /// The service depends on document paths and JSON-safe maps only. This

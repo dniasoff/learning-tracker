@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -14,12 +15,21 @@ import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 
-/// A [BackupLearningPort] whose sub-tracks are scripted per profile and
+/// A [BackupLearningPort] whose events and sub-tracks are scripted per
+/// profile and
 /// which records every replay.
 final class _ScriptedLearningPort implements BackupLearningPort {
   final Map<String, List<SubTrack>> subTracks = {};
+  final Map<String, List<LearningEvent>> events = {};
   final List<String> reads = [];
+  final List<String> eventReads = [];
   final Map<String, BackupReplayInput> replays = {};
+
+  @override
+  Future<List<LearningEvent>> readLearningEvents(String profileId) async {
+    eventReads.add(profileId);
+    return events[profileId] ?? const [];
+  }
 
   @override
   Future<List<SubTrack>> readSubTracks(String profileId) async {
@@ -109,9 +119,9 @@ void main() {
   );
 
   group('AC-1: the export is the AD-49 backup set', () {
-    test('learning_events, sub_tracks via SubTrackRepository, change_log, '
-        'governed collections, non-event points and redemptions; no pts_ '
-        'entry', () async {
+    test('learning_events via LearningEventRepository, sub_tracks via '
+        'SubTrackRepository, change_log, governed collections, non-event '
+        'points and redemptions; no pts_ entry', () async {
       final firestore = FakeFirebaseFirestore();
       await seedProfile(firestore, uid: testUid, profileId: testProfileId);
       final profile = firestore
@@ -120,7 +130,9 @@ void main() {
           .collection('learner_profiles')
           .doc(testProfileId);
       final event = engineLearn(1, 'Mishnah Berakhot 1:1');
-      await profile.collection('learning_events').doc(event.id).set({
+      // Only the repository read is exported (AD-35 "Reads"): a raw row it
+      // does not return never enters the backup.
+      await profile.collection('learning_events').doc(ulidE).set({
         'kind': 'learn',
         'curriculum_id': 'mishnayos',
         'ref': 'Mishnah Berakhot 1:1',
@@ -163,6 +175,7 @@ void main() {
       await profile.collection('sub_tracks').doc(ulidA).set({'raw': true});
 
       final learning = _ScriptedLearningPort()
+        ..events[testProfileId] = [event]
         ..subTracks[testProfileId] = [c0SubTrack(id: engineUlid(900)), _ended];
       final exported = profileFrom(
         jsonDecode(await _service(firestore, learning).exportData())
@@ -170,10 +183,13 @@ void main() {
         testProfileId,
       );
       expect(learning.reads, [testProfileId]);
-      expect(
-        collectionDocuments(exported, 'learning_events').single['id'],
-        event.id,
-      );
+      expect(learning.eventReads, [testProfileId]);
+      final exportedEvent = collectionDocuments(
+        exported,
+        'learning_events',
+      ).single;
+      expect(exportedEvent['id'], event.id);
+      expect(documentData(exportedEvent)['ref'], event.ref);
       final subTracks = collectionDocuments(exported, 'sub_tracks');
       expect(subTracks.map((d) => d['id']), [engineUlid(900), engineUlid(901)]);
       expect(

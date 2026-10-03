@@ -4,9 +4,11 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/backup_record_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/settings/data/repositories/backup_learning_sources.dart';
 
@@ -82,6 +84,30 @@ void main() {
         .set({'name': 'broken'});
     await expectLater(
       port.readSubTracks(testProfileId),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('learning events are one complete repository read, learns and voids; '
+      'undecodable rows fail the export', () async {
+    final firestore = FakeFirebaseFirestore();
+    final port = firestoreBackupLearningPort(firestore);
+    expect(await port.readLearningEvents(testProfileId), isEmpty);
+    final events = FirestoreLearningEventRepository(firestore: firestore);
+    final scope = LearnerScope(ownerUid: testUid, profileId: testProfileId);
+    final learn = engineLearn(1, 'Mishnah Berakhot 1:1');
+    final voided = engineVoid(2, 1);
+    await events.create(scope, learn);
+    await events.create(scope, voided);
+    expect((await port.readLearningEvents(testProfileId)).map((e) => e.id), [
+      learn.id,
+      voided.id,
+    ]);
+    await firestore.doc('${scope.profilePath}/learning_events/$ulidA').set({
+      'kind': 'learn',
+    });
+    await expectLater(
+      port.readLearningEvents(testProfileId),
       throwsA(isA<StateError>()),
     );
   });

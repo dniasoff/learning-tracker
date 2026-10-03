@@ -15,7 +15,7 @@ import 'package:learning_tracker/features/settings/domain/services/backup_learni
 import 'package:package_info_plus/package_info_plus.dart';
 
 export 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart'
-    show BackupDocumentWrite, BackupFirestoreGateway;
+    show BackupDocumentWrite, BackupFirestoreGateway, backupLearningEventsKey;
 export 'package:learning_tracker/features/settings/domain/services/backup_learning_port.dart'
     show BackupLearningPort;
 
@@ -92,8 +92,9 @@ final class BackupImportReport {
 /// - The account, profile snapshot, diagnostic logs, learner profile docs
 ///   (without their governed settings keys) and the non-learning profile
 ///   collections ([rawProfileCollections]) are raw documents.
-/// - The learning record is the AD-49 set: `learning_events`, `sub_tracks`
-///   (read through `SubTrackRepository`), `change_log`, the governed
+/// - The learning record is the AD-49 set: `learning_events` (read through
+///   `LearningEventRepository`), `sub_tracks` (read through
+///   `SubTrackRepository`), `change_log`, the governed
 ///   collections, the non-event `points_ledger` entries and the
 ///   `reward_redemptions`. Event-linked `pts_` entries are never exported:
 ///   a restore re-derives them (AD-50). A restore replays the record
@@ -126,8 +127,9 @@ class DataExportImportService {
   static const int _maxBatchWrites = 450;
   static const String _typeKey = '__firestore_type';
 
-  /// `learning_events`.
-  static const String learningEventsCollection = 'learning_events';
+  /// `learning_events`: its payload key, read through
+  /// [BackupLearningPort.readLearningEvents].
+  static const String learningEventsCollection = backupLearningEventsKey;
 
   /// `sub_tracks`.
   static const String subTracksCollection = 'sub_tracks';
@@ -211,9 +213,14 @@ class DataExportImportService {
       final profilePath = '$_profilesPath/$profileId';
       Future<List<Map<String, dynamic>>> raw(String name) =>
           _gateway.readCollection('$profilePath/$name');
+      final events = [...await _learning.readLearningEvents(profileId)]
+        ..sort((a, b) => a.id.compareTo(b.id));
       final subTracks = await _learning.readSubTracks(profileId);
       final collections = <String, dynamic>{
-        learningEventsCollection: await raw(learningEventsCollection),
+        learningEventsCollection: [
+          for (final event in events)
+            {'id': event.id, 'data': _encodeMap(event.toStorage())},
+        ],
         subTracksCollection: [
           for (final track in subTracks)
             {'id': track.id, 'data': _encodeMap(track.toStorage())},
