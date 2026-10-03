@@ -313,8 +313,38 @@ typedef RecordedSubTrackLifecycle = ({
   int groundEntries,
 });
 
+/// One recorded [LearningAnalytics.catchupCompleted].
+typedef RecordedCatchupCompleted = ({
+  String curriculumId,
+  CatchUpMode mode,
+  int lockedDaysOffered,
+  int lockedDaysRecorded,
+  int eventCount,
+  bool withinWindow,
+});
+
 /// A [LearningAnalytics] that records every event.
 final class RecordingLearningAnalytics implements LearningAnalytics {
+  /// Every `catchupCompleted`, in order.
+  final List<RecordedCatchupCompleted> catchups = [];
+
+  @override
+  void catchupCompleted({
+    required String curriculumId,
+    required CatchUpMode mode,
+    required int lockedDaysOffered,
+    required int lockedDaysRecorded,
+    required int eventCount,
+    required bool withinWindow,
+  }) => catchups.add((
+    curriculumId: curriculumId,
+    mode: mode,
+    lockedDaysOffered: lockedDaysOffered,
+    lockedDaysRecorded: lockedDaysRecorded,
+    eventCount: eventCount,
+    withinWindow: withinWindow,
+  ));
+
   /// Every `capture`, in order.
   final List<RecordedCapture> captures = [];
 

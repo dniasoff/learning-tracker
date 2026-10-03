@@ -416,4 +416,73 @@ void main() {
       expect(_cardPending(h), isFalse);
     });
   });
+
+  group('AC-9: one catchup_completed per accepted action', () {
+    test('one event per curriculum, enums and counts only', () async {
+      final h = CatchUpCommandHarness();
+      await h.commands.recordCatchUp(
+        catchUpAllAction([
+          mainCatchUpLeaf('Mishnah Berakhot 2:1'),
+          mainCatchUpLeaf('Mishnah Berakhot 2:2'),
+          subCatchUpLeaf('Mishnah Peah 1:1'),
+          mainCatchUpLeaf('Berakhot 2a', curriculumId: 'bavli'),
+        ]),
+      );
+      expect(h.analytics.catchups, [
+        (
+          curriculumId: 'mishnayos',
+          mode: CatchUpMode.all,
+          lockedDaysOffered: 1,
+          lockedDaysRecorded: 1,
+          eventCount: 3,
+          withinWindow: true,
+        ),
+        (
+          curriculumId: 'bavli',
+          mode: CatchUpMode.all,
+          lockedDaysOffered: 1,
+          lockedDaysRecorded: 1,
+          eventCount: 1,
+          withinWindow: true,
+        ),
+      ]);
+      // The plain capture event is not emitted for a catch-up.
+      expect(h.analytics.captures, isEmpty);
+    });
+
+    test('a queued (offline) action emits once, at once', () async {
+      final h = CatchUpCommandHarness()..port.holdAttempts.add(0);
+      await h.commands.recordCatchUp(
+        catchUpAllAction([mainCatchUpLeaf('Mishnah Berakhot 2:1')]),
+      );
+      expect(h.analytics.catchups, hasLength(1));
+      h.port.release(0);
+      await _settle();
+      expect(h.analytics.catchups, hasLength(1));
+    });
+
+    test('nothing for an ended, failed, invalid or empty action', () async {
+      final ended = CatchUpCommandHarness(
+        now: catchUpZone.at(DateTime.utc(2026, 10, 13), minute: 1),
+      );
+      await ended.commands.recordCatchUp(
+        catchUpAllAction([mainCatchUpLeaf('Mishnah Berakhot 2:1')]),
+      );
+      final failed = CatchUpCommandHarness()..port.rejectAttempts.add(0);
+      await failed.commands.recordCatchUp(
+        catchUpAllAction([mainCatchUpLeaf('Mishnah Berakhot 2:1')]),
+      );
+      final empty = CatchUpCommandHarness();
+      await empty.commands.recordCatchUp(catchUpAllAction([]));
+      final invalid = CatchUpCommandHarness();
+      await invalid.commands.recordCatchUp(
+        catchUpAllAction([
+          mainCatchUpLeaf('Mishnah Berakhot 2:1', learnedOn: '2026-10-11'),
+        ]),
+      );
+      for (final h in [ended, failed, empty, invalid]) {
+        expect(h.analytics.catchups, isEmpty);
+      }
+    });
+  });
 }

@@ -2,7 +2,7 @@
 ///
 /// DNI-469 (1.7) binds it to `AnalyticsService` and registers `capture`
 /// in the catalog. Later stories add methods under the C0 contract-change
-/// protocol (for example DNI-507 adds `catchupCompleted`), plus a
+/// protocol (for example DNI-506 adds `catchupCompleted`), plus a
 /// [LearningAnalyticsEvent] value and its catalog mapping.
 ///
 /// AD-47: `LearningCommands` (and `TutorWriteService` after a successful
@@ -13,6 +13,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
 
 /// Where a capture came from.
 enum CaptureSourceKind {
@@ -134,6 +135,17 @@ abstract interface class LearningAnalytics {
     required int actual,
     required int windowWeeks,
   });
+
+  /// A catch-up card action was accepted (AD-47 `catchup_completed`):
+  /// enums, counts and a flag only.
+  void catchupCompleted({
+    required String curriculumId,
+    required CatchUpMode mode,
+    required int lockedDaysOffered,
+    required int lockedDaysRecorded,
+    required int eventCount,
+    required bool withinWindow,
+  });
 }
 
 /// The learning analytics events, each registered in `AnalyticsEvent`.
@@ -146,6 +158,9 @@ enum LearningAnalyticsEvent {
 
   /// `AnalyticsEvent.subTrackForecastVsActual`.
   subTrackForecastVsActual,
+
+  /// `AnalyticsEvent.catchupCompleted`.
+  catchupCompleted,
 }
 
 /// Receives one event with its enum/count-only [parameters].
@@ -239,6 +254,26 @@ final class SinkLearningAnalytics implements LearningAnalytics {
       'forecast': forecast,
       'actual': actual,
       'window_weeks': windowWeeks,
+    });
+  }
+
+  @override
+  void catchupCompleted({
+    required String curriculumId,
+    required CatchUpMode mode,
+    required int lockedDaysOffered,
+    required int lockedDaysRecorded,
+    required int eventCount,
+    required bool withinWindow,
+  }) {
+    assert(lockedDaysOffered >= 0 && lockedDaysRecorded >= 0 && eventCount >= 0);
+    sink(LearningAnalyticsEvent.catchupCompleted, {
+      'curriculum_id': curriculumId,
+      'mode': mode.storage,
+      'locked_days_offered': lockedDaysOffered,
+      'locked_days_recorded': lockedDaysRecorded,
+      'event_count': eventCount,
+      'within_window': withinWindow,
     });
   }
 }

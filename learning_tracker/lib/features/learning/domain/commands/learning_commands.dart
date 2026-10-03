@@ -1034,6 +1034,22 @@ final class DefaultLearningCommands implements LearningCommands {
           );
         }
         _afterWrite(outcome);
+        // AC-9: one catchup_completed per curriculum of the accepted
+        // action (written or queued), never on a refusal or failure.
+        for (final curriculumId in action.curricula) {
+          final mine = [
+            for (final l in leaves)
+              if (l.curriculumId == curriculumId) l,
+          ];
+          _analytics.catchupCompleted(
+            curriculumId: curriculumId,
+            mode: action.mode,
+            lockedDaysOffered: action.lockedDaysOffered,
+            lockedDaysRecorded: {for (final l in mine) l.learnedOn}.length,
+            eventCount: mine.length,
+            withinWindow: true,
+          );
+        }
         return CaptureResult.success(
           eventIds: outcome.eventIds,
           queued: outcome.queued,

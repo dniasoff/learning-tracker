@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 
 void main() {
@@ -124,5 +125,38 @@ void main() {
       AnalyticsEvent.subTrackForecastVsActual,
       'subtrack_forecast_vs_actual',
     );
+  });
+
+  group('DNI-506 AC-9: catchup_completed', () {
+    test('carries exactly the six enum, count and flag parameters', () {
+      final sent = <(LearningAnalyticsEvent, Map<String, Object>)>[];
+      SinkLearningAnalytics((e, p) => sent.add((e, p))).catchupCompleted(
+        curriculumId: 'mishnayos',
+        mode: CatchUpMode.all,
+        lockedDaysOffered: 3,
+        lockedDaysRecorded: 2,
+        eventCount: 7,
+        withinWindow: true,
+      );
+      final (event, params) = sent.single;
+      expect(event, LearningAnalyticsEvent.catchupCompleted);
+      expect(params, {
+        'curriculum_id': 'mishnayos',
+        'mode': 'all',
+        'locked_days_offered': 3,
+        'locked_days_recorded': 2,
+        'event_count': 7,
+        'within_window': true,
+      });
+      for (final value in params.values) {
+        expect(value is int || value is bool || value is String, isTrue);
+      }
+    });
+
+    test('mode storage values and catalog registration', () {
+      expect(CatchUpMode.all.storage, 'all');
+      expect(CatchUpMode.adjusted.storage, 'adjusted');
+      expect(AnalyticsEvent.catchupCompleted, 'catchup_completed');
+    });
   });
 }

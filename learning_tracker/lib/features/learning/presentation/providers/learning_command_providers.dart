@@ -81,6 +81,13 @@ final learningAnalyticsProvider = Provider<LearningAnalytics>((ref) {
           AnalyticsEvent.subTrackForecastVsActual,
           parameters: parameters,
         );
+      case LearningAnalyticsEvent.catchupCompleted:
+        sent = analytics.logEvent(
+          AnalyticsEvent.catchupCompleted,
+          parameters: parameters,
+        );
+          parameters: parameters,
+        );
     }
     // Analytics never fails a command.
     unawaited(sent.catchError((Object _) {}));

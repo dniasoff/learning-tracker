@@ -69,6 +69,11 @@ abstract final class AnalyticsEvent {
 
   /// AD-47: a close-window forecast comparison; enums and counts only.
   static const subTrackForecastVsActual = 'subtrack_forecast_vs_actual';
+
+  /// DNI-506 (AD-47): a catch-up card action was accepted — `curriculum_id`,
+  /// `mode` (`all` | `adjusted`), `locked_days_offered`,
+  /// `locked_days_recorded`, `event_count` and `within_window`.
+  static const catchupCompleted = 'catchup_completed';
 }
 
 /// Milestone thresholds for [AnalyticsEvent.streakMilestoneReached].
