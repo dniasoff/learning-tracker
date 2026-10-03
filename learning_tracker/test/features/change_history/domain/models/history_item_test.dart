@@ -83,7 +83,30 @@ void main() {
       expect(item.isLearn, isTrue);
       expect(item.actor, historyParent);
       expect(item.sourceRank, 1);
-      expect(item.key, 'events:${LearningBatchItem.batchKeyOf(item.first)}');
+      expect(item.key, 'events:${historyId(1)}', reason: 'its first event');
+    });
+
+    test('a replacement or re-issue shares its target\'s fields and '
+        'effective instant, but not its command, so it is another batch', () {
+      final capture = historyLearn(1, minutes: 10);
+      final sameCommand = historyLearn(2, minutes: 10);
+      // A correction at minute 40 keeps the capture's instant (AD-31).
+      final replacement = historyLearn(3, minutes: 40, originalMinutes: 10);
+      expect(
+        LearningBatchItem.batchKeyOf(replacement),
+        LearningBatchItem.batchKeyOf(capture),
+        reason: 'the visible fields alone cannot tell them apart',
+      );
+      expect(LearningBatchItem.sameBatch(capture, sameCommand), isTrue);
+      expect(LearningBatchItem.sameBatch(capture, replacement), isFalse);
+      expect(
+        LearningBatchItem.sameBatch(
+          capture,
+          historyLearn(4, minutes: 10, actor: historyTutor),
+        ),
+        isFalse,
+        reason: 'another actor is another command',
+      );
     });
 
     test('events of different captures key apart', () {

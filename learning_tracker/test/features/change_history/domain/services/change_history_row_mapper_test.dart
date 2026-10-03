@@ -493,6 +493,39 @@ void main() {
       expect(learnRow.canUndo, isFalse);
     });
 
+    test('a correction reads as a removal and a new record: the corrected '
+        'capture is fully removed with no Undo, the replacement is its own '
+        'row with Undo', () {
+      final rows = _rows(
+        events: [
+          historyLearn(1, minutes: 10),
+          // The correction at minute 40 keeps the capture's instant.
+          historyVoid(2, target: 1, minutes: 40),
+          historyLearn(
+            3,
+            minutes: 40,
+            originalMinutes: 10,
+            ref: 'Mishnah Berakhot 1:2',
+          ),
+        ],
+      );
+      expect(rows, hasLength(3));
+      final learnRows = rows.where((r) => !r.isVoid).toList();
+      final capture = learnRows.singleWhere(
+        (r) => _learning(r).refs.single == 'Mishnah Berakhot 1:1',
+      );
+      expect(capture.eventCount, 1);
+      expect(capture.voidedCount, 1);
+      expect(capture.canUndo, isFalse);
+      final replacement = learnRows.singleWhere(
+        (r) => _learning(r).refs.single == 'Mishnah Berakhot 1:2',
+      );
+      expect(replacement.eventCount, 1);
+      expect(replacement.voidedBy, isNull);
+      expect(replacement.canUndo, isTrue);
+      expect(replacement.key, isNot(capture.key));
+    });
+
     test('a persisted void whose target is another void maps without '
         'crashing, as a generic removal with its own who and when', () {
       final rows = _rows(

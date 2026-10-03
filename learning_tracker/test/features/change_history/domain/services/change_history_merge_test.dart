@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/change_history/domain/models/history_item.dart';
@@ -239,6 +240,105 @@ void main() {
         historyAt(40),
         historyAt(30),
         historyAt(10),
+      ]);
+    });
+  });
+
+  group('one batch per command', () {
+    test('a correction\'s replacement keeps the capture\'s instant but is '
+        'its own batch, not merged into the capture it corrects', () {
+      final buffer = ChangeHistoryBuffer()
+        ..addChangeLogPage(
+          HistoryPage(items: [], next: null, exhausted: true, watermark: null),
+        )
+        ..addLearningEventPage(
+          HistoryPage(
+            items: [
+              historyLearn(3, minutes: 40, originalMinutes: 10),
+              historyVoid(2, target: 1, minutes: 40),
+              historyLearn(1, minutes: 10),
+            ],
+            next: null,
+            exhausted: true,
+            watermark: historyAt(10),
+          ),
+        );
+      final batches = buffer.visibleItems().cast<LearningBatchItem>();
+      expect(
+        [for (final b in batches) b.events.map((e) => e.id).toList()],
+        unorderedEquals([
+          [historyId(2)],
+          [historyId(3)],
+          [historyId(1)],
+        ]),
+      );
+      expect(batches.map((b) => b.key).toSet(), hasLength(3));
+    });
+
+    test('an un-learn re-issue does not join the before-tracking capture '
+        'it re-issues', () {
+      final buffer = ChangeHistoryBuffer()
+        ..addChangeLogPage(
+          HistoryPage(items: [], next: null, exhausted: true, watermark: null),
+        )
+        ..addLearningEventPage(
+          HistoryPage(
+            items: [
+              historyVoid(4, target: 1, minutes: 40),
+              historyLearn(
+                3,
+                minutes: 40,
+                originalMinutes: 10,
+                dateState: DateState.beforeTracking,
+                ref: 'Mishnah Berakhot 1',
+              ),
+              historyLearn(
+                1,
+                minutes: 10,
+                dateState: DateState.beforeTracking,
+                ref: 'Mishnah Berakhot',
+              ),
+            ],
+            next: null,
+            exhausted: true,
+            watermark: historyAt(10),
+          ),
+        );
+      final capture = buffer
+          .visibleItems()
+          .cast<LearningBatchItem>()
+          .singleWhere((b) => b.events.any((e) => e.id == historyId(1)));
+      expect(capture.events.map((e) => e.id), [historyId(1)]);
+    });
+
+    test('a command split by a page boundary is shown only once whole, '
+        'under the key it keeps', () async {
+      final repo = FakeHistoryPorts(
+        events: [
+          historyLearn(1, minutes: 10),
+          historyLearn(2, minutes: 10),
+          historyLearn(3, minutes: 10),
+          historyLearn(4, minutes: 5),
+        ],
+      );
+      final pager = ChangeHistoryPager(
+        changeLog: repo.changeLog,
+        events: repo.events,
+        scope: _scope,
+        pageSize: 2,
+      );
+      await pager.fill((items) => items.isNotEmpty);
+      final first = pager.buffer.visibleItems().first as LearningBatchItem;
+      expect(first.events.map((e) => e.id), [
+        historyId(1),
+        historyId(2),
+        historyId(3),
+      ]);
+      expect(first.key, 'events:${historyId(1)}');
+      await pager.fill(_never);
+      expect(pager.buffer.visibleItems().map((i) => i.key), [
+        'events:${historyId(1)}',
+        'events:${historyId(4)}',
       ]);
     });
   });

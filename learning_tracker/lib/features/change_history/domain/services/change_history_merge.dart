@@ -164,14 +164,26 @@ final class ChangeHistoryBuffer {
     for (final e in _entries.values) {
       (byAction[e.actionId] ??= []).add(e);
     }
-    final byBatch = <String, List<LearningEvent>>{};
+    // Bucket by the shared visible fields, then split each bucket by
+    // command: a replacement or re-issue shares its target's fields and
+    // effective instant but not its command (LearningBatchItem).
+    final byFields = <String, List<List<LearningEvent>>>{};
     for (final e in _events.values) {
-      (byBatch[LearningBatchItem.batchKeyOf(e)] ??= []).add(e);
+      final batches = byFields[LearningBatchItem.batchKeyOf(e)] ??= [];
+      final batch = batches
+          .where((b) => writtenByOneCommand(b.first, e))
+          .firstOrNull;
+      if (batch != null) {
+        batch.add(e);
+      } else {
+        batches.add([e]);
+      }
     }
     return [
       for (final MapEntry(:key, :value) in byAction.entries)
         GovernedActionItem(key, value),
-      for (final batch in byBatch.values) LearningBatchItem(batch),
+      for (final batches in byFields.values)
+        for (final batch in batches) LearningBatchItem(batch),
     ]..sort(compareHistoryItems);
   }
 
