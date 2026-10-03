@@ -295,8 +295,10 @@ jobs:
       # `make audit`'s 105/105 check and the `ci:` Makefile target's
       # check-retired-symbols prerequisite. Since the cutover (DNI-490) it
       # runs with --enforce: every inventory entry counts as retired and
-      # tool/retired_symbols/allowlist.json must match exactly (the R14
-      # deny-all rules matches and indexes). DNI-491 empties the allowlist.
+      # tool/retired_symbols/allowlist.json must match exactly. Since the
+      # release after (DNI-491) the allowlist is empty, so any retired name
+      # in lib/, functions/src/, firestore.rules or firestore.indexes.json
+      # fails the build.
       - name: Assert no retired symbol survives outside the AD-49 allowlist
         working-directory: learning_tracker
         run: dart run tool/check_retired_symbols.dart --enforce
