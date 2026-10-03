@@ -186,8 +186,13 @@ jobs:
     steps:
       # Comments may mention firebase deploy and functions:delete.
       - run: node tool/firebase_backend_release.mjs --mode deploy --project torah-study-tracker
+  perf-gate:
+    needs: gate-ci-status
+    runs-on: ubuntu-latest
+    steps:
+      - run: flutter test --tags perf test/benchmark/learner_state_engine_benchmark_test.dart
   deploy:
-    needs: [gate-ci-status, backend-deploy]
+    needs: [gate-ci-status, backend-deploy, perf-gate]
     runs-on: ubuntu-latest
     steps:
       - run: flutter build appbundle
@@ -198,8 +203,17 @@ test('the workflow contract accepts the gated order', () => {
 });
 
 test('the workflow contract rejects an app release that does not wait for the backend', () => {
-  const bad = GOOD.replace('needs: [gate-ci-status, backend-deploy]', 'needs: gate-ci-status');
+  const bad = GOOD.replace('needs: [gate-ci-status, backend-deploy, perf-gate]', 'needs: [gate-ci-status, perf-gate]');
   assert.match(validateReleaseWorkflow(bad).join('\n'), /must need `backend-deploy`/);
+});
+
+test('AC-5: the workflow contract requires the perf gate before the app release', () => {
+  const noNeed = GOOD.replace('needs: [gate-ci-status, backend-deploy, perf-gate]', 'needs: [gate-ci-status, backend-deploy]');
+  assert.match(validateReleaseWorkflow(noNeed).join('\n'), /must need `perf-gate`/);
+  const soft = GOOD.replace('  perf-gate:\n', '  perf-gate:\n    continue-on-error: true\n');
+  assert.match(validateReleaseWorkflow(soft).join('\n'), /`perf-gate` must fail closed/);
+  const other = GOOD.replace('test/benchmark/learner_state_engine_benchmark_test.dart', 'test/other_test.dart');
+  assert.match(validateReleaseWorkflow(other).join('\n'), /must run test\/benchmark/);
 });
 
 test('the workflow contract rejects a backend job that skips the CI gate', () => {

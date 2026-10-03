@@ -127,9 +127,50 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: node tool/firebase_backend_release.mjs --mode deploy --project torah-study-tracker
 
+  # ── perf-gate (DNI-490 AC-5; AD-54 perf gate, ruling B12) ─────────────────
+  # The AD-54 engine benchmark as a BLOCKING release gate: 20 learners ×
+  # (40,000 leaf + 200 node events) on the largest corpus; every learner's
+  # warm recompute + dailyTarget must stay under 1 s (provisional on this
+  # runner until the reference device is named — checklist P9). The cold
+  # first load is in the uploaded run record and never fails the gate.
+  # In ci.yml the same benchmark runs in the non-blocking perf job.
+  perf-gate:
+    name: perf-gate
+    needs: gate-ci-status
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Flutter bootstrap (codegen + asset + secrets)
+        uses: ./.github/actions/flutter-bootstrap
+        with:
+          run-codegen: 'true'
+          prepare-asset: 'true'
+          decode-secrets: 'true'
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
+
+      # CI=true on every GitHub runner, so perfGateSkipReason() lets it run.
+      - name: AD-54 warm recompute gate (cold first load recorded, not gated)
+        working-directory: learning_tracker
+        run: flutter test --tags perf --concurrency=1 --reporter=expanded test/benchmark/learner_state_engine_benchmark_test.dart
+
+      - name: Upload the benchmark run record
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cutover-perf-record-${{ github.ref_name }}
+          path: learning_tracker/build/perf/learner_state_engine_benchmark.json
+          if-no-files-found: error
+          retention-days: 90
+
   deploy:
-    # DNI-490 AC-6: the app release runs only after the backend release passed.
-    needs: [gate-ci-status, backend-deploy]
+    # DNI-490 AC-6 / AC-5: the app release runs only after the backend
+    # release and the perf gate passed.
+    needs: [gate-ci-status, backend-deploy, perf-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

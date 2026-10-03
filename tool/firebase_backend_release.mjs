@@ -22,7 +22,8 @@
 // Wiring: .github/workflows/deploy-play-store.yml job `backend-deploy` runs
 // `node tool/firebase_backend_release.mjs --mode deploy --project
 // torah-study-tracker` after `gate-ci-status` (green ci.yml for the release
-// SHA); the app `deploy` job `needs` it. validateReleaseWorkflow() pins that
+// SHA); the app `deploy` job `needs` it and the AD-54 `perf-gate` job
+// (DNI-490 AC-5). validateReleaseWorkflow() pins that
 // wiring and runs in this file's tests (ci.yml backend-deploy-gate job) and in
 // the release workflow itself.
 //
@@ -57,6 +58,7 @@ export const RELEASE_WORKFLOW = '.github/workflows/deploy-play-store.yml';
 export const BACKEND_JOB = 'backend-deploy';
 export const APP_JOB = 'deploy';
 export const CI_GATE_JOB = 'gate-ci-status';
+export const PERF_GATE_JOB = 'perf-gate';
 
 /** `firebase functions:delete <the four> --force` (AC-3, verbatim). */
 export function deleteArgs(project) {
@@ -173,7 +175,19 @@ export function validateReleaseWorkflow(text) {
   if (!jobNeeds(app).includes(BACKEND_JOB)) {
     errors.push(`the app release job \`${APP_JOB}\` must need \`${BACKEND_JOB}\``);
   }
-  for (const [name, job] of [[BACKEND_JOB, backend], [APP_JOB, app]]) {
+  // AC-5: the AD-54 benchmark gates this release.
+  const perf = extractJob(text, PERF_GATE_JOB);
+  if (perf == null) {
+    errors.push(`no \`${PERF_GATE_JOB}\` job (AD-54 benchmark release gate)`);
+  } else {
+    if (!jobNeeds(app).includes(PERF_GATE_JOB)) {
+      errors.push(`the app release job \`${APP_JOB}\` must need \`${PERF_GATE_JOB}\``);
+    }
+    if (!/learner_state_engine_benchmark_test\.dart/.test(perf.replace(/^\s*#.*$/gm, ''))) {
+      errors.push(`\`${PERF_GATE_JOB}\` must run test/benchmark/learner_state_engine_benchmark_test.dart`);
+    }
+  }
+  for (const [name, job] of [[BACKEND_JOB, backend], [APP_JOB, app], [PERF_GATE_JOB, perf ?? '']]) {
     if (/^ {4}continue-on-error:\s*true/m.test(job) || /^ {8}continue-on-error:\s*true/m.test(job)) {
       errors.push(`\`${name}\` must fail closed (no continue-on-error)`);
     }
