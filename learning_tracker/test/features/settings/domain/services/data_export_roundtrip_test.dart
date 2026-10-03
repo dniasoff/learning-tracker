@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/settings/domain/exceptions/import_vali
 
 import '../../../../helpers/data_export_firestore_test_support.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/retired_inventory.dart';
 
 Future<FakeFirebaseFirestore> profileStore() async {
   final firestore = FakeFirebaseFirestore();
@@ -73,31 +74,54 @@ void main() {
     );
     final goals = collectionDocuments(profile, 'goals');
     expect(goals, hasLength(1));
+    for (final key in retiredKeysOf(
+      'lib/data/repositories/firestore_goal_repository.dart',
+    )) {
+      expect(documentData(goals.single), isNot(contains(key)), reason: key);
+    }
     expect(documentData(goals.single)['description'], 'Finish the tract');
   });
 
-  test(
-    'exports main-track order rows from the track order collection',
-    () async {
-      final firestore = await profileStore();
-      await profileCollection(
-        firestore,
-        'track_learning_order',
-      ).doc('mishnayos_seder_Zeraim').set({
-        'curriculum_id': 'mishnayos',
-        'level': 'seder',
-        'ref': 'Zeraim',
-        'user_sort_order': 0,
-      });
-      final profile = profileFrom(
-        await exportedMap(backupService(firestore)),
-        testProfileId,
-      );
-      final rows = collectionDocuments(profile, 'track_learning_order');
-      expect(rows, hasLength(1));
-      expect(documentData(rows.single)['ref'], 'Zeraim');
-    },
-  );
+  test('exports main-track order rows (track_learning_order; the retired '
+      'learning_order collection is merged into it, DNI-476)', () async {
+    final firestore = await profileStore();
+    await profileCollection(
+      firestore,
+      'track_learning_order',
+    ).doc('mishnayos_seder_Zeraim').set({
+      'curriculum_id': 'mishnayos',
+      'level': 'seder',
+      'ref': 'Zeraim',
+      'user_sort_order': 0,
+    });
+    final profile = profileFrom(
+      await exportedMap(backupService(firestore)),
+      testProfileId,
+    );
+    final rows = collectionDocuments(profile, 'track_learning_order');
+    expect(rows, hasLength(1));
+    expect(documentData(rows.single)['ref'], 'Zeraim');
+  });
+
+  test('retired streak_events and learning_ledger are not exported '
+      '(DNI-479, AD-49)', () async {
+    final firestore = await profileStore();
+    await profileCollection(
+      firestore,
+      'streak_events',
+    ).doc('event-1').set({'event_type': 'completion', 'day_utc': '2026-01-01'});
+    await profileCollection(
+      firestore,
+      'learning_ledger',
+    ).doc('entry-1').set({'unit_identifier': 'unit-1'});
+    final profile = profileFrom(
+      await exportedMap(backupService(firestore)),
+      testProfileId,
+    );
+    final collections = profile['collections'] as Map<String, dynamic>;
+    expect(collections.containsKey('streak_events'), isFalse);
+    expect(collections.containsKey('learning_ledger'), isFalse);
+  });
 
   test(
     'importData on an empty backup leaves a fresh Firestore instance empty',

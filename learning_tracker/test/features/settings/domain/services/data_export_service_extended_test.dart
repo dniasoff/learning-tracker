@@ -32,4 +32,48 @@ void main() {
       );
     },
   );
+
+  test('export includes the AD-49 learning record and the raw profile '
+      'collections, even when empty, and no retired store (DNI-482)', () async {
+    final firestore = FakeFirebaseFirestore();
+    await seedProfile(firestore, uid: testUid, profileId: testProfileId);
+    final profile = profileFrom(
+      await exportedMap(backupService(firestore)),
+      testProfileId,
+    );
+    final collections = profile['collections'] as Map<String, dynamic>;
+
+    const expected = [
+      'learning_events',
+      'sub_tracks',
+      'change_log',
+      'points_ledger',
+      'reward_redemptions',
+      'settings',
+      'stage_definitions',
+      'point_configs',
+      'curriculum_tracks',
+      'bookmarks',
+      'track_learning_order',
+      'preferences',
+      'goals',
+      'import_metadata',
+      'profile_programs',
+      'curriculum_scopes',
+      'study_day_configs',
+    ];
+    for (final collection in expected) {
+      expect(collections.containsKey(collection), isTrue);
+      expect(collections[collection], isEmpty);
+    }
+    expect(collections.keys.toSet(), expected.toSet());
+    for (final retired in [
+      'completions',
+      'learning_ledger',
+      'streak_events',
+      'learning_order',
+    ]) {
+      expect(collections.containsKey(retired), isFalse);
+    }
+  });
 }

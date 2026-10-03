@@ -6,7 +6,8 @@ import '../../../../helpers/data_export_firestore_test_support.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 
 void main() {
-  test('export contains canonical track and stage docs', () async {
+  test('export contains canonical track, stage and bookmark docs and no '
+      'retired completions (DNI-482, AD-49)', () async {
     final firestore = FakeFirebaseFirestore();
     await seedProfile(firestore, uid: testUid, profileId: testProfileId);
     await seedTrack(
@@ -21,6 +22,23 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.bavli,
     );
+    // A leftover document in the retired `completions` collection (R1) must
+    // never be exported.
+    await firestore
+        .collection('users')
+        .doc(testUid)
+        .collection('learner_profiles')
+        .doc(testProfileId)
+        .collection('completions')
+        .doc('retired-completion')
+        .set({'curriculum_id': CurriculumId.bavli.storageKey});
+    await seedBookmark(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
       testProfileId,
@@ -28,10 +46,8 @@ void main() {
     final collections = profile['collections'] as Map<String, dynamic>;
     expect(collections['curriculum_tracks'], hasLength(1));
     expect(collections['stage_definitions'], hasLength(3));
-    expect(
-      collections.keys,
-      containsAll(['curriculum_tracks', 'stage_definitions']),
-    );
+    expect(collections.containsKey('completions'), isFalse);
+    expect(collections['bookmarks'], hasLength(1));
   });
 
   test('import writes the same nested document ids and values', () async {
