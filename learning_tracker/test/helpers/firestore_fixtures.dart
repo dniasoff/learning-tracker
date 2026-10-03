@@ -133,19 +133,6 @@ Future<void> seedBookmark(
       .doc(DocIds.bookmarkDocId(data))
       .set(data);
 }
-  await firestore
-      .collection('users')
-      .doc(uid)
-      .collection('learner_profiles')
-      .doc(profileId)
-      .collection('completions')
-      .doc(docId)
-      .set(completion.toFirestore());
-  return docId;
-      .collection('bookmarks')
-      .doc(DocIds.bookmarkDocId(data))
-      .set(data);
-}
 
 /// Seeds one goal and returns its deterministic Firestore document id.
 ///
