@@ -11,10 +11,10 @@
 // - A queued create the server refuses for good is rolled back alone:
 //   unrelated queued edits queued before and after it survive, it becomes
 //   a "not saved — retry" pending failure, and retry re-sends it.
-// - The same, end to end through the hub and the ongoing form: the queued
-//   row shows, rolls back with "Your change couldn't be saved." and Retry
-//   brings it back (UX-DR-121); a Retry the server refuses again at once
-//   shows the notice and its Retry again, and the next Retry lands.
+// - The same, end to end through the Story 2.4 (DNI-495) Manage tracks hub
+//   and the ongoing form: the queued row shows, rolls back with the shared
+//   "Your change couldn't be saved." (UX-DR-121); a retry the server
+//   refuses again at once stays unsaved, and the next retry lands.
 // - The production composition: the unoverridden `learningCommandsProvider`
 //   (only its data sources are in-memory) saves an ongoing create and an
 //   edit, and the hub run above goes through it, so its pending failures
@@ -34,6 +34,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
@@ -53,7 +54,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ongoing_sub_track_hub_seam.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/learner_state/c0_fixtures.dart';
@@ -406,8 +408,8 @@ void main() {
 
   testWidgets('hub and form through the production LearningCommands: a '
       'rejected queued create rolls back with the shared failure notice, an '
-      'earlier queued edit survives, a Retry refused again keeps its notice, '
-      'and Retry restores it', (tester) async {
+      'earlier queued edit survives, a retry refused again stays unsaved, '
+      'and the next retry restores it', (tester) async {
     // The saves below let real async run (see `save`), so the form's
     // preference reads need the mock store.
     SharedPreferences.setMockInitialValues({});
@@ -432,6 +434,10 @@ void main() {
           localDayClockProvider.overrideWithValue(
             FakeLocalDayClock(DateTime.utc(2026, 9, 7, 12)),
           ),
+          learnerStateProvider.overrideWith(
+            (ref, _) => const Stream<LearnerState>.empty(),
+          ),
+          subTrackParentSessionProvider.overrideWith((ref) async => true),
           ongoingSubTrackParentSessionProvider.overrideWith(
             (ref) async => true,
           ),
@@ -440,15 +446,16 @@ void main() {
         child: Scaffold(
           body: ListView(
             children: const [
-              OngoingSubTrackHubSeam(curriculumId: engineCurriculum),
+              SubTrackSyncRejectionListener(),
+              SubTrackHubSection(curriculumId: engineCurriculum),
             ],
           ),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    final messenger = ScaffoldMessenger.of(
-      tester.element(find.byType(OngoingSubTrackHubSeam)),
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SubTrackHubSection)),
     );
     Finder key(String k) => find.byKey(ValueKey(k));
     Future<void> save() async {
@@ -465,26 +472,26 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 50)),
       );
       await tester.pumpAndSettle();
-      expect(
-        find.text("Saved. It will sync when you're back online."),
-        findsOneWidget,
-      );
-      messenger.hideCurrentSnackBar();
-      await tester.pumpAndSettle();
+      expect(key('ongoingSubTrackSave'), findsNothing, reason: 'form closed');
     }
 
-    // An unrelated edit, queued offline.
+    // An unrelated edit, queued offline, from the hub's ongoing row.
     await tester.tap(find.text('Gemara'));
     await tester.pumpAndSettle();
     await tester.enterText(key('ongoingSubTrackName'), "Gemara b'iyun");
     await save();
 
-    // A create the server will refuse for good, queued offline.
+    // A create the server will refuse for good, queued offline, from the
+    // hub's Add sub-track → Ongoing.
     device.repo.failNextWith(
       const PermanentWriteRejection('failed-precondition'),
     );
-    await tester.tap(key('ongoingSubTrackHubAdd'));
+    await tester.tap(find.text('Add sub-track'));
     await tester.pumpAndSettle();
+    expect(
+      find.text('You can have up to 5 ongoing sub-tracks. 1 in use.'),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Ongoing'));
     await tester.pumpAndSettle();
     await tester.enterText(key('ongoingSubTrackName'), 'Night seder');
@@ -501,24 +508,35 @@ void main() {
     expect(find.text("Gemara b'iyun"), findsOneWidget);
     expect(find.text("Your change couldn't be saved."), findsOneWidget);
 
-    // Online, the server refuses the retry again at once: the change is
-    // still unsaved, so the notice and its Retry come back (AC-7).
+    // The refused create is a "not saved — retry" entry of the production
+    // commands. Online, the server refuses the retry again at once: it
+    // stays unsaved and nothing lands.
+    final commands = (await tester.runAsync(
+      () => container.read(learningCommandsProvider.future),
+    ))!;
+    final failures = (await tester.runAsync(
+      () => commands.watchPendingFailures().firstWhere((f) => f.isNotEmpty),
+    ))!;
+    expect(failures, hasLength(1));
     device.repo
       ..offline = false
       ..failNextWith(const PermanentWriteRejection('failed-precondition'));
-    await tester.tap(find.text('Retry'));
+    final refused = await tester.runAsync(
+      () => commands.retry(failures.single.id),
+    );
+    expect(refused, isA<CaptureRejected>());
     await tester.runAsync(_drain);
     await tester.pumpAndSettle();
     expect(find.text('Night seder'), findsNothing);
-    expect(find.text("Your change couldn't be saved."), findsOneWidget);
-    expect(find.text('Retry'), findsOneWidget);
 
-    // The next Retry re-sends the same create and it lands.
-    await tester.tap(find.text('Retry'));
+    // The next retry re-sends the same create and it lands in the hub.
+    final landed = await tester.runAsync(
+      () => commands.retry(failures.single.id),
+    );
+    expect(landed, isA<CaptureSuccess>());
     await tester.runAsync(_drain);
     await tester.pumpAndSettle();
     expect(find.text('Night seder'), findsOneWidget);
-    expect(find.text("Your change couldn't be saved."), findsNothing);
     expect(
       device.repo.tracksOf(scope).map((t) => t.name),
       containsAll(["Gemara b'iyun", 'Night seder']),

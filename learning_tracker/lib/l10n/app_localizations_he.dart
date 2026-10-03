@@ -2618,12 +2618,6 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא ניתן היה לשמור את תת-המסלול. מה שהוזן נשמר בטופס.';
 
   @override
-  String get ongoingSubTrackSavedOffline => 'נשמר. יסונכרן כשתחזרו לרשת.';
-
-  @override
-  String get ongoingSubTrackSyncRejected => 'לא ניתן היה לשמור את השינוי.';
-
-  @override
   String ongoingSubTrackStarts(String date) {
     return 'מתחיל ב-$date';
   }
@@ -2632,22 +2626,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String ongoingSubTrackRateSummary(String rate, String weeks) {
     return '$rate בשבוע × $weeks שבועות';
   }
-
-  @override
-  String get ongoingSubTrackChooserTitle => 'הוספת תת-מסלול';
-
-  @override
-  String get ongoingSubTrackChooserSchoolYear => 'שנת לימודים';
-
-  @override
-  String get ongoingSubTrackChooserOngoing => 'קבוע';
-
-  @override
-  String get ongoingSubTrackChooserOngoingHelper =>
-      'רבי או חברותא בלי לוח שנת לימודים';
-
-  @override
-  String get ongoingSubTrackHubHeader => 'תתי-מסלולים';
 
   @override
   String get ongoingSubTrackTabletSummaryTitle => 'תתי-המסלולים של הלומד';

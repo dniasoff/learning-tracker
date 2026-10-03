@@ -2,14 +2,14 @@
 /// (Story 2.5 / DNI-496).
 ///
 /// Everything here reads through the Story 2.1 ports re-exported by
-/// `ongoing_sub_track_sources.dart`; no Firestore access is added. The
-/// derived activity state (`onHome`, `holdsGround`, capacity, the daily
-/// target) stays with the engine (Stories 2.2/2.3).
+/// `sub_track_sources.dart`; no Firestore access is added. The derived
+/// activity state (`onHome`, `holdsGround`, capacity, the daily target)
+/// stays with the engine (Stories 2.2/2.3).
 ///
-/// DNI-495 seam: Story 2.4 (Manage tracks hub) was to provide the
-/// sub-track selectors and the parent-session gate. It is not on
-/// `integ/sub-tracks`, so this story owns the minimal versions below and a
-/// follow-up bead folds them into Story 2.4's providers when it lands.
+/// These were written before Story 2.4 (DNI-495) landed. Its hub now reads
+/// [ongoingSubTrackContextProvider] for the ongoing usage and the learner's
+/// civil today; folding the parent-session gate and the per-curriculum read
+/// into Story 2.4's `sub_track_providers.dart` is a follow-up.
 library;
 
 import 'dart:async';
@@ -25,7 +25,7 @@ import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
-import 'package:learning_tracker/features/sub_tracks/data/repositories/ongoing_sub_track_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 

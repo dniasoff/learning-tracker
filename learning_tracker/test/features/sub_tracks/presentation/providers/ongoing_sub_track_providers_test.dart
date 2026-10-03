@@ -1,7 +1,7 @@
 // DNI-496 (Story 2.5): the form-facing selectors — learner civil today in
 // the profile's time zone (AD-41), the curriculum's sub-tracks as a
 // complete read, the AD-45 ongoing count, calendar-program detection and
-// the parent-session gate (DNI-495 seam).
+// the parent-session gate.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -15,7 +15,7 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
-import 'package:learning_tracker/features/sub_tracks/data/repositories/ongoing_sub_track_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';

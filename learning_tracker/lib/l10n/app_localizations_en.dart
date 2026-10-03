@@ -2644,13 +2644,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save the sub-track. Your entries are kept.';
 
   @override
-  String get ongoingSubTrackSavedOffline =>
-      'Saved. It will sync when you\'re back online.';
-
-  @override
-  String get ongoingSubTrackSyncRejected => 'Your change couldn\'t be saved.';
-
-  @override
   String ongoingSubTrackStarts(String date) {
     return 'Starts $date';
   }
@@ -2659,22 +2652,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String ongoingSubTrackRateSummary(String rate, String weeks) {
     return '$rate/wk × $weeks weeks';
   }
-
-  @override
-  String get ongoingSubTrackChooserTitle => 'Add sub-track';
-
-  @override
-  String get ongoingSubTrackChooserSchoolYear => 'School year';
-
-  @override
-  String get ongoingSubTrackChooserOngoing => 'Ongoing';
-
-  @override
-  String get ongoingSubTrackChooserOngoingHelper =>
-      'A rebbe or chavrusa with no school calendar';
-
-  @override
-  String get ongoingSubTrackHubHeader => 'Sub-tracks';
 
   @override
   String get ongoingSubTrackTabletSummaryTitle => 'This learner\'s sub-tracks';

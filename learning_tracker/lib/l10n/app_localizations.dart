@@ -4657,18 +4657,6 @@ abstract class AppLocalizations {
   /// DNI-496 ongoing sub-track form
   ///
   /// In en, this message translates to:
-  /// **'Saved. It will sync when you\'re back online.'**
-  String get ongoingSubTrackSavedOffline;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Your change couldn\'t be saved.'**
-  String get ongoingSubTrackSyncRejected;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
   /// **'Starts {date}'**
   String ongoingSubTrackStarts(String date);
 
@@ -4677,36 +4665,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{rate}/wk × {weeks} weeks'**
   String ongoingSubTrackRateSummary(String rate, String weeks);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Add sub-track'**
-  String get ongoingSubTrackChooserTitle;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'School year'**
-  String get ongoingSubTrackChooserSchoolYear;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Ongoing'**
-  String get ongoingSubTrackChooserOngoing;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'A rebbe or chavrusa with no school calendar'**
-  String get ongoingSubTrackChooserOngoingHelper;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Sub-tracks'**
-  String get ongoingSubTrackHubHeader;
 
   /// DNI-496 ongoing sub-track form
   ///
