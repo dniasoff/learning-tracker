@@ -63,3 +63,6 @@ export {
   tutorUpsertCurriculumScope,
   tutorEditProfile,
 } from "./tutor_writes";
+
+// Story 4.7 (DNI-515): parent push when a tutor changes the goal or main track.
+export { onChangeLogCreated } from "./notifications";
