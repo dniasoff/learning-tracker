@@ -4,6 +4,7 @@
 // See _cf_helpers.mjs for the harness.
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, test } from 'node:test';
 import {
   PARENT,
@@ -19,9 +20,18 @@ import {
   expectHttpsError,
   fns,
   parentAuth,
+  profileRef,
   seedProfile,
   ulid,
 } from './_cf_helpers.mjs';
+import {
+  PROFILE_COLLECTIONS,
+  assertAllGone,
+  assertAllPresent,
+  retiredCollections,
+  seedAccountTree,
+  seedProfileTree,
+} from './_profile_tree.mjs';
 
 // ── deleteLearnerProfile ──────────────────────────────────────────────────────
 describe('deleteLearnerProfile', () => {
@@ -349,5 +359,112 @@ describe('deleteAccountData', () => {
     await userRef.set({ email: 'test@example.com' });
     const res = await call(fns.deleteAccountData, { unexpected: 'field' }, parentAuth);
     assert.equal(res.success, true);
+  });
+});
+
+// ── DNI-491 (Story 1.29) AC-4 — deletion after the AD-49 release after ──────
+//
+// The retired collections' rules matches, indexes and allowlist are gone.
+// Profile and account deletion must still remove the learning record
+// (learning_events), sub_tracks, change_log and every governed doc
+// recursively, never touch another profile or account, and name none of the
+// retired collections.
+
+describe('DNI-491 AC-4 — recursive profile and account deletion', () => {
+  const OTHER_PROFILE = '01J8XKQ2M3N4P5R6S7T8V9W0ZZ';
+
+  beforeEach(async () => {
+    await clearFirestore();
+  });
+
+  test('the seeded tree covers learning_events, sub_tracks, change_log and ' +
+      'the AD-38 governed collections', () => {
+    for (const c of [
+      'learning_events', 'sub_tracks', 'change_log', 'goals', 'curriculum_tracks',
+      'track_learning_order', 'profile_programs', 'study_day_configs',
+      'stage_definitions', 'curriculum_scopes',
+    ]) {
+      assert.ok(c in PROFILE_COLLECTIONS, c);
+    }
+    for (const c of retiredCollections()) {
+      assert.ok(!(c in PROFILE_COLLECTIONS), `${c} is retired and never seeded`);
+    }
+  });
+
+  test('deleteLearnerProfile removes the whole profile subtree and nothing ' +
+      'of another profile or account', async () => {
+    const target = await seedProfileTree(PARENT, PROFILE);
+    const sibling = await seedProfileTree(PARENT, OTHER_PROFILE);
+    // Same profile id under another account: the path, not the id, scopes it.
+    const otherAccount = await seedProfileTree(STRANGER, PROFILE);
+    const account = db.collection('users').doc(PARENT);
+    await account.set({ display_name: PARENT_NAME });
+
+    const res = await call(fns.deleteLearnerProfile, { profileId: PROFILE }, parentAuth);
+
+    assert.equal(res.success, true);
+    await assertAllGone(target, 'deleted profile');
+    await assertAllPresent(sibling, 'sibling profile');
+    await assertAllPresent(otherAccount, 'other account, same profile id');
+    await assertAllPresent([account], 'the owner account doc');
+  });
+
+  test('deleteLearnerProfile on an already-missing profile root succeeds ' +
+      '(retry after a completed delete, or an id that never existed)', async () => {
+    const sibling = await seedProfileTree(PARENT, OTHER_PROFILE);
+    const target = await seedProfileTree(PARENT, PROFILE);
+
+    assert.equal((await call(fns.deleteLearnerProfile, { profileId: PROFILE }, parentAuth)).success, true);
+    // The retry finds nothing and still succeeds.
+    assert.equal((await call(fns.deleteLearnerProfile, { profileId: PROFILE }, parentAuth)).success, true);
+    assert.equal(
+      (await call(fns.deleteLearnerProfile, { profileId: '01J8NEVEREXISTED000000000' }, parentAuth)).success,
+      true,
+    );
+    await assertAllGone(target, 'deleted profile');
+    await assertAllPresent(sibling, 'sibling profile');
+  });
+
+  test('deleteLearnerProfile removes descendants whose profile doc is ' +
+      'already gone (no orphaned learning data)', async () => {
+    const orphans = await seedProfileTree(PARENT, PROFILE, { withRoot: false });
+    assert.equal((await profileRef(PARENT, PROFILE).get()).exists, false);
+
+    const res = await call(fns.deleteLearnerProfile, { profileId: PROFILE }, parentAuth);
+
+    assert.equal(res.success, true);
+    await assertAllGone(orphans, 'orphaned profile descendants');
+  });
+
+  test('deleteAccountData removes the account and every profile subtree, ' +
+      'and nothing of another account', async () => {
+    const mine = await seedAccountTree(PARENT, [PROFILE, OTHER_PROFILE]);
+    const theirs = await seedAccountTree(STRANGER, [PROFILE]);
+
+    const res = await call(fns.deleteAccountData, {}, parentAuth);
+
+    assert.equal(res.success, true);
+    await assertAllGone(mine, 'deleted account');
+    await assertAllPresent(theirs, 'other account');
+  });
+
+  test('deleteAccountData on an already-deleted account succeeds', async () => {
+    const mine = await seedAccountTree(PARENT, [PROFILE]);
+    assert.equal((await call(fns.deleteAccountData, {}, parentAuth)).success, true);
+    assert.equal((await call(fns.deleteAccountData, {}, parentAuth)).success, true);
+    await assertAllGone(mine, 'deleted account');
+  });
+
+  test('deletes.ts names none of the retired collections and deletes by ' +
+      'recursive delete only', () => {
+    const source = readFileSync(new URL('../src/deletes.ts', import.meta.url), 'utf8');
+    for (const c of retiredCollections()) {
+      assert.ok(
+        !new RegExp(`["'\`/]${c}["'\`/]`).test(source),
+        `deletes.ts must not reference the retired ${c} collection`,
+      );
+    }
+    assert.equal(source.match(/db\.recursiveDelete\(/g)?.length, 3);
+    assert.ok(!/\.delete\(\)/.test(source), 'no per-document delete sweep');
   });
 });
