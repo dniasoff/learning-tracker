@@ -777,6 +777,17 @@ final class SubTrackCommands {
     return null;
   }
 
+  /// The AD-52 intent fields of [track] (every governed field except the
+  /// tombstone keys) — the payload the owner batch and the tutor's
+  /// `tutorUpsertSubTrack` (Story 4.1, DNI-509) both diff and write.
+  static Map<String, Object?> intentFieldsOf(SubTrack track) =>
+      _fieldsOf(track);
+
+  /// [track] with [edit] applied (`ground` replaced whole) — the one edit
+  /// rule the owner and tutor paths share.
+  static SubTrack applyEdit(SubTrack track, SubTrackEdit edit) =>
+      _applyEdit(track, edit);
+
   /// The intent fields of [track] in AD-52 storage form, without the codec's
   /// validation (so malformed intent reaches the AD-45 validator first):
   /// every governed field except the tombstone keys; `curriculum_id` never
