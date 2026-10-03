@@ -198,43 +198,126 @@ void main() {
       }
     });
 
-    // DNI-490 (AC-4): the cutover allowlist holds EXACTLY the R14 remnants:
-    // one deny-all `match` block per retired collection in firestore.rules,
-    // plus each retired collection's index in firestore.indexes.json.
-    // functions/src/deletes.ts names none of them (recursiveDelete), so it
-    // has no entry. The names come from R14.json, not from this file.
-    test('the allowlist is exactly the R14 cutover remnants (DNI-490)', () {
-      final dir = Directory('$packageDir/tool/retired_symbols');
+    // DNI-491 (story 1.29): the release after the cutover removed every R14
+    // remnant (the five deny-all rules matches and the two retired indexes;
+    // deletes.ts never named one), so the allowlist is empty. The retired
+    // names come from R14.json, never from this file.
+    List<String> r14Collections() {
       final r14 =
-          jsonDecode(File('${dir.path}/R14.json').readAsStringSync()) as _Json;
-      final collections = [
+          jsonDecode(
+                File(
+                  '$packageDir/tool/retired_symbols/R14.json',
+                ).readAsStringSync(),
+              )
+              as _Json;
+      return [
         for (final e in (r14['entries']! as List<Object?>).cast<_Json>())
           if (e['kind'] == 'collection') e['symbol']! as String,
       ];
-      expect(collections, hasLength(5));
-      final indexes = File(
-        '$packageDir/firestore.indexes.json',
-      ).readAsStringSync();
-      final rules = File('$packageDir/firestore.rules').readAsStringSync();
-      final expected = <String>{
-        // DNI-491 removes the deny-all matches; any one still present must
-        // be allowlisted exactly once.
-        for (final c in collections)
-          if (rules.contains('match /$c/')) 'firestore.rules|$c|1',
-        for (final c in collections)
-          if (RegExp('"collectionGroup":\\s*"$c"').allMatches(indexes)
-              case final m when m.isNotEmpty)
-            'firestore.indexes.json|$c|${m.length}',
-      };
+    }
+
+    test('R14 names exactly the five retired collections', () {
+      expect(r14Collections(), hasLength(5));
+    });
+
+    test('AC-2: the allowlist is empty (DNI-491)', () {
       final allow =
-          jsonDecode(File('${dir.path}/allowlist.json').readAsStringSync())
+          jsonDecode(
+                File(
+                  '$packageDir/tool/retired_symbols/allowlist.json',
+                ).readAsStringSync(),
+              )
               as _Json;
-      final actual = <String>{
-        for (final e in (allow['entries']! as List<Object?>).cast<_Json>())
-          '${e['path']}|${e['symbol']}|${e['count']}',
+      expect(allow['entries'], isEmpty);
+    });
+
+    test('AC-1/AC-3: firestore.rules has no retired match, keeps the global '
+        'default-deny and every governed match', () {
+      final rules = File('$packageDir/firestore.rules').readAsStringSync();
+      for (final c in r14Collections()) {
+        expect(
+          RegExp('match\\s+/$c/').hasMatch(rules),
+          isFalse,
+          reason: '$c must have no match block after the release after',
+        );
+        expect(
+          RegExp('/$c/').hasMatch(rules.replaceAll(RegExp(r'//[^\n]*'), '')),
+          isFalse,
+          reason: '$c must not appear in any rules path',
+        );
+      }
+      expect(
+        RegExp(
+          r'match /\{document=\*\*\} \{\s*allow read, write: if false;\s*\}',
+        ).hasMatch(rules),
+        isTrue,
+        reason: 'the global default-deny must stay',
+      );
+      // AD-38 governed collections (amended, never removed) and the
+      // learning record itself.
+      for (final governed in const [
+        'learning_events/{eventId}',
+        'change_log/{entryId}',
+        'sub_tracks/{subTrackId}',
+        'goals/{goalId}',
+        'curriculum_tracks/{trackId}',
+        'track_learning_order/{orderId}',
+        'profile_programs/{curriculumId}',
+        'study_day_configs/{configId}',
+        'stage_definitions/{stageId}',
+        'curriculum_scopes/{scopeId}',
+      ]) {
+        expect(rules, contains('match /$governed {'), reason: governed);
+      }
+    });
+
+    test('AC-1: firestore.indexes.json has no retired index; the governed '
+        'track_learning_order index stays', () {
+      final indexes =
+          jsonDecode(
+                File('$packageDir/firestore.indexes.json').readAsStringSync(),
+              )
+              as _Json;
+      final groups = {
+        for (final i in (indexes['indexes']! as List<Object?>).cast<_Json>())
+          i['collectionGroup']! as String,
       };
-      expect(actual, expected);
-      expect(actual.where((k) => k.startsWith('functions/')), isEmpty);
+      final overrides = {
+        for (final f
+            in ((indexes['fieldOverrides'] as List<Object?>?) ?? const [])
+                .cast<_Json>())
+          f['collectionGroup']! as String,
+      };
+      for (final c in r14Collections()) {
+        expect(groups, isNot(contains(c)), reason: '$c index must be gone');
+        expect(overrides, isNot(contains(c)), reason: '$c field override');
+      }
+      expect(groups, contains('track_learning_order'));
+    });
+
+    test('AC-1/AC-4: deletes.ts names no retired collection and keeps its '
+        'three recursive deletes (account trigger, profile, account)', () {
+      final deletes = File(
+        '$packageDir/functions/src/deletes.ts',
+      ).readAsStringSync();
+      for (final c in r14Collections()) {
+        expect(
+          RegExp('["\'`]$c["\'`/]').hasMatch(deletes),
+          isFalse,
+          reason: '$c must not be named in deletes.ts',
+        );
+      }
+      expect(
+        RegExp(r'db\.recursiveDelete\(').allMatches(deletes),
+        hasLength(3),
+      );
+      for (final fn in const [
+        'onUserDeleted',
+        'deleteLearnerProfile',
+        'deleteAccountData',
+      ]) {
+        expect(deletes, contains('export const $fn ='));
+      }
     });
 
     test('the real tree passes --enforce (the cutover gate)', () async {
@@ -244,6 +327,7 @@ void main() {
       ], workingDirectory: packageDir);
       expect(result.exitCode, 0, reason: out(result));
       expect(result.stdout.toString(), contains('--enforce'));
+      expect(result.stdout.toString(), contains(' 0 allowlist entries.'));
       expect(
         result.stdout.toString(),
         contains('Retired-symbols check OK (AD-49).'),
@@ -973,6 +1057,138 @@ match /users/{uid}/learner_profiles/{profileId}/${_retiredWord(20)}/{id} {
       );
       final enforced = await run(root, ['--enforce']);
       expect(enforced.exitCode, 0, reason: out(enforced));
+    });
+  });
+
+  // DNI-491 (story 1.29): after the release after, the allowlist is empty
+  // and every R14 remnant is gone. A remnant that comes back fails CI's
+  // --enforce run; the governed `track_` ordering collection, which
+  // contains a retired name as a suffix, never matches it.
+  group('release after the cutover (DNI-491)', () {
+    final retired = ['${_retiredWord(20)}', '${_retiredWord(16)}'];
+    final ordering = '${_retiredWord(12)}';
+    final r14 = {
+      'R14': [
+        for (final c in [...retired, ordering])
+          _entry(
+            c,
+            kind: 'collection',
+            state: 'pending',
+            owner: 'DNI-490',
+            paths: {
+              'include': [
+                'firestore.rules',
+                'firestore.indexes.json',
+                'functions/src/deletes.ts',
+              ],
+            },
+          ),
+      ],
+    };
+    final cleanRules =
+        'match /{document=**} { allow read, write: if false; }\n'
+        'match /track_$ordering/{orderId} { allow read: if isOwner(uid); }\n';
+    final cleanIndexes = jsonEncode({
+      'indexes': [
+        {
+          'collectionGroup': 'track_$ordering',
+          'queryScope': 'COLLECTION',
+          'fields': [
+            {'fieldPath': 'curriculum_id', 'order': 'ASCENDING'},
+          ],
+        },
+      ],
+      'fieldOverrides': <Object?>[],
+    });
+
+    test('a clean tree passes --enforce with an empty allowlist', () async {
+      final root = await fixtureRoot(
+        groups: r14,
+        files: {
+          'firestore.rules': cleanRules,
+          'firestore.indexes.json': cleanIndexes,
+          'functions/src/deletes.ts':
+              'await db.recursiveDelete(db.collection("users").doc(uid));\n',
+        },
+      );
+      final enforced = await run(root, ['--enforce']);
+      expect(enforced.exitCode, 0, reason: out(enforced));
+      expect(enforced.stdout.toString(), contains(' 0 allowlist entries.'));
+    });
+
+    test('a deny-all match that comes back fails --enforce', () async {
+      for (final c in [...retired, ordering]) {
+        final root = await fixtureRoot(
+          groups: r14,
+          files: {
+            'firestore.rules':
+                '${cleanRules}match /$c/{id} { allow write: if false; }\n',
+            'firestore.indexes.json': cleanIndexes,
+          },
+        );
+        final enforced = await run(root, ['--enforce']);
+        expect(enforced.exitCode, 1, reason: '$c\n${out(enforced)}');
+        expect(enforced.stderr.toString(), contains('firestore.rules:'));
+      }
+    });
+
+    test('a retired index that comes back fails --enforce', () async {
+      final root = await fixtureRoot(
+        groups: r14,
+        files: {
+          'firestore.rules': cleanRules,
+          'firestore.indexes.json': jsonEncode({
+            'indexes': [
+              {
+                'collectionGroup': retired[1],
+                'queryScope': 'COLLECTION',
+                'fields': [
+                  {'fieldPath': '__name__', 'order': 'DESCENDING'},
+                ],
+              },
+            ],
+          }),
+        },
+      );
+      final enforced = await run(root, ['--enforce']);
+      expect(enforced.exitCode, 1, reason: out(enforced));
+      expect(enforced.stderr.toString(), contains('firestore.indexes.json:'));
+    });
+
+    test(
+      'a retired deletion-list entry in deletes.ts fails --enforce',
+      () async {
+        final root = await fixtureRoot(
+          groups: r14,
+          files: {
+            'firestore.rules': cleanRules,
+            'firestore.indexes.json': cleanIndexes,
+            'functions/src/deletes.ts':
+                'const TRACK_SCOPED = ["goals", "$ordering"];\n',
+          },
+        );
+        final enforced = await run(root, ['--enforce']);
+        expect(enforced.exitCode, 1, reason: out(enforced));
+        expect(
+          enforced.stderr.toString(),
+          contains('functions/src/deletes.ts:'),
+        );
+      },
+    );
+
+    test('allowlisting a removed remnant again fails --enforce '
+        '(the allowlist must stay exact, so empty)', () async {
+      final root = await fixtureRoot(
+        groups: r14,
+        files: {
+          'firestore.rules': cleanRules,
+          'firestore.indexes.json': cleanIndexes,
+        },
+        allow: [_allow(retired[1], 'firestore.indexes.json', 1)],
+      );
+      final enforced = await run(root, ['--enforce']);
+      expect(enforced.exitCode, 1, reason: out(enforced));
+      expect(enforced.stderr.toString(), contains('allowlist'));
     });
   });
 
