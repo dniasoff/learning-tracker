@@ -886,14 +886,16 @@ Status: ready-for-dev
     final profilePathKeyingScript =
         '$packageDir/tool/check_profile_path_keying.dart';
     // Piggybacks on a REAL, already-verified-LIVE repository file
-    // (firestore_bookmark_repository.dart is reachable via HOP 1 from
-    // lib/features/learning/presentation/providers/bookmark_providers.dart
-    // today) rather than fabricating a fake provider/adapter chain: any
-    // literal collection-name touch added anywhere in an already-LIVE file
-    // is promoted to the liveness-filtered ULID-C bucket automatically,
-    // because reachability is a property of the FILE, not the line.
+    // (firestore_curriculum_scope_repository.dart is reachable through
+    // firestoreCurriculumScopeRepositoryProvider from the tracks feature;
+    // the former host, firestore_bookmark_repository.dart, was deleted with
+    // the bookmarks retirement, DNI-478) rather than fabricating a fake
+    // provider/adapter chain: any literal collection-name touch added
+    // anywhere in an already-LIVE file is promoted to the liveness-filtered
+    // ULID-C bucket automatically, because reachability is a property of
+    // the FILE, not the line.
     final bookmarkRepoFile = File(
-      '$packageDir/lib/data/repositories/firestore_bookmark_repository.dart',
+      '$packageDir/lib/data/repositories/firestore_curriculum_scope_repository.dart',
     );
     // The old INT bucket lived under lib/core/sync/, which was archived with
     // the Drift sync engine. Cloud Functions is the live INT bucket now.
