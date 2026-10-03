@@ -5,7 +5,11 @@
 ///
 /// 1. It refuses to run outside an unlocked parent session
 ///    ([LifetimeReportExportDenied], AC-12), and checks again before the
-///    file is shared.
+///    file is shared. Each export is bound to the learner whose report it
+///    is: if the active learner changes while it runs (a profile switch
+///    that keeps a parent session), it stops before writing, or deletes
+///    the file before sharing ([LifetimeReportExportSuperseded]), so one
+///    learner's report is never shared from another learner's screen.
 /// 2. It renders the document on a background isolate
 ///    ([renderLifetimeReportPdfInBackground], AC-7): the UI isolate only
 ///    loads the font assets.
@@ -44,6 +48,17 @@ final class LifetimeReportExportDenied implements Exception {
 
   @override
   String toString() => 'LifetimeReportExportDenied';
+}
+
+/// The active learner changed while the export ran, or was not resolved
+/// when it started: the report belongs to another learner than the one on
+/// screen, so nothing is shared and no file is kept.
+final class LifetimeReportExportSuperseded implements Exception {
+  /// Creates the exception.
+  const LifetimeReportExportSuperseded();
+
+  @override
+  String toString() => 'LifetimeReportExportSuperseded';
 }
 
 /// Generating, writing or sharing the PDF failed (AC-9). Nothing partial
@@ -238,20 +253,25 @@ final class LifetimeReportExportService {
   /// Creates the service.
   ///
   /// [isParentSession] answers, fail closed, whether the session is an
-  /// unlocked parent session right now.
+  /// unlocked parent session right now. [currentScope] is the identity of
+  /// the active learner right now (compared with `==`), or null while it
+  /// is not resolved.
   LifetimeReportExportService({
     required Future<bool> Function() isParentSession,
+    required Object? Function() currentScope,
     required LifetimeReportPdfFontSource fonts,
     required LifetimeReportPdfFileStore files,
     required LifetimeReportPdfSharer sharer,
     LifetimeReportPdfRenderer render = renderLifetimeReportPdfInBackground,
   }) : _isParentSession = isParentSession,
+       _currentScope = currentScope,
        _fonts = fonts,
        _files = files,
        _sharer = sharer,
        _render = render;
 
   final Future<bool> Function() _isParentSession;
+  final Object? Function() _currentScope;
   final LifetimeReportPdfFontSource _fonts;
   final LifetimeReportPdfFileStore _files;
   final LifetimeReportPdfSharer _sharer;
@@ -260,22 +280,36 @@ final class LifetimeReportExportService {
   /// Exports [document] as [fileName] and opens the share sheet anchored
   /// at [origin].
   ///
+  /// The export is bound to [scope], the identity of the learner whose
+  /// report [document] is (as [currentScope] gives it, taken when the
+  /// document was composed); without one it is bound to the learner
+  /// active when this is called.
+  ///
   /// Throws [LifetimeReportExportDenied] outside a parent session (nothing
-  /// is generated), and [LifetimeReportExportFailed] when generation, the
-  /// file write or the share fails (the file is deleted; nothing partial
-  /// is shared).
+  /// is generated); [LifetimeReportExportSuperseded] when the bound learner
+  /// is unresolved or is no longer the active one, checked after rendering
+  /// and again just before sharing (nothing is shared; a written file is
+  /// deleted); and [LifetimeReportExportFailed] when generation, the file
+  /// write or the share fails (the file is deleted; nothing partial is
+  /// shared).
   Future<LifetimeReportShareOutcome> export({
     required LifetimeReportPdfDocument document,
     required String fileName,
     Rect? origin,
+    Object? scope,
   }) async {
+    // Bound before the first await, so it is the learner of [document].
+    final bound = scope ?? _currentScope();
     await _requireParent();
+    _requireScope(bound);
     final Uint8List bytes;
     try {
       bytes = await _render(document, await _fonts.load());
     } on Object catch (e, st) {
       Error.throwWithStackTrace(LifetimeReportExportFailed(e), st);
     }
+    // The learner may have changed while the PDF was rendered.
+    _requireScope(bound);
     final String path;
     try {
       path = await _files.write(fileName, bytes);
@@ -283,8 +317,10 @@ final class LifetimeReportExportService {
       Error.throwWithStackTrace(LifetimeReportExportFailed(e), st);
     }
     try {
-      // The session may have locked while the PDF was generated.
+      // The session may have locked, or the learner changed, while the
+      // PDF was generated or written.
       await _requireParent();
+      _requireScope(bound);
       return await _sharer.share(
         path: path,
         fileName: fileName,
@@ -292,6 +328,9 @@ final class LifetimeReportExportService {
         subject: stripHebrewMarks(document.title),
       );
     } on LifetimeReportExportDenied {
+      await _files.delete(path);
+      rethrow;
+    } on LifetimeReportExportSuperseded {
       await _files.delete(path);
       rethrow;
     } on Object catch (e, st) {
@@ -308,6 +347,21 @@ final class LifetimeReportExportService {
       throw const LifetimeReportExportDenied();
     }
     if (!parent) throw const LifetimeReportExportDenied();
+  }
+
+  /// Throws [LifetimeReportExportSuperseded] unless [bound] is resolved
+  /// and is still the active learner (fail closed: a learner re-resolving
+  /// is not the same one).
+  void _requireScope(Object? bound) {
+    final Object? current;
+    try {
+      current = _currentScope();
+    } on Object {
+      throw const LifetimeReportExportSuperseded();
+    }
+    if (bound == null || current != bound) {
+      throw const LifetimeReportExportSuperseded();
+    }
   }
 }
 

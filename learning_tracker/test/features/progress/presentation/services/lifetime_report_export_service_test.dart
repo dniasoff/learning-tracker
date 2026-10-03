@@ -12,6 +12,9 @@ import 'dart:isolate';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_report_pdf_builder.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_report_pdf_document.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_export_provider.dart';
@@ -66,6 +69,26 @@ final class _FailingFiles implements LifetimeReportPdfFileStore {
       throw const FileSystemException('No space left on device');
 }
 
+/// A file store that runs [onWritten] once the file is complete.
+final class _SwitchingFiles implements LifetimeReportPdfFileStore {
+  _SwitchingFiles(this.inner, {required this.onWritten});
+
+  final LifetimeReportPdfFileStore inner;
+  final void Function() onWritten;
+  int written = 0;
+
+  @override
+  Future<void> delete(String path) => inner.delete(path);
+
+  @override
+  Future<String> write(String fileName, Uint8List bytes) async {
+    final path = await inner.write(fileName, bytes);
+    written++;
+    onWritten();
+    return path;
+  }
+}
+
 Uint8List _fakePdf = Uint8List.fromList(utf8.encode('%PDF-1.7 fake'));
 
 Future<Uint8List> _isolateName(
@@ -99,8 +122,10 @@ void main() {
     LifetimeReportPdfRenderer? render,
     LifetimeReportPdfFileStore? files,
     LifetimeReportPdfSharer? sharer,
+    Object? Function()? currentScope,
   }) => LifetimeReportExportService(
     isParentSession: isParent ?? () async => parent,
+    currentScope: currentScope ?? () => 'learner-a',
     fonts: fonts,
     files: files ?? TemporaryReportPdfFileStore(directory: () async => temp),
     sharer: sharer ?? _Sharer(),
@@ -285,6 +310,175 @@ void main() {
     });
   });
 
+  group('bound to the learner on screen', () {
+    test(
+      'a learner switch during rendering writes and shares nothing',
+      () async {
+        var active = 'learner-a';
+        final gate = Completer<Uint8List>();
+        final sharer = _Sharer();
+        final running = service(
+          currentScope: () => active,
+          sharer: sharer,
+          render: (doc, f) => gate.future,
+        ).export(document: document, fileName: _fileName);
+        await pumpEventQueue();
+        active = 'learner-b';
+        gate.complete(_fakePdf);
+        await expectLater(
+          running,
+          throwsA(isA<LifetimeReportExportSuperseded>()),
+        );
+        expect(sharer.shares, isEmpty);
+        expect(exported(), isEmpty);
+      },
+    );
+
+    test('a switch after the file is written deletes it unshared', () async {
+      var active = 'learner-a';
+      final sharer = _Sharer();
+      final files = _SwitchingFiles(
+        TemporaryReportPdfFileStore(directory: () async => temp),
+        onWritten: () => active = 'learner-b',
+      );
+      await expectLater(
+        service(
+          currentScope: () => active,
+          files: files,
+          sharer: sharer,
+        ).export(document: document, fileName: _fileName),
+        throwsA(isA<LifetimeReportExportSuperseded>()),
+      );
+      expect(files.written, 1);
+      expect(sharer.shares, isEmpty);
+      expect(exported(), isEmpty);
+    });
+
+    test('a document of another learner is not rendered', () async {
+      var rendered = false;
+      await expectLater(
+        service(
+          currentScope: () => 'learner-b',
+          render: (doc, f) async {
+            rendered = true;
+            return _fakePdf;
+          },
+        ).export(document: document, fileName: _fileName, scope: 'learner-a'),
+        throwsA(isA<LifetimeReportExportSuperseded>()),
+      );
+      expect(rendered, isFalse);
+    });
+
+    test('an unresolved or failing learner fails closed', () async {
+      await expectLater(
+        service(
+          currentScope: () => null,
+        ).export(document: document, fileName: _fileName),
+        throwsA(isA<LifetimeReportExportSuperseded>()),
+      );
+      await expectLater(
+        service(
+          currentScope: () => throw StateError('scope'),
+        ).export(document: document, fileName: _fileName, scope: 'learner-a'),
+        throwsA(isA<LifetimeReportExportSuperseded>()),
+      );
+      expect(exported(), isEmpty);
+    });
+
+    test('the same learner throughout shares normally', () async {
+      final sharer = _Sharer();
+      final outcome = await service(
+        currentScope: () => 'learner-a',
+        sharer: sharer,
+      ).export(document: document, fileName: _fileName, scope: 'learner-a');
+      expect(outcome, LifetimeReportShareOutcome.shared);
+      expect(sharer.shares, hasLength(1));
+    });
+  });
+
+  group('lifetimeReportExportScope', () {
+    final scopeA = LearnerScope(
+      ownerUid: 'owner',
+      profileId: '01HZY5K8Q6T9X3M2N4P7R1S0VA',
+    );
+    LearnerProfileEntity profile(String id) => LearnerProfileEntity(
+      profileId: id,
+      displayName: 'Dovid',
+      mode: ProfileMode.child,
+      createdAt: DateTime.utc(2026),
+      updatedAt: DateTime.utc(2026),
+    );
+
+    test('the scope and profile id of a resolved learner', () {
+      expect(
+        lifetimeReportExportScope(AsyncData(scopeA), AsyncData(profile('p1'))),
+        (learner: scopeA, profileId: 'p1'),
+      );
+      expect(
+        lifetimeReportExportScope(AsyncData(scopeA), AsyncData(profile('p1'))),
+        isNot(
+          lifetimeReportExportScope(
+            AsyncData(scopeA),
+            AsyncData(profile('p2')),
+          ),
+        ),
+      );
+    });
+
+    test('null while the learner re-resolves after a switch, even with '
+        'the previous learner retained', () async {
+      final next = Completer<LearnerScope?>();
+      var reads = 0;
+      final learner = FutureProvider<LearnerScope?>(
+        (ref) => reads++ == 0 ? scopeA : next.future,
+      );
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      c.listen(learner, (_, _) {});
+      await c.read(learner.future);
+      final p = AsyncData<LearnerProfileEntity?>(profile('p1'));
+      expect(lifetimeReportExportScope(c.read(learner), p), isNotNull);
+      c.invalidate(learner);
+      final reresolving = c.read(learner);
+      expect(reresolving.value, scopeA);
+      expect(lifetimeReportExportScope(reresolving, p), isNull);
+      next.complete(scopeA);
+    });
+
+    test('null while either side is loading, failed or absent', () {
+      final p = AsyncData<LearnerProfileEntity?>(profile('p1'));
+      expect(
+        lifetimeReportExportScope(const AsyncLoading<LearnerScope?>(), p),
+        isNull,
+      );
+      expect(
+        lifetimeReportExportScope(
+          AsyncError<LearnerScope?>(StateError('x'), StackTrace.empty),
+          p,
+        ),
+        isNull,
+      );
+      expect(
+        lifetimeReportExportScope(const AsyncData<LearnerScope?>(null), p),
+        isNull,
+      );
+      expect(
+        lifetimeReportExportScope(
+          AsyncData(scopeA),
+          const AsyncData<LearnerProfileEntity?>(null),
+        ),
+        isNull,
+      );
+      expect(
+        lifetimeReportExportScope(
+          AsyncData(scopeA),
+          const AsyncLoading<LearnerProfileEntity?>(),
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('AC-7 off the UI isolate', () {
     test('the PDF is built on a background isolate', () async {
       final bytes = await renderLifetimeReportPdfInBackground(
@@ -445,6 +639,23 @@ void main() {
             .export(document: document, fileName: _fileName),
         LifetimeReportExportResult.denied,
       );
+    });
+
+    test('a learner switch mid-export reports superseded', () async {
+      var active = 'learner-a';
+      final gate = Completer<Uint8List>();
+      final c = container(
+        service(currentScope: () => active, render: (doc, f) => gate.future),
+      );
+      final running = c
+          .read(lifetimeReportExportProvider.notifier)
+          .export(document: document, fileName: _fileName, scope: 'learner-a');
+      await pumpEventQueue();
+      active = 'learner-b';
+      gate.complete(_fakePdf);
+      expect(await running, LifetimeReportExportResult.superseded);
+      expect(c.read(lifetimeReportExportProvider), isFalse);
+      expect(exported(), isEmpty);
     });
 
     test('a dismissed sheet reports dismissed', () async {

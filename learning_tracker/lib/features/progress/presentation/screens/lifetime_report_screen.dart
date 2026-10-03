@@ -113,10 +113,20 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
   final _exportKey = GlobalKey();
 
   /// Exports the report on screen (AC-2) and opens the share sheet.
+  ///
+  /// The export is bound to the learner on screen, taken together with the
+  /// report: a profile switch while it runs abandons it before the share
+  /// sheet opens, never sharing one learner's report from another's screen.
   Future<void> _export() async {
     final report = ref.read(lifetimeReportProvider(_curriculumId));
     final pace = ref.read(perSourcePaceReportProvider(_curriculumId));
-    if (report case AsyncData(:final value) when !pace.isLoading) {
+    final scope = lifetimeReportExportScope(
+      ref.read(activeLearnerScopeProvider),
+      ref.read(activeProfileProvider),
+    );
+    if (report case AsyncData(
+      :final value,
+    ) when !pace.isLoading && scope != null) {
       final l10n = AppLocalizations.of(context)!;
       final messenger = ScaffoldMessenger.of(context);
       final learner = ref.read(activeProfileProvider).value?.displayName ?? '';
@@ -145,7 +155,12 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
           : null;
       final result = await ref
           .read(lifetimeReportExportProvider.notifier)
-          .export(document: document, fileName: fileName, origin: origin);
+          .export(
+            document: document,
+            fileName: fileName,
+            origin: origin,
+            scope: scope,
+          );
       if (!mounted || result != LifetimeReportExportResult.failed) return;
       messenger
         ..hideCurrentSnackBar()

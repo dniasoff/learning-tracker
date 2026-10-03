@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
@@ -72,8 +73,16 @@ final class _Export {
   /// Throws from the renderer while set (AC-9).
   Exception? renderError;
 
+  /// The active learner: its scope and profile (a test switches them).
+  LearnerScope scope = c0Scope();
+  LearnerProfileEntity profile = _profile('p1', 'Dovid');
+
   LifetimeReportExportService service(Ref ref) => LifetimeReportExportService(
     isParentSession: () async => ref.read(parentSessionProvider).value == true,
+    currentScope: () => lifetimeReportExportScope(
+      ref.read(activeLearnerScopeProvider),
+      ref.read(activeProfileProvider),
+    ),
     fonts: _NoFonts(),
     files: files,
     sharer: _Sharer(this),
@@ -85,6 +94,14 @@ final class _Export {
     },
   );
 }
+
+LearnerProfileEntity _profile(String id, String name) => LearnerProfileEntity(
+  profileId: id,
+  displayName: name,
+  mode: ProfileMode.child,
+  createdAt: DateTime.utc(2026),
+  updatedAt: DateTime.utc(2026),
+);
 
 final class _Sharer implements LifetimeReportPdfSharer {
   _Sharer(this.export);
@@ -112,16 +129,8 @@ List<Override> _overrides(
 }) => [
   parentSessionProvider.overrideWith((ref) async => parent),
   effectiveUseHebrewTermsProvider.overrideWithValue(hebrewTerms),
-  activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
-  activeProfileProvider.overrideWith(
-    (ref) async => LearnerProfileEntity(
-      profileId: 'p1',
-      displayName: 'Dovid',
-      mode: ProfileMode.child,
-      createdAt: DateTime.utc(2026),
-      updatedAt: DateTime.utc(2026),
-    ),
-  ),
+  activeLearnerScopeProvider.overrideWith((ref) async => export.scope),
+  activeProfileProvider.overrideWith((ref) async => export.profile),
   learnerStateProvider.overrideWith(
     (ref, _) => states != null ? states() : Stream.value(state!),
   ),
@@ -554,6 +563,46 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Export PDF'), findsOneWidget);
       expect(_enabled(tester), isTrue);
+    });
+  });
+
+  group('bound to the learner on screen', () {
+    testWidgets('a learner switch while rendering shares nothing of the '
+        'previous learner', (tester) async {
+      export.gate = Completer<Uint8List>();
+      await _pump(tester, export, state: reportState([fullReport()]));
+      await tester.tap(_pill);
+      await tester.pump();
+      expect(export.documents.single.learnerName, 'Dovid');
+
+      // A profile switch that keeps the parent session.
+      export
+        ..scope = LearnerScope(
+          ownerUid: 'owner-uid',
+          profileId: '01HZY5K8Q6T9X3M2N4P7R1S0VB',
+        )
+        ..profile = _profile('p2', 'Rivka');
+      ProviderScope.containerOf(
+          tester.element(find.byType(LifetimeReportScreen)),
+        )
+        ..invalidate(activeLearnerScopeProvider)
+        ..invalidate(activeProfileProvider);
+      await tester.pump();
+
+      export.gate!.complete(Uint8List.fromList('%PDF-'.codeUnits));
+      await tester.pumpAndSettle();
+      expect(export.shares, isEmpty);
+      expect(export.files.files, isEmpty);
+      // Abandoned, not failed: no error snackbar on the new learner's
+      // report, and the pill is ready again.
+      expect(find.byType(SnackBar), findsNothing);
+      expect(_enabled(tester), isTrue);
+
+      // The next export is the new learner's.
+      export.gate = null;
+      await _tapExport(tester);
+      expect(export.documents.last.learnerName, 'Rivka');
+      expect(export.shares.single.fileName, contains('Rivka'));
     });
   });
 

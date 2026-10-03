@@ -126,6 +126,7 @@ void main() {
           lifetimeReportExportServiceProvider.overrideWith(
             (ref) => LifetimeReportExportService(
               isParentSession: () async => true,
+              currentScope: () => 'learner',
               fonts: AssetLifetimeReportPdfFontSource(rootBundle),
               files: TemporaryReportPdfFileStore(),
               sharer: sharer,
