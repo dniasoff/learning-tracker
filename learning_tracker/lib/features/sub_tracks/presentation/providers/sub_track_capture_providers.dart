@@ -17,6 +17,11 @@
 ///   captured for and is only ever read for that scope
 ///   ([activePendingRefsProvider]), so a capture still queued for one
 ///   profile never shows as recorded on another after a profile switch.
+///   A switch also drops every entry of the learner left behind: their
+///   `LearningCommands` are disposed with the switch, so a later rejection
+///   of those writes could never roll the overlay back. Back on that
+///   learner, the rows read what the engine derives from the persisted
+///   log, which holds the queued writes and not the rejected ones.
 library;
 
 import 'package:flutter/material.dart';
@@ -149,9 +154,20 @@ final class PendingCaptures {
 class PendingCapturesNotifier extends Notifier<PendingCaptures> {
   int _next = 0;
   final _failed = <String>{};
+  LearnerScope? _active;
 
   @override
   PendingCaptures build() {
+    // A profile switch disposes the left learner's commands, and with them
+    // the only feed that reports its rejected writes: drop that learner's
+    // entries rather than keep leaves no failure can roll back.
+    final scope = ref.listen<AsyncValue<LearnerScope?>>(
+      activeLearnerScopeProvider,
+      (_, next) {
+        if (next case AsyncData(:final value)) _activate(value);
+      },
+    );
+    _active = scope.read().asData?.value;
     // Prune what the engine has derived: counted, or kept and not counted
     // (lock-ignored, AD-36).
     ref.listen<AsyncValue<LearnerState?>>(activeLearnerStateProvider, (
@@ -253,6 +269,16 @@ class PendingCapturesNotifier extends Notifier<PendingCaptures> {
   /// Forgets the failure of [eventIds]: a retry saved them.
   void retried(Iterable<String> eventIds) => _failed.removeAll(eventIds);
 
+  void _activate(LearnerScope? scope) {
+    if (scope == _active) return;
+    _active = scope;
+    if (state.entries.every((e) => e.scope == scope)) return;
+    state = PendingCaptures([
+      for (final e in state.entries)
+        if (e.scope == scope) e,
+    ]);
+  }
+
   // Event ids are client ULIDs, unique across profiles, so pruning by id
   // against the active learner's state never touches another profile's
   // entries.
@@ -339,6 +365,7 @@ Future<CaptureResult?> captureLeaves(
   //
   // The overlay entry is bound to the learner the capture is for, so it
   // never reads as recorded on another profile (cross-profile isolation).
+  final container = ProviderScope.containerOf(context, listen: false);
   final scope = ref.read(activeLearnerScopeProvider).asData?.value;
   final optimistic =
       scope != null && ref.read(activeTutoredProfileSelectionProvider) == null;
@@ -360,7 +387,12 @@ Future<CaptureResult?> captureLeaves(
   final CaptureResult result;
   try {
     commands = await ref.read(learningCommandsProvider.future);
-    if (commands == null) {
+    // The commands are bound to the learner active when they resolved. A
+    // profile switch while they resolved would write this capture to a
+    // learner the child did not pick it for, while its overlay entry stays
+    // on the old one: write nothing (cross-profile isolation).
+    if (commands == null ||
+        container.read(activeLearnerScopeProvider).asData?.value != scope) {
       notSaved();
       return null;
     }
