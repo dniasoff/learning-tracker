@@ -237,7 +237,6 @@ final class TutorLearningCommands implements LearningCommands {
     CivilDate? learnedOn,
     bool skipRecorded = false,
     int? stage,
-    bool skipRecorded = false,
   }) => _preflight((now, history) async {
     // Epic 1: tutors record main-track learning, dated or before tracking.
     // A skip-recorded (Up to…) capture needs the talmid's counted log,
