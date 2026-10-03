@@ -26,6 +26,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -272,51 +273,20 @@ void retryLearnerForecast(WidgetRef ref) => retryLearnerState(ref);
 typedef SubTrackDetailOpener =
     VoidCallback? Function(BuildContext context, ShortfallWarning warning);
 
-/// The sub-track detail's route path, as Story 2.6 (DNI-497) registers it
-/// for `SubTrackDetailRoute`.
-const subTrackDetailRoutePath = '/settings/tracks/sub-tracks/:subTrackId';
-
-/// The sub-track detail's location for [subTrackId] ([subTrackDetailRoutePath]
-/// filled in).
-///
-/// Bound by path, not by the generated route class, so the Dashboard does
-/// not import the sub-tracks feature's screen (layering) and compiles on
-/// `integ/sub-tracks` before DNI-497 lands there.
-String subTrackDetailPath(String subTrackId) =>
-    '/settings/tracks/sub-tracks/${Uri.encodeComponent(subTrackId)}';
-
-/// Whether [router]'s app resolves [subTrackDetailPath] to the sub-track
-/// detail route for exactly [subTrackId]: a top-level match on
-/// [subTrackDetailRoutePath], not a redirect or another route, carrying the
-/// requested id. False while DNI-497's route is not registered.
-bool resolvesSubTrackDetail(RoutingController router, String subTrackId) {
-  final matches = router.root.matcher.match(subTrackDetailPath(subTrackId));
-  if (matches == null || matches.length != 1) return false;
-  final match = matches.single;
-  return match.redirectedFrom == null &&
-      match.path == subTrackDetailRoutePath &&
-      match.params.optString('subTrackId') == subTrackId;
-}
-
 /// The production *View {name} →* action (AC-5): pushes the warning's
-/// sub-track detail on the root router. Null, so the action is hidden, when
-/// the context has no router or the app does not register the detail route
-/// for that id ([resolvesSubTrackDetail]); this is the state on
-/// `integ/sub-tracks` until DNI-497 merges, and nothing here reaches a user
-/// before the DNI-490 cutover (AD-49 ship hold). AC-5 ships only with
-/// DNI-497: bead learning-tracker-fyh.217 is the merge gate from
-/// `integ/sub-tracks` to dev, and swaps the path for the typed
-/// `SubTrackDetailRoute` once DNI-497 is on `integ/sub-tracks`.
+/// sub-track detail, Story 2.6's (DNI-497) typed [SubTrackDetailRoute], on
+/// the root router, where that route is registered (top level, above the
+/// tab shell). Null, so the action is hidden, only when the context has no
+/// router. Nothing here reaches a user before the
+/// DNI-490 cutover (AD-49 ship hold).
 VoidCallback? subTrackDetailAction(
   BuildContext context,
   ShortfallWarning warning,
 ) {
   final router = StackRouterScope.of(context)?.controller;
-  if (router == null || !resolvesSubTrackDetail(router, warning.subTrackId)) {
-    return null;
-  }
-  final path = subTrackDetailPath(warning.subTrackId);
-  return () => unawaited(router.root.pushPath<void>(path));
+  if (router == null) return null;
+  final route = SubTrackDetailRoute(subTrackId: warning.subTrackId);
+  return () => unawaited(router.root.push<void>(route));
 }
 
 /// Where *View {name} →* leads (AC-5): [subTrackDetailAction] in

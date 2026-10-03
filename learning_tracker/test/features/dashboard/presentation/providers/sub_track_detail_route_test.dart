@@ -1,19 +1,16 @@
 // Story 2.11 (DNI-502) AC-5: *View {name} →* opens that sub-track's detail
-// in the production router, or is not offered at all.
+// in the production router.
 //
-// The real AppRouter, not a test router: whenever it registers Story 2.6's
-// (DNI-497) `SubTrackDetailRoute`, the Dashboard's detail path must resolve
-// to it, top level, carrying the requested sub-track id. While it does not
-// (on integ/sub-tracks before DNI-497 merges), the path resolves to nothing,
-// so the shortfall card hides the action rather than opening another
-// screen. DNI-502 therefore depends on DNI-497 to ship AC-5: the
-// integ/sub-tracks to dev merge gate is bead learning-tracker-fyh.217.
-//
-// The routed-tap test pumps the production route table with Story 2.6's
-// route contract added and taps View on the real shortfall cards, so the
-// push is proven against every route the app has today.
+// The real AppRouter, not a test router: Story 2.6's (DNI-497) typed
+// `SubTrackDetailRoute` is registered top level, so the Dashboard's push
+// lands on it carrying the requested sub-track id. The routed-tap test
+// pumps the whole production route table (guards let every navigation
+// through) and taps View on the real shortfall cards, so the push reaches
+// the real `SubTrackDetailScreen`, not a stand-in. A moved or renamed route
+// fails this file.
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
@@ -22,9 +19,10 @@ import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/shortfall_warning_card.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/dashboard/forecast_fixtures.dart';
@@ -46,77 +44,78 @@ AppRouter _productionRouter() => AppRouter(
 );
 
 void main() {
-  test('the production router resolves the detail path to the requested '
-      'sub-track whenever SubTrackDetailRoute is registered', () {
+  test('the production router registers SubTrackDetailRoute top level and '
+      'matches it with the requested sub-track id', () {
     final router = _productionRouter();
-    final registered = router.routeCollection
-        .findPathTo('SubTrackDetailRoute')
-        .isNotEmpty;
+    expect(
+      router.routes.map((r) => r.name),
+      contains(SubTrackDetailRoute.name),
+    );
 
     for (final id in [schoolSubTrackId, rebbeSubTrackId]) {
-      final matches = router.matcher.match(subTrackDetailPath(id));
-      if (registered) {
-        // DNI-497 is in the tree: the Dashboard path must land on it.
-        expect(matches, isNotNull, reason: 'no route for $id');
-        expect(matches!.single.name, 'SubTrackDetailRoute');
-        expect(matches.single.path, subTrackDetailRoutePath);
-        expect(matches.single.params.optString('subTrackId'), id);
-        expect(resolvesSubTrackDetail(router, id), isTrue);
-      } else {
-        // Not yet: nothing (no wildcard, no other screen) answers the
-        // path, so View is hidden.
-        expect(matches, isNull);
-        expect(resolvesSubTrackDetail(router, id), isFalse);
-      }
+      final match = router.matcher.matchByRoute(
+        SubTrackDetailRoute(subTrackId: id),
+      );
+      expect(match, isNotNull, reason: 'no route for $id');
+      expect(match!.name, SubTrackDetailRoute.name);
+      expect(match.params.optString('subTrackId'), id);
+      expect(match.redirectedFrom, isNull);
     }
   });
 
-  testWidgets('with Story 2.6\'s route contract added to the production '
-      'route table, View {name} opens exactly that sub-track\'s detail', (
-    tester,
-  ) async {
-    final router = _ProductionTablePlusDetail();
+  testWidgets('in the production route table, View {name} opens exactly '
+      'that sub-track\'s detail screen', (tester) async {
+    final router = _ProductionTableWithDashboard();
     await tester.pumpWidget(
       pumpApp(
         theme: AppTheme.lightTheme(),
         routerConfig: router.config(
           deepLinkBuilder: (_) => const DeepLink.path(_dashboardPath),
         ),
-        overrides: forecastOverrides(
-          state: forecastState([
-            forecastCurriculumState(
-              projection: const Projection(
-                status: ProjectionStatus.behindPace,
-                projectedFinish: '2029-03-14',
-                deadline: '2029-09-10',
+        overrides:
+            forecastOverrides(
+              state: forecastState([
+                forecastCurriculumState(
+                  projection: const Projection(
+                    status: ProjectionStatus.behindPace,
+                    projectedFinish: '2029-03-14',
+                    deadline: '2029-09-10',
+                  ),
+                  dailyTarget: 3,
+                  subTracks: {
+                    schoolSubTrackId: shortfallSubTrack(
+                      id: schoolSubTrackId,
+                      name: 'School',
+                      shortfall: 40,
+                      lastNode: const NodeEntry(
+                        level: 'chapter',
+                        ref: 'Mishnah Berakhot 3',
+                      ),
+                      windowEnd: '2027-07-31',
+                    ),
+                    rebbeSubTrackId: shortfallSubTrack(
+                      id: rebbeSubTrackId,
+                      name: 'Rebbe',
+                      shortfall: 12,
+                      lastNode: const NodeEntry(
+                        level: 'masechta',
+                        ref: 'Mishnah Beitzah',
+                      ),
+                    ),
+                  },
+                ),
+              ]),
+              // The production opener, not a stand-in.
+              detailOpener: null,
+            ) +
+            [
+              // The real detail screen renders over a failed read, so this test
+              // needs no sub-track data: it proves the route and the id.
+              subTrackDetailProvider.overrideWith(
+                (ref, id) =>
+                    AsyncError(StateError('detail $id'), StackTrace.empty),
               ),
-              dailyTarget: 3,
-              subTracks: {
-                schoolSubTrackId: shortfallSubTrack(
-                  id: schoolSubTrackId,
-                  name: 'School',
-                  shortfall: 40,
-                  lastNode: const NodeEntry(
-                    level: 'chapter',
-                    ref: 'Mishnah Berakhot 3',
-                  ),
-                  windowEnd: '2027-07-31',
-                ),
-                rebbeSubTrackId: shortfallSubTrack(
-                  id: rebbeSubTrackId,
-                  name: 'Rebbe',
-                  shortfall: 12,
-                  lastNode: const NodeEntry(
-                    level: 'masechta',
-                    ref: 'Mishnah Beitzah',
-                  ),
-                ),
-              },
-            ),
-          ]),
-          // The production opener, not a stand-in.
-          detailOpener: null,
-        ),
+            ],
       ),
     );
     await tester.pumpAndSettle();
@@ -129,23 +128,20 @@ void main() {
       await tester.pumpAndSettle();
 
       final top = router.topMatch;
-      expect(top.name, 'SubTrackDetailRoute');
-      expect(top.path, subTrackDetailRoutePath);
+      expect(top.name, SubTrackDetailRoute.name);
       expect(top.params.optString('subTrackId'), id);
-      expect(find.text('sub-track detail $id'), findsOneWidget);
+      expect(router.currentPath, '/settings/tracks/sub-tracks/$id');
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is SubTrackDetailScreen && w.subTrackId == id,
+        ),
+        findsOneWidget,
+      );
 
       await router.maybePop();
       await tester.pumpAndSettle();
       expect(router.topMatch.path, _dashboardPath);
     }
-  });
-
-  test('the Manage tracks hub path is not mistaken for the detail', () {
-    final router = _productionRouter();
-    // The hub is registered at the detail path's prefix; only a full match
-    // on the detail route counts.
-    expect(router.matcher.match('/settings/tracks'), isNotNull);
-    expect(resolvesSubTrackDetail(router, ''), isFalse);
   });
 }
 
@@ -161,17 +157,13 @@ class _PassGuard extends AutoRouteGuard {
       resolver.next();
 }
 
-/// The production [AppRouter]'s whole route table, plus Story 2.6's
-/// (DNI-497) route contract exactly as `story/DNI-497` registers it:
-/// top-level `SubTrackDetailRoute` at [subTrackDetailRoutePath], behind the
-/// auth guard. It proves the Dashboard's push lands on that route, with the
-/// requested id, and that no route already in the app (the Manage tracks
-/// hub at the path's prefix, a redirect, a wildcard) answers it first. The
-/// real `SubTrackDetailRoute` replaces the contract stand-in once DNI-497
-/// is on integ/sub-tracks (bead learning-tracker-fyh.217); the first test
-/// above checks the real registration, so a different path or name there
-/// fails this file.
-class _ProductionTablePlusDetail extends RootStackRouter {
+/// The production [AppRouter]'s whole route table, including Story 2.6's
+/// (DNI-497) real `SubTrackDetailRoute`, plus a route that mounts the
+/// Dashboard forecast (the shortfall cards under the on-track card). It
+/// proves the Dashboard's push lands on that route, with the requested id,
+/// and that no route already in the app (the Manage tracks hub at the
+/// path's prefix, a redirect, a wildcard) answers it first.
+class _ProductionTableWithDashboard extends RootStackRouter {
   final _app = AppRouter(
     authGuard: _PassGuard(),
     profileGuard: _ProfileGuard(),
@@ -192,17 +184,6 @@ class _ProductionTablePlusDetail extends RootStackRouter {
         ),
       ),
     ),
-    // The real detail screen needs the sub-track providers; the first test
-    // checks its registration, this one the push.
-    ..._app.routes.where((r) => r.name != 'SubTrackDetailRoute'),
-    NamedRouteDef(
-      name: 'SubTrackDetailRoute',
-      path: subTrackDetailRoutePath,
-      guards: [_app.authGuard],
-      builder: (context, data) => Text(
-        'sub-track detail '
-        '${data.inheritedPathParams.getString('subTrackId')}',
-      ),
-    ),
+    ..._app.routes,
   ];
 }

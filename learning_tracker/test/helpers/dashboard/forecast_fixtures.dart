@@ -76,9 +76,9 @@ SubTrackState shortfallSubTrack({
   lastShortfallNode: shortfall > 0 ? lastNode : null,
 );
 
-/// A [SubTrackDetailOpener] as if the sub-track detail route (DNI-497) were
-/// registered: every warning offers *View {name} →*, whose tap does
-/// nothing.
+/// A [SubTrackDetailOpener] for surfaces pumped without a router: every
+/// warning offers *View {name} →* (as the production opener does under the
+/// app router), whose tap does nothing.
 VoidCallback? registeredDetailOpener(
   BuildContext context,
   ShortfallWarning warning,
@@ -94,8 +94,8 @@ VoidCallback? registeredDetailOpener(
 /// (a never-completing future keeps the role unresolved).
 ///
 /// [detailOpener] resolves *View {name} →*; the default
-/// [registeredDetailOpener] stands in for an app that registers the
-/// sub-track detail route, since these surfaces are pumped without a
+/// [registeredDetailOpener] stands in for the app router's
+/// `SubTrackDetailRoute` push, since these surfaces are pumped without a
 /// router. Null keeps the production [subTrackDetailAction].
 List<Override> forecastOverrides({
   bool parent = true,

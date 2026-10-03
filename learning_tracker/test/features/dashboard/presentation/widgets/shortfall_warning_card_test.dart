@@ -6,6 +6,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -162,7 +163,7 @@ void main() {
     testWidgets('View {name} pushes the sub-track detail route', (
       tester,
     ) async {
-      final router = _DashboardRouter(withDetailRoute: true);
+      final router = _DashboardRouter();
       await _pumpRouted(tester, router);
       final button = tester.widget<TextButton>(
         find.byKey(const Key('shortfallCardView')),
@@ -176,18 +177,6 @@ void main() {
         router.currentPath,
         '/settings/tracks/sub-tracks/$schoolSubTrackId',
       );
-    });
-
-    testWidgets('before the detail route is registered (DNI-497) the card '
-        'offers no View action and opens nothing else', (tester) async {
-      final router = _DashboardRouter(withDetailRoute: false);
-      await _pumpRouted(tester, router);
-
-      expect(find.byType(ShortfallWarningCard), findsOneWidget);
-      expect(find.byKey(const Key('shortfallCardView')), findsNothing);
-      expect(find.text('View School'), findsNothing);
-      expect(router.currentPath, '/');
-      expect(tester.takeException(), isNull);
     });
 
     testWidgets('without a router the card offers no View action', (
@@ -266,13 +255,11 @@ void main() {
 }
 
 /// A real router shaped like the app's for this tap: the Dashboard, the
-/// Manage tracks hub and, when [withDetailRoute], the DNI-497 sub-track
-/// detail path. The opener is the production one.
+/// Manage tracks hub and the DNI-497 sub-track detail, registered under
+/// [SubTrackDetailRoute]'s name and path. The opener is the production one;
+/// `sub_track_detail_route_test.dart` runs the same tap over the whole
+/// production route table.
 class _DashboardRouter extends RootStackRouter {
-  _DashboardRouter({required this.withDetailRoute});
-
-  final bool withDetailRoute;
-
   @override
   List<AutoRoute> get routes => [
     NamedRouteDef(
@@ -292,13 +279,12 @@ class _DashboardRouter extends RootStackRouter {
       path: '/settings/tracks',
       builder: (context, data) => const Text('manage tracks'),
     ),
-    if (withDetailRoute)
-      NamedRouteDef(
-        name: 'TestSubTrackDetailRoute',
-        path: subTrackDetailRoutePath,
-        builder: (context, data) =>
-            Text('detail:${data.inheritedPathParams.getString('subTrackId')}'),
-      ),
+    NamedRouteDef(
+      name: SubTrackDetailRoute.name,
+      path: '/settings/tracks/sub-tracks/:subTrackId',
+      builder: (context, data) =>
+          Text('detail:${data.inheritedPathParams.getString('subTrackId')}'),
+    ),
   ];
 }
 
