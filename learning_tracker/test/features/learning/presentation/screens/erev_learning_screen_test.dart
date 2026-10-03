@@ -678,6 +678,62 @@ void main() {
       await _unmount(tester);
     });
 
+    testWidgets('the section Up to… is a 48dp target announced with its '
+        'track', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final world = _World(now: _local(2026, 10, 9, 9))
+        ..planned = {
+          '2026-10-10': [_task('Mishnah Peah 1:1')],
+        };
+      await _pump(tester, _app(world));
+      final upTo = find.byKey(const ValueKey('erevUpTo-2026-10-10-mishnayos'));
+      await tester.ensureVisible(upTo);
+      final size = tester.getSize(
+        find.descendant(of: upTo, matching: find.byType(TextButton)),
+      );
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(find.bySemanticsLabel('Record up to, Mishnayos'), findsOneWidget);
+      semantics.dispose();
+      await _unmount(tester);
+    });
+
+    testWidgets('RTL mirrors the section header: Up to… sits on the left', (
+      tester,
+    ) async {
+      final world = _World(now: _local(2026, 10, 9, 9))
+        ..planned = {
+          '2026-10-10': [_task('Mishnah Peah 1:1')],
+        };
+      await _pump(
+        tester,
+        _app(world, locale: const Locale('he'), hebrewTerms: true),
+      );
+      final upTo = find.byKey(const ValueKey('erevUpTo-2026-10-10-mishnayos'));
+      final heading = find.text('מתוכנן לשבת');
+      await tester.ensureVisible(upTo);
+      expect(tester.getCenter(upTo).dx, lessThan(tester.getCenter(heading).dx));
+      await _unmount(tester);
+    });
+
+    testWidgets('dark theme paints planned rows with the dark card token', (
+      tester,
+    ) async {
+      final world = _World(now: _local(2026, 10, 9, 9))
+        ..planned = {
+          '2026-10-10': [_task('Mishnah Peah 1:1')],
+        };
+      await _pump(tester, _app(world, theme: AppTheme.darkTheme()));
+      final row = tester.widget<Material>(
+        find.byKey(
+          const ValueKey('erevPlannedRow-mishnayos-Mishnah Peah 1:1-1'),
+        ),
+      );
+      expect(row.color, AppPalette.dark.brandCreamCard);
+      expect(tester.takeException(), isNull);
+      await _unmount(tester);
+    });
+
     testWidgets('tablet width uses the same Learn composition', (tester) async {
       final world = _World(now: _local(2026, 10, 9, 9))
         ..planned = {
