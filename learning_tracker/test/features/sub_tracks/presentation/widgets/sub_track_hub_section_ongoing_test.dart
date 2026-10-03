@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
@@ -44,6 +45,7 @@ SubTrack _ongoing(
 Future<SubTrackHarness> _pump(
   WidgetTester tester, {
   List<SubTrack> seed = const [],
+  Widget? child,
 }) async {
   tester.view.physicalSize = const Size(430, 1600);
   tester.view.devicePixelRatio = 1;
@@ -63,9 +65,11 @@ Future<SubTrackHarness> _pump(
         ),
       ],
       retry: (_, _) => null,
-      child: const Scaffold(
+      child: Scaffold(
         body: SingleChildScrollView(
-          child: SubTrackHubSection(curriculumId: subTrackTestCurriculum),
+          child:
+              child ??
+              const SubTrackHubSection(curriculumId: subTrackTestCurriculum),
         ),
       ),
     ),
@@ -158,9 +162,20 @@ void main() {
     expect(find.text('Ongoing · 5/week'), findsOneWidget);
   });
 
-  testWidgets('AC-6: an ongoing row opens its edit form', (tester) async {
-    await _pump(tester, seed: [_ongoing(1, name: 'Rebbe Cohen')]);
-    await tester.tap(find.text('Rebbe Cohen'));
+  testWidgets('AC-6: an ongoing sub-track\'s Edit (the detail ⋮, UX-DR-53) '
+      'opens its edit form', (tester) async {
+    final track = _ongoing(1, name: 'Rebbe Cohen');
+    await _pump(
+      tester,
+      seed: [track],
+      child: Builder(
+        builder: (context) => TextButton(
+          onPressed: () => openSubTrackForm(context, track),
+          child: const Text('edit'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('edit'));
     await tester.pumpAndSettle();
     expect(find.text('Edit ongoing sub-track'), findsOneWidget);
     expect(

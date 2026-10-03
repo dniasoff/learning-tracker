@@ -206,13 +206,13 @@ void main() {
       expect(launched, [school.id]);
     });
 
-    testWidgets('an ongoing sub-track has no Edit (its form is DNI-496); '
-        'the menu holds only DNI-499 End and Delete', (tester) async {
+    testWidgets('an ongoing sub-track has Edit (its form is DNI-496) beside '
+        'DNI-499 End and Delete', (tester) async {
       h.seed(subTracks: [school]);
       await pump(tester);
       await tester.tap(find.byKey(const ValueKey('subTrackDetailMenu')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('subTrackMenu:edit')), findsNothing);
+      expect(find.byKey(const ValueKey('subTrackMenu:edit')), findsOneWidget);
       expect(find.byKey(const ValueKey('subTrackMenu:end')), findsOneWidget);
       expect(find.byKey(const ValueKey('subTrackMenu:delete')), findsOneWidget);
     });

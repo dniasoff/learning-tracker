@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_route.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_actions.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -44,10 +45,10 @@ final subTrackFormLauncherProvider = Provider<SubTrackFormLauncher?>(
 );
 
 /// The sub-track types whose metadata form exists; ⋮ → *Edit* shows only
-/// for these. Story 2.4 (DNI-495) built the school-year form; Story 2.5
-/// (DNI-496) adds [SubTrackType.ongoing] here and to [openSubTrackForm].
+/// for these: the school-year form (Story 2.4, DNI-495) and the ongoing
+/// form (Story 2.5, DNI-496).
 final subTrackFormTypesProvider = Provider<Set<SubTrackType>>(
-  (ref) => const {SubTrackType.schoolYear},
+  (ref) => const {SubTrackType.schoolYear, SubTrackType.ongoing},
 );
 
 /// Opens [track]'s metadata form (UX-DR-53: Edit moved from the hub row
@@ -63,7 +64,11 @@ Future<void> openSubTrackForm(BuildContext context, SubTrack track) async {
         ),
       );
     case SubTrackType.ongoing:
-      throw UnsupportedError('The ongoing sub-track form is DNI-496');
+      await openOngoingSubTrackForm(
+        context,
+        curriculumId: track.curriculumId,
+        subTrackId: track.id,
+      );
   }
 }
 

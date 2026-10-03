@@ -45,15 +45,15 @@ void main() {
   final school = detailSubTrack(10, 'School', const [peah]);
 
   group('⋮ registry', () {
-    test('Edit opens the metadata form by default, and shows only for a '
-        'sub-track type that has a form (school year; ongoing is DNI-496)', () {
+    test('Edit opens the metadata form by default, for both sub-track types '
+        '(school year, DNI-495; ongoing, DNI-496)', () {
       final c = ProviderContainer();
       addTearDown(c.dispose);
       expect(c.read(subTrackFormLauncherProvider), isNotNull);
       final edit = c.read(subTrackDetailMenuActionsProvider).first;
       expect(edit.id, 'edit');
       expect(edit.visibleFor(engineDetail(_schoolYear(school))), isTrue);
-      expect(edit.visibleFor(engineDetail(school)), isFalse, reason: 'ongoing');
+      expect(edit.visibleFor(engineDetail(school)), isTrue, reason: 'ongoing');
     });
 
     test('a bound launcher adds Edit, visible to the parent on a live '
