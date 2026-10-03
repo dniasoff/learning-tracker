@@ -35,9 +35,8 @@ import {
 //    validation, field-level merges, the `change_log` entry, tombstones and
 //    idempotent replay. None of these callables checks a permission itself.
 //
-// B. LEGACY callables not governed by AD-38 — tutorResetCompletion,
-//    tutorUpdateGamificationSettings and tutorEditProfile. They keep the
-//    per-call grant contract:
+// B. LEGACY callables not governed by AD-38 — tutorUpdateGamificationSettings
+//    and tutorEditProfile. They keep the per-call grant contract:
 //      1. Caller must be authenticated.
 //      2. Grant must be active and grant.tutor_uid must equal the caller uid.
 //      3. grant.parent_uid must equal the supplied ownerUid.
@@ -204,66 +203,6 @@ async function writeAuditLog(
     logger.warn(`writeAuditLog: failed for grant=${grantId} action=${action}`, e);
   }
 }
-
-// ── tutorResetCompletion ──────────────────────────────────────────────────────
-//
-// Deletes a completion document from the child's profile as a correction path.
-// Requires can_edit_learning (AD-53, DNI-487). Retired by Story 1.26 (DNI-488).
-//
-// Expects:
-//   {
-//     grantId: string,
-//     ownerUid: string,
-//     profileId: string,   // ULID
-//     completionId: string,   // the doc-id to delete
-//   }
-//
-// Returns: { success: true }
-
-export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, completionId } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof completionId !== "string" || !completionId)
-    throw new HttpsError("invalid-argument", "completionId must be a non-empty string");
-
-  // The grant check and the delete run in ONE transaction (AD-53, DNI-487
-  // AC-6): a revocation that commits first aborts the delete (the grant is
-  // re-read on retry and denied), so a revoked tutor can never remove a
-  // completion.
-  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
-    const verified = await verifyTutorGrant(
-      callerUid, grantId, ownerUid, profileId, "can_edit_learning", txn,
-    );
-    const completionRef = verified.profilePath.collection("completions").doc(completionId);
-    // Capture before-value for audit log.
-    const beforeSnap = await txn.get(completionRef);
-    txn.delete(completionRef);
-    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
-  });
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "completion_reset",
-    `profile/${profileId}/completions/${completionId}`,
-    beforeValue, null, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorResetCompletion: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} completionId=${completionId}`,
-  );
-
-  return { success: true };
-});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // A. Governed callables — rerouted through writeWithChangeLog (AD-38, AD-53)

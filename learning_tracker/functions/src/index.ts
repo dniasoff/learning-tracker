@@ -16,7 +16,6 @@ export {
   onUserDeleted,
   deleteLearnerProfile,
   deleteCurriculumTrack,
-  deleteBulkMarkedCompletions,
   deleteAccountData,
 } from "./deletes";
 
@@ -25,8 +24,6 @@ export { purgeExpiredAuditLogs } from "./audit_log_purge";
 export { billingKillSwitch } from "./billing_kill_switch";
 
 export { ownerOversizedGovernedWrite } from "./owner_oversized_governed_write";
-
-export { tutorBulkPriorCompletions } from "./tutor_bulk_completions";
 
 export { tutorRecordLearning, tutorUnlearn, tutorVoidLearning } from "./tutor_learning";
 
@@ -44,7 +41,6 @@ export {
 export { updateTutorGrantPermissions } from "./tutor_invites";
 
 export {
-  tutorResetCompletion,
   tutorUpsertGoal,
   tutorDeleteGoal,
   tutorUpsertTrack,
