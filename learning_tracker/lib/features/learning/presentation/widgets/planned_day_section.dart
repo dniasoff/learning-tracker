@@ -52,7 +52,7 @@ String erevDayName(BuildContext context, WidgetRef ref, LockedDay day) {
   return DateFormat.EEEE(locale).format(parseCivilDay(day.date));
 }
 
-/// Whether [task] is a review (chazara) row, recorded at its stage.
+/// Whether [task] is a review (chazara) row.
 bool _isReview(DailyTask task) =>
     task.priority == DailyTaskPriority.overdueChazara ||
     task.priority == DailyTaskPriority.scheduledChazara;
@@ -60,7 +60,7 @@ bool _isReview(DailyTask task) =>
 /// Records [tasks] through `LearningCommands` and shows the shared
 /// recorded / Undo snackbar: one `dated` main-track capture per
 /// (curriculum, stage) group, in row order, `learned_on` the learner's
-/// today. Calls [onRecorded] with the rows written and [onUndone] when the
+/// today and `stage` the row's planner stage. Calls [onRecorded] with the rows written and [onUndone] when the
 /// Undo voids them. A refused capture (the lock started, AC-8) shows the
 /// lock notice; the selection is dropped, never retried.
 Future<void> recordErevTasks(
@@ -79,10 +79,13 @@ Future<void> recordErevTasks(
     messenger.showSnackBar(SnackBar(content: Text(l10n.captureNotSaved)));
     return;
   }
-  final groups = <(String, int?), List<DailyTask>>{};
+  // Every row is recorded at its planner stage, as today's list does
+  // (`stage: task.stageOrder`): a new-learning row carries the first stage
+  // order, so the leaf opens its AD-32 review cycle; a review row carries
+  // its review stage.
+  final groups = <(String, int), List<DailyTask>>{};
   for (final task in tasks) {
-    final stage = _isReview(task) ? task.stageOrder : null;
-    (groups[(task.curriculumId.storageKey, stage)] ??= []).add(task);
+    (groups[(task.curriculumId.storageKey, task.stageOrder)] ??= []).add(task);
   }
   final eventIds = <String>[];
   final written = <ErevRowKey>{};

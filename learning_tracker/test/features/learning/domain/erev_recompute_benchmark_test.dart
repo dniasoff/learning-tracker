@@ -172,6 +172,8 @@ void main() {
       source: LearningEvent.sourceMain,
       dateState: DateState.dated,
       learnedOn: _dates.first,
+      // The planned row's stage, as the erev tick writes it.
+      stage: ticked.stageOrder,
       recordedAt: _now,
       actor: _actor,
     );

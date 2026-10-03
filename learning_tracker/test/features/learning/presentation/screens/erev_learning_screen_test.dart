@@ -408,7 +408,10 @@ void main() {
         // The command stamps learned_on = the learner's today and
         // recorded_at = now; the view passes neither.
         'learnedOn': null,
-        'stage': null,
+        // A new-learning row records at its planner stage (the first
+        // stage order), as today's list does, so the leaf opens its
+        // review cycle (AD-32).
+        'stage': 1,
       });
       expect(find.text('1 recorded'), findsOneWidget);
       // Shown ticked until the live plan drops it.
