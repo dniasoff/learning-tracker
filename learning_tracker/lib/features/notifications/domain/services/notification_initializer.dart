@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -20,6 +23,9 @@ typedef ProfileSwitchCallback = void Function(String profileId);
 /// parent PIN gate still applies.
 typedef ParentPushTapCallback = void Function(ParentPushTap tap);
 
+/// Selects the profile of a catch-up reminder tap; false means no route opens.
+typedef CatchUpTapCallback = Future<bool> Function(String profileId);
+
 /// Initializes the notification system at app startup.
 ///
 /// Call once from [main] after [WidgetsFlutterBinding.ensureInitialized].
@@ -30,6 +36,7 @@ class NotificationInitializer {
     this.onSwitchProfile,
     this.onParentPushTap,
     this.readLaunchPayload,
+    this.onCatchUpTap,
   });
 
   final NotificationGateway service;
@@ -52,6 +59,9 @@ class NotificationInitializer {
   /// when none). Defaults to the plugin's launch details; injectable for
   /// tests.
   final Future<String?> Function()? readLaunchPayload;
+
+  /// Selects the profile of a catch-up reminder before opening Learn.
+  final CatchUpTapCallback? onCatchUpTap;
 
   static Future<String?> _pluginLaunchPayload() async {
     final details = await FlutterLocalNotificationsPlugin()
@@ -81,7 +91,9 @@ class NotificationInitializer {
       );
     }
 
-    await service.initialize(onNotificationTap: _handleNotificationTap);
+    await service.initialize(
+      onNotificationTap: _handleNotificationTap,
+    );
     final parentPushTap = onParentPushTap;
     if (parentPushTap != null) {
       try {
@@ -99,12 +111,31 @@ class NotificationInitializer {
     }
   }
 
+  /// Routes a tapped notification payload. Visible for focused tests.
+  @visibleForTesting
+  Future<void> handleNotificationTap(String? payload) =>
+      _routeNotificationTap(payload);
+
   void _handleNotificationTap(String? payload) {
+    unawaited(_routeNotificationTap(payload));
+  }
+
+  Future<void> _routeNotificationTap(String? payload) async {
     if (payload == null) return;
 
     final parentPush = ParentPushTap.tryParsePayload(payload);
     if (parentPush != null) {
       onParentPushTap?.call(parentPush);
+      return;
+    }
+
+    if (payload.startsWith('$catchUpReminderPayload:')) {
+      final parts = payload.split(':');
+      final callback = onCatchUpTap;
+      if (parts.length != 2 || parts[1].isEmpty || callback == null) return;
+      if (await callback(parts[1])) {
+        await router.navigate(const LearningRoute());
+      }
       return;
     }
 

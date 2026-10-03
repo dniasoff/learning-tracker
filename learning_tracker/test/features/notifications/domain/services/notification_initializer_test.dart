@@ -83,4 +83,45 @@ void main() {
     verify(() => router.navigate(any())).called(1);
     expect(taps, isEmpty);
   });
+
+  test('a catch-up tap selects its profile, then opens Learn', () async {
+    final selected = <String>[];
+    final initializer = NotificationInitializer(
+      service: gateway,
+      router: router,
+      onCatchUpTap: (profileId) async {
+        selected.add(profileId);
+        return true;
+      },
+    );
+    const profileId = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+    await initializer.handleNotificationTap(
+      '$catchUpReminderPayload:$profileId',
+    );
+    expect(selected, [profileId]);
+    final route = verify(() => router.navigate(captureAny())).captured.single;
+    expect((route as PageRouteInfo).routeName, LearningRoute.name);
+  });
+
+  test('a declined or malformed catch-up tap opens nothing', () async {
+    final selected = <String>[];
+    final initializer = NotificationInitializer(
+      service: gateway,
+      router: router,
+      onCatchUpTap: (profileId) async {
+        selected.add(profileId);
+        return false;
+      },
+    );
+    const profileId = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+    await initializer.handleNotificationTap(
+      '$catchUpReminderPayload:$profileId',
+    );
+    await initializer.handleNotificationTap('$catchUpReminderPayload:');
+    await initializer.handleNotificationTap(
+      '$catchUpReminderPayload:$profileId:extra',
+    );
+    expect(selected, [profileId]);
+    verifyNever(() => router.navigate(any()));
+  });
 }
