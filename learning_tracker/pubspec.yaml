@@ -100,6 +100,9 @@ dependencies:
   share_plus: ^13.3.0
   # PDF generation (sub-tracks stack, story 1.1)
   pdf: ^3.13.1
+  # Unicode bidi reordering of mixed Hebrew/Latin lines in the report PDF
+  # (story 5.4); already resolved as a dependency of pdf.
+  bidi: ^2.0.13
 
   # HTTP client
   dio: ^5.9.1
