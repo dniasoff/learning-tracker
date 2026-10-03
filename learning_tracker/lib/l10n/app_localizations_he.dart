@@ -996,6 +996,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String subTrackLifecycleNextYearSourceEnded(String name) {
+    return '$name הסתיים או נמחק, ולכן השנה הבאה לא נוספה.';
+  }
+
+  @override
   String get subTrackLifecycleQueued => 'נשמר במכשיר. יסונכרן כשתחזרו לרשת.';
 
   @override

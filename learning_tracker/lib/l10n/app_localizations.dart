@@ -1763,6 +1763,12 @@ abstract class AppLocalizations {
   /// **'{name} added for {yearLabel}'**
   String subTrackLifecycleNextYearSaved(String name, String yearLabel);
 
+  /// Snackbar when Add next year is saved after its source sub-track was ended or deleted (e.g. on another device). Nothing was saved. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} was ended or deleted, so next year wasn\'t added.'**
+  String subTrackLifecycleNextYearSourceEnded(String name);
+
   /// Snackbar when an End, Delete or Add next year is queued offline and not yet accepted by the server (AD-54). DRAFT copy, pending zc4.
   ///
   /// In en, this message translates to:

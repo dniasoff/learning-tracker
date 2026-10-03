@@ -999,6 +999,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String subTrackLifecycleNextYearSourceEnded(String name) {
+    return '$name was ended or deleted, so next year wasn\'t added.';
+  }
+
+  @override
   String get subTrackLifecycleQueued =>
       'Saved on this device. It will sync when you\'re back online.';
 

@@ -909,6 +909,15 @@
       }
     }
   },
+  "subTrackLifecycleNextYearSourceEnded": "{name} was ended or deleted, so next year wasn't added.",
+  "@subTrackLifecycleNextYearSourceEnded": {
+    "description": "Snackbar when Add next year is saved after its source sub-track was ended or deleted (e.g. on another device). Nothing was saved. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "subTrackLifecycleQueued": "Saved on this device. It will sync when you're back online.",
   "@subTrackLifecycleQueued": {
     "description": "Snackbar when an End, Delete or Add next year is queued offline and not yet accepted by the server (AD-54). DRAFT copy, pending zc4."

@@ -505,6 +505,7 @@
   "subTrackLifecycleReadOnlyNote": "מסלול המשנה הזה הסתיים. אי אפשר לשנות אותו.",
   "subTrackLifecycleNextYearTitle": "שנת הלימודים הבאה",
   "subTrackLifecycleNextYearSaved": "{name} נוסף לשנת {yearLabel}",
+  "subTrackLifecycleNextYearSourceEnded": "{name} הסתיים או נמחק, ולכן השנה הבאה לא נוספה.",
   "subTrackLifecycleQueued": "נשמר במכשיר. יסונכרן כשתחזרו לרשת.",
   "subTrackLifecycleSyncAddNextYear": "הוספת {name} לשנת {yearLabel}",
   "subTrackLifecycleSyncDelete": "מחיקת {name}",

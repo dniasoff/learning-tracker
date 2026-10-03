@@ -114,7 +114,9 @@ void main() {
       await tester.pumpAndSettle();
       await _save(tester);
 
-      expect(world.commands.calls, ['createSubTrack(addNextYear)']);
+      expect(world.commands.calls, [
+        'createSubTrack(nextYearOf: ${source.id})',
+      ]);
       expect(world.stored, hasLength(2));
       final created = world.stored.firstWhere((t) => t.id != source.id);
       expect(created.id, isNot(source.id));
@@ -154,7 +156,9 @@ void main() {
       world.repo.seed(world.scope, [other]);
       await _save(tester);
 
-      expect(world.commands.calls, ['createSubTrack(addNextYear)']);
+      expect(world.commands.calls, [
+        'createSubTrack(nextYearOf: ${source.id})',
+      ]);
       expect(
         find.text('This academic year already has a school sub-track'),
         findsOneWidget,
@@ -162,6 +166,36 @@ void main() {
       expect(find.byType(SchoolYearSubTrackForm), findsOneWidget);
       expect(_field(tester, 'subTrackFormName'), 'School 2');
       expect(world.stored.map((t) => t.id).toSet(), {source.id, other.id});
+      expect(world.repo.entries, isEmpty);
+      expect(world.analytics.lifecycles, isEmpty);
+    });
+
+    testWidgets('a source another device ended after the form opened is '
+        'refused at save: no row, the tombstone stays, and the parent is '
+        'told why', (tester) async {
+      final source = schoolYear();
+      final world = LifecycleWorld([source]);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, source.id);
+      await tester.ensureVisible(_pill);
+      await tester.tap(_pill);
+      await tester.pumpAndSettle();
+      expect(find.byType(SchoolYearSubTrackForm), findsOneWidget);
+
+      // Another device ends the source between render and save; the
+      // command re-reads it at save time.
+      final ended = schoolYear(endReason: SubTrackEndReason.ended);
+      world.commands.beforeNext = () => world.repo.seed(world.scope, [ended]);
+      await _save(tester);
+
+      expect(world.commands.calls, [
+        'createSubTrack(nextYearOf: ${source.id})',
+      ]);
+      expect(
+        find.text("School was ended or deleted, so next year wasn't added."),
+        findsOneWidget,
+      );
+      expect(world.stored.single, ended);
       expect(world.repo.entries, isEmpty);
       expect(world.analytics.lifecycles, isEmpty);
     });

@@ -22,7 +22,7 @@ typedef SubTrackNextYearForm =
 
 /// The form behind *Add next year*: Story 2.4's (DNI-495) school-year form
 /// in its next-year mode, prefilled from [nextYearSubTrackDraft] and saving
-/// a new sub-track through `createSubTrack(addNextYear: true)`. A seam so
+/// a new sub-track through `createSubTrack(nextYearOf: source.id)`. A seam so
 /// the detail tests can observe the pill without the whole form.
 final subTrackNextYearFormProvider = Provider<SubTrackNextYearForm>(
   (ref) => openNextYearSubTrackForm,

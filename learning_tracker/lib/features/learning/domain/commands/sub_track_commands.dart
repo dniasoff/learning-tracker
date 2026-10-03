@@ -261,13 +261,20 @@ final class SubTrackCommands {
       _ledger._controller;
 
   /// Creates a sub-track from [draft]. [subTrackId] is the new doc ULID
-  /// (minted when omitted); it is the entry's `entity_id`. [addNextYear]
-  /// reports the create as *Add next year* (Story 2.8) in
-  /// `subtrack_lifecycle`; the write is identical.
+  /// (minted when omitted); it is the entry's `entity_id`.
+  ///
+  /// [nextYearOf] makes the create the *Add next year* rollover of that
+  /// school-year sub-track (Story 2.8): the source is re-read in the same
+  /// complete read as the AD-45 check, and the create is refused
+  /// (`rejected(targetNotFound)`, nothing written) when the source is gone,
+  /// tombstoned (ended or deleted, e.g. on another device after the form
+  /// opened), not a school year, or of another curriculum. The write is
+  /// otherwise identical and is reported as `add_next_year` in
+  /// `subtrack_lifecycle`. The source is never written.
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
-    bool addNextYear = false,
+    String? nextYearOf,
   }) async {
     if (actor.role == ActorRole.child) return const CaptureResult.childLimit();
     final id = subTrackId ?? _newId();
@@ -291,6 +298,15 @@ final class SubTrackCommands {
     if (siblings.any((s) => s.id == id)) {
       return const CaptureResult.rejected(CaptureRejection.invalid);
     }
+    if (nextYearOf != null) {
+      final source = _find(siblings, nextYearOf);
+      if (source == null ||
+          source.isEnded ||
+          source.type != SubTrackType.schoolYear ||
+          source.curriculumId != draft.curriculumId) {
+        return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+      }
+    }
     final refused = await _validate(candidate, prior: null, siblings: siblings);
     if (refused != null) return refused;
     if (!_encodes(candidate)) {
@@ -307,7 +323,7 @@ final class SubTrackCommands {
       ),
       onConfirmed: _emitter(
         candidate,
-        addNextYear
+        nextYearOf != null
             ? SubTrackLifecycleAction.addNextYear
             : SubTrackLifecycleAction.create,
       ),

@@ -110,6 +110,10 @@ final class SubTrackLifecycleCommands implements LearningCommands {
   /// The result of the next call (one-shot), returned without writing.
   CaptureResult? nextResult;
 
+  /// Runs once just before the next call reaches the real commands
+  /// (one-shot): a change another device makes between render and save.
+  FutureOr<void> Function()? beforeNext;
+
   Future<CaptureResult> _run(
     String name,
     Future<CaptureResult> Function() command,
@@ -120,6 +124,9 @@ final class SubTrackLifecycleCommands implements LearningCommands {
       nextResult = null;
       return scripted;
     }
+    final before = beforeNext;
+    beforeNext = null;
+    await before?.call();
     return command();
   }
 
@@ -127,13 +134,15 @@ final class SubTrackLifecycleCommands implements LearningCommands {
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
-    bool addNextYear = false,
+    String? nextYearOf,
   }) => _run(
-    addNextYear ? 'createSubTrack(addNextYear)' : 'createSubTrack',
+    nextYearOf != null
+        ? 'createSubTrack(nextYearOf: $nextYearOf)'
+        : 'createSubTrack',
     () => inner.createSubTrack(
       draft,
       subTrackId: subTrackId,
-      addNextYear: addNextYear,
+      nextYearOf: nextYearOf,
     ),
   );
 

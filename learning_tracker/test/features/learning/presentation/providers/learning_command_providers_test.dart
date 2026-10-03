@@ -467,7 +467,7 @@ void main() {
             ground: [],
           ),
           subTrackId: ulidC,
-          addNextYear: true,
+          nextYearOf: ulidD,
         );
         expect(result, isA<CaptureSuccess>());
         expect((result as CaptureSuccess).queued, isFalse);

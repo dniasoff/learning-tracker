@@ -364,8 +364,9 @@ class SubTrackLifecycleSyncNotifier
   }
 }
 
-/// Saves the *Add next year* [draft] (AC-1) as a new sub-track through
-/// `createSubTrack(addNextYear: true)` of the active learner's commands,
+/// Saves the *Add next year* [draft] (AC-1) of school-year sub-track
+/// [sourceId] as a new sub-track through `createSubTrack(nextYearOf:
+/// sourceId)` of the active learner's commands,
 /// captured before the save ([resolveSubTrackLifecycleOrigin]) so a queued
 /// result tracks under this learner even if the parent switches learners
 /// while it awaits the server. A queued result (AD-54) is handed to
@@ -373,20 +374,26 @@ class SubTrackLifecycleSyncNotifier
 /// year*. Null when no learner or commands are available; nothing is then
 /// written.
 ///
-/// AD-45 limits are re-checked by the shared command against the latest
-/// complete sub-track read at save time, not the render-time snapshot, so
-/// a year another device took after render is refused. Two creates made at
+/// AD-45 limits and the source itself are re-checked by the shared command
+/// against the latest complete sub-track read at save time, not the
+/// render-time snapshot: a year another device took after render is
+/// refused, and so is a source another device ended or deleted after the
+/// form opened (`rejected(targetNotFound)`; nothing is written). Two creates made at
 /// once while both devices are offline can both sync; AD-45 has the engine
 /// tolerate that excess. Server-side enforcement for owner batches is
 /// DNI-492's follow-up (learning-tracker-fyh.136; accepted risk fyh.127).
 Future<CaptureResult?> saveNextYearSubTrack(
   SubTrackLifecycleReader read,
   SubTrackDraft draft, {
+  required String sourceId,
   required String yearLabel,
 }) async {
   final origin = await resolveSubTrackLifecycleOrigin(read);
   if (origin == null) return null;
-  final result = await origin.commands.createSubTrack(draft, addNextYear: true);
+  final result = await origin.commands.createSubTrack(
+    draft,
+    nextYearOf: sourceId,
+  );
   if (result is CaptureSuccess &&
       result.queued &&
       result.changeIds.isNotEmpty) {

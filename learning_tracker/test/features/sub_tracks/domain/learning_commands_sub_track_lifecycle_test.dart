@@ -34,12 +34,14 @@ final _now = DateTime.utc(2026, 10, 1, 9);
 /// The 2026–27 school year the parent set up: Sep–Jul, 8 a week.
 SubTrack _school({
   String id = ulidA,
+  String curriculumId = 'shas',
   int academicYear = 2026,
   String windowStart = '2026-09-01',
   String? windowEnd = '2027-07-31',
+  SubTrackEndReason? endReason,
 }) => SubTrack(
   id: id,
-  curriculumId: 'shas',
+  curriculumId: curriculumId,
   name: 'School',
   type: SubTrackType.schoolYear,
   academicYear: academicYear,
@@ -50,6 +52,8 @@ SubTrack _school({
   learnsOnShabbos: true,
   ground: const [_berakhot],
   lastChangeId: ulidE,
+  endedAt: endReason == null ? null : _now,
+  endReason: endReason,
 );
 
 /// The 2027–28 draft *Add next year* saves (prefill, unedited).
@@ -116,7 +120,7 @@ void main() {
 
   group('T6 subtrack_lifecycle for the explicit lifecycle actions (AD-47)', () {
     test('Add next year reports add_next_year, not create', () async {
-      await commands.createSubTrack(_nextYear, addNextYear: true);
+      await commands.createSubTrack(_nextYear, nextYearOf: ulidA);
       expect(analytics.lifecycles, [
         (
           curriculumId: 'shas',
@@ -153,7 +157,7 @@ void main() {
           learnsOnShabbos: true,
           ground: [],
         ),
-        addNextYear: true,
+        nextYearOf: ulidA,
       );
       expect(analytics.lifecycles, isEmpty);
     });
@@ -183,7 +187,7 @@ void main() {
       final source = repo.tracksOf(scope).single;
       final result = await commands.createSubTrack(
         nextYearSubTrackDraft(source),
-        addNextYear: true,
+        nextYearOf: ulidA,
       );
       expect(result, isA<CaptureSuccess>());
       final entry = repo.entries.single.$2;
@@ -229,7 +233,7 @@ void main() {
       );
       expect(leap.windowEnd, '2028-02-29');
       expect(
-        await commands.createSubTrack(draft, addNextYear: true),
+        await commands.createSubTrack(draft, nextYearOf: ulidB),
         isA<CaptureSuccess>(),
       );
     });
@@ -246,9 +250,57 @@ void main() {
       ]);
       final result = await commands.createSubTrack(
         nextYearSubTrackDraft(_school()),
-        addNextYear: true,
+        nextYearOf: ulidA,
       );
       expect(result, isA<CaptureRejected>());
+      expect(repo.calls, isEmpty);
+      expect(repo.entries, isEmpty);
+    });
+
+    for (final (label, reason) in [
+      ('ended', SubTrackEndReason.ended),
+      ('deleted', SubTrackEndReason.deleted),
+    ]) {
+      test('a source $label on another device after the form opened refuses '
+          'Add next year before any write; the tombstone stays', () async {
+        final draft = nextYearSubTrackDraft(_school());
+        // The other device's tombstone reaches the read between render
+        // and save.
+        final tombstoned = _school(endReason: reason);
+        repo.seed(scope, [tombstoned]);
+        final result = await commands.createSubTrack(draft, nextYearOf: ulidA);
+        expect(
+          result,
+          isA<CaptureRejected>().having(
+            (r) => r.reason,
+            'reason',
+            CaptureRejection.targetNotFound,
+          ),
+        );
+        expect(repo.calls, isEmpty);
+        expect(repo.entries, isEmpty);
+        expect(repo.tracksOf(scope).single, tombstoned);
+        expect(analytics.lifecycles, isEmpty);
+      });
+    }
+
+    test('a missing source, or one of another curriculum or type, refuses '
+        'Add next year before any write', () async {
+      final draft = nextYearSubTrackDraft(_school());
+      expect(
+        await commands.createSubTrack(draft, nextYearOf: ulidB),
+        isA<CaptureRejected>().having(
+          (r) => r.reason,
+          'reason',
+          CaptureRejection.targetNotFound,
+        ),
+      );
+      final otherCurriculum = _school(id: ulidC, curriculumId: 'other');
+      repo.seed(scope, [otherCurriculum]);
+      expect(
+        await commands.createSubTrack(draft, nextYearOf: ulidC),
+        isA<CaptureRejected>(),
+      );
       expect(repo.calls, isEmpty);
       expect(repo.entries, isEmpty);
     });
@@ -262,7 +314,7 @@ void main() {
       final results = [
         await commands.createSubTrack(
           nextYearSubTrackDraft(_school()),
-          addNextYear: true,
+          nextYearOf: ulidA,
         ),
         await commands.endSubTrack(ulidA),
         await commands.deleteSubTrack(ulidA),
@@ -278,7 +330,7 @@ void main() {
       expect(
         await commands.createSubTrack(
           nextYearSubTrackDraft(_school()),
-          addNextYear: true,
+          nextYearOf: ulidA,
         ),
         isA<CaptureSuccess>(),
       );
@@ -299,7 +351,7 @@ void main() {
       expect(
         await commands.createSubTrack(
           nextYearSubTrackDraft(_school()),
-          addNextYear: true,
+          nextYearOf: ulidA,
         ),
         isA<CaptureRejected>(),
       );
@@ -464,7 +516,7 @@ void main() {
         'acknowledged', () async {
       repo.offline = true;
       final result =
-          await commands.createSubTrack(_nextYear, addNextYear: true)
+          await commands.createSubTrack(_nextYear, nextYearOf: ulidA)
               as CaptureSuccess;
       expect(result.queued, isTrue);
       expect(analytics.lifecycles, isEmpty);
