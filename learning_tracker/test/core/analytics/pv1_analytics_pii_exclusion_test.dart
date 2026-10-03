@@ -50,6 +50,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/analytics/profile_analytics_hash.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -183,6 +184,28 @@ void main() {
       _assertNoBannedPii(params, event.name);
     }
   });
+
+  test(
+    'DNI-503 profile hash is a user property, never an event parameter',
+    () async {
+      const profileId = 'synthetic-profile-id';
+      final hasher = ProfileAnalyticsHasher(
+        saltStore: const _FixedAnalyticsSaltStore('pv1-install-salt'),
+      );
+      final hash = await hasher.hash(profileId);
+      await analytics.setUserProperty('profile_hash', hash);
+      await analytics.logEvent(
+        AnalyticsEvent.capture,
+        parameters: {'curriculum_id': 'synthetic-curriculum', 'event_count': 1},
+      );
+
+      expect(analytics.userProperties, {'profile_hash': hash});
+      final params = analytics.lastParamsOf(AnalyticsEvent.capture)!;
+      expect(params.values, isNot(contains(profileId)));
+      expect(params.values, isNot(contains(hash)));
+      _assertNoBannedPii(params, AnalyticsEvent.capture);
+    },
+  );
 
   /// Asserts the LAST fired [eventName]'s parameter map contains no
   /// [_bannedPiiKeys] substring, and records [eventName] as exercised (see
@@ -530,6 +553,18 @@ void main() {
           'review, not silently fall through every list.',
     );
   });
+}
+
+final class _FixedAnalyticsSaltStore implements AnalyticsSaltStore {
+  const _FixedAnalyticsSaltStore(this.salt);
+
+  final String salt;
+
+  @override
+  Future<String?> read() async => salt;
+
+  @override
+  Future<void> write(String salt) async {}
 }
 
 // ── Fakes for the direct call-site sweep ─────────────────────────────────

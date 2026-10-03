@@ -204,6 +204,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       _autoSelectRan = false;
     }
 
+    ref.watch(profileAnalyticsIdentityProvider);
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final profiles = profilesAsync.asData?.value ?? <LearnerProfileEntity>[];

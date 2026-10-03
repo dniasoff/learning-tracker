@@ -201,6 +201,7 @@ class LoggingAnalyticsService extends AnalyticsService {
 /// Use in acceptance/unit tests to assert events fire exactly once per trigger.
 class FakeAnalyticsService extends AnalyticsService {
   final List<_FiredEvent> _events = [];
+  final Map<String, String?> userProperties = {};
 
   List<_FiredEvent> get events => List.unmodifiable(_events);
 
@@ -219,6 +220,11 @@ class FakeAnalyticsService extends AnalyticsService {
   @override
   Future<void> logEvent(String name, {Map<String, Object?>? parameters}) async {
     _events.add(_FiredEvent(name: name, parameters: parameters ?? {}));
+  }
+
+  @override
+  Future<void> setUserProperty(String name, String? value) async {
+    userProperties[name] = value;
   }
 }
 
