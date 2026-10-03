@@ -24,10 +24,11 @@ import 'package:learning_tracker/features/content_browsing/presentation/widgets/
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/held_ground_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -62,6 +63,11 @@ class _ContentHierarchyScreenState
   /// back exactly that batch.
   final _ticked = <String>{};
   final _refsByEvent = <String, List<String>>{};
+
+  /// Event ids the server rejected for good and no retry has saved yet. A
+  /// rejection can be reported before the capture call returns, so a
+  /// batch never ticks the leaves of these ids (AD-54 Recovery).
+  final _failedEvents = <String>{};
   bool _capturing = false;
 
   @override
@@ -94,6 +100,11 @@ class _ContentHierarchyScreenState
   Widget build(BuildContext context) {
     final curriculum = _curriculumOrNull;
 
+    if (curriculum != null) {
+      // Story 2.10 (AC-9): keep the sub-track sources ready for the
+      // free-tick sheet (empty on a tutor device, AC-11).
+      ref.watch(subTrackSourceChoicesProvider(curriculum.storageKey));
+    }
     if (curriculum == null) {
       final l10nEarly = AppLocalizations.of(context)!;
       return Scaffold(
@@ -178,8 +189,14 @@ class _ContentHierarchyScreenState
         }
       },
       child: PendingCaptureFailureListener(
-        onFailure: (failure) => _rollBack(failure.eventIds),
-        onRetried: (failure) => _reapply(failure.eventIds),
+        onFailure: (failure) {
+          _failedEvents.addAll(failure.eventIds);
+          _rollBack(failure.eventIds);
+        },
+        onRetried: (failure) {
+          _failedEvents.removeAll(failure.eventIds);
+          _reapply(failure.eventIds);
+        },
         child: Scaffold(
           appBar: AppBar(
             title: AppBarTitle(
@@ -286,6 +303,9 @@ class _ContentHierarchyScreenState
                 ),
               ),
 
+              // Story 1.24 (DNI-486): why a tutor's ticks are disabled.
+              const TutorWriteNote(padding: EdgeInsets.fromLTRB(16, 8, 16, 0)),
+
               // Content list
               Expanded(
                 child: itemsAsync.when(
@@ -391,6 +411,11 @@ class _ContentHierarchyScreenState
                       itemBuilder: (context, index) {
                         final item = groupedItems[index];
                         final ready = allItems != null && !_capturing;
+                        // DNI-486: a tutor without editing access, offline,
+                        // or with the talmid locked sees the tick disabled.
+                        final tutorBlocked = ref
+                            .watch(tutorWriteAvailabilityProvider)
+                            .blocksTutor;
                         final (heldBy, heldWhole) = heldOf(item);
                         return ContentItemTile(
                           item: item,
@@ -408,7 +433,8 @@ class _ContentHierarchyScreenState
                           onTick: ready
                               ? () => _tick(curriculum, allItems, item)
                               : null,
-                          onLongPress: ready
+                          tickDisabled: tutorBlocked,
+                          onLongPress: ready && !tutorBlocked
                               ? () => _tickUpToHere(curriculum, allItems, item)
                               : null,
                         );
@@ -459,17 +485,10 @@ class _ContentHierarchyScreenState
       useHebrew: domainTermLabels(ref).isHebrew,
       transliterationVariant: ref.read(currentTransliterationVariantProvider),
     ),
-    gesture: CaptureGesture.taskTick,
   );
 
   /// Long-press: "Tick up to here" — the row's leaves and every earlier
   /// leaf of its masechta, inclusive, in corpus order.
-  ///
-  /// Every candidate is written for the chosen source, including leaves
-  /// already learnt from another source: positions are tracked per source,
-  /// so dropping them would leave the chosen source's position behind. The
-  /// command writes the whole batch, so this surface skips nothing and
-  /// reports `skipped_count` 0.
   Future<void> _tickUpToHere(
     CurriculumId curriculum,
     List<ContentItem> items,
@@ -482,7 +501,6 @@ class _ContentHierarchyScreenState
       unitDepth: unitDepthOf(curriculum, items),
     ),
     title: AppLocalizations.of(context)!.captureTickUpToHere,
-    gesture: CaptureGesture.upTo,
   );
 
   /// Confirms the source once (Home default), then issues ONE capture for
@@ -491,7 +509,6 @@ class _ContentHierarchyScreenState
     CurriculumId curriculum, {
     required List<ContentItem> leaves,
     required String title,
-    required CaptureGesture gesture,
     ContentItem? node,
   }) async {
     if (leaves.isEmpty || _capturing) return;
@@ -500,6 +517,14 @@ class _ContentHierarchyScreenState
       title: title,
       count: leaves.length,
       today: ref.read(localDayClockProvider).today(),
+      // Home (default), each onHome sub-track of this curriculum by name,
+      // then Before tracking (FR-3, UX-DR-20; Story 2.10 AC-9).
+      extraSources: [
+        for (final s in ref.read(
+          subTrackSourceChoicesProvider(curriculum.storageKey),
+        ))
+          FreeTickSourceOption(id: s.id, label: s.name),
+      ],
     );
     if (choice == null || !mounted) return;
     setState(() => _capturing = true);
@@ -524,34 +549,47 @@ class _ContentHierarchyScreenState
         source: choice.source,
         dateState: choice.dateState,
         learnedOn: choice.learnedOn,
-        gesture: gesture,
-        taps: choice.taps,
       );
       if (!mounted) return;
       final batch = <String, List<String>>{};
-      if (result case CaptureSuccess(:final eventIds)) {
-        if (eventIds.length == refs.length && !asNode) {
-          for (var i = 0; i < refs.length; i++) {
-            batch[eventIds[i]] = [refs[i]];
-          }
-        } else {
-          for (final id in eventIds) {
-            batch[id] = refs;
-          }
-        }
+      var savedLeaves = leaves.length;
+      if (result case CaptureSuccess(
+        :final eventIds,
+        :final rejectedEventIds,
+        :final keptNotCounted,
+      )) {
+        final saved = recordedBatch(
+          refs: asNode ? null : refs,
+          nodeRefs: refs,
+          eventIds: eventIds,
+          rejectedEventIds: rejectedEventIds,
+          // A tutor capture stamped inside the learner's lock is kept but
+          // not counted (DNI-486 AC-7): it ticks nothing.
+          failed: {..._failedEvents, ...keptNotCounted},
+        );
+        batch.addAll(saved.byEvent);
+        keptNotCounted.forEach(batch.remove);
+        savedLeaves = saved.ticked.length;
         setState(() {
           _refsByEvent.addAll(batch);
-          _ticked.addAll(refs);
+          _ticked.addAll(saved.ticked);
         });
       }
       showCaptureOutcome(
         context,
         result: result,
         commands: commands,
+        // Never claim the leaves of a rejected chunk (AD-54).
         message: AppLocalizations.of(
           context,
-        )!.captureRecordedCount(leaves.length),
+        )!.captureRecordedCount(savedLeaves),
         onUndone: () => _rollBack(batch.keys),
+        learnerName: ref.read(tutorLearnerNameProvider),
+        // Story 4.2 (AC-1): a tutor's free tick on one of the talmid's
+        // sub-tracks offers no Undo (Story 4.1 voids are main-only).
+        undoable:
+            choice.source == LearningEvent.sourceMain ||
+            ref.read(activeTutoredProfileSelectionProvider) == null,
       );
     } on Exception {
       if (mounted) {
@@ -768,4 +806,46 @@ class _RootCurriculumChip extends StatelessWidget {
       child: chip,
     );
   }
+}
+
+/// The leaves one Browse capture recorded, keyed by event id, and the
+/// leaves to show ticked now.
+///
+/// [refs] is the per-leaf batch in leaf order, or null for a node capture
+/// (its events each cover all of [nodeRefs]). `LearningCommands.capture`
+/// writes one event per leaf with ascending ids, so the sorted union of
+/// [eventIds] and [rejectedEventIds] lines up with [refs]. Every planned
+/// event is keyed (a retry of a rejected chunk re-ticks its leaves), but
+/// only the leaves of saved or queued events that are not in [failed] are
+/// ticked. A plan that does not line up ticks nothing: the learner state
+/// then shows what was saved.
+@visibleForTesting
+({Map<String, List<String>> byEvent, Set<String> ticked}) recordedBatch({
+  required List<String>? refs,
+  required List<String> nodeRefs,
+  required List<String> eventIds,
+  required List<String> rejectedEventIds,
+  required Set<String> failed,
+}) {
+  final notSaved = {...rejectedEventIds, ...failed};
+  final planned = [...eventIds, ...rejectedEventIds]..sort();
+  if (refs == null) {
+    final saved = eventIds.any((id) => !notSaved.contains(id));
+    return (
+      byEvent: {for (final id in planned) id: nodeRefs},
+      ticked: saved && rejectedEventIds.isEmpty ? nodeRefs.toSet() : const {},
+    );
+  }
+  if (planned.length != refs.length) {
+    return (byEvent: const {}, ticked: const {});
+  }
+  return (
+    byEvent: {
+      for (final (i, id) in planned.indexed) id: [refs[i]],
+    },
+    ticked: {
+      for (final (i, id) in planned.indexed)
+        if (!notSaved.contains(id)) refs[i],
+    },
+  );
 }

@@ -115,7 +115,8 @@ class MishnaHistoryScreen extends ConsumerWidget {
         ref.watch(tutorWriteAvailabilityProvider).blocksTutor;
     final history = ref.watch(mishnaHistoryViewProvider(_args));
     // Story 2.10 (AC-10): the sub-track sources Change source offers, kept
-    // ready for the picker (empty on a tutor device, AC-11).
+    // ready for the picker — on a tutor device the talmid's, while the
+    // tutor may write (Story 4.2 AC-1).
     ref.watch(subTrackSourceChoicesProvider(curriculumId));
     final theme = Theme.of(context);
 
