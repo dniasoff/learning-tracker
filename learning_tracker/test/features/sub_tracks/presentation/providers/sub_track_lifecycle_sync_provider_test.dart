@@ -2,7 +2,9 @@
 /// year stays pending across a rebuild of `learningCommandsProvider` (a
 /// parent-PIN, profile or clock change) and across switching learners and
 /// back; a settle in flight still lands and a refused write is retried
-/// through the current commands.
+/// through the current commands. A queued result that arrives after the
+/// parent switched learners is tracked, settled and retried under the
+/// learner the write was issued for, never the newly active one.
 library;
 
 import 'dart:async';
@@ -101,7 +103,7 @@ void main() {
             write: SubTrackLifecycleWrite.end,
             name: 'School',
           ),
-          first,
+          SubTrackLifecycleOrigin(scope: scopeA, commands: first),
         );
     expect(status(), SubTrackLifecycleSyncStatus.waiting);
 
@@ -128,7 +130,9 @@ void main() {
     final first = await trackQueued(accepted: false);
     expect(status(), SubTrackLifecycleSyncStatus.notSaved);
 
-    await c.read(subTrackLifecycleSyncProvider.notifier).retry(_changeId);
+    await c
+        .read(subTrackLifecycleSyncProvider.notifier)
+        .retry(c.read(subTrackLifecycleSyncProvider)[_changeId]!);
     expect(status(), SubTrackLifecycleSyncStatus.saved);
     expect(first.calls.map((call) => call.name), [
       'whenSubTrackChangeConfirmed',
@@ -149,7 +153,7 @@ void main() {
             write: SubTrackLifecycleWrite.delete,
             name: 'School',
           ),
-          first,
+          SubTrackLifecycleOrigin(scope: scopeA, commands: first),
         );
 
     c.read(activeScope.notifier).set(scopeB);
@@ -165,5 +169,128 @@ void main() {
     verdict.complete(true);
     await pumpEventQueue();
     expect(status(), SubTrackLifecycleSyncStatus.saved);
+  });
+
+  Map<String, SubTrackLifecycleSync> storeOf(LearnerScope scope) =>
+      c.read(subTrackLifecycleSyncStoreProvider(scope)).writes;
+
+  test('a queued result that arrives after a learner switch stays with the '
+      'learner it was issued for, and retries through that learner\'s '
+      'commands', () async {
+    // The origin is captured before the command runs.
+    final origin = (await resolveSubTrackLifecycleOrigin(c.read))!;
+    expect(origin.scope, scopeA);
+    final commandsA = origin.commands as FakeLearningCommands;
+    final verdict = Completer<bool>();
+    commandsA.subTrackConfirmations[_changeId] = verdict;
+
+    // The parent switches to B while the command awaits the server.
+    c.read(activeScope.notifier).set(scopeB);
+    final commandsB = await commands();
+    await pumpEventQueue();
+    expect(commandsB, isNot(same(commandsA)));
+
+    // The queued result arrives now, with B active.
+    c
+        .read(subTrackLifecycleSyncProvider.notifier)
+        .track(
+          const SubTrackLifecycleSync(
+            changeId: _changeId,
+            write: SubTrackLifecycleWrite.end,
+            name: 'School',
+          ),
+          origin,
+        );
+    await pumpEventQueue();
+    expect(storeOf(scopeB), isEmpty, reason: 'never in the active store');
+    expect(c.read(subTrackLifecycleSyncProvider), isEmpty);
+    expect(
+      storeOf(scopeA)[_changeId]?.status,
+      SubTrackLifecycleSyncStatus.waiting,
+    );
+
+    // A refuses it; settlement went through A's commands only.
+    verdict.complete(false);
+    await pumpEventQueue();
+    expect(
+      storeOf(scopeA)[_changeId]?.status,
+      SubTrackLifecycleSyncStatus.notSaved,
+    );
+    expect(commandsB.calls, isEmpty);
+
+    // A retry of A's write while B is active never resends through B's
+    // commands.
+    await c
+        .read(subTrackLifecycleSyncProvider.notifier)
+        .retry(storeOf(scopeA)[_changeId]!);
+    expect(commandsB.calls, isEmpty);
+    expect(
+      storeOf(scopeA)[_changeId]?.status,
+      SubTrackLifecycleSyncStatus.notSaved,
+    );
+
+    // Back on A: the pending recovery state is shown and its retry goes
+    // through A's commands.
+    c.read(activeScope.notifier).set(scopeA);
+    final commandsA2 = await commands();
+    await pumpEventQueue();
+    expect(status(), SubTrackLifecycleSyncStatus.notSaved);
+    expect(c.read(subTrackLifecycleSyncProvider)[_changeId]?.scope, scopeA);
+    await c
+        .read(subTrackLifecycleSyncProvider.notifier)
+        .retry(c.read(subTrackLifecycleSyncProvider)[_changeId]!);
+    expect(status(), SubTrackLifecycleSyncStatus.saved);
+    expect(commandsA2.calls.map((call) => call.name), ['retry']);
+    expect(commandsB.calls, isEmpty);
+    expect(storeOf(scopeB), isEmpty);
+  });
+
+  test('removing a write after a learner switch removes it only from the '
+      'learner it was issued for', () async {
+    final first = await commands();
+    first.subTrackConfirmations[_changeId] = Completer<bool>()..complete(true);
+    c
+        .read(subTrackLifecycleSyncProvider.notifier)
+        .track(
+          const SubTrackLifecycleSync(
+            changeId: _changeId,
+            write: SubTrackLifecycleWrite.delete,
+            name: 'School',
+          ),
+          SubTrackLifecycleOrigin(scope: scopeA, commands: first),
+        );
+    await pumpEventQueue();
+    expect(status(), SubTrackLifecycleSyncStatus.saved);
+    // The record the panel holds when it shows A's confirmation.
+    final shown = c.read(subTrackLifecycleSyncProvider)[_changeId]!;
+
+    c.read(activeScope.notifier).set(scopeB);
+    await commands();
+    await pumpEventQueue();
+    c
+        .read(subTrackLifecycleSyncStoreProvider(scopeB))
+        .track(
+          const SubTrackLifecycleSync(
+            changeId: _changeId,
+            write: SubTrackLifecycleWrite.end,
+            name: 'Other',
+          ),
+          built.last,
+        );
+
+    // The panel forgets A's write after B became active.
+    c.read(subTrackLifecycleSyncProvider.notifier).remove(shown);
+    expect(storeOf(scopeA), isEmpty);
+    expect(storeOf(scopeB), contains(_changeId));
+  });
+
+  test('no origin resolves while no learner commands exist', () async {
+    final none = ProviderContainer.test(
+      overrides: [
+        activeLearnerScopeProvider.overrideWith((ref) async => scopeA),
+        learningCommandsProvider.overrideWith((ref) async => null),
+      ],
+    );
+    expect(await resolveSubTrackLifecycleOrigin(none.read), isNull);
   });
 }

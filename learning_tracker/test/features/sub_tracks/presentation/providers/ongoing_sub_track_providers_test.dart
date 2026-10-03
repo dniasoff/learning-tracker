@@ -1,7 +1,7 @@
 // DNI-496 (Story 2.5): the form-facing selectors — learner civil today in
 // the profile's time zone (AD-41), the curriculum's sub-tracks as a
 // complete read, the AD-45 ongoing count, calendar-program detection and
-// the parent-session gate (DNI-495 seam).
+// the parent-session gate.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -15,7 +15,7 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
-import 'package:learning_tracker/features/sub_tracks/data/repositories/ongoing_sub_track_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -157,6 +157,37 @@ void main() {
       );
     });
 
+    test('re-reads at the learner midnight in the profile zone', () async {
+      intents.emit(c0Scope(), _intent(timeZone: 'Asia/Jerusalem'));
+      // The limit reads on the old day: track 2's window ends on 7 Sep.
+      subTracks.seed(c0Scope(), [_track(1), _track(2, end: '2026-09-07')]);
+      // 20:59:59.95 UTC on 7 Sep is 50ms before midnight in Jerusalem
+      // (UTC+3 in September).
+      final clock = FakeLocalDayClock(
+        DateTime.utc(2026, 9, 7, 20, 59, 59, 950),
+      );
+      final c = ProviderContainer(
+        overrides: [
+          activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
+          subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
+          governedIntentRepositoryProvider.overrideWith((ref) async => intents),
+          localDayClockProvider.overrideWithValue(clock),
+        ],
+      );
+      addTearDown(c.dispose);
+      final before = await read(c);
+      expect(before!.today, '2026-09-07');
+      expect(before.timeZone, 'Asia/Jerusalem');
+      expect(before.ongoingInUse(), 2);
+      clock.advance(const Duration(milliseconds: 60));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      final after = await c.read(
+        ongoingSubTrackContextProvider(_curriculum).future,
+      );
+      expect(after!.today, '2026-09-08');
+      expect(after.ongoingInUse(), 1);
+    });
+
     test('null while no learner is active', () async {
       expect(await read(container(scoped: false)), isNull);
     });
@@ -172,6 +203,45 @@ void main() {
         ongoingSubTrackContextProvider(_curriculum).future,
       );
       expect(again!.ongoingInUse(), 2);
+    });
+  });
+
+  group('learner civil day helpers', () {
+    test('todayAt and atDay re-judge a read on a later instant', () {
+      final read = OngoingSubTrackContext(
+        scope: c0Scope(),
+        curriculumId: _curriculum,
+        today: '2026-09-07',
+        timeZone: 'Asia/Jerusalem',
+        subTracks: [
+          _track(1),
+          _track(2, end: '2026-09-07'),
+        ],
+        calendarProgram: false,
+      );
+      expect(read.todayAt(DateTime.utc(2026, 9, 7, 20, 59)), '2026-09-07');
+      final later = read.todayAt(DateTime.utc(2026, 9, 7, 21, 1));
+      expect(later, '2026-09-08');
+      expect(identical(read.atDay('2026-09-07'), read), isTrue);
+      final next = read.atDay(later);
+      expect(next.today, '2026-09-08');
+      expect(next.timeZone, 'Asia/Jerusalem');
+      expect(next.subTracks, read.subTracks);
+      expect(read.ongoingInUse(), 2);
+      expect(next.ongoingInUse(), 1);
+    });
+
+    test('untilNextLearnerDay waits for the zone midnight, DST-aware', () {
+      expect(
+        untilNextLearnerDay('UTC', DateTime.utc(2026, 9, 7, 23)),
+        const Duration(hours: 1, microseconds: 1),
+      );
+      // Jerusalem leaves summer time on 25 Oct 2026: that civil day is
+      // 25 hours long, and midnight is 22:00 UTC after it.
+      expect(
+        untilNextLearnerDay('Asia/Jerusalem', DateTime.utc(2026, 10, 24, 21)),
+        const Duration(hours: 25, microseconds: 1),
+      );
     });
   });
 
@@ -232,6 +302,74 @@ void main() {
         'follows the tutor write gate', () async {
       expect(await session(mode: ProfileMode.adult, tutored: true), isTrue);
     });
+  });
+
+  group('ongoingSubTrackWriteScopeProvider', () {
+    LearnerProfileEntity profile(ProfileMode mode, {String? id}) =>
+        LearnerProfileEntity(
+          profileId: id ?? profileUlid,
+          displayName: 'Yehuda',
+          mode: mode,
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+
+    Future<Object?> grant({
+      required ProfileMode mode,
+      String? profileId,
+      String? pinFor,
+      bool scoped = true,
+    }) async {
+      final c = ProviderContainer(
+        overrides: [
+          activeProfileProvider.overrideWith(
+            (ref) async => profile(mode, id: profileId),
+          ),
+          parentPinAuthenticatedProfileIdProvider.overrideWith(
+            () => _Pin(pinFor),
+          ),
+          activeTutoredProfileSelectionProvider.overrideWith(
+            () => _Tutored(false),
+          ),
+          activeLearnerScopeProvider.overrideWith(
+            (ref) async => scoped ? c0Scope() : null,
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      final sub = c.listen(ongoingSubTrackWriteScopeProvider, (_, __) {});
+      addTearDown(sub.close);
+      return c.read(ongoingSubTrackWriteScopeProvider.future);
+    }
+
+    test('an adult learner is granted its own scope', () async {
+      expect(await grant(mode: ProfileMode.adult), c0Scope());
+    });
+
+    test('a child is granted only with its parent PIN session', () async {
+      expect(await grant(mode: ProfileMode.child), isNull);
+      expect(
+        await grant(mode: ProfileMode.child, pinFor: profileUlid),
+        c0Scope(),
+      );
+    });
+
+    test('no learner scope grants nothing', () async {
+      expect(await grant(mode: ProfileMode.adult, scoped: false), isNull);
+    });
+
+    test(
+      'a profile and scope that disagree mid-switch grant nothing',
+      () async {
+        expect(
+          await grant(
+            mode: ProfileMode.adult,
+            profileId: '01ARZ3NDEKTSV4RRFFQ69G5FB2',
+          ),
+          isNull,
+        );
+      },
+    );
   });
 }
 

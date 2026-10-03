@@ -4,21 +4,23 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_screen.dart';
 
-/// Opens the ongoing form for [curriculumId]: a new sub-track, or
-/// [existing] for an edit. Resolves to the save outcome, or null when the
+/// Opens the ongoing form for [curriculumId]: a new sub-track, or the
+/// sub-track [subTrackId] for an edit. Only the id travels in the route;
+/// the form resolves the row from the bound learner's current read and
+/// refuses one that is missing, ended, not ongoing or of another
+/// curriculum. Resolves to the save outcome, or null when the
 /// parent leaves without saving.
 Future<OngoingSubTrackSaved?> openOngoingSubTrackForm(
   BuildContext context, {
   required String curriculumId,
-  SubTrack? existing,
+  String? subTrackId,
 }) => Navigator.of(context).push<OngoingSubTrackSaved>(
   MaterialPageRoute(
     builder: (_) => OngoingSubTrackFormScreen(
       curriculumId: curriculumId,
-      existing: existing,
+      subTrackId: subTrackId,
     ),
   ),
 );

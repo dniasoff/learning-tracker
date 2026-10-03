@@ -5,21 +5,30 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongo
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_route.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_screen.dart';
 
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
 
 void main() {
   testWidgets('openOngoingSubTrackForm pushes the form and pops null on back', (
     tester,
   ) async {
-    OngoingSubTrackSaved? result = const OngoingSubTrackSaved(queued: true);
+    OngoingSubTrackSaved? result = OngoingSubTrackSaved(
+      scope: c0Scope(),
+      queued: true,
+    );
     var done = false;
     await tester.pumpWidget(
       pumpApp(
         overrides: [
+          ongoingSubTrackWriteScopeProvider.overrideWith(
+            (ref) async => c0Scope(),
+          ),
           ongoingSubTrackContextProvider('mishnayos').overrideWith(
             (ref) async => OngoingSubTrackContext(
+              scope: c0Scope(),
               curriculumId: 'mishnayos',
               today: '2026-09-07',
+              timeZone: 'UTC',
               subTracks: const [],
               calendarProgram: false,
             ),

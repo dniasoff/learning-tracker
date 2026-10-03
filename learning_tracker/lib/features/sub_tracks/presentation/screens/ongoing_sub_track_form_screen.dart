@@ -10,13 +10,14 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
@@ -39,7 +40,15 @@ const kOngoingFormTabletBreakpoint = 600.0;
 /// A successful save, returned when the form closes.
 final class OngoingSubTrackSaved {
   /// Creates the outcome.
-  const OngoingSubTrackSaved({this.queued = false, this.changeIds = const []});
+  const OngoingSubTrackSaved({
+    required this.scope,
+    this.queued = false,
+    this.changeIds = const [],
+  });
+
+  /// The learner the write was made for. A later rejection of a queued
+  /// write is announced only while this learner is still the active one.
+  final LearnerScope scope;
 
   /// Whether the write is queued offline (AD-54); a later permanent
   /// rejection rolls it back (UX-DR-121).
@@ -59,6 +68,19 @@ final class OngoingSubTrackSaved {
 /// `createSubTrack` / `editSubTrack` only; the engine derives everything
 /// else (activity, capacity, target) from the stored values.
 ///
+/// An edit is opened by sub-track id only. The form resolves the row from
+/// the bound learner's current read and edits it only while it is a
+/// non-ended ongoing sub-track of [OngoingSubTrackFormScreen.curriculumId]
+/// (see [OngoingSubTrackContext.editableOngoing]); a stale or hand-made
+/// route for a missing, ended, school-year or other-curriculum row closes
+/// without writing. The same check runs again right before the write.
+///
+/// The form is bound to the learner it was opened for: it shows only while
+/// [ongoingSubTrackWriteScopeProvider] grants that learner (a parent
+/// session), closes itself when the active profile changes or the parent
+/// session ends, and re-checks the grant right before every write, so a
+/// direct push or a profile switch never writes to another learner.
+///
 /// A failed save keeps every entered value and offers a retry
 /// (UX-DR-120). At ≥ 600dp the form is capped at 600px beside a summary of
 /// the learner's sub-tracks (UX-DR-164).
@@ -66,14 +88,14 @@ class OngoingSubTrackFormScreen extends ConsumerStatefulWidget {
   const OngoingSubTrackFormScreen({
     super.key,
     required this.curriculumId,
-    this.existing,
+    this.subTrackId,
   });
 
   /// The curriculum's storage key.
   final String curriculumId;
 
-  /// The sub-track being edited, or null for a new one.
-  final SubTrack? existing;
+  /// The id of the sub-track being edited, or null for a new one.
+  final String? subTrackId;
 
   @override
   ConsumerState<OngoingSubTrackFormScreen> createState() =>
@@ -101,23 +123,29 @@ class _OngoingSubTrackFormScreenState
   bool _saving = false;
   bool _limitBlocked = false;
 
+  /// The learner this form writes for: the first scope the write gate
+  /// granted. Null until then.
+  LearnerScope? _boundScope;
+
+  /// Set once the form is closing because its grant was lost.
+  bool _closing = false;
+
+  /// The edited sub-track as resolved from the bound learner's read; null
+  /// for a create, and for an edit until the read arrives. It is the
+  /// baseline the parent's edits are measured from: only fields changed
+  /// from it are written.
+  SubTrack? _existing;
+
+  bool get _isEdit => widget.subTrackId != null;
+
   @override
   void initState() {
     super.initState();
-    final existing = widget.existing;
-    _name = TextEditingController(text: existing?.name ?? '');
-    _rate = TextEditingController(
-      text: existing == null
-          ? '$kOngoingDefaultRatePerWeek'
-          : formatOngoingNumber(existing.ratePerWeek),
-    );
-    _weeks = existing == null
-        ? const OngoingWeeksPrefill.initial()
-        : OngoingWeeksPrefill.forStored(existing.weeksPerYear);
+    _name = TextEditingController();
+    _rate = TextEditingController(text: '$kOngoingDefaultRatePerWeek');
+    _weeks = const OngoingWeeksPrefill.initial();
     _weeksText = TextEditingController(text: _weeks.weeksText);
-    _start = existing?.windowStart;
-    _end = existing?.windowEnd;
-    _shabbos = existing?.learnsOnShabbos ?? false;
+    _shabbos = false;
     for (final MapEntry(key: field, value: node) in _focus.entries) {
       node.addListener(() {
         if (!node.hasFocus && mounted) setState(() => _touched.add(field));
@@ -134,6 +162,62 @@ class _OngoingSubTrackFormScreenState
       node.dispose();
     }
     super.dispose();
+  }
+
+  /// Fills the fields from [existing], once, when an edit resolves.
+  void _prefill(SubTrack existing) {
+    _existing = existing;
+    _name.text = existing.name;
+    _rate.text = formatOngoingNumber(existing.ratePerWeek);
+    _weeks = OngoingWeeksPrefill.forStored(existing.weeksPerYear);
+    _weeksText.text = _weeks.weeksText;
+    _start = existing.windowStart;
+    _end = existing.windowEnd;
+    _shabbos = existing.learnsOnShabbos;
+  }
+
+  /// The row this edit may write, from [read]: null when [read] is another
+  /// learner's, or the row is missing, ended, not ongoing or of another
+  /// curriculum.
+  SubTrack? _editable(OngoingSubTrackContext read) =>
+      _isBound(read.scope) ? read.editableOngoing(widget.subTrackId!) : null;
+
+  bool _isBound(LearnerScope? scope) =>
+      scope != null && _boundScope != null && scope == _boundScope;
+
+  /// Whether the parent session still grants the bound learner, read fresh
+  /// (fails closed on any error).
+  Future<bool> _writeStillGranted() async {
+    try {
+      return _isBound(await ref.read(ongoingSubTrackWriteScopeProvider.future));
+    } on Object catch (error, stack) {
+      _log.error(
+        event: 'ongoing_sub_track_write_gate_failed',
+        exception: error,
+        stackTrace: stack,
+      );
+      return false;
+    }
+  }
+
+  /// Leaves the form without saving: its learner or parent session is gone.
+  void _close() {
+    if (_closing) return;
+    _closing = true;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) {
+        if (!mounted) return;
+        final route = ModalRoute.of(context);
+        if (route == null) return;
+        final navigator = Navigator.of(context);
+        if (route.isCurrent) {
+          navigator.pop();
+        } else {
+          // A picker is open above the form: drop the form under it.
+          navigator.removeRoute(route);
+        }
+      })
+      ..scheduleFrame();
   }
 
   OngoingFormValidation _validate(CivilDate today) =>
@@ -216,8 +300,20 @@ class _OngoingSubTrackFormScreenState
     );
   }
 
-  Future<void> _save(OngoingSubTrackContext data) async {
+  Future<void> _save(OngoingSubTrackContext read) async {
     if (_saving) return;
+    // Judge the save on the learner's civil today now, not when the form
+    // was read: a form left open across midnight must not default the
+    // start to yesterday or count the limit on a stale day (AD-41, AC-3).
+    final data = read.atDay(
+      read.todayAt(ref.read(localDayClockProvider).nowUtc()),
+    );
+    final shared = ongoingSubTrackContextProvider(widget.curriculumId);
+    final sharedToday = ref.read(shared).value?.today;
+    if (sharedToday != null && sharedToday != data.today) {
+      // The midnight re-read was late (a suspended app): refresh the hub.
+      ref.invalidate(shared);
+    }
     final validation = _validate(data.today);
     setState(() {
       _submitted = true;
@@ -225,31 +321,63 @@ class _OngoingSubTrackFormScreenState
     });
     if (!validation.isValid) return;
     final values = validation.values!;
-    final existing = widget.existing;
+    final bound = _boundScope;
+    if (bound == null || !_isBound(data.scope)) {
+      _close();
+      return;
+    }
+    // An edit writes only against the row as the bound learner's current
+    // read holds it; one that is gone, ended or no longer ongoing is not
+    // written (a stale route never edits another row).
+    final existing = _isEdit ? _editable(data) : null;
+    if (_isEdit && existing == null) {
+      _close();
+      return;
+    }
     if (existing == null && !ongoingCreateAllowed(data.ongoingInUse())) {
       setState(() => _limitBlocked = true);
       return;
     }
-    SubTrackEdit? edit;
-    if (existing != null) {
-      edit = values.editFrom(existing);
-      if (edit == null) {
-        Navigator.of(context).pop(const OngoingSubTrackSaved());
-        return;
-      }
+    if (existing != null &&
+        values.editFrom(existing, opened: _existing) == null) {
+      Navigator.of(context).pop(OngoingSubTrackSaved(scope: bound));
+      return;
     }
     setState(() => _saving = true);
-    CaptureResult result;
+    CaptureResult? result;
+    var unchanged = false;
     try {
       final commands = await ref.read(learningCommandsProvider.future);
-      if (commands == null) {
+      // Re-gate right before the write: the profile may have switched or
+      // the parent PIN session ended while the form was open.
+      if (!await _writeStillGranted()) {
+        result = null;
+      } else if (commands == null) {
         result = const CaptureResult.onlineRequired();
       } else if (existing == null) {
         result = await commands.createSubTrack(
           values.toDraft(widget.curriculumId),
         );
       } else {
-        result = await commands.editSubTrack(existing.id, edit!);
+        // Re-resolve the row from the latest read right before the write:
+        // it may have been ended or changed elsewhere since the tap.
+        final latest = await ref.read(
+          ongoingSubTrackContextProvider(widget.curriculumId).future,
+        );
+        final current = latest == null ? null : _editable(latest);
+        // Only the fields the parent changed from the row the form opened
+        // with are sent, so a change made elsewhere while the form was
+        // open is kept unless the parent edited that same field.
+        final latestEdit = current == null
+            ? null
+            : values.editFrom(current, opened: _existing);
+        if (current == null) {
+          result = null;
+        } else if (latestEdit == null) {
+          unchanged = true;
+        } else {
+          result = await commands.editSubTrack(current.id, latestEdit);
+        }
       }
     } on Object catch (error, stack) {
       _log.error(
@@ -261,11 +389,23 @@ class _OngoingSubTrackFormScreenState
     }
     if (!mounted) return;
     setState(() => _saving = false);
+    if (unchanged) {
+      Navigator.of(context).pop(OngoingSubTrackSaved(scope: bound));
+      return;
+    }
+    if (result == null) {
+      _close();
+      return;
+    }
     switch (result) {
       case CaptureSuccess(:final queued, :final changeIds):
-        Navigator.of(
-          context,
-        ).pop(OngoingSubTrackSaved(queued: queued, changeIds: changeIds));
+        Navigator.of(context).pop(
+          OngoingSubTrackSaved(
+            scope: bound,
+            queued: queued,
+            changeIds: changeIds,
+          ),
+        );
       case CaptureRejected(:final violations) when violations.isNotEmpty:
         _showViolations(violations, data);
       default:
@@ -304,7 +444,18 @@ class _OngoingSubTrackFormScreenState
           content: Text(l10n.ongoingSubTrackSaveFailed),
           action: SnackBarAction(
             label: l10n.actionRetry,
-            onPressed: () => unawaited(_save(data)),
+            // Retry with the values still in the form (UX-DR-120) against
+            // the latest sub-track read.
+            onPressed: () => unawaited(
+              _save(
+                ref
+                        .read(
+                          ongoingSubTrackContextProvider(widget.curriculumId),
+                        )
+                        .value ??
+                    data,
+              ),
+            ),
           ),
         ),
       );
@@ -323,10 +474,43 @@ class _OngoingSubTrackFormScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final gate = ref.watch(ongoingSubTrackWriteScopeProvider);
+    final granted = gate.hasError ? null : gate.value;
+    if (_boundScope == null && granted != null && !gate.isLoading) {
+      _boundScope = granted;
+    }
+    // Fail closed: an error, or a settled grant for no learner or another
+    // learner (a direct push without a parent session, a profile switch, a
+    // cleared PIN) closes the form; a reload keeps the bound learner.
+    var revoked =
+        _closing ||
+        gate.hasError ||
+        (gate.hasValue && !gate.isLoading && !_isBound(granted));
     final dataAsync = ref.watch(
       ongoingSubTrackContextProvider(widget.curriculumId),
     );
-    final title = widget.existing == null
+    // An edit resolves its row from the bound learner's settled read, and
+    // closes when that read has no editable row of that id (UX: the route
+    // was stale or never valid).
+    final read = dataAsync.hasError ? null : dataAsync.value;
+    var unresolved = false;
+    if (_isEdit && _boundScope != null && read != null) {
+      if (_isBound(read.scope)) {
+        final row = _editable(read);
+        if (row == null) {
+          if (!dataAsync.isLoading) revoked = true;
+          unresolved = true;
+        } else if (_existing == null) {
+          _prefill(row);
+        }
+      } else {
+        unresolved = true; // another learner's read, mid switch
+      }
+    } else if (_isEdit && _existing == null) {
+      unresolved = true;
+    }
+    if (revoked) _close();
+    final title = !_isEdit
         ? l10n.ongoingSubTrackFormTitle
         : l10n.ongoingSubTrackEditTitle;
     return Scaffold(
@@ -344,29 +528,40 @@ class _OngoingSubTrackFormScreenState
         ),
       ),
       body: switch (dataAsync) {
-        AsyncData(value: final data?) => LayoutBuilder(
-          builder: (context, constraints) {
-            final form = _buildForm(context, l10n, data);
-            if (constraints.maxWidth < kOngoingFormTabletBreakpoint) {
-              return form;
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: form,
-                ),
-                Expanded(
-                  child: _SubTrackSummaryPanel(
-                    subTracks: data.liveSubTracks,
-                    editingId: widget.existing?.id,
+        _ when revoked => const SizedBox.shrink(),
+        _ when _boundScope == null || (unresolved && _existing == null) =>
+          const Center(child: CircularProgressIndicator()),
+        // A reload (new rows, the learner's midnight) keeps the form on
+        // screen with the previous read instead of flashing a spinner.
+        AsyncValue(value: final read?) when !dataAsync.hasError =>
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Every rebuild judges the form on the learner's civil today
+              // now, so validation and the limit line never lag midnight.
+              final data = read.atDay(
+                read.todayAt(ref.read(localDayClockProvider).nowUtc()),
+              );
+              final form = _buildForm(context, l10n, data);
+              if (constraints.maxWidth < kOngoingFormTabletBreakpoint) {
+                return form;
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: form,
                   ),
-                ),
-              ],
-            );
-          },
-        ),
+                  Expanded(
+                    child: _SubTrackSummaryPanel(
+                      subTracks: data.liveSubTracks,
+                      editingId: widget.subTrackId,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         AsyncError(:final error, :final stackTrace) => AppErrorView(
           error: error,
           stackTrace: stackTrace,
@@ -470,6 +665,8 @@ class _OngoingSubTrackFormScreenState
             today: data.today,
             onPicked: (d) {
               _start = d;
+              // A new start re-checks an end already chosen (UX-DR-80).
+              if (_end != null) _touched.add(OngoingFormField.end);
               _clearCommandError(OngoingFormField.end);
             },
           ),

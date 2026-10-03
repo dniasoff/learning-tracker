@@ -2,15 +2,17 @@
 /// (Story 2.5 / DNI-496).
 ///
 /// Everything here reads through the Story 2.1 ports re-exported by
-/// `ongoing_sub_track_sources.dart`; no Firestore access is added. The
-/// derived activity state (`onHome`, `holdsGround`, capacity, the daily
-/// target) stays with the engine (Stories 2.2/2.3).
+/// `sub_track_sources.dart`; no Firestore access is added. The derived
+/// activity state (`onHome`, `holdsGround`, capacity, the daily target)
+/// stays with the engine (Stories 2.2/2.3).
 ///
-/// DNI-495 seam: Story 2.4 (Manage tracks hub) was to provide the
-/// sub-track selectors and the parent-session gate. It is not on
-/// `integ/sub-tracks`, so this story owns the minimal versions below and a
-/// follow-up bead folds them into Story 2.4's providers when it lands.
+/// These were written before Story 2.4 (DNI-495) landed. Its hub now reads
+/// [ongoingSubTrackContextProvider] for the ongoing usage and the learner's
+/// civil today; folding the parent-session gate and the per-curriculum read
+/// into Story 2.4's `sub_track_providers.dart` is a follow-up.
 library;
+
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -18,11 +20,12 @@ import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
-import 'package:learning_tracker/features/sub_tracks/data/repositories/ongoing_sub_track_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
@@ -44,17 +47,28 @@ final class SubTrackRowsUnreadableException implements Exception {
 final class OngoingSubTrackContext {
   /// Creates the context.
   OngoingSubTrackContext({
+    required this.scope,
     required this.curriculumId,
     required this.today,
+    required this.timeZone,
     required List<SubTrack> subTracks,
     required this.calendarProgram,
   }) : subTracks = List.unmodifiable(subTracks);
 
+  /// The learner this read belongs to. A form bound to another learner
+  /// never uses it (a read that lands mid profile switch).
+  final LearnerScope scope;
+
   /// The curriculum's storage key.
   final String curriculumId;
 
-  /// The learner's civil today, in the profile's `time_zone` (AD-41).
+  /// The learner's civil today, in the profile's `time_zone` (AD-41), as
+  /// of when this context was read. A form re-derives it with [todayAt]
+  /// before it writes (the form may stay open across midnight).
   final CivilDate today;
+
+  /// The learner's IANA `time_zone` the context was read under (AD-41).
+  final String timeZone;
 
   /// Every sub-track of [curriculumId], live and ended.
   final List<SubTrack> subTracks;
@@ -63,12 +77,46 @@ final class OngoingSubTrackContext {
   /// AD-45, prd-deviations #12).
   final bool calendarProgram;
 
+  /// The learner's civil date at [nowUtc] in [timeZone] (AD-41; never the
+  /// device offset).
+  CivilDate todayAt(DateTime nowUtc) => learnerCivilToday(timeZone, nowUtc);
+
+  /// This context re-read for civil day [day]: the same rows and program,
+  /// with the limit count and statuses judged on [day].
+  OngoingSubTrackContext atDay(CivilDate day) => day == today
+      ? this
+      : OngoingSubTrackContext(
+          scope: scope,
+          curriculumId: curriculumId,
+          today: day,
+          timeZone: timeZone,
+          subTracks: subTracks,
+          calendarProgram: calendarProgram,
+        );
+
   /// The non-ended sub-tracks, for the hub rows (UX-DR-82: ended ones are
   /// not listed among the active rows).
   List<SubTrack> get liveSubTracks => [
     for (final s in subTracks)
       if (!s.isEnded) s,
   ];
+
+  /// The sub-track [id] as the ongoing form may edit it, from this read:
+  /// a non-ended ongoing sub-track of [curriculumId]. Null when the read
+  /// has no such row (a stale or hand-made edit route, a school-year row,
+  /// another curriculum's row, or one ended meanwhile), so the form never
+  /// writes an edit the caller merely claimed.
+  SubTrack? editableOngoing(String id) {
+    for (final s in subTracks) {
+      if (s.id != id) continue;
+      final editable =
+          s.curriculumId == curriculumId &&
+          s.type == SubTrackType.ongoing &&
+          !s.isEnded;
+      return editable ? s : null;
+    }
+    return null;
+  }
 
   /// Ongoing sub-tracks counting toward the AD-45 cap, optionally leaving
   /// out the one being edited ([excludingId]).
@@ -78,6 +126,19 @@ final class OngoingSubTrackContext {
     today: today,
     excludingId: excludingId,
   );
+}
+
+/// The learner's civil date at [nowUtc] in IANA zone [timeZone] (AD-41).
+CivilDate learnerCivilToday(String timeZone, DateTime nowUtc) =>
+    formatCivilDay(LearnerZone.of(timeZone).dayOf(nowUtc));
+
+/// How long from [nowUtc] until the learner's next civil day begins in
+/// [timeZone], plus one tick so the re-read lands inside the new day.
+Duration untilNextLearnerDay(String timeZone, DateTime nowUtc) {
+  final zone = LearnerZone.of(timeZone);
+  final next = zone.startOf(addCivilDays(zone.dayOf(nowUtc), 1));
+  final wait = next.difference(nowUtc.toUtc()) + civilTick;
+  return wait.isNegative ? civilTick : wait;
 }
 
 /// The learner's governed intent, live; null while no learner is active or
@@ -120,20 +181,29 @@ final curriculumSubTracksProvider = StreamProvider.autoDispose
 /// learner is active. Recomputes when the intent or the sub-tracks change.
 final ongoingSubTrackContextProvider = FutureProvider.autoDispose
     .family<OngoingSubTrackContext?, String>((ref, curriculumId) async {
+      final scope = await ref.watch(activeLearnerScopeProvider.future);
       final intent = await ref.watch(ongoingSubTrackIntentProvider.future);
       final subTracks = await ref.watch(
         curriculumSubTracksProvider(curriculumId).future,
       );
-      if (intent == null || subTracks == null) return null;
+      if (scope == null || intent == null || subTracks == null) return null;
+      final timeZone = intent.settings.timeZone;
       final nowUtc = ref.watch(localDayClockProvider).nowUtc();
-      final today = formatCivilDay(
-        LearnerZone.of(intent.settings.timeZone).dayOf(nowUtc),
+      final today = learnerCivilToday(timeZone, nowUtc);
+      // Re-read at the learner's next midnight (AD-41), so a hub or form
+      // left open across it recounts the limit and the "Starts" rows.
+      final midnight = Timer(
+        untilNextLearnerDay(timeZone, nowUtc),
+        ref.invalidateSelf,
       );
+      ref.onDispose(midnight.cancel);
       // The live program only, exactly as `SubTrackCommands` reads it.
       final program = intent.mainTracks[curriculumId]?.program;
       return OngoingSubTrackContext(
+        scope: scope,
         curriculumId: curriculumId,
         today: today,
+        timeZone: timeZone,
         subTracks: subTracks,
         calendarProgram:
             program != null &&
@@ -158,3 +228,21 @@ final ongoingSubTrackParentSessionProvider = FutureProvider.autoDispose<bool>((
   return ref.watch(parentPinAuthenticatedProfileIdProvider) ==
       profile.profileId;
 }, retry: (retryCount, error) => null);
+
+/// The learner a sub-track form may write for: the active learner's scope
+/// while [ongoingSubTrackParentSessionProvider] holds for that same
+/// profile; null otherwise (no learner, a child profile without a verified
+/// parent PIN, a tutored session, or a profile and scope that disagree
+/// mid-switch). The form binds to the first scope it sees and re-checks
+/// this right before every write.
+final ongoingSubTrackWriteScopeProvider =
+    FutureProvider.autoDispose<LearnerScope?>((ref) async {
+      if (!await ref.watch(ongoingSubTrackParentSessionProvider.future)) {
+        return null;
+      }
+      final scope = await ref.watch(activeLearnerScopeProvider.future);
+      final profile = await ref.watch(activeProfileProvider.future);
+      if (scope == null || profile == null) return null;
+      if (profile.profileId != scope.profileId) return null;
+      return scope;
+    }, retry: (retryCount, error) => null);

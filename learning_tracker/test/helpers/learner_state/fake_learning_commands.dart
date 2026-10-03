@@ -22,7 +22,6 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
@@ -256,20 +255,6 @@ final class FakeLearningCommands implements LearningCommands {
     if (error == null) return result;
     retryError = null;
     throw error;
-  }
-
-  /// Each queued sub-track change's server verdict; unlisted ids are
-  /// accepted. Complete a scripted completer to settle it.
-  final Map<String, Completer<bool>> subTrackConfirmations = {};
-
-  @override
-  Future<bool> whenSubTrackChangeConfirmed(String changeId) async {
-    calls.add(
-      LearningCommandCall('whenSubTrackChangeConfirmed', {
-        'changeId': changeId,
-      }),
-    );
-    return subTrackConfirmations[changeId]?.future ?? true;
   }
 
   /// Each queued sub-track change's server verdict; unlisted ids are
