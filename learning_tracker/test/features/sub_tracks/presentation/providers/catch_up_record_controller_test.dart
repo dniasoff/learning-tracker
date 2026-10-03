@@ -9,12 +9,15 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -51,6 +54,18 @@ class _HeldCommands extends Fake implements LearningCommands {
   }
 }
 
+/// Commands that resolve only when [release] completes, like a
+/// `learningCommandsProvider` still building after the tap.
+final class _SlowCommands {
+  final release = Completer<void>();
+  final commands = FakeLearningCommands();
+
+  Future<LearningCommands?> resolve() async {
+    await release.future;
+    return commands;
+  }
+}
+
 final _card = find.byType(CatchUpCardView);
 final _yesAll = find.byKey(const ValueKey('catchUpCardYesAll'));
 final _saveFailed = find.byKey(const ValueKey('catchUpCardSaveFailed'));
@@ -80,15 +95,25 @@ LearnerState _caughtUp() => fakeLearnerState(
 final class _Rig {
   final state = LiveSource<LearnerState>(_plain());
   DateTime now = catchUpSunday;
+  LearnerScope scope = catchUpScope;
 
-  List<Override> overrides(LearningCommands commands) => [
+  List<Override> overrides(
+    LearningCommands commands, {
+    Future<LearningCommands?> Function()? resolve,
+  }) => [
     useHebrewTermsProvider.overrideWith(_EnglishTerms.new),
     currentTransliterationVariantProvider.overrideWithValue(
       TransliterationVariant.ashkenazi,
     ),
     activeTutoredProfileSelectionProvider.overrideWith(_Owner.new),
-    ...catchUpOverrides(states: (_) => state.stream(), clock: () => now),
-    learningCommandsProvider.overrideWith((ref) async => commands),
+    ...catchUpOverrides(
+      states: (_) => state.stream(),
+      clock: () => now,
+      scopeOf: () => scope,
+    ),
+    learningCommandsProvider.overrideWith(
+      (ref) => resolve?.call() ?? Future.value(commands),
+    ),
   ];
 }
 
@@ -252,6 +277,35 @@ void main() {
     commands.release.complete(const CaptureResult.success());
     await _settle(tester);
     expect(find.byKey(const ValueKey('catchUpCardRecording')), findsNothing);
+    await _unmount(tester);
+  });
+
+  testWidgets('a learner switch while the commands resolve writes nothing', (
+    tester,
+  ) async {
+    final rig = _Rig();
+    final slow = _SlowCommands();
+    await _pump(tester, rig.overrides(slow.commands, resolve: slow.resolve));
+    expect(_card, findsOneWidget);
+    await tester.tap(_yesAll);
+    await _settle(tester);
+    expect(find.byKey(const ValueKey('catchUpCardRecording')), findsOneWidget);
+
+    // Another profile comes into view before the commands resolve.
+    rig.scope = catchUpOtherScope;
+    ProviderScope.containerOf(
+      tester.element(find.byType(CatchUpCardsSection)),
+    ).invalidate(activeLearnerScopeProvider);
+    await _settle(tester);
+    slow.release.complete();
+    await _settle(tester);
+
+    expect(
+      slow.commands.calls.where((c) => c.name == 'recordCatchUp'),
+      isEmpty,
+    );
+    expect(find.byKey(const ValueKey('catchUpCardRecording')), findsNothing);
+    expect(_saveFailed, findsNothing);
     await _unmount(tester);
   });
 

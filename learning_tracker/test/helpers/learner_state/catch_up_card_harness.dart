@@ -115,17 +115,22 @@ SubTrack catchUpSubTrack(
   lastChangeId: ulidC,
 );
 
-/// The overrides of one device viewing [scope].
+/// The overrides of one device viewing [scope] (or, when given,
+/// [scopeOf]'s answer each time the active scope is read, so a test can
+/// switch learners by invalidating `activeLearnerScopeProvider`).
 List<Override> catchUpOverrides({
   required Stream<LearnerState> Function(LearnerScope scope) states,
   Stream<List<SubTrack>> Function(LearnerScope scope)? subTracks,
   LearnerScope? scope,
+  LearnerScope Function()? scopeOf,
   DateTime Function()? clock,
   LearnerSettingsHistory? history,
   CatchUpSequencePlanner? planner,
   void Function(CatchUpHistoryGap gap)? onGap,
 }) => [
-  activeLearnerScopeProvider.overrideWith((ref) async => scope ?? catchUpScope),
+  activeLearnerScopeProvider.overrideWith(
+    (ref) async => scopeOf?.call() ?? scope ?? catchUpScope,
+  ),
   learnerStateProvider.overrideWith((ref, s) => states(s)),
   subTracksForScopeProvider.overrideWith(
     (ref, s) => subTracks?.call(s) ?? Stream.value(const <SubTrack>[]),

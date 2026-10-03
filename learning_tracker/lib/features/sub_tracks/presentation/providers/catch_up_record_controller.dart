@@ -8,6 +8,9 @@
 ///
 /// * **Recording**: the card's actions are disabled until the command
 ///   returns, so a double tap never writes twice.
+/// * **Learner switched** while the commands resolve: nothing is written
+///   and the card is idle again — the card's refs and lock belong to the
+///   learner in view at the tap, never to the next one.
 /// * **Success** (saved or queued offline, AC-5): the card disappears on
 ///   its own — the events reach the live learner state at once and the
 ///   card is complete (A-5). A snackbar offers Undo for exactly the
@@ -26,12 +29,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/catch_up_cards_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/catch_up_action_builder.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Where a card's record action stands.
@@ -81,6 +87,10 @@ Future<void> recordCatchUpAll(
       CatchUpRecordPhase.recording) {
     return;
   }
+  // The card is the learner's in view now: its refs and lock are recorded
+  // only under this scope.
+  final scope = _ownerScopeInView(ref);
+  if (scope == null) return;
   final messenger = ScaffoldMessenger.maybeOf(context);
   status.set(key, CatchUpRecordPhase.recording);
   final CaptureResult result;
@@ -89,6 +99,14 @@ Future<void> recordCatchUpAll(
     commands = await ref.read(learningCommandsProvider.future);
     if (commands == null) {
       status.set(key, CatchUpRecordPhase.failed);
+      return;
+    }
+    // The commands are bound to whichever learner is active when they
+    // resolve. A profile switch during the wait would submit this card
+    // under another learner, so nothing is written then; the new
+    // learner's cards are their own.
+    if (_ownerScopeInView(ref) != scope) {
+      status.set(key, null);
       return;
     }
     result = await commands.recordCatchUp(
@@ -129,6 +147,16 @@ Future<void> recordCatchUpAll(
     case CaptureRejected() || CaptureChildLimit() || CaptureOnlineRequired():
       status.set(key, CatchUpRecordPhase.failed);
   }
+}
+
+/// The settled scope of the owner learner in view, or null while it is
+/// loading, failed, absent, or a tutored session is active (the card is
+/// owner-only, AC-12 of DNI-505).
+LearnerScope? _ownerScopeInView(Ref ref) {
+  if (ref.read(activeTutoredProfileSelectionProvider) != null) return null;
+  final scope = ref.read(activeLearnerScopeProvider);
+  if (scope.isLoading || !scope.hasValue) return null;
+  return scope.value;
 }
 
 /// The *Yes, all of it* handler the catch-up card plugs in
