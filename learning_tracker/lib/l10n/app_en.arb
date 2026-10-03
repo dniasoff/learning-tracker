@@ -2964,6 +2964,65 @@
   "currentPasswordLabel": "Current Password",
   "invalidPasswordError": "Invalid password. Please try again.",
   "calendarOffsetToday": "Today",
+  "catchUpAdjustLoadError": "What you can adjust couldn't load.",
+  "@catchUpAdjustLoadError": {
+    "description": "DRAFT copy, pending zc4. Inline error in a catch-up card's Adjust panel whose track data failed to load; a Retry action follows, Record is disabled and the card stays available (DNI-507 AC-7, UX-DR-109)."
+  },
+  "catchUpAdjustMainGroup": "Home · Main track",
+  "@catchUpAdjustMainGroup": {
+    "description": "DRAFT copy, pending zc4. Heading of the main-track group in a catch-up card's Adjust panel (DNI-507 AC-1)."
+  },
+  "catchUpAdjustMainGroupOf": "Home · Main track ({units})",
+  "@catchUpAdjustMainGroupOf": {
+    "description": "DRAFT copy, pending zc4. Main-track group heading in the Adjust panel when the card spans more than one curriculum (DNI-507 AC-1); {units} is the curriculum's leaf unit (e.g. mishnayos).",
+    "placeholders": {
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpAdjustNoMoreGround": "No more {units} in this track's ground",
+  "@catchUpAdjustNoMoreGround": {
+    "description": "DRAFT copy, pending zc4. Shown under a sub-track group in the Adjust panel when its ground has no leaf after the planned ones; Up to… is disabled (DNI-507 AC-6, UX-DR-108). {units} is the leaf unit plural (e.g. mishnayos).",
+    "placeholders": {
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpAdjustPickerConfirm": "Include {count} {unit}",
+  "@catchUpAdjustPickerConfirm": {
+    "description": "DRAFT copy, pending zc4. Confirm button of the shared Up to… picker opened from a catch-up card's Adjust panel: it returns the selection to the panel and writes nothing (DNI-507 AC-2). {unit} is the leaf unit for {count}.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpAdjustRecordItems": "Record {count, plural, =1{1 item} other{{count} items}}",
+  "@catchUpAdjustRecordItems": {
+    "description": "DRAFT copy, pending zc4. Record pill of the Adjust panel when the card spans more than one curriculum (DNI-507 AC-1); {count} is the live number of ticked leaves.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catchUpAdjustSubTrackGroup": "{name} (learns on {shabbos})",
+  "@catchUpAdjustSubTrackGroup": {
+    "description": "DRAFT copy, pending zc4. Heading of a sub-track group in a catch-up card's Adjust panel (DNI-507 AC-1): {name} is the sub-track's name, {shabbos} the Shabbos term in running text.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "shabbos": {
+        "type": "String"
+      }
+    }
+  },
   "catchUpCardAdjust": "Adjust…",
   "@catchUpCardAdjust": {
     "description": "DRAFT copy, pending zc4. Outlined pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): opens the per-day adjust list (Story 3.4)."

@@ -3702,6 +3702,43 @@ class AppLocalizationsHe extends AppLocalizations {
   String get calendarOffsetToday => 'היום';
 
   @override
+  String get catchUpAdjustLoadError => 'לא ניתן היה לטעון את מה שאפשר להתאים.';
+
+  @override
+  String get catchUpAdjustMainGroup => 'בית · המסלול הראשי';
+
+  @override
+  String catchUpAdjustMainGroupOf(String units) {
+    return 'בית · המסלול הראשי ($units)';
+  }
+
+  @override
+  String catchUpAdjustNoMoreGround(String units) {
+    return 'אין עוד $units בתחום של המסלול הזה';
+  }
+
+  @override
+  String catchUpAdjustPickerConfirm(int count, String unit) {
+    return 'לכלול $count $unit';
+  }
+
+  @override
+  String catchUpAdjustRecordItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count פריטים',
+      one: 'פריט אחד',
+    );
+    return 'רישום $_temp0';
+  }
+
+  @override
+  String catchUpAdjustSubTrackGroup(String name, String shabbos) {
+    return '$name (לומד ב$shabbos)';
+  }
+
+  @override
   String get catchUpCardAdjust => 'התאמה…';
 
   @override

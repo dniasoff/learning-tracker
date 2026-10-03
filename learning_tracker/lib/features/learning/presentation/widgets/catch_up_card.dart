@@ -14,11 +14,14 @@
 ///   retry, until its window ends (AC-11, UX-DR-132).
 ///
 /// The actions write nothing here: Story 3.3 (DNI-506, *Yes, all of it*,
-/// `recordCatchUpAll`) and Story 3.4 (DNI-507, *Adjust…*) provide them
-/// through [catchUpCardActionsProvider]; one not yet provided is shown
-/// disabled. While a record action runs the actions are disabled, and a
-/// record that was not saved shows "Couldn't save — try again before the
-/// card expires." on the card (DNI-506 AC-8, UX-DR-133).
+/// `recordCatchUpAll`) and Story 3.4 (DNI-507, *Adjust…* then Record,
+/// `recordCatchUpAdjusted`) provide them through
+/// [catchUpCardActionsProvider]; one not yet provided is shown disabled.
+/// *Adjust…* expands the [CatchUpAdjustPanel] in place (no new route) and
+/// collapses it again, discarding the panel's edits. While a record action
+/// runs the actions are disabled, and a record that was not saved shows
+/// "Couldn't save — try again before the card expires." on the card
+/// (DNI-506 AC-8, UX-DR-133).
 library;
 
 import 'package:flutter/material.dart';
@@ -32,7 +35,9 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/domain/learner_state/catch_up_card_projection.dart';
 import 'package:learning_tracker/domain/learner_state/erev_window.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
+import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/catch_up_cards_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/catch_up_adjust_panel.dart';
 import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -40,13 +45,19 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// action disabled.
 final class CatchUpCardActions {
   /// Creates the actions.
-  const CatchUpCardActions({this.recordAll, this.adjust});
+  const CatchUpCardActions({this.recordAll, this.recordAdjusted});
 
   /// *Yes, all of it* (Story 3.3, DNI-506).
   final void Function(BuildContext context, CatchUpTaskCard card)? recordAll;
 
-  /// *Adjust…* (Story 3.4, DNI-507).
-  final void Function(BuildContext context, CatchUpTaskCard card)? adjust;
+  /// *Record {n}* of the *Adjust…* panel (Story 3.4, DNI-507): records the
+  /// adjusted [CatchUpAction] of the card. Null disables *Adjust…*.
+  final void Function(
+    BuildContext context,
+    CatchUpTaskCard card,
+    CatchUpAction action,
+  )?
+  recordAdjusted;
 }
 
 /// The actions of the catch-up card: *Yes, all of it* (Story 3.3); Story
@@ -255,8 +266,9 @@ class CatchUpCardShell extends StatelessWidget {
   }
 }
 
-/// One pending card with its contents and actions.
-class CatchUpCardView extends ConsumerWidget {
+/// One pending card with its contents and actions; *Adjust…* expands the
+/// [CatchUpAdjustPanel] in place.
+class CatchUpCardView extends ConsumerStatefulWidget {
   /// Creates the card.
   const CatchUpCardView({super.key, required this.card});
 
@@ -264,7 +276,22 @@ class CatchUpCardView extends ConsumerWidget {
   final CatchUpTaskCard card;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CatchUpCardView> createState() => _CatchUpCardViewState();
+}
+
+class _CatchUpCardViewState extends ConsumerState<CatchUpCardView> {
+  /// Whether the Adjust panel is open. Closing it drops its selection.
+  bool _adjusting = false;
+
+  @override
+  void didUpdateWidget(CatchUpCardView old) {
+    super.didUpdateWidget(old);
+    if (old.card.window.key != widget.card.window.key) _adjusting = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final card = widget.card;
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colors = context.colors;
@@ -272,7 +299,8 @@ class CatchUpCardView extends ConsumerWidget {
     final phase = ref.watch(catchUpRecordStatusProvider)[card.window.key];
     final recording = phase == CatchUpRecordPhase.recording;
     final recordAll = recording ? null : actions.recordAll;
-    final adjust = recording ? null : actions.adjust;
+    final recordAdjusted = actions.recordAdjusted;
+    final adjusting = _adjusting && recordAdjusted != null;
     final lines = <(String key, String text)>[];
     for (final g in card.groups) {
       if (g.mainTaskCount > 0) {
@@ -373,17 +401,36 @@ class CatchUpCardView extends ConsumerWidget {
                       )
                     : Text(l10n.catchUpCardYesAll),
               ),
-              OutlinedButton(
-                key: const ValueKey('catchUpCardAdjust'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: pillMin,
-                  shape: const StadiumBorder(),
+              Semantics(
+                expanded: recordAdjusted == null ? null : adjusting,
+                child: OutlinedButton.icon(
+                  key: const ValueKey('catchUpCardAdjust'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: pillMin,
+                    shape: const StadiumBorder(),
+                  ),
+                  iconAlignment: IconAlignment.end,
+                  onPressed: recordAdjusted == null || recording
+                      ? null
+                      : () => setState(() => _adjusting = !_adjusting),
+                  icon: Icon(
+                    adjusting
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    size: 20,
+                  ),
+                  label: Text(l10n.catchUpCardAdjust),
                 ),
-                onPressed: adjust == null ? null : () => adjust(context, card),
-                child: Text(l10n.catchUpCardAdjust),
               ),
             ],
           ),
+          if (adjusting)
+            CatchUpAdjustPanel(
+              card: card,
+              recording: recording,
+              onCollapse: () => setState(() => _adjusting = false),
+              onRecord: (action) => recordAdjusted(context, card, action),
+            ),
         ],
       ),
     );

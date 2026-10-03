@@ -6370,6 +6370,48 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get calendarOffsetToday;
 
+  /// DRAFT copy, pending zc4. Inline error in a catch-up card's Adjust panel whose track data failed to load; a Retry action follows, Record is disabled and the card stays available (DNI-507 AC-7, UX-DR-109).
+  ///
+  /// In en, this message translates to:
+  /// **'What you can adjust couldn\'t load.'**
+  String get catchUpAdjustLoadError;
+
+  /// DRAFT copy, pending zc4. Heading of the main-track group in a catch-up card's Adjust panel (DNI-507 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'Home · Main track'**
+  String get catchUpAdjustMainGroup;
+
+  /// DRAFT copy, pending zc4. Main-track group heading in the Adjust panel when the card spans more than one curriculum (DNI-507 AC-1); {units} is the curriculum's leaf unit (e.g. mishnayos).
+  ///
+  /// In en, this message translates to:
+  /// **'Home · Main track ({units})'**
+  String catchUpAdjustMainGroupOf(String units);
+
+  /// DRAFT copy, pending zc4. Shown under a sub-track group in the Adjust panel when its ground has no leaf after the planned ones; Up to… is disabled (DNI-507 AC-6, UX-DR-108). {units} is the leaf unit plural (e.g. mishnayos).
+  ///
+  /// In en, this message translates to:
+  /// **'No more {units} in this track\'s ground'**
+  String catchUpAdjustNoMoreGround(String units);
+
+  /// DRAFT copy, pending zc4. Confirm button of the shared Up to… picker opened from a catch-up card's Adjust panel: it returns the selection to the panel and writes nothing (DNI-507 AC-2). {unit} is the leaf unit for {count}.
+  ///
+  /// In en, this message translates to:
+  /// **'Include {count} {unit}'**
+  String catchUpAdjustPickerConfirm(int count, String unit);
+
+  /// DRAFT copy, pending zc4. Record pill of the Adjust panel when the card spans more than one curriculum (DNI-507 AC-1); {count} is the live number of ticked leaves.
+  ///
+  /// In en, this message translates to:
+  /// **'Record {count, plural, =1{1 item} other{{count} items}}'**
+  String catchUpAdjustRecordItems(int count);
+
+  /// DRAFT copy, pending zc4. Heading of a sub-track group in a catch-up card's Adjust panel (DNI-507 AC-1): {name} is the sub-track's name, {shabbos} the Shabbos term in running text.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} (learns on {shabbos})'**
+  String catchUpAdjustSubTrackGroup(String name, String shabbos);
+
   /// DRAFT copy, pending zc4. Outlined pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): opens the per-day adjust list (Story 3.4).
   ///
   /// In en, this message translates to:

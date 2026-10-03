@@ -3,7 +3,11 @@
 library sub_tracks;
 
 // Stories 2.4 (DNI-495), 2.6 (DNI-497), 2.8 (DNI-499) and 2.9 (DNI-500).
+export 'domain/models/up_to_selection.dart'
+    show UpToRow, UpToRowStatus, UpToSelection;
 export 'domain/services/on_home_sub_tracks.dart';
+export 'domain/services/up_to_selection_service.dart'
+    show UpToAvailability, UpToSlice;
 export 'domain/sub_track_home_projection.dart';
 export 'presentation/controllers/sub_track_capture_controller.dart';
 export 'presentation/providers/catch_up_record_controller.dart'
@@ -31,7 +35,9 @@ export 'presentation/providers/up_to_picker_providers.dart'
         MainTrackUpToRequest,
         SubTrackUpToRequest,
         UpToRequest,
-        onHomeSubTracksProvider;
+        onHomeSubTracksProvider,
+        retryUpToInputs,
+        upToSliceProvider;
 export 'presentation/screens/sub_track_detail_screen.dart';
 // Manage tracks section and detail layout.
 export 'presentation/widgets/also_learning_section.dart';
@@ -43,4 +49,11 @@ export 'presentation/widgets/sub_track_lifecycle_sync_panel.dart';
 export 'presentation/widgets/sub_track_list_detail_layout.dart';
 export 'presentation/widgets/sub_track_read_only.dart';
 export 'presentation/widgets/up_to_picker.dart'
-    show UpToActionButton, openUpToAndRecord, showUpToPicker;
+    show
+        UpToActionButton,
+        UpToUnitLabels,
+        openUpToAndRecord,
+        showUpToPicker,
+        upToLeafLabelProvider,
+        upToUnitFor,
+        upToUnitLabelsProvider;

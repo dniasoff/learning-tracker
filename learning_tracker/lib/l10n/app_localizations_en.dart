@@ -3749,6 +3749,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarOffsetToday => 'Today';
 
   @override
+  String get catchUpAdjustLoadError => 'What you can adjust couldn\'t load.';
+
+  @override
+  String get catchUpAdjustMainGroup => 'Home · Main track';
+
+  @override
+  String catchUpAdjustMainGroupOf(String units) {
+    return 'Home · Main track ($units)';
+  }
+
+  @override
+  String catchUpAdjustNoMoreGround(String units) {
+    return 'No more $units in this track\'s ground';
+  }
+
+  @override
+  String catchUpAdjustPickerConfirm(int count, String unit) {
+    return 'Include $count $unit';
+  }
+
+  @override
+  String catchUpAdjustRecordItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return 'Record $_temp0';
+  }
+
+  @override
+  String catchUpAdjustSubTrackGroup(String name, String shabbos) {
+    return '$name (learns on $shabbos)';
+  }
+
+  @override
   String get catchUpCardAdjust => 'Adjust…';
 
   @override
