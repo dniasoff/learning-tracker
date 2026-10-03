@@ -238,6 +238,7 @@ final class TutorLearningCommands implements LearningCommands {
     CivilDate? learnedOn,
     bool skipRecorded = false,
     int? stage,
+    bool skipRecorded = false,
   }) => _preflight((now, history) async {
     // Epic 1: tutors record main-track learning, dated or before tracking.
     // A skip-recorded (Up to…) capture needs the talmid's counted log,
@@ -621,6 +622,34 @@ final class TutorLearningCommands implements LearningCommands {
 
   @override
   Future<CaptureResult> reAddTrack(String curriculumId) async => _invalid;
+
+  /// Tutor sub-track writes are the typed `tutorUpsertSubTrack` service
+  /// methods (Story 4.1, DNI-509), not the owner's queueable batch.
+  @override
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+    String? nextYearOf,
+  }) async => _invalid;
+
+  /// See [createSubTrack].
+  @override
+  Future<CaptureResult> editSubTrack(
+    String subTrackId,
+    SubTrackEdit edit,
+  ) async => _invalid;
+
+  /// See [createSubTrack].
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) async => _invalid;
+
+  /// See [createSubTrack].
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) async => _invalid;
+
+  /// A tutor write is never queued (AD-53 online-only): nothing awaits.
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) async => true;
 
   // Backup import is an owner-only operation; a tutor session cannot replay
   // a backup into the learner's account.

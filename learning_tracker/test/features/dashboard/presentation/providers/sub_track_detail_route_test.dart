@@ -41,6 +41,7 @@ AppRouter _productionRouter() => AppRouter(
   profileGuard: _ProfileGuard(),
   childModeGuard: _ChildModeGuard(),
   pinGuard: _PinGuard(),
+  sacredTimeLocationGuard: _AuthGuard(),
 );
 
 void main() {
@@ -169,6 +170,7 @@ class _ProductionTableWithDashboard extends RootStackRouter {
     profileGuard: _ProfileGuard(),
     childModeGuard: _ChildModeGuard(),
     pinGuard: _PinGuard(),
+    sacredTimeLocationGuard: _PassGuard(),
   );
 
   @override

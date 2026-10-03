@@ -123,6 +123,13 @@ final class LoggingChangeLog implements ChangeLogRepository {
   @override
   Stream<bool> watchIsReverted(LearnerScope scope, String actionId) =>
       inner.watchIsReverted(scope, actionId);
+
+  @override
+  Future<HistoryPage<ChangeLogEntry>> historyPage(
+    LearnerScope scope, {
+    HistoryCursor? after,
+    int limit = kChangeHistoryPageSize,
+  }) => inner.historyPage(scope, after: after, limit: limit);
 }
 
 /// A [SubTrackRepository] that logs each change to [log].
