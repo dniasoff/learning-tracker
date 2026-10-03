@@ -20,6 +20,8 @@ import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_tr
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_ground_tree.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_footer.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_sync_panel.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorDisabledControl, TutorWriteNote;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The routed detail of sub-track [subTrackId]: opened from a hub row on a
@@ -128,6 +130,9 @@ class _DetailBody extends ConsumerWidget {
         // (AD-54), and an ended sub-track says it is read-only (AC-5).
         const SubTrackLifecycleSyncPanel(),
         if (detail.isEnded) const SubTrackEndedNote(),
+        // Story 4.2 (AC-5, AC-6): one note while a tutor may not write.
+        if (detail.role == SubTrackDetailRole.tutor && !detail.isEnded)
+          const TutorWriteNote(padding: EdgeInsets.only(bottom: 12)),
         _SummaryCard(detail: detail),
         const SizedBox(height: 12),
         _UpNextCard(detail: detail),
@@ -168,10 +173,14 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
         ],
-        // Story 2.8 (DNI-499, AC-1, AC-2): the parent's Add next year.
-        if (detail.role == SubTrackDetailRole.parent) ...[
+        // Story 2.8 (DNI-499, AC-1, AC-2): Add next year, for the parent
+        // and (Story 4.2) the tutor — disabled while he may not write.
+        if (detail.role != SubTrackDetailRole.child) ...[
           const SizedBox(height: 20),
-          SubTrackLifecycleFooter(track: track),
+          TutorDisabledControl(
+            blocked: detail.writesBlocked,
+            child: SubTrackLifecycleFooter(track: track),
+          ),
         ],
       ],
     );
@@ -314,8 +323,22 @@ class SubTrackDetailMenu extends ConsumerWidget {
     ];
     if (actions.isEmpty) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context)!;
+    // Story 4.2 (AC-5, AC-6): visible but disabled while a tutor may not
+    // write.
+    return TutorDisabledControl(
+      blocked: detail.writesBlocked,
+      child: _menu(context, l10n, actions),
+    );
+  }
+
+  Widget _menu(
+    BuildContext context,
+    AppLocalizations l10n,
+    List<SubTrackDetailMenuAction> actions,
+  ) {
     return PopupMenuButton<SubTrackDetailMenuAction>(
       key: const ValueKey('subTrackDetailMenu'),
+      enabled: !detail.writesBlocked,
       tooltip: l10n.subTrackDetailMoreOptions,
       icon: const Icon(Icons.more_vert),
       onSelected: (action) => action.onSelected(context, detail),

@@ -268,17 +268,26 @@ void main() {
       expect(_pill, findsNothing);
     });
 
-    for (final role in [SubTrackDetailRole.child, SubTrackDetailRole.tutor]) {
-      testWidgets('no pill for a read-only viewer (${role.name})', (
-        tester,
-      ) async {
-        final world = LifecycleWorld([schoolYear()], role: role);
-        addTearDown(world.dispose);
-        await _openDetail(tester, world, lifecycleId(1));
-        expect(_detail(lifecycleId(1)), findsOneWidget);
-        expect(_pill, findsNothing);
-      });
-    }
+    testWidgets('no pill for the read-only child', (tester) async {
+      final world = LifecycleWorld([
+        schoolYear(),
+      ], role: SubTrackDetailRole.child);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+      expect(_detail(lifecycleId(1)), findsOneWidget);
+      expect(_pill, findsNothing);
+    });
+
+    testWidgets('a tutor in tutor mode gets the pill (Story 4.2, DNI-510)', (
+      tester,
+    ) async {
+      final world = LifecycleWorld([
+        schoolYear(),
+      ], role: SubTrackDetailRole.tutor);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+      expect(_pill, findsOneWidget);
+    });
   });
 
   group('AC-3 / AC-4 overflow Delete and End', () {
@@ -416,15 +425,26 @@ void main() {
       expect(_detail(lifecycleId(1)), findsOneWidget);
     });
 
-    for (final role in [SubTrackDetailRole.child, SubTrackDetailRole.tutor]) {
-      testWidgets('no ⋮ for a read-only viewer (${role.name})', (tester) async {
-        final world = LifecycleWorld([schoolYear()], role: role);
-        addTearDown(world.dispose);
-        await _openDetail(tester, world, lifecycleId(1));
-        expect(_detail(lifecycleId(1)), findsOneWidget);
-        expect(_menu, findsNothing);
-      });
-    }
+    testWidgets('no ⋮ for the read-only child', (tester) async {
+      final world = LifecycleWorld([
+        schoolYear(),
+      ], role: SubTrackDetailRole.child);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+      expect(_detail(lifecycleId(1)), findsOneWidget);
+      expect(_menu, findsNothing);
+    });
+
+    testWidgets('a tutor in tutor mode gets the ⋮ (Story 4.2, DNI-510)', (
+      tester,
+    ) async {
+      final world = LifecycleWorld([
+        schoolYear(),
+      ], role: SubTrackDetailRole.tutor);
+      addTearDown(world.dispose);
+      await _openDetail(tester, world, lifecycleId(1));
+      expect(_menu, findsOneWidget);
+    });
   });
 
   group('AC-5 an ended sub-track opens read-only', () {

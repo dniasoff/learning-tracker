@@ -1681,6 +1681,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get tutorModeExit => 'יציאה';
 
   @override
+  String get tutorModeSwitch => 'החלפה';
+
+  @override
   String get tutoredEntryPermissionDenied =>
       'הגישה נדחתה — ייתכן שההרשאה בוטלה.';
 
@@ -3457,10 +3460,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String subTrackHomeUndoNotSaved(String name) {
     return 'הביטול לא נשמר: $name';
   }
-
-  @override
-  String get subTrackTutorReadOnlyNote =>
-      'עריכת תתי-מסלולים ממכשיר מורה תתאפשר בקרוב';
 
   @override
   String subTrackDashboardTitle(int count) {

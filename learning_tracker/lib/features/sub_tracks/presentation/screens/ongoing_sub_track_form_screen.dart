@@ -21,6 +21,9 @@ import 'package:learning_tracker/features/learning/presentation/providers/learni
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorDisabledControl, TutorWriteNote;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 final _log = AppLogger.instance;
@@ -391,6 +394,7 @@ class _OngoingSubTrackFormScreenState
     final unit = _leafUnit();
     final theme = Theme.of(context);
     final inUse = data.ongoingInUse();
+    final blocked = ref.watch(subTrackWritesBlockedProvider);
     return ListView(
       padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
       children: [
@@ -518,19 +522,27 @@ class _OngoingSubTrackFormScreenState
           ),
         ],
         const SizedBox(height: 24),
-        SizedBox(
-          height: 52,
-          child: FilledButton.icon(
-            key: const ValueKey('ongoingSubTrackSave'),
-            onPressed: _saving ? null : () => unawaited(_save(data)),
-            style: FilledButton.styleFrom(shape: const StadiumBorder()),
-            icon: _saving
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.check),
-            label: Text(l10n.ongoingSubTrackSave),
+        // Story 4.2 (AC-4, AC-5, AC-6): progress and held while saving;
+        // visible but disabled, with one note, while a tutor may not write.
+        if (blocked) const TutorWriteNote(padding: EdgeInsets.only(bottom: 12)),
+        TutorDisabledControl(
+          blocked: blocked,
+          child: SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              key: const ValueKey('ongoingSubTrackSave'),
+              onPressed: _saving || blocked
+                  ? null
+                  : () => unawaited(_save(data)),
+              style: FilledButton.styleFrom(shape: const StadiumBorder()),
+              icon: _saving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check),
+              label: Text(l10n.ongoingSubTrackSave),
+            ),
           ),
         ),
       ],

@@ -56,8 +56,8 @@ void main() {
       expect(edit.visibleFor(engineDetail(school)), isTrue, reason: 'ongoing');
     });
 
-    test('a bound launcher adds Edit, visible to the parent on a live '
-        'sub-track only', () {
+    test('a bound launcher adds Edit, visible to the parent and the tutor on '
+        'a live sub-track only', () {
       final c = ProviderContainer(
         overrides: [
           subTrackFormLauncherProvider.overrideWithValue(
@@ -72,9 +72,15 @@ void main() {
       final edit = c.read(subTrackDetailMenuActionsProvider).first;
       expect(edit.id, 'edit');
       expect(edit.visibleFor(engineDetail(school)), isTrue);
-      for (final role in [SubTrackDetailRole.child, SubTrackDetailRole.tutor]) {
-        expect(edit.visibleFor(engineDetail(school, role: role)), isFalse);
-      }
+      expect(
+        edit.visibleFor(engineDetail(school, role: SubTrackDetailRole.child)),
+        isFalse,
+      );
+      // Story 4.2 (DNI-510): the tutor edits from the same ⋮.
+      expect(
+        edit.visibleFor(engineDetail(school, role: SubTrackDetailRole.tutor)),
+        isTrue,
+      );
       final ended = detailSubTrack(11, 'Old', const [peah], ended: true);
       expect(edit.visibleFor(engineDetail(ended)), isFalse);
     });
@@ -90,24 +96,29 @@ void main() {
       );
     });
 
-    test('DNI-499 registers End and Delete after Edit, for the parent on a '
-        'sub-track that is not ended (tombstoned or past its window)', () {
+    test('DNI-499 registers End and Delete after Edit, for the parent and '
+        '(Story 4.2) the tutor on a sub-track that is not ended (tombstoned '
+        'or past its window)', () {
       final c = ProviderContainer();
       addTearDown(c.dispose);
       final actions = c.read(subTrackDetailMenuActionsProvider);
       expect([for (final a in actions) a.id], ['edit', 'end', 'delete']);
       for (final action in actions.skip(1)) {
         expect(action.visibleFor(engineDetail(school)), isTrue);
-        for (final role in [
-          SubTrackDetailRole.child,
-          SubTrackDetailRole.tutor,
-        ]) {
-          expect(
-            action.visibleFor(engineDetail(school, role: role)),
-            isFalse,
-            reason: '${action.id} for ${role.name}',
-          );
-        }
+        expect(
+          action.visibleFor(
+            engineDetail(school, role: SubTrackDetailRole.child),
+          ),
+          isFalse,
+          reason: '${action.id} for child',
+        );
+        expect(
+          action.visibleFor(
+            engineDetail(school, role: SubTrackDetailRole.tutor),
+          ),
+          isTrue,
+          reason: '${action.id} for the tutor (Story 4.2)',
+        );
         final ended = detailSubTrack(11, 'Old', const [peah], ended: true);
         expect(action.visibleFor(engineDetail(ended)), isFalse);
       }

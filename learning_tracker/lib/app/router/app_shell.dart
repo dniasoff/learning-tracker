@@ -885,19 +885,24 @@ class TutorModeIndicatorBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    // Bug 11: name the talmid being managed in the banner itself — not just a
-    // bare "Tutor mode". The active profile in a tutored session resolves to the
-    // talmid's synthetic mirror, so its displayName is the child's name. While
-    // the mirror is still resolving (name null/empty), fall back to the bare
-    // "Tutor mode" label so the banner is never blank.
-    final talmidName = ref
-        .watch(activeProfileProvider)
-        .asData
-        ?.value
-        ?.displayName
-        .trim();
-    final label = (talmidName != null && talmidName.isNotEmpty)
-        ? l10n.tutorModeIndicatorNamed(talmidName)
+    // Story 4.2 (DNI-510, AC-2, UX-DR-38): "Tutor mode · {tutor name}" — the
+    // tutor's own profile name, on every surface of the session — with
+    // *Switch*. The talmid is named on the surfaces themselves. While the
+    // name is unknown, fall back to the bare "Tutor mode" so the banner is
+    // never blank.
+    final selection = ref.watch(activeTutoredProfileSelectionProvider);
+    final tutorName = selection == null
+        ? null
+        : ref
+              .watch(profileListStreamProvider)
+              .asData
+              ?.value
+              .where((p) => p.profileId == selection.tutorOwnProfileId)
+              .firstOrNull
+              ?.displayName
+              .trim();
+    final label = (tutorName != null && tutorName.isNotEmpty)
+        ? l10n.tutorModeIndicatorNamed(tutorName)
         : l10n.tutorModeIndicator;
     return Container(
       // AUD-app-01: no literal `height:` — the Exit control below is floored
@@ -923,6 +928,32 @@ class TutorModeIndicatorBar extends ConsumerWidget {
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          // UX-DR-38: *Switch* opens the profile switcher (≥48dp target).
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              key: const Key('tutorModeIndicatorBarSwitch'),
+              onTap: () => showProfileSwitcherSheet(context),
+              borderRadius: BorderRadius.circular(4),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: kMinInteractiveDimension,
+                  minHeight: kMinInteractiveDimension,
+                ),
+                child: Center(
+                  child: Text(
+                    l10n.tutorModeSwitch,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

@@ -71,6 +71,21 @@ final routerProvider = Provider<AppRouter>((ref) {
         }
       },
     ),
+    // Story 4.2 (DNI-510, AC-2): the shared sub-track forms and ground
+    // picker open for a parent session or a tutor in tutor mode.
+    subTrackEditorGuard: ParentSessionGuard(
+      isParentSession: () async {
+        if (ref.read(activeTutoredProfileSelectionProvider) != null) {
+          return true;
+        }
+        final sub = ref.listen(parentSessionProvider.future, (_, _) {});
+        try {
+          return await sub.read();
+        } finally {
+          sub.close();
+        }
+      },
+    ),
     // DNI-513: parent-only views refuse a tutored session.
     ownSessionGuard: OwnSessionGuard(
       isTutoredSession: () =>

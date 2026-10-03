@@ -298,17 +298,17 @@ void main() {
       });
     }
 
-    for (final role in [SubTrackDetailRole.child, SubTrackDetailRole.tutor]) {
-      testWidgets('a ${role.name} sees no + Add ground (ground is read-only)', (
-        tester,
-      ) async {
-        h.seed(subTracks: [school]);
-        await pump(tester, role: role);
-        expect(find.text('Ground (in order)'), findsOneWidget);
-        expect(addGround, findsNothing);
-        expect(find.text('Add ground'), findsNothing);
-      });
-    }
+    // A tutor in tutor mode gets + Add ground (Story 4.2, DNI-510):
+    // tutor_manage_tracks_test.dart and tutor_edit_permission_gating_test.dart.
+    testWidgets('the child sees no + Add ground (ground is read-only)', (
+      tester,
+    ) async {
+      h.seed(subTracks: [school]);
+      await pump(tester, role: SubTrackDetailRole.child);
+      expect(find.text('Ground (in order)'), findsOneWidget);
+      expect(addGround, findsNothing);
+      expect(find.text('Add ground'), findsNothing);
+    });
 
     testWidgets('an ended sub-track has no + Add ground', (tester) async {
       final ended = detailSubTrack(50, 'Last year', const [peah], ended: true);

@@ -1447,6 +1447,10 @@
     }
   },
   "tutorModeExit": "Exit",
+  "tutorModeSwitch": "Switch",
+  "@tutorModeSwitch": {
+    "description": "Story 4.2 (DNI-510, UX-DR-38): the tutor-mode bar's action that opens the profile switcher."
+  },
   "tutoredEntryPermissionDenied": "Access denied — the grant may have been revoked.",
   "tutoredEntryError": "Could not load talmid data. Please try again.",
   "tutoredEntryAborted": "Could not open the talmid profile on this account. Please try again.",
@@ -2759,10 +2763,6 @@
         "type": "String"
       }
     }
-  },
-  "subTrackTutorReadOnlyNote": "Editing sub-tracks from a tutor device is coming soon",
-  "@subTrackTutorReadOnlyNote": {
-    "description": "The single note on read-only tutor sub-track surfaces (DNI-500 AC-9). [ASSUMPTION copy] DRAFT copy, pending zc4."
   },
   "subTrackDashboardTitle": "Sub-tracks ({count})",
   "@subTrackDashboardTitle": {

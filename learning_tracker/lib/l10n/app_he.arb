@@ -842,6 +842,7 @@
     }
   },
   "tutorModeExit": "יציאה",
+  "tutorModeSwitch": "החלפה",
   "tutoredEntryPermissionDenied": "הגישה נדחתה — ייתכן שההרשאה בוטלה.",
   "tutoredEntryError": "לא ניתן לטעון את נתוני התלמיד. אנא נסה שנית.",
   "tutoredEntryAborted": "לא ניתן לפתוח את פרופיל התלמיד בחשבון זה. אנא נסה שנית.",
@@ -1800,10 +1801,6 @@
         "type": "String"
       }
     }
-  },
-  "subTrackTutorReadOnlyNote": "עריכת תתי-מסלולים ממכשיר מורה תתאפשר בקרוב",
-  "@subTrackTutorReadOnlyNote": {
-    "description": "The single note on read-only tutor sub-track surfaces (DNI-500 AC-9). [ASSUMPTION copy] DRAFT copy, pending zc4."
   },
   "subTrackDashboardTitle": "תתי-מסלולים ({count})",
   "@subTrackDashboardTitle": {

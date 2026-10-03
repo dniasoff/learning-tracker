@@ -19,12 +19,15 @@ import 'package:learning_tracker/features/learning/presentation/providers/learni
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/academic_year_picker.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/no_deadline_note.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_parent_session_hold.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorDisabledControl, TutorWriteNote;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 final _log = AppLogger.instance;
@@ -95,7 +98,9 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
               : l10n.subTrackTypeSchoolYear,
         ),
       ),
+      // Story 4.2 (DNI-510, AC-2): the tutor uses the same form.
       body: SubTrackParentSessionHold(
+        allowTutor: true,
         child: _CommandsGate(
           child: _ReadsGate(
             curriculumId: curriculumId,
@@ -429,9 +434,10 @@ class _SchoolYearSubTrackFormState
         throw StateError('No active learner for the sub-track commands');
       }
       // The command boundary (AC-3): the parent session may have ended
-      // since the form opened. Nothing is written; the values stay.
-      if (!await readSubTrackParentSession(ref)) {
-        throw StateError('No parent session for the sub-track save');
+      // since the form opened — or, for a tutor (Story 4.2), his editing
+      // access or connection. Nothing is written; the values stay.
+      if (!await readSubTrackEditorSession(ref)) {
+        throw StateError('No editor session for the sub-track save');
       }
       final existing = widget.existing;
       final source = widget.nextYearOf;
@@ -618,6 +624,8 @@ class _SchoolYearSubTrackFormState
   }) {
     final theme = Theme.of(context);
     final colors = context.colors;
+    final tutor = ref.watch(subTrackTutorSessionProvider);
+    final blocked = ref.watch(subTrackWritesBlockedProvider);
     final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     final monthNames = DateFormat.MMMM(
       Localizations.localeOf(context).toLanguageTag(),
@@ -812,24 +820,32 @@ class _SchoolYearSubTrackFormState
         ),
         const SizedBox(height: 12),
         InfoNote(text: l10n.subTrackFormGroundNote),
-        if (showNoDeadlineNote) ...[
+        // The tutor sets the deadline from the main track's goal screen
+        // (Story 4.2): the note's link opens the parent's goal setup.
+        if (showNoDeadlineNote && !tutor) ...[
           const SizedBox(height: 12),
           NoDeadlineNote(onOpenGoalSetup: () => unawaited(_openGoalSetup())),
         ],
         const SizedBox(height: 24),
-        FilledButton(
-          key: const ValueKey('subTrackFormSave'),
-          onPressed: _saving ? null : _save,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(52),
-            shape: const StadiumBorder(),
+        // Story 4.2 (AC-4, AC-5, AC-6): progress and held while saving;
+        // visible but disabled, with one note, while a tutor may not write.
+        if (blocked) const TutorWriteNote(padding: EdgeInsets.only(bottom: 12)),
+        TutorDisabledControl(
+          blocked: blocked,
+          child: FilledButton(
+            key: const ValueKey('subTrackFormSave'),
+            onPressed: _saving || blocked ? null : _save,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              shape: const StadiumBorder(),
+            ),
+            child: _saving
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(l10n.subTrackFormSave),
           ),
-          child: _saving
-              ? const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(l10n.subTrackFormSave),
         ),
       ],
     );

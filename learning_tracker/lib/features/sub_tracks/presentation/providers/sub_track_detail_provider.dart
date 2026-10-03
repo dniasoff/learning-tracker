@@ -32,6 +32,7 @@ import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_detail_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_ground_projection.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 /// The detail cannot load: no learner is active, a repository is not
@@ -472,6 +473,7 @@ final subTrackDetailProvider = Provider.autoDispose
           track: track,
           state: engine,
           role: ref.watch(subTrackDetailRoleProvider),
+          writesBlocked: ref.watch(subTrackWritesBlockedProvider),
           noDeadline: curriculum.dailyTarget == null,
           ground: SubTrackGroundProjection.project(
             track: track,

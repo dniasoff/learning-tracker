@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 
 /// Shows [child] — a sub-track write surface (the school-year form, the
@@ -16,6 +17,7 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_
 class SubTrackParentSessionHold extends ConsumerStatefulWidget {
   const SubTrackParentSessionHold({
     required this.child,
+    this.allowTutor = false,
     this.loading = const Center(child: CircularProgressIndicator()),
     this.locked = const SizedBox.shrink(
       key: ValueKey('subTrackParentSessionLocked'),
@@ -25,6 +27,11 @@ class SubTrackParentSessionHold extends ConsumerStatefulWidget {
 
   /// The parent-only surface.
   final Widget child;
+
+  /// Whether a tutored session holds it too (Story 4.2, DNI-510: the shared
+  /// sub-track forms; [subTrackEditorSessionProvider]). The goal setup the
+  /// no-deadline link opens stays parent-only.
+  final bool allowTutor;
 
   /// Shown while the session resolves for the first time.
   final Widget loading;
@@ -45,7 +52,9 @@ class _SubTrackParentSessionHoldState
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(subTrackParentSessionProvider);
+    final session = widget.allowTutor
+        ? ref.watch(subTrackEditorSessionProvider)
+        : ref.watch(subTrackParentSessionProvider);
     final live = !session.hasError && session.value == true;
     if (live) _granted = true;
     if (!_granted) {

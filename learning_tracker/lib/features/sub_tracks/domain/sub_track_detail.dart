@@ -15,9 +15,10 @@ import 'package:learning_tracker/features/sub_tracks/domain/sub_track_ground_pro
 
 /// Who is looking at the detail.
 ///
-/// Only the parent edits (AC-5, AC-6). The child is read-only with no
-/// shortfall (AC-2, AC-7). A tutor is read-only in Epic 2 (tutor sub-track
-/// writes arrive in Epic 4) and, like the parent, may see the shortfall.
+/// The parent edits (AC-5, AC-6), and so does a tutor in tutor mode (Story
+/// 4.2 / DNI-510), whose controls are disabled while he may not write
+/// ([SubTrackDetail.writesBlocked]). The child is read-only with no
+/// shortfall (AC-2, AC-7); the tutor, like the parent, may see it.
 enum SubTrackDetailRole {
   /// The parent (or an adult learner): full controls.
   parent,
@@ -38,6 +39,7 @@ final class SubTrackDetail {
     required this.ground,
     required this.role,
     required this.noDeadline,
+    this.writesBlocked = false,
   });
 
   /// The stored intent.
@@ -52,6 +54,11 @@ final class SubTrackDetail {
   /// The viewer.
   final SubTrackDetailRole role;
 
+  /// The viewer's edit controls are visible but disabled right now: a tutor
+  /// without editing access, offline, or with the talmid locked (Story 4.2
+  /// AC-5, AC-6). Never true for the parent.
+  final bool writesBlocked;
+
   /// Whether the curriculum has no live deadline (the engine derives no
   /// `dailyTarget` for it). Only then does the parent see the Story 2.4
   /// no-deadline note.
@@ -65,9 +72,14 @@ final class SubTrackDetail {
   /// wholly read-only for every role.
   bool get isEnded => track.isEnded || !state.holdsGround;
 
-  /// Whether the viewer may reorder or remove ground: the parent, on a
-  /// sub-track that is not ended ([isEnded]).
-  bool get canEdit => role == SubTrackDetailRole.parent && !isEnded;
+  /// Whether the viewer's edit controls show (reorder, remove, ⋮, Add
+  /// ground, Add next year): the parent or a tutor, on a sub-track that is
+  /// not ended ([isEnded]).
+  bool get canEdit => role != SubTrackDetailRole.child && !isEnded;
+
+  /// Whether those controls are enabled now ([canEdit] and not
+  /// [writesBlocked]).
+  bool get canWrite => canEdit && !writesBlocked;
 
   /// Whether the shortfall tag may show (never for the child, NFR-9).
   bool get showsShortfall => role != SubTrackDetailRole.child;

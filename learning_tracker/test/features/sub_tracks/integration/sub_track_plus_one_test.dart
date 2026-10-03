@@ -14,6 +14,7 @@ import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/also_learning_section.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_write_availability.dart';
 
 import '../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../helpers/pump_app.dart';
@@ -32,6 +33,7 @@ List<LearningCommandCall> _captures(EngineBackedCommands c) =>
 Future<(SubTrackTestEngine, EngineBackedCommands)> _pump(
   WidgetTester tester, {
   SubTrackViewerRole role = SubTrackViewerRole.child,
+  TutorWriteAvailability? availability,
 }) async {
   final engine = SubTrackTestEngine();
   addTearDown(engine.dispose);
@@ -42,6 +44,7 @@ Future<(SubTrackTestEngine, EngineBackedCommands)> _pump(
         engine: engine,
         commands: commands,
         role: role,
+        availability: availability,
       ),
       child: const Scaffold(
         body: SingleChildScrollView(
@@ -302,11 +305,34 @@ void main() {
     expect(engine.state.countedEventIds, isEmpty);
   });
 
-  testWidgets('a tutor device never attempts a sub-track write (deviation '
-      '#3: tutor capture stays disabled, online or offline)', (tester) async {
-    final (_, commands) = await _pump(tester, role: SubTrackViewerRole.tutor);
-    await tester.tap(_plusOne(schoolId), warnIfMissed: false);
+  // Story 4.2 (DNI-510) replaced the Epic 2 read-only tutor: a tutor who
+  // may not write now (no editing access, offline — deviation #3) attempts
+  // nothing; a permitted, online tutor records (AC-1).
+  for (final availability in [
+    TutorWriteAvailability.noEditAccess,
+    TutorWriteAvailability.offline,
+  ]) {
+    testWidgets('a blocked tutor never attempts a sub-track write '
+        '(${availability.name})', (tester) async {
+      final (_, commands) = await _pump(
+        tester,
+        role: SubTrackViewerRole.tutor,
+        availability: availability,
+      );
+      await tester.tap(_plusOne(schoolId), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(commands.inner.calls, isEmpty);
+    });
+  }
+
+  testWidgets('a permitted, online tutor records the +1', (tester) async {
+    final (_, commands) = await _pump(
+      tester,
+      role: SubTrackViewerRole.tutor,
+      availability: TutorWriteAvailability.available,
+    );
+    await tester.tap(_plusOne(schoolId));
     await tester.pumpAndSettle();
-    expect(commands.inner.calls, isEmpty);
+    expect(_captures(commands), hasLength(1));
   });
 }

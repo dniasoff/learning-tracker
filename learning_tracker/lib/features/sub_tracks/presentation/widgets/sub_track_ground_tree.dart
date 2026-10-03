@@ -13,6 +13,8 @@ import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dar
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_ground_projection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_ground_row.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorDisabledControl;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The ground of [detail] in stored entry order, as the engine expands it.
@@ -151,6 +153,11 @@ class _SubTrackGroundTreeState extends ConsumerState<SubTrackGroundTree> {
       );
     }
     final busy = ref.watch(subTrackGroundEditorProvider(detail.track.id)).busy;
+    // Story 4.2 (AC-5, AC-6): a tutor who may not write sees the controls
+    // visible but disabled; any session's controls hold while an edit is in
+    // flight (AC-4).
+    final blocked = detail.writesBlocked;
+    final enabled = !busy && !blocked;
     final count = ground.entries.length;
     return ReorderableListView.builder(
       key: const ValueKey('subTrackGroundReorderable'),
@@ -158,7 +165,7 @@ class _SubTrackGroundTreeState extends ConsumerState<SubTrackGroundTree> {
       physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
       itemCount: count,
-      onReorderItem: busy ? (_, _) {} : _move,
+      onReorderItem: enabled ? _move : (_, _) {},
       itemBuilder: (context, i) {
         final entry = ground.entries[i];
         return Column(
@@ -167,16 +174,22 @@ class _SubTrackGroundTreeState extends ConsumerState<SubTrackGroundTree> {
           children: _block(
             ground,
             entry,
-            leading: _DragHandle(row: entry, index: i, enabled: !busy),
-            trailing: _EntryMenu(
-              row: entry,
-              trackName: detail.track.name,
-              enabled: !busy,
-              canMoveUp: i > 0,
-              canMoveDown: i < count - 1,
-              onMoveUp: () => _move(i, i - 1),
-              onMoveDown: () => _move(i, i + 1),
-              onRemove: () => unawaited(_remove(entry)),
+            leading: TutorDisabledControl(
+              blocked: blocked,
+              child: _DragHandle(row: entry, index: i, enabled: enabled),
+            ),
+            trailing: TutorDisabledControl(
+              blocked: blocked,
+              child: _EntryMenu(
+                row: entry,
+                trackName: detail.track.name,
+                enabled: enabled,
+                canMoveUp: i > 0,
+                canMoveDown: i < count - 1,
+                onMoveUp: () => _move(i, i - 1),
+                onMoveDown: () => _move(i, i + 1),
+                onRemove: () => unawaited(_remove(entry)),
+              ),
             ),
           ),
         );

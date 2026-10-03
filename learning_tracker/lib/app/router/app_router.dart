@@ -76,6 +76,12 @@ class AppRouter extends RootStackRouter {
   /// DNI-513: refuses tutored sessions on parent-only views.
   final OwnSessionGuard ownSessionGuard;
 
+  /// The shared sub-track write surfaces (the school-year form, the ground
+  /// picker): a parent session, or a tutor in tutor mode (Story 4.2,
+  /// DNI-510, AC-2). Defaults to [parentSessionGuard], so a router built
+  /// without it keeps them parent-only.
+  final ParentSessionGuard subTrackEditorGuard;
+
   /// Guards the city picker, which writes the active learner's lock
   /// settings: a child holder with a Parent PIN must have verified it
   /// (DNI-481 AC-3, AUD-sacred_time-08) — also on a direct deep link.
@@ -86,12 +92,17 @@ class AppRouter extends RootStackRouter {
     required this.profileGuard,
     required this.childModeGuard,
     required this.pinGuard,
+    required this.sacredTimeLocationGuard,
     ParentSessionGuard? parentSessionGuard,
     OwnSessionGuard? ownSessionGuard,
-    required this.sacredTimeLocationGuard,
+    ParentSessionGuard? subTrackEditorGuard,
     super.navigatorKey,
   }) : parentSessionGuard = parentSessionGuard ?? ParentSessionGuard.denyAll(),
-       ownSessionGuard = ownSessionGuard ?? OwnSessionGuard.denyAll();
+       ownSessionGuard = ownSessionGuard ?? OwnSessionGuard.denyAll(),
+       subTrackEditorGuard =
+           subTrackEditorGuard ??
+           parentSessionGuard ??
+           ParentSessionGuard.denyAll();
 
   @override
   RouteType get defaultRouteType => const RouteType.material();
@@ -185,13 +196,14 @@ class AppRouter extends RootStackRouter {
     ),
 
     // Sub-tracks. Ground picker (Story 2.7, DNI-498): a parent write
-    // surface. A child, PIN-locked or tutored session — a deep link
-    // included — is refused by the shared parent-session guard; the picker
-    // also fails closed on a calendar-program curriculum (AC-7, AC-8).
+    // surface, shared with a tutor in tutor mode (Story 4.2, DNI-510). A
+    // child or PIN-locked session — a deep link included — is refused by
+    // the sub-track editor guard; the picker also fails closed on a
+    // calendar-program curriculum (AC-7, AC-8).
     AutoRoute(
       path: '/sub-tracks/:subTrackId/ground',
       page: GroundPickerRoute.page,
-      guards: [authGuard, parentSessionGuard],
+      guards: [authGuard, subTrackEditorGuard],
     ),
 
     // Content browsing routes
@@ -324,15 +336,16 @@ class AppRouter extends RootStackRouter {
       page: TrackDetailRoute.page,
       guards: [authGuard],
     ),
+
     // Sub-tracks (Epic 2). One route per story; every sub-track write
-    // surface is behind the parent-session guard (DNI-495 AC-3).
+    // surface is behind the sub-track editor guard: a parent session
+    // (DNI-495 AC-3) or a tutor in tutor mode (Story 4.2, DNI-510).
     AutoRoute(
       path: '/settings/tracks/:curriculumId/sub-tracks/school-year',
       page: SchoolYearSubTrackFormRoute.page,
-      guards: [authGuard, parentSessionGuard],
+      guards: [authGuard, subTrackEditorGuard],
     ),
-
-    // Sub-tracks (Epic 2). Story 2.6 (DNI-497): the sub-track detail, opened
+    // Story 2.6 (DNI-497): the sub-track detail, opened
     // from a Manage tracks hub row. Any role may open it (the child and tutor
     // read-only), so no parent-session guard. Registered without a
     // SUB_TRACKS compile-time flag: orchestrator ruling B2 / AD-49 makes the
@@ -344,6 +357,7 @@ class AppRouter extends RootStackRouter {
       page: SubTrackDetailRoute.page,
       guards: [authGuard],
     ),
+
     AutoRoute(
       path: '/settings/lifetime',
       page: LifetimeMarkingRoute.page,

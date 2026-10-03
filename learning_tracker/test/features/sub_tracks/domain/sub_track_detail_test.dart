@@ -16,12 +16,14 @@ SubTrackDetail _detail({
   int? capacity,
   bool noDeadline = true,
   bool holdsGround = true,
+  bool writesBlocked = false,
 }) {
   final t = track ?? detailSubTrack(10, 'School', const [peah]);
   return SubTrackDetail(
     track: t,
     role: role,
     noDeadline: noDeadline,
+    writesBlocked: writesBlocked,
     state: SubTrackState(
       subTrackId: t.id,
       holdsGround: holdsGround,
@@ -61,10 +63,19 @@ void main() {
     expect(_detail().hasCapacity, isFalse);
   });
 
-  test('only the parent edits, and never an ended sub-track', () {
+  test('the parent and the tutor edit, never the child nor an ended '
+      'sub-track; a blocked tutor sees the controls disabled (Story 4.2)', () {
     expect(_detail().canEdit, isTrue);
+    expect(_detail().canWrite, isTrue);
     expect(_detail(role: SubTrackDetailRole.child).canEdit, isFalse);
-    expect(_detail(role: SubTrackDetailRole.tutor).canEdit, isFalse);
+    expect(_detail(role: SubTrackDetailRole.tutor).canEdit, isTrue);
+    expect(_detail(role: SubTrackDetailRole.tutor).canWrite, isTrue);
+    final blocked = _detail(
+      role: SubTrackDetailRole.tutor,
+      writesBlocked: true,
+    );
+    expect(blocked.canEdit, isTrue, reason: 'visible');
+    expect(blocked.canWrite, isFalse, reason: 'disabled');
     final ended = detailSubTrack(11, 'Old', const [peah], ended: true);
     expect(_detail(track: ended).canEdit, isFalse);
   });

@@ -1693,6 +1693,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorModeExit => 'Exit';
 
   @override
+  String get tutorModeSwitch => 'Switch';
+
+  @override
   String get tutoredEntryPermissionDenied =>
       'Access denied — the grant may have been revoked.';
 
@@ -3496,10 +3499,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String subTrackHomeUndoNotSaved(String name) {
     return 'Undo not saved: $name';
   }
-
-  @override
-  String get subTrackTutorReadOnlyNote =>
-      'Editing sub-tracks from a tutor device is coming soon';
 
   @override
   String subTrackDashboardTitle(int count) {

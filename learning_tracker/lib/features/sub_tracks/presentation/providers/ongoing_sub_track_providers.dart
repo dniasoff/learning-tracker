@@ -143,13 +143,15 @@ final ongoingSubTrackContextProvider = FutureProvider.autoDispose
     }, retry: (retryCount, error) => null);
 
 /// Whether a sub-track write surface may be shown: an adult profile (the
-/// learner is the parent), or a child profile whose parent PIN was
-/// verified this session. A tutored session is refused (tutor sub-track
-/// writes are Epic 4). Fails closed while the profile resolves.
+/// learner is the parent), a child profile whose parent PIN was verified
+/// this session, or a tutored session (Story 4.2, DNI-510: the tutor's
+/// Save is disabled while he may not write, and his tutor commands run the
+/// grant, connection and lock preflight). Fails closed while the profile
+/// resolves.
 final ongoingSubTrackParentSessionProvider = FutureProvider.autoDispose<bool>((
   ref,
 ) async {
-  if (ref.watch(activeTutoredProfileSelectionProvider) != null) return false;
+  if (ref.watch(activeTutoredProfileSelectionProvider) != null) return true;
   final profile = await ref.watch(activeProfileProvider.future);
   if (profile == null) return false;
   if (!profile.mode.isChild) return true;

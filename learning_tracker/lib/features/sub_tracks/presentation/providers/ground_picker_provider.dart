@@ -17,10 +17,10 @@ import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/content_browsing/content_browsing.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/ground_picker_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ground_selection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_picker_content.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 
 /// Why the picker cannot be used (AC-7, AC-8): it then shows no editable
 /// control at all, whichever entry point or deep link reached it.
@@ -157,9 +157,13 @@ final groundPickerCalendarProgramProvider = StreamProvider.autoDispose
 /// retry, UX-DR-126); access refusals are [GroundPickerUnavailable].
 final groundPickerAccessProvider = FutureProvider.autoDispose
     .family<GroundPickerAccess, String>((ref, subTrackId) async {
-      final parent = await ref.watch(parentSessionProvider.future);
-      if (!parent)
+      // A parent session, or a tutored session (Story 4.2, DNI-510): the
+      // tutor's picks write through his tutor commands; without editing
+      // access or a connection the confirm stays disabled (AC-5, AC-6).
+      final editor = await ref.watch(subTrackEditorSessionProvider.future);
+      if (!editor) {
         return const GroundPickerUnavailable(GroundPickerBlock.notParent);
+      }
       final scope = await ref.watch(activeLearnerScopeProvider.future);
       if (scope == null) {
         return const GroundPickerUnavailable(GroundPickerBlock.notFound);
@@ -308,11 +312,14 @@ final class GroundPickerController extends Notifier<GroundPickerUiState> {
     state = state.copyWith(expanded: Set.unmodifiable(next));
   }
 
-  /// A confirm started: the [ground] it will write shows at once.
-  void submitting(List<NodeEntry> ground) => state = state.copyWith(
-    submitting: true,
-    optimisticGround: List.unmodifiable(ground),
-  );
+  /// A confirm started: the [ground] it will write shows at once — or,
+  /// with [optimistic] false (a tutor's write, AD-53, Story 4.2), only once
+  /// the callable has succeeded and the talmid's row is re-read.
+  void submitting(List<NodeEntry> ground, {bool optimistic = true}) =>
+      state = state.copyWith(
+        submitting: true,
+        optimisticGround: optimistic ? List.unmodifiable(ground) : null,
+      );
 
   /// The confirm was accepted: the draft is done.
   void accepted() => state = state.copyWith(

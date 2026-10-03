@@ -2903,6 +2903,12 @@ abstract class AppLocalizations {
   /// **'Exit'**
   String get tutorModeExit;
 
+  /// Story 4.2 (DNI-510, UX-DR-38): the tutor-mode bar's action that opens the profile switcher.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch'**
+  String get tutorModeSwitch;
+
   /// No description provided for @tutoredEntryPermissionDenied.
   ///
   /// In en, this message translates to:
@@ -5943,12 +5949,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Undo not saved: {name}'**
   String subTrackHomeUndoNotSaved(String name);
-
-  /// The single note on read-only tutor sub-track surfaces (DNI-500 AC-9). [ASSUMPTION copy] DRAFT copy, pending zc4.
-  ///
-  /// In en, this message translates to:
-  /// **'Editing sub-tracks from a tutor device is coming soon'**
-  String get subTrackTutorReadOnlyNote;
 
   /// Dashboard section header above the sub-track summary cards (DNI-500 AC-8).
   ///

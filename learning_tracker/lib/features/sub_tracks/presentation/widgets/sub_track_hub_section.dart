@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,16 +7,23 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/ongoing_sub_track_form_route.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ended_sub_tracks_section.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_start_status.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_type_chooser.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorDisabledControl, TutorWriteNote;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The Sub-tracks group under one curriculum's main-track card in Settings →
@@ -34,6 +43,12 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///   UX-DR-53): pushed on a phone; inside the >=840dp split the row is
 ///   selected and the detail pane updates in place. Metadata *Edit* is in
 ///   the detail's ⋮.
+/// - *Add sub-track* → *Ongoing* opens the ongoing form (DNI-496 AC-1). The
+///   chooser shows the curriculum's AD-45 ongoing usage and disables
+///   Ongoing at five (AC-5); until that count has loaded, Ongoing stays
+///   disabled (fail closed).
+/// - An ongoing row that has not started yet reads "Starts {date}"
+///   (DNI-496 AC-4, UX-DR-89), judged on the learner's civil today.
 /// - Story 2.8 (DNI-499, AC-5, AC-6): the rows and the header count are the
 ///   sub-tracks active on the learner's civil today (AD-41); a tombstoned
 ///   one and one whose window passed (no write, AD-33) are listed instead
@@ -47,7 +62,9 @@ class SubTrackHubSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(subTrackParentSessionProvider).value != true) {
+    // A parent session, or a tutor in tutor mode (Story 4.2, DNI-510,
+    // AC-2): the same group, its writes through his tutor commands.
+    if (ref.watch(subTrackEditorSessionProvider).value != true) {
       return const SizedBox.shrink();
     }
     // Inert until the Story 2.1 commands are live for this learner (ruling:
@@ -94,6 +111,13 @@ class SubTrackHubSection extends ConsumerWidget {
         .watch(activeLearnerStateProvider)
         .value?[curriculumId]
         ?.dailyTarget;
+    // The ongoing usage and the learner's civil today (AD-41), as the
+    // ongoing form reads them (DNI-496).
+    final ongoing = ref.watch(ongoingSubTrackContextProvider(curriculumId));
+    final ongoingRead = ongoing.hasError ? null : ongoing.value;
+    // Story 4.2 (AC-5, AC-6): Add stays visible but disabled, with one
+    // note, while a tutor may not write.
+    final blocked = ref.watch(subTrackWritesBlockedProvider);
 
     return Padding(
       padding: const EdgeInsetsDirectional.only(start: 4, bottom: 16),
@@ -121,6 +145,7 @@ class SubTrackHubSection extends ConsumerWidget {
                 padding: const EdgeInsetsDirectional.only(bottom: 8),
                 child: SubTrackHubRow(
                   track: s,
+                  today: ongoingRead?.today,
                   selected: s.id == selected,
                   onTap: () => openSubTrackDetail(context, ref, s.id),
                 ),
@@ -141,19 +166,36 @@ class SubTrackHubSection extends ConsumerWidget {
               ),
           ],
           const SizedBox(height: 4),
-          OutlinedButton.icon(
-            onPressed: () => SubTrackTypeChooser.show(
-              context,
-              onSchoolYear: () => context.router.push(
-                SchoolYearSubTrackFormRoute(curriculumId: curriculumId),
+          if (blocked)
+            const TutorWriteNote(padding: EdgeInsets.only(bottom: 8)),
+          TutorDisabledControl(
+            blocked: blocked,
+            child: OutlinedButton.icon(
+              key: const ValueKey('subTrackHubAdd'),
+              onPressed: blocked
+                  ? null
+                  : () => SubTrackTypeChooser.show(
+                      context,
+                      onSchoolYear: () => context.router.push(
+                        SchoolYearSubTrackFormRoute(curriculumId: curriculumId),
+                      ),
+                      onOngoing: ongoingRead == null
+                          ? null
+                          : () => unawaited(
+                              openOngoingSubTrackForm(
+                                context,
+                                curriculumId: curriculumId,
+                              ),
+                            ),
+                      ongoingInUse: ongoingRead?.ongoingInUse(),
+                    ),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.subTrackHubAdd),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                shape: const StadiumBorder(),
+                side: BorderSide(color: colors.brandOutline),
               ),
-            ),
-            icon: const Icon(Icons.add),
-            label: Text(l10n.subTrackHubAdd),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(48, 48),
-              shape: const StadiumBorder(),
-              side: BorderSide(color: colors.brandOutline),
             ),
           ),
           EndedSubTracksSection(
@@ -167,7 +209,9 @@ class SubTrackHubSection extends ConsumerWidget {
 }
 
 /// One sub-track row: a flat card with a 1px outline at elevation 0
-/// (UX-DR-15, UX-DR-150), its name and a type/window/rate subtitle.
+/// (UX-DR-15, UX-DR-150), its name and a type/window/rate subtitle. An
+/// ongoing row that starts after [today] reads "Starts {date}" instead
+/// (DNI-496 AC-4, UX-DR-89).
 ///
 /// [selected] marks the sub-track whose detail the >=840dp split shows
 /// (UX-DR-163, UX-DR-164); the chevron follows the text direction, so it
@@ -176,12 +220,17 @@ class SubTrackHubRow extends StatelessWidget {
   const SubTrackHubRow({
     required this.track,
     this.onTap,
+    this.today,
     this.selected = false,
     super.key,
   });
 
   /// The sub-track.
   final SubTrack track;
+
+  /// The learner's civil today, or null while it is unknown (no "Starts"
+  /// status then).
+  final CivilDate? today;
 
   /// Opens the sub-track's detail; null renders the row inert.
   final VoidCallback? onTap;
@@ -207,7 +256,10 @@ class SubTrackHubRow extends StatelessWidget {
         rate,
       );
     } else {
-      subtitle = l10n.subTrackRowOngoingSubtitle(rate);
+      final day = today;
+      subtitle =
+          (day == null ? null : subTrackStartsLabel(context, track, day)) ??
+          l10n.subTrackRowOngoingSubtitle(rate);
     }
     return Card(
       elevation: 0,

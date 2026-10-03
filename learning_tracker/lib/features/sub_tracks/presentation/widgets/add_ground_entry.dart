@@ -2,7 +2,8 @@
 /// split host (Story 2.7 / DNI-498 AC-1, AC-7, AC-8, AC-9).
 ///
 /// [AddGroundButton] is shown on every parent view of a sub-track detail,
-/// groundless included (UX-DR-54, UX-DR-122). It is absent for a child
+/// groundless included (UX-DR-54, UX-DR-122), and on a tutor's (Story 4.2,
+/// DNI-510): disabled while he may not write. It is absent for a child
 /// session (FR-10, FR-11: ground is read-only for the child) and on a
 /// calendar-program curriculum (AD-45), and while either is unresolved
 /// (fail closed). On a phone it pushes the full-screen picker route; inside
@@ -20,10 +21,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/ground_picker_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_picker_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ground_picker_pane.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorDisabledControl;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The width from which the picker is a right pane beside the detail.
@@ -70,11 +73,12 @@ class _AddGroundButtonState extends ConsumerState<AddGroundButton> {
 
   @override
   Widget build(BuildContext context) {
-    // The picker has usually closed when a queued assignment is refused.
-    listenForGroundRollbacks(ref, context, widget.subTrackId);
-    final parent = ref.watch(parentSessionProvider).value ?? false;
+    // A parent, or a tutor in tutor mode (Story 4.2, DNI-510, AC-2): the
+    // tutor's entry stays visible but disabled while he may not write.
+    final editor = ref.watch(subTrackEditorSessionProvider).value ?? false;
     final scope = ref.watch(activeLearnerScopeProvider).value;
-    if (!parent || scope == null) return const SizedBox.shrink();
+    if (!editor || scope == null) return const SizedBox.shrink();
+    final blocked = ref.watch(subTrackWritesBlockedProvider);
     final calendar = ref.watch(
       groundPickerCalendarProgramProvider((
         scope: scope,
@@ -83,11 +87,14 @@ class _AddGroundButtonState extends ConsumerState<AddGroundButton> {
     );
     // Unknown counts as blocked: the entry appears once it is known safe.
     if (calendar.value != false) return const SizedBox.shrink();
-    return OutlinedButton.icon(
-      focusNode: _focus,
-      onPressed: _open,
-      icon: const Icon(Icons.add),
-      label: Text(AppLocalizations.of(context)!.groundPickerAddGround),
+    return TutorDisabledControl(
+      blocked: blocked,
+      child: OutlinedButton.icon(
+        focusNode: _focus,
+        onPressed: blocked ? null : _open,
+        icon: const Icon(Icons.add),
+        label: Text(AppLocalizations.of(context)!.groundPickerAddGround),
+      ),
     );
   }
 }

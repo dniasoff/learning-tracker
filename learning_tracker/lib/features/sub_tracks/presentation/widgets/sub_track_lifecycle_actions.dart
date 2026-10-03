@@ -63,17 +63,16 @@ enum SubTrackLifecycleMenuAction {
 const subTrackLifecycleMenuActions = SubTrackLifecycleMenuAction.values;
 
 /// DNI-499's entries in DNI-497's detail ⋮ registry: *End sub-track now*
-/// and *Delete track* for the parent on a sub-track that is not ended
-/// (tombstoned or past its window, [SubTrackDetail.isEnded]). The child and
-/// the tutor never see them (tutor sub-track writes are Epic 4).
+/// and *Delete track* for the parent and (Story 4.2, DNI-510) the tutor on
+/// a sub-track that is not ended (tombstoned or past its window,
+/// [SubTrackDetail.isEnded]). The child never sees them.
 List<SubTrackDetailMenuAction> get subTrackLifecycleDetailMenuActions => [
   for (final action in subTrackLifecycleMenuActions)
     SubTrackDetailMenuAction(
       id: action.id,
       icon: action.icon,
       label: action.label,
-      visibleFor: (detail) =>
-          detail.role == SubTrackDetailRole.parent && !detail.isEnded,
+      visibleFor: (detail) => detail.canEdit,
       onSelected: (context, detail) async {
         final read = ProviderScope.containerOf(context, listen: false).read;
         await runSubTrackLifecycleAction(

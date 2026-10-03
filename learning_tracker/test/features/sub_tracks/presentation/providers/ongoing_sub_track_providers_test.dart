@@ -228,8 +228,9 @@ void main() {
       },
     );
 
-    test('a tutored session is refused (Epic 4)', () async {
-      expect(await session(mode: ProfileMode.adult, tutored: true), isFalse);
+    test('a tutored session opens the form (Story 4.2, DNI-510); its Save '
+        'follows the tutor write gate', () async {
+      expect(await session(mode: ProfileMode.adult, tutored: true), isTrue);
     });
   });
 }
