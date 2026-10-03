@@ -282,6 +282,27 @@ Future<List<List<DailyTask>>> watchPlannedDaysAfterToday(
   return lists.sublist(1);
 }
 
+/// The planner's task lists for [dates], in order, laid out in sequence
+/// over the active learner's live `LearnerState` with nothing before them
+/// (DNI-505): [watchPlannedDaysAfterToday]'s layout without today's list
+/// in front. The catch-up cards read it for the locked days of every
+/// pending card, oldest first, so a later card continues after an earlier
+/// one (A-4). Watches the same inputs as [plannedTasksForDate].
+Future<List<List<DailyTask>>> watchPlannedDaysInSequence(
+  Ref ref,
+  List<String> dates,
+) async {
+  final inputs = await _watchPlannerInputs(ref);
+  return buildPlannedSequence(
+    state: inputs.state,
+    corpora: inputs.corpora,
+    dates: dates,
+    activeCurricula: inputs.activeCurricula,
+    activeTracks: inputs.activeTracks,
+    presentationFor: inputs.presentationFor,
+  );
+}
+
 /// Everything the planner reads besides the date: the live state, corpora,
 /// active curricula and tracks, and a per-date presentation loader.
 typedef _PlannerInputs = ({
