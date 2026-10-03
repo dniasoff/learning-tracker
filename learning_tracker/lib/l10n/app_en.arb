@@ -1273,6 +1273,7 @@
   },
   "changeHistorySettingsSubtitle": "Every change to tracks, goals and learning, by anyone",
   "changeHistorySourceMain": "Main track",
+  "changeHistorySourceSeveral": "Several tracks",
   "changeHistoryStagesChanged": "Changed the review stages",
   "changeHistoryStudyDaysChanged": "Changed the study days",
   "changeHistorySubTrackChanged": "Changed {name}: {fields}",

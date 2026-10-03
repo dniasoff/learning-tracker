@@ -182,6 +182,16 @@ void main() {
           ref,
           learningHistoryRow(kind: LearningEventKind.void_, refs: const []),
         ),
+        changeHistorySentence(
+          l10n,
+          formats,
+          ref,
+          learningHistoryRow(
+            kind: LearningEventKind.void_,
+            refs: const ['Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:2'],
+            source: const SeveralSources(),
+          ),
+        ),
       ],
     );
     expect(sentences, [
@@ -189,6 +199,7 @@ void main() {
       'Learned Berakhot 1:1, Berakhot 1:2 · Main track',
       'Learned Berakhot 1:1 – Berakhot 1:3 (3) · Main track',
       'Removed an earlier learning record',
+      'Removed Berakhot 1:1, Berakhot 1:2 · Several tracks',
     ]);
   });
 

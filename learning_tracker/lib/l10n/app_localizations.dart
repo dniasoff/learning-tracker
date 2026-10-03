@@ -3491,6 +3491,12 @@ abstract class AppLocalizations {
   /// **'Main track'**
   String get changeHistorySourceMain;
 
+  /// No description provided for @changeHistorySourceSeveral.
+  ///
+  /// In en, this message translates to:
+  /// **'Several tracks'**
+  String get changeHistorySourceSeveral;
+
   /// No description provided for @changeHistoryStagesChanged.
   ///
   /// In en, this message translates to:

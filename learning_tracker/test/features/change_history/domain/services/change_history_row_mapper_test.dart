@@ -526,6 +526,53 @@ void main() {
       expect(replacement.key, isNot(capture.key));
     });
 
+    test('an un-learn across sources is one row that names no single '
+        'source, and voids each source\'s capture', () {
+      final sub = historyId(9001);
+      final rows = _rows(
+        names: {sub: 'Rebbe'},
+        events: [
+          historyLearn(1, minutes: 10),
+          historyLearn(
+            2,
+            minutes: 20,
+            source: sub,
+            ref: 'Mishnah Berakhot 1:2',
+            dateState: DateState.catchUp,
+          ),
+          // One un-learn command voids both.
+          historyVoid(3, target: 1, minutes: 40),
+          historyVoid(4, target: 2, minutes: 40),
+        ],
+      );
+      expect(rows, hasLength(3));
+      final unlearn = rows.first;
+      expect(unlearn.isVoid, isTrue);
+      expect(unlearn.eventCount, 2);
+      expect(_learning(unlearn).refs, [
+        'Mishnah Berakhot 1:1',
+        'Mishnah Berakhot 1:2',
+      ]);
+      expect(_learning(unlearn).source, isA<SeveralSources>());
+      expect(_learning(unlearn).dateState, isNull, reason: 'not shared');
+      expect(_learning(unlearn).learnedOn, '2026-09-01', reason: 'shared');
+      for (final capture in rows.skip(1)) {
+        expect(capture.voidedCount, 1);
+        expect(capture.canUndo, isFalse);
+      }
+
+      // A void of one source's learning still names that source.
+      final single = _rows(
+        names: {sub: 'Rebbe'},
+        events: [
+          historyLearn(2, minutes: 20, source: sub),
+          historyVoid(4, target: 2, minutes: 40),
+        ],
+      ).first;
+      expect((_learning(single).source! as SubTrackSource).name, 'Rebbe');
+      expect(_learning(single).dateState, DateState.dated);
+    });
+
     test('a persisted void whose target is another void maps without '
         'crashing, as a generic removal with its own who and when', () {
       final rows = _rows(

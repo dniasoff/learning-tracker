@@ -1012,6 +1012,7 @@
   "changeHistorySettingsChanged": "שינה הגדרות לומד: {fields}",
   "changeHistorySettingsSubtitle": "כל שינוי במסלולים, ביעדים ובלימוד, על ידי כל אחד",
   "changeHistorySourceMain": "מסלול ראשי",
+  "changeHistorySourceSeveral": "כמה מסלולים",
   "changeHistoryStagesChanged": "שינה את שלבי החזרה",
   "changeHistoryStudyDaysChanged": "שינה את ימי הלימוד",
   "changeHistorySubTrackChanged": "שינה את {name}: {fields}",

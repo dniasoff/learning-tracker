@@ -127,6 +127,13 @@ final class SubTrackSource extends HistorySourceLabel {
   final String? name;
 }
 
+/// More than one source: an un-learn voids counted learning of one
+/// curriculum on every source it was captured to.
+final class SeveralSources extends HistorySourceLabel {
+  /// More than one source.
+  const SeveralSources();
+}
+
 /// A learning batch: what was learnt (or, for a void, what was removed).
 final class LearningSummary extends ChangeHistorySummary {
   /// Creates the summary.
@@ -145,13 +152,14 @@ final class LearningSummary extends ChangeHistorySummary {
   /// target is unknown.
   final List<String> refs;
 
-  /// The source at event time; null when unknown (an unresolved void).
+  /// The source at event time; [SeveralSources] when a void's targets span
+  /// sources; null when unknown (an unresolved void).
   final HistorySourceLabel? source;
 
-  /// The learnt events' date state.
+  /// The learnt events' date state; null when unknown or not shared.
   final DateState? dateState;
 
-  /// The learnt events' civil date.
+  /// The learnt events' civil date; null when unknown or not shared.
   final CivilDate? learnedOn;
 }
 

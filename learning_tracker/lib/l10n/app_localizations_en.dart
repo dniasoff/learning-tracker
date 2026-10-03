@@ -1965,6 +1965,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changeHistorySourceMain => 'Main track';
 
   @override
+  String get changeHistorySourceSeveral => 'Several tracks';
+
+  @override
   String get changeHistoryStagesChanged => 'Changed the review stages';
 
   @override
