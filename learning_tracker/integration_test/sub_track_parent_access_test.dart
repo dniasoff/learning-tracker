@@ -31,6 +31,8 @@ Future<void> _pumpAt(
   SubTrackHarness h,
   String path, {
   required bool parentSession,
+  required Finder until,
+  int maxPumps = 200,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(430, 1600);
@@ -46,6 +48,8 @@ Future<void> _pumpAt(
       retry: (_, _) => null,
     ),
   );
+  await tester.pumpAndSettle();
+  await pumpUntilFound(tester, until, maxPumps: maxPumps);
   await tester.pumpAndSettle();
 }
 
@@ -70,7 +74,16 @@ void main() {
   });
 
   testWidgets('a child deep link to the form exposes nothing', (tester) async {
-    await _pumpAt(tester, h, _formPath, parentSession: false);
+    await _pumpAt(
+      tester,
+      h,
+      _formPath,
+      parentSession: false,
+      // A negative check: give the form ~2 s to appear before asserting
+      // that it never does.
+      until: find.byType(SchoolYearSubTrackFormScreen),
+      maxPumps: 40,
+    );
     expect(find.byType(SchoolYearSubTrackFormScreen), findsNothing);
     expect(find.text('Save sub-track'), findsNothing);
     expect(h.commands.creates, isEmpty);
@@ -79,7 +92,16 @@ void main() {
   testWidgets('a child on Manage tracks sees no sub-track entry point', (
     tester,
   ) async {
-    await _pumpAt(tester, h, '/settings/tracks', parentSession: false);
+    // A negative check: give the group ~2 s to appear before asserting
+    // that it never does.
+    await _pumpAt(
+      tester,
+      h,
+      '/settings/tracks',
+      parentSession: false,
+      until: find.text('Add sub-track'),
+      maxPumps: 40,
+    );
     expect(find.byType(TrackManagementBody), findsOneWidget);
     expect(find.byType(LearningTrackCard), findsOneWidget);
     expect(find.byType(SubTrackHubRow), findsNothing);
@@ -87,7 +109,13 @@ void main() {
   });
 
   testWidgets('a parent reaches the hub group and the form', (tester) async {
-    await _pumpAt(tester, h, '/settings/tracks', parentSession: true);
+    await _pumpAt(
+      tester,
+      h,
+      '/settings/tracks',
+      parentSession: true,
+      until: find.text('Sub-tracks · 1 active'),
+    );
     expect(find.text('Sub-tracks · 1 active'), findsOneWidget);
     await tester.tap(find.text('Add sub-track'));
     await tester.pumpAndSettle();
@@ -97,7 +125,13 @@ void main() {
   });
 
   testWidgets('a parent deep link opens the form directly', (tester) async {
-    await _pumpAt(tester, h, _formPath, parentSession: true);
+    await _pumpAt(
+      tester,
+      h,
+      _formPath,
+      parentSession: true,
+      until: find.byType(SchoolYearSubTrackForm),
+    );
     expect(find.byType(SchoolYearSubTrackForm), findsOneWidget);
   });
 }

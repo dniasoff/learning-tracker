@@ -456,3 +456,17 @@ Future<void> settleCommands(WidgetTester tester) async {
     await tester.pump();
   }
 }
+
+/// Pumps in 50 ms steps until [finder] matches, at most [maxPumps] times.
+/// The integration binding runs on real time, so `pumpAndSettle` can return
+/// before the hub's async reads (scope, intent, sub-tracks) emit: no frame
+/// is pending until they do. The caller still asserts on [finder].
+Future<void> pumpUntilFound(
+  WidgetTester tester,
+  Finder finder, {
+  int maxPumps = 200,
+}) async {
+  for (var i = 0; i < maxPumps && finder.evaluate().isEmpty; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
