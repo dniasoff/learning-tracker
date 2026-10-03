@@ -38,8 +38,10 @@ lib/domain/learner_state/lock_constants.dart
 lib/domain/learner_state/ports/governed_doc_reader.dart
 lib/domain/learner_state/ports/learner_settings_reader.dart
 lib/domain/learner_state/ports/ports.dart
+lib/domain/learner_state/ports/sub_track_latest_write.dart
 lib/features/account/account.dart
 lib/features/account/domain/repositories/auth_repository.dart
+lib/features/change_history/data/repositories/change_history_sources.dart
 lib/features/content_browsing/content_browsing.dart
 lib/features/dashboard/domain/models/calendar_position.dart
 lib/features/gamification/domain/models/streak_recovery_info.dart
@@ -71,6 +73,11 @@ lib/features/scheduler/domain/repositories/goal_repository.dart
 lib/features/scheduler/scheduler.dart
 lib/features/settings/domain/services/backup_learning_port.dart
 lib/features/settings/settings.dart
+lib/features/sub_tracks/data/repositories/ground_picker_sources.dart
+lib/features/sub_tracks/data/repositories/sub_track_capture_sources.dart
+lib/features/sub_tracks/data/repositories/sub_track_detail_sources.dart
+lib/features/sub_tracks/data/repositories/sub_track_sources.dart
+lib/features/sub_tracks/sub_tracks.dart
 lib/features/tracks/setup/domain/entities/add_track_result.dart
 lib/features/tracks/setup/domain/repositories/curriculum_scope_write_repository.dart
 lib/features/tracks/setup/domain/repositories/profile_program_repository.dart
