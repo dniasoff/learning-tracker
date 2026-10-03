@@ -44,6 +44,7 @@ final class _Harness {
     DateTime? now,
     List<LearningEvent>? events,
     LearningCommandReads Function(FakeLearningCommandReads)? wrapReads,
+    Future<CaptureSourceType?> Function(String source)? sourceTypeOf,
   }) : now = now ?? _tuesday {
     reads = FakeLearningCommandReads(
       history: c0SettingsHistory(),
@@ -67,6 +68,7 @@ final class _Harness {
       ackWait: const Duration(milliseconds: 40),
       pointsWait: const Duration(milliseconds: 40),
       recordedWait: const Duration(milliseconds: 40),
+      sourceTypeOf: sourceTypeOf,
     );
     addTearDown(commands.dispose);
   }
@@ -97,6 +99,9 @@ final class _Harness {
     String? learnedOn,
     int? stage,
     bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) => commands.capture(
     curriculumId: engineCurriculum,
     refs: refs,
@@ -106,6 +111,9 @@ final class _Harness {
     learnedOn: learnedOn,
     stage: stage,
     skipRecorded: skipRecorded,
+    gesture: gesture,
+    taps: taps,
+    skippedCount: skippedCount,
   );
 }
 
@@ -545,6 +553,30 @@ void main() {
         'event_count': 1,
         'skipped_count': 0,
         'taps': 1,
+      });
+    },
+  );
+
+  test(
+    'capture uses the resolved type, gesture, measured taps and skips',
+    () async {
+      final h = _Harness(
+        sourceTypeOf: (_) async => CaptureSourceType.schoolYear,
+      );
+      await h.capture(
+        refs: [_b11, _b12],
+        source: engineUlid(7),
+        gesture: CaptureGesture.upTo,
+        taps: 4,
+        skippedCount: 2,
+      );
+      expect(h.analytics.captureSummaries.single, {
+        'curriculum_id': engineCurriculum,
+        'source_type': 'school_year',
+        'gesture': 'up_to',
+        'event_count': 2,
+        'skipped_count': 2,
+        'taps': 4,
       });
     },
   );

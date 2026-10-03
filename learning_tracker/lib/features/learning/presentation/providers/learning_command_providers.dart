@@ -315,6 +315,21 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       return null;
     }
   }
+  Future<CaptureSourceType?> sourceTypeOf(String source) async {
+    final repository = await subTrackRepository.read();
+    if (repository == null) return null;
+    final read = await repository
+        .watchAll(scope)
+        .firstWhere((value) => value is CompleteReadReady<SubTrack>);
+    for (final track in (read as CompleteReadReady<SubTrack>).items) {
+      if (track.id == source) {
+        return track.type == SubTrackType.schoolYear
+            ? CaptureSourceType.schoolYear
+            : CaptureSourceType.ongoing;
+      }
+    }
+    return null;
+  }
   final governed = DefaultGovernedLearningCommands(
     scope: scope,
     actor: actor,
@@ -383,6 +398,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     // A sub-track source must be live in this learner's scope and curriculum.
     sourceCheck: subTrackSourceCheckFrom(subTracks, scope),
     subTrackCommands: subTrackCommands,
+    sourceTypeOf: sourceTypeOf,
   );
   // Recover any latch a failed check left absent (app start, learner
   // switch); runs in the background and retries its own failures.

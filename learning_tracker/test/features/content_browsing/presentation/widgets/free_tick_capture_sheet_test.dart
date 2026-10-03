@@ -93,6 +93,7 @@ void main() {
         source: LearningEvent.sourceMain,
         dateState: DateState.dated,
         learnedOn: '2026-09-07',
+        taps: 4,
       ),
     );
   });
@@ -114,6 +115,7 @@ void main() {
       const FreeTickChoice(
         source: LearningEvent.sourceMain,
         dateState: DateState.beforeTracking,
+        taps: 3,
       ),
     );
   });
@@ -132,7 +134,7 @@ void main() {
     );
     expect(
       choice,
-      const FreeTickChoice(source: ulid, dateState: DateState.dated),
+      const FreeTickChoice(source: ulid, dateState: DateState.dated, taps: 3),
     );
   });
 

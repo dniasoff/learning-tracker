@@ -35,6 +35,7 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -201,9 +202,11 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
     required String source,
     required DateState dateState,
     CivilDate? learnedOn,
-    bool skipRecorded = false,
     int? stage,
     bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) => _fake.capture(
     curriculumId: curriculumId,
     refs: refs,
@@ -213,7 +216,9 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
     learnedOn: learnedOn,
     skipRecorded: skipRecorded,
     stage: stage,
-    skipRecorded: skipRecorded,
+    gesture: gesture,
+    taps: taps,
+    skippedCount: skippedCount,
   );
 
   @override

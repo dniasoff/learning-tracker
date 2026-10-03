@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/content_browsing/domain/entities/text_
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -765,6 +766,8 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           source: LearningEvent.sourceMain,
           dateState: DateState.dated,
           stage: task.stageOrder,
+          gesture: CaptureGesture.taskTick,
+          taps: 1,
         );
       }
 

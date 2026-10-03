@@ -2,8 +2,8 @@
 library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
-import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_capacity.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
@@ -14,10 +14,14 @@ SubTrackForecastComparison? recomputeSubTrackForecast({
   required Iterable<ChangeLogEntry> history,
   required Iterable<LearningEvent> events,
 }) {
-  final creation = history.where((entry) =>
-      entry.entity == GovernedEntity.subTrack &&
-      entry.entityId == track.id &&
-      entry.before.values.every((value) => value == null)).firstOrNull;
+  final creation = history
+      .where(
+        (entry) =>
+            entry.entity == GovernedEntity.subTrack &&
+            entry.entityId == track.id &&
+            entry.before.values.every((value) => value == null),
+      )
+      .firstOrNull;
   if (creation == null) return null;
 
   final creationFields = <String, Object?>{};
@@ -37,10 +41,13 @@ SubTrackForecastComparison? recomputeSubTrackForecast({
     return null;
   }
 
-  final end = snapshot.windowEnd ??
-      formatCivilDay(parseCivilDay(snapshot.windowStart).add(
-        const Duration(days: ongoingWindowLengthDays - 1),
-      ));
+  final end =
+      snapshot.windowEnd ??
+      formatCivilDay(
+        parseCivilDay(
+          snapshot.windowStart,
+        ).add(const Duration(days: ongoingWindowLengthDays - 1)),
+      );
   final forecast = subTrackCapacity(
     snapshot,
     today: snapshot.windowStart,

@@ -24,6 +24,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/widgets/
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/held_ground_provider.dart';
@@ -458,6 +459,7 @@ class _ContentHierarchyScreenState
       useHebrew: domainTermLabels(ref).isHebrew,
       transliterationVariant: ref.read(currentTransliterationVariantProvider),
     ),
+    gesture: CaptureGesture.taskTick,
   );
 
   /// Long-press: "Tick up to here" — the row's leaves and every earlier
@@ -466,15 +468,34 @@ class _ContentHierarchyScreenState
     CurriculumId curriculum,
     List<ContentItem> items,
     ContentItem item,
-  ) => _record(
-    curriculum,
-    leaves: leavesUpToHere(
+  ) {
+    final candidates = leavesUpToHere(
       items,
       item,
       unitDepth: unitDepthOf(curriculum, items),
-    ),
-    title: AppLocalizations.of(context)!.captureTickUpToHere,
-  );
+    );
+    final learnt =
+        ref
+            .read(activeLearnerStateProvider)
+            .asData
+            ?.value?[curriculum.storageKey]
+            ?.learntLeaves ??
+        const <String>{};
+    final alreadyLearnt = {...learnt, ..._ticked};
+    final skippedCount = candidates
+        .where((leaf) => alreadyLearnt.contains(leaf.sefariaRef))
+        .length;
+    final unlearnt = candidates
+        .where((leaf) => !alreadyLearnt.contains(leaf.sefariaRef))
+        .toList(growable: false);
+    return _record(
+      curriculum,
+      leaves: unlearnt,
+      skippedCount: skippedCount,
+      title: AppLocalizations.of(context)!.captureTickUpToHere,
+      gesture: CaptureGesture.upTo,
+    );
+  }
 
   /// Confirms the source once (Home default), then issues ONE capture for
   /// the batch. Cancel or an empty batch writes nothing.
@@ -482,6 +503,8 @@ class _ContentHierarchyScreenState
     CurriculumId curriculum, {
     required List<ContentItem> leaves,
     required String title,
+    required CaptureGesture gesture,
+    int skippedCount = 0,
     ContentItem? node,
   }) async {
     if (leaves.isEmpty || _capturing) return;
@@ -514,6 +537,9 @@ class _ContentHierarchyScreenState
         source: choice.source,
         dateState: choice.dateState,
         learnedOn: choice.learnedOn,
+        gesture: gesture,
+        taps: choice.taps,
+        skippedCount: skippedCount,
       );
       if (!mounted) return;
       final batch = <String, List<String>>{};

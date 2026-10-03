@@ -142,6 +142,9 @@ final class FakeLearningCommands implements LearningCommands {
     CivilDate? learnedOn,
     int? stage,
     bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) async => _record('capture', {
     'curriculumId': curriculumId,
     'refs': refs,

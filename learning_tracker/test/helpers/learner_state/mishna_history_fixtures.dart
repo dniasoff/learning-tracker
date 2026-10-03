@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/learner_state/presentation/providers/l
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
@@ -222,6 +223,9 @@ final class GatedLearningCommands implements LearningCommands {
     CivilDate? learnedOn,
     int? stage,
     bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) => _held(
     () => inner.capture(
       curriculumId: curriculumId,
@@ -232,6 +236,9 @@ final class GatedLearningCommands implements LearningCommands {
       learnedOn: learnedOn,
       stage: stage,
       skipRecorded: skipRecorded,
+      gesture: gesture,
+      taps: taps,
+      skippedCount: skippedCount,
     ),
   );
 

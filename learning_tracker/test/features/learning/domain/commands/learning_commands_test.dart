@@ -862,7 +862,14 @@ void main() {
       final retried = await h.commands.retry(pending.single.id);
       expect(retried, CaptureResult.success(eventIds: pending.single.eventIds));
       expect(identical(h.port.attempts.last, rejected), isTrue);
+      expect(h.analytics.captureSummaries, hasLength(1));
+      expect(h.analytics.captureSummaries.single['event_count'], 2);
       expect(await h.commands.watchPendingFailures().first, isEmpty);
+      expect(
+        await h.commands.retry(pending.single.id),
+        const CaptureResult.rejected(CaptureRejection.targetNotFound),
+      );
+      expect(h.analytics.captureSummaries, hasLength(1));
     });
 
     test('a partially rejected command reports only what was saved', () async {
@@ -874,7 +881,11 @@ void main() {
       final pending = await h.commands.watchPendingFailures().first;
       expect(pending.single.eventIds, hasLength(225));
       expect(h.analytics.captures.single.count, 75);
-      expect(h.analytics.captureSummaries.single['skipped_count'], 225);
+      expect(h.analytics.captureSummaries.single['skipped_count'], 0);
+      await h.commands.retry(pending.single.id);
+      expect(h.analytics.captureSummaries, hasLength(2));
+      expect(h.analytics.captureSummaries.last['event_count'], 225);
+      expect(h.analytics.captureSummaries.last['skipped_count'], 0);
     });
 
     test('a transient (SDK-queued) write is not duplicated into an '

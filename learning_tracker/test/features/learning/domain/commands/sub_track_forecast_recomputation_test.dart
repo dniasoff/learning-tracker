@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
-import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_forecast_recomputation.dart';
 
@@ -73,7 +72,12 @@ void main() {
         actor: _actor,
       ),
       _learn('01ARZ3NDEKTSV4RRFFQ69G5FAH', 'Outside', '2026-01-08'),
-      _learn('01ARZ3NDEKTSV4RRFFQ69G5FAJ', 'Node', '2026-01-04', level: 'perek'),
+      _learn(
+        '01ARZ3NDEKTSV4RRFFQ69G5FAJ',
+        'Node',
+        '2026-01-04',
+        level: 'perek',
+      ),
       _learn(
         '01ARZ3NDEKTSV4RRFFQ69G5FAK',
         'Other source',

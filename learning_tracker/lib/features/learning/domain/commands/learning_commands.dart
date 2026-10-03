@@ -183,6 +183,9 @@ abstract interface class LearningCommands {
     CivilDate? learnedOn,
     int? stage,
     bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   });
 
   /// Voids the `learn` event [targetId].
@@ -303,6 +306,22 @@ abstract interface class GovernedLearningCommands {
 /// [LearningWriteDispatcher], which owns queued success and pending
 /// failures. Nothing is written before the gate passes and the whole
 /// command validates.
+final class _CaptureAnalyticsContext {
+  const _CaptureAnalyticsContext({
+    required this.curriculumId,
+    required this.sourceType,
+    required this.dateState,
+    required this.gesture,
+    required this.taps,
+  });
+
+  final String curriculumId;
+  final CaptureSourceType sourceType;
+  final DateState dateState;
+  final CaptureGesture gesture;
+  final int taps;
+}
+
 final class DefaultLearningCommands implements LearningCommands {
   /// Creates the commands.
   DefaultLearningCommands({
@@ -323,6 +342,7 @@ final class DefaultLearningCommands implements LearningCommands {
     AchievementLatch? achievements,
     SubTrackSourceCheck? sourceCheck,
     BackupImportReplay? backupReplay,
+    Future<CaptureSourceType?> Function(String source)? sourceTypeOf,
   }) : _scope = scope,
        _achievements = achievements,
        _sourceCheck = sourceCheck,
@@ -337,6 +357,7 @@ final class DefaultLearningCommands implements LearningCommands {
        _newUlid = newUlid,
        _governed = governed,
        _subTrackCommands = subTrackCommands,
+       _sourceTypeOf = sourceTypeOf,
        _dispatcher = LearningWriteDispatcher(
          scope: scope,
          port: writePort,
@@ -354,11 +375,15 @@ final class DefaultLearningCommands implements LearningCommands {
   final GovernedLearningCommands? _governed;
   final SubTrackSourceCheck? _sourceCheck;
   final SubTrackCommands? _subTrackCommands;
+  final Future<CaptureSourceType?> Function(String source)? _sourceTypeOf;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
   final AchievementLatch? _achievements;
   final Duration _recordedWait;
   final BackupImportReplay? _backupReplay;
+  final Map<String, _CaptureAnalyticsContext> _captureContexts = {};
+  static const _maxCaptureContexts = 10000;
+  static const _sourceTypeWait = Duration(seconds: 2);
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -479,9 +504,17 @@ final class DefaultLearningCommands implements LearningCommands {
     CivilDate? learnedOn,
     int? stage,
     bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) {
     Future<CaptureResult> run() => _gated((stamp, history) async {
-      if (curriculumId.isEmpty || !_validSource(source)) return _invalid;
+      if (curriculumId.isEmpty ||
+          !_validSource(source) ||
+          taps < 0 ||
+          skippedCount < 0) {
+        return _invalid;
+      }
       if (!await _sourceAllowed(curriculumId, source)) return _invalid;
       if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
         return _invalid;
@@ -543,6 +576,37 @@ final class DefaultLearningCommands implements LearningCommands {
       } on StorageFormatException {
         return _invalid;
       }
+      CaptureSourceType? analyticsSourceType;
+      try {
+        if (source == LearningEvent.sourceMain) {
+          analyticsSourceType = CaptureSourceType.main;
+        } else if (_sourceTypeOf != null) {
+          analyticsSourceType = await _sourceTypeOf(
+            source,
+          ).timeout(_sourceTypeWait);
+        } else if (isUlid(source)) {
+          analyticsSourceType = CaptureSourceType.ongoing;
+        }
+      } on Object {
+        // Analytics enrichment cannot fail a saved capture.
+      }
+      if (analyticsSourceType != null) {
+        final context = _CaptureAnalyticsContext(
+          curriculumId: curriculumId,
+          sourceType: analyticsSourceType,
+          dateState: dateState,
+          gesture: gesture,
+          taps: taps,
+        );
+        for (final unit in units) {
+          for (final event in unit.events.where((event) => event.isLearn)) {
+            _captureContexts[event.id] = context;
+          }
+        }
+        while (_captureContexts.length > _maxCaptureContexts) {
+          _captureContexts.remove(_captureContexts.keys.first);
+        }
+      }
       var result = await _write(LearningCommandKind.capture, units);
       if (result is CaptureSuccess && alreadyRecorded.isNotEmpty) {
         result = CaptureResult.success(
@@ -561,21 +625,17 @@ final class DefaultLearningCommands implements LearningCommands {
           dateState: dateState,
           count: result.eventIds.length,
         );
-        // Until the capture UI carries explicit gesture and tap metadata,
-        // report the child-safe defaults used by the analytics contract.
-        _analytics.captureSummary(
-          curriculumId: curriculumId,
-          sourceType: source == LearningEvent.sourceMain
-              ? CaptureSourceType.main
-              : CaptureSourceType.ongoing,
-          dateState: dateState,
-          gesture: CaptureGesture.plusOne,
-          eventCount: result.eventIds.length,
-          skippedCount: leaves.length > result.eventIds.length
-              ? leaves.length - result.eventIds.length
-              : 0,
-          taps: 1,
-        );
+        if (analyticsSourceType != null) {
+          _analytics.captureSummary(
+            curriculumId: curriculumId,
+            sourceType: analyticsSourceType,
+            dateState: dateState,
+            gesture: gesture,
+            eventCount: result.eventIds.length,
+            skippedCount: skippedCount,
+            taps: taps,
+          );
+        }
       }
       return result;
     });
@@ -976,6 +1036,21 @@ final class DefaultLearningCommands implements LearningCommands {
     }
     if (outcome.allRejected) {
       return const CaptureResult.rejected(CaptureRejection.notSaved);
+    }
+    final context = _captureContexts[pendingFailureId];
+    if (context != null) {
+      _analytics.captureSummary(
+        curriculumId: context.curriculumId,
+        sourceType: context.sourceType,
+        dateState: context.dateState,
+        gesture: context.gesture,
+        eventCount: outcome.eventIds.length,
+        skippedCount: 0,
+        taps: context.taps,
+      );
+      for (final id in outcome.eventIds) {
+        _captureContexts.remove(id);
+      }
     }
     _afterWrite(outcome);
     return CaptureResult.success(

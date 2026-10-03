@@ -19,6 +19,7 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
@@ -188,6 +189,9 @@ final class EngineBackedCommands implements LearningCommands {
     CivilDate? learnedOn,
     int? stage,
     bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) async {
     final result = await inner.capture(
       curriculumId: curriculumId,
@@ -198,6 +202,9 @@ final class EngineBackedCommands implements LearningCommands {
       learnedOn: learnedOn,
       stage: stage,
       skipRecorded: skipRecorded,
+      gesture: gesture,
+      taps: taps,
+      skippedCount: skippedCount,
     );
     await gate?.future;
     if (result case CaptureSuccess(:final eventIds)) {

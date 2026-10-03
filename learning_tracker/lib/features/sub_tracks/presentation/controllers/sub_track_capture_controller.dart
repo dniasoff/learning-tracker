@@ -44,6 +44,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_home_projection.dart';
@@ -358,6 +359,8 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
         refs: [position],
         source: item.subTrackId,
         dateState: DateState.dated,
+        gesture: CaptureGesture.plusOne,
+        taps: 1,
       );
       if (binding != _binding) {
         AppLogger.instance.warning(
