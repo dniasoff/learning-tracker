@@ -37,8 +37,24 @@ Set<LeafRef> learntLeaves(
   Iterable<LearningEvent> countedLearns,
   Corpus corpus,
   bool Function(LeafRef leaf) inScope,
-) => {
-  for (final event in countedLearns)
-    for (final leaf in coveredLeaves(event, corpus))
-      if (inScope(leaf)) leaf,
-};
+) {
+  final out = <LeafRef>{};
+  // fyh.325: a later event on an already-added node covers exactly the
+  // same leaves, all already in [out], so it is skipped instead of being
+  // re-expanded (a log can hold many node events on one whole volume).
+  final addedNodes = <(String, String)>{};
+  for (final event in countedLearns) {
+    final level = event.level;
+    final ref = event.ref;
+    if (level != null &&
+        ref != null &&
+        event.isLearn &&
+        !addedNodes.add((level, ref))) {
+      continue;
+    }
+    for (final leaf in coveredLeaves(event, corpus)) {
+      if (inScope(leaf)) out.add(leaf);
+    }
+  }
+  return out;
+}

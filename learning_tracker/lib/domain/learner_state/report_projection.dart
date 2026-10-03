@@ -533,6 +533,9 @@ final class _SourceAcc {
   int events = 0;
   final Set<LeafRef> leaves = {};
 
+  /// The node events (level, ref) whose leaves [leaves] already holds.
+  final Set<(String, String)> addedNodes = {};
+
   /// The earliest velocity day of each leaf from this source.
   final Map<LeafRef, CivilDate> firstDay = {};
 }
@@ -563,11 +566,25 @@ ReportProjection deriveReportProjection({
   final bySource = <String, _SourceAcc>{LearningEvent.sourceMain: _SourceAcc()};
   _SourceAcc? before;
   var total = 0;
+  // fyh.325: a node event's in-scope leaves, once per node; and the nodes
+  // whose leaves a set already holds, so a repeated node event (a log can
+  // hold many on one whole volume) only adds to the counts. Re-adding
+  // leaves a set already holds would change nothing.
+  final nodeLeaves = <(String, String), List<LeafRef>>{};
+  final knownNodes = <(String, String)>{};
   for (final e in countedLearns) {
-    final leaves = [
+    final level = e.level;
+    final ref = e.ref;
+    final node = e.isLearn && level != null && ref != null
+        ? (level, ref)
+        : null;
+    List<LeafRef> inScopeLeaves() => [
       for (final leaf in coveredLeaves(e, corpus))
         if (inScope(leaf)) leaf,
     ];
+    final leaves = node == null
+        ? inScopeLeaves()
+        : nodeLeaves[node] ??= inScopeLeaves();
     if (leaves.isEmpty) continue;
     final source = e.source!;
     final acc =
@@ -576,11 +593,13 @@ ReportProjection deriveReportProjection({
         ? (before ??= _SourceAcc())
         : bySource.putIfAbsent(source, _SourceAcc.new);
     acc.events += leaves.length;
-    acc.leaves.addAll(leaves);
+    if (node == null || acc.addedNodes.add(node)) acc.leaves.addAll(leaves);
     total += leaves.length;
     if (velocity == null) continue;
     if (e.dateState == DateState.beforeTracking) {
-      knownBeforeTracking.addAll(leaves);
+      if (node == null || knownNodes.add(node)) {
+        knownBeforeTracking.addAll(leaves);
+      }
     } else if (isVelocityEvent(e, velocity.firstStage)) {
       final day = e.learnedOn!;
       for (final leaf in leaves) {

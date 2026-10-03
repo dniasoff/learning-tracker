@@ -121,6 +121,15 @@ final class InMemoryCorpus implements Corpus {
   final List<NodeEntry> _order = [];
   late final List<LeafRef> _leaves;
 
+  /// Per node, the half-open range of [_leaves] at or below it. Leaves are
+  /// in pre-order, so a subtree's leaves are one contiguous run (fyh.325).
+  final Map<NodeEntry, (int, int)> _leafRange = {};
+
+  /// [leavesUnder] memo: the corpus is immutable, so each node's list is
+  /// built once instead of walking the subtree on every call (fyh.325).
+  final Map<NodeEntry, List<LeafRef>> _leavesUnder = {};
+  var _leafCount = 0;
+
   void _index(CorpusNode node, NodeEntry? parent) {
     final entry = node.entry;
     if (_parents.containsKey(entry)) {
@@ -130,9 +139,12 @@ final class InMemoryCorpus implements Corpus {
     _byRef.putIfAbsent(entry.ref, () => entry);
     _order.add(entry);
     _children[entry] = List.unmodifiable(node.children.map((c) => c.entry));
+    final start = _leafCount;
+    if (node.children.isEmpty) _leafCount++;
     for (final child in node.children) {
       _index(child, entry);
     }
+    _leafRange[entry] = (start, _leafCount);
   }
 
   @override
@@ -155,18 +167,11 @@ final class InMemoryCorpus implements Corpus {
 
   @override
   List<LeafRef> leavesUnder(NodeEntry node) {
-    if (!_children.containsKey(node)) return const [];
-    final out = <LeafRef>[];
-    void walk(NodeEntry n) {
-      final children = _children[n]!;
-      if (children.isEmpty) {
-        out.add(n.ref);
-        return;
-      }
-      children.forEach(walk);
-    }
-
-    walk(node);
-    return List.unmodifiable(out);
+    final cached = _leavesUnder[node];
+    if (cached != null) return cached;
+    final range = _leafRange[node];
+    if (range == null) return const [];
+    final (start, end) = range;
+    return _leavesUnder[node] = List.unmodifiable(_leaves.sublist(start, end));
   }
 }
