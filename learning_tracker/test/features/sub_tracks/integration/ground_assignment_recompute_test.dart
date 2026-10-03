@@ -200,11 +200,18 @@ Future<void> _pickBerakhot1to3(WidgetTester tester) async {
 /// Confirms the pick. The governed command's reads complete on real
 /// async only (its in-memory ports' stream cancellation never settles
 /// under the widget tester's fake clock), so the tap runs in runAsync.
+/// The picker's command-boundary parent-session re-read resolves on the
+/// widget tester's clock, so one frame is pumped between the real-async
+/// halves.
 Future<void> _confirm(WidgetTester tester) async {
   await tester.runAsync(() async {
     await tester.tap(find.text('Add 3 Perakim to School'));
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
   });
+  await tester.pump();
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 300)),
+  );
   await tester.pumpAndSettle();
 }
 

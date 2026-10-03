@@ -115,6 +115,7 @@ final class GroundPickerWorld {
     this.commandsOverride,
     this.labelItems,
     this.stateStream,
+    this.commandsGate,
   }) : scope = c0Scope() {
     subTracks.seed(scope, tracks);
     intent.emit(scope, _intent());
@@ -165,6 +166,10 @@ final class GroundPickerWorld {
   /// A live learner state (e.g. the real engine over [subTracks]); wins
   /// over [state].
   final Stream<LearnerState> Function(GroundPickerWorld world)? stateStream;
+
+  /// When set, `learningCommandsProvider` resolves only after it completes
+  /// (a slow command load, e.g. to end the parent session mid-confirm).
+  final Future<void>? commandsGate;
 
   /// ContentIndex rows for labels (default: none, names fall back to refs).
   final Map<CurriculumId, List<ContentItem>>? labelItems;
@@ -222,9 +227,10 @@ final class GroundPickerWorld {
     learnerStateProvider.overrideWith(
       (ref, _) => stateStream?.call(this) ?? Stream.value(state),
     ),
-    learningCommandsProvider.overrideWith(
-      (ref) async => commandsOverride?.call() ?? commands,
-    ),
+    learningCommandsProvider.overrideWith((ref) async {
+      await commandsGate;
+      return commandsOverride?.call() ?? commands;
+    }),
     curriculumContentProvider.overrideWith(
       (ref, curriculum) async => labelItems?[curriculum] ?? const [],
     ),

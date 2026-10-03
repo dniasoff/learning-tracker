@@ -26,6 +26,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ground_selection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_picker_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ground_picker_labels.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ground_picker_row.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ground_picker_tree.dart';
@@ -97,8 +98,11 @@ class _GroundPickerPaneState extends ConsumerState<GroundPickerPane> {
     try {
       final commands = await ref.read(learningCommandsProvider.future);
       // Not ready (no account or learner yet) is a plain refusal; only the
-      // command itself says when the server is needed.
-      result = commands == null
+      // command itself says when the server is needed. The command boundary
+      // (AC-7, DNI-495 AC-3): the parent session may have ended (PIN lock)
+      // while the picker was open or the commands were loading, so it is
+      // asked again just before the write; without it nothing is written.
+      result = commands == null || !await readSubTrackParentSession(ref)
           ? const CaptureResult.rejected(CaptureRejection.notSaved)
           : await commands.editSubTrack(
               inputs.track.id,
