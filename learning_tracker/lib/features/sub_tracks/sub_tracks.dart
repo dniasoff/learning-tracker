@@ -2,6 +2,7 @@
 // Import this barrel from outside the feature; avoid deep paths.
 library sub_tracks;
 
+// Stories 2.4 (DNI-495), 2.6 (DNI-497), 2.8 (DNI-499) and 2.9 (DNI-500).
 export 'domain/services/on_home_sub_tracks.dart';
 export 'domain/sub_track_home_projection.dart';
 export 'presentation/controllers/sub_track_capture_controller.dart';
