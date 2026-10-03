@@ -50,6 +50,7 @@ library;
 import 'dart:async';
 
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/append_ground.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
@@ -58,6 +59,9 @@ import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
+import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart'
+    show OnlineRequiredException;
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_latest_write.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -115,7 +119,8 @@ final class SubTrackDraft {
 
 /// The fields an edit changes; a null field keeps its value. Nullable
 /// stored fields are cleared with [clearAcademicYear] / [clearWindowEnd].
-/// `ground`, when given, replaces the whole ordered list.
+/// `ground`, when given, replaces the whole ordered list; [appendGround]
+/// instead appends picked nodes to the latest stored ground (Story 2.7).
 final class SubTrackEdit {
   /// Creates an edit.
   const SubTrackEdit({
@@ -130,6 +135,7 @@ final class SubTrackEdit {
     this.weeksPerYear,
     this.learnsOnShabbos,
     this.ground,
+    this.appendGround,
   });
 
   /// New name.
@@ -164,26 +170,26 @@ final class SubTrackEdit {
 
   /// The whole new ordered ground.
   final List<NodeEntry>? ground;
-}
 
-/// The result of recomputing SM-5 from the creation change-log entry and
-/// tick events. This value is ephemeral and is never persisted.
-final class SubTrackForecastComparison {
-  /// Creates a count-only comparison.
-  const SubTrackForecastComparison({
-    required this.forecast,
-    required this.actual,
-    required this.windowWeeks,
-  });
-
-  /// Capacity forecast when this track was created.
-  final int forecast;
-
-  /// Distinct leaves ticked inside the original track window.
-  final int actual;
-
-  /// Original window length in weeks.
-  final int windowWeeks;
+  /// Ground-picker nodes to append (Story 2.7 / DNI-498, FR-10/FR-11).
+  ///
+  /// The command re-reads the sub-track's latest `ground`, drops every
+  /// picked leaf an existing entry already covers, and appends the rest in
+  /// ContentIndex order (`groundToAppend`); the stored entries are kept as
+  /// entered and the result is written as the whole new `ground` list with
+  /// one change-log entry. Every node must belong to the sub-track's own
+  /// curriculum. Exclusive with [ground]; a replay appends nothing.
+  ///
+  /// An append needs the server: the new list is derived from the row the
+  /// server holds at commit time inside one transaction
+  /// ([SubTrackLatestWrite]), so two devices appending at once both keep
+  /// their nodes. It is never queued: a whole list derived from a cached
+  /// row and replayed after reconnecting would, under AD-38 per-field LWW,
+  /// overwrite nodes another device appended meanwhile, and the rules do
+  /// not compare `ground` with the server row. Offline, or when the
+  /// repository has no latest-row write, the command returns
+  /// `CaptureResult.onlineRequired()` and writes nothing.
+  final List<NodeEntry>? appendGround;
 }
 
 /// The sub-track lifecycle commands for one learner and actor.
@@ -206,8 +212,6 @@ final class SubTrackCommands {
     Future<Corpus?> Function(String curriculumId)? corpusOf,
     LearningAnalytics? analytics,
     SubTrackWriteLedger? ledger,
-    Future<SubTrackForecastComparison?> Function(SubTrack track)?
-    forecastComparison,
     this.ackTimeout = const Duration(seconds: 3),
     this.readTimeout = const Duration(seconds: 10),
   }) : _ledger = ledger ?? SubTrackWriteLedger(),
@@ -218,8 +222,7 @@ final class SubTrackCommands {
        _nowUtc = nowUtc,
        _newId = newId,
        _corpusOf = corpusOf,
-       _analytics = analytics,
-       _forecastComparison = forecastComparison;
+       _analytics = analytics;
 
   /// The learner the commands write for.
   final LearnerScope scope;
@@ -242,8 +245,6 @@ final class SubTrackCommands {
   final String Function() _newId;
   final Future<Corpus?> Function(String curriculumId)? _corpusOf;
   final LearningAnalytics? _analytics;
-  final Future<SubTrackForecastComparison?> Function(SubTrack track)?
-  _forecastComparison;
 
   final SubTrackWriteLedger _ledger;
   final bool _ownsLedger;
@@ -315,13 +316,11 @@ final class SubTrackCommands {
     // Absent optional fields are not written (nor logged as null → null).
     final fields = _fieldsOf(candidate)..removeWhere((_, v) => v == null);
     final entry = _entry(id, entryId, before: const {}, after: fields);
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.create(
-          subTrackId: id,
-          changedFields: fields,
-          entry: entry,
-        ),
+    return _commit(
+      SubTrackChange.create(
+        subTrackId: id,
+        changedFields: fields,
+        entry: entry,
       ),
       onConfirmed: _emitter(
         candidate,
@@ -346,7 +345,12 @@ final class SubTrackCommands {
     if (current == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
-    final candidate = _applyEdit(current, edit);
+    final (appended, corpus, refusedAppend) = await _appendedGround(
+      current,
+      edit,
+    );
+    if (refusedAppend != null) return refusedAppend;
+    final candidate = _applyEdit(current, edit, ground: appended);
     final old = _fieldsOf(current);
     final now = _fieldsOf(candidate);
     final changed = [
@@ -365,20 +369,172 @@ final class SubTrackCommands {
     if (!_encodes(candidate)) {
       return const CaptureResult.rejected(CaptureRejection.invalid);
     }
+    if (appended != null) {
+      // Never queue a whole-list `ground` built from the cached row (see
+      // SubTrackEdit.appendGround): an append commits on the server or not
+      // at all.
+      if (_subTracks case final SubTrackLatestWrite writer
+          when corpus != null) {
+        return await _appendToLatest(
+              writer,
+              subTrackId,
+              edit,
+              corpus: corpus,
+              siblings: siblings,
+            ) ??
+            const CaptureResult.onlineRequired();
+      }
+      return const CaptureResult.onlineRequired();
+    }
     final entryId = _newId();
     final entry = _entry(subTrackId, entryId, before: before, after: after);
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.fields(
-          subTrackId: subTrackId,
-          changedFields: after,
-          entry: entry,
+    return _commit(
+      SubTrackChange.fields(
+        subTrackId: subTrackId,
+        changedFields: after,
+        entry: entry,
+      ),
+      onConfirmed: _emitter(candidate, SubTrackLifecycleAction.edit),
+    );
+  }
+
+  /// The whole new `ground` of an [SubTrackEdit.appendGround] edit of
+  /// [current] (its latest stored value, read by this command) and the
+  /// corpus it was derived with — nulls when [edit] does not append — or
+  /// the result refusing it: a picked node outside the sub-track's
+  /// curriculum (`crossCurriculumGround`), an ended sub-track, a missing
+  /// corpus, or `ground` given as well.
+  Future<(List<NodeEntry>?, Corpus?, CaptureResult?)> _appendedGround(
+    SubTrack current,
+    SubTrackEdit edit,
+  ) async {
+    const invalid = CaptureResult.rejected(CaptureRejection.invalid);
+    final picked = edit.appendGround;
+    if (picked == null) return (null, null, null);
+    if (edit.ground != null || current.isEnded) return (null, null, invalid);
+    final corpus = await _corpusOf?.call(current.curriculumId);
+    if (corpus == null) return (null, null, invalid);
+    final foreign = [
+      for (final node in picked)
+        if (corpus.curriculumId != current.curriculumId ||
+            !corpusHoldsNode(corpus, node))
+          SubTrackViolation(
+            SubTrackLimit.crossCurriculumGround,
+            subject: node.ref,
+          ),
+    ];
+    if (foreign.isNotEmpty) {
+      return (
+        null,
+        null,
+        CaptureResult.rejected(CaptureRejection.invalid, violations: foreign),
+      );
+    }
+    return (_appendTo(current.ground, picked, corpus), corpus, null);
+  }
+
+  static List<NodeEntry> _appendTo(
+    List<NodeEntry> ground,
+    List<NodeEntry> picked,
+    Corpus corpus,
+  ) => [
+    ...ground,
+    ...groundToAppend(current: ground, selected: picked, corpus: corpus),
+  ];
+
+  /// Commits an append [edit] of [subTrackId] through [writer]: the new
+  /// whole `ground` is re-derived from the row the server holds at commit
+  /// time (re-run by the transaction if another write lands first) and
+  /// written with one change-log entry whose `before` is that row. The
+  /// picks were already checked against [corpus] on the cached row.
+  ///
+  /// Returns null when the server cannot be reached (nothing written or
+  /// queued; the caller answers `onlineRequired`), else the command
+  /// result. A latest row that already covers every pick writes nothing
+  /// (success).
+  Future<CaptureResult?> _appendToLatest(
+    SubTrackLatestWrite writer,
+    String subTrackId,
+    SubTrackEdit edit, {
+    required Corpus corpus,
+    required List<SubTrack> siblings,
+  }) async {
+    final entryId = _newId();
+    final today = _today();
+    SubTrack? written;
+    SubTrackChange? build(SubTrack latest) {
+      written = null;
+      if (latest.isEnded) {
+        throw const _Refused(CaptureResult.rejected(CaptureRejection.invalid));
+      }
+      final candidate = _applyEdit(
+        latest,
+        edit,
+        ground: _appendTo(latest.ground, edit.appendGround!, corpus),
+      );
+      final old = _fieldsOf(latest);
+      final now = _fieldsOf(candidate);
+      final changed = [
+        for (final key in now.keys)
+          if (!storageValueEquals(old[key], now[key])) key,
+      ];
+      if (changed.isEmpty) return null;
+      final violations = [
+        ...subTrackIntentViolations(candidate, corpus: corpus),
+        ...subTrackLimitViolations(
+          candidate: candidate,
+          prior: latest,
+          siblings: [for (final s in siblings) s.id == latest.id ? latest : s],
+          today: today,
+          calendarProgramId: null,
         ),
-      ),
-      onConfirmed: _emitter(
-        candidate,
-        _groundAction(current.ground, candidate.ground),
-      ),
+      ];
+      if (violations.isNotEmpty) {
+        throw _Refused(
+          CaptureResult.rejected(
+            CaptureRejection.invalid,
+            violations: violations,
+          ),
+        );
+      }
+      if (!_encodes(candidate)) {
+        throw const _Refused(CaptureResult.rejected(CaptureRejection.invalid));
+      }
+      final after = {for (final k in changed) k: now[k]};
+      written = candidate;
+      return SubTrackChange.fields(
+        subTrackId: subTrackId,
+        changedFields: after,
+        entry: _entry(
+          subTrackId,
+          entryId,
+          before: {for (final k in changed) k: old[k]},
+          after: after,
+        ),
+      );
+    }
+
+    final SubTrackChange? change;
+    try {
+      change = await writer.applyGovernedChangeToLatest(
+        scope,
+        subTrackId,
+        build,
+      );
+    } on _Refused catch (refused) {
+      return refused.result;
+    } on OnlineRequiredException {
+      return null;
+    } on Object catch (error, stack) {
+      return _refusalOf(error, stack);
+    }
+    final track = written;
+    if (change == null || track == null) return const CaptureResult.success();
+    // The latest-row transaction is online-only: committed means accepted.
+    _emitter(track, SubTrackLifecycleAction.edit)();
+    return CaptureResult.success(
+      changeIds: [change.entry.id],
+      actionId: change.entry.actionId,
     );
   }
 
@@ -469,14 +625,12 @@ final class SubTrackCommands {
       after: {SubTrack.kEndedAt: endedAt, SubTrack.kEndReason: reason.storage},
       at: endedAt,
     );
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.tombstone(
-          subTrackId: subTrackId,
-          endedAt: endedAt,
-          reason: reason,
-          entry: entry,
-        ),
+    return _commit(
+      SubTrackChange.tombstone(
+        subTrackId: subTrackId,
+        endedAt: endedAt,
+        reason: reason,
+        entry: entry,
       ),
       onConfirmed: _emitter(
         current,
@@ -487,49 +641,15 @@ final class SubTrackCommands {
     );
   }
 
-  /// The AD-47 lifecycle summary runs once the server accepts the write.
+  /// The AD-47 `subtrack_lifecycle` emission — enums and counts only —
+  /// that [_commit] runs once the server has accepted the write.
   void Function() _emitter(SubTrack track, SubTrackLifecycleAction action) =>
-      () => unawaited(_emitLifecycleSummary(track, action));
-
-  Future<void> _emitLifecycleSummary(
-    SubTrack track,
-    SubTrackLifecycleAction action,
-  ) async {
-    var leaves = 0;
-    if (_analytics != null && _corpusOf != null) {
-      try {
-        final corpus = await _corpusOf(track.curriculumId);
-        if (corpus != null) leaves = expandGround(track.ground, corpus).length;
-      } on Object {
-        // Analytics is best-effort and must never fail a durable command.
-      }
-    }
-    _analytics?.subTrackLifecycleSummary(
-      curriculumId: track.curriculumId,
-      type: track.type,
-      action: action,
-      groundEntries: track.ground.length,
-      leaves: leaves,
-    );
-    if (_forecastComparison != null &&
-        (action == SubTrackLifecycleAction.end ||
-            action == SubTrackLifecycleAction.delete ||
-            action == SubTrackLifecycleAction.addNextYear)) {
-      try {
-        final comparison = await _forecastComparison(track);
-        if (comparison != null) {
-          _analytics?.subTrackForecastVsActual(
-            type: track.type,
-            forecast: comparison.forecast,
-            actual: comparison.actual,
-            windowWeeks: comparison.windowWeeks,
-          );
-        }
-      } on Object {
-        // A missing history page cannot fail an already durable close.
-      }
-    }
-  }
+      () => _analytics?.subTrackLifecycle(
+        curriculumId: track.curriculumId,
+        type: track.type,
+        action: action,
+        groundEntries: track.ground.length,
+      );
 
   /// The complete sub-track read of [scope] (live and ended), or a refusal:
   /// - `onlineRequired` when it is not available within [readTimeout]
@@ -558,44 +678,7 @@ final class SubTrackCommands {
         items: const <SubTrack>[],
         refusal: const CaptureResult.onlineRequired(),
       );
-      if (_forecastComparison != null &&
-          (action == SubTrackLifecycleAction.end ||
-              action == SubTrackLifecycleAction.delete ||
-              action == SubTrackLifecycleAction.addNextYear)) {
-        try {
-          final comparison = await _forecastComparison(track);
-          if (comparison != null) {
-            _analytics?.subTrackForecastVsActual(
-              type: track.type,
-              forecast: comparison.forecast,
-              actual: comparison.actual,
-              windowWeeks: comparison.windowWeeks,
-            );
-          }
-        } on Object {
-          // A missing history page cannot fail an already durable close.
-        }
-      }
     }
-  }
-
-  static SubTrackLifecycleAction _groundAction(
-    List<NodeEntry> before,
-    List<NodeEntry> after,
-  ) {
-    if (after.length > before.length && after.toSet().containsAll(before)) {
-      return SubTrackLifecycleAction.groundAdd;
-    }
-    if (after.length < before.length && before.toSet().containsAll(after)) {
-      return SubTrackLifecycleAction.remove;
-    }
-    if (after.length == before.length &&
-        after.toSet().length == before.toSet().length &&
-        after.toSet().containsAll(before) &&
-        after.indexed.any((entry) => entry.$2 != before[entry.$1])) {
-      return SubTrackLifecycleAction.reorder;
-    }
-    return SubTrackLifecycleAction.edit;
   }
 
   /// The main track of [curriculumId] in the complete governed intent:
@@ -725,21 +808,26 @@ final class SubTrackCommands {
       );
     }
     if (result is! _Failed) return success;
-    return switch (result.error) {
-      SubTrackNotFoundException() => const CaptureResult.rejected(
-        CaptureRejection.targetNotFound,
-      ),
-      // Refused before it was queued: the caller sees it at once, so no
-      // pending "not saved — retry" entry is recorded.
-      PermanentWriteRejection() ||
-      ChangeLogConflictException() ||
-      ChangeBaselineMismatchException() ||
-      StorageFormatException() => const CaptureResult.rejected(
-        CaptureRejection.invalid,
-      ),
-      _ => Error.throwWithStackTrace(result.error, result.stack),
-    };
+    return _refusalOf(result.error, result.stack);
   }
+
+  /// The result of a write that failed before it counted as queued; an
+  /// unexpected error is rethrown.
+  static CaptureResult _refusalOf(Object error, StackTrace stack) =>
+      switch (error) {
+        SubTrackNotFoundException() => const CaptureResult.rejected(
+          CaptureRejection.targetNotFound,
+        ),
+        // Refused before it was queued: the caller sees it at once, so no
+        // pending "not saved — retry" entry is recorded.
+        PermanentWriteRejection() ||
+        ChangeLogConflictException() ||
+        ChangeBaselineMismatchException() ||
+        StorageFormatException() => const CaptureResult.rejected(
+          CaptureRejection.invalid,
+        ),
+        _ => Error.throwWithStackTrace(error, stack),
+      };
 
   void _recordPending(
     SubTrackChange change,
@@ -819,7 +907,11 @@ final class SubTrackCommands {
     }
   }
 
-  static SubTrack _applyEdit(SubTrack t, SubTrackEdit e) => SubTrack(
+  static SubTrack _applyEdit(
+    SubTrack t,
+    SubTrackEdit e, {
+    List<NodeEntry>? ground,
+  }) => SubTrack(
     id: t.id,
     curriculumId: t.curriculumId,
     name: e.name ?? t.name,
@@ -832,7 +924,7 @@ final class SubTrackCommands {
     ratePerWeek: e.ratePerWeek ?? t.ratePerWeek,
     weeksPerYear: e.weeksPerYear ?? t.weeksPerYear,
     learnsOnShabbos: e.learnsOnShabbos ?? t.learnsOnShabbos,
-    ground: e.ground ?? t.ground,
+    ground: ground ?? e.ground ?? t.ground,
     endedAt: t.endedAt,
     endReason: t.endReason,
     lastChangeId: t.lastChangeId,
@@ -883,3 +975,11 @@ final class _Failed {
 }
 
 const _queued = _Queued();
+
+/// A latest-row append the validation refused inside the transaction;
+/// thrown out of the build so nothing is written.
+final class _Refused implements Exception {
+  const _Refused(this.result);
+
+  final CaptureResult result;
+}
