@@ -162,9 +162,9 @@ List<Override> _textContentOverrides(String sefariaRef) => [
 /// TextDisplayScreen (path: '/text/<ref>').
 ///
 /// Includes:
-///  • streak silence — prevents the 15-minute periodic timer left by
-///    `StreakStateService.watch` (triggered even on non-dashboard routes via
-///    the shell or root widget tree).
+///  • streak silence — prevents the dashboard streak chain's 15-minute
+///    periodic timer (triggered even on non-dashboard routes via the shell
+///    or root widget tree).
 ///  • Hebrew-terms force-false — `UseHebrewTerms` defaults to `true` so without
 ///    this override stage labels render in Hebrew script, breaking label
 ///    assertions.

@@ -7,15 +7,15 @@
     "regenerate": "cd learning_tracker && UPDATE_GOLDENS=1 flutter test test/features/scheduler/domain/services/legacy_planner_golden_parity_test.dart — refused (fails closed) unless lib, assets, pubspec.yaml, pubspec.lock are identical to captured_at_sha.",
     "regenerate_after_cutover": "legacy golden is captured at SHA ddb9eb971da145ba46a4800735f7c6670d2eb6db or earlier; if the fixture is missing, regenerate from that SHA (git worktree add ../lt-golden ddb9eb971, copy this test in, run with UPDATE_GOLDENS=1), never from post-cutover code.",
     "entry_points": {
-      "projection_tasks": "buildProjectionTasks (daily_task_projection_service.dart)",
-      "chazara_tasks": "buildFreshPlan, overdueChazara/scheduledChazara priorities only",
+      "projection_tasks": "the legacy projection entry point of daily_task_projection_service.dart at captured_at_sha",
+      "chazara_tasks": "the legacy fresh-plan builder at captured_at_sha, overdueChazara/scheduledChazara priorities only",
       "daily_tasks": "allDailyTasksProvider composition: projection + chazara, completion filter, priority sort; no skips, no snapshot cache"
     },
     "divergence_policy": "projection_tasks must match exactly in every scenario. chazara_tasks and daily_tasks must match exactly in every scenario except chazara_due, whose chazara_tasks (and hence daily_tasks) may be marked an intentional divergence only where reviewsDue(today) semantics differ; document it in DNI-477.",
     "conventions": {
       "dates": "Dates are civil YYYY-MM-DD. The legacy planner is fed each civil date as an instant at 12:00Z.",
       "learnt": "learnt rows are first-stage (learn, stage_order 1) completions with a real learned_on date; no before_tracking / bulk-prior sentinel rows.",
-      "track": "tracking_start_date is the track activatedAt; no reorder (lastReorderAt null), no custom learning order, no program enrollment, no sub-tracks.",
+      "track": "tracking_start_date is the track activatedAt; no reorder (the legacy reorder baseline unset), no custom learning order, no program enrollment, no sub-tracks.",
       "track_label": "track_label comes from the production seam (curriculumLabelTextFromRef, as injected by allDailyTasksProvider) with display toggles pinned to useHebrewTerms=false, transliteration=ashkenazi. shared_inputs.track_label_by_display_setting freezes the seam under every toggle combination."
     }
   },

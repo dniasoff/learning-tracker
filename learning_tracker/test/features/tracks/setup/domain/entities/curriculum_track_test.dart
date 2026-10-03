@@ -9,17 +9,17 @@
 /// `test/data/repositories/firestore_curriculum_track_repository_test.dart`.
 ///
 /// DNI-484 (R16): the codec carries only the live fields — `curriculum_id`,
-/// `state` and the display-only `activated_at`. The retired fields
-/// (`state_changed_at`, `purged`, `purged_at`, `pace_reset_date`,
-/// `last_reorder_at`, `progress_schema_version`, `progress_computed_at`,
-/// `progress_model`, `program_progress`, `self_paced_progress`, the governed
-/// `updated_at` / `synced_at`) are never encoded and never surfaced on
-/// decode.
+/// `state` and the display-only `activated_at`. The retired fields (the
+/// lifecycle and purge stamps, the pace reset, the reorder baseline, the
+/// progress passthrough and the governed timestamps, read from the AD-49
+/// inventory, DNI-489) are never encoded and never surfaced on decode.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+
+import '../../../../../helpers/retired_inventory.dart';
 
 /// The firestore.rules `curriculum_tracks` `.hasOnly()` whitelist after R16.
 const _rulesWhitelist = <String>{
@@ -32,21 +32,10 @@ const _rulesWhitelist = <String>{
   'ended_at',
 };
 
-/// Every R16 retired `curriculum_tracks` key.
-const _retiredKeys = <String>[
-  'state_changed_at',
-  'purged',
-  'purged_at',
-  'pace_reset_date',
-  'last_reorder_at',
-  'progress_schema_version',
-  'progress_computed_at',
-  'progress_model',
-  'program_progress',
-  'self_paced_progress',
-  'updated_at',
-  'synced_at',
-];
+/// Every R16 retired `curriculum_tracks` key, from the AD-49 inventory.
+final _retiredKeys = retiredKeysOf(
+  'lib/features/tracks/setup/domain/entities/curriculum_track.dart',
+);
 
 void main() {
   final base = CurriculumTrackEntity(
@@ -141,18 +130,7 @@ void main() {
         'curriculum_id': 'nach',
         'state': 'active',
         'activated_at': '2026-01-04T00:00:00.000Z',
-        'state_changed_at': '2026-01-04T00:00:00.000Z',
-        'purged': false,
-        'purged_at': '2026-01-05T00:00:00.000Z',
-        'pace_reset_date': '2026-01-06T00:00:00.000Z',
-        'last_reorder_at': '2026-01-07T00:00:00.000Z',
-        'progress_schema_version': 2,
-        'progress_computed_at': '2026-01-07T00:00:00.000Z',
-        'progress_model': 'program',
-        'program_progress': {'percent': 7},
-        'self_paced_progress': {'percent': 9},
-        'updated_at': '2026-01-08T00:00:00.000Z',
-        'synced_at': '2026-01-08T00:00:00.000Z',
+        ...legacyKeys(_retiredKeys),
       };
       final decoded = curriculumTrackFromFirestore(legacy);
       expect(decoded.state, 'active');
@@ -164,10 +142,12 @@ void main() {
       }
     });
 
-    test('pace_reset_date can never be encoded: no entity field or '
-        'constructor parameter carries it', () {
+    test('a retired key (the pace reset among them) can never be encoded: '
+        'no entity field or constructor parameter carries one', () {
       final payload = base.toFirestore();
-      expect(payload, isNot(contains('pace_reset_date')));
+      for (final key in _retiredKeys) {
+        expect(payload, isNot(contains(key)), reason: key);
+      }
       expect(payload.keys.toSet(), {'curriculum_id', 'state', 'activated_at'});
     });
   });

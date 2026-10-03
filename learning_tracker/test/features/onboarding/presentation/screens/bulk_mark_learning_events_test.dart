@@ -1,6 +1,6 @@
 // Story 1.11 (DNI-473) AC-2: the onboarding bulk mark and the settings
-// Lifetime Marking screen write `before_tracking` learning events (R10: the
-// retired 2000-01-01 sentinel) through the real `DefaultLearningCommands`:
+// Lifetime Marking screen write undated `before_tracking` learning events
+// through the real `DefaultLearningCommands`:
 // `date_state = before_tracking`, `learned_on` null, a whole node marked is
 // one node event carrying its `level`, and no pts_ entry.
 import 'package:flutter/material.dart';

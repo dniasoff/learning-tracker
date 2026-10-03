@@ -83,6 +83,13 @@ class _CurrentFirestoreWriter {
         );
       case #pushBookmark:
         return _write('bookmarks', DocIds.bookmarkDocId(data), data);
+      case #pushLedgerEntry:
+      case #pushLedgerEntriesBatch:
+        return _write(
+          'learning_ledger',
+          DocIds.learningLedgerDocId(data),
+          data,
+        );
       case #pushProfileProgram:
         return _write(
           'profile_programs',
@@ -248,6 +255,14 @@ void main() {
       await _gw(fs).pushBookmark(profileId: _profileId, data: data);
       final live = await _liveDocId(fs, 'bookmarks');
       expect(DocIds.bookmarkDocId(data), equals(live));
+    });
+
+    test('learning_ledger uses the gateway ULID formula', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      final data = <String, dynamic>{'ulid': 'LEDGER_ULID_1', 'amount': 10};
+      await _gw(fs).pushLedgerEntry(profileId: _profileId, data: data);
+      final live = await _liveDocId(fs, 'learning_ledger');
+      expect(DocIds.learningLedgerDocId(data), equals(live));
     });
 
     test('profile_programs: byte-for-byte', () async {

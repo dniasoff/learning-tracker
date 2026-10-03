@@ -1,14 +1,14 @@
 // DNI-480 (Story 1.18) AC-3 / R15 port: the still-valid cases of the
-// retired points readers and their tests (`FirestorePointsRepository`,
-// the completion-based `PointsService` totals, the curriculum eligibility
+// retired points readers and their tests (the Firestore points
+// repository, the completion-based `PointsService` totals, the curriculum eligibility
 // gate, the old-store balance and lifetime adapters), now pinned on what
 // replaces them: `DefaultLearningCommands` writes, the engine's
 // `earningEventIds`, and `pointsTotals`.
 //
 // Retired, not ported: per-curriculum eligibility by goal or program (the
 // engine is the only eligibility authority, AD-50), the completion-tier
-// points history and the autoDispose checks of the deleted
-// `curriculumPointsProvider` / `pointsHistoryProvider`.
+// points history and the autoDispose checks of the deleted per-curriculum
+// points and points-history providers.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
@@ -99,7 +99,7 @@ final class _Harness {
 void main() {
   test('retired point and achievement behavior is covered by engine and '
       'command tests', () async {
-    // Ledger balance and lifetime (was FirestorePointsRepository /
+    // Ledger balance and lifetime (was the Firestore points repository /
     // the old-store adapters): earned rows, a debit, a refund and parent
     // adjustments.
     final h = _Harness();

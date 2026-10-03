@@ -1,4 +1,6 @@
 // Tests for `make audit` and `tool/arb_parity_check.dart` (DNI-389 / Story 27.13).
+// ignore_for_file: use_raw_strings
+// Shell and awk snippets intentionally preserve command-line quoting.
 //
 // These tests shell out to the real Make target and Dart script and
 // assert their behaviour. This keeps the same integration-style
@@ -33,7 +35,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Single-quotes [value] for safe interpolation into a `bash -c` command.
-String _shellQuote(String value) => "'${value.replaceAll("'", r"'\''")}'";
+String _shellQuote(String value) => "'${value.replaceAll("'", "'\\''")}'";
 
 void main() {
   // `flutter test` runs with cwd = the package dir (`learning_tracker/`).
@@ -106,9 +108,9 @@ void main() {
         //      run regardless of outcome and never a violation. Its format
         //      is deliberately `file.dart:ClassName` (a class name, not a
         //      line number) to point at the dormant repository class, e.g.
-        //      `WATCHLIST: completions — live INT writer ... at
+        //      `WATCHLIST: retired completion store — live INT writer ... at
         //      lib/data/repositories/firestore_completion_repository.dart:
-        //      FirestoreCompletionRepository ...`.
+        //      the legacy repository source path ...`.
         // Excluding both (by the structural markers that identify them —
         // a leading test-runner progress prefix, and the `WATCHLIST:` tag
         // — not by pre-checking the file:line format itself) narrows the
@@ -363,9 +365,9 @@ void main() {
     // and exempts imports that route through the target feature's own
     // barrel (`features/<f>/<f>.dart`).
     const awkProgram =
-        r'{ content = $0; sub(/^[^:]*:[^:]*:/, "", content); '
-        r'if (match($1, /features\/([^\/]+)\//, a) && '
-        r'match(content, /features\/([^\/]+)\//, b)) { '
+        '{ content = \$0; sub(/^[^:]*:[^:]*:/, "", content); '
+        'if (match(\$1, /features\\/([^\\/]+)\\//, a) && '
+        'match(content, /features\\/([^\\/]+)\\//, b)) { '
         'if (a[1] != b[1]) { '
         'barrel = "features/" b[1] "/" b[1] ".dart"; '
         'if (index(content, barrel) == 0) print } } }';

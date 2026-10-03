@@ -161,11 +161,11 @@ describe('deleteCurriculumTrack', () => {
     });
   }
 
-  // CLIENT CONTRACT — curriculum_track_repository_impl.dart's
-  // deleteTrackPermanently sends exactly
+  // CLIENT CONTRACT — the Dart adapter's permanent-delete caller (retired
+  // by DNI-476; Remove track is now LearningCommands.removeTrack) sent exactly
   //     { profileId: <profile ULID string>, curriculumId: <storageKey string> }
-  // This seam has broken TWICE (e2ab5aeb, P3-17); this fails if the client is
-  // ever changed to send an enum or a numeric id.
+  // This seam broke TWICE (e2ab5aeb, P3-17); this fails if the callable ever
+  // stops accepting that string-id shape.
   test('CLIENT CONTRACT: the exact shape the Dart adapter sends is accepted', async () => {
     await trackRef().set({ state: 'active', curriculum_id: C });
     const res = await call(

@@ -2,7 +2,7 @@
 ///
 /// Journeys implemented (active assertions):
 ///   E2E-216  Self-paced track: CURRENT FOCUS label rendered (not "No projection")
-///   E2E-418  Whole-curriculum learning order: LearningOrderScreen AppBar title +
+///   E2E-418  Whole-curriculum learning order: the order screen's AppBar title +
 ///            reset icon present when orderingRestrictedProvider=false
 ///   E2E-919  Curriculum Settings: "Custom schedule", "Change Program", and
 ///            "Don't see your program?" tiles all visible

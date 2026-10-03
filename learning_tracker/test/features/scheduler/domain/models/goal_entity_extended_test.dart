@@ -18,6 +18,9 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:test/test.dart';
 
+import '../../../../helpers/retired_inventory.dart';
+
+const _goalEntity = 'lib/features/scheduler/domain/models/goal_entity.dart';
 void main() {
   // ── DeadlineTarget ─────────────────────────────────────────────────────────
 
@@ -225,16 +228,19 @@ void main() {
       expect(restored.paceGranularityKey, 'daf');
     });
 
-    test('R16: ignores a legacy target_percent / targetPercent alias and '
-        'never re-encodes it', () {
-      for (final key in ['target_percent', 'targetPercent']) {
+    test('R16: ignores each legacy retired goal key (the percent target and '
+        'its camelCase alias among them) and never re-encodes one', () {
+      final retired = retiredKeysOf(_goalEntity, aliases: true);
+      for (final key in retired) {
         final entity = GoalEntity.fromFirestore({
           'curriculumId': 'mishnayos',
           'createdAt': '2026-01-01T00:00:00.000Z',
           key: 50,
         });
-        expect(entity.toFirestore(), isNot(contains('target_percent')));
-        expect(entity.toFirestore(), isNot(contains('targetPercent')));
+        final encoded = entity.toFirestore();
+        for (final other in retired) {
+          expect(encoded, isNot(contains(other)), reason: '$key -> $other');
+        }
       }
     });
 

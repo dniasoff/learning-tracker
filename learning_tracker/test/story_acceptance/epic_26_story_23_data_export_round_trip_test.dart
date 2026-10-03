@@ -180,6 +180,12 @@ void main() {
             .collection('point_configs')
             .doc('bavli')
             .set({'curriculum_id': 'bavli'});
+        await seedBookmark(
+          source,
+          uid: testUid,
+          profileId: secondTestProfileId,
+          curriculumId: CurriculumId.bavli,
+        );
         await seedStageDefinitions(
           source,
           uid: testUid,

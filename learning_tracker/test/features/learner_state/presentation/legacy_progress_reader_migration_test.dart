@@ -1,8 +1,9 @@
 // DNI-474 AC-2: a static audit of the R3 readers. Each one consumes
 // LearnerState (directly, through the learner-progress providers, or as an
 // engine value passed in) and none reads completions, the learning ledger
-// or a legacy calculator; the two pace calculators and the
-// CompletionDetectionService have no declaration or reference left.
+// or a legacy calculator; the two pace calculators and the completion
+// detection service have no declaration or reference left. The retired
+// names come from the AD-49 inventory (R1, R3, R5; DNI-489).
 //
 // A repo-wide static audit over Directory('lib') (the R7 checker's
 // documented tree-walking exemption).
@@ -11,6 +12,8 @@ library;
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/retired_inventory.dart';
 
 /// The R3 readers named by AC-2 (both pace calculators are deleted).
 const _readers = [
@@ -33,27 +36,25 @@ final _learnerState = RegExp(
   r'activeLearnerStateProvider|learner_progress(_providers)?\.dart)\b',
 );
 
-/// Legacy read paths a rewired reader must not use.
+/// Legacy read paths a rewired reader must not use, beyond the retired
+/// completion, progress-calculator and ledger identifiers (R1, R3, R5).
 const _legacyReads = [
-  'CompletionEntity',
   'completionRepositoryProvider',
   'getCompletionsByCurriculum',
   'getCompletionsByTier',
   'progressRepositoryProvider',
-  'FirestoreChartDataRepositoryAdapter',
-  'FirestoreProgressRepositoryAdapter',
-  'learningLedgerProvider',
-  'ref.watch(curriculumLedgerProvider',
   'computeLearnedLeafRefs',
   'completion_detection_service.dart',
   'pace_calculator.dart',
 ];
 
-/// Symbols that must be gone from lib/ entirely.
-final _retired = RegExp(
-  r'\b(ProgressPaceCalculator|ProgressPaceStatus|PaceCalculator|'
-  r'CompletionDetectionService|completionDetectionServiceProvider)\b',
+/// The retired R1/R3/R5 identifiers no rewired reader may use.
+final _retiredReads = identifierPattern(
+  retiredIdentifiersIn(['R1', 'R3', 'R5']),
 );
+
+/// The retired R3 identifiers that must be gone from lib/ entirely.
+final _retired = identifierPattern(retiredIdentifiersIn(['R3']));
 
 Directory _lib() => Directory('lib').existsSync()
     ? Directory('lib')
@@ -84,10 +85,15 @@ void main() {
       for (final legacy in _legacyReads) {
         expect(code.contains(legacy), isFalse, reason: '$path uses $legacy');
       }
+      expect(
+        _retiredReads.firstMatch(code)?.group(0),
+        isNull,
+        reason: '$path uses a retired identifier',
+      );
     });
   }
 
-  test('the pace calculators and CompletionDetectionService are gone', () {
+  test('the pace calculators and the completion detection service are gone', () {
     for (final path in [
       'lib/features/progress/domain/services/pace_calculator.dart',
       'lib/features/scheduler/domain/services/pace_calculator.dart',

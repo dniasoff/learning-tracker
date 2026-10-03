@@ -11,6 +11,7 @@ import 'package:learning_tracker/features/profiles/domain/repositories/profile_r
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/learner_state_fixtures.dart';
+import '../../../../helpers/retired_inventory.dart';
 
 void main() {
   test('seedFor carries every device value onto the new profile', () {
@@ -77,11 +78,17 @@ void main() {
 
     test('reads only the device zone: no device preference (the retired '
         'Sacred Time location / in-Israel keys) reaches the seed', () async {
+      // Every retired R9 preference key, from the AD-49 inventory, at a
+      // value of its stored type.
       SharedPreferences.setMockInitialValues({
-        'sacred_time_latitude': 31.778,
-        'sacred_time_longitude': 35.235,
-        'sacred_time_fixed_at_ms': 1,
-        'sacred_time_in_israel': true,
+        for (final key in retiredKeysOf('lib/**', group: 'R9'))
+          key: key.endsWith('israel')
+              ? true
+              : key.endsWith('_ms')
+              ? 1
+              : key.endsWith('itude')
+              ? 31.778
+              : 'legacy',
       });
       const channel = MethodChannel('flutter_timezone');
       final messenger =

@@ -1,4 +1,4 @@
-.PHONY: help test test-invariants test-rules test-functions emit-fixtures test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.1 test-story-24.4 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-story-F5 test-epic-27 test-story-i4 test-epic-28 ci analyze format format-check validate-calendar seed seed-mongo-up seed-restore seed-down audit lint lint-rules-test gen-arch-tables check-arch-tables check-feature-graph gen-dart-test-tags check-dart-test-tags check-coverage-denominator check-profile-path-keying check-retired-symbols check-profile-id-int-sites check-dependency-direction test-quarantine test-perf
+.PHONY: analyze audit check-arch-tables check-coverage-denominator check-dart-test-tags check-dependency-direction check-feature-graph check-profile-id-int-sites check-profile-path-keying check-retired-symbols check-retired-test-references ci emit-fixtures format format-check gen-arch-tables gen-dart-test-tags help lint lint-rules-test seed seed-down seed-mongo-up seed-restore test test-epic-10 test-epic-12 test-epic-13 test-epic-14 test-epic-15 test-epic-21 test-epic-24 test-epic-25 test-epic-26 test-epic-27 test-epic-28 test-epic-8 test-epic-9 test-functions test-invariants test-perf test-quarantine test-rules test-story-10.4 test-story-10.5 test-story-12.4 test-story-13.1 test-story-13.2 test-story-14.1 test-story-14.2 test-story-14.3 test-story-15.5 test-story-15.6 test-story-15.8 test-story-24.1 test-story-24.4 test-story-24.7 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-story-26.7 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-9.4 test-story-F5 test-story-i4 validate-calendar
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -97,6 +97,9 @@ check-coverage-denominator: ## Fail if any lib/**.dart file has zero SF: entries
 
 check-profile-path-keying: ## Run the profile-scoped-collection keying-split gate standalone
 	dart run tool/check_profile_path_keying.dart
+
+check-retired-test-references: ## Fail when a retired symbol appears in test/, integration_test/ or functions/test/ (DNI-489)
+	dart run tool/check_retired_test_references.dart
 
 check-retired-symbols: ## Run the AD-49 retired-symbols gate standalone (DNI-521; inventory in tool/retired_symbols/)
 	dart run tool/check_retired_symbols.dart
@@ -306,7 +309,7 @@ test-story-i4: ## Run Story I-4 (Curriculum overlap deduplication) acceptance te
 test-epic-28: ## Run all Epic 28 (Curriculum overlap) acceptance tests
 	flutter test test/story_acceptance/epic_28_curriculum_overlap_test.dart
 
-ci: analyze check-dependency-direction check-learning-event-read-boundary validate-calendar lint-rules-test test test-serial-tools test-rules test-functions check-profile-path-keying check-retired-symbols check-profile-id-int-sites ## Run full CI pipeline (analyze + dependency-direction/pure-domain gate + learning-event read boundary + seed validation + lint-rules-test + all tests + rules tests + Cloud Functions tests + profile-path-keying gate + retired-symbols gate + profile-id-int-sites gate)
+ci: analyze check-dependency-direction check-learning-event-read-boundary validate-calendar lint-rules-test test test-serial-tools test-rules test-functions check-profile-path-keying check-retired-symbols check-retired-test-references check-profile-id-int-sites ## Run full CI pipeline (analyze + dependency-direction/pure-domain gate + learning-event read boundary + seed validation + lint-rules-test + all tests + rules tests + Cloud Functions tests + profile-path-keying gates + profile-id-int-sites gate)
 
 analyze: ## Run dart analyze (matches CI --fatal-infos flag)
 	dart analyze --fatal-infos
