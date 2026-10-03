@@ -19,6 +19,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -31,6 +32,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learner_state.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
@@ -114,7 +116,7 @@ final class _Browse {
       reads: reads,
       writePort: port,
       gate: const LockWindowCaptureGate(),
-      analytics: RecordingLearningAnalytics(),
+      analytics: analytics,
       failureReporter: RecordingLearningFailureReporter(),
       clock: () => at,
       newUlid: (_) => engineUlid(seq++),
@@ -125,6 +127,7 @@ final class _Browse {
   }
 
   final port = InMemoryLearningWritePort();
+  final analytics = RecordingLearningAnalytics();
   late final FakeLearningCommandReads reads;
   late final DefaultLearningCommands commands;
   late final FakeLocalDayClock clock;
@@ -138,14 +141,21 @@ final class _Browse {
     reads.eventLog.addAll(written.where((e) => ids.add(e.id)));
   }
 
-  Widget app({List<String> stack = const ['Zeraim', 'Berakhot']}) {
+  Widget app({
+    List<String> stack = const ['Zeraim', 'Berakhot'],
+    LearnerState? state,
+  }) {
     final content = _Content();
     final tree = ContentTree.fromCurricula({
       for (final c in CurriculumId.values) c: c == _m ? _items : const [],
     });
     return pumpApp(
       overrides: [
-        ...learnerStateOverrides(scope: c0Scope(), commands: commands),
+        ...learnerStateOverrides(
+          scope: c0Scope(),
+          commands: commands,
+          state: state,
+        ),
         contentRepositoryProvider.overrideWithValue(content),
         contentTreeProvider.overrideWith((ref) async => tree),
         curriculumContentProvider.overrideWith(
@@ -275,6 +285,65 @@ void main() {
       'Berakhot 2:2',
     ]);
     expect(flow.written.map((e) => e.ref), isNot(contains('Peah 1:1')));
+  });
+
+  testWidgets('AC-3 / DNI-503: "Tick up to here" over a range partly learnt '
+      'on another source writes every leaf for the chosen source and emits '
+      'one up_to capture with the measured taps and zero skipped', (
+    tester,
+  ) async {
+    final subTrack = engineUlid(900);
+    final flow = _Browse(
+      prior: [
+        engineLearn(1, 'Berakhot 1:1', source: subTrack),
+        engineLearn(2, 'Berakhot 2:1', source: subTrack),
+      ],
+    );
+    addTearDown(flow.commands.dispose);
+    // The engine sees both sub-track leaves as learnt.
+    await tester.pumpWidget(
+      flow.app(
+        state: fakeLearnerState(
+          curricula: {
+            'mishnayos': FakeCurriculumState(
+              curriculumId: 'mishnayos',
+              learntLeaves: const {'Berakhot 1:1', 'Berakhot 2:1'},
+            ),
+          },
+        ),
+      ),
+    );
+    await _settle(tester);
+
+    await tester.longPress(find.byType(ListTile).at(1)); // perek 2
+    await _settle(tester);
+    expect(find.text('Tick up to here'), findsOneWidget);
+    // Leaves learnt from a sub-track are not dropped from the Home batch.
+    await tester.tap(find.text('Record 4'));
+    await _settle(tester);
+
+    expect(flow.port.chunks, hasLength(1), reason: 'one capture');
+    expect(flow.written.map((e) => e.ref), [
+      'Berakhot 1:1',
+      'Berakhot 1:2',
+      'Berakhot 2:1',
+      'Berakhot 2:2',
+    ]);
+    expect(
+      flow.written.map((e) => e.source).toSet(),
+      {LearningEvent.sourceMain},
+      reason: 'the chosen source advances over every leaf',
+    );
+    expect(flow.analytics.captureSummaries, [
+      {
+        'curriculum_id': 'mishnayos',
+        'source_type': 'main',
+        'gesture': 'up_to',
+        'event_count': 4,
+        'skipped_count': 0,
+        'taps': 2, // the long-press, then Record
+      },
+    ]);
   });
 
   testWidgets('Edge: Cancel writes nothing', (tester) async {

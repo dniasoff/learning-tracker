@@ -464,38 +464,26 @@ class _ContentHierarchyScreenState
 
   /// Long-press: "Tick up to here" — the row's leaves and every earlier
   /// leaf of its masechta, inclusive, in corpus order.
+  ///
+  /// Every candidate is written for the chosen source, including leaves
+  /// already learnt from another source: positions are tracked per source,
+  /// so dropping them would leave the chosen source's position behind. The
+  /// command writes the whole batch, so this surface skips nothing and
+  /// reports `skipped_count` 0.
   Future<void> _tickUpToHere(
     CurriculumId curriculum,
     List<ContentItem> items,
     ContentItem item,
-  ) {
-    final candidates = leavesUpToHere(
+  ) => _record(
+    curriculum,
+    leaves: leavesUpToHere(
       items,
       item,
       unitDepth: unitDepthOf(curriculum, items),
-    );
-    final learnt =
-        ref
-            .read(activeLearnerStateProvider)
-            .asData
-            ?.value?[curriculum.storageKey]
-            ?.learntLeaves ??
-        const <String>{};
-    final alreadyLearnt = {...learnt, ..._ticked};
-    final skippedCount = candidates
-        .where((leaf) => alreadyLearnt.contains(leaf.sefariaRef))
-        .length;
-    final unlearnt = candidates
-        .where((leaf) => !alreadyLearnt.contains(leaf.sefariaRef))
-        .toList(growable: false);
-    return _record(
-      curriculum,
-      leaves: unlearnt,
-      skippedCount: skippedCount,
-      title: AppLocalizations.of(context)!.captureTickUpToHere,
-      gesture: CaptureGesture.upTo,
-    );
-  }
+    ),
+    title: AppLocalizations.of(context)!.captureTickUpToHere,
+    gesture: CaptureGesture.upTo,
+  );
 
   /// Confirms the source once (Home default), then issues ONE capture for
   /// the batch. Cancel or an empty batch writes nothing.
@@ -504,7 +492,6 @@ class _ContentHierarchyScreenState
     required List<ContentItem> leaves,
     required String title,
     required CaptureGesture gesture,
-    int skippedCount = 0,
     ContentItem? node,
   }) async {
     if (leaves.isEmpty || _capturing) return;
@@ -539,7 +526,6 @@ class _ContentHierarchyScreenState
         learnedOn: choice.learnedOn,
         gesture: gesture,
         taps: choice.taps,
-        skippedCount: skippedCount,
       );
       if (!mounted) return;
       final batch = <String, List<String>>{};
