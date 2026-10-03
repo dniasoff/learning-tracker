@@ -3148,6 +3148,9 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get upToPickerSetTargetAction => 'סמן כאחרון שנלמד';
+
+  @override
   String get upToPickerStatusAlreadyRecorded => 'כבר נרשם';
 
   @override

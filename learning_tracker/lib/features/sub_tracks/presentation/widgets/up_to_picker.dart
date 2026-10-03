@@ -13,6 +13,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -350,7 +351,20 @@ class _UpToRowTile extends ConsumerWidget {
       label: isTarget
           ? l10n.upToPickerRowTargetSemantics(label, statusText)
           : l10n.upToPickerRowSemantics(label, statusText),
-      onTap: selectable ? () => onChanged(selection.selectTarget(index)) : null,
+      // The row announces itself as its tick, so a screen-reader activation
+      // does what the tick does (AC-2, AC-8): inside the run it skips or
+      // re-ticks the row, outside it makes the row the last one learnt.
+      // Cutting the run short at a row already inside it is a custom
+      // action, as the row's visible tap does.
+      onTap: selectable ? () => onChanged(selection.tick(index)) : null,
+      customSemanticsActions: selectable && selection.inRun(index) && !isTarget
+          ? {
+              CustomSemanticsAction(
+                label: l10n.upToPickerSetTargetAction,
+              ): () =>
+                  onChanged(selection.selectTarget(index)),
+            }
+          : null,
       excludeSemantics: true,
       child: Material(
         color: isTarget ? scheme.primaryContainer : Colors.transparent,

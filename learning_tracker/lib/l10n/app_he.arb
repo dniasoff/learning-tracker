@@ -1859,6 +1859,7 @@
       }
     }
   },
+  "upToPickerSetTargetAction": "סמן כאחרון שנלמד",
   "upToPickerStatusAlreadyRecorded": "כבר נרשם",
   "upToPickerStatusIncluded": "כלול",
   "upToPickerStatusNextUp": "הבא בתור",

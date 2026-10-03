@@ -5500,6 +5500,12 @@ abstract class AppLocalizations {
   /// **'{label}, {status}, last one learnt'**
   String upToPickerRowTargetSemantics(String label, String status);
 
+  /// Screen-reader custom action on an Up to… picker row inside the run: makes it the last one learnt, cutting the run short there (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Make this the last one learnt'**
+  String get upToPickerSetTargetAction;
+
   /// Up to… row state: ticked in this track before; not selectable (UX-DR-157).
   ///
   /// In en, this message translates to:
