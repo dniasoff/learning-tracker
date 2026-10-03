@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -335,8 +333,8 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         duration: const Duration(seconds: 8),
         action: SnackBarAction(
           label: l10n.actionRetry,
-          onPressed: () =>
-              unawaited(report.retryNotSaved().catchError((Object _) {})),
+          // A retry that fails again stays "not saved"; nothing to show.
+          onPressed: () => report.retryNotSaved().ignore(),
         ),
       ),
     );
