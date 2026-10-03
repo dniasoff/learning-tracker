@@ -925,12 +925,7 @@ class TutorModeIndicatorBar extends ConsumerWidget {
               onTap: () => showProfileSwitcherSheet(context),
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
-                ),
+                style: _tutorBarLabelStyle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -949,15 +944,7 @@ class TutorModeIndicatorBar extends ConsumerWidget {
                   minHeight: kMinInteractiveDimension,
                 ),
                 child: Center(
-                  child: Text(
-                    l10n.tutorModeSwitch,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
+                  child: Text(l10n.tutorModeSwitch, style: _tutorBarLabelStyle),
                 ),
               ),
             ),
@@ -1000,15 +987,7 @@ class TutorModeIndicatorBar extends ConsumerWidget {
                           color: Colors.white,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          l10n.tutorModeExit,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
+                        Text(l10n.tutorModeExit, style: _tutorBarLabelStyle),
                       ],
                     ),
                   ),
@@ -1021,3 +1000,12 @@ class TutorModeIndicatorBar extends ConsumerWidget {
     );
   }
 }
+
+// The tutor-mode bar's label text (name, *Switch*, *Exit*): one shared style,
+// so the bar's white-on-amber text is declared once.
+const TextStyle _tutorBarLabelStyle = TextStyle(
+  color: Colors.white,
+  fontSize: 11,
+  fontWeight: FontWeight.w700,
+  letterSpacing: 0.4,
+);
