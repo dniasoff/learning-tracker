@@ -33,6 +33,7 @@ import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/lock_cover_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -244,6 +245,8 @@ void main() {
         ..._ashkenaziEnglishTerms,
         currentSacredWindowProvider.overrideWithValue(null),
       ]);
+      // One frame to discard root messenger surfaces, then the reveal.
+      await tester.pump();
       await tester.pump();
       expect(find.text('Good Shabbos'), findsNothing);
       expect(find.text('TAPS 1'), findsOneWidget, reason: 'state kept');
@@ -355,6 +358,81 @@ void main() {
       }
       expect(actions, 0);
       semantics.dispose();
+    });
+
+    testWidgets('(g) root SnackBars and banners requested WHILE locked never '
+        'surface when the lock lifts', (tester) async {
+      final messengerKey = GlobalKey<ScaffoldMessengerState>();
+      final container = ProviderContainer(
+        overrides: [
+          ..._ashkenaziEnglishTerms,
+          currentSacredWindowProvider.overrideWithValue(_activeShabbosWindow()),
+        ],
+      );
+      addTearDown(container.dispose);
+      var actions = 0;
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            scaffoldMessengerKey: messengerKey,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => SacredTimeLockOverlay(
+              child: TutoredLearnerLockOverlay(onExit: () {}, child: child!),
+            ),
+            home: const Scaffold(body: Text('DASHBOARD')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Good Shabbos'), findsOneWidget);
+      expect(container.read(lockCoverEngagedProvider), isTrue);
+
+      // An async caller requests surfaces long after the lock engaged.
+      messengerKey.currentState!
+        ..showSnackBar(
+          SnackBar(
+            duration: const Duration(minutes: 1),
+            content: const Text('LATE'),
+            action: SnackBarAction(label: 'ACT', onPressed: () => actions++),
+          ),
+        )
+        ..showSnackBar(const SnackBar(content: Text('LATE QUEUED')))
+        ..showMaterialBanner(
+          const MaterialBanner(
+            content: Text('LATE BANNER'),
+            actions: [SizedBox.shrink()],
+          ),
+        );
+      await tester.pumpAndSettle();
+      expect(find.text('LATE'), findsNothing, reason: 'not painted');
+
+      container.updateOverrides([
+        ..._ashkenaziEnglishTerms,
+        currentSacredWindowProvider.overrideWithValue(null),
+      ]);
+      // The unlock frame: the cover is still up while it discards.
+      await tester.pump();
+      expect(find.text('Good Shabbos'), findsOneWidget);
+      expect(find.text('LATE'), findsNothing);
+
+      await tester.pump();
+      expect(find.text('DASHBOARD'), findsOneWidget);
+      expect(find.text('Good Shabbos'), findsNothing);
+      for (final text in ['LATE', 'LATE QUEUED', 'LATE BANNER', 'ACT']) {
+        expect(find.text(text), findsNothing, reason: '$text surfaced');
+      }
+      await tester.pumpAndSettle();
+      for (final text in ['LATE', 'LATE QUEUED', 'LATE BANNER', 'ACT']) {
+        expect(
+          find.text(text, skipOffstage: false),
+          findsNothing,
+          reason: '$text surfaced',
+        );
+      }
+      expect(actions, 0);
+      expect(container.read(lockCoverEngagedProvider), isFalse);
     });
   });
 

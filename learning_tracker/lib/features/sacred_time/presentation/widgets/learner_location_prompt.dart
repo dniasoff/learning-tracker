@@ -24,6 +24,7 @@ import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/lock_cover_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -68,12 +69,17 @@ final class LearnerLocationPrompt {
 /// The prompts due now, one per own learner (every learner whose lock
 /// drives the device, [lockDrivingScopesProvider]) that has no location
 /// and whose lock ended within [learnerLocationPromptLookBack]; empty
-/// while a lock is in force, in a tutored session, or while the account's
-/// learners load. A learner whose settings load or fail is skipped (its
+/// while a lock is in force or its cover is still up
+/// ([lockCoverEngagedProvider]), in a tutored session, or while the
+/// account's learners load. A learner whose settings load or fail is skipped (its
 /// lock is fail-closed anyway; the prompt waits for a readable history).
 final learnerLocationPromptsProvider =
     Provider.autoDispose<List<LearnerLocationPrompt>>((ref) {
       if (ref.watch(currentSacredWindowProvider) != null) return const [];
+      // Until the lock cover has released (after it discarded what was
+      // requested from the root messenger during the lock), so the prompt
+      // is never swept by that discard.
+      if (ref.watch(lockCoverEngagedProvider)) return const [];
       if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
         return const [];
       }

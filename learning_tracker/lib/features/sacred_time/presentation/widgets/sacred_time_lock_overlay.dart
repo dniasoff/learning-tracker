@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/scrollable_fill_body.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/lock_cover_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -74,11 +75,18 @@ class TutoredLearnerLockOverlay extends ConsumerWidget {
 /// The root `ScaffoldMessenger` (from `MaterialApp.router`) sits ABOVE the
 /// builder slot this cover is mounted in. Its snack bars and material
 /// banners are painted by the Scaffolds of the covered routes, so they are
-/// offstage with them; still, when the lock engages the cover dismisses
-/// them and drops the queue, so no snack bar (and no action of one — e.g.
-/// the after-lock location prompt) is pending behind the lock, resurfaces
-/// when it lifts, or paints on any Scaffold outside the cover (AC-1 touch
-/// and semantics boundary).
+/// offstage with them; still, nothing requested from it may be pending
+/// behind the lock or resurface when it lifts (AC-1 touch and semantics
+/// boundary). So the root messenger is gated for the WHOLE locked
+/// interval:
+///  * when the lock engages, the cover dismisses every snack bar and banner
+///    shown or queued before it;
+///  * when the lock ends, the cover stays up one more frame, dismisses
+///    every snack bar and banner requested while it was up (by any async
+///    caller, at any point of the lock), and only then reveals the app.
+/// The cover is registered in [lockCoversProvider] from engage to that
+/// release, so after-lock surfaces (the location prompt) are requested
+/// only once the discard has run.
 class _LockCover extends ConsumerStatefulWidget {
   const _LockCover({
     required this.window,
@@ -95,39 +103,83 @@ class _LockCover extends ConsumerStatefulWidget {
 }
 
 class _LockCoverState extends ConsumerState<_LockCover> {
+  /// This cover's identity in [lockCoversProvider].
+  final Object _token = Object();
+
+  late final LockCovers _covers;
+
+  /// The window on screen. It follows [_LockCover.window] at once when a
+  /// lock starts or changes, but outlives it by the release step when the
+  /// lock ends.
+  SacredWindow? _shown;
+
   @override
   void initState() {
     super.initState();
-    if (widget.window != null) _dismissMessengerSurfaces();
+    _covers = ref.read(lockCoversProvider.notifier);
+    _shown = widget.window;
+    if (_shown != null) _engage();
   }
 
   @override
   void didUpdateWidget(_LockCover oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.window == null && widget.window != null) {
-      _dismissMessengerSurfaces();
+    final window = widget.window;
+    if (window != null) {
+      final wasCovered = _shown != null;
+      _shown = window;
+      if (!wasCovered) _engage();
+    } else if (oldWidget.window != null && _shown != null) {
+      _release();
     }
   }
 
-  /// Removes every snack bar and material banner of the enclosing (root)
-  /// messenger, current and queued, at once — after this frame, since the
-  /// messenger rebuilds its scaffolds.
-  void _dismissMessengerSurfaces() {
+  @override
+  void dispose() {
+    final covers = _covers;
+    final token = _token;
+    // Providers cannot change while the tree is being torn down.
+    WidgetsBinding.instance.addPostFrameCallback((_) => covers.release(token));
+    super.dispose();
+  }
+
+  /// The lock started: drop what the messenger held before it (after this
+  /// frame — the messenger rebuilds its scaffolds, and providers cannot
+  /// change mid-build).
+  void _engage() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      if (messenger == null) return;
-      messenger
-        ..clearSnackBars()
-        ..removeCurrentSnackBar()
-        ..clearMaterialBanners()
-        ..removeCurrentMaterialBanner();
+      if (!mounted || widget.window == null) return;
+      _dismissMessengerSurfaces();
+      _covers.engage(_token);
     });
+  }
+
+  /// The lock ended: drop what was requested while it was up, THEN reveal
+  /// the app and release the cover — unless a lock started again first.
+  void _release() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.window != null) return;
+      _dismissMessengerSurfaces();
+      setState(() => _shown = null);
+      _covers.release(_token);
+    });
+  }
+
+  /// Removes every snack bar and material banner of the enclosing (root)
+  /// messenger, current and queued, at once (no exit animation).
+  void _dismissMessengerSurfaces() {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger
+      ..clearSnackBars()
+      ..removeCurrentSnackBar()
+      ..clearMaterialBanners()
+      ..removeCurrentMaterialBanner();
   }
 
   @override
   Widget build(BuildContext context) {
-    final activeWindow = widget.window;
+    final activeWindow = _shown;
     final locked = activeWindow != null;
     // Resolve the variant-aware Shabbos term once here (this is the Consumer
     // layer) and hand the composed greeting/subtitle down to the plain

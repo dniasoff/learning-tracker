@@ -17,8 +17,10 @@ import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/lock_cover_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/learner_location_prompt.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -153,6 +155,20 @@ void main() {
       );
       expect(await _read(_overrides(tutored: true)), isEmpty);
     });
+
+    test('no prompt while a lock cover is still up (releasing)', () async {
+      final container = ProviderContainer.test(overrides: _overrides());
+      final sub = container.listen(learnerLocationPromptsProvider, (_, _) {});
+      addTearDown(sub.close);
+      final profiles = container.listen(profileListStreamProvider, (_, _) {});
+      addTearDown(profiles.close);
+      await container.read(profileListStreamProvider.future);
+      final cover = Object();
+      container.read(lockCoversProvider.notifier).engage(cover);
+      expect(container.read(learnerLocationPromptsProvider), isEmpty);
+      container.read(lockCoversProvider.notifier).release(cover);
+      expect(container.read(learnerLocationPromptsProvider), hasLength(1));
+    });
   });
 
   group('LearnerLocationPromptListener', () {
@@ -206,6 +222,51 @@ void main() {
       await tester.tap(find.text('Set location'));
       await tester.pump();
       expect(opened.single.profileId, _sibling);
+    });
+
+    testWidgets('with the lock overlay: the prompt shows after the lock '
+        'lifts, after the cover discarded what was requested during it, '
+        'and is not swept by that discard', (tester) async {
+      final lockedWindow = SacredWindow(
+        startUtc: _monday.subtract(const Duration(hours: 1)),
+        endUtc: _monday.add(const Duration(hours: 1)),
+        kind: SacredWindowKind.shabbos,
+      );
+      final container = ProviderContainer(
+        overrides: _overrides(window: lockedWindow),
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            scaffoldMessengerKey: rootScaffoldMessengerKey,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => LearnerLocationPromptListener(
+              onSetLocation: (_) async {},
+              child: SacredTimeLockOverlay(child: child!),
+            ),
+            home: const Scaffold(body: Text('HOME')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('has no location'), findsNothing);
+      rootScaffoldMessengerKey.currentState!.showSnackBar(
+        const SnackBar(content: Text('DURING LOCK')),
+      );
+      await tester.pumpAndSettle();
+
+      container.updateOverrides(_overrides());
+      for (var i = 0; i < 4; i++) {
+        await tester.pump();
+      }
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('HOME'), findsOneWidget);
+      expect(find.text('DURING LOCK'), findsNothing);
+      expect(find.textContaining('Avi has no location'), findsOneWidget);
     });
   });
 
