@@ -16,16 +16,10 @@ import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
-import 'package:learning_tracker/domain/learner_state/learner_state.dart';
-import 'package:learning_tracker/domain/learner_state/learning_event.dart';
-import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
-import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
-import 'package:learning_tracker/features/gamification/data/repositories/achievement_latch_adapter.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
@@ -37,7 +31,9 @@ import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_w
     show OnlineRequiredException;
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_latest_write.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/achievement_latch_adapter.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
 import 'package:learning_tracker/features/learning/domain/commands/achievement_latch.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
@@ -48,8 +44,6 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
-import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
-=======
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
