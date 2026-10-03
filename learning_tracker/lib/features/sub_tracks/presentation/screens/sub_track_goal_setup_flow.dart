@@ -20,6 +20,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -115,7 +117,7 @@ Future<SubTrackGoalSetupOutcome> openSubTrackGoalSetup(
     curriculumId: curriculumKey,
     choice: choice,
     current: current,
-    nowUtc: DateTime.now().toUtc(),
+    nowUtc: ref.read(localDayClockProvider).nowUtc(),
   );
   if (action == null) return SubTrackGoalSetupOutcome.saved;
 
@@ -198,7 +200,7 @@ PaceGoal? prefilledPaceOf(CurriculumGoals? goals) {
 /// (e.g. 1.5) shows rounded; [goalChoiceOf] maps an untouched pace back to
 /// the stored value, so the rounding never reaches a save.
 GoalEntity? goalEntityOf(CurriculumId curriculum, CurriculumGoals? goals) {
-  final now = DateTime.now().toUtc();
+  final now = DateTimeFactory.nowUtc();
   final deadline = goals?.deadline;
   if (deadline != null && deadline.endedAt == null) {
     final date = DateTime.parse(deadline.targetDate);

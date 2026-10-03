@@ -219,17 +219,17 @@ Future<Uint8List> buildLifetimeReportPdf(
     double indent = 0,
     pw.EdgeInsets padding = pw.EdgeInsets.zero,
   }) => pw.Padding(
-    padding:
-        padding +
-        (rtl
-            ? pw.EdgeInsets.only(right: indent)
-            : pw.EdgeInsets.only(left: indent)),
-    child: _BidiParagraph(
-      text: clean(value),
-      style: style.textStyle(faces),
-      faces: faces,
-      bold: style.bold,
-      rtl: rtl,
+    padding: padding,
+    // The page's text direction (MultiPage.textDirection) resolves start.
+    child: pw.Padding(
+      padding: pw.EdgeInsetsDirectional.only(start: indent),
+      child: _BidiParagraph(
+        text: clean(value),
+        style: style.textStyle(faces),
+        faces: faces,
+        bold: style.bold,
+        rtl: rtl,
+      ),
     ),
   );
 
@@ -409,14 +409,15 @@ class _BidiParagraph extends pw.StatelessWidget {
         children: [
           for (final line in lines)
             pw.Align(
-              alignment: rtl
-                  ? pw.Alignment.centerRight
-                  : pw.Alignment.centerLeft,
+              // Resolved by the page's text direction: right in Hebrew.
+              alignment: pw.AlignmentDirectional.centerStart,
               child: pw.Text(
                 visualOrder(line, rtl: rtl),
                 style: style,
                 textDirection: pw.TextDirection.ltr,
-                textAlign: rtl ? pw.TextAlign.right : pw.TextAlign.left,
+                // The line is drawn left to right in visual order, so its end
+                // is the right edge.
+                textAlign: rtl ? pw.TextAlign.end : pw.TextAlign.start,
               ),
             ),
         ],

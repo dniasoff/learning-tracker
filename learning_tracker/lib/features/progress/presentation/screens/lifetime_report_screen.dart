@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
@@ -132,7 +133,7 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
       final learner = ref.read(activeProfileProvider).value?.displayName ?? '';
       final today =
           ref.read(activeLearnerStateProvider).value?.today ??
-          formatCivilDay(DateTime.now().toUtc());
+          formatCivilDay(ref.read(localDayClockProvider).nowUtc());
       final document = composeLifetimeReportPdf(
         view: value,
         pace: pace.value,
