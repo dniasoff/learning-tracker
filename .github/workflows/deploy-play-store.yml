@@ -74,9 +74,18 @@ jobs:
   #      `functions:delete ... --force` — absent from source is not absent
   #      from production;
   #   2. lists again and fails if any of them is still deployed;
-  #   3. deploys `--only firestore:rules,firestore:indexes,functions` once.
-  # Any failure (missing credential, list, delete, verification or deploy)
-  # fails this job and therefore the app release. Every Play track shares the
+  #   3. deploys `--only firestore:rules,firestore:indexes,functions` once;
+  #   4. (DNI-491 AC-5) lists the deployed indexes and, when an index of an
+  #      AD-49 retired collection (R14) is still there, prunes with
+  #      `deploy --only firestore:indexes --force` — refusing if anything
+  #      undeclared outside a declared or retired collection group would go —
+  #      then lists again and fails if a retired index remains. A
+  #      non-interactive deploy never deletes an index on its own.
+  # The retired-symbols gate (check_retired_symbols.dart --enforce, empty
+  # allowlist since DNI-491) runs in ci.yml, which gate-ci-status requires
+  # green for this SHA. Any failure (missing credential, list, delete,
+  # verification, deploy or index prune) fails this job and therefore the
+  # app release. Every Play track shares the
   # one production Firebase project, so every release run takes this gate.
   # Credential: the FIREBASE_TOKEN repo secret (rulings B5, approved).
   backend-deploy:
@@ -122,7 +131,7 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Undeploy the retired callables, verify, then release rules, indexes and functions once
+      - name: Undeploy the retired callables, release rules, indexes and functions once, then drop the retired indexes
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: node tool/firebase_backend_release.mjs --mode deploy --project torah-study-tracker
