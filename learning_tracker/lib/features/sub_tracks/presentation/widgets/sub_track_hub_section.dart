@@ -46,6 +46,11 @@ class SubTrackHubSection extends ConsumerWidget {
     }
     final intent = ref.watch(subTrackCurriculumIntentProvider(curriculumId));
     final tracks = ref.watch(learnerSubTracksProvider);
+    // No main track for this curriculum in the governed intent: no group
+    // (fail closed; nothing to add a sub-track to).
+    if (intent.error is SubTrackMainTrackNotFoundException) {
+      return const SizedBox.shrink();
+    }
     final failed = intent.hasError ? intent : (tracks.hasError ? tracks : null);
     if (failed != null) {
       return AppErrorView(
