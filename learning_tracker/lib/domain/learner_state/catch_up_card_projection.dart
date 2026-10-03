@@ -372,8 +372,9 @@ int catchUpSubTrackDailyAmount(SubTrack track) {
 /// and the engine has its state: [catchUpSubTrackDailyAmount] leaves from
 /// its position along its remaining path (skipping leaves it already
 /// recorded ahead), continuing across the days and cards in order (A-3,
-/// A-4). Ended, future-start, groundless and unflagged sub-tracks never
-/// appear (AC-7).
+/// A-4). A curriculum a card already completed takes no leaves there, so
+/// a later pending card continues from the sub-track's position. Ended,
+/// future-start, groundless and unflagged sub-tracks never appear (AC-7).
 List<CatchUpCard<T>> projectCatchUpCards<T>({
   required List<CatchUpCardWindow> windows,
   required List<List<T>> mainTasksByDay,
@@ -409,11 +410,17 @@ List<CatchUpCard<T>> projectCatchUpCards<T>({
         ((mainByCurriculum[c] ??= {})[day.date] ??= []).add(task);
       }
     }
+    // A curriculum this card already completed (A-5) lists nothing, so its
+    // sub-tracks keep their cursors for the next pending card (A-4).
+    final recorded = <String, bool>{};
+    bool complete(String c) =>
+        recorded[c] ??= catchUpRecorded(window, c, state);
     final subsByCurriculum =
         <String, Map<CivilDate, List<CatchUpSubTrackPlan>>>{};
     for (final day in window.lockedDays) {
       for (final s in tracks) {
         if (!s.learnsOnShabbos || !onHome(s, day.date)) continue;
+        if (complete(s.curriculumId)) continue;
         final amount = catchUpSubTrackDailyAmount(s);
         final path = cursors[s.id]!;
         if (amount == 0 || path.isEmpty) continue;
@@ -428,7 +435,7 @@ List<CatchUpCard<T>> projectCatchUpCards<T>({
     }
     final groups = <CatchUpCurriculumGroup<T>>[];
     for (final c in curriculumOrder) {
-      if (catchUpRecorded(window, c, state)) continue;
+      if (complete(c)) continue;
       final days = <CatchUpDayPlan<T>>[
         for (final day in window.lockedDays)
           CatchUpDayPlan<T>(

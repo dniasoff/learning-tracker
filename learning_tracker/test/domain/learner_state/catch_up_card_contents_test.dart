@@ -421,6 +421,48 @@ void main() {
     });
   });
 
+  group('A-4 / A-5: a completed card before a pending one', () {
+    final h = constantHistory(jerusalem);
+    final jlm = LearnerZone.of('Asia/Jerusalem');
+    final stacked = catchUpCardWindowsAt(h, jlm.at(_day(2027, 4, 25), hour: 9));
+
+    test('the completed card takes no sub-track leaves; the pending card '
+        'continues from the position', () {
+      final [first, second] = stacked;
+      final cards = project(
+        windows: stacked,
+        main: [
+          const <_Task>[],
+          [(_mishnayos, 'Mishnah_Berakhot_2.2')],
+        ],
+        state: _learner(
+          {
+            _mishnayos: {
+              'rebbe': _state('rebbe', [
+                'Mishnah_Peah_1.1',
+                'Mishnah_Peah_1.2',
+              ]),
+            },
+          },
+          countedLearns: [
+            _learn(
+              'e1',
+              dateState: DateState.catchUp,
+              learnedOn: first.lockedDays.single.date,
+              at: second.lock.endUtc.add(const Duration(minutes: 1)),
+            ),
+          ],
+        ),
+        subTracks: [_track('rebbe')],
+      );
+      final card = cards.single;
+      expect(card.window, second);
+      expect(card.groups.single.days.single.subTracks.single.leaves, [
+        'Mishnah_Peah_1.1',
+      ]);
+    });
+  });
+
   test('A-3: the daily amount is ceil(rate ÷ 7), 0 for a bad rate', () {
     expect(catchUpSubTrackDailyAmount(_track('a', ratePerWeek: 7)), 1);
     expect(catchUpSubTrackDailyAmount(_track('a', ratePerWeek: 8)), 2);
