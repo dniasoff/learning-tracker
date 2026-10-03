@@ -5680,6 +5680,30 @@ abstract class AppLocalizations {
   /// **'Open the lifetime report'**
   String get reportEntryTooltip;
 
+  /// Primary pill on the lifetime report that exports it as a PDF and opens the share sheet (UX-DR-43).
+  ///
+  /// In en, this message translates to:
+  /// **'Export PDF'**
+  String get reportExportAction;
+
+  /// The Export PDF pill while the PDF is being generated; the pill is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing PDF…'**
+  String get reportExportBusy;
+
+  /// Floating snackbar when generating or saving the report PDF fails (UX-DR-145); shown with a Retry action.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t export the report — try again.'**
+  String get reportExportError;
+
+  /// Accessibility hint of the Export PDF pill.
+  ///
+  /// In en, this message translates to:
+  /// **'Export the lifetime report as a PDF and share it'**
+  String get reportExportSemantics;
+
   /// No description provided for @reportGroupCollapseHint.
   ///
   /// In en, this message translates to:
@@ -5840,6 +5864,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last {days} days: {rate} / week'**
   String reportPaceTrailing(String days, String rate);
+
+  /// Line under the learner and curriculum in the report PDF; the date is the learner's civil date in their time zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated on {date}'**
+  String reportPdfGeneratedOn(String date);
+
+  /// Footer on every page of the report PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {total}'**
+  String reportPdfPageLabel(String page, String total);
 
   /// No description provided for @reportSchoolYears.
   ///

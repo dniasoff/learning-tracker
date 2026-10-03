@@ -2237,6 +2237,22 @@
   },
   "reportEntry": "Report",
   "reportEntryTooltip": "Open the lifetime report",
+  "reportExportAction": "Export PDF",
+  "@reportExportAction": {
+    "description": "Primary pill on the lifetime report that exports it as a PDF and opens the share sheet (UX-DR-43)."
+  },
+  "reportExportBusy": "Preparing PDF…",
+  "@reportExportBusy": {
+    "description": "The Export PDF pill while the PDF is being generated; the pill is disabled."
+  },
+  "reportExportError": "Couldn't export the report — try again.",
+  "@reportExportError": {
+    "description": "Floating snackbar when generating or saving the report PDF fails (UX-DR-145); shown with a Retry action."
+  },
+  "reportExportSemantics": "Export the lifetime report as a PDF and share it",
+  "@reportExportSemantics": {
+    "description": "Accessibility hint of the Export PDF pill."
+  },
   "reportGroupCollapseHint": "Hide years",
   "reportGroupExpandHint": "Show years",
   "reportGroupOngoing": "ongoing",
@@ -2365,6 +2381,27 @@
         "type": "String"
       },
       "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPdfGeneratedOn": "Generated on {date}",
+  "@reportPdfGeneratedOn": {
+    "description": "Line under the learner and curriculum in the report PDF; the date is the learner's civil date in their time zone.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPdfPageLabel": "Page {page} of {total}",
+  "@reportPdfPageLabel": {
+    "description": "Footer on every page of the report PDF.",
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "total": {
         "type": "String"
       }
     }

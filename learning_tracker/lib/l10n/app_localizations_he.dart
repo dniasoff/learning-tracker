@@ -3233,6 +3233,18 @@ class AppLocalizationsHe extends AppLocalizations {
   String get reportEntryTooltip => 'פתיחת הדוח המצטבר';
 
   @override
+  String get reportExportAction => 'ייצוא PDF';
+
+  @override
+  String get reportExportBusy => 'מכין PDF…';
+
+  @override
+  String get reportExportError => 'לא הצלחנו לייצא את הדוח — נסו שוב.';
+
+  @override
+  String get reportExportSemantics => 'ייצוא הדוח המצטבר כ-PDF ושיתופו';
+
+  @override
   String get reportGroupCollapseHint => 'הסתרת השנים';
 
   @override
@@ -3339,6 +3351,16 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String reportPaceTrailing(String days, String rate) {
     return '$days הימים האחרונים: $rate / שבוע';
+  }
+
+  @override
+  String reportPdfGeneratedOn(String date) {
+    return 'הופק ב-$date';
+  }
+
+  @override
+  String reportPdfPageLabel(String page, String total) {
+    return 'עמוד $page מתוך $total';
   }
 
   @override

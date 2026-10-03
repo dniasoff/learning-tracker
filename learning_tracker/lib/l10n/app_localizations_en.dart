@@ -3269,6 +3269,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportEntryTooltip => 'Open the lifetime report';
 
   @override
+  String get reportExportAction => 'Export PDF';
+
+  @override
+  String get reportExportBusy => 'Preparing PDF…';
+
+  @override
+  String get reportExportError => 'Couldn\'t export the report — try again.';
+
+  @override
+  String get reportExportSemantics =>
+      'Export the lifetime report as a PDF and share it';
+
+  @override
   String get reportGroupCollapseHint => 'Hide years';
 
   @override
@@ -3377,6 +3390,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String reportPaceTrailing(String days, String rate) {
     return 'Last $days days: $rate / week';
+  }
+
+  @override
+  String reportPdfGeneratedOn(String date) {
+    return 'Generated on $date';
+  }
+
+  @override
+  String reportPdfPageLabel(String page, String total) {
+    return 'Page $page of $total';
   }
 
   @override
