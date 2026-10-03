@@ -3,19 +3,19 @@
   "title": "completions / CompletionEntity repositories and adapters",
   "description": "Action: delete (replaced by the learning_event repository and ports). The rules/indexes/deletes.ts remnants of `completions` are R14's.",
   "entries": [
-    {"symbol": "completions", "kind": "collection", "state": "pending", "owner": "DNI-483", "paths": {"include": ["lib/**"]}, "note": "lib/ only; functions/src is R12 (DNI-488), rules/indexes/deletes.ts are R14"},
-    {"symbol": "CompletionEntity", "kind": "type", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "CompletionEntityFirestoreCodec", "kind": "type", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "CompletionRepository", "kind": "type", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "CompletionRepositoryNotReadyException", "kind": "type", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "FirestoreCompletionRepository", "kind": "service", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "FirestoreCompletionRepositoryAdapter", "kind": "service", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "SchedulerFirestoreCompletionRepositoryAdapter", "kind": "service", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "SchedulerCompletionRepositoryNotReadyException", "kind": "type", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "FirestoreProgressRepositoryAdapter", "kind": "service", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "FirestoreChartDataRepositoryAdapter", "kind": "service", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "CompletionRequest", "kind": "type", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "BulkCompletionRequest", "kind": "type", "state": "pending", "owner": "DNI-483"},
-    {"symbol": "MarkCompletionResult", "kind": "type", "state": "pending", "owner": "DNI-483"}
+    {"symbol": "completions", "kind": "collection", "state": "retired", "owner": "DNI-483", "paths": {"include": ["lib/**"]}, "note": "lib/ only; functions/src is R12 (DNI-488), rules/indexes/deletes.ts are R14"},
+    {"symbol": "CompletionEntity", "kind": "type", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "CompletionEntityFirestoreCodec", "kind": "type", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "CompletionRepository", "kind": "type", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "CompletionRepositoryNotReadyException", "kind": "type", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "FirestoreCompletionRepository", "kind": "service", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "FirestoreCompletionRepositoryAdapter", "kind": "service", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "SchedulerFirestoreCompletionRepositoryAdapter", "kind": "service", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "SchedulerCompletionRepositoryNotReadyException", "kind": "type", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "FirestoreProgressRepositoryAdapter", "kind": "service", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "FirestoreChartDataRepositoryAdapter", "kind": "service", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "CompletionRequest", "kind": "type", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "BulkCompletionRequest", "kind": "type", "state": "retired", "owner": "DNI-483"},
+    {"symbol": "MarkCompletionResult", "kind": "type", "state": "retired", "owner": "DNI-483"}
   ]
 }
