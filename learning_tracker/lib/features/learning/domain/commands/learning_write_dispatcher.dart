@@ -240,6 +240,22 @@ final class LearningWriteDispatcher {
     ], retrying: true);
   }
 
+  /// Drops every pending failure whose chunk holds one of [eventIds]
+  /// without re-sending it: its command has compensated the rest of its
+  /// action and offers its own retry (a catch-up card, DNI-506 AC-8), so a
+  /// later retry of one chunk must never count part of the action. Returns
+  /// how many were dropped.
+  int discard(Iterable<String> eventIds) {
+    final ids = eventIds.toSet();
+    final drop = [
+      for (final MapEntry(:key, :value) in _pending.entries)
+        if (value.chunk.events.any((e) => ids.contains(e.id))) key,
+    ];
+    drop.forEach(_pending.remove);
+    if (drop.isNotEmpty) _notify();
+    return drop.length;
+  }
+
   Future<_ChunkStatus> _commit(
     LearningCommandKind command,
     LearningWriteChunk chunk, {

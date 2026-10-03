@@ -14,7 +14,8 @@
 /// `lock_windows.dart`; nothing here computes a lock or a window any other
 /// way.
 ///
-/// Pure. Imports only `lib/domain/learner_state/**` and `dart:` (C0 AC-1).
+/// [planCatchUp] builds the writes. Pure. Imports only
+/// `lib/domain/learner_state/**`, this directory and `dart:` (C0 AC-1).
 library;
 
 import 'package:learning_tracker/domain/learner_state/catch_up_card_projection.dart'
@@ -25,6 +26,8 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_event_plans.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_write_chunker.dart';
 
 /// How a catch-up card was recorded (the `mode` of `catchup_completed`).
 enum CatchUpMode {
@@ -170,4 +173,37 @@ CatchUpCheck checkCatchUp(
   }
   if (used.length > maxCatchUpLockedDays) return CatchUpCheck.invalid;
   return CatchUpCheck.ok;
+}
+
+/// The writes of a catch-up action (AC-1, AD-50, AD-54): one `learn`
+/// event per leaf of [leaves], in order and with ascending ids, with
+/// `date_state = catch_up`, `learned_on` = the leaf's locked day, its
+/// `source`, its stage (main only), `recorded_at` = the tap instant and
+/// the stamp's actor. Each `source = main` event is one unit with its
+/// `pts_{eventId}` award of [amountOf] (`created_at = recorded_at`), so
+/// chunking never separates them.
+List<WriteUnit> planCatchUp({
+  required CommandStamp stamp,
+  required List<CatchUpLeaf> leaves,
+  required int? Function(CatchUpLeaf leaf) amountOf,
+}) {
+  final ids = stamp.ids(leaves.length);
+  return [
+    for (final (i, leaf) in leaves.indexed)
+      learnUnit(
+        LearningEvent.learn(
+          id: ids[i],
+          curriculumId: leaf.curriculumId,
+          ref: leaf.ref,
+          source: leaf.source,
+          dateState: DateState.catchUp,
+          learnedOn: leaf.learnedOn,
+          stage: leaf.source == LearningEvent.sourceMain ? leaf.stage : null,
+          recordedAt: stamp.nowUtc,
+          actor: stamp.actor,
+        ),
+        leaf.source == LearningEvent.sourceMain ? amountOf(leaf) : null,
+        stamp.nowUtc,
+      ),
+  ];
 }

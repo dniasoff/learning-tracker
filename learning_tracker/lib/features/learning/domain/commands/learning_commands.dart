@@ -27,6 +27,8 @@ import 'package:learning_tracker/features/learning/domain/commands/achievement_l
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/child_redate_limit.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_event_plans.dart';
@@ -37,6 +39,8 @@ import 'package:learning_tracker/features/learning/domain/commands/sub_track_com
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
 import 'package:learning_tracker/features/learning/domain/commands/unlearn_plan.dart';
 
+export 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart'
+    show CatchUpAction, CatchUpLeaf, CatchUpMode;
 export 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart'
     show SubTrackDraft, SubTrackEdit;
 
@@ -258,6 +262,21 @@ abstract interface class LearningCommands {
   /// does not save is a "not saved — retry" [PendingFailure], listed in
   /// [BackupReplayResult.notSaved] and in [watchPendingFailures].
   Future<BackupReplayResult> importBackup(BackupReplayInput input);
+  /// Records a catch-up card [action] (Story 3.3, DNI-506; AD-40): one
+  /// `learn` event per leaf with `date_state = catch_up`, `learned_on` =
+  /// its locked day and `recorded_at` = now, each `source = main` event
+  /// with its `pts_` award in the same chunk (AD-50, AD-54).
+  ///
+  /// Refused before any write with [CaptureRejection.catchUpEnded] when
+  /// now is outside the lock's `catchUpWindow` ([checkCatchUp], AC-3). The
+  /// action is all-or-nothing (AC-8): if the server rejects any chunk
+  /// within the ack window, the chunks it saved are voided at once and the
+  /// result is [CaptureRejection.notSaved], with no pending failure left
+  /// to retry part of it (the card is the retry); a rejection after the
+  /// window (queued offline) is compensated the same way when it arrives.
+  /// An empty action writes nothing. Undo is `undoEvents` over the
+  /// success's `eventIds` (one command, AC-7).
+  Future<CaptureResult> recordCatchUp(CatchUpAction action);
 
   /// Queued writes the server rejected, live.
   Stream<List<PendingFailure>> watchPendingFailures();
@@ -953,6 +972,115 @@ final class DefaultLearningCommands implements LearningCommands {
   }
 
   /// The event failures, then the governed ones, then the backup import's
+  /// (AD-54 Recovery).
+  @override
+  Future<CaptureResult> recordCatchUp(CatchUpAction action) =>
+      _gated((stamp, history) async {
+        switch (checkCatchUp(action, history, stamp.nowUtc)) {
+          case CatchUpCheck.ended:
+            return const CaptureResult.rejected(CaptureRejection.catchUpEnded);
+          case CatchUpCheck.invalid:
+            return _invalid;
+          case CatchUpCheck.ok:
+            break;
+        }
+        final leaves = action.leaves.toSet().toList();
+        if (leaves.isEmpty) return const CaptureResult.success();
+        for (final (curriculumId, source) in {
+          for (final l in leaves) (l.curriculumId, l.source),
+        }) {
+          if (!await _sourceAllowed(curriculumId, source)) return _invalid;
+        }
+        final amounts = <(String, int?), int>{};
+        for (final l in leaves) {
+          if (l.source != LearningEvent.sourceMain) continue;
+          final key = (l.curriculumId, l.stage);
+          if (!amounts.containsKey(key)) {
+            amounts[key] = await _pointsAmount(l.curriculumId, l.stage);
+          }
+        }
+        final List<WriteUnit> units;
+        try {
+          units = planCatchUp(
+            stamp: stamp,
+            leaves: leaves,
+            amountOf: (l) => amounts[(l.curriculumId, l.stage)],
+          );
+          _validate(units);
+        } on StorageFormatException {
+          return _invalid;
+        }
+        final planned = [
+          for (final u in units)
+            for (final e in u.events) e.id,
+        ];
+        final outcome = await _dispatcher.dispatch(
+          LearningCommandKind.capture,
+          chunkWrites(units),
+        );
+        if (outcome.rejectedChunks > 0) {
+          await _compensateCatchUp(planned, saved: outcome.eventIds);
+          return const CaptureResult.rejected(CaptureRejection.notSaved);
+        }
+        if (outcome.queued) {
+          // A chunk the server rejects after the ack window (queued
+          // offline) is compensated when the rejection arrives (AC-8).
+          unawaited(
+            outcome.acknowledgedLearnEventIds.then((acked) async {
+              final unsaved = _dispatcher.unsavedEventIds;
+              if (!planned.any(unsaved.contains)) return;
+              await _compensateCatchUp(planned, saved: acked);
+            }),
+          );
+        }
+        _afterWrite(outcome);
+        return CaptureResult.success(
+          eventIds: outcome.eventIds,
+          queued: outcome.queued,
+        );
+      });
+
+  /// Makes a partly rejected catch-up action count for nothing (AC-8): the
+  /// rejected chunks are dropped from the pending failures (the card, not
+  /// a per-chunk retry, re-records the action) and every [saved] event of
+  /// [planned] is voided in one undo-shaped write (`reverts_action_id` =
+  /// the action's first event id), so no subset stays counted and the
+  /// card returns while its window is open. A void the server then
+  /// rejects is an ordinary pending failure with its own retry.
+  Future<void> _compensateCatchUp(
+    List<String> planned, {
+    required List<String> saved,
+  }) async {
+    _dispatcher.discard(planned);
+    final targets = [
+      for (final id in planned)
+        if (saved.contains(id)) id,
+    ];
+    if (targets.isEmpty) return;
+    final stamp = CommandStamp(
+      actor: _actor,
+      nowUtc: _clock().toUtc(),
+      newUlid: _newUlid,
+    );
+    final ids = stamp.ids(targets.length);
+    final actionId = planned.reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
+    try {
+      await _dispatcher.dispatch(LearningCommandKind.undo, [
+        for (final chunk in chunkWrites([
+          for (final (i, target) in targets.indexed)
+            WriteUnit([
+              voidEventOf(stamp, ids[i], target, revertsActionId: actionId),
+            ]),
+        ]))
+          chunk,
+      ]);
+    } on Object {
+      // Not accepted locally: nothing more to do here; the engine still
+      // sees only what was written.
+    }
+  }
+
+  /// The event failures, then the governed and backup import failures
   /// (AD-54 Recovery).
   @override
   Future<CaptureResult> createSubTrack(

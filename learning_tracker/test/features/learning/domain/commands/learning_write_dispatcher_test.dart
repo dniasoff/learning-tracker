@@ -231,6 +231,24 @@ void main() {
     expect(reporter.reports, isEmpty);
   });
 
+  test('DNI-506 AC-8: discard drops the failures holding the given events '
+      'without re-sending them', () async {
+    port.failNextWith(const PermanentWriteRejection('permission-denied'));
+    await dispatcher.dispatch(LearningCommandKind.capture, [_chunk(1)]);
+    expect(dispatcher.pendingFailures, hasLength(1));
+    final seen = <List<PendingFailure>>[];
+    final sub = dispatcher.watchPendingFailures().listen(seen.add);
+    await pumpEventQueue();
+    expect(dispatcher.discard([engineUlid(99)]), 0);
+    expect(dispatcher.discard([engineUlid(2)]), 1);
+    await pumpEventQueue();
+    expect(dispatcher.pendingFailures, isEmpty);
+    expect(dispatcher.unsavedEventIds, isEmpty);
+    expect(seen.last, isEmpty);
+    expect(port.chunks, isEmpty, reason: 'nothing is re-sent');
+    await sub.cancel();
+  });
+
   test('pendingFailureReasonOf maps server codes', () {
     expect(
       pendingFailureReasonOf('permission-denied'),

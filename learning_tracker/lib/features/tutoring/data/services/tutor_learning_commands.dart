@@ -40,6 +40,7 @@ import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_event_plans.dart';
 import 'package:learning_tracker/features/learning/domain/commands/unlearn_plan.dart';
@@ -587,6 +588,13 @@ final class TutorLearningCommands implements LearningCommands {
   // Track lifecycle is an owner-only command. Keep the shared interface
   // complete while refusing to expose those operations in a tutor session.
   @override
+  // The catch-up card is owner-only (DNI-505 AC-12); no tutor surface
+  // records one (DNI-506 out of scope).
+  @override
+  Future<CaptureResult> recordCatchUp(CatchUpAction action) async => _invalid;
+
+  // Sub-track writes by a tutor go through the DNI-509 callable
+  // (tutorUpsertSubTrack, post-cutover); until then they are refused here.
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
