@@ -19,7 +19,6 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_footer.dart';
@@ -276,9 +275,9 @@ final class LifecycleWorld {
     governedIntentRepositoryProvider.overrideWith(
       (ref) async => _FakeAsyncIntent(intent),
     ),
-    subTrackParentSessionProvider.overrideWith(
-      (ref) async => role == SubTrackDetailRole.parent,
-    ),
+    // The parent session follows [role] through `detail.overrides`
+    // (`subTrackParentSessionProvider` is `parentSessionProvider`, which a
+    // container may override only once).
     ...subTrackFormEnvironmentOverrides(today: today),
     subTrackNextYearFormProvider.overrideWithValue(
       (context, source) async =>
