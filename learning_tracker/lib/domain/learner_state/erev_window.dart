@@ -111,19 +111,7 @@ final class ErevWindow {
   final List<LockedDay> lockedDays;
 
   /// What the lock is, from its locked days.
-  ErevKind get kind {
-    final kinds = {for (final d in lockedDays) d.kind};
-    if (kinds.contains(LockedDayKind.yomKippur)) return ErevKind.yomKippur;
-    final shabbos =
-        kinds.contains(LockedDayKind.shabbos) ||
-        kinds.contains(LockedDayKind.yomTovShabbos);
-    final yomTov =
-        kinds.contains(LockedDayKind.yomTov) ||
-        kinds.contains(LockedDayKind.yomTovShabbos);
-    if (shabbos && yomTov) return ErevKind.yomTovAndShabbos;
-    if (yomTov) return ErevKind.yomTov;
-    return ErevKind.shabbos;
-  }
+  ErevKind get kind => lockKindOf(lockedDays);
 
   @override
   bool operator ==(Object other) {
@@ -187,18 +175,44 @@ ErevWindow? erevWindowAt(LearnerSettingsHistory history, DateTime nowUtc) {
   if (lock == null) return null;
   final erevStart = _erevStart(lock, history);
   if (now.isBefore(erevStart)) return null;
-  final settings = history.at(lock.startUtc);
-  final zone = LearnerZone.of(settings.timeZone);
-  final inIsrael = settings.inIsrael ?? false;
-  final days = lockedDays(lock, history).toList()..sort();
+  final zone = LearnerZone.of(history.at(lock.startUtc).timeZone);
   return ErevWindow(
     lock: lock,
     erevStartUtc: erevStart,
     lockStartLocal: zone.wallTimeOf(lock.startUtc),
-    lockedDays: [
-      for (final d in days) LockedDay(date: d, kind: _kindOf(d, inIsrael)),
-    ],
+    lockedDays: lockedDaysOf(lock, history),
   );
+}
+
+/// [lock]'s [lockedDays], ascending, each with what it is (the `in_israel`
+/// in force at `lock.startUtc`, as [lockedDays] reads it). Shared by the
+/// erev view and the catch-up card (DNI-505), so both label a lock alike.
+List<LockedDay> lockedDaysOf(LockWindow lock, LearnerSettingsHistory history) {
+  final inIsrael = history.at(lock.startUtc).inIsrael ?? false;
+  final days = lockedDays(lock, history).toList()..sort();
+  return [
+    for (final d in days)
+      LockedDay(
+        date: d,
+        kind: lockedDayKindOf(d, inIsrael: inIsrael),
+      ),
+  ];
+}
+
+/// What a lock with [days] is, for its label (A-2): Yom Kippur, yom tov
+/// and Shabbos, yom tov, or Shabbos.
+ErevKind lockKindOf(Iterable<LockedDay> days) {
+  final kinds = {for (final d in days) d.kind};
+  if (kinds.contains(LockedDayKind.yomKippur)) return ErevKind.yomKippur;
+  final shabbos =
+      kinds.contains(LockedDayKind.shabbos) ||
+      kinds.contains(LockedDayKind.yomTovShabbos);
+  final yomTov =
+      kinds.contains(LockedDayKind.yomTov) ||
+      kinds.contains(LockedDayKind.yomTovShabbos);
+  if (shabbos && yomTov) return ErevKind.yomTovAndShabbos;
+  if (yomTov) return ErevKind.yomTov;
+  return ErevKind.shabbos;
 }
 
 /// The next instant after [nowUtc] at which [erevWindowAt] may change:
@@ -214,7 +228,9 @@ DateTime? nextErevTransition(LearnerSettingsHistory history, DateTime nowUtc) {
   return now.isBefore(erevStart) ? erevStart : lock.startUtc;
 }
 
-LockedDayKind _kindOf(CivilDate date, bool inIsrael) {
+/// What locked civil [date] is (Yom Kippur, yom tov on Shabbos, yom tov or
+/// Shabbos) under the `in_israel` setting [inIsrael].
+LockedDayKind lockedDayKindOf(CivilDate date, {required bool inIsrael}) {
   final day = parseCivilDay(date);
   final calendar = JewishCalendar.fromDateTime(day)..inIsrael = inIsrael;
   if (calendar.getYomTovIndex() == JewishCalendar.YOM_KIPPUR) {
