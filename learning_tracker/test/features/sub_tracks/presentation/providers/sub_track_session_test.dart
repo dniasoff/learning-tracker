@@ -1,10 +1,20 @@
-// Story 2.9 (DNI-500) — viewer role and the navigation seam.
+// Story 2.9 (DNI-500) — viewer role and the navigation seam; DNI-498 wires
+// the ground-picker destination.
+import 'package:auto_route/auto_route.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_home_projection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_session.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
+import 'package:mocktail/mocktail.dart';
+
+class _MockStackRouter extends Mock implements StackRouter {}
+
+class _FakePageRouteInfo extends Fake implements PageRouteInfo<Object?> {}
 
 LearnerProfileEntity _profile(ProfileMode mode) => LearnerProfileEntity(
   profileId: 'p1',
@@ -95,9 +105,9 @@ void main() {
     expect(await _role(), SubTrackViewerRole.child);
   });
 
-  test('the default navigator opens the hub and the detail (DNI-497); no '
-      'unbuilt destination is reported, so its entry point stays '
-      'disabled', () {
+  test('the default navigator opens the hub, the detail (DNI-497) and the '
+      'ground picker (DNI-498); the unbuilt Up to… is not reported, so its '
+      'entry point stays disabled', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final navigator = container.read(subTrackNavigatorProvider);
@@ -105,9 +115,42 @@ void main() {
     for (final destination in SubTrackDestination.values) {
       expect(
         navigator.canOpen(destination),
-        destination == SubTrackDestination.detail,
+        destination != SubTrackDestination.upTo,
         reason: '$destination',
       );
     }
+  });
+
+  testWidgets('the default navigator pushes the ground picker route for the '
+      "row's sub-track (DNI-498)", (tester) async {
+    registerFallbackValue(_FakePageRouteInfo());
+    final router = _MockStackRouter();
+    when(() => router.push<Object?>(any())).thenAnswer((_) async => null);
+    late BuildContext context;
+    await tester.pumpWidget(
+      StackRouterScope(
+        controller: router,
+        stateHash: 0,
+        child: Builder(
+          builder: (c) {
+            context = c;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+    const RoutedSubTrackNavigator().openGroundPicker(
+      context,
+      const SubTrackHomeItem(
+        subTrackId: '01J0000000000000000000000R',
+        curriculumId: 'mishnayos',
+        name: 'Rebbe',
+        kind: SubTrackRowKind.groundless,
+      ),
+    );
+    final pushed =
+        verify(() => router.push<Object?>(captureAny())).captured.single
+            as GroundPickerRoute;
+    expect(pushed.args!.subTrackId, '01J0000000000000000000000R');
   });
 }

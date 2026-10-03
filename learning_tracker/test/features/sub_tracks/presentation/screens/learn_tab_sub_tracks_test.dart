@@ -387,8 +387,9 @@ void main() {
 
   for (final role in [SubTrackViewerRole.child, SubTrackViewerRole.parent]) {
     testWidgets('production navigator (${role.name}): the row opens the '
-        'sub-track detail (DNI-497); an unbuilt destination leaves its entry '
-        'point disabled instead of routing elsewhere', (tester) async {
+        'sub-track detail (DNI-497), a parent\'s Add ground opens the ground '
+        'picker (DNI-498); an unbuilt destination leaves its entry point '
+        'disabled instead of routing elsewhere', (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final router = _MockStackRouter();
@@ -462,18 +463,30 @@ void main() {
         isNotNull,
       );
 
-      // A parent's Add ground has no picker yet: visible, disabled.
+      // A parent's Add ground opens the ground picker route (DNI-498).
       if (role == SubTrackViewerRole.parent) {
+        final addGround = find.descendant(
+          of: find.byKey(const Key('subTrackHomeAddGround-$rebbeId')),
+          matching: find.byType(OutlinedButton),
+        );
+        expect(tester.widget<OutlinedButton>(addGround).onPressed, isNotNull);
+        await tester.ensureVisible(addGround);
+        await tester.pump();
+        await tester.tap(addGround);
+        await tester.pump();
+        final opened = verify(
+          () => router.push<Object?>(
+            captureAny(),
+            onFailure: any(named: 'onFailure'),
+          ),
+        ).captured;
         expect(
-          tester
-              .widget<OutlinedButton>(
-                find.descendant(
-                  of: find.byKey(const Key('subTrackHomeAddGround-$rebbeId')),
-                  matching: find.byType(OutlinedButton),
-                ),
-              )
-              .onPressed,
-          isNull,
+          opened.single,
+          isA<GroundPickerRoute>().having(
+            (r) => r.args?.subTrackId,
+            'subTrackId',
+            rebbeId,
+          ),
         );
       }
     });
