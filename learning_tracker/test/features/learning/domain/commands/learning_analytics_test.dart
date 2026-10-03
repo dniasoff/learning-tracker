@@ -153,7 +153,35 @@ void main() {
       }
     });
 
+<<<<<<< HEAD
     test('mode storage values and catalog registration', () {
+=======
+    test('DNI-507 T5: an adjusted record sends mode adjusted, counts only', () {
+      final sent = <(LearningAnalyticsEvent, Map<String, Object>)>[];
+      SinkLearningAnalytics((e, p) => sent.add((e, p))).catchupCompleted(
+        curriculumId: 'mishnayos',
+        mode: CatchUpMode.adjusted,
+        lockedDaysOffered: 1,
+        lockedDaysRecorded: 1,
+        eventCount: 13,
+        withinWindow: true,
+      );
+      final (event, params) = sent.single;
+      expect(event, LearningAnalyticsEvent.catchupCompleted);
+      expect(params['mode'], 'adjusted');
+      expect(params['event_count'], 13);
+      expect(params.keys, {
+        'curriculum_id',
+        'mode',
+        'locked_days_offered',
+        'locked_days_recorded',
+        'event_count',
+        'within_window',
+      });
+    });
+
+    test('mode storage values', () {
+>>>>>>> 9aad6a5e7 (test(sub-tracks): DNI-507 T5 catchup_completed carries mode adjusted)
       expect(CatchUpMode.all.storage, 'all');
       expect(CatchUpMode.adjusted.storage, 'adjusted');
       expect(AnalyticsEvent.catchupCompleted, 'catchup_completed');
