@@ -13,9 +13,12 @@
 /// * The contents fail to load: the card stays, with an inline error and
 ///   retry, until its window ends (AC-11, UX-DR-132).
 ///
-/// The actions write nothing here: Story 3.3 (DNI-506, *Yes, all of it*)
-/// and Story 3.4 (DNI-507, *Adjust…*) provide them through
-/// [catchUpCardActionsProvider]; until then they are shown disabled.
+/// The actions write nothing here: Story 3.3 (DNI-506, *Yes, all of it*,
+/// `recordCatchUpAll`) and Story 3.4 (DNI-507, *Adjust…*) provide them
+/// through [catchUpCardActionsProvider]; one not yet provided is shown
+/// disabled. While a record action runs the actions are disabled, and a
+/// record that was not saved shows "Couldn't save — try again before the
+/// card expires." on the card (DNI-506 AC-8, UX-DR-133).
 library;
 
 import 'package:flutter/material.dart';
@@ -30,6 +33,7 @@ import 'package:learning_tracker/domain/learner_state/catch_up_card_projection.d
 import 'package:learning_tracker/domain/learner_state/erev_window.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/catch_up_cards_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The card actions the later stories plug in; a null handler shows its
@@ -45,10 +49,10 @@ final class CatchUpCardActions {
   final void Function(BuildContext context, CatchUpTaskCard card)? adjust;
 }
 
-/// The actions of the catch-up card: none until Stories 3.3 and 3.4
-/// override this provider.
+/// The actions of the catch-up card: *Yes, all of it* (Story 3.3); Story
+/// 3.4 adds *Adjust…*.
 final catchUpCardActionsProvider = Provider<CatchUpCardActions>(
-  (ref) => const CatchUpCardActions(),
+  (ref) => CatchUpCardActions(recordAll: catchUpRecordAllOf(ref)),
 );
 
 /// The pending catch-up cards, or nothing.
@@ -265,8 +269,10 @@ class CatchUpCardView extends ConsumerWidget {
     final theme = Theme.of(context);
     final colors = context.colors;
     final actions = ref.watch(catchUpCardActionsProvider);
-    final recordAll = actions.recordAll;
-    final adjust = actions.adjust;
+    final phase = ref.watch(catchUpRecordStatusProvider)[card.window.key];
+    final recording = phase == CatchUpRecordPhase.recording;
+    final recordAll = recording ? null : actions.recordAll;
+    final adjust = recording ? null : actions.adjust;
     final lines = <(String key, String text)>[];
     for (final g in card.groups) {
       if (g.mainTaskCount > 0) {
@@ -316,6 +322,32 @@ class CatchUpCardView extends ConsumerWidget {
                 ),
               ),
             ),
+          if (phase == CatchUpRecordPhase.failed)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(top: 4),
+              child: Semantics(
+                liveRegion: true,
+                child: Row(
+                  key: const ValueKey('catchUpCardSaveFailed'),
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 18,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.catchUpCardSaveFailed,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -330,7 +362,16 @@ class CatchUpCardView extends ConsumerWidget {
                 onPressed: recordAll == null
                     ? null
                     : () => recordAll(context, card),
-                child: Text(l10n.catchUpCardYesAll),
+                child: recording
+                    ? Semantics(
+                        label: l10n.catchUpCardRecording,
+                        child: const SizedBox.square(
+                          key: ValueKey('catchUpCardRecording'),
+                          dimension: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : Text(l10n.catchUpCardYesAll),
               ),
               OutlinedButton(
                 key: const ValueKey('catchUpCardAdjust'),

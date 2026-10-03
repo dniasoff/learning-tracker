@@ -3017,6 +3017,14 @@
       }
     }
   },
+  "catchUpCardRecording": "Recording…",
+  "@catchUpCardRecording": {
+    "description": "DRAFT copy, pending zc4. Screen-reader status of the catch-up card's Yes, all of it pill while the record action runs (DNI-506 T6)."
+  },
+  "catchUpCardSaveFailed": "Couldn't save — try again before the card expires.",
+  "@catchUpCardSaveFailed": {
+    "description": "DRAFT copy, pending zc4. Inline error on a catch-up card whose record action was not saved; the card stays and can be recorded again (DNI-506 AC-8, UX-DR-133). Never mentions the streak (NFR-18)."
+  },
   "catchUpCardSourceLine": "{source} · {count} {units}",
   "@catchUpCardSourceLine": {
     "description": "DRAFT copy, pending zc4. One source's planned amount on a catch-up card (DNI-505 AC-7): {source} is Home (main track) or a sub-track's name, {units} the leaf unit for {count}.",
@@ -3035,6 +3043,10 @@
   "catchUpCardYesAll": "Yes, all of it",
   "@catchUpCardYesAll": {
     "description": "DRAFT copy, pending zc4. Primary pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): records everything the card lists (Story 3.3)."
+  },
+  "catchUpEnded": "This catch-up has ended — you can still tick learning in Browse.",
+  "@catchUpEnded": {
+    "description": "DRAFT copy, pending zc4. Snackbar when a catch-up card is confirmed after its window ended (e.g. a stale screen at 00:01); nothing was recorded and the card disappears (DNI-506 AC-3). Never mentions the streak (NFR-18)."
   },
   "dayNameShabbos": "Shabbos",
   "statusPendingTapToAccept": "Pending — tap to accept",

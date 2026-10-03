@@ -6406,6 +6406,18 @@ abstract class AppLocalizations {
   /// **'{day} · learnt what was planned?'**
   String catchUpCardQuestionNoCount(String day);
 
+  /// DRAFT copy, pending zc4. Screen-reader status of the catch-up card's Yes, all of it pill while the record action runs (DNI-506 T6).
+  ///
+  /// In en, this message translates to:
+  /// **'Recording…'**
+  String get catchUpCardRecording;
+
+  /// DRAFT copy, pending zc4. Inline error on a catch-up card whose record action was not saved; the card stays and can be recorded again (DNI-506 AC-8, UX-DR-133). Never mentions the streak (NFR-18).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save — try again before the card expires.'**
+  String get catchUpCardSaveFailed;
+
   /// DRAFT copy, pending zc4. One source's planned amount on a catch-up card (DNI-505 AC-7): {source} is Home (main track) or a sub-track's name, {units} the leaf unit for {count}.
   ///
   /// In en, this message translates to:
@@ -6417,6 +6429,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes, all of it'**
   String get catchUpCardYesAll;
+
+  /// DRAFT copy, pending zc4. Snackbar when a catch-up card is confirmed after its window ended (e.g. a stale screen at 00:01); nothing was recorded and the card disappears (DNI-506 AC-3). Never mentions the streak (NFR-18).
+  ///
+  /// In en, this message translates to:
+  /// **'This catch-up has ended — you can still tick learning in Browse.'**
+  String get catchUpEnded;
 
   /// No description provided for @dayNameShabbos.
   ///

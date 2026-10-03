@@ -5,6 +5,15 @@ library sub_tracks;
 export 'domain/services/on_home_sub_tracks.dart';
 export 'domain/sub_track_home_projection.dart';
 export 'presentation/controllers/sub_track_capture_controller.dart';
+export 'presentation/providers/catch_up_record_controller.dart'
+    show
+        CatchUpRecordPhase,
+        CatchUpRecordStatus,
+        catchUpRecordAllOf,
+        catchUpRecordStatusProvider,
+        recordCatchUpAll;
+export 'presentation/providers/sub_track_providers.dart';
+export 'presentation/providers/sub_track_session.dart';
 export 'presentation/providers/sub_track_capture_providers.dart'
     show
         SubTrackSourceChoice,

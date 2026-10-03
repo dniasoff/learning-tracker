@@ -3735,12 +3735,22 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get catchUpCardRecording => 'רושם…';
+
+  @override
+  String get catchUpCardSaveFailed => 'לא נשמר — נסו שוב לפני שהכרטיס יפוג.';
+
+  @override
   String catchUpCardSourceLine(String source, int count, String units) {
     return '$source · $count $units';
   }
 
   @override
   String get catchUpCardYesAll => 'כן, הכול';
+
+  @override
+  String get catchUpEnded =>
+      'ההשלמה הזו הסתיימה — עדיין אפשר לסמן לימוד בעיון.';
 
   @override
   String get dayNameShabbos => 'שבת';

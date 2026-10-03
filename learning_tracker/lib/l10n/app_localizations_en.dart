@@ -3782,12 +3782,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get catchUpCardRecording => 'Recording…';
+
+  @override
+  String get catchUpCardSaveFailed =>
+      'Couldn\'t save — try again before the card expires.';
+
+  @override
   String catchUpCardSourceLine(String source, int count, String units) {
     return '$source · $count $units';
   }
 
   @override
   String get catchUpCardYesAll => 'Yes, all of it';
+
+  @override
+  String get catchUpEnded =>
+      'This catch-up has ended — you can still tick learning in Browse.';
 
   @override
   String get dayNameShabbos => 'Shabbos';
