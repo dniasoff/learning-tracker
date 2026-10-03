@@ -28,7 +28,12 @@ export { ownerOversizedGovernedWrite } from "./owner_oversized_governed_write";
 
 export { tutorBulkPriorCompletions } from "./tutor_bulk_completions";
 
-export { tutorRecordLearning, tutorUnlearn, tutorVoidLearning } from "./tutor_learning";
+export {
+  tutorRecordLearning,
+  tutorUnlearn,
+  tutorUpsertSubTrack,
+  tutorVoidLearning,
+} from "./tutor_learning";
 
 export {
   inviteTutor,
