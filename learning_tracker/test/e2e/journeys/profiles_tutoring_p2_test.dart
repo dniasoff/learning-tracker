@@ -242,8 +242,8 @@ void main() {
       h.expectNotOnScreen('Personal');
       h.expectNotOnScreen('אישי');
 
-      // R-TR9 note: the LearningOrderScreen "Controlled by parent" banner is
-      // hardcoded English. The he variant is documented as a gap (device-only).
+      // R-TR9 note: the retired learning-order screen's "Controlled by
+      // parent" banner was hardcoded English. The he variant is documented as a gap (device-only).
     });
   });
 

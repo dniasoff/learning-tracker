@@ -115,7 +115,7 @@ void main() {
     });
 
     testWidgets('renders the form without a target-percent slider (R16: '
-        'target_percent is retired, AD-43)', (tester) async {
+        'the percent target is retired, AD-43)', (tester) async {
       await tester.pumpWidget(
         _makeApp(
           home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos),

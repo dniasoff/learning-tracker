@@ -422,7 +422,8 @@ void main() {
         // resolved curriculumTrackRepositoryAdapterProvider, uncaught from
         // the button's fire-and-forget onTap. Fixed by making `_functions`
         // a `late final` field, so it resolves lazily on first actual use
-        // (deleteTrackPermanently only) instead of at construction time.
+        // (the retired permanent-delete callable only) instead of at
+        // construction time.
         await h.tapText(
           'Archive (keep history)',
           settle: const Duration(milliseconds: 500),

@@ -11,7 +11,7 @@
 ///   P3 — `derivePaceFromDeadline` falls back to (1, per_week) when the
 ///        window or scope is empty so the invariant holds in edge cases.
 ///
-/// The former P4 (the legacy projection's `MissingPaceError`) is deleted
+/// The former P4 (the legacy projection's missing-pace error) is deleted
 /// with the projection (DNI-477, AD-49): with no pace and no deadline the
 /// planner shows no new learning, which the planner tests pin.
 library;

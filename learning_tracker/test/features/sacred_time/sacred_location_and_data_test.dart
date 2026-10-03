@@ -2,8 +2,8 @@
 //   • CitiesRepository — searchByPrefix, topCitiesByCountry, dispose/reuse
 //   • LocationService — all 5 permission/result branches
 //
-// DNI-481 (R9) deleted SacredLocationNotifier / InIsraelNotifier and their
-// device preferences; a learner's location, zone and Israel flag are now
+// DNI-481 (R9) deleted the Sacred Time location and in-Israel notifiers and
+// their device preferences; a learner's location, zone and Israel flag are now
 // governed learnerSettings changes (learner_settings_editor_provider_test,
 // learner_settings_command_test).
 //

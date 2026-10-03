@@ -21,7 +21,7 @@
 /// Three scenarios date every learnt row `today` (`mid_masechta_pace`,
 /// `masechta_boundary_pace`, `deadline_mid_masechta`). The legacy planner's
 /// new learning does not depend on `learned_on` within `[tracking start,
-/// today]`: at the capture SHA `buildProjectionTasks` filters the schedule
+/// today]`: at the capture SHA the legacy projection filters the schedule
 /// by the set of learnt refs (`completionRefs`) and dates only the
 /// completions before the track anchor. The planner on LearnerState
 /// anchors a day's batch at the start of the day (`mainTrackAtStartOf`),
@@ -49,8 +49,8 @@
 /// exactly.
 ///
 /// `mid_masechta_pace` and `deadline_mid_masechta` diverge by design. The
-/// legacy planner accrued its own schedule from the track start
-/// (`selfPacedSchedule`) and showed the unlearnt part of past days as
+/// legacy planner accrued its own self-paced schedule from the track start
+/// and showed the unlearnt part of past days as
 /// "Behind pace" overdue tasks on top of today's batch, deriving a deadline
 /// pace from the whole scope (74 leaves / 10 study days = 8). AD-49 retires
 /// that: "the planner never computes a quantity". It lays out the engine's

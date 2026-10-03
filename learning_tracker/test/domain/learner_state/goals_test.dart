@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
+import '../../helpers/retired_inventory.dart';
+
 void main() {
   const deadline = DeadlineGoal(
     curriculumId: 'mishnayos',
@@ -73,11 +75,16 @@ void main() {
     test('legacy keys are ignored and never re-emitted', () {
       final decoded = DeadlineGoal.fromStorage('mishnayos_deadline', {
         ...deadline.toStorage(),
-        'target_percent': 100,
-        'updated_at': ended,
+        ...legacyKeys(
+          retiredKeysOf('lib/data/repositories/firestore_goal_repository.dart'),
+        ),
       });
       expect(decoded, deadline);
-      expect(decoded.toStorage().keys, isNot(contains('target_percent')));
+      for (final key in retiredKeysOf(
+        'lib/data/repositories/firestore_goal_repository.dart',
+      )) {
+        expect(decoded.toStorage().keys, isNot(contains(key)), reason: key);
+      }
     });
 
     test('a wrong type, id, date or pace is rejected', () {

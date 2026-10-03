@@ -131,7 +131,7 @@ void main() {
     testWidgets(
       'SKIP: E2E-1104 is a P1 journey already implemented in '
       'infra_p1_test.dart (Wave 2). See that file for the full assertion: '
-      'In-Israel Switch present; toggling writes sacred_time_in_israel=true '
+      'In-Israel Switch present; toggling writes the in-Israel preference '
       'to SharedPreferences.',
       skip: true, // Already implemented as P1 in infra_p1_test.dart
       (tester) async {},

@@ -21,6 +21,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 
+import '../../helpers/retired_inventory.dart';
+
 // ── Fake infra ────────────────────────────────────────────────────────────────
 
 class _InvokerRecord {
@@ -272,7 +274,8 @@ void main() {
   //
   // GoalMerger reads: curriculum_id, track_id, created_at, description,
   //   target_date, date_type, goal_type, pace_value, pace_unit.
-  //   (R16, DNI-484: target_percent and the governed updated_at are retired.)
+  //   (R16, DNI-484: the percent target and the governed timestamps are
+  //   retired.)
   //
   // GoalEntity.toFirestore() outputs snake_case to match these field names.
   // R2-H1 fix: GoalEntity now has a trackId field; _toEntity passes goal.trackId
@@ -303,11 +306,16 @@ void main() {
             reason:
                 'GoalMerger reads curriculum_id (was camelCase — fixed by S2)',
           );
-          expect(
-            data.containsKey('target_percent'),
-            isFalse,
-            reason: 'R16: target_percent is retired (AD-43)',
-          );
+          for (final key in retiredKeysOf(
+            'lib/features/scheduler/domain/models/goal_entity.dart',
+            aliases: true,
+          )) {
+            expect(
+              data.containsKey(key),
+              isFalse,
+              reason: 'R16: $key is retired (AD-43)',
+            );
+          }
           expect(
             data.containsKey('target_date'),
             isTrue,
@@ -361,7 +369,6 @@ void main() {
             reason:
                 'camelCase curriculumId must not be present after snake_case fix',
           );
-          expect(data.containsKey('targetPercent'), isFalse);
           expect(data.containsKey('pacePeriod'), isFalse);
           expect(data.containsKey('createdAt'), isFalse);
           expect(data.containsKey('updatedAt'), isFalse);
