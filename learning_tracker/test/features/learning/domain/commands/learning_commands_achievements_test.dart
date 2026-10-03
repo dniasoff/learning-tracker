@@ -419,9 +419,12 @@ void main() {
   });
 
   test('dispose cancels pending retries', () async {
+    // The retry is scheduled well beyond the capture/pump work so that
+    // dispose() always lands first, even on a loaded CI runner (a 5 ms delay
+    // let the retry fire before dispose there).
     final h = _Harness(
       firestore,
-      retryDelays: const [Duration(milliseconds: 5)],
+      retryDelays: const [Duration(milliseconds: 300)],
     );
     await h.capture([_b11]);
     await pumpEventQueue();
@@ -429,7 +432,7 @@ void main() {
     await h.capture([_b12]);
     await pumpEventQueue();
     h.latch.dispose();
-    await Future<void>.delayed(const Duration(milliseconds: 30));
+    await Future<void>.delayed(const Duration(milliseconds: 600));
     expect(await h.unlocked(), isEmpty);
     expect(h.port.latchCalls, 0);
   });
