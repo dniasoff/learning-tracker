@@ -28,6 +28,7 @@ import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
@@ -64,14 +65,21 @@ Future<(FirebaseFirestore, FirebaseAuth)> _device(String name) async {
   return (db, auth);
 }
 
-/// No calendar program on any curriculum (the governed-intent repository is
-/// DNI-470's; this test needs only "no program").
+/// A self-paced `shas` main track with no calendar program (the
+/// governed-intent repository is DNI-470's; this test needs only "a main
+/// track, no program" — a create for a curriculum with no main track is
+/// refused).
 final class _NoProgramIntent implements GovernedIntentRepository {
   @override
   Stream<LearnerIntent> watch(LearnerScope scope) => Stream.value(
     LearnerIntent(
       settings: const LearnerSettings(profileId: _profileId, timeZone: 'UTC'),
-      mainTracks: const {},
+      mainTracks: {
+        'shas': MainTrackIntent(
+          curriculumId: 'shas',
+          track: MainTrack(curriculumId: 'shas', state: MainTrackState.active),
+        ),
+      },
       goals: const {},
     ),
   );

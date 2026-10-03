@@ -600,12 +600,21 @@ final class SubTrackCommands {
     }
   }
 
-  /// The live calendar program of [curriculumId], or null.
-  Future<String?> _calendarProgramOf(String curriculumId) async {
+  /// The main track of [curriculumId] in the complete governed intent:
+  /// whether it exists, and its live calendar program (or null).
+  Future<({bool exists, String? programId})> _mainTrackOf(
+    String curriculumId,
+  ) async {
     final intent = await _intent.watch(scope).first.timeout(readTimeout);
-    final program = intent.mainTracks[curriculumId]?.program;
-    if (program == null || program.endedAt != null) return null;
-    return program.programId;
+    final mainTrack = intent.mainTracks[curriculumId];
+    if (mainTrack == null) return (exists: false, programId: null);
+    final program = mainTrack.program;
+    return (
+      exists: true,
+      programId: program == null || program.endedAt != null
+          ? null
+          : program.programId,
+    );
   }
 
   Future<CaptureResult?> _validate(
@@ -614,13 +623,20 @@ final class SubTrackCommands {
     required List<SubTrack> siblings,
   }) async {
     final corpus = await _corpusOf?.call(candidate.curriculumId);
-    final String? programId;
-    try {
-      programId = prior == null
-          ? await _calendarProgramOf(candidate.curriculumId)
-          : null;
-    } on TimeoutException {
-      return const CaptureResult.onlineRequired();
+    String? programId;
+    if (prior == null) {
+      final ({bool exists, String? programId}) mainTrack;
+      try {
+        mainTrack = await _mainTrackOf(candidate.curriculumId);
+      } on TimeoutException {
+        return const CaptureResult.onlineRequired();
+      }
+      // A create needs the curriculum's main track: no orphan sub-track for
+      // a curriculum the learner does not follow (fail closed).
+      if (!mainTrack.exists) {
+        return const CaptureResult.rejected(CaptureRejection.invalid);
+      }
+      programId = mainTrack.programId;
     }
     final violations = [
       ...subTrackIntentViolations(candidate, corpus: corpus),
