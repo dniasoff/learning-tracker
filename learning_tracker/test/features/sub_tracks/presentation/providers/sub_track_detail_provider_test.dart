@@ -191,7 +191,9 @@ void main() {
     test('groundOver: the pending order wins; a refused order still in the '
         'store shows the last confirmed one; otherwise the store', () {
       const refused = SubTrackGroundRollback(
-        rejected: [peah, berakhot1],
+        rejectedOrders: [
+          [peah, berakhot1],
+        ],
         prior: [berakhot1, peah],
         removal: false,
       );
@@ -298,6 +300,121 @@ void main() {
         expect(edits.read().lateRejections, 1);
       },
     );
+  });
+
+  group('overlapping queued ground edits (AC-5, AC-6)', () {
+    final school = detailSubTrack(10, 'School', const [berakhot1, peah]);
+    const a = [berakhot1, peah]; // confirmed
+    const b = [peah, berakhot1]; // e1: reorder
+    const cc = [peah]; // e2: removal, queued on top of e1
+
+    late ProviderContainer c;
+    late ProviderSubscription<SubTrackGroundEditState> edits;
+    late StreamController<List<PendingFailure>> failures;
+    late String e1;
+    late String e2;
+
+    List<NodeEntry> shown() => [
+      for (final r
+          in c
+              .read(subTrackDetailProvider(school.id))
+              .requireValue
+              .ground
+              .entries)
+        r.node,
+    ];
+
+    PendingFailure refused(String id) => PendingFailure(
+      id: id,
+      eventIds: const [],
+      changeIds: [id],
+      reason: PendingFailureReason.permissionDenied,
+    );
+
+    setUp(() async {
+      h.seed(subTracks: [school]);
+      h.tracks.offline = true; // applied locally, never acknowledged here
+      final intent = InMemoryGovernedIntentRepository()
+        ..emit(
+          h.scope,
+          LearnerIntent(
+            settings: c0Settings,
+            mainTracks: {engineCurriculum: engineIntent()},
+            goals: const <String, CurriculumGoals>{},
+          ),
+        );
+      failures = StreamController<List<PendingFailure>>.broadcast();
+      var ids = 0;
+      final inner = SubTrackCommands(
+        scope: h.scope,
+        actor: parentActor,
+        subTracks: h.repository,
+        intent: intent,
+        today: () => '2026-09-07',
+        nowUtc: () => engineAt(10000),
+        newId: () => engineUlid(5000 + ++ids),
+        ackTimeout: const Duration(milliseconds: 10),
+      );
+      addTearDown(() async {
+        await failures.close();
+        await inner.dispose();
+        await intent.dispose();
+      });
+      c = container(commands: _QueuedCommands(inner, failures.stream));
+      edits = c.listen(subTrackGroundEditorProvider(school.id), (_, _) {});
+      addTearDown(edits.close);
+      await settle(c, school.id);
+      expect(shown(), a);
+
+      final editor = c.read(subTrackGroundEditorProvider(school.id).notifier);
+      expect(await editor.commit(b, prior: a), isTrue);
+      await pumpEventQueue();
+      expect(shown(), b);
+      // The second edit starts before the first one's outcome is known.
+      expect(await editor.commit(cc, prior: b, removal: true), isTrue);
+      await pumpEventQueue();
+      expect(shown(), cc);
+      expect(h.tracks.entries, hasLength(2));
+      e1 = h.tracks.entries[0].$2.id;
+      e2 = h.tracks.entries[1].$2.id;
+    });
+
+    test('both refused in one report: the confirmed order is back, both '
+        'counted', () async {
+      failures.add([refused(e1), refused(e2)]);
+      await pumpEventQueue();
+      expect(edits.read().lateRejections, 2);
+      expect(shown(), a, reason: 'not e1, which was refused too');
+    });
+
+    test('the earlier edit refused first changes nothing while the later '
+        'one stands; once the later one is refused too, the confirmed order '
+        'is back', () async {
+      failures.add([refused(e1)]);
+      await pumpEventQueue();
+      expect(edits.read().lateRejections, 1);
+      expect(edits.read().rollback!.removal, isFalse);
+      expect(shown(), cc, reason: 'the newest queued edit is not refused');
+
+      failures.add([refused(e2)]);
+      await pumpEventQueue();
+      expect(edits.read().lateRejections, 2);
+      expect(edits.read().rollback!.removal, isTrue);
+      expect(shown(), a);
+    });
+
+    test('the later edit refused first falls back to the earlier queued '
+        'order, then to the confirmed order', () async {
+      failures.add([refused(e2)]);
+      await pumpEventQueue();
+      expect(edits.read().lateRejections, 1);
+      expect(shown(), b);
+
+      failures.add([refused(e1)]);
+      await pumpEventQueue();
+      expect(edits.read().lateRejections, 2);
+      expect(shown(), a);
+    });
   });
 
   group('role', () {
