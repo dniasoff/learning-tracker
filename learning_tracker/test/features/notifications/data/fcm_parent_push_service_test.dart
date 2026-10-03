@@ -278,6 +278,62 @@ void main() {
       await service.onTokenRefresh('tok-2');
       expect(tokens.ops, isEmpty);
     });
+
+    test('a lock before the refresh write stops it', () async {
+      await service.onParentUnlocked(_profile);
+      tokens.ops.clear();
+      // The refresh has read the unlocked marker and is awaiting the
+      // install id when the lock lands.
+      final refreshing = service.onTokenRefresh('tok-2');
+      final locking = service.onParentLocked();
+      await Future.wait([refreshing, locking]);
+      expect(tokens.ops, ['remove acct-1/owner-uid install-a']);
+      expect(store.read(), isNull);
+    });
+
+    test('a lock racing the refresh write deletes the entry again', () async {
+      await service.onParentUnlocked(_profile);
+      tokens.ops.clear();
+      tokens.upsertGate = Completer<void>();
+      final refreshing = service.onTokenRefresh('tok-2');
+      await Future<void>.delayed(Duration.zero);
+      expect(tokens.ops, ['upsert acct-1/owner-uid install-a tok-2']);
+      final gate = tokens.upsertGate!;
+      tokens.upsertGate = null;
+      // The lock's delete is ordered before the refresh upsert completes.
+      await service.onParentLocked();
+      gate.complete();
+      await refreshing;
+      expect(tokens.ops, [
+        'upsert acct-1/owner-uid install-a tok-2',
+        'remove acct-1/owner-uid install-a',
+        'remove acct-1/owner-uid install-a',
+      ]);
+      expect(store.read(), isNull);
+    });
+
+    test(
+      'a lock then re-unlock of the same owner keeps the refreshed entry',
+      () async {
+        await service.onParentUnlocked(_profile);
+        tokens.ops.clear();
+        tokens.upsertGate = Completer<void>();
+        final refreshing = service.onTokenRefresh('tok-2');
+        await Future<void>.delayed(Duration.zero);
+        final gate = tokens.upsertGate!;
+        tokens.upsertGate = null;
+        await service.onParentLocked();
+        await service.onParentUnlocked(_profile);
+        gate.complete();
+        await refreshing;
+        expect(tokens.ops, [
+          'upsert acct-1/owner-uid install-a tok-2',
+          'remove acct-1/owner-uid install-a',
+          'upsert acct-1/owner-uid install-a tok-1',
+        ]);
+        expect(store.read(), isNotNull);
+      },
+    );
   });
 }
 

@@ -241,15 +241,27 @@ class FcmParentPushService {
   Future<void> onColdStart() => onParentLocked();
 
   /// FCM rotated this install's token: re-register it while unlocked.
+  ///
+  /// The generation is captured before the first await, like
+  /// [onParentUnlocked]: a lock that lands while the install id or the
+  /// upsert is in flight wins. Before the upsert the refresh just stops;
+  /// after it, the lock's delete may have been ordered first, so the entry
+  /// is deleted again unless the same owner has been unlocked since.
   Future<void> onTokenRefresh(String token) async {
+    final generation = _generation;
     final current = _store.read();
     if (current == null || token.isEmpty) return;
+    final owner = FcmTokenOwner(
+      accountId: current.accountId,
+      uid: current.ownerUid,
+    );
     try {
-      await _tokens.upsertToken(
-        FcmTokenOwner(accountId: current.accountId, uid: current.ownerUid),
-        installId: await _store.installId(),
-        token: token,
-      );
+      final installId = await _store.installId();
+      if (generation != _generation) return;
+      await _tokens.upsertToken(owner, installId: installId, token: token);
+      if (generation != _generation && !_isUnlockedFor(owner)) {
+        await _tokens.removeToken(owner, installId: installId);
+      }
     } on Object catch (e, stack) {
       _log.warning(
         event: 'parent_push_token_refresh_failed',
@@ -257,6 +269,15 @@ class FcmParentPushService {
         stackTrace: stack,
       );
     }
+  }
+
+  /// Whether the durable marker currently holds an unlocked session on
+  /// [owner]'s account.
+  bool _isUnlockedFor(FcmTokenOwner owner) {
+    final s = _store.read();
+    return s != null &&
+        s.accountId == owner.accountId &&
+        s.ownerUid == owner.uid;
   }
 }
 
