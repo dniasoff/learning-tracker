@@ -71,6 +71,8 @@ void main() {
 
     events.add([engineLearn(1, 'Mishnah Berakhot 1:1', stage: 1)]);
     await tester.pump();
+    // Let the asynchronous provider notification rebuild both consumers.
+    await tester.pump();
     expect(find.text('Learner: Mishnah Berakhot 1:2'), findsOneWidget);
     expect(find.text('Tutor: Mishnah Berakhot 1:2'), findsOneWidget);
   });
