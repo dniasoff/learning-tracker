@@ -71,6 +71,16 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- AD-47 / bead h3f: child-safe Google Analytics. No advertising ID
+             collection and no ad personalization signals (Google Signals is
+             off in the GA4 console). See docs/privacy-policy.md. -->
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_personalization_signals"
+            android:value="false" />
+
         <!-- flutter_local_notifications: reschedule notifications after reboot
              and dispatch action buttons. -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"/>
