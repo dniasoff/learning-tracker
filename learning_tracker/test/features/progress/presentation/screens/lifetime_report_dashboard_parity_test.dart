@@ -227,7 +227,6 @@ List<Override> _dashboard(LearnerState state, {bool parent = true}) => [
       CurriculumTrackEntity(
         curriculumId: CurriculumId.mishnayos,
         state: 'active',
-        stateChangedAt: DateTime.utc(2026, 9, 1),
         activatedAt: DateTime.utc(2026, 9, 1),
       ),
     ]),
