@@ -1,9 +1,10 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
-import 'package:learning_tracker/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
@@ -34,7 +35,7 @@ Future<CalendarPosition> programCalendarPosition(
   final clockUtc = ref.watch(clockProvider);
   final stageRepository = ref.watch(globalStageRepositoryProvider);
   final programRepo = FirestoreProfileProgramRepositoryAdapter(ref: ref);
-  final chartData = FirestoreChartDataRepositoryAdapter(ref: ref);
+  final learnerStateFuture = ref.watch(activeLearnerStateFutureProvider.future);
   // Await after all synchronous ref reads are captured.
   final calendarService = await calendarServiceFuture;
 
@@ -100,17 +101,12 @@ Future<CalendarPosition> programCalendarPosition(
       ? null
       : (stages.toList()..sort((a, b) => a.stageOrder.compareTo(b.stageOrder)))
             .first;
-  final completions = await chartData.getCompletionsByTier(
-    tier: CompletionTierFilter.trackAchievement,
-    curriculumId: curriculumId,
-  );
-  final completedLearnItems = <String>{};
-  for (final c in completions) {
-    if (firstStage == null || c.stageId == firstStage.stageOrder) {
-      completedLearnItems.add(c.sefariaRef);
-    }
-  }
-  final completionCount = completedLearnItems.length;
+  final learnerState = await learnerStateFuture;
+  final completionCount = trackLearntRefs(
+    learnerState,
+    curriculumId: curriculumId.storageKey,
+    firstStageOrder: firstStage?.stageOrder,
+  ).length;
 
   // 5. Compare expected vs actual since chosen start anchor.
   final elapsedDays = todayLocal.difference(startLocal).inDays;
@@ -131,4 +127,32 @@ Future<CalendarPosition> programCalendarPosition(
     delta: delta,
     status: status,
   );
+}
+
+/// The refs of [curriculumId] with a counted in-track learn of the first
+/// stage ([firstStageOrder]; any stage when null) in [state] (AD-35).
+///
+/// In-track means dated or catch-up: before-tracking backfills are not
+/// program progress, as with the retired `trackAchievement` tier. A
+/// main-track learn without a stage is the first stage; a sub-track learn
+/// has no stage and does not count.
+Set<String> trackLearntRefs(
+  LearnerState? state, {
+  required String curriculumId,
+  int? firstStageOrder,
+}) {
+  final refs = <String>{};
+  if (state == null) return refs;
+  for (final e in state.countedLearns) {
+    if (e.curriculumId != curriculumId) continue;
+    if (e.dateState == DateState.beforeTracking) continue;
+    final leafRef = e.ref;
+    if (leafRef == null) continue;
+    final stage = firstStageOrder == null
+        ? stageOfLearn(e)
+        : stageOfLearn(e, firstStageOrder: firstStageOrder);
+    if (stage == null) continue;
+    if (firstStageOrder == null || stage == firstStageOrder) refs.add(leafRef);
+  }
+  return refs;
 }

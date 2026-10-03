@@ -57,6 +57,7 @@ List<Override> _learningScreenOverrides({
   required List<CurriculumId> curricula,
   required List<DailyTask> tasks,
 }) => [
+  activeLearnerStateFutureProvider.overrideWith((ref) async => null),
   dashboardActiveCurriculaStreamProvider.overrideWith(
     (ref) => Stream.value(curricula),
   ),
@@ -81,6 +82,9 @@ List<Override> _learningScreenOverrides({
 /// Overrides required for tests rooted on /text/<ref>. Keeps the streak
 /// providers silent and forces English mode (same as learning_p0_test.dart).
 List<Override> _textDisplayBaseOverrides() => [
+  // DNI-483: the reader's stage-completed read derives from LearnerState;
+  // no learner is active in these journeys.
+  activeLearnerStateFutureProvider.overrideWith((ref) async => null),
   dashboardStreakProvider.overrideWith(
     (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
   ),

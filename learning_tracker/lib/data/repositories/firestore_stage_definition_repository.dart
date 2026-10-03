@@ -33,16 +33,9 @@
 /// (+ `ended_at`); a field a stage no longer has is cleared with an
 /// explicit `null`. `updated_at` / `synced_at` are retired from governed
 /// docs and never written.
-///
-/// ## [hasCompletionsForStage]
-///
-/// Accepts the legacy integer as the Firestore `stage_id` ordinal and
-/// queries real completion documents; a matching document that cannot be
-/// decoded throws rather than reading as "no completions".
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:learning_tracker/core/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -54,7 +47,6 @@ import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_intents.dart';
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 
 /// Default stage definitions (לימוד, חזרה א׳, חזרה ב׳).
@@ -94,13 +86,6 @@ class FirestoreStageDefinitionRepository {
       .collection('learner_profiles')
       .doc(_profileId)
       .collection('stage_definitions');
-
-  CollectionReference<Map<String, dynamic>> get _completions => _firestore
-      .collection('users')
-      .doc(_uid)
-      .collection('learner_profiles')
-      .doc(_profileId)
-      .collection('completions');
 
   static String _docId(CurriculumId curriculumId, int stageOrder) =>
       DocIds.stageDefinitionDocId({
@@ -145,22 +130,6 @@ class FirestoreStageDefinitionRepository {
       }
     }
     return results;
-  }
-
-  Map<String, dynamic> _normalizeCompletionForDecode(Map<String, dynamic> raw) {
-    var normalized = raw;
-    final completedAt = normalized['completed_at'];
-    if (completedAt is Timestamp) {
-      normalized = {
-        ...normalized,
-        'completed_at': completedAt.toDate().toUtc(),
-      };
-    }
-    final purgedAt = normalized['purged_at'];
-    if (purgedAt is Timestamp) {
-      normalized = {...normalized, 'purged_at': purgedAt.toDate().toUtc()};
-    }
-    return normalized;
   }
 
   /// Live updates of [getStagesForCurriculum]. Resubscribes with bounded
@@ -280,35 +249,6 @@ class FirestoreStageDefinitionRepository {
     final writer = _writer;
     if (writer == null) throw const GovernedWriterNotReadyException();
     await applyOwnerAction(writer, GovernedAction(changes));
-  }
-
-  /// Returns true if any active completion references [stageId]. In the
-  /// Firestore schema this value is the stage-order ordinal, not a Drift row
-  /// id. Tombstoned completions do not count; malformed matching documents
-  /// throw because returning false would make stage deletion unsafe.
-  Future<bool> hasCompletionsForStage(int stageId) async {
-    final snapshot = await _completions
-        .where('stage_id', isEqualTo: stageId)
-        .get();
-
-    for (final doc in snapshot.docs) {
-      final data = _normalizeCompletionForDecode(doc.data());
-      final purgedAtRaw = data['purged_at'];
-      if (purgedAtRaw != null) {
-        if (FirestoreCodec.parseDateTime(purgedAtRaw) == null) {
-          throw FormatException(
-            'Completion ${doc.id} has an invalid purged_at value',
-          );
-        }
-        continue;
-      }
-
-      // Decode the complete entity so a malformed relevant document fails
-      // closed instead of being silently treated as no completion.
-      completionEntityFromFirestore(data);
-      return true;
-    }
-    return false;
   }
 
   /// Every live stage definition of this profile (cross-curriculum).
