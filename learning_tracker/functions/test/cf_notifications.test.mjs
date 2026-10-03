@@ -272,7 +272,9 @@ describe('AC-7: dead tokens are pruned, transient failures keep tokens', () => {
 
     const { error, logs } = await captureLogs(() => fire(ulid(1)));
 
-    assert.equal(error, undefined);
+    // The transient failure leaves an install owed the push: the binding
+    // throws so the retry-enabled trigger redelivers the event.
+    assert.ok(error instanceof notifications.PushRetryableError);
     assert.deepEqual(await tokensOf(PARENT), { flaky: 'tok-flaky', good: 'tok-good' });
     const pruned = logs.filter((l) => l.entry.message === 'parent_push_token_pruned');
     assert.deepEqual(pruned.map((l) => l.entry.code).sort(), [
@@ -289,6 +291,55 @@ describe('AC-7: dead tokens are pruned, transient failures keep tokens', () => {
     for (const secret of [PARENT, TUTOR, PROFILE, TUTOR_NAME, LEARNER_NAME, 'tok-', 'deadA']) {
       assert.ok(!allText.includes(secret), `log output leaked: ${secret}`);
     }
+  });
+
+  test('a transient failure is retried for the owed install only, then finalized', async () => {
+    await seedTokens(PARENT, { flaky: 'tok-flaky', good: 'tok-good' });
+    notifications.setPushMessagingForTests(fcm = fakeMessaging({
+      'tok-flaky': 'messaging/internal-error',
+    }));
+    await seedEntry(ulid(1), { entity: 'goal', entityId: `${C}_deadline` });
+
+    const first = await captureLogs(() => fire(ulid(1)));
+    assert.ok(first.error instanceof notifications.PushRetryableError);
+    const receipt = profileRef().collection('push_receipts').doc(ulid(1));
+    assert.equal((await receipt.get()).get('state'), 'retry');
+    assert.equal((await receipt.get()).get('claimed_at'), undefined, 'claim released');
+
+    // The platform redelivers the event; FCM has recovered.
+    const recovered = fakeMessaging();
+    notifications.setPushMessagingForTests(recovered);
+    await fire(ulid(1));
+
+    assert.deepEqual(recovered.messages.map((m) => m.token), ['tok-flaky'],
+      'the install already delivered is never sent twice');
+    const done = await receipt.get();
+    assert.equal(done.get('state'), 'sent');
+    assert.deepEqual(done.get('done_installs'), ['flaky', 'good']);
+    assert.equal(await outcome(ulid(1)), 'already_delivered');
+  });
+
+  test('a still-failing install is given up after MAX_DELIVERY_ATTEMPTS', async () => {
+    await seedTokens(PARENT, { flaky: 'tok-flaky' });
+    notifications.setPushMessagingForTests(fcm = fakeMessaging({
+      'tok-flaky': 'messaging/server-unavailable',
+    }));
+    await seedEntry(ulid(1), { entity: 'mainTrack' });
+
+    const outcomes = [];
+    for (let i = 0; i < notifications.MAX_DELIVERY_ATTEMPTS; i += 1) {
+      const { result } = await captureLogs(() => outcome(ulid(1)));
+      outcomes.push(result);
+    }
+    assert.deepEqual(outcomes, [
+      ...Array(notifications.MAX_DELIVERY_ATTEMPTS - 1).fill('retry'), 'sent',
+    ]);
+    assert.equal(fcm.calls.length, notifications.MAX_DELIVERY_ATTEMPTS);
+    const receipt = await profileRef().collection('push_receipts').doc(ulid(1)).get();
+    assert.equal(receipt.get('state'), 'sent');
+    assert.equal(receipt.get('failed_count'), 1);
+    assert.deepEqual(await tokensOf(PARENT), { flaky: 'tok-flaky' }, 'a transient failure never prunes');
+    assert.equal(await outcome(ulid(1)), 'already_delivered');
   });
 
   test('an install that re-registered a new token during the send is kept', async () => {
@@ -337,6 +388,7 @@ describe('AC-9: the trigger ships through the gated backend deploy', () => {
       endpoint.eventTrigger.eventFilterPathPatterns.document,
       'users/{ownerUid}/learner_profiles/{profileId}/change_log/{entryId}',
     );
+    assert.equal(endpoint.eventTrigger.retry, true, 'transient send failures are redelivered');
   });
 
   test('CI runs the rules and functions suites that gate the deploy', () => {
