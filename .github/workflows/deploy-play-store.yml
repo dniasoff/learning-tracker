@@ -62,8 +62,74 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node tool/check_deploy_ci_gate.mjs
 
-  deploy:
+  # ── backend-deploy (DNI-490 AC-3 / AC-6; AD-49 cutover, AD-54) ─────────────
+  # The gated production backend release. It runs ONCE per release run, after
+  # gate-ci-status (a green ci.yml run — rules, functions and the dry-run
+  # backend-deploy-gate — for this exact SHA), and the app `deploy` job needs
+  # it, so the app never ships against an older backend. Through
+  # tool/firebase_backend_release.mjs it:
+  #   1. lists the deployed functions and explicitly deletes the four retired
+  #      callables (tutorResetCompletion, tutorBulkPriorCompletions,
+  #      deleteBulkMarkedCompletions, tutorUpsertBookmark) with
+  #      `functions:delete ... --force` — absent from source is not absent
+  #      from production;
+  #   2. lists again and fails if any of them is still deployed;
+  #   3. deploys `--only firestore:rules,firestore:indexes,functions` once.
+  # Any failure (missing credential, list, delete, verification or deploy)
+  # fails this job and therefore the app release. Every Play track shares the
+  # one production Firebase project, so every release run takes this gate.
+  # Credential: the FIREBASE_TOKEN repo secret (rulings B5, approved).
+  backend-deploy:
+    name: backend-deploy
     needs: gate-ci-status
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: firebase-backend-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: learning_tracker/functions/package-lock.json
+
+      - name: Run release-script tests (Rule 0 — the script's own correctness gate)
+        run: node --test tool/firebase_backend_release.test.mjs
+
+      - name: Require the production deploy credential
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::error::The FIREBASE_TOKEN repo secret is not set; the backend release cannot run, so the app release is blocked (rulings B5)."
+            exit 1
+          fi
+
+      - name: Install functions dependencies
+        working-directory: learning_tracker/functions
+        run: npm ci
+
+      - name: Build the functions deploy artifact (tsc)
+        working-directory: learning_tracker/functions
+        run: npm run build
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Undeploy the retired callables, verify, then release rules, indexes and functions once
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: node tool/firebase_backend_release.mjs --mode deploy --project torah-study-tracker
+
+  deploy:
+    # DNI-490 AC-6: the app release runs only after the backend release passed.
+    needs: [gate-ci-status, backend-deploy]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

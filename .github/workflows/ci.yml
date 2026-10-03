@@ -502,12 +502,12 @@ jobs:
   # passes, and deploy-play-store.yml's gate-ci-status requires a green
   # ci.yml run for the released SHA — so no app release can skip it.
   #
-  # AD-49: nothing deploys to production before the cutover release. This job
-  # is DRY-RUN ONLY: no secret, no credential, no `firebase deploy`. It builds
-  # the functions artifact, validates the rules/indexes/functions deploy
-  # inputs and its own wiring (tool/check_backend_deploy_gate.mjs), and
-  # prints the command it would run. DNI-490 owns the production deploy
-  # (rulings B5); the checker refuses `--mode deploy` until then.
+  # This job is DRY-RUN ONLY: no secret, no credential, no `firebase deploy`.
+  # It builds the functions artifact, validates the rules/indexes/functions
+  # deploy inputs and its own wiring (tool/check_backend_deploy_gate.mjs),
+  # and prints the command it would run. The production deploy runs only in
+  # deploy-play-store.yml's backend-deploy job (DNI-490, the AD-49 cutover),
+  # through tool/firebase_backend_release.mjs; this job tests that script.
   backend-deploy-gate:
     name: backend-deploy-gate
     needs: [firestore-rules, functions]
@@ -540,8 +540,18 @@ jobs:
         working-directory: learning_tracker/functions
         run: npm run build
 
-      - name: Gated backend deploy (dry-run only until the AD-49 cutover)
+      - name: Gated backend deploy (dry-run only; production runs in deploy-play-store.yml)
         run: node tool/check_backend_deploy_gate.mjs --mode "$BACKEND_DEPLOY_MODE"
+
+      # DNI-490 (AC-3/AC-6): the production backend release that
+      # deploy-play-store.yml's backend-deploy job runs before the app
+      # release. Its tests simulate every failure path and pin the release
+      # workflow's wiring; the dry-run prints the exact command sequence.
+      - name: Backend release script tests (AC-3/AC-6 failure paths + workflow contract)
+        run: node --test tool/firebase_backend_release.test.mjs
+
+      - name: Backend release dry-run (no credential, no production call)
+        run: node tool/firebase_backend_release.mjs --mode dry-run --project torah-study-tracker
 
   # ── 11. offline-batch-instrumented (DNI-471 AC-5 / AD-29; rulings B12) ─────
   # Instrumented evidence that an owner batch (learning events + pts_ entries
