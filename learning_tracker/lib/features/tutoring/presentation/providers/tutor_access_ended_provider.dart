@@ -83,7 +83,7 @@ class TutorAccessEndedNotifier extends Notifier<TutorAccessEnded?> {
     // Frozen action ids of the ended learner's unconfirmed writes: never
     // retried (the server would refuse them) and never shown again.
     ref.invalidate(tutorGovernedActionLedgerProvider);
-    if (refreshRoster) ref.invalidate(incomingTutorGrantsProvider);
+    if (refreshRoster) _reReadActiveGrants(ref);
     state = TutorAccessEnded(grantId: grantId, learnerName: name);
   }
 
@@ -147,8 +147,15 @@ final tutorSessionAccessWatchProvider = Provider<void>((ref) {
   });
   ref.listen(connectivityStreamProvider, (previous, next) {
     final wasOffline = previous?.value == false;
-    if (wasOffline && next.value == true) {
-      ref.invalidate(incomingTutorGrantsProvider);
-    }
+    if (wasOffline && next.value == true) _reReadActiveGrants(ref);
   });
 });
+
+/// Starts a fresh read of the active-grant list now, when it is in use (a
+/// list not yet read is fresh on its first read anyway), so the roster's
+/// next update does not wait for a later frame to pull it.
+void _reReadActiveGrants(Ref ref) {
+  if (!ref.exists(incomingTutorGrantsProvider)) return;
+  ref.invalidate(incomingTutorGrantsProvider);
+  ref.read(incomingTutorGrantsProvider);
+}
