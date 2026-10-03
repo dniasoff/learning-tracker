@@ -63,6 +63,13 @@ class SubTrackDetailScreen extends ConsumerWidget {
 /// The detail body for [subTrackId]: the routed screen's body, and the
 /// detail pane of the tablet list-detail split ([showTitle] adds the name
 /// and ⋮ there, since the pane has no app bar).
+///
+/// Either way it hosts the ground picker's [GroundPickerSplitView]
+/// (Story 2.7 / DNI-498 AC-9, UX-DR-164): from
+/// [groundPickerTabletBreakpoint] *+ Add ground* opens the picker as a
+/// right pane beside the detail instead of pushing the phone route. The
+/// host is keyed by [subTrackId], so selecting another sub-track in the
+/// hub closes a pane that belonged to the previous one.
 class SubTrackDetailView extends ConsumerWidget {
   /// Creates the view.
   const SubTrackDetailView({
@@ -79,18 +86,21 @@ class SubTrackDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return switch (ref.watch(subTrackDetailProvider(subTrackId))) {
-      AsyncValue(:final error?, :final stackTrace) => AppErrorView(
-        error: error,
-        stackTrace: stackTrace,
-        onRetry: () => retrySubTrackDetail(ref),
-      ),
-      AsyncValue(:final value?) => _DetailBody(
-        detail: value,
-        showTitle: showTitle,
-      ),
-      _ => const Center(child: CircularProgressIndicator()),
-    };
+    return GroundPickerSplitView(
+      key: ValueKey('groundPickerSplit:$subTrackId'),
+      detail: switch (ref.watch(subTrackDetailProvider(subTrackId))) {
+        AsyncValue(:final error?, :final stackTrace) => AppErrorView(
+          error: error,
+          stackTrace: stackTrace,
+          onRetry: () => retrySubTrackDetail(ref),
+        ),
+        AsyncValue(:final value?) => _DetailBody(
+          detail: value,
+          showTitle: showTitle,
+        ),
+        _ => const Center(child: CircularProgressIndicator()),
+      },
+    );
   }
 }
 

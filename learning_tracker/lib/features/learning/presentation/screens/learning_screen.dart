@@ -134,10 +134,6 @@ class LearningScreen extends ConsumerWidget {
                       onRetry: () => ref.invalidate(dashboardStreakProvider),
                     ),
                     const SizedBox(height: 36),
-                    // Named Learn sections (DNI-500): each slot is its own
-                    // widget file and takes no space while empty, so the
-                    // stories that fill them never edit this body.
-                    const CatchUpCardsSlot(),
                     // DNI-502: today against the daily target, with
                     // encouragement only (every role; no parent status).
                     const LearnerTodaySection(),
@@ -153,7 +149,6 @@ class LearningScreen extends ConsumerWidget {
                     const ErevPlannedSlot(),
                     const AlsoLearningSlot(),
                     const MainTrackUpToActions(),
-                    const SubTrackCaptureSection(),
                     const SizedBox(height: 36),
                     const _BrowseSection(),
                   ],
