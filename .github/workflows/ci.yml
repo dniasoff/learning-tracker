@@ -341,7 +341,11 @@ jobs:
     # to a real `make audit` or `dart run tool/...`, a cold process start
     # every time, --concurrency=1 by design). 21 tests x ~4.3min extrapolates
     # to ~90min. Sized to that evidence rather than guessed.
-    timeout-minutes: 90
+    # 2026-10-03: with the sub-tracks code on dev each `make audit` sub-test
+    # takes ~4.5-5min; the job passed at 86min on 17a7b12d0/eb3cddd56 and was
+    # then cancelled at 90min while still green on a30357fb5 and 11c775493
+    # (runs 37138048356, 37141440686). 150min restores headroom.
+    timeout-minutes: 150
 
     steps:
       - name: Checkout repository
