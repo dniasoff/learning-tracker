@@ -98,6 +98,53 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('a screen reader skips, re-ticks and retargets a row through '
+      'its semantics actions alone (AC-2, AC-8)', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _open(tester);
+    void act(int i, SemanticsAction action, [Object? args]) {
+      final node = _row(tester, i);
+      node.owner!.performAction(node.id, action, args);
+    }
+
+    // Activating a row outside the run makes it the last one learnt.
+    act(4, SemanticsAction.tap);
+    await tester.pump();
+    expect(_row(tester, 4).label, 'Berakhot 2:2, included, last one learnt');
+    expect(find.bySemanticsLabel(RegExp('Record 4 mishnayos')), findsOneWidget);
+
+    // Activating an included row skips it, as its tick announces.
+    act(3, SemanticsAction.tap);
+    await tester.pump();
+    expect(_row(tester, 3).label, 'Berakhot 2:1, skipped');
+    expect(_row(tester, 3), isSemantics(isChecked: false));
+    expect(find.bySemanticsLabel(RegExp('Record 3 mishnayos')), findsOneWidget);
+
+    // Activating it again re-ticks it.
+    act(3, SemanticsAction.tap);
+    await tester.pump();
+    expect(_row(tester, 3).label, 'Berakhot 2:1, included');
+    expect(_row(tester, 3), isSemantics(isChecked: true));
+    expect(find.bySemanticsLabel(RegExp('Record 4 mishnayos')), findsOneWidget);
+
+    // The custom action cuts the run short at a row inside it.
+    const setTarget = CustomSemanticsAction(
+      label: 'Make this the last one learnt',
+    );
+    expect(_row(tester, 1), isSemantics(customActions: [setTarget]));
+    expect(_row(tester, 4), isNot(isSemantics(customActions: [setTarget])));
+    act(
+      1,
+      SemanticsAction.customAction,
+      CustomSemanticsAction.getIdentifier(setTarget),
+    );
+    await tester.pump();
+    expect(_row(tester, 1).label, 'Berakhot 1:4, included, last one learnt');
+    expect(_row(tester, 4).label, 'Berakhot 2:2, not selected');
+    expect(find.bySemanticsLabel(RegExp('Record 2 mishnayos')), findsOneWidget);
+    handle.dispose();
+  });
+
   testWidgets('the confirm label carries the live count', (tester) async {
     final handle = tester.ensureSemantics();
     await _open(tester);

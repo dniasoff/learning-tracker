@@ -3318,6 +3318,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get upToPickerSetTargetAction => 'Make this the last one learnt';
+
+  @override
   String get upToPickerStatusAlreadyRecorded => 'already recorded';
 
   @override
