@@ -24,20 +24,6 @@ import '../test/helpers/sub_tracks/sub_track_router.dart';
 Finder _chip(String label) =>
     find.ancestor(of: find.text(label), matching: find.byType(ChoiceChip));
 
-/// Pumps in 50 ms steps until [finder] matches, at most [maxPumps] times.
-/// The integration binding runs on real time, so `pumpAndSettle` can return
-/// while the hub's async reads (scope, intent, sub-tracks) have not emitted
-/// yet: no frame is pending until they do.
-Future<void> _pumpUntilFound(
-  WidgetTester tester,
-  Finder finder, {
-  int maxPumps = 200,
-}) async {
-  for (var i = 0; i < maxPumps && finder.evaluate().isEmpty; i++) {
-    await tester.pump(const Duration(milliseconds: 50));
-  }
-}
-
 Future<void> _createFromHub(WidgetTester tester, SubTrackHarness h) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(430, 1800);
@@ -53,7 +39,7 @@ Future<void> _createFromHub(WidgetTester tester, SubTrackHarness h) async {
     ),
   );
   await tester.pumpAndSettle();
-  await _pumpUntilFound(tester, find.text('Sub-tracks · 0 active'));
+  await pumpUntilFound(tester, find.text('Sub-tracks · 0 active'));
   expect(find.text('Sub-tracks · 0 active'), findsOneWidget);
 
   await tester.tap(find.text('Add sub-track'));
