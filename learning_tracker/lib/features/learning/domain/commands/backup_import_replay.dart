@@ -11,7 +11,10 @@
 ///    updates of the destination profile's import-time settings (its
 ///    seed), each carrying `original_at` = the old entry's effective
 ///    instant. Fields an entry would not change are left out; an entry
-///    that changes nothing writes nothing.
+///    that changes nothing writes nothing. A destination with no settings
+///    yet is first seeded with the source's initial settings
+///    ([BackupReplayInput.settingsSeed]) unless the history opens with a
+///    seed of its own.
 /// 2. **governed** — every governed doc (goals and the `mainTrack*`
 ///    collections) as a field-level logged update against the writer's
 ///    view of the destination doc (`before` = its cached value, `null` when
@@ -114,7 +117,12 @@ final class BackupReplayInput {
     Map<GovernedEntity, List<BackupDoc>> governed = const {},
     List<BackupDoc> pointsEntries = const [],
     List<BackupDoc> rewardRedemptions = const [],
-  }) : events = List.unmodifiable(events),
+    Map<String, Object?> settingsSeed = const {},
+  }) : settingsSeed = Map.unmodifiable({
+         for (final MapEntry(:key, :value) in settingsSeed.entries)
+           if (_settingsFields.contains(key) && value != null) key: value,
+       }),
+       events = List.unmodifiable(events),
        subTracks = List.unmodifiable(subTracks),
        changeLog = List.unmodifiable(changeLog),
        governed = Map.unmodifiable(governed),
@@ -138,6 +146,13 @@ final class BackupReplayInput {
 
   /// The `reward_redemptions` rows.
   final List<BackupDoc> rewardRedemptions;
+
+  /// The source profile's current governed settings (`latitude`,
+  /// `longitude`, `time_zone`, `in_israel`; storage form, absent keys left
+  /// out): the state its `learnerSettings` history ends in. A source whose
+  /// seed was never logged (no seed entry in [changeLog]) still restores
+  /// its settings from it (DNI-482).
+  final Map<String, Object?> settingsSeed;
 }
 
 /// The replay steps, in order (AD-49).
@@ -322,8 +337,38 @@ const Set<String> _settingsFields = {
   LearnerSettings.kInIsrael,
 };
 
+/// The source's settings before its first [history] entry: [seed] (its
+/// current settings) with every entry's `before` applied, newest first.
+Map<String, Object?> _sourceInitialSettings(
+  Map<String, Object?> seed,
+  List<ChangeLogEntry> history,
+) {
+  final state = <String, Object?>{for (final f in _settingsFields) f: seed[f]};
+  for (final old in history.reversed) {
+    for (final MapEntry(key: k, :value) in old.before.entries) {
+      final parsed = ChangedFieldKey.tryParse(k);
+      if (parsed == null ||
+          parsed.collection != GovernedEntity.learnerSettings.collection ||
+          !_settingsFields.contains(parsed.field)) {
+        continue;
+      }
+      state[parsed.field] = value;
+    }
+  }
+  return state;
+}
+
 /// Step 1: the source `learnerSettings` history as ordered updates of the
 /// destination's current settings.
+///
+/// A destination with no settings yet (no `time_zone`: a fresh profile,
+/// whose restored doc never carries settings keys, AD-37) first gets the
+/// source's initial settings as a seed entry (every `before` null), when
+/// the source history does not open with one itself: a source whose seed
+/// was never logged would otherwise restore no settings at all, and the
+/// lock gate could never judge the profile again. A seed leads the
+/// history from the beginning of time ([LearnerSettingsHistory]), so it
+/// carries no `original_at`.
 Future<void> _planSettings(
   BackupReplayPlan plan,
   BackupReplayInput input,
@@ -339,7 +384,8 @@ Future<void> _planSettings(
           final byTime = _entryInstant(a).compareTo(_entryInstant(b));
           return byTime != 0 ? byTime : a.id.compareTo(b.id);
         });
-  if (history.isEmpty) return;
+  final initial = _sourceInitialSettings(input.settingsSeed, history);
+  if (history.isEmpty && initial[LearnerSettings.kTimeZone] == null) return;
   const collection = 'learner_profiles';
   assert(collection == GovernedEntity.learnerSettings.collection, 'AD-38');
   final profileId = scope.profileId;
@@ -348,20 +394,7 @@ Future<void> _planSettings(
     for (final f in _settingsFields) f: current?[f],
   };
   String key(String field) => ChangedFieldKey(collection, profileId, field).key;
-  for (final old in history) {
-    final changed = <String, Object?>{};
-    for (final MapEntry(key: k, :value) in old.after.entries) {
-      final parsed = ChangedFieldKey.tryParse(k);
-      if (parsed == null ||
-          parsed.collection != collection ||
-          !_settingsFields.contains(parsed.field)) {
-        continue;
-      }
-      if (!storageValueEquals(running[parsed.field], value)) {
-        changed[parsed.field] = value;
-      }
-    }
-    if (changed.isEmpty) continue;
+  void add(Map<String, Object?> changed, DateTime? originalAt) {
     final entry = entryOf(
       entity: GovernedEntity.learnerSettings,
       entityId: profileId,
@@ -369,7 +402,7 @@ Future<void> _planSettings(
       after: {
         for (final MapEntry(key: f, :value) in changed.entries) key(f): value,
       },
-      originalAt: _entryInstant(old),
+      originalAt: originalAt,
     );
     plan.settings.add(
       GovernedBatch(
@@ -384,6 +417,31 @@ Future<void> _planSettings(
       ),
     );
     running.addAll(changed);
+  }
+
+  if (running[LearnerSettings.kTimeZone] == null &&
+      initial[LearnerSettings.kTimeZone] != null) {
+    add({
+      for (final f in _settingsFields)
+        if (initial[f] != null && !storageValueEquals(running[f], initial[f]))
+          f: initial[f],
+    }, null);
+  }
+  for (final old in history) {
+    final changed = <String, Object?>{};
+    for (final MapEntry(key: k, :value) in old.after.entries) {
+      final parsed = ChangedFieldKey.tryParse(k);
+      if (parsed == null ||
+          parsed.collection != collection ||
+          !_settingsFields.contains(parsed.field)) {
+        continue;
+      }
+      if (!storageValueEquals(running[parsed.field], value)) {
+        changed[parsed.field] = value;
+      }
+    }
+    if (changed.isEmpty) continue;
+    add(changed, _entryInstant(old));
   }
 }
 

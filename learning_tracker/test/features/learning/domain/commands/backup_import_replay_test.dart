@@ -4,6 +4,8 @@
 // "not saved — retry" recovery of a rejected chunk).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/backup_record_write_port.dart';
@@ -366,6 +368,98 @@ void main() {
       for (final MapEntry(:key, :value) in points.entries) {
         expect(value['ulid'], key.split('/').last);
       }
+    });
+  });
+
+  group('a fresh destination with seed-only settings (DNI-482)', () {
+    // The destination profile doc was restored without settings keys
+    // (AD-37), so it holds no settings at all.
+    BackupReplayHarness fresh() {
+      final h = BackupReplayHarness();
+      h.store.seedDoc(h.scope, 'learner_profiles', profileUlid, {
+        'display_name': 'Restored',
+      });
+      return h;
+    }
+
+    LearnerSettingsHistory historyOf(BackupReplayHarness h) =>
+        LearnerSettingsHistory.reconstruct(
+          current: LearnerSettings.fromProfileDoc(
+            profileUlid,
+            h.store.doc(h.scope, 'learner_profiles', profileUlid)!,
+          ),
+          entries: [for (final (_, b) in h.store.batches) b.entry],
+        );
+
+    test('with no learnerSettings history, the source settings restore as '
+        'a leading seed and the record is restored', () async {
+      final h = fresh();
+      final result = await h.commands.importBackup(
+        BackupReplayInput(
+          settingsSeed: const {
+            'time_zone': 'Asia/Jerusalem',
+            'in_israel': true,
+            'last_change_id': '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+          },
+          events: [engineLearn(1, _b11, minutes: 10)],
+        ),
+      );
+      expect(result.saved, isTrue);
+      expect(result.steps.first, BackupReplayStep.learnerSettings);
+      final seed = h.store.batches.single.$2.entry;
+      expect(seed.entity, GovernedEntity.learnerSettings);
+      expect(seed.before.values, everyElement(isNull));
+      expect(seed.after, {
+        _k('learner_profiles', profileUlid, 'time_zone'): 'Asia/Jerusalem',
+        _k('learner_profiles', profileUlid, 'in_israel'): true,
+      });
+      expect(seed.originalAt, isNull);
+      expect(historyOf(h).at(engineAt(0)).timeZone, 'Asia/Jerusalem');
+      expect(h.events.chunks, hasLength(1));
+    });
+
+    test('a history without a seed entry is led by the source\'s initial '
+        'settings', () async {
+      final h = fresh();
+      final result = await h.commands.importBackup(
+        BackupReplayInput(
+          settingsSeed: const {
+            'time_zone': 'America/New_York',
+            'latitude': 40.7,
+            'longitude': -74.0,
+          },
+          changeLog: [
+            _settings(
+              21,
+              minutes: 100,
+              before: {'time_zone': 'Asia/Jerusalem'},
+              after: {'time_zone': 'America/New_York'},
+            ),
+          ],
+        ),
+      );
+      expect(result.saved, isTrue);
+      final entries = [for (final (_, b) in h.store.batches) b.entry];
+      expect(entries, hasLength(2));
+      expect(entries.first.before.values, everyElement(isNull));
+      expect(
+        entries.first.after[_k('learner_profiles', profileUlid, 'time_zone')],
+        'Asia/Jerusalem',
+      );
+      expect(entries.last.originalAt, engineAt(100));
+      final history = historyOf(h);
+      expect(history.at(engineAt(50)).timeZone, 'Asia/Jerusalem');
+      expect(history.at(engineAt(50)).latitude, 40.7);
+      expect(history.at(engineAt(150)).timeZone, 'America/New_York');
+    });
+
+    test('a seeded destination keeps its own settings', () async {
+      final h = _destination();
+      final result = await h.commands.importBackup(
+        BackupReplayInput(settingsSeed: const {'time_zone': 'UTC'}),
+      );
+      expect(result.saved, isTrue);
+      expect(h.store.batches, isEmpty);
     });
   });
 

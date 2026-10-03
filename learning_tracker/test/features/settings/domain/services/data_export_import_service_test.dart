@@ -290,6 +290,47 @@ void main() {
       },
     );
 
+    test('a seed-only learner restores onto a fresh account: its settings '
+        'lead the restored history and the record is restored', () async {
+      final source = FakeFirebaseFirestore();
+      await seedProfile(source, uid: testUid, profileId: testProfileId);
+      // Seeded settings with no learnerSettings change-log row.
+      await source.doc('users/$testUid/learner_profiles/$testProfileId').update(
+        {'time_zone': 'Asia/Jerusalem', 'in_israel': true},
+      );
+      final event = LearningEvent.learn(
+        id: ulidA,
+        curriculumId: 'mishnayos',
+        ref: 'Mishnah Berakhot 1:1',
+        source: LearningEvent.sourceMain,
+        dateState: DateState.dated,
+        learnedOn: '2026-08-01',
+        recordedAt: DateTime.utc(2026, 8, 1, 9),
+        actor: parentActor,
+      );
+      final learning = _ScriptedLearningPort()..events[testProfileId] = [event];
+      final payload = await _service(source, learning).exportData();
+
+      final target = FakeFirebaseFirestore();
+      final report = await backupService(
+        target,
+        settings: StoredSettingsReader(target),
+      ).importData(payload);
+      expect(report.saved, isTrue, reason: '${report.profiles}');
+      const profilePath = 'users/$testUid/learner_profiles/$testProfileId';
+      final restored = (await target.doc(profilePath).get()).data()!;
+      expect(restored['time_zone'], 'Asia/Jerusalem');
+      expect(restored['in_israel'], isTrue);
+      final log = await target.collection('$profilePath/change_log').get();
+      expect(log.docs.single.data()['entity'], 'learnerSettings');
+      final events = await target
+          .collection(
+            '$profilePath/${DataExportImportService.learningEventsCollection}',
+          )
+          .get();
+      expect(events.docs.single.data()['ref'], event.ref);
+    });
+
     test('an undecodable learning record fails validation', () async {
       final firestore = FakeFirebaseFirestore();
       await seedProfile(firestore, uid: testUid, profileId: testProfileId);

@@ -37,9 +37,34 @@ final class _UtcSettingsReader implements LearnerSettingsReader {
 /// The production [CommandsBackupLearningPort] over the real Firestore
 /// repositories on [firestore], with an always-open gate and a fixed
 /// clock, so a restore replays end to end through `LearningCommands`.
+/// The destination's stored settings, read once from its learner profile
+/// doc: a profile never seeded (no `time_zone`) fails the read, as the
+/// production reader does.
+final class StoredSettingsReader implements LearnerSettingsReader {
+  /// Reads [firestore].
+  const StoredSettingsReader(this.firestore);
+
+  /// The store.
+  final FakeFirebaseFirestore firestore;
+
+  @override
+  Stream<LearnerSettings> watch(LearnerScope scope) => Stream.fromFuture(
+    firestore
+        .doc('users/${scope.ownerUid}/learner_profiles/${scope.profileId}')
+        .get()
+        .then(
+          (doc) => LearnerSettings.fromProfileDoc(
+            scope.profileId,
+            doc.data() ?? const {},
+          ),
+        ),
+  );
+}
+
 CommandsBackupLearningPort firestoreBackupLearningPort(
   FakeFirebaseFirestore firestore, {
   String uid = testUid,
+  LearnerSettingsReader settings = const _UtcSettingsReader(),
 }) {
   final changeLog = FirestoreChangeLogRepository(firestore: firestore);
   final events = FirestoreLearningEventRepository(firestore: firestore);
@@ -49,7 +74,7 @@ CommandsBackupLearningPort firestoreBackupLearningPort(
     subTracks: FirestoreSubTrackRepository(firestore: firestore),
     changeLog: changeLog,
     reader: changeLog,
-    settings: const _UtcSettingsReader(),
+    settings: settings,
     events: events,
     writePort: events,
     points: FirestorePointsAmountReader(firestore: firestore),
@@ -65,9 +90,14 @@ DataExportImportService backupService(
   FakeFirebaseFirestore firestore, {
   String uid = testUid,
   String appVersion = '1.0.0-test',
+  LearnerSettingsReader settings = const _UtcSettingsReader(),
 }) => DataExportImportService(
   firestore: firestore,
-  learning: firestoreBackupLearningPort(firestore, uid: uid),
+  learning: firestoreBackupLearningPort(
+    firestore,
+    uid: uid,
+    settings: settings,
+  ),
   uid: uid,
   appVersionFetcher: () async => appVersion,
 );

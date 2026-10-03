@@ -229,9 +229,11 @@ final class CommandsBackupLearningPort implements BackupLearningPort {
         entries: ready.items,
       );
     } on Object {
+      final input = _inputs[scope.profileId];
       final restored = restoredSettingsHistory(
         scope.profileId,
-        _inputs[scope.profileId]?.changeLog ?? const [],
+        input?.changeLog ?? const [],
+        seed: input?.settingsSeed ?? const {},
       );
       if (restored == null) rethrow;
       return restored;
@@ -239,18 +241,34 @@ final class CommandsBackupLearningPort implements BackupLearningPort {
   }
 }
 
-/// The settings history a backup's `learnerSettings` [entries] describe
-/// for [profileId], or null when they hold no time zone.
+/// The settings history a backup describes for [profileId]: its
+/// `learnerSettings` [entries] ending in the source's current settings
+/// [seed] (`BackupReplayInput.settingsSeed`), or, without a seed, in the
+/// state the entries build. Null when neither holds a time zone.
 LearnerSettingsHistory? restoredSettingsHistory(
   String profileId,
-  List<ChangeLogEntry> entries,
-) {
+  List<ChangeLogEntry> entries, {
+  Map<String, Object?> seed = const {},
+}) {
   final mine =
       entries.where((e) => e.entity == GovernedEntity.learnerSettings).toList()
         ..sort((a, b) {
           final byTime = (a.originalAt ?? a.at).compareTo(b.originalAt ?? b.at);
           return byTime != 0 ? byTime : a.id.compareTo(b.id);
         });
+  if (seed[LearnerSettings.kTimeZone] != null) {
+    try {
+      return LearnerSettingsHistory.reconstruct(
+        current: LearnerSettings.fromProfileDoc(profileId, seed),
+        entries: [
+          for (final e in mine)
+            if (e.entityId == profileId) e,
+        ],
+      );
+    } on StorageFormatException {
+      // Fall back to the entries alone.
+    }
+  }
   final fields = <String, Object?>{};
   for (final e in mine) {
     for (final MapEntry(:key, :value) in e.after.entries) {

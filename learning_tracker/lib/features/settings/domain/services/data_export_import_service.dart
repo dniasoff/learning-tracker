@@ -316,7 +316,12 @@ class DataExportImportService {
           );
         }
       }
-      _replayInput(collections, 'profiles[$i]'); // strict record decode
+      _replayInput(
+        collections,
+        'profiles[$i]',
+        profileId: profileId,
+        profileData: profile['data'],
+      ); // strict record decode
       total += 1;
     }
 
@@ -403,7 +408,12 @@ class DataExportImportService {
           ),
         );
       }
-      replays[profileId] = _replayInput(collections, 'profiles.$profileId');
+      replays[profileId] = _replayInput(
+        collections,
+        'profiles.$profileId',
+        profileId: profileId,
+        profileData: profileData,
+      );
     }
 
     for (var offset = 0; offset < writes.length; offset += _maxBatchWrites) {
@@ -419,9 +429,15 @@ class DataExportImportService {
   }
 
   /// The strictly decoded AD-49 learning record of one profile's
-  /// [collections]. Throws [ImportValidationException] for any record no
+  /// [collections], with the settings of its [profileData] as the replay's
+  /// settings seed. Throws [ImportValidationException] for any record no
   /// replay could write.
-  BackupReplayInput _replayInput(Map<String, dynamic> collections, String at) {
+  BackupReplayInput _replayInput(
+    Map<String, dynamic> collections,
+    String at, {
+    required String profileId,
+    required Object? profileData,
+  }) {
     List<(String, Map<String, Object?>)> docs(String name) {
       final value = collections[name];
       if (value == null) return const [];
@@ -443,6 +459,7 @@ class DataExportImportService {
     }
 
     return BackupReplayInput(
+      settingsSeed: _settingsSeed(profileId, profileData, at),
       events: [
         for (final (id, map) in docs(learningEventsCollection))
           decode(
@@ -481,6 +498,33 @@ class DataExportImportService {
           BackupDoc(id, map),
       ],
     );
+  }
+
+  /// The governed settings a backed-up learner profile doc holds (the
+  /// state its `learnerSettings` history ends in), strictly decoded; empty
+  /// when it holds no `time_zone` (never seeded).
+  Map<String, Object?> _settingsSeed(
+    String profileId,
+    Object? profileData,
+    String at,
+  ) {
+    if (profileData is! Map) return const {};
+    // Only the settings keys: the rest of the doc is restored raw.
+    final map = _storageMap({
+      for (final key in LearnerSettings.storageKeys)
+        if (profileData[key] != null) key: profileData[key],
+    }, '$at.data');
+    if (map[LearnerSettings.kTimeZone] == null) return const {};
+    try {
+      LearnerSettings.fromProfileDoc(profileId, map);
+    } on StorageFormatException catch (e) {
+      throw ImportValidationException('$at: invalid learner settings ($e)');
+    }
+    return {
+      for (final key in LearnerSettings.storageKeys)
+        if (key != LearnerSettings.kLastChangeId && map[key] != null)
+          key: map[key],
+    };
   }
 
   /// [value] decoded to the AD-52 storage form the domain codecs read:

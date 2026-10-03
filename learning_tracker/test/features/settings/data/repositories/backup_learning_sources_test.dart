@@ -138,6 +138,41 @@ void main() {
       expect(h.at(DateTime.utc(2026, 4)).timeZone, 'America/New_York');
     });
 
+    test('a seed-only source (no settings history) holds its seed for all '
+        'time', () {
+      final h = restoredSettingsHistory(
+        testProfileId,
+        const [],
+        seed: const {'time_zone': 'Asia/Jerusalem', 'in_israel': true},
+      )!;
+      expect(h.spans, hasLength(1));
+      expect(h.at(DateTime.utc(2020)).timeZone, 'Asia/Jerusalem');
+    });
+
+    test('the seed is the state the history ends in', () {
+      final h = restoredSettingsHistory(
+        testProfileId,
+        [
+          _settings(1, DateTime.utc(2026), {'time_zone': 'Asia/Jerusalem'}),
+          _settings(
+            2,
+            DateTime.utc(2026, 3),
+            {'time_zone': 'America/New_York'},
+            before: {'time_zone': 'Asia/Jerusalem'},
+          ),
+        ],
+        seed: const {
+          'time_zone': 'America/New_York',
+          'latitude': 40.7,
+          'longitude': -74.0,
+        },
+      )!;
+      expect(h.at(DateTime.utc(2026, 2)).timeZone, 'Asia/Jerusalem');
+      expect(h.at(DateTime.utc(2026, 4)).timeZone, 'America/New_York');
+      // A field the history never logged is the seed's.
+      expect(h.at(DateTime.utc(2026, 4)).latitude, 40.7);
+    });
+
     test('is null without a time zone', () {
       expect(restoredSettingsHistory(testProfileId, const []), isNull);
     });
