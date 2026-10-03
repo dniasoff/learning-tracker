@@ -17,23 +17,7 @@
 //   4. `firebase functions:list --json` again — fail if any of the four is
 //      still deployed or the list cannot be read;
 //   5. `firebase deploy --only firestore:rules,firestore:indexes,functions`,
-//      exactly once, never retried;
-//   6. DNI-491 (Story 1.29) AC-5 — `firebase firestore:indexes --json`: which
-//      indexes are deployed. Run non-interactively, step 5 creates the
-//      declared indexes but NEVER deletes one that the file no longer lists
-//      (firebase-tools only logs "run this command with the --force flag"),
-//      so the retired collections' indexes would stay in production;
-//   7. when an index of a retired collection (R14 in
-//      learning_tracker/tool/retired_symbols/R14.json) is still deployed:
-//      `firebase deploy --only firestore:indexes --force`, which deletes the
-//      deployed indexes and field overrides the file does not declare. It
-//      runs only after checking that everything it would delete belongs to a
-//      retired collection or to a collection group the file declares (whose
-//      declared indexes are the intended set); anything else — an index of an
-//      unknown collection group, a field override the file does not declare —
-//      stops the release instead of being deleted;
-//   8. `firebase firestore:indexes --json` again — fail if an index of a
-//      retired collection is still deployed.
+//      exactly once, never retried.
 //
 // Wiring: .github/workflows/deploy-play-store.yml job `backend-deploy` runs
 // `node tool/firebase_backend_release.mjs --mode deploy --project
@@ -68,7 +52,6 @@ export const RETIRED_CALLABLES = Object.freeze([
 ]);
 
 export const DEPLOY_TARGETS = 'firestore:rules,firestore:indexes,functions';
-export const INDEX_TARGET = 'firestore:indexes';
 export const PRODUCTION_PROJECT = 'torah-study-tracker';
 
 export const RELEASE_WORKFLOW = '.github/workflows/deploy-play-store.yml';
@@ -89,91 +72,6 @@ export function deployArgs(project) {
 
 export function listArgs(project) {
   return ['functions:list', '--json', '--project', project];
-}
-
-/** `firebase firestore:indexes --json` — the deployed index spec. */
-export function indexListArgs(project) {
-  return ['firestore:indexes', '--json', '--project', project];
-}
-
-/**
- * `firebase deploy --only firestore:indexes --force` — the only way
- * firebase-tools deletes, non-interactively, an index the file dropped.
- */
-export function indexPruneArgs(project) {
-  return ['deploy', '--only', INDEX_TARGET, '--force', '--project', project];
-}
-
-/**
- * The deployed index spec from `firebase firestore:indexes --json` output
- * (`{"status":"success","result":{"indexes":[...],"fieldOverrides":[...]}}`,
- * or the bare spec). Throws on anything else: an unreadable list is never
- * treated as "no index deployed".
- */
-export function parseIndexSpec(stdout) {
-  const text = String(stdout ?? '');
-  const start = text.indexOf('{');
-  if (start < 0) throw new Error('firestore:indexes printed no JSON');
-  let parsed;
-  try {
-    parsed = JSON.parse(text.slice(start));
-  } catch (e) {
-    throw new Error(`firestore:indexes printed invalid JSON: ${e.message}`);
-  }
-  if ('status' in (parsed ?? {})) {
-    if (parsed.status !== 'success') {
-      throw new Error(`firestore:indexes did not succeed: ${JSON.stringify(parsed.error ?? parsed.status)}`);
-    }
-    parsed = parsed.result;
-  }
-  return readIndexSpec(parsed, 'firestore:indexes result');
-}
-
-/** Validates an index spec ({indexes, fieldOverrides?}) and returns it. */
-export function readIndexSpec(spec, label = 'index spec') {
-  if (!spec || !Array.isArray(spec.indexes)) {
-    throw new Error(`${label} has no "indexes" list`);
-  }
-  const fieldOverrides = spec.fieldOverrides ?? [];
-  if (!Array.isArray(fieldOverrides)) {
-    throw new Error(`${label} "fieldOverrides" is not a list`);
-  }
-  const groupOf = (entry, i, kind) => {
-    const g = entry?.collectionGroup;
-    if (typeof g !== 'string' || !g) {
-      throw new Error(`${label} ${kind} ${i} has no collectionGroup`);
-    }
-    return g;
-  };
-  return {
-    indexes: spec.indexes.map((x, i) => ({ ...x, collectionGroup: groupOf(x, i, 'index') })),
-    fieldOverrides: fieldOverrides.map((x, i) => ({
-      ...x,
-      collectionGroup: groupOf(x, i, 'field override'),
-    })),
-  };
-}
-
-/**
- * What a `deploy --only firestore:indexes --force` against [deployed] would
- * delete that is NOT safe to delete: an index of a collection group that is
- * neither declared in [declared] nor [retired], or a field override that
- * [declared] does not list (by collection group and field path, the
- * firebase-tools match). Empty = the prune is safe.
- */
-export function unsafePrunes(deployed, declared, retired) {
-  const declaredGroups = new Set(declared.indexes.map((i) => i.collectionGroup));
-  const retiredSet = new Set(retired);
-  const overrideKey = (f) => `${f.collectionGroup}/${f.fieldPath}`;
-  const declaredOverrides = new Set(declared.fieldOverrides.map(overrideKey));
-  return [
-    ...deployed.indexes
-      .filter((i) => !declaredGroups.has(i.collectionGroup) && !retiredSet.has(i.collectionGroup))
-      .map((i) => `index on ${i.collectionGroup}`),
-    ...deployed.fieldOverrides
-      .filter((f) => !declaredOverrides.has(overrideKey(f)))
-      .map((f) => `field override ${overrideKey(f)}`),
-  ];
 }
 
 /**
@@ -218,23 +116,8 @@ export class ReleaseError extends Error {
  * firebase-tools invocation). Returns the steps it ran; throws ReleaseError
  * (naming the failed step) on the first failure, before any later step.
  */
-export function runBackendRelease({ run, project, declaredIndexes, retiredCollections, log = () => {} }) {
+export function runBackendRelease({ run, project, log = () => {} }) {
   if (!project) throw new ReleaseError('args', '--project is required');
-  let declared;
-  try {
-    declared = readIndexSpec(declaredIndexes, 'firestore.indexes.json');
-  } catch (e) {
-    throw new ReleaseError('args', e.message);
-  }
-  if (!Array.isArray(retiredCollections) || retiredCollections.length === 0) {
-    throw new ReleaseError('args', 'the retired collections (R14) are required');
-  }
-  const retiredDeclared = declared.indexes
-    .map((i) => i.collectionGroup)
-    .filter((g) => retiredCollections.includes(g));
-  if (retiredDeclared.length > 0) {
-    throw new ReleaseError('args', `firestore.indexes.json still declares a retired index: ${retiredDeclared.join(', ')}`);
-  }
   const steps = [];
   const invoke = (step, args) => {
     steps.push({ step, args });
@@ -270,48 +153,7 @@ export function runBackendRelease({ run, project, declaredIndexes, retiredCollec
   }
   log(`Verified absent: ${RETIRED_CALLABLES.join(', ')}`);
   invoke('deploy', deployArgs(project));
-
-  // DNI-491 AC-5: drop the retired collections' indexes in production.
-  const listIndexes = (step) => {
-    const r = invoke(step, indexListArgs(project));
-    try {
-      return parseIndexSpec(r.stdout);
-    } catch (e) {
-      throw new ReleaseError(step, e.message);
-    }
-  };
-  const retiredLive = (spec) => [
-    ...new Set(spec.indexes.map((i) => i.collectionGroup).filter((g) => retiredCollections.includes(g))),
-  ];
-  const deployed = listIndexes('list-indexes');
-  const liveIndexes = retiredLive(deployed);
-  if (liveIndexes.length === 0) {
-    log('No index of a retired collection is deployed; nothing to prune.');
-    return steps;
-  }
-  log(`Indexes of retired collections still deployed: ${liveIndexes.join(', ')}`);
-  const unsafe = unsafePrunes(deployed, declared, retiredCollections);
-  if (unsafe.length > 0) {
-    throw new ReleaseError(
-      'prune-indexes',
-      `refusing \`firebase ${indexPruneArgs(project).join(' ')}\`: it would also delete ${unsafe.join(', ')}, ` +
-        'which firestore.indexes.json does not declare and no retired collection owns. ' +
-        'Declare them or delete them by hand, then re-run the release.',
-    );
-  }
-  invoke('prune-indexes', indexPruneArgs(project));
-  const leftIndexes = retiredLive(listIndexes('verify-indexes'));
-  if (leftIndexes.length > 0) {
-    throw new ReleaseError('verify-indexes', `still deployed after the prune: ${leftIndexes.join(', ')}`);
-  }
-  log(`Verified no index of a retired collection is deployed (${retiredCollections.join(', ')}).`);
   return steps;
-}
-
-/** The R14 retired collections from the AD-49 inventory. */
-export function readRetiredCollections(projectDir) {
-  const r14 = JSON.parse(readFileSync(join(projectDir, 'tool/retired_symbols/R14.json'), 'utf8'));
-  return r14.entries.filter((e) => e.kind === 'collection').map((e) => e.symbol);
 }
 
 /**
@@ -390,20 +232,6 @@ function main(argv) {
     ...validateReleaseWorkflow(readFileSync(join(repoRoot, RELEASE_WORKFLOW), 'utf8')).map((e) => `${RELEASE_WORKFLOW}: ${e}`),
     ...validateDeployTargets(projectDir),
   ];
-  let declaredIndexes;
-  let retiredCollections;
-  try {
-    declaredIndexes = JSON.parse(readFileSync(join(projectDir, 'firestore.indexes.json'), 'utf8'));
-    retiredCollections = readRetiredCollections(projectDir);
-    const stillDeclared = readIndexSpec(declaredIndexes, 'firestore.indexes.json').indexes
-      .map((i) => i.collectionGroup)
-      .filter((g) => retiredCollections.includes(g));
-    if (stillDeclared.length) {
-      errors.push(`firestore.indexes.json still declares a retired index: ${stillDeclared.join(', ')}`);
-    }
-  } catch (e) {
-    errors.push(`index inputs: ${e.message}`);
-  }
   if (errors.length) {
     for (const e of errors) console.error(`::error::${e}`);
     return 1;
@@ -414,9 +242,6 @@ function main(argv) {
     console.log(`  firebase ${deleteArgs(project).join(' ')}   (only if any is deployed)`);
     console.log(`  firebase ${listArgs(project).join(' ')}   (fail if any remains)`);
     console.log(`  firebase ${deployArgs(project).join(' ')}   (once)`);
-    console.log(`  firebase ${indexListArgs(project).join(' ')}`);
-    console.log(`  firebase ${indexPruneArgs(project).join(' ')}   (only if an index of a retired collection is deployed, and only it or other undeclared indexes of declared groups would go)`);
-    console.log(`  firebase ${indexListArgs(project).join(' ')}   (fail if an index of a retired collection remains)`);
     return 0;
   }
   if (!process.env.FIREBASE_TOKEN && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -438,15 +263,13 @@ function main(argv) {
         return r;
       },
       project,
-      declaredIndexes,
-      retiredCollections,
       log: (m) => console.log(m),
     });
   } catch (e) {
     console.error(`::error::Backend release failed at ${e.message}`);
     return 1;
   }
-  console.log(`Backend release done: retired callables absent; ${DEPLOY_TARGETS} deployed once to ${project}; no index of a retired collection deployed.`);
+  console.log(`Backend release done: retired callables absent; ${DEPLOY_TARGETS} deployed once to ${project}.`);
   return 0;
 }
 
