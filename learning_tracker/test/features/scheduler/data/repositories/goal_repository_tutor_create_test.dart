@@ -41,7 +41,6 @@ void main() {
         .read(goalRepositoryProvider)
         .createGoal(
           curriculumId: CurriculumId.mishnayos,
-          targetPercent: 100,
           paceTarget: const PacePeriodTarget(rate: 2, period: 'per_week'),
           description: 'Seder Moed',
           paceGranularity: 'mishna',
@@ -68,7 +67,7 @@ void main() {
     await expectLater(
       container
           .read(goalRepositoryProvider)
-          .createGoal(curriculumId: CurriculumId.mishnayos, targetPercent: 100),
+          .createGoal(curriculumId: CurriculumId.mishnayos),
       throwsA(isA<TutorGovernedWriteException>()),
     );
     expect(h.invoker.calls, isEmpty);
