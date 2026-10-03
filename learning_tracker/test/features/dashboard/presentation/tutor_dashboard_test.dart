@@ -122,7 +122,7 @@ void main() {
     await tester.pumpWidget(
       pumpApp(
         overrides: tutoredOverrides(selection: tutorSelection(), gate: gate),
-        child: TutoredLearnerLockOverlay(
+        child: TutoredLearnerLockCover(
           child: Scaffold(
             body: Center(
               child: TextButton(
