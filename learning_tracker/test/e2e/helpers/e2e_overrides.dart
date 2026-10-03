@@ -51,9 +51,7 @@ import '../harness/e2e_harness.dart';
 /// profile / restore / PIN guards) can complete.
 Future<void> navigateTo(E2EHarness h, PageRouteInfo route) async {
   unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
+  await h.settle();
 }
 
 // ── Silence overrides ────────────────────────────────────────────────────────

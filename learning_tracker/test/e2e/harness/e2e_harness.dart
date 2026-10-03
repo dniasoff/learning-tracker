@@ -449,6 +449,25 @@ class E2EHarness {
   /// Pumps [duration] frames.
   Future<void> pump([Duration? duration]) => _tester.pump(duration);
 
+  /// Pumps [frames] short frames (plus an initial zero-duration frame) so a
+  /// chain of async hops settles without `pumpAndSettle` (which never
+  /// returns while a progress indicator animates).
+  ///
+  /// Every hop — a route guard resolving, the pushed screen's first build, a
+  /// one-shot provider load, a post-frame refresh — lands on its own frame.
+  /// A couple of long pumps advance fake time but render only a couple of
+  /// frames, so a screen whose data takes one hop more than the pump count
+  /// is still showing its loading state when the journey asserts.
+  Future<void> settle({
+    int frames = 6,
+    Duration step = const Duration(milliseconds: 100),
+  }) async {
+    await _tester.pump();
+    for (var i = 0; i < frames; i++) {
+      await _tester.pump(step);
+    }
+  }
+
   /// Taps the widget found by [finder] and pumps a settle delay.
   Future<void> tapWidget(
     Finder finder, {
