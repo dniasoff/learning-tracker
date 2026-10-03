@@ -3,16 +3,27 @@ import 'dart:typed_data';
 
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/backup_record_write_port.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
+import 'package:learning_tracker/features/settings/domain/services/backup_learning_port.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 export 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart'
     show BackupDocumentWrite, BackupFirestoreGateway;
+export 'package:learning_tracker/features/settings/domain/services/backup_learning_port.dart'
+    show BackupLearningPort;
 
 /// Summary of a Firestore backup payload.
 class ImportPreview {
   const ImportPreview({
-    required this.completionCount,
+    required this.learningEventCount,
+    required this.subTrackCount,
     required this.goalCount,
     required this.stageCount,
     required this.pointConfigCount,
@@ -25,7 +36,8 @@ class ImportPreview {
     required this.totalDocumentCount,
   });
 
-  final int completionCount;
+  final int learningEventCount;
+  final int subTrackCount;
   final int goalCount;
   final int stageCount;
   final int pointConfigCount;
@@ -40,20 +52,63 @@ class ImportPreview {
   int get totalRecords => totalDocumentCount;
 }
 
-/// Exports and restores the authenticated user's Firestore document tree.
+/// What a restore did, per restored profile (AD-49, AD-54).
+final class BackupImportReport {
+  /// Creates the report.
+  BackupImportReport({
+    required Map<String, BackupReplayResult> profiles,
+    required BackupLearningPort learning,
+  }) : profiles = Map.unmodifiable(profiles),
+       _learning = learning;
+
+  /// Each restored profile's replay result, by profile id.
+  final Map<String, BackupReplayResult> profiles;
+
+  final BackupLearningPort _learning;
+
+  /// Whether every learning write was saved (or queued): no profile was
+  /// refused and none left a "not saved — retry" failure.
+  bool get saved => profiles.values.every((r) => r.saved);
+
+  /// The writes the server did not save.
+  int get notSavedCount =>
+      profiles.values.fold(0, (n, r) => n + r.notSaved.length);
+
+  /// Re-sends every write that was not saved, unchanged (AD-54 Recovery).
+  Future<void> retryNotSaved() async {
+    for (final MapEntry(key: profileId, value: result) in profiles.entries) {
+      for (final failure in result.notSaved) {
+        await _learning.retry(profileId, failure.id);
+      }
+    }
+  }
+}
+
+/// Exports and restores the authenticated user's backup (AD-49).
 ///
 /// This is deliberately a same-user backup format. The uid is part of the
-/// payload and is checked on import; no profile or account identity is
-/// remapped. Documents are represented by their Firestore document id and raw
-/// field map so fields added by a repository are not silently discarded.
+/// payload and is checked on import; profile ids are kept.
+///
+/// - The account, profile snapshot, diagnostic logs, learner profile docs
+///   (without their governed settings keys) and the non-learning profile
+///   collections ([rawProfileCollections]) are raw documents.
+/// - The learning record is the AD-49 set: `learning_events`, `sub_tracks`
+///   (read through `SubTrackRepository`), `change_log`, the governed
+///   collections, the non-event `points_ledger` entries and the
+///   `reward_redemptions`. Event-linked `pts_` entries are never exported:
+///   a restore re-derives them (AD-50). A restore replays the record
+///   through `LearningCommands.importBackup` ([BackupLearningPort]), never
+///   as raw documents.
 class DataExportImportService {
   DataExportImportService({
     Object? firestore,
     BackupFirestoreGateway? gateway,
+    required BackupLearningPort learning,
     required String uid,
     Future<String> Function()? appVersionFetcher,
     LocalDayClock? clock,
   }) : _gateway = gateway ?? backupFirestoreGatewayFor(firestore!),
+       _learning = learning,
        _uid = uid,
        _clock = clock ?? const SystemLocalDayClock(),
        _appVersionFetcher =
@@ -63,37 +118,59 @@ class DataExportImportService {
              return info.version;
            });
 
-  static const int formatVersion = 1;
-  static const int _pageSize = 500;
+  /// Version 2: the AD-49 learning record (version 1 carried the retired
+  /// completion stores and is no longer restorable, AD-13).
+  static const int formatVersion = 2;
+
+  /// AD-54: writes per raw batch.
+  static const int _maxBatchWrites = 450;
   static const String _typeKey = '__firestore_type';
 
-  // These are the profile-scoped collections declared in firestore.rules.
-  // Keeping this list here makes the backup boundary explicit and prevents
-  // tutor-owned or other-account collections from entering a user backup.
-  static const List<String> _profileCollectionNames = [
-    'completions',
-    // The retired `streak_events` and `learning_ledger` collections (AD-49,
-    // R5/R6, DNI-479) are neither exported nor restored: the streak and
-    // lifetime knowledge are derived from `learning_events`.
-    'points_ledger',
-    'reward_redemptions',
+  /// `learning_events`.
+  static const String learningEventsCollection = 'learning_events';
+
+  /// `sub_tracks`.
+  static const String subTracksCollection = 'sub_tracks';
+
+  /// `change_log`.
+  static const String changeLogCollection = 'change_log';
+
+  /// `points_ledger` (non-event entries only).
+  static const String pointsLedgerCollection = 'points_ledger';
+
+  /// `reward_redemptions`.
+  static const String rewardRedemptionsCollection = 'reward_redemptions';
+
+  /// The governed collections, by name (AD-38).
+  static final Map<String, GovernedEntity> governedCollections = {
+    for (final e in backupGovernedEntities) e.collection: e,
+  };
+
+  /// Profile collections outside the learning record, restored as raw
+  /// documents. The retired completion stores (`completions`,
+  /// `learning_ledger`, `streak_events`, `learning_order`) are neither
+  /// exported nor restored (AD-49, R1/R5/R6/R13).
+  static const List<String> rawProfileCollections = [
     'settings',
-    'stage_definitions',
     'point_configs',
-    'curriculum_tracks',
     'bookmarks',
-    // The retired `learning_order` collection (AD-49, R13) is merged into
-    // `track_learning_order` (DNI-476): neither exported nor restored.
-    'track_learning_order',
     'preferences',
-    'goals',
     'import_metadata',
-    'profile_programs',
-    'curriculum_scopes',
-    'study_day_configs',
+  ];
+
+  /// Every profile collection a backup holds.
+  static final List<String> profileCollectionNames = [
+    learningEventsCollection,
+    subTracksCollection,
+    changeLogCollection,
+    ...governedCollections.keys,
+    pointsLedgerCollection,
+    rewardRedemptionsCollection,
+    ...rawProfileCollections,
   ];
 
   final BackupFirestoreGateway _gateway;
+  final BackupLearningPort _learning;
   final String _uid;
   final LocalDayClock _clock;
   final Future<String> Function() _appVersionFetcher;
@@ -102,13 +179,13 @@ class DataExportImportService {
 
   String get _profilesPath => '$_accountPath/learner_profiles';
 
-  /// Exports version 1 of the Firestore backup format.
+  /// Exports version 2 of the backup format.
   ///
   /// The top-level shape is:
   ///
   /// ```text
   /// {
-  ///   version: 1,
+  ///   version: 2,
   ///   uid: string,
   ///   exportedAt: ISO-8601 string,
   ///   appVersion: string,
@@ -130,15 +207,28 @@ class DataExportImportService {
     final profilePayload = <Map<String, dynamic>>[];
 
     for (final profile in profiles) {
-      final profilePath = '$_profilesPath/${profile['id'] as String}';
-      final collections = <String, dynamic>{};
-      for (final collectionName in _profileCollectionNames) {
-        collections[collectionName] = await _gateway.readCollection(
-          '$profilePath/$collectionName',
-        );
-      }
+      final profileId = profile['id'] as String;
+      final profilePath = '$_profilesPath/$profileId';
+      Future<List<Map<String, dynamic>>> raw(String name) =>
+          _gateway.readCollection('$profilePath/$name');
+      final subTracks = await _learning.readSubTracks(profileId);
+      final collections = <String, dynamic>{
+        learningEventsCollection: await raw(learningEventsCollection),
+        subTracksCollection: [
+          for (final track in subTracks)
+            {'id': track.id, 'data': _encodeMap(track.toStorage())},
+        ],
+        changeLogCollection: await raw(changeLogCollection),
+        for (final name in governedCollections.keys) name: await raw(name),
+        pointsLedgerCollection: [
+          for (final entry in await raw(pointsLedgerCollection))
+            if (!_isEventEntry(entry)) entry,
+        ],
+        rewardRedemptionsCollection: await raw(rewardRedemptionsCollection),
+        for (final name in rawProfileCollections) name: await raw(name),
+      };
       profilePayload.add({
-        'id': profile['id'],
+        'id': profileId,
         'data': profile['data'],
         'collections': collections,
       });
@@ -157,7 +247,16 @@ class DataExportImportService {
     return const JsonEncoder.withIndent('  ').convert(payload);
   }
 
-  /// Validates a version 1 backup and returns its document counts.
+  static bool _isEventEntry(Map<String, dynamic> document) {
+    final data = document['data'];
+    return isEventPointsEntry(
+      document['id'] as String,
+      data is Map<String, dynamic> ? data : const {},
+    );
+  }
+
+  /// Validates a version 2 backup, including every learning record, and
+  /// returns its document counts.
   ImportPreview validateAndPreview(String jsonString) {
     final data = _decodePayload(jsonString);
     final account = _requireMap(data, 'account');
@@ -183,13 +282,7 @@ class DataExportImportService {
     }
 
     var total = account['data'] == null ? 0 : 1;
-    var completions = 0;
-    var goals = 0;
-    var stages = 0;
-    var pointConfigs = 0;
-    var bookmarks = 0;
-    var learningOrders = 0;
-    var tracks = 0;
+    final counts = <String, int>{};
 
     for (var i = 0; i < profiles.length; i++) {
       final profile = _requireMapValue(profiles[i], 'profiles[$i]');
@@ -198,7 +291,7 @@ class DataExportImportService {
       _validateDocumentData(profile, 'profiles[$i]');
       final collections = _requireMap(profile, 'collections');
       for (final entry in collections.entries) {
-        if (!_profileCollectionNames.contains(entry.key)) {
+        if (!profileCollectionNames.contains(entry.key)) {
           throw ImportValidationException(
             'Unknown profile collection: ${entry.key}',
           );
@@ -208,22 +301,7 @@ class DataExportImportService {
           'profiles[$i].collections.${entry.key}',
         );
         total += documents.length;
-        switch (entry.key) {
-          case 'completions':
-            completions += documents.length;
-          case 'goals':
-            goals += documents.length;
-          case 'stage_definitions':
-            stages += documents.length;
-          case 'point_configs':
-            pointConfigs += documents.length;
-          case 'bookmarks':
-            bookmarks += documents.length;
-          case 'track_learning_order':
-            learningOrders += documents.length;
-          case 'curriculum_tracks':
-            tracks += documents.length;
-        }
+        counts[entry.key] = (counts[entry.key] ?? 0) + documents.length;
         for (var j = 0; j < documents.length; j++) {
           _validateDocumentRecord(
             documents[j],
@@ -231,18 +309,20 @@ class DataExportImportService {
           );
         }
       }
+      _replayInput(collections, 'profiles[$i]'); // strict record decode
       total += 1;
     }
 
     total += profileSnapshot.length + diagnosticLogs.length;
     return ImportPreview(
-      completionCount: completions,
-      goalCount: goals,
-      stageCount: stages,
-      pointConfigCount: pointConfigs,
-      bookmarkCount: bookmarks,
-      learningOrderCount: learningOrders,
-      curriculumTrackCount: tracks,
+      learningEventCount: counts[learningEventsCollection] ?? 0,
+      subTrackCount: counts[subTracksCollection] ?? 0,
+      goalCount: counts['goals'] ?? 0,
+      stageCount: counts['stage_definitions'] ?? 0,
+      pointConfigCount: counts['point_configs'] ?? 0,
+      bookmarkCount: counts['bookmarks'] ?? 0,
+      learningOrderCount: counts['track_learning_order'] ?? 0,
+      curriculumTrackCount: counts['curriculum_tracks'] ?? 0,
       userProfileCount: profiles.length,
       totalDocumentCount: total,
       exportedAt: data['exportedAt'] as String? ?? 'unknown',
@@ -250,15 +330,22 @@ class DataExportImportService {
     );
   }
 
-  /// Restores a backup into this same user's Firestore tree.
+  /// Restores a backup into this same user's account.
   ///
-  /// Firestore client rules deny deletes, including for append-only
-  /// collections. Import therefore only creates or overwrites documents that
-  /// are present in the backup. Existing documents absent from the payload are
-  /// intentionally left alone. A tombstoned completion or ledger entry is
-  /// written with its encoded `purged_at` value intact, so restore never
-  /// resurrects purged history.
-  Future<void> importData(String jsonString) async {
+  /// 1. The raw documents are written first: the account doc, the
+  ///    profile snapshot, the diagnostic logs, each learner profile doc
+  ///    merged WITHOUT its governed settings keys (AD-37), and the
+  ///    [rawProfileCollections] — in batches of at most 450 writes.
+  /// 2. Each profile's learning record is then replayed through
+  ///    `LearningCommands.importBackup` (AD-49): its settings history as
+  ///    updates of the import-time settings, governed docs as logged
+  ///    updates, sub-tracks and events under fresh ids with `pts_`
+  ///    re-derived, then the non-event points and redemptions.
+  ///
+  /// Nothing is deleted. The report never claims a write was saved when
+  /// the server refused it: such writes are "not saved — retry" entries
+  /// ([BackupImportReport.retryNotSaved]).
+  Future<BackupImportReport> importData(String jsonString) async {
     validateAndPreview(jsonString);
     final data = _decodePayload(jsonString);
     final writes = <BackupDocumentWrite>[];
@@ -285,30 +372,149 @@ class DataExportImportService {
       _requireDocumentList(data, 'diagnosticLogs'),
     );
 
+    final replays = <String, BackupReplayInput>{};
     for (final rawProfile in _requireList(data, 'profiles')) {
       final profile = _requireMapValue(rawProfile, 'profile');
       final profileId = _requireString(profile, 'id', path: 'profile');
       final profilePath = '$_profilesPath/$profileId';
-      writes.add(
-        BackupDocumentWrite(
-          profilePath,
-          _decodeMapValue(profile['data'], 'profiles.$profileId.data'),
-        ),
-      );
+      final profileData = profile['data'];
+      if (profileData != null) {
+        final fields = _decodeMapValue(profileData, 'profiles.$profileId.data')
+          ..removeWhere((key, _) => LearnerSettings.storageKeys.contains(key));
+        writes.add(BackupDocumentWrite(profilePath, fields, merge: true));
+      }
       final collections = _requireMap(profile, 'collections');
-      for (final entry in collections.entries) {
-        final documents = _requireDocumentListValue(
-          entry.value,
-          'profiles.$profileId.collections.${entry.key}',
+      for (final name in rawProfileCollections) {
+        final documents = collections[name];
+        if (documents == null) continue;
+        _addWrites(
+          writes,
+          '$profilePath/$name',
+          _requireDocumentListValue(
+            documents,
+            'profiles.$profileId.collections.$name',
+          ),
         );
-        _addWrites(writes, '$profilePath/${entry.key}', documents);
+      }
+      replays[profileId] = _replayInput(collections, 'profiles.$profileId');
+    }
+
+    for (var offset = 0; offset < writes.length; offset += _maxBatchWrites) {
+      final end = (offset + _maxBatchWrites).clamp(0, writes.length);
+      await _gateway.writeBatch(writes.sublist(offset, end));
+    }
+
+    final results = <String, BackupReplayResult>{};
+    for (final MapEntry(key: profileId, value: input) in replays.entries) {
+      results[profileId] = await _learning.replay(profileId, input);
+    }
+    return BackupImportReport(profiles: results, learning: _learning);
+  }
+
+  /// The strictly decoded AD-49 learning record of one profile's
+  /// [collections]. Throws [ImportValidationException] for any record no
+  /// replay could write.
+  BackupReplayInput _replayInput(Map<String, dynamic> collections, String at) {
+    List<(String, Map<String, Object?>)> docs(String name) {
+      final value = collections[name];
+      if (value == null) return const [];
+      return [
+        for (final document in _requireDocumentListValue(value, '$at.$name'))
+          (
+            document['id'] as String,
+            _storageMap(document['data'], '$at.$name.${document['id']}'),
+          ),
+      ];
+    }
+
+    T decode<T>(String what, String id, T Function() read) {
+      try {
+        return read();
+      } on StorageFormatException catch (e) {
+        throw ImportValidationException('$at: invalid $what $id ($e)');
       }
     }
 
-    for (var offset = 0; offset < writes.length; offset += _pageSize) {
-      final end = (offset + _pageSize).clamp(0, writes.length);
-      await _gateway.writeBatch(writes.sublist(offset, end));
+    return BackupReplayInput(
+      events: [
+        for (final (id, map) in docs(learningEventsCollection))
+          decode(
+            'learning event',
+            id,
+            () => LearningEvent.fromStorage(id, map)..toStorage(),
+          ),
+      ],
+      subTracks: [
+        for (final (id, map) in docs(subTracksCollection))
+          decode('sub-track', id, () => SubTrack.fromStorage(id, map)),
+      ],
+      changeLog: [
+        for (final (id, map) in docs(changeLogCollection))
+          // Only learnerSettings entries replay (AD-49); the rest of the
+          // history is exported but never re-written.
+          if (map[ChangeLogEntry.kEntity] ==
+              GovernedEntity.learnerSettings.storage)
+            decode(
+              'change-log entry',
+              id,
+              () => ChangeLogEntry.fromStorage(id, map),
+            ),
+      ],
+      governed: {
+        for (final MapEntry(key: name, value: entity)
+            in governedCollections.entries)
+          entity: [for (final (id, map) in docs(name)) BackupDoc(id, map)],
+      },
+      pointsEntries: [
+        for (final (id, map) in docs(pointsLedgerCollection))
+          if (!isEventPointsEntry(id, map)) BackupDoc(id, map),
+      ],
+      rewardRedemptions: [
+        for (final (id, map) in docs(rewardRedemptionsCollection))
+          BackupDoc(id, map),
+      ],
+    );
+  }
+
+  /// [value] decoded to the AD-52 storage form the domain codecs read:
+  /// instants as UTC `DateTime`s. Any other typed Firestore value has no
+  /// place in a learning record and is rejected.
+  Map<String, Object?> _storageMap(Object? value, String path) {
+    final decoded = _storageValue(value, path);
+    if (decoded is! Map<String, Object?>) {
+      throw ImportValidationException('$path must be an object');
     }
+    return decoded;
+  }
+
+  Object? _storageValue(Object? value, String path) {
+    if (value is List) {
+      return [for (final v in value) _storageValue(v, path)];
+    }
+    if (value is! Map) return value;
+    final map = Map<String, dynamic>.from(value);
+    final type = map[_typeKey];
+    if (type is String) {
+      switch (type) {
+        case 'map':
+          return _storageMap(map['value'], path);
+        case 'timestamp':
+          final raw = map['value'];
+          final parsed = raw is String ? DateTime.tryParse(raw) : null;
+          if (parsed == null) {
+            throw ImportValidationException('$path: invalid timestamp');
+          }
+          return parsed.toUtc();
+        default:
+          throw ImportValidationException(
+            '$path: unsupported value type $type',
+          );
+      }
+    }
+    return <String, Object?>{
+      for (final entry in map.entries)
+        entry.key: _storageValue(entry.value, path),
+    };
   }
 
   void _addWrites(

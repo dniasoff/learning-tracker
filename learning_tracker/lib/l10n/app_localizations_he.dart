@@ -5866,4 +5866,8 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get backupImportError => 'לא ניתן לשחזר את הגיבוי. נסו שוב.';
+
+  @override
+  String get backupImportNotSaved =>
+      'לא נשמר — חלק מהגיבוי לא שוחזר. לנסות שוב?';
 }

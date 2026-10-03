@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -306,13 +308,38 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
 
     setState(() => _busy = true);
     try {
-      await service.importData(json);
-      if (mounted) _showMessage(l10n.backupImportSuccess);
+      final report = await service.importData(json);
+      if (!mounted) return;
+      if (report.saved) {
+        _showMessage(l10n.backupImportSuccess);
+      } else if (report.notSavedCount > 0) {
+        _showNotSaved(report);
+      } else {
+        // Refused before writing (locked, or the record was invalid).
+        _showMessage(l10n.backupImportError);
+      }
     } catch (_) {
       if (mounted) _showMessage(l10n.backupImportError);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// AD-54 Recovery: the restore's refused writes are "not saved — retry";
+  /// Retry re-sends exactly those writes (DNI-482).
+  void _showNotSaved(BackupImportReport report) {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.backupImportNotSaved),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: l10n.actionRetry,
+          onPressed: () =>
+              unawaited(report.retryNotSaved().catchError((Object _) {})),
+        ),
+      ),
+    );
   }
 
   Future<String?> _showPasteDialog() {

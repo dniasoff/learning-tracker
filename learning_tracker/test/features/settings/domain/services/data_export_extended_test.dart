@@ -6,47 +6,45 @@ import '../../../../helpers/data_export_firestore_test_support.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 
 void main() {
-  test(
-    'export contains canonical track, stage, completion, and bookmark docs',
-    () async {
-      final firestore = FakeFirebaseFirestore();
-      await seedProfile(firestore, uid: testUid, profileId: testProfileId);
-      await seedTrack(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        curriculumId: CurriculumId.bavli,
-      );
-      await seedStageDefinitions(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        curriculumId: CurriculumId.bavli,
-      );
-      await seedCompletion(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        curriculumId: CurriculumId.bavli,
-      );
-      await seedBookmark(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        curriculumId: CurriculumId.bavli,
-      );
+  test('export contains canonical track, stage and bookmark docs and no '
+      'retired completions (DNI-482, AD-49)', () async {
+    final firestore = FakeFirebaseFirestore();
+    await seedProfile(firestore, uid: testUid, profileId: testProfileId);
+    await seedTrack(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    await seedStageDefinitions(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    await seedCompletion(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    await seedBookmark(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
 
-      final profile = profileFrom(
-        await exportedMap(backupService(firestore)),
-        testProfileId,
-      );
-      final collections = profile['collections'] as Map<String, dynamic>;
-      expect(collections['curriculum_tracks'], hasLength(1));
-      expect(collections['stage_definitions'], hasLength(3));
-      expect(collections['completions'], hasLength(1));
-      expect(collections['bookmarks'], hasLength(1));
-    },
-  );
+    final profile = profileFrom(
+      await exportedMap(backupService(firestore)),
+      testProfileId,
+    );
+    final collections = profile['collections'] as Map<String, dynamic>;
+    expect(collections['curriculum_tracks'], hasLength(1));
+    expect(collections['stage_definitions'], hasLength(3));
+    expect(collections.containsKey('completions'), isFalse);
+    expect(collections['bookmarks'], hasLength(1));
+  });
 
   test('import writes the same nested document ids and values', () async {
     final source = FakeFirebaseFirestore();

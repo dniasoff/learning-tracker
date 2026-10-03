@@ -9850,6 +9850,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t restore the backup. Please try again.'**
   String get backupImportError;
+
+  /// Snackbar after a backup restore when the server refused some of the replayed learning writes (AD-49, AD-54 Recovery: not saved — retry). Shown with a Retry action that re-sends exactly those writes. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Not saved — part of the backup was not restored. Retry?'**
+  String get backupImportNotSaved;
 }
 
 class _AppLocalizationsDelegate

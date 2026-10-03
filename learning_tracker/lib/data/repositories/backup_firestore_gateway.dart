@@ -21,10 +21,15 @@ abstract interface class BackupFirestoreGateway {
 }
 
 final class BackupDocumentWrite {
-  const BackupDocumentWrite(this.path, this.data);
+  const BackupDocumentWrite(this.path, this.data, {this.merge = false});
 
   final String path;
   final Map<String, dynamic> data;
+
+  /// Whether [data] merges into the stored doc (`set(merge: true)`) rather
+  /// than replacing it — used for a learner profile doc, whose governed
+  /// settings keys a restore never overwrites (AD-37, AD-49).
+  final bool merge;
 }
 
 /// Account-bound backup access resolved from the active authenticated session.
@@ -94,7 +99,11 @@ final class _FirebaseBackupFirestoreGateway implements BackupFirestoreGateway {
   Future<void> writeBatch(List<BackupDocumentWrite> writes) async {
     final batch = _firestore.batch();
     for (final write in writes) {
-      batch.set(_firestore.doc(write.path), write.data);
+      batch.set(
+        _firestore.doc(write.path),
+        write.data,
+        SetOptions(merge: write.merge),
+      );
     }
     await batch.commit();
   }

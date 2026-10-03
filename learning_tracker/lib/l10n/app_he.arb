@@ -3271,5 +3271,6 @@
   },
   "backupImportConfirm": "שחזור גיבוי",
   "backupImportSuccess": "הגיבוי שוחזר בהצלחה.",
-  "backupImportError": "לא ניתן לשחזר את הגיבוי. נסו שוב."
+  "backupImportError": "לא ניתן לשחזר את הגיבוי. נסו שוב.",
+  "backupImportNotSaved": "לא נשמר — חלק מהגיבוי לא שוחזר. לנסות שוב?"
 }
