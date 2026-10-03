@@ -139,7 +139,6 @@ Widget _buildScreen({Locale locale = const Locale('en')}) {
       ),
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
-          ownsBookmark: () => true,
           contentRepository: content,
           commands: () async =>
               throw Exception('test-forced capture write failure'),
