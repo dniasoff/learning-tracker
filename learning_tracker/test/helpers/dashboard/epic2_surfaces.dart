@@ -16,6 +16,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_body.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
@@ -27,6 +29,7 @@ import 'package:learning_tracker/features/progress/domain/models/journey_view_mo
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -126,6 +129,31 @@ List<Override> epic2SurfaceOverrides({
     (ref) async => ContentIndex.fromCurricula(const {}),
   ),
 ];
+
+/// The learner's on-home sub-tracks School and Rebbe (the ids of the
+/// forecast fixtures' sub-track states), so the Dashboard summary cards
+/// and the Learn rows render for them.
+List<Override> epic2SubTrackOverrides() => [
+  subTracksForScopeProvider.overrideWith(
+    (ref, _) => Stream.value([
+      _subTrack(schoolSubTrackId, 'School'),
+      _subTrack(rebbeSubTrackId, 'Rebbe'),
+    ]),
+  ),
+];
+
+SubTrack _subTrack(String id, String name) => SubTrack(
+  id: id,
+  curriculumId: forecastCurriculum,
+  name: name,
+  type: SubTrackType.ongoing,
+  windowStart: '2026-09-01',
+  ratePerWeek: 3,
+  weeksPerYear: 40,
+  learnsOnShabbos: false,
+  ground: const [NodeEntry(level: 'masechta', ref: 'Mishnah Berakhot')],
+  lastChangeId: '01J6Q2H4A8M7K3P9R5T6V8WX90',
+);
 
 Widget _routed(StackRouter router, Widget child) =>
     StackRouterScope(controller: router, stateHash: 0, child: child);
