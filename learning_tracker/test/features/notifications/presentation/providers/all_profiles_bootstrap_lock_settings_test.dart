@@ -232,9 +232,9 @@ void main() {
     final before = gateway.reminderBatches[_inactiveProfileId]!;
     expect(before, hasLength(14));
     expect(before.any((t) => _isSaturday(t.toUtc())), isTrue);
-    expect(gateway.streakPredicates[_inactiveProfileId], isNotNull);
-    final saturday = before.firstWhere((t) => _isSaturday(t.toUtc())).toUtc();
-    expect(gateway.streakPredicates[_inactiveProfileId]!(saturday), isFalse);
+    // DNI-479 cancels streak alerts for inactive profiles because their
+    // streak state is not evaluated on this device.
+    expect(gateway.streakPredicates[_inactiveProfileId], isNull);
     // The active profile is owned by the reactive effects, never here.
     expect(gateway.reminderBatches.containsKey(_activeProfileId), isFalse);
 
@@ -253,12 +253,6 @@ void main() {
           'the NEW lock predicate: no reminder may fire inside the new lock.',
     );
     expect(after, hasLength(12));
-    expect(
-      gateway.streakPredicates[_inactiveProfileId]!(saturday),
-      isTrue,
-      reason:
-          'The inactive learner\'s streak alerts must be rescheduled with the '
-          'NEW lock predicate, so occurrences inside the new lock are dropped.',
-    );
+    expect(gateway.streakPredicates[_inactiveProfileId], isNull);
   });
 }
