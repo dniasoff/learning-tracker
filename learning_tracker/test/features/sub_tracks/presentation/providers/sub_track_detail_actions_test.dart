@@ -1,13 +1,17 @@
 // Mirror test for
 // `lib/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart`
-// (DNI-497): the ⋮ registry, hub selection and the hub-row tap.
+// (DNI-497): the ⋮ registry, hub selection, the hub-row tap and the
+// no-deadline link's goal setup.
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/learner_state/engine_fixtures.dart';
@@ -101,6 +105,70 @@ void main() {
       final container = await pumpRow(tester, split: true);
       verifyNever(() => router.push<Object?>(any()));
       expect(container.read(subTrackHubSelectionProvider), school.id);
+    });
+  });
+
+  group('openSubTrackDeadlineSetup (AC-2, Story 2.4 link)', () {
+    Future<List<CurriculumId>> tapLink(
+      WidgetTester tester,
+      List<SubTrackGoalSetupOutcome> outcomes,
+    ) async {
+      final opened = <CurriculumId>[];
+      final pending = [...outcomes];
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [
+            subTrackGoalSetupLauncherProvider.overrideWithValue((
+              context,
+              ref,
+              curriculum,
+            ) async {
+              opened.add(curriculum);
+              return pending.removeAt(0);
+            }),
+          ],
+          child: Scaffold(
+            body: Consumer(
+              builder: (context, ref, _) => TextButton(
+                onPressed: () => ref.read(subTrackDeadlineSetupProvider)!(
+                  context,
+                  ref,
+                  engineCurriculum,
+                ),
+                child: const Text('link'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('link'));
+      await tester.pumpAndSettle();
+      return opened;
+    }
+
+    testWidgets('is bound by default and opens the curriculum goal setup; a '
+        'saved goal is confirmed', (tester) async {
+      final opened = await tapLink(tester, [SubTrackGoalSetupOutcome.saved]);
+      expect(opened, [CurriculumId.fromStorageKey(engineCurriculum)]);
+      expect(find.text('Goal saved'), findsOneWidget);
+    });
+
+    testWidgets('a failed save reports it with a retry that reopens the '
+        'goal setup', (tester) async {
+      final opened = await tapLink(tester, [
+        SubTrackGoalSetupOutcome.failed,
+        SubTrackGoalSetupOutcome.cancelled,
+      ]);
+      expect(opened, hasLength(1));
+      expect(find.text("Couldn't save the goal."), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(opened, hasLength(2));
+    });
+
+    testWidgets('a cancelled setup shows nothing', (tester) async {
+      await tapLink(tester, [SubTrackGoalSetupOutcome.cancelled]);
+      expect(find.byType(SnackBar), findsNothing);
     });
   });
 

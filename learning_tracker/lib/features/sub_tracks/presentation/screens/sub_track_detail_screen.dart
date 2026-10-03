@@ -2,6 +2,8 @@
 /// "Up next", "{n} ticked", capacity vs path and the ordered ground.
 library;
 
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -127,7 +129,7 @@ class _DetailBody extends ConsumerWidget {
           detail: detail,
           onSetDeadline: setup == null
               ? null
-              : () => setup(context, track.curriculumId),
+              : () => unawaited(setup(context, ref, track.curriculumId)),
         ),
         const SizedBox(height: 20),
         Semantics(

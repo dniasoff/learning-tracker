@@ -1130,18 +1130,6 @@ abstract class AppLocalizations {
   /// **'Shortfall: {count}'**
   String subTrackDetailShortfall(int count);
 
-  /// Sub-track detail: parent note when the curriculum has no deadline; Story 2.4 (DNI-495) wording, reused verbatim (DNI-497 AC-2). DRAFT copy, pending zc4.
-  ///
-  /// In en, this message translates to:
-  /// **'Without a deadline, a sub-track can\'t lower the daily target.'**
-  String get subTrackDetailNoDeadlineNote;
-
-  /// Sub-track detail: link from the no-deadline note to the curriculum's goal setup; Story 2.4 (DNI-495) wording (DNI-497 AC-2). DRAFT copy, pending zc4.
-  ///
-  /// In en, this message translates to:
-  /// **'Set a deadline'**
-  String get subTrackDetailNoDeadlineLink;
-
   /// Sub-track detail: section header over the ordered ground list (DNI-497 AC-1).
   ///
   /// In en, this message translates to:

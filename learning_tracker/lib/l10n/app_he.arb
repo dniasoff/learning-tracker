@@ -310,8 +310,6 @@
   "subTrackDetailCapacityCaption": "מסלול שנותר: {path} · קיבולת כוללת: {capacity}",
   "subTrackDetailNoShortfall": "אין חוסר",
   "subTrackDetailShortfall": "חוסר: {count}",
-  "subTrackDetailNoDeadlineNote": "ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.",
-  "subTrackDetailNoDeadlineLink": "הגדרת תאריך יעד",
   "subTrackDetailGroundTitle": "חומר (לפי הסדר)",
   "subTrackDetailGroundEmpty": "אין עדיין חומר",
   "subTrackDetailLearntOf": "{learnt} מתוך {total} נלמדו",
