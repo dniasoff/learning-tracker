@@ -15,6 +15,8 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/erev_planned_tasks_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/erev_banner.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/also_learning_slot.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/catch_up_cards_slot.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/erev_planned_slot.dart';
@@ -104,6 +106,7 @@ class LearningScreen extends ConsumerWidget {
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(allDailyTasksProvider);
+                  ref.invalidate(erevWindowProvider);
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
                   ref.invalidate(dashboardStreakProvider);
                 },
@@ -114,6 +117,9 @@ class LearningScreen extends ConsumerWidget {
                     // sub-track rows (keeps itself alive in the list).
                     const PendingCaptureRollback(),
                     const SizedBox(height: 18),
+                    // Erev (DNI-504): the banner is the tab's first
+                    // focusable element (AC-11); zero size otherwise.
+                    const ErevBannerSlot(),
                     _StreakHeroCard(
                       streakAsync: streakAsync,
                       onRetry: () => ref.invalidate(dashboardStreakProvider),
