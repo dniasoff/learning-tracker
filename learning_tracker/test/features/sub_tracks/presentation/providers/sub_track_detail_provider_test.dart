@@ -110,6 +110,57 @@ void main() {
     );
   });
 
+  test(
+    'fails closed on a rejected sibling sub-track, a rejected event or '
+    'rejected learner-state rows, and recovers once the reads are clean',
+    () async {
+      final school = detailSubTrack(10, 'School', const [berakhot1, peah]);
+      h.seed(subTracks: [school]);
+      final c = container();
+      expect((await settle(c, school.id)).hasValue, isTrue);
+
+      // A malformed SIBLING (not the requested sub-track) would vanish from
+      // the held-by-others labels and the ground availability.
+      h.repository.seedRejected([RejectedRow(engineUlid(11), 'bad')]);
+      await pumpEventQueue();
+      final sibling = c.read(subTrackDetailProvider(school.id));
+      expect(sibling.hasValue, isFalse);
+      expect(sibling.error, isA<SubTrackDetailUnavailable>());
+
+      h.repository.seedRejected(const []);
+      await pumpEventQueue();
+      expect(c.read(subTrackDetailProvider(school.id)).hasValue, isTrue);
+
+      // A malformed learn event would vanish from the counted progress.
+      h.events.seedRejected(h.scope, [RejectedRow(engineUlid(12), 'bad')]);
+      await pumpEventQueue();
+      final event = c.read(subTrackDetailProvider(school.id));
+      expect(event.hasValue, isFalse);
+      expect(event.error, isA<SubTrackDetailUnavailable>());
+    },
+  );
+
+  test('fails closed when the learner state carries rejected rows', () async {
+    final school = detailSubTrack(10, 'School', const [peah]);
+    h.seed(subTracks: [school]);
+    final clean = engineDetailState(school);
+    final value = await settle(
+      container(
+        state: Stream.value(
+          LearnerState(
+            nowUtc: clean.nowUtc,
+            curricula: clean.curricula,
+            countedEventIds: clean.countedEventIds,
+            rejectedRows: [RejectedRow(engineUlid(13), 'bad')],
+          ),
+        ),
+      ),
+      school.id,
+    );
+    expect(value.hasValue, isFalse);
+    expect(value.error, isA<SubTrackDetailUnavailable>());
+  });
+
   test('an engine error is forwarded', () async {
     final school = detailSubTrack(10, 'School', const [peah]);
     h.seed(subTracks: [school]);

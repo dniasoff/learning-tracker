@@ -3,7 +3,8 @@
 /// [subTrackDetailProvider] joins the selected sub-track's complete read,
 /// the learner's complete [LearnerState], its corpus and its counted
 /// events, and publishes a [SubTrackDetail] only once every input is
-/// complete (`AsyncLoading` until then; the first error wins). It reads
+/// complete (`AsyncLoading` until then; the first error wins) and every
+/// read decoded cleanly (any rejected row is a typed error). It reads
 /// the engine's values and never computes position, progress, capacity,
 /// shortfall or return itself.
 ///
@@ -34,7 +35,8 @@ import 'package:learning_tracker/features/sub_tracks/domain/sub_track_ground_pro
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 /// The detail cannot load: no learner is active, a repository is not
-/// ready, or the sub-track is missing or undecodable. Rendered through
+/// ready, the sub-track is missing, or any row of the joined complete
+/// reads (sub-tracks, learning events, the learner state) is undecodable. Rendered through
 /// `AppErrorView` with retry (UX-DR-123).
 final class SubTrackDetailUnavailable implements Exception {
   /// Creates the error for [reason].
@@ -62,9 +64,12 @@ final subTrackDetailTracksProvider = StreamProvider.autoDispose
     }, retry: (retryCount, error) => null);
 
 /// Every learning event of [LearnerScope] from the complete read (for the
-/// learnt-at source labels); loading until complete.
+/// learnt-at source labels); loading until complete, never partial.
 final subTrackDetailEventsProvider = StreamProvider.autoDispose
-    .family<List<LearningEvent>, LearnerScope>((ref, scope) async* {
+    .family<CompleteReadReady<LearningEvent>, LearnerScope>((
+      ref,
+      scope,
+    ) async* {
       final repository = await ref.watch(
         learningEventRepositoryProvider.future,
       );
@@ -74,7 +79,7 @@ final subTrackDetailEventsProvider = StreamProvider.autoDispose
       yield* repository
           .watchAll(scope)
           .where((r) => r is CompleteReadReady<LearningEvent>)
-          .map((r) => (r as CompleteReadReady<LearningEvent>).items);
+          .cast<CompleteReadReady<LearningEvent>>();
     }, retry: (retryCount, error) => null);
 
 /// The viewer role of the detail.
@@ -350,10 +355,22 @@ final subTrackDetailProvider = Provider.autoDispose
         return const AsyncLoading();
       }
 
+      // Fail closed on ANY undecodable row (AD-35 "Complete inputs";
+      // CompleteReadReady.rejected must be surfaced, never dropped): a
+      // malformed sibling sub-track or learn event would otherwise vanish
+      // from the held-by-others labels, the ground availability and the
+      // counted progress, so the capacity, the ground state and the edit
+      // affordances would be computed over a partial log.
       final read = tracks.requireValue;
-      if (read.rejected.any((r) => r.docId == id)) {
+      final learner = state.requireValue;
+      final rejected = <String>[
+        if (!read.isClean) 'sub_tracks',
+        if (!events.requireValue.isClean) 'learning_events',
+        if (learner.rejectedRows.isNotEmpty) 'learner_state',
+      ];
+      if (rejected.isNotEmpty) {
         return AsyncError(
-          const SubTrackDetailUnavailable('undecodable_sub_track'),
+          SubTrackDetailUnavailable('undecodable_rows:${rejected.join(',')}'),
           StackTrace.current,
         );
       }
@@ -364,7 +381,6 @@ final subTrackDetailProvider = Provider.autoDispose
           StackTrace.current,
         );
       }
-      final learner = state.requireValue;
       final curriculum = learner[track.curriculumId];
       final corpus = corpora.requireValue[track.curriculumId];
       final engine = curriculum?.subTracks[id];
@@ -391,7 +407,7 @@ final subTrackDetailProvider = Provider.autoDispose
             corpus: corpus,
             learntLeaves: curriculum.learntLeaves,
             countedLearns: _countedLearns(
-              events.requireValue,
+              events.requireValue.items,
               learner,
               track.curriculumId,
             ),
