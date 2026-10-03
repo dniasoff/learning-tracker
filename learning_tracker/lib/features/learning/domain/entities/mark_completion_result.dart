@@ -22,7 +22,7 @@ class MarkCompletionResult {
   ///
   /// `CompletionOrchestrator` (`lib/features/learning/domain/services/
   /// completion_orchestrator.dart`) gates every post-write side effect
-  /// (points, streak, siyum detection, bookmark advance) on this flag —
+  /// (points, streak and siyum detection) on this flag —
   /// re-marking an already-completed stage must not double-credit anything.
   /// Defaults to `true` so pre-existing test doubles that construct this
   /// result without setting it (there is exactly one genuinely-new

@@ -9,7 +9,7 @@
 /// Factory constructors encode the per-entity key shape consistently.
 ///
 /// AUD-core-ids-01: the mergers whose natural key has a dedicated shape
-/// below (stage definitions, settings, bookmarks, track config, learning
+/// below (stage definitions, settings, track config, learning
 /// order) and the single-column profile-program association construct
 /// their key via these factories rather than hand-rolling `'$a|$b'`
 /// concatenation, so the shape is owned in one place. Adoption is not
@@ -79,13 +79,6 @@ extension type NaturalKey(String value) implements String {
 
   /// Natural key for curriculum settings: `(curriculumId)`.
   factory NaturalKey.forSettings({required String curriculumId}) =>
-      NaturalKey(curriculumId);
-
-  // ── Bookmark ────────────────────────────────────────────────────────────────
-
-  /// Natural key for a bookmark: `curriculumId` (one track per profile +
-  /// curriculum).
-  factory NaturalKey.forBookmark({required String curriculumId}) =>
       NaturalKey(curriculumId);
 
   // ── Learner profile ─────────────────────────────────────────────────────────

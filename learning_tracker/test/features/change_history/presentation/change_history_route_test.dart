@@ -112,6 +112,7 @@ void main() {
       final childMode = _MockChildModeGuard();
       final pin = _MockPinGuard();
       final router = AppRouter(
+        sacredTimeLocationGuard: _MockAuthGuard(),
         authGuard: _MockAuthGuard(),
         profileGuard: _MockProfileGuard(),
         childModeGuard: childMode,
@@ -137,6 +138,7 @@ void main() {
 
     test('a router built without session wiring refuses the route', () async {
       final router = AppRouter(
+        sacredTimeLocationGuard: _MockAuthGuard(),
         authGuard: _MockAuthGuard(),
         profileGuard: _MockProfileGuard(),
         childModeGuard: _MockChildModeGuard(),

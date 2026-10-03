@@ -1,6 +1,7 @@
 @Tags(['l1', 'settings', 'backup_sync'])
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,8 +11,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/data_export_import_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/firestore_sync_status_providers.dart';
@@ -39,10 +44,40 @@ class _RecordingDelivery implements BackupFileDelivery {
   Future<void> share(String value) async => json = value;
 }
 
+/// A [BackupLearningPort] whose replay result is scripted (DNI-482).
+class _ScriptedPort implements BackupLearningPort {
+  _ScriptedPort([
+    this.result = const BackupReplayResult(result: CaptureResult.success()),
+  ]);
+
+  BackupReplayResult result;
+  final List<String> retried = [];
+
+  @override
+  Future<List<LearningEvent>> readLearningEvents(String profileId) async =>
+      const [];
+
+  @override
+  Future<List<SubTrack>> readSubTracks(String profileId) async => const [];
+
+  @override
+  Future<BackupReplayResult> replay(
+    String profileId,
+    BackupReplayInput input,
+  ) async => result;
+
+  @override
+  Future<CaptureResult> retry(String profileId, String id) async {
+    retried.add(id);
+    return const CaptureResult.success();
+  }
+}
+
 class _TrackingService extends DataExportImportService {
-  _TrackingService(FakeFirebaseFirestore firestore)
+  _TrackingService(FakeFirebaseFirestore firestore, [BackupLearningPort? port])
     : super(
         firestore: firestore,
+        learning: port ?? _ScriptedPort(),
         uid: testUid,
         appVersionFetcher: () async => 'widget-test',
       );
@@ -50,9 +85,9 @@ class _TrackingService extends DataExportImportService {
   bool importCalled = false;
 
   @override
-  Future<void> importData(String jsonString) async {
+  Future<BackupImportReport> importData(String jsonString) async {
     importCalled = true;
-    await super.importData(jsonString);
+    return super.importData(jsonString);
   }
 }
 
@@ -109,6 +144,7 @@ void main() {
     final firestore = await _seedFirestore();
     final service = DataExportImportService(
       firestore: firestore,
+      learning: _ScriptedPort(),
       uid: testUid,
       appVersionFetcher: () async => 'widget-test',
     );
@@ -158,6 +194,103 @@ void main() {
     await tester.tap(find.text('Restore backup'));
     await tester.pumpAndSettle();
     expect(service.importCalled, isTrue);
+  });
+
+  testWidgets('a restore the server partly refused shows "not saved — retry" '
+      'and Retry re-sends exactly those writes (DNI-482, AD-54)', (
+    tester,
+  ) async {
+    final firestore = await _seedFirestore();
+    const failure = PendingFailure(
+      id: '01ARZ3NDEKTSV4RRFFQ69G5FAA',
+      eventIds: ['01ARZ3NDEKTSV4RRFFQ69G5FAA'],
+      changeIds: [],
+      reason: PendingFailureReason.permissionDenied,
+    );
+    final port = _ScriptedPort(
+      const BackupReplayResult(
+        result: CaptureResult.success(),
+        notSaved: [failure],
+      ),
+    );
+    final service = _TrackingService(firestore, port);
+    final json = await service.exportData();
+
+    await tester.pumpWidget(
+      _buildHarness(service: service, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import backup'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), json);
+    await tester.tap(find.text('Preview backup'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore backup'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // snackbar enters
+
+    expect(
+      find.text('Not saved — part of the backup was not restored. Retry?'),
+      findsOneWidget,
+    );
+    expect(find.text('Backup restored successfully.'), findsNothing);
+    await tester.tap(find.widgetWithText(SnackBarAction, 'Retry'));
+    await tester.pump();
+    expect(port.retried, [failure.id]);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('a queued restore the server later refuses turns into "not '
+      'saved — retry" (DNI-482, AD-54)', (tester) async {
+    final firestore = await _seedFirestore();
+    const failure = PendingFailure(
+      id: '01ARZ3NDEKTSV4RRFFQ69G5FAA',
+      eventIds: ['01ARZ3NDEKTSV4RRFFQ69G5FAA'],
+      changeIds: [],
+      reason: PendingFailureReason.permissionDenied,
+    );
+    final settled = Completer<void>();
+    var isSettled = false;
+    final failures = <PendingFailure>[];
+    final port = _ScriptedPort(
+      BackupReplayResult(
+        result: const CaptureResult.success(),
+        liveNotSaved: () => failures,
+        isSettled: () => isSettled,
+        settled: settled.future,
+      ),
+    );
+    final service = _TrackingService(firestore, port);
+    final json = await service.exportData();
+
+    await tester.pumpWidget(
+      _buildHarness(service: service, locale: const Locale('en')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import backup'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), json);
+    await tester.tap(find.text('Preview backup'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore backup'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Backup restored successfully.'), findsOneWidget);
+
+    failures.add(failure);
+    isSettled = true;
+    settled.complete();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 5)); // first snackbar times out
+    await tester.pumpAndSettle(); // it leaves; the next one enters
+    expect(
+      find.text('Not saved — part of the backup was not restored. Retry?'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(SnackBarAction, 'Retry'));
+    await tester.pump();
+    expect(port.retried, [failure.id]);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('service error renders the app error state', (tester) async {
@@ -285,7 +418,11 @@ void main() {
     tester,
   ) async {
     final firestore = await _seedFirestore();
-    final service = DataExportImportService(firestore: firestore, uid: testUid);
+    final service = DataExportImportService(
+      firestore: firestore,
+      learning: _ScriptedPort(),
+      uid: testUid,
+    );
     await tester.pumpWidget(
       _buildHarness(service: service, locale: const Locale('he')),
     );
@@ -305,7 +442,11 @@ void main() {
     tester,
   ) async {
     final firestore = await _seedFirestore();
-    final service = DataExportImportService(firestore: firestore, uid: testUid);
+    final service = DataExportImportService(
+      firestore: firestore,
+      learning: _ScriptedPort(),
+      uid: testUid,
+    );
 
     await tester.pumpWidget(
       _buildHarness(service: service, locale: const Locale('en')),
@@ -328,7 +469,11 @@ void main() {
     tester,
   ) async {
     final firestore = await _seedFirestore();
-    final service = DataExportImportService(firestore: firestore, uid: testUid);
+    final service = DataExportImportService(
+      firestore: firestore,
+      learning: _ScriptedPort(),
+      uid: testUid,
+    );
 
     await tester.pumpWidget(
       _buildHarness(service: service, locale: const Locale('en')),

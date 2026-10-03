@@ -9,7 +9,10 @@
 //       Add Track button must NOT appear (child cannot add tracks).
 //   6.  Empty state (tutor session, canEditLearning=false) — 'Ask a grown-up';
 //       Add Track button absent (tutor without edit-stages permission).
-//   7.  Empty state (tutor session, canEditLearning=true) — Add Track button IS shown.
+//   7.  Empty state (tutor session, canEditLearning=true) — still no Add Track
+//       button: adding a track has no governed tutor path yet (DNI-486,
+//       learning-tracker-fyh.212), so it would only write into the talmid's
+//       tree from this device.
 //   8.  PRODUCT INVARIANT: tutor canMarkLiveCompletion is always false — the
 //       active tutor selection fixture verifies the TutorPermissions VO enforces
 //       this at model level (no live-mark gating in LearningScreen itself; the
@@ -427,26 +430,28 @@ void main() {
 
   // ── 7. Empty state (tutor session, canEditLearning=true) ──────────────────────
 
-  testWidgets(
-    'empty state (tutor, canEditLearning=true): Add Track button IS shown',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildScreen(
-          curricula: const [],
-          // Tutor WITH canEditLearning permission.
-          tutorPerms: const TutorPermissions(canEditLearning: true),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+  testWidgets('empty state (tutor, canEditLearning=true): no Add Track button '
+      '(DNI-486: add-track has no governed tutor path)', (tester) async {
+    await tester.pumpWidget(
+      _buildScreen(
+        curricula: const [],
+        // Tutor WITH canEditLearning permission.
+        tutorPerms: const TutorPermissions(canEditLearning: true),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('No active tracks'), findsOneWidget);
-      expect(find.text('Add Track'), findsOneWidget);
+    expect(find.text('No active tracks'), findsOneWidget);
+    expect(find.text('Add Track'), findsNothing);
+    expect(
+      find.text('Ask a grown-up to add a learning track.'),
+      findsOneWidget,
+    );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
   // ── 8. Product invariant: tutor canMarkLiveCompletion is always false ────────
 

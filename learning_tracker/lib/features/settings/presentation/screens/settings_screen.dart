@@ -142,13 +142,10 @@ class SettingsScreen extends ConsumerWidget {
               // escalating actions (AN-2 pattern) instead of gating the
               // whole Settings screen, which children legitimately need for
               // their own profile preferences.
+              // Passed unresolved: the card disables its actions until the
+              // guard settles (fail closed on loading / error).
               SacredTimeSettingsCard(
-                pinGuardRequired:
-                    ref
-                        .watch(sacredTimeLocationPinGuardRequiredProvider)
-                        .asData
-                        ?.value ??
-                    false,
+                pinGuard: ref.watch(sacredTimeLocationPinGuardRequiredProvider),
                 activeProfileId: deviceOwnerProfileId,
               ),
               const SizedBox(height: 24),

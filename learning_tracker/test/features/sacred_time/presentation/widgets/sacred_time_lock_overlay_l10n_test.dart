@@ -146,4 +146,51 @@ void main() {
       );
     });
   });
+
+  // DNI-481 AC-1 edge row: accessibility and display resilience — the
+  // greeting is the only semantics, in light and dark, LTR and RTL.
+  group('SacredTimeLockOverlay — semantics expose the greeting only', () {
+    for (final (name, theme, locale, greeting) in [
+      ('light en', ThemeData.light(), const Locale('en'), 'Good Shabbos'),
+      ('dark he', ThemeData.dark(), const Locale('he'), 'שבת שלום'),
+    ]) {
+      testWidgets(name, (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              currentSacredWindowProvider.overrideWithValue(
+                _windowOf(SacredWindowKind.shabbos),
+              ),
+              useHebrewTermsProvider.overrideWithValue(
+                locale.languageCode == 'he',
+              ),
+              currentTransliterationVariantProvider.overrideWithValue(
+                TransliterationVariant.ashkenazi,
+              ),
+            ],
+            child: MaterialApp(
+              theme: theme,
+              locale: locale,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const SacredTimeLockOverlay(
+                child: Scaffold(body: Text('BEHIND THE LOCK')),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.bySemanticsLabel(RegExp(greeting)), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('BEHIND THE LOCK')), findsNothing);
+        expect(tester.takeException(), isNull);
+        semantics.dispose();
+      });
+    }
+  });
 }

@@ -25,7 +25,7 @@ import {
 // A. GOVERNED callables (sub-tracks AD-38 / AD-53, Story 1.10 / DNI-472) —
 //    tutorUpsertGoal, tutorDeleteGoal, tutorUpsertTrack, tutorDeleteTrack,
 //    tutorUpsertStudyDayConfig, tutorDeleteStudyDayConfig,
-//    tutorUpsertStageDefinition, tutorUpsertCurriculumScope and
+//    tutorReplaceStudyDays (Story 1.24), tutorUpsertStageDefinition, tutorUpsertCurriculumScope and
 //    tutorSetProfileProgram. Each one is a thin adapter: it maps its stable
 //    legacy request ({grantId, ownerUid, profileId, <id>, <data>} plus the
 //    optional client ULID `actionId`) onto storage-shaped patches and writes
@@ -35,9 +35,8 @@ import {
 //    validation, field-level merges, the `change_log` entry, tombstones and
 //    idempotent replay. None of these callables checks a permission itself.
 //
-// B. LEGACY callables not governed by AD-38 — tutorResetCompletion,
-//    tutorUpdateGamificationSettings, tutorUpsertBookmark (retired at the
-//    cutover) and tutorEditProfile. They keep the per-call grant contract:
+// B. LEGACY callables not governed by AD-38 — tutorUpdateGamificationSettings
+//    and tutorEditProfile. They keep the per-call grant contract:
 //      1. Caller must be authenticated.
 //      2. Grant must be active and grant.tutor_uid must equal the caller uid.
 //      3. grant.parent_uid must equal the supplied ownerUid.
@@ -50,47 +49,12 @@ import {
 // Admin SDK bypasses Firestore Security Rules — these checks are the sole
 // enforcement layer for these write paths.
 
-// ── AUD-firebase-10: field whitelist for the legacy bookmark CF ──────────────
-//
-// Admin SDK writes bypass firestore.rules entirely, so `assertAllowedFields`
-// below is the only server-side gate on WHICH fields a legacy caller may write
-// and how large they may be. The governed callables are validated against the
-// AD-52 storage schema by `writeWithChangeLog` instead. preferences
-// (gamification_settings) has no rules `.hasOnly()` counterpart, so only the
-// size cap applies there (the `null` allowedKeys call site below).
-
-const BOOKMARK_ALLOWED_FIELDS = [
-  "profile_id", "curriculum_id", "content_item_id", "sefaria_ref",
-  "stage_id", "updated_at", "synced_at",
-] as const;
-
-/**
- * Throws HttpsError('invalid-argument') if `data` contains a key outside
- * `allowedKeys`, or if any string value exceeds `maxStringLength`.
- *
- * @param data            the caller-supplied payload object (e.g. goalData).
- * @param fieldParamName  its request.data field name, used in error messages.
- * @param allowedKeys     null means the collection has no field whitelist
- *                        (no rules `.hasOnly()` counterpart) — only the size
- *                        cap is enforced.
- */
-function assertAllowedFields(
+/** Reject oversized string values in tutor-supplied settings. */
+function assertSettingsStringValues(
   data: Record<string, unknown>,
   fieldParamName: string,
-  allowedKeys: readonly string[] | null,
   maxStringLength = 5000,
 ): void {
-  if (allowedKeys !== null) {
-    const allowed = new Set<string>(allowedKeys);
-    for (const key of Object.keys(data)) {
-      if (!allowed.has(key)) {
-        throw new HttpsError(
-          "invalid-argument",
-          `${fieldParamName} contains an unexpected field: ${key}`,
-        );
-      }
-    }
-  }
   for (const [key, value] of Object.entries(data)) {
     if (typeof value === "string" && value.length > maxStringLength) {
       throw new HttpsError(
@@ -239,66 +203,6 @@ async function writeAuditLog(
     logger.warn(`writeAuditLog: failed for grant=${grantId} action=${action}`, e);
   }
 }
-
-// ── tutorResetCompletion ──────────────────────────────────────────────────────
-//
-// Deletes a completion document from the child's profile as a correction path.
-// Requires can_edit_learning (AD-53, DNI-487). Retired by Story 1.26 (DNI-488).
-//
-// Expects:
-//   {
-//     grantId: string,
-//     ownerUid: string,
-//     profileId: string,   // ULID
-//     completionId: string,   // the doc-id to delete
-//   }
-//
-// Returns: { success: true }
-
-export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, completionId } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof completionId !== "string" || !completionId)
-    throw new HttpsError("invalid-argument", "completionId must be a non-empty string");
-
-  // The grant check and the delete run in ONE transaction (AD-53, DNI-487
-  // AC-6): a revocation that commits first aborts the delete (the grant is
-  // re-read on retry and denied), so a revoked tutor can never remove a
-  // completion.
-  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
-    const verified = await verifyTutorGrant(
-      callerUid, grantId, ownerUid, profileId, "can_edit_learning", txn,
-    );
-    const completionRef = verified.profilePath.collection("completions").doc(completionId);
-    // Capture before-value for audit log.
-    const beforeSnap = await txn.get(completionRef);
-    txn.delete(completionRef);
-    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
-  });
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "completion_reset",
-    `profile/${profileId}/completions/${completionId}`,
-    beforeValue, null, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorResetCompletion: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} completionId=${completionId}`,
-  );
-
-  return { success: true };
-});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // A. Governed callables — rerouted through writeWithChangeLog (AD-38, AD-53)
@@ -500,6 +404,54 @@ export const tutorDeleteStudyDayConfig = governedTombstone({
   entity: "mainTrackStudyDays", idParam: "configId", auditAction: "study_day_config_deleted",
 });
 
+// tutorReplaceStudyDays — { curriculumId, upserts: [{ configId, configData }],
+// removedConfigIds: string[], actionId? } (mainTrackStudyDays, Story 1.24 /
+// DNI-486). Replaces a curriculum's study-day schedule as ONE action: every
+// upsert and every `ended_at` tombstone is a doc of ONE mainTrackStudyDays
+// change_log entry (entity_id = curriculumId) under ONE action_id, written in
+// one writeWithChangeLog transaction — all or nothing, one push (AD-38,
+// AD-39). writeWithChangeLog owns the grant check, payload validation and
+// the rule that every doc belongs to `curriculumId`.
+
+/** A week holds 7 days; a replace touches each day's doc at most once. */
+const MAX_STUDY_DAY_DOCS = 7;
+
+export const tutorReplaceStudyDays = onCall(CALL_OPTS, (request) => runGoverned("mainTrackStudyDays", async () => {
+  const args = parseLegacyGovernedArgs(request.data, "curriculumId");
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const upserts = data.upserts ?? [];
+  const removed = data.removedConfigIds ?? [];
+  if (!Array.isArray(upserts)) throw new HttpsError("invalid-argument", "upserts must be an array");
+  if (!Array.isArray(removed)) throw new HttpsError("invalid-argument", "removedConfigIds must be an array");
+  const collection = ENTITY_COLLECTION.mainTrackStudyDays;
+  const seen = new Set<string>();
+  const claim = (docId: unknown): string => {
+    if (!isDocIdSafe(docId)) throw new HttpsError("invalid-argument", "configId must be a non-empty string");
+    if (seen.has(docId)) throw new HttpsError("invalid-argument", "Each config may appear once");
+    seen.add(docId);
+    return docId;
+  };
+  const docs = [
+    ...upserts.map((u: unknown) => {
+      const entry = (u ?? {}) as Record<string, unknown>;
+      return { collection, docId: claim(entry.configId), fields: parseLegacyData(entry, "configData") };
+    }),
+    ...removed.map((id: unknown) => ({ collection, docId: claim(id), fields: { ended_at: TOMBSTONE } })),
+  ];
+  if (docs.length === 0) throw new HttpsError("invalid-argument", "Nothing to replace");
+  if (docs.length > MAX_STUDY_DAY_DOCS) {
+    throw new HttpsError("invalid-argument", `At most ${MAX_STUDY_DAY_DOCS} study-day configs`);
+  }
+  return writeWithChangeLog(request.auth, {
+    ownerUid: args.ownerUid,
+    profileId: args.profileId,
+    grantId: args.grantId,
+    actionId: args.actionId,
+    auditAction: "study_days_replaced",
+    entries: [{ entity: "mainTrackStudyDays", entityId: args.targetId, docs }],
+  });
+}));
+
 // tutorSetProfileProgram — { programId: curriculumId, programData } (mainTrackProgram).
 export const tutorSetProfileProgram = governedUpsert({
   entity: "mainTrackProgram", idParam: "programId", dataParam: "programData",
@@ -561,7 +513,7 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
   // No firestore.rules `.hasOnly()` counterpart for preferences/{scope} — it's
   // intentionally an open-ended bag even for the owner's own direct writes,
   // so only the size cap applies here (null = no key whitelist).
-  assertAllowedFields(settingsData, "settingsData", null);
+  assertSettingsStringValues(settingsData, "settingsData");
 
   // Grant check and write in ONE transaction, so a revocation or permission
   // change that commits first aborts the write (DNI-487 review).
@@ -590,71 +542,6 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
   logger.info(
     `tutorUpdateGamificationSettings: tutor=${callerUid} grant=${grantId} ` +
       `ownerUid=${ownerUid} profileId=${profileId} permKey=${permKey}`,
-  );
-
-  return { success: true };
-});
-
-// ── tutorUpsertBookmark ───────────────────────────────────────────────────────
-//
-// Creates or updates a bookmark document in the child's profile.
-// Requires can_edit_learning (AD-53, DNI-487): bookmarks are part of the
-// learning position. Retired by Story 1.16 (DNI-478).
-//
-// Expects:
-//   {
-//     grantId, ownerUid, profileId,
-//     bookmarkId: string,       // bookmarks doc-id ("{curriculum_id}_{track_type}")
-//     bookmarkData: object,
-//   }
-// Returns: { success: true }
-
-export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
-  const callerUid = request.auth?.uid;
-  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
-
-  const { grantId, ownerUid, profileId, bookmarkId, bookmarkData } = request.data ?? {};
-
-  if (typeof grantId !== "string" || !grantId)
-    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
-  if (typeof ownerUid !== "string" || !ownerUid)
-    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
-  if (typeof profileId !== "string" || !profileId)
-    throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
-  if (typeof bookmarkId !== "string" || !bookmarkId)
-    throw new HttpsError("invalid-argument", "bookmarkId must be a non-empty string");
-  if (!bookmarkData || typeof bookmarkData !== "object" || Array.isArray(bookmarkData))
-    throw new HttpsError("invalid-argument", "bookmarkData must be an object");
-  assertAllowedFields(bookmarkData, "bookmarkData", BOOKMARK_ALLOWED_FIELDS);
-
-  // The grant check, the bookmark read and the write run in ONE transaction
-  // (AD-53, DNI-487 AC-6): a turn-off or revocation that commits first aborts
-  // the write (the grant is re-read on retry and denied), so a tutor whose
-  // editing was turned off can never land a bookmark.
-  const { grant, writtenAt, beforeValue } = await db.runTransaction(async (txn) => {
-    const verified = await verifyTutorGrant(
-      callerUid, grantId, ownerUid, profileId, "can_edit_learning", txn,
-    );
-    const bookmarkRef = verified.profilePath.collection("bookmarks").doc(bookmarkId);
-    const beforeSnap = await txn.get(bookmarkRef);
-    txn.set(
-      bookmarkRef,
-      { ...bookmarkData, synced_at: verified.writtenAt },
-      { merge: true },
-    );
-    return { ...verified, beforeValue: beforeSnap.exists ? beforeSnap.data() : null };
-  });
-
-  await writeAuditLog(
-    grantId, grant, callerUid,
-    "bookmark_upserted",
-    `profile/${profileId}/bookmarks/${bookmarkId}`,
-    beforeValue, bookmarkData, writtenAt, request.data?.idempotencyKey,
-  );
-
-  logger.info(
-    `tutorUpsertBookmark: tutor=${callerUid} grant=${grantId} ` +
-      `ownerUid=${ownerUid} profileId=${profileId} bookmarkId=${bookmarkId}`,
   );
 
   return { success: true };

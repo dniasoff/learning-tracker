@@ -99,6 +99,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
     required int minute,
     required String body,
     String title = 'Streak at Risk!',
+    bool Function(DateTime utc)? isLockedAt,
   }) async {}
 
   @override
@@ -138,7 +139,7 @@ void main() {
     required bool sacredTimeActive,
     required List<DailyTask> tasks,
   }) {
-    // A scheduler with NO SacredWindowRepository: buildFireTimesForTest then
+    // A scheduler with NO lock predicate: buildFireTimesForTest then
     // performs no per-fire-time filtering, so a full 14-entry batch is built.
     // The point of the test is that the provider SCHEDULES the batch instead of
     // blanket-cancelling it — the per-fire-time suppression itself is covered

@@ -60,7 +60,7 @@ PointsLedgerRow pointsLedgerRowOf(PointsLedgerEntry entry) => PointsLedgerRow(
 /// sum left.
 ///
 /// **No interface, no `implements`** — same reasoning as
-/// `FirestoreBookmarkRepository`'s doc comment: the Drift implementation is
+/// `Firestore repository`'s doc comment: the Drift implementation is
 /// being deleted outright, not kept alongside this one.
 ///
 /// ## Owner decision 5 — the balance is DERIVED and CLAMPED, never stored

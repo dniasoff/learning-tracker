@@ -2,7 +2,7 @@
 //   tutorUpsertStageDefinition, tutorUpsertStudyDayConfig, tutorDeleteStudyDayConfig,
 //   tutorSetProfileProgram, tutorUpsertCurriculumScope — rerouted through
 //   writeWithChangeLog (sub-tracks AD-38 / AD-53, Story 1.10 / DNI-472, AC-3/AC-6);
-//   tutorUpsertBookmark — legacy, unchanged until its cutover retirement.
+//   tutorReplaceStudyDays — a whole study-day schedule as one action (Story 1.24 / DNI-486);
 // The shared rejection matrix lives in _governed_contract.mjs.
 // See _cf_helpers.mjs for the harness.
 
@@ -175,134 +175,86 @@ describe('tutor main-track configuration callables — AC-3 behaviour', () => {
   });
 });
 
-// ── tutorUpsertBookmark ───────────────────────────────────────────────────────
-describe('tutorUpsertBookmark', () => {
-  const goodArgs = {
-    grantId: GRANT,
-    ownerUid: PARENT,
-    profileId: PROFILE,
-    bookmarkId: 'talmud_bavli_standard',
-    // AUD-firebase-10: fields must be in BOOKMARK_ALLOWED_FIELDS (mirrors
-    // firestore.rules' bookmarks hasOnly() whitelist).
-    bookmarkData: { sefaria_ref: 'Berakhot.2a', stage_id: 'stage-1' },
-  };
-
+describe('tutorReplaceStudyDays — one action for the whole schedule (DNI-486)', () => {
   beforeEach(async () => {
     await clearFirestore();
+    await seedProfile();
+    await seedLearningGrant();
   });
 
-  test('unauthenticated caller → unauthenticated', async () => {
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, goodArgs, null),
-      'unauthenticated',
-    );
+  const day = (d, type = 'study') => ({ curriculum_id: C, day_of_week: d, day_type: type });
+
+  test('upserts and tombstones land as ONE change_log entry under ONE action_id', async () => {
+    await col('study_day_configs').doc(`${C}_7`).set(day(7));
+    const res = await call(fns.tutorReplaceStudyDays, {
+      ...base,
+      curriculumId: C,
+      upserts: [
+        { configId: `${C}_1`, configData: day(1) },
+        { configId: `${C}_2`, configData: day(2, 'rest') },
+      ],
+      removedConfigIds: [`${C}_7`],
+      actionId: ulid(1),
+    });
+    assert.equal(res.action_id, ulid(1));
+    const entries = await changeLog();
+    assert.equal(entries.length, 1, 'one entity, one entry');
+    const [entry] = entries;
+    assert.equal(entry.entity, 'mainTrackStudyDays');
+    assert.equal(entry.entity_id, C);
+    assert.equal(entry.action_id, ulid(1));
+    const docsTouched = new Set(Object.keys(entry.after).map((k) => k.split('.')[0]));
+    assert.deepEqual([...docsTouched].sort(), [
+      `study_day_configs/${C}_1`, `study_day_configs/${C}_2`, `study_day_configs/${C}_7`,
+    ]);
+    assert.ok((await col('study_day_configs').doc(`${C}_7`).get()).get('ended_at'));
+    assert.equal((await col('study_day_configs').doc(`${C}_2`).get()).get('day_type'), 'rest');
   });
 
-  test('missing/blank grantId → invalid-argument', async () => {
+  test('a doc of another curriculum fails the whole replace: nothing is written', async () => {
     await expectHttpsError(
-      call(fns.tutorUpsertBookmark, { ...goodArgs, grantId: '' }),
-      'invalid-argument',
-    );
-  });
-
-  test('missing/blank ownerUid → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, { ...goodArgs, ownerUid: '' }),
-      'invalid-argument',
-    );
-  });
-
-  test('non-integer profileId → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, { ...goodArgs, profileId: 1.5 }),
-      'invalid-argument',
-    );
-  });
-
-  test('missing/blank bookmarkId → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, { ...goodArgs, bookmarkId: '' }),
-      'invalid-argument',
-    );
-  });
-
-  test('bookmarkData is an array → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, { ...goodArgs, bookmarkData: [] }),
-      'invalid-argument',
-    );
-  });
-
-  test('bookmarkData is null → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, { ...goodArgs, bookmarkData: null }),
-      'invalid-argument',
-    );
-  });
-
-  // AUD-firebase-10: bookmarkData is whitelisted server-side (mirrors
-  // firestore.rules' bookmarks hasOnly()).
-  test('AUD-firebase-10: bookmarkData with an unexpected key → invalid-argument', async () => {
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, {
-        ...goodArgs,
-        bookmarkData: { sefaria_ref: 'Berakhot.2a', not_a_real_field: 'sneaky' },
+      call(fns.tutorReplaceStudyDays, {
+        ...base,
+        curriculumId: C,
+        upserts: [
+          { configId: `${C}_1`, configData: day(1) },
+          { configId: 'mishnayos_2', configData: { ...day(2), curriculum_id: 'mishnayos' } },
+        ],
+        actionId: ulid(1),
       }),
       'invalid-argument',
     );
+    assert.deepEqual(await changeLog(), []);
+    assert.equal((await col('study_day_configs').doc(`${C}_1`).get()).exists, false);
   });
 
-  test('grant does not exist → not-found', async () => {
+  test('a config named twice, or an empty replace, is rejected', async () => {
     await expectHttpsError(
-      call(fns.tutorUpsertBookmark, goodArgs),
-      'not-found',
-    );
-  });
-
-  test('grant not active → permission-denied', async () => {
-    await seedActiveGrant(
-      { can_edit_learning: true },
-      { state: 'revoked_by_parent' },
+      call(fns.tutorReplaceStudyDays, {
+        ...base,
+        curriculumId: C,
+        upserts: [{ configId: `${C}_1`, configData: day(1) }],
+        removedConfigIds: [`${C}_1`],
+      }),
+      'invalid-argument',
     );
     await expectHttpsError(
-      call(fns.tutorUpsertBookmark, goodArgs),
-      'permission-denied',
+      call(fns.tutorReplaceStudyDays, { ...base, curriculumId: C, upserts: [] }),
+      'invalid-argument',
     );
+    assert.deepEqual(await changeLog(), []);
   });
 
-  test('caller is not the grant tutor → permission-denied', async () => {
-    await seedActiveGrant({ can_edit_learning: true });
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, goodArgs, strangerAuth),
-      'permission-denied',
-    );
-  });
-
-  test('grant lacks can_edit_learning → permission-denied', async () => {
-    await seedActiveGrant({});
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, goodArgs),
-      'permission-denied',
-    );
-  });
-
-  test('happy path → upserts bookmarks doc + writes one audit-log entry', async () => {
-    await seedActiveGrant({ can_edit_learning: true });
-
-    const res = await call(fns.tutorUpsertBookmark, goodArgs);
-
-    assert.equal(res.success, true);
-
-    const bmRef = profileRef().collection('bookmarks').doc('talmud_bavli_standard');
-    const snap = await bmRef.get();
-    assert.equal(snap.exists, true, 'bookmarks doc should exist');
-
-    const audit = await db
-      .collection('tutor_grants')
-      .doc(GRANT)
-      .collection('audit_log')
-      .get();
-    assert.equal(audit.size, 1, 'exactly one audit-log entry');
+  test('a retry with the same actionId replays the stored action', async () => {
+    const args = {
+      ...base,
+      curriculumId: C,
+      upserts: [{ configId: `${C}_1`, configData: day(1) }],
+      actionId: ulid(1),
+    };
+    await call(fns.tutorReplaceStudyDays, args);
+    const again = await call(fns.tutorReplaceStudyDays, args);
+    assert.equal(again.replayed, true);
+    assert.equal((await changeLog()).length, 1);
   });
 });
-

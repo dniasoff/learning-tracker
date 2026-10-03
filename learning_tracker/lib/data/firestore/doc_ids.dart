@@ -182,21 +182,6 @@ final class DocIds {
     ].join('_');
   }
 
-  // ── streak_events ────────────────────────────────────────────────────
-
-  /// `streak_events/{ulid}` doc-id formula.
-  ///
-  /// Mirrors `FirestoreGatewayImpl.pushStreak`
-  /// (`firestore_gateway_impl.dart:299-302`): the outbox payload's `ulid`
-  /// field IS the doc id. Returns `null` when the payload carries no
-  /// `ulid` — the live gateway falls back to `collection.doc()` (a
-  /// server-assigned random id) in that case, which by construction has no
-  /// deterministic formula for this pure module to reproduce; callers must
-  /// treat `null` as "fall back to a random server-assigned id", exactly as
-  /// the gateway does today.
-  static String? streakEventDocId(Map<String, dynamic> data) =>
-      data['ulid'] as String?;
-
   // ── settings (legacy) ────────────────────────────────────────────────
 
   /// `settings/{curriculum_id}` doc-id formula (defaults to `'default'`).
@@ -298,19 +283,6 @@ final class DocIds {
   /// so the curriculum id alone is the natural key.
   static String bookmarkDocId(Map<String, dynamic> data) =>
       data['curriculum_id']?.toString() ?? '';
-
-  // ── learning_ledger ──────────────────────────────────────────────────
-
-  /// `learning_ledger/{ulid}` doc-id formula (shared by the single-entry
-  /// and batch push paths — both derive the id identically).
-  ///
-  /// Mirrors `FirestoreGatewayImpl.pushLedgerEntry`
-  /// (`firestore_gateway_impl.dart:513-516`) and
-  /// `pushLedgerEntriesBatch` (`:535-541`). Returns `null` when the payload
-  /// carries no `ulid`, matching the gateway's random-id fallback (see
-  /// [streakEventDocId] for the same contract).
-  static String? learningLedgerDocId(Map<String, dynamic> data) =>
-      data['ulid'] as String?;
 
   // ── profile_programs ─────────────────────────────────────────────────
 
@@ -525,8 +497,10 @@ final class DocIds {
   ///
   /// Mirrors `FirestoreGatewayImpl.pushPointsLedgerEntry`
   /// (`firestore_gateway_impl.dart:1216-1219`). Returns `null` when the
-  /// payload carries no `ulid`, matching the gateway's random-id fallback
-  /// (see [streakEventDocId] for the same contract). `UNIQUE(profileId,
+  /// payload carries no `ulid` — the live gateway falls back to
+  /// `collection.doc()` (a server-assigned random id), which has no
+  /// deterministic formula; callers treat `null` as "fall back to a random
+  /// server-assigned id". `UNIQUE(profileId,
   /// ulid)` (MCF-8) depends on this id always being the ledger's own ulid
   /// when present — never a re-derived or re-encoded value.
   static String? pointsLedgerDocId(Map<String, dynamic> data) =>
@@ -539,7 +513,7 @@ final class DocIds {
   /// Mirrors `FirestoreGatewayImpl.pushRewardRedemption`
   /// (`firestore_gateway_impl.dart:1239-1242`). Returns `null` when the
   /// payload carries no `ulid`, matching the gateway's random-id fallback
-  /// (see [streakEventDocId] for the same contract).
+  /// (see [pointsLedgerDocId] for the same contract).
   static String? rewardRedemptionDocId(Map<String, dynamic> data) =>
       data['ulid'] as String?;
 
@@ -584,7 +558,7 @@ final class DocIds {
   ///
   /// Reads the profile's own persisted stable ULID from the payload's
   /// `profile_ulid` field — mirroring the `data['ulid']`-echo pattern used
-  /// by [streakEventDocId]/[learningLedgerDocId]/etc. above — and mints a
+  /// by [pointsLedgerDocId]/[rewardRedemptionDocId] above — and mints a
   /// fresh one via [mintProfileUlid] only when the payload carries none yet
   /// (the profile-creation-time case). This is a profile-scoped id — NOT
   /// the path-derived local autoincrement `profileId` that

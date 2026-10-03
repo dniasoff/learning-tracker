@@ -499,21 +499,24 @@ abstract class _$RewardNotificationEnabled extends $AsyncNotifier<bool> {
 
 /// Returns true if notifications should currently be suppressed because
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
-/// notifications follow the same window the lock screen does.
+/// notifications follow the same lock the overlay does (DNI-481 AC-5: the
+/// union of `lockWindows` over the account's learners, fail-closed).
 
 @ProviderFor(isSacredTimeActive)
 final isSacredTimeActiveProvider = IsSacredTimeActiveProvider._();
 
 /// Returns true if notifications should currently be suppressed because
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
-/// notifications follow the same window the lock screen does.
+/// notifications follow the same lock the overlay does (DNI-481 AC-5: the
+/// union of `lockWindows` over the account's learners, fail-closed).
 
 final class IsSacredTimeActiveProvider
     extends $FunctionalProvider<bool, bool, bool>
     with $Provider<bool> {
   /// Returns true if notifications should currently be suppressed because
   /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
-  /// notifications follow the same window the lock screen does.
+  /// notifications follow the same lock the overlay does (DNI-481 AC-5: the
+  /// union of `lockWindows` over the account's learners, fail-closed).
   IsSacredTimeActiveProvider._()
     : super(
         from: null,
@@ -549,89 +552,6 @@ final class IsSacredTimeActiveProvider
 
 String _$isSacredTimeActiveHash() =>
     r'd1c02e4f2f10995baf550dbfde9fbfd589492dc6';
-
-/// Provides the [SacredWindowRepository] singleton.
-///
-/// Kept alive so the in-memory cache survives across provider rebuilds.
-/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
-/// on resume (DNI-367).
-///
-/// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
-/// dead — nothing in Dart read the windows back, and no native SQLite reader
-/// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
-/// device-local ("Stays local, never leaves the device") — it is not a
-/// Firestore migration target, so the repository is constructed bare.
-
-@ProviderFor(sacredWindowRepository)
-final sacredWindowRepositoryProvider = SacredWindowRepositoryProvider._();
-
-/// Provides the [SacredWindowRepository] singleton.
-///
-/// Kept alive so the in-memory cache survives across provider rebuilds.
-/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
-/// on resume (DNI-367).
-///
-/// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
-/// dead — nothing in Dart read the windows back, and no native SQLite reader
-/// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
-/// device-local ("Stays local, never leaves the device") — it is not a
-/// Firestore migration target, so the repository is constructed bare.
-
-final class SacredWindowRepositoryProvider
-    extends
-        $FunctionalProvider<
-          SacredWindowRepository,
-          SacredWindowRepository,
-          SacredWindowRepository
-        >
-    with $Provider<SacredWindowRepository> {
-  /// Provides the [SacredWindowRepository] singleton.
-  ///
-  /// Kept alive so the in-memory cache survives across provider rebuilds.
-  /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
-  /// on resume (DNI-367).
-  ///
-  /// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
-  /// dead — nothing in Dart read the windows back, and no native SQLite reader
-  /// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
-  /// device-local ("Stays local, never leaves the device") — it is not a
-  /// Firestore migration target, so the repository is constructed bare.
-  SacredWindowRepositoryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'sacredWindowRepositoryProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$sacredWindowRepositoryHash();
-
-  @$internal
-  @override
-  $ProviderElement<SacredWindowRepository> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  SacredWindowRepository create(Ref ref) {
-    return sacredWindowRepository(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SacredWindowRepository value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SacredWindowRepository>(value),
-    );
-  }
-}
-
-String _$sacredWindowRepositoryHash() =>
-    r'352f72aa0a86150457c461db1bea1a2ad7b69a86';
 
 /// Provides the [NotificationScheduler] instance.
 
@@ -684,7 +604,7 @@ final class NotificationSchedulerProvider
 }
 
 String _$notificationSchedulerHash() =>
-    r'03597a17d9f0f098a5e5e09a941b7b808db154bb';
+    r'ecdfb6c6c1e09df57f75f14e5a1d0356e3855bfa';
 
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
@@ -777,16 +697,15 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'6cbbfbddf193a5543eb3a7333cf02c4477a598a2';
+    r'b43ca4cf80aa6c2f3993a09a9218cfd72a5a5745';
 
 /// Provides the [StreakAlertService] instance for [profileId].
 ///
 /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
 /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-/// not just the active one — can construct its per-profile [StreakAlertService]
+/// not just the active one — reaches its per-profile [StreakAlertService]
 /// through this same provider seam instead of hand-constructing a second
-/// instance. A test overriding this family for a specific inactive profileId
-/// now observably changes bootstrap's behavior for that profile.
+/// instance.
 
 @ProviderFor(streakAlertService)
 final streakAlertServiceProvider = StreakAlertServiceFamily._();
@@ -795,10 +714,9 @@ final streakAlertServiceProvider = StreakAlertServiceFamily._();
 ///
 /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
 /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-/// not just the active one — can construct its per-profile [StreakAlertService]
+/// not just the active one — reaches its per-profile [StreakAlertService]
 /// through this same provider seam instead of hand-constructing a second
-/// instance. A test overriding this family for a specific inactive profileId
-/// now observably changes bootstrap's behavior for that profile.
+/// instance.
 
 final class StreakAlertServiceProvider
     extends
@@ -812,10 +730,9 @@ final class StreakAlertServiceProvider
   ///
   /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
   /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-  /// not just the active one — can construct its per-profile [StreakAlertService]
+  /// not just the active one — reaches its per-profile [StreakAlertService]
   /// through this same provider seam instead of hand-constructing a second
-  /// instance. A test overriding this family for a specific inactive profileId
-  /// now observably changes bootstrap's behavior for that profile.
+  /// instance.
   StreakAlertServiceProvider._({
     required StreakAlertServiceFamily super.from,
     required String super.argument,
@@ -869,16 +786,15 @@ final class StreakAlertServiceProvider
 }
 
 String _$streakAlertServiceHash() =>
-    r'3581f9c1156dab696c25245ec594dcd3c04968c0';
+    r'0ccf8bfa1b7043875211e752ae1f2668c5b95ddb';
 
 /// Provides the [StreakAlertService] instance for [profileId].
 ///
 /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
 /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-/// not just the active one — can construct its per-profile [StreakAlertService]
+/// not just the active one — reaches its per-profile [StreakAlertService]
 /// through this same provider seam instead of hand-constructing a second
-/// instance. A test overriding this family for a specific inactive profileId
-/// now observably changes bootstrap's behavior for that profile.
+/// instance.
 
 final class StreakAlertServiceFamily extends $Family
     with $FunctionalFamilyOverride<StreakAlertService, String> {
@@ -895,10 +811,9 @@ final class StreakAlertServiceFamily extends $Family
   ///
   /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
   /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-  /// not just the active one — can construct its per-profile [StreakAlertService]
+  /// not just the active one — reaches its per-profile [StreakAlertService]
   /// through this same provider seam instead of hand-constructing a second
-  /// instance. A test overriding this family for a specific inactive profileId
-  /// now observably changes bootstrap's behavior for that profile.
+  /// instance.
 
   StreakAlertServiceProvider call(String profileId) =>
       StreakAlertServiceProvider._(argument: profileId, from: this);
@@ -966,12 +881,24 @@ final class AllProfilesReminderBootstrapProvider
 }
 
 String _$allProfilesReminderBootstrapHash() =>
-    r'5fad9acb7f5cae30bd8dbc2314d8f002a461e3c4';
+    r'6287882d2b7b97989371d48f6b8c2c5311018e47';
 
-/// Watches streak alert settings and evaluates whether to schedule or cancel
-/// the streak protection alert.
+/// Watches the streak-alert settings and the active learner's state, and
+/// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
+/// AD-40): one alert per curriculum at risk, at most once per civil day per
+/// curriculum, none inside a lock window (the service checks
+/// `lockWindows`; a suppression is reported to analytics).
 ///
-/// Also respects sacred time mode — cancels alerts during Shabbos.
+/// Only the device's own selected profile is evaluated: in a tutored
+/// session the active learner is another profile, whose streak is not
+/// this device's to alert on. While the selected profile is not the active
+/// learner (no scope, logout, a tutored session) its alerts are cancelled,
+/// since its streak is no longer being evaluated; they are re-evaluated
+/// when it is the active learner again.
+///
+/// A run superseded while awaiting its inputs touches no alert: the alert
+/// work is serialized through [streakAlertWorkQueueProvider] and skipped
+/// once the run is stale.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -979,10 +906,22 @@ String _$allProfilesReminderBootstrapHash() =>
 @ProviderFor(streakAlertSyncEffect)
 final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
 
-/// Watches streak alert settings and evaluates whether to schedule or cancel
-/// the streak protection alert.
+/// Watches the streak-alert settings and the active learner's state, and
+/// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
+/// AD-40): one alert per curriculum at risk, at most once per civil day per
+/// curriculum, none inside a lock window (the service checks
+/// `lockWindows`; a suppression is reported to analytics).
 ///
-/// Also respects sacred time mode — cancels alerts during Shabbos.
+/// Only the device's own selected profile is evaluated: in a tutored
+/// session the active learner is another profile, whose streak is not
+/// this device's to alert on. While the selected profile is not the active
+/// learner (no scope, logout, a tutored session) its alerts are cancelled,
+/// since its streak is no longer being evaluated; they are re-evaluated
+/// when it is the active learner again.
+///
+/// A run superseded while awaiting its inputs touches no alert: the alert
+/// work is serialized through [streakAlertWorkQueueProvider] and skipped
+/// once the run is stale.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -990,10 +929,22 @@ final streakAlertSyncEffectProvider = StreakAlertSyncEffectProvider._();
 final class StreakAlertSyncEffectProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
-  /// Watches streak alert settings and evaluates whether to schedule or cancel
-  /// the streak protection alert.
+  /// Watches the streak-alert settings and the active learner's state, and
+  /// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
+  /// AD-40): one alert per curriculum at risk, at most once per civil day per
+  /// curriculum, none inside a lock window (the service checks
+  /// `lockWindows`; a suppression is reported to analytics).
   ///
-  /// Also respects sacred time mode — cancels alerts during Shabbos.
+  /// Only the device's own selected profile is evaluated: in a tutored
+  /// session the active learner is another profile, whose streak is not
+  /// this device's to alert on. While the selected profile is not the active
+  /// learner (no scope, logout, a tutored session) its alerts are cancelled,
+  /// since its streak is no longer being evaluated; they are re-evaluated
+  /// when it is the active learner again.
+  ///
+  /// A run superseded while awaiting its inputs touches no alert: the alert
+  /// work is serialized through [streakAlertWorkQueueProvider] and skipped
+  /// once the run is stale.
   ///
   /// Kept alive so that time/enable changes always trigger a reschedule,
   /// even if no UI is watching this provider at the moment.
@@ -1023,4 +974,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'ea3ca788ace18ce0eab403dd663a9f5c1f754e5b';
+    r'd3bbab20cc93df2a9e8d995df2f66fe64566235d';

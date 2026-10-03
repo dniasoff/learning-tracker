@@ -32,7 +32,7 @@ const String _kProfileSnapshotDocId = 'data';
 /// `lib/features/` reads it, the existing Drift-backed `UserProfileDao` is
 /// untouched.
 ///
-/// **No interface** — same reasoning as `FirestoreBookmarkRepository`'s doc
+/// **No interface** — same reasoning as `Firestore repository`'s doc
 /// comment.
 ///
 /// ## Two documents, two different levels of schema commitment

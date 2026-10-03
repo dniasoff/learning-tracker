@@ -16,6 +16,7 @@ void main() {
       'governed_change',
       'undo_action',
       'retry',
+      'backup_import',
     ]);
   });
 

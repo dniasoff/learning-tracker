@@ -5,12 +5,16 @@ import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city_search_exception.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Typeahead picker over the bundled cities dataset (~33k cities).
-/// On selection, persists as the user's manual location and pops the route
-/// returning the chosen [City] so callers can react.
+///
+/// On selection, writes the city's location, IANA zone and Israel flag onto
+/// the ACTIVE LEARNER as one governed `learnerSettings` change (DNI-481
+/// AC-3, through [learnerSettingsEditorProvider]) and pops the route
+/// returning the chosen [City]. A change that is not saved keeps the picker
+/// open with a message.
 @RoutePage()
 class CityPickerScreen extends ConsumerStatefulWidget {
   const CityPickerScreen({super.key});
@@ -99,16 +103,24 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
   }
 
   Future<void> _select(City city) async {
-    await ref
-        .read(sacredLocationProvider.notifier)
-        .setManualCity(
-          latitude: city.latitude,
-          longitude: city.longitude,
-          cityLabel: _formatCityLabel(city),
-          countryCode: city.countryCode,
-        );
+    final outcome = await ref
+        .read(learnerSettingsEditorProvider)
+        .chooseCity(city);
     if (!mounted) return;
-    context.router.pop(city);
+    if (outcome == LearnerSettingsEditOutcome.saved) {
+      context.router.pop(city);
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          outcome == LearnerSettingsEditOutcome.unavailable
+              ? l10n.sacredTimeSettingsUnavailable
+              : l10n.sacredTimeSettingsNotSaved,
+        ),
+      ),
+    );
   }
 }
 
@@ -189,13 +201,4 @@ String _subtitleFor(City city) {
     city.countryCode,
   ];
   return parts.join(' · ');
-}
-
-String _formatCityLabel(City city) {
-  final parts = <String>[
-    city.name,
-    if (_isReadableRegion(city.admin1)) city.admin1!,
-    city.countryCode,
-  ];
-  return parts.join(', ');
 }

@@ -50,11 +50,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/exceptions/permission_exception.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
-import 'package:learning_tracker/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 
@@ -175,7 +172,10 @@ void main() {
     });
 
     test('streak_milestone_reached', () async {
-      await analytics.logStreakMilestoneReached(milestone: 30);
+      await analytics.logStreakMilestoneReached(
+        curriculumId: 'mishnayos',
+        milestone: 30,
+      );
       expectNoPiiIn(AnalyticsEvent.streakMilestoneReached);
     });
 
@@ -319,25 +319,6 @@ void main() {
         await useCase.call(grant: activeGrant());
         expectDirectCallNoPiiIn(AnalyticsEvent.tutorResigned);
       });
-
-      test('tutor_live_mark_blocked — no parameters at all', () async {
-        final useCase = MarkLiveCompletionUseCase<void>(
-          session: ResolvedSession.forTutor(
-            selection: const TutoredProfileSelection(
-              profileId: 'child-1',
-              ownerUid: 'parent-uid',
-              grantId: 'grant-1',
-              permissions: TutorPermissions(),
-            ),
-          ),
-          analytics: analytics,
-        );
-        await expectLater(
-          useCase.call(() async {}),
-          throwsA(isA<TutorWriteForbiddenException>()),
-        );
-        expectDirectCallNoPiiIn(AnalyticsEvent.tutorLiveMarkBlocked);
-      });
     },
   );
 
@@ -357,7 +338,6 @@ void main() {
       AnalyticsEvent.tutorGrantRescinded,
       AnalyticsEvent.tutorGrantRevoked,
       AnalyticsEvent.tutorResigned,
-      AnalyticsEvent.tutorLiveMarkBlocked,
     };
     expect(
       _exercisedDirectCallEvents,
@@ -378,7 +358,6 @@ void main() {
       AnalyticsEvent.tutorGrantRescinded,
       AnalyticsEvent.tutorGrantRevoked,
       AnalyticsEvent.tutorResigned,
-      AnalyticsEvent.tutorLiveMarkBlocked,
     };
     // AnalyticsEvent members with zero lib/ emitters — verified by grep,
     // nothing to sweep. `AnalyticsEvent.tutorActionRecorded` was the sole
@@ -387,7 +366,13 @@ void main() {
     // the catalog member is kept (Cloud Functions still write the
     // server-side audit trail under the same name) but nothing in `lib/`
     // fires it, so there is no live parameter shape to assert against.
-    const deadCatalogEvents = <String>{AnalyticsEvent.tutorActionRecorded};
+    // `AnalyticsEvent.tutorLiveMarkBlocked` lost its only emitter when Story
+    // 1.24 (DNI-486) deleted the legacy tutor-rejection branch of
+    // MarkLiveCompletionUseCase: tutors now record through the callables.
+    const deadCatalogEvents = <String>{
+      AnalyticsEvent.tutorActionRecorded,
+      AnalyticsEvent.tutorLiveMarkBlocked,
+    };
     // AnalyticsEvent members genuinely covered by a real PV-1 assertion in
     // another suite — each verified by reading the cited test. A prior
     // version of this list (~12 entries) claimed coverage that did not

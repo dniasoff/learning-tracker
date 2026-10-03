@@ -24,6 +24,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learning_command_rea
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/features/learning/domain/commands/achievement_latch.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/child_redate_limit.dart';
@@ -107,6 +108,44 @@ final class EventReplacement {
   @override
   String toString() =>
       'EventReplacement($ref, $source, $learnedOn, ${dateState?.name})';
+}
+
+/// The fields of the replacement of [t] by [r] at [nowUtc], or null when
+/// they are invalid (FR-4). The single rule both the owner commands and the
+/// tutor commands (DNI-486) apply: a move to Before tracking clears
+/// `learned_on`; an unchanged ref keeps the node `level`; `stage` is kept
+/// only on the main source.
+ResolvedReplacement? resolveReplacement(
+  LearningEvent t,
+  EventReplacement r,
+  DateTime nowUtc,
+  LearnerSettingsHistory history,
+) {
+  final source = r.source ?? t.source!;
+  if (source != LearningEvent.sourceMain && !isUlid(source)) return null;
+  final state = r.dateState ?? t.dateState!;
+  final redate =
+      (r.dateState != null && r.dateState != t.dateState) ||
+      (r.learnedOn != null && r.learnedOn != t.learnedOn);
+  final learnedOn = state == DateState.beforeTracking
+      ? null
+      : r.learnedOn ?? t.learnedOn ?? civilDate(nowUtc, history);
+  if (learnedOn != null && !isCivilDate(learnedOn)) return null;
+  final level = r.ref != null && r.ref != t.ref ? null : t.level;
+  if (level != null && state != DateState.beforeTracking) return null;
+  final ref = r.ref ?? t.ref!;
+  if (ref.isEmpty) return null;
+  if (r.stage != null && source != LearningEvent.sourceMain) return null;
+  final stage = source == LearningEvent.sourceMain ? r.stage ?? t.stage : null;
+  return ResolvedReplacement(
+    ref: ref,
+    level: level,
+    source: source,
+    dateState: state,
+    learnedOn: learnedOn,
+    stage: stage,
+    redate: redate,
+  );
 }
 
 /// Every learning write: events (AD-31) and governed changes (AD-38).
@@ -201,6 +240,14 @@ abstract interface class LearningCommands {
   /// writes nothing.
   Future<CaptureResult> reAddTrack(String curriculumId);
 
+  /// AD-49 backup import (DNI-482): replays [input] onto this learner in
+  /// order — settings, governed docs, sub-tracks, learn events with
+  /// re-derived `pts_` entries, voids, then non-event records — under
+  /// fresh ids (`backup_import_replay.dart`). A batch or chunk the server
+  /// does not save is a "not saved — retry" [PendingFailure], listed in
+  /// [BackupReplayResult.notSaved] and in [watchPendingFailures].
+  Future<BackupReplayResult> importBackup(BackupReplayInput input);
+
   /// Queued writes the server rejected, live.
   Stream<List<PendingFailure>> watchPendingFailures();
 
@@ -263,9 +310,11 @@ final class DefaultLearningCommands implements LearningCommands {
     SubTrackCommands? subTrackCommands,
     AchievementLatch? achievements,
     SubTrackSourceCheck? sourceCheck,
+    BackupImportReplay? backupReplay,
   }) : _scope = scope,
        _achievements = achievements,
        _sourceCheck = sourceCheck,
+       _backupReplay = backupReplay,
        _pointsWait = pointsWait,
        _recordedWait = recordedWait,
        _actor = actor,
@@ -297,6 +346,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final Duration _pointsWait;
   final AchievementLatch? _achievements;
   final Duration _recordedWait;
+  final BackupImportReplay? _backupReplay;
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -621,35 +671,7 @@ final class DefaultLearningCommands implements LearningCommands {
     EventReplacement r,
     CommandStamp stamp,
     LearnerSettingsHistory history,
-  ) {
-    final source = r.source ?? t.source!;
-    if (!_validSource(source)) return null;
-    final state = r.dateState ?? t.dateState!;
-    final redate =
-        (r.dateState != null && r.dateState != t.dateState) ||
-        (r.learnedOn != null && r.learnedOn != t.learnedOn);
-    final learnedOn = state == DateState.beforeTracking
-        ? null
-        : r.learnedOn ?? t.learnedOn ?? civilDate(stamp.nowUtc, history);
-    if (learnedOn != null && !isCivilDate(learnedOn)) return null;
-    final level = r.ref != null && r.ref != t.ref ? null : t.level;
-    if (level != null && state != DateState.beforeTracking) return null;
-    final ref = r.ref ?? t.ref!;
-    if (ref.isEmpty) return null;
-    if (r.stage != null && source != LearningEvent.sourceMain) return null;
-    final stage = source == LearningEvent.sourceMain
-        ? r.stage ?? t.stage
-        : null;
-    return ResolvedReplacement(
-      ref: ref,
-      level: level,
-      source: source,
-      dateState: state,
-      learnedOn: learnedOn,
-      stage: stage,
-      redate: redate,
-    );
-  }
+  ) => resolveReplacement(t, r, stamp.nowUtc, history);
 
   @override
   Future<CaptureResult> unlearn(String curriculumId, Set<LeafRef> leafSet) =>
@@ -822,7 +844,29 @@ final class DefaultLearningCommands implements LearningCommands {
     return _gated((_, _) => governed.reAddTrack(curriculumId));
   }
 
-  /// The event failures, then the governed ones (AD-54 Recovery).
+  /// Backup imports pass the [CaptureGate] like every other write (AD-36);
+  /// a locked or unreadable gate writes nothing.
+  @override
+  Future<BackupReplayResult> importBackup(BackupReplayInput input) async {
+    final replay = _backupReplay;
+    if (replay == null) {
+      throw UnimplementedError('importBackup (wired by DNI-482)');
+    }
+    BackupReplayResult? replayed;
+    final result = await _gated((stamp, _) async {
+      final out = replayed = await replay.replay(
+        input,
+        stamp: stamp,
+        amount: _pointsAmount,
+        afterEvents: _afterWrite,
+      );
+      return out.result;
+    });
+    return replayed ?? BackupReplayResult(result: result);
+  }
+
+  /// The event failures, then the governed ones, then the backup import's
+  /// (AD-54 Recovery).
   @override
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
@@ -861,8 +905,7 @@ final class DefaultLearningCommands implements LearningCommands {
   /// later refused must reach its caller, which rolls it back).
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {
-    final events = _dispatcher.watchPendingFailures();
-    var latest = events;
+    var latest = _dispatcher.watchPendingFailures();
     final governed = _governed;
     if (governed != null) {
       latest = _concatLatest(latest, governed.watchPendingFailures());
@@ -870,6 +913,10 @@ final class DefaultLearningCommands implements LearningCommands {
     final subTracks = _subTrackCommands;
     if (subTracks != null) {
       latest = _concatLatest(latest, subTracks.watchPendingFailures());
+    }
+    final backup = _backupReplay;
+    if (backup != null) {
+      latest = _concatLatest(latest, backup.watchPendingFailures());
     }
     return latest;
   }
@@ -883,7 +930,12 @@ final class DefaultLearningCommands implements LearningCommands {
           if (governed != null) return governed;
           final subTracks = _subTrackCommands;
           if (subTracks != null) return subTracks.retry(pendingFailureId);
-          return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+          final backup = await _backupReplay?.retry(
+            pendingFailureId,
+            afterEvents: _afterWrite,
+          );
+          return backup ??
+              const CaptureResult.rejected(CaptureRejection.targetNotFound);
         }
         if (outcome.allRejected) {
           return const CaptureResult.rejected(CaptureRejection.notSaved);
@@ -919,8 +971,11 @@ final class DefaultLearningCommands implements LearningCommands {
     );
   }
 
-  /// Closes the pending-failure stream.
-  Future<void> dispose() => _dispatcher.dispose();
+  /// Closes the pending-failure streams.
+  Future<void> dispose() async {
+    await _dispatcher.dispose();
+    await _backupReplay?.dispose();
+  }
 
   /// The latest list of [a] followed by the latest of [b], once both have
   /// delivered.

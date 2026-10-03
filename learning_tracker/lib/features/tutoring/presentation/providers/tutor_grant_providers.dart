@@ -6,6 +6,7 @@
 
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -96,8 +97,12 @@ Future<List<TutorGrant>> pendingTutorInvites(Ref ref) {
 /// S4 Cloud Functions (Admin SDK write proxy to the parent's namespace).
 ///
 /// Use when `activeTutoredProfileSelectionProvider != null` to route an edit
-/// through the CF instead of the local outbox.
+/// through the CF instead of the local outbox. A successful learning capture
+/// emits `capture` through the shared [learningAnalyticsProvider] (AD-47).
 @riverpod
 TutorWriteService tutorWriteService(Ref ref) {
-  return TutorWriteService(resolveFunctions: ref.watch(accountFunctionsProvider));
+  return TutorWriteService(
+    resolveFunctions: ref.watch(accountFunctionsProvider),
+    analytics: ref.watch(learningAnalyticsProvider),
+  );
 }

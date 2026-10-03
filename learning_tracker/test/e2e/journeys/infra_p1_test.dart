@@ -15,20 +15,18 @@
 ///
 /// ### E2E-1102 — City Picker: detect GPS location
 /// The "Detect" button lives in [SacredTimeSettingsCard._LocationActions] on
-/// SettingsScreen (not in CityPickerScreen itself). Stubbing
-/// [locationServiceProvider] with a fake that returns [LocationFetchSuccess]
-/// causes [SacredLocationNotifier.detect] to update state. The resulting
-/// snackbar text (l10n.sacredTimeLocationUpdated = "Location updated.") confirms
-/// the call path completed successfully without a real GPS fix.
-/// R-IC13: sequential override ensures no auto-set race between detect() and
-/// setInIsrael().
+/// SettingsScreen (not in CityPickerScreen itself). DNI-481: the detect is
+/// [LearnerSettingsEditor.detect] — a fake [LocationService] returns a
+/// [LocationFetchSuccess] and the fix is written onto the active learner as
+/// ONE governed learnerSettings change (recorded by a fake LearningCommands).
+/// The snackbar text (l10n.sacredTimeLocationUpdated = "Location updated.")
+/// confirms the call path completed without a real GPS fix.
 ///
 /// ### E2E-1104 — In-Israel toggle
-/// The In-Israel toggle is rendered by [SacredTimeSettingsCard._InIsraelRow].
-/// Override [inIsraelProvider] to a fixed-false notifier, navigate to
-/// SettingsScreen, scroll down to expose the SacredTimeSettingsCard, toggle
-/// the switch, and verify [InIsraelNotifier.setInIsrael] wrote 'in_israel'=true
-/// to SharedPreferences.
+/// The In-Israel toggle is rendered by [SacredTimeSettingsCard._InIsraelRow]
+/// and shows the active learner's `in_israel` (DNI-481: a learner setting,
+/// not a device preference). Toggling it writes one governed
+/// learnerSettings change and NO device preference.
 /// Note: Wave-3 implementation-plan §3 also lists this journey (R-IC13). Per §2
 /// and the Wave-2 P1 catalog (line 417) it is a P1 journey.
 ///
@@ -95,9 +93,20 @@ library;
 
 import 'package:flutter/material.dart'
     show Key, ListView, Row, Scrollable, Switch;
-import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    show AsyncData, ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart'
+    show GovernedAction;
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart'
+    show LearnerSettings;
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart'
+    show LearnerScope;
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart'
+    show CaptureResult;
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart'
+    show LearningCommands;
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
     show NotificationPreferencesRepository;
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart'
@@ -112,12 +121,17 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
     show selectedProfileIdProvider;
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart'
     show LocationService;
+import 'package:learning_tracker/features/sacred_time/domain/learner_settings_change.dart'
+    show LearnerSettingsEdit, learnerSettingsAction;
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart'
     show LocationFetchSuccess;
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart'
     show SacredLocation, SacredLocationSource;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart'
-    show InIsraelNotifier, inIsraelProvider, locationServiceProvider;
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart'
+    show
+        LearnerSettingsEditor,
+        activeLearnerSettingsProvider,
+        learnerSettingsEditorProvider;
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
 
@@ -153,15 +167,41 @@ class _FakeLocationService extends Fake implements LocationService {
   Future<LocationFetchSuccess> detectCurrent() async => result;
 }
 
-/// [InIsraelNotifier] stub that starts at a known state without the async
-/// prefs load (R-IC13: prevents auto-set race in tests).
-class _FixedInIsraelNotifier extends InIsraelNotifier {
-  _FixedInIsraelNotifier({required bool initial}) : _initial = initial;
-  final bool _initial;
+/// The learner whose Sacred Time settings the card edits (DNI-481).
+const _learnerId = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+
+/// [LearningCommands] stub recording the governed settings changes.
+class _RecordingCommands extends Fake implements LearningCommands {
+  final List<GovernedAction> applied = [];
 
   @override
-  bool build() => _initial; // returns directly; _load() is not called.
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) async {
+    applied.add(action);
+    return const CaptureResult.success(changeIds: []);
+  }
 }
+
+/// Overrides the card's learner settings and editor: [commands] records the
+/// writes, [location] answers the detect.
+List<Override> _learnerSettingsOverrides(
+  _RecordingCommands commands, {
+  LocationService location = const LocationService(),
+}) => [
+  activeLearnerSettingsProvider.overrideWithValue(
+    const AsyncData(
+      LearnerSettings(profileId: _learnerId, timeZone: 'America/New_York'),
+    ),
+  ),
+  learnerSettingsEditorProvider.overrideWithValue(
+    LearnerSettingsEditor(
+      commands: () async => commands,
+      scope: () async =>
+          LearnerScope(ownerUid: 'owner-uid', profileId: _learnerId),
+      locationService: location,
+      deviceTimeZone: () async => 'Asia/Jerusalem',
+    ),
+  ),
+];
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -248,11 +288,10 @@ void main() {
   group('E2E-1102 — City Picker: detect GPS location', () {
     // Key assertions (catalog §2 Area 11):
     //  • Settings → SacredTimeSettingsCard renders "Detect" button
-    //  • Tapping Detect calls sacredLocationProvider.notifier.detect()
-    //  • locationServiceProvider stub returns LocationFetchSuccess
+    //  • Tapping Detect runs LearnerSettingsEditor.detect()
+    //  • the LocationService stub returns LocationFetchSuccess
+    //  • the fix is ONE governed learnerSettings change (DNI-481 AC-3)
     //  • Snackbar "Location updated." confirms the call path completed
-    //
-    // R-IC13: detect() is called first; no race with setInIsrael().
 
     testWidgets(
       'Tapping Detect on SacredTimeSettingsCard with a GPS stub shows '
@@ -277,13 +316,17 @@ void main() {
           result: LocationFetchSuccess(fakeLocation),
         );
         final fakeGw = _FakeNotificationGateway();
+        final commands = _RecordingCommands();
 
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
             ..._infraSilences(h),
             ..._notificationSilenceOverrides(fakeGw),
-            locationServiceProvider.overrideWithValue(fakeLocationService),
+            ..._learnerSettingsOverrides(
+              commands,
+              location: fakeLocationService,
+            ),
           ],
         );
 
@@ -295,7 +338,7 @@ void main() {
         // "Detect" button must be visible.
         h.expectOnScreen('Detect', routeName: 'SacredTimeSettingsCard');
 
-        // Tap "Detect" → calls sacredLocationProvider.notifier.detect()
+        // Tap "Detect" → LearnerSettingsEditor.detect()
         // → fakeLocationService.detectCurrent() → LocationFetchSuccess.
         await h.tapText('Detect', settle: const Duration(milliseconds: 800));
         await h.pump(const Duration(milliseconds: 300));
@@ -310,6 +353,17 @@ void main() {
               'Snackbar "Location updated." must appear after LocationFetchSuccess '
               '(confirms detect() call path completed via fake LocationService)',
         );
+        expect(commands.applied, [
+          learnerSettingsAction(
+            _learnerId,
+            const LearnerSettingsEdit(
+              latitude: 31.76,
+              longitude: 35.21,
+              timeZone: 'Asia/Jerusalem',
+              inIsrael: true,
+            ),
+          ),
+        ]);
       },
     );
   });
@@ -319,16 +373,14 @@ void main() {
   group('E2E-1104 — In-Israel toggle updates Yom Tov window computation', () {
     // Key assertions (catalog §2 Area 11):
     //  • SacredTimeSettingsCard renders "I am in Israel" toggle
-    //  • Toggle starts OFF; tapping writes 'in_israel'=true to SharedPreferences
-    //
-    // R-IC13: [_FixedInIsraelNotifier] bypasses async _load() entirely so
-    // there is no race between detect() / setInIsrael() in this test.
+    //  • Toggle starts OFF (the learner's in_israel unset); tapping writes
+    //    ONE governed learnerSettings change (DNI-481) and no device pref
     //
     // Note: Wave-3 plan §3 also lists this journey. Per §2 and the Wave-2
     // catalog (line 417) it is P1.
 
     testWidgets('In-Israel switch in SacredTimeSettingsCard is toggleable; '
-        'toggling ON writes in_israel=true to SharedPreferences', (
+        'toggling ON writes the learner in_israel=true as a governed change', (
       tester,
     ) async {
       final identity = E2EIdentity.localBorn(
@@ -339,16 +391,14 @@ void main() {
       addTearDown(h.dispose);
 
       final fakeGw = _FakeNotificationGateway();
+      final commands = _RecordingCommands();
 
       await h.pumpApp(
         path: '/dashboard',
         extraOverrides: [
           ..._infraSilences(h),
           ..._notificationSilenceOverrides(fakeGw),
-          // R-IC13: fix inIsrael to false so async _load() cannot race.
-          inIsraelProvider.overrideWith(
-            () => _FixedInIsraelNotifier(initial: false),
-          ),
+          ..._learnerSettingsOverrides(commands),
         ],
       );
 
@@ -377,7 +427,7 @@ void main() {
         reason: 'In-Israel Switch must be present in SacredTimeSettingsCard',
       );
 
-      // Tap to toggle ON → calls InIsraelNotifier.setInIsrael(true).
+      // Tap to toggle ON → LearnerSettingsEditor.setInIsrael(true).
       // Use the first match (innermost Row wraps the Switch directly).
       await tester.tap(israelSwitch.first, warnIfMissed: false);
       await tester.pump();
@@ -386,15 +436,18 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pump();
 
-      // Key assertion: SharedPreferences 'sacred_time_in_israel' written as
-      // true. SacredTimePreferences._inIsraelKey = 'sacred_time_in_israel'.
+      // Key assertion: one governed learnerSettings change, and no device
+      // preference (the retired Sacred Time keys are never written).
+      expect(commands.applied, [
+        learnerSettingsAction(
+          _learnerId,
+          const LearnerSettingsEdit(inIsrael: true),
+        ),
+      ]);
       final prefs = await SharedPreferences.getInstance();
       expect(
-        prefs.getBool('sacred_time_in_israel'),
-        isTrue,
-        reason:
-            "SharedPreferences['sacred_time_in_israel'] must be true after "
-            'toggling On',
+        prefs.getKeys().where((k) => k.startsWith('sacred_time_')),
+        isEmpty,
       );
     });
   });

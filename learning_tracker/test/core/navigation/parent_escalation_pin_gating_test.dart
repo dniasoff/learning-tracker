@@ -26,6 +26,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
+import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
@@ -87,6 +88,14 @@ AppRouter _buildRouterForInspection() {
       pinSetupRoute: () => _never('PinGuard.pinSetupRoute'),
       promptForPin: () => _never('PinGuard.promptForPin'),
       getScope: () => _never('PinGuard.getScope'),
+    ),
+    sacredTimeLocationGuard: SacredTimeLocationGuard(
+      getSelectedProfileId: () =>
+          _never('SacredTimeLocationGuard.getSelectedProfileId'),
+      getProfileById: (_) => _never('SacredTimeLocationGuard.getProfileById'),
+      hasProfilePin: (_) => _never('SacredTimeLocationGuard.hasProfilePin'),
+      consumeAccess: (_) => _never('SacredTimeLocationGuard.consumeAccess'),
+      promptForPin: (_) => _never('SacredTimeLocationGuard.promptForPin'),
     ),
   );
 }
@@ -235,6 +244,20 @@ void main() {
             '_childFacingNoPinPaths with a documented reason — never '
             'silently left unclassified.',
       );
+    });
+
+    // DNI-481 AC-3 / AUD-sacred_time-08: the city picker writes the active
+    // learner's lock settings. It is reachable by a deep link, so the PIN
+    // check cannot live only in the Settings card that pushes it.
+    test('the city picker route carries the Sacred Time location guard', () {
+      final router = _buildRouterForInspection();
+      final route = _flatten(
+        router.routes,
+      ).singleWhere((r) => r.path == '/sacred-time/city');
+
+      expect(route.guards, contains(router.authGuard));
+      expect(route.guards, contains(router.sacredTimeLocationGuard));
+      expect(router.sacredTimeLocationGuard, isA<SacredTimeLocationGuard>());
     });
   });
 

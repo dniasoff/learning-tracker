@@ -58,6 +58,7 @@ class ContentItemTile extends ConsumerWidget {
     this.tickState,
     this.onTick,
     this.onLongPress,
+    this.tickDisabled = false,
   });
 
   final ContentItem item;
@@ -92,6 +93,11 @@ class ContentItemTile extends ConsumerWidget {
   /// Replaces the default long-press action.
   final VoidCallback? onLongPress;
 
+  /// Story 1.24 (DNI-486, AC-4/AC-5): a tutor who may not write right now
+  /// still SEES the tick box, drawn at 40% opacity and disabled (no
+  /// handler, disabled semantics); "Tick up to here" is off too.
+  final bool tickDisabled;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -116,6 +122,12 @@ class ContentItemTile extends ConsumerWidget {
       ).withValues(alpha: learntTriStateTintAlpha),
       leading: onTick == null
           ? _buildLeadingIcon(theme, progress)
+          : tickDisabled
+          ? Opacity(
+              key: const Key('contentItemTickDisabled'),
+              opacity: 0.4,
+              child: _TickBox(state: tickState ?? state, onTick: null),
+            )
           : _TickBox(state: tickState ?? state, onTick: onTick!),
       title: CurriculumLabel.item(
         item,
@@ -144,11 +156,12 @@ class ContentItemTile extends ConsumerWidget {
           : null,
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
-      onLongPress:
-          onLongPress ??
-          (item.isLeaf && count > 0 && showReviewBadge
-              ? () => _showStageBreakdown(context, ref)
-              : null),
+      onLongPress: tickDisabled && onLongPress != null
+          ? null
+          : onLongPress ??
+                (item.isLeaf && count > 0 && showReviewBadge
+                    ? () => _showStageBreakdown(context, ref)
+                    : null),
     );
     if (progress == null || l10n == null) return tile;
     return Semantics(
@@ -217,7 +230,9 @@ class _TickBox extends StatelessWidget {
   const _TickBox({required this.state, required this.onTick});
 
   final TriState state;
-  final VoidCallback onTick;
+
+  /// Null draws the box disabled.
+  final VoidCallback? onTick;
 
   @override
   Widget build(BuildContext context) {
@@ -237,7 +252,7 @@ class _TickBox extends StatelessWidget {
         TriState.empty => false,
       },
       semanticLabel: label,
-      onChanged: (_) => onTick(),
+      onChanged: onTick == null ? null : (_) => onTick!(),
     );
   }
 }

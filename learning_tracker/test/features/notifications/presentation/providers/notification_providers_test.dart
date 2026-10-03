@@ -4,10 +4,24 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
+import 'package:learning_tracker/features/notifications/domain/services/curriculum_streak_alerts.dart';
+import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learner_state.dart';
+import '../../../../helpers/learner_state_fixtures.dart';
 
 const _testProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
@@ -207,4 +221,153 @@ void main() {
       );
     });
   });
+  group("today's learning is read from LearnerState (DNI-482 AC-5)", () {
+    // Tue 2026-09-08, 12:00Z, for the UTC no-location learner: unlocked,
+    // alert at 21:00. The main-track streak was last kept yesterday.
+    final now = DateTime.utc(2026, 9, 8, 12);
+    final scope = c0Scope();
+
+    LearningEvent learnToday({String source = LearningEvent.sourceMain}) =>
+        LearningEvent.learn(
+          id: engineUlid(1),
+          curriculumId: engineCurriculum,
+          ref: 'Mishnah Berakhot 1:1',
+          source: source,
+          dateState: DateState.dated,
+          learnedOn: '2026-09-08',
+          recordedAt: DateTime.utc(2026, 9, 8, 9),
+          actor: parentActor,
+        );
+
+    Future<(List<String>, int)> runEffect({
+      required List<LearningEvent> counted,
+      Set<String> lockIgnored = const {},
+    }) async {
+      SharedPreferences.setMockInitialValues({
+        NotificationPreferencesRepository.streakAlertEnabledKey(profileUlid):
+            true,
+        NotificationPreferencesRepository.streakAlertHourKey(profileUlid): 21,
+        NotificationPreferencesRepository.streakAlertMinuteKey(profileUlid): 0,
+      });
+      final alerts = _DoneTodayAlerts();
+      var completionReads = 0;
+      final container = ProviderContainer(
+        overrides: [
+          selectedProfileIdProvider.overrideWithValue(profileUlid),
+          currentAppLocaleProvider.overrideWithValue(const Locale('en')),
+          streakAlertServiceProvider(profileUlid).overrideWith(
+            (ref) => StreakAlertService(
+              notifications: alerts,
+              markers: _DoneTodayMarkers(),
+              profileId: profileUlid,
+              clock: () => now,
+            ),
+          ),
+          activeLearnerScopeProvider.overrideWith((ref) async => scope),
+          learnerStateProvider.overrideWith(
+            (ref, _) => Stream.value(
+              fakeLearnerState(
+                nowUtc: now,
+                today: '2026-09-08',
+                countedLearns: counted,
+                countedEventIds: {for (final e in counted) e.id},
+                lockIgnoredEventIds: lockIgnored,
+                curricula: {
+                  engineCurriculum: FakeCurriculumState(
+                    curriculumId: engineCurriculum,
+                    streak: const CurriculumStreak(
+                      current: 3,
+                      best: 3,
+                      lastDay: '2026-09-07',
+                    ),
+                  ),
+                },
+              ),
+            ),
+          ),
+          learnerLockSettingsProvider.overrideWith(
+            (ref, _) => Stream.value(c0SettingsHistory()),
+          ),
+          // The retired completion read must never be reached.
+          firestoreCompletionRepositoryProvider.overrideWith((ref) async {
+            completionReads++;
+            throw StateError('completions are retired (R11)');
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(streakAlertSyncEffectProvider.future);
+      return (alerts.scheduled, completionReads);
+    }
+
+    test('counted learning today (any source) means done: no alert', () async {
+      final (scheduled, reads) = await runEffect(
+        counted: [learnToday(source: engineUlid(900))],
+      );
+      expect(scheduled, isEmpty);
+      expect(reads, 0);
+    });
+
+    test('no counted learning today means the streak is at risk', () async {
+      final (scheduled, reads) = await runEffect(counted: const []);
+      expect(scheduled, [engineCurriculum]);
+      expect(reads, 0);
+    });
+
+    test('a voided or lock-ignored event is not in the counted set, so it '
+        'never marks today done', () async {
+      // The engine leaves voided and lock-ignored events out of
+      // countedLearns; the projection reads nothing else.
+      final (scheduled, reads) = await runEffect(
+        counted: const [],
+        lockIgnored: {engineUlid(1)},
+      );
+      expect(scheduled, [engineCurriculum]);
+      expect(reads, 0);
+    });
+  });
+}
+
+class _DoneTodayAlerts implements StreakAlertNotifications {
+  final scheduled = <String>[];
+
+  @override
+  Future<void> schedule({
+    required String profileId,
+    required String curriculumId,
+    required DateTime fireAtUtc,
+    required String title,
+    required String body,
+  }) async => scheduled.add(curriculumId);
+
+  @override
+  Future<void> cancel({
+    required String profileId,
+    required String curriculumId,
+  }) async {}
+
+  @override
+  Future<void> cancelAll(String profileId) async {}
+}
+
+class _DoneTodayMarkers implements StreakAlertMarkers {
+  final _markers = <String, String>{};
+
+  @override
+  Future<String?> read(String profileId, String curriculumId) async =>
+      _markers['$profileId/$curriculumId'];
+
+  @override
+  Future<void> write(
+    String profileId,
+    String curriculumId,
+    String marker,
+  ) async => _markers['$profileId/$curriculumId'] = marker;
+
+  @override
+  Future<void> clear(String profileId, String curriculumId) async =>
+      _markers.remove('$profileId/$curriculumId');
+
+  @override
+  Future<void> clearAll(String profileId) async => _markers.clear();
 }

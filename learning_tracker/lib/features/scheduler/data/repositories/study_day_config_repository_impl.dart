@@ -8,15 +8,17 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 
 /// Thrown by [FirestoreStudyDayConfigRepositoryAdapter]'s write methods when
 /// `firestoreStudyDayConfigRepositoryProvider` resolves to `null` — see
-/// `BookmarkRepositoryNotReadyException`'s doc comment
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
+/// not-ready exception's doc comment
 /// for the read-vs-write split this mirrors: reads reuse a natural "nothing
 /// yet" value (`[]`), writes have no such value and throw instead.
 class StudyDayConfigRepositoryNotReadyException implements Exception {
@@ -31,10 +33,7 @@ class StudyDayConfigRepositoryNotReadyException implements Exception {
 }
 
 /// Firestore-backed adapter over [FirestoreStudyDayConfigRepository].
-/// Follows the pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// establishes — read that class's doc comment first; this one only calls
-/// out what is DIFFERENT here.
+/// Uses the shared provider re-resolution pattern.
 ///
 /// ## No domain interface to `implements` — none ever existed
 ///
@@ -54,7 +53,6 @@ class StudyDayConfigRepositoryNotReadyException implements Exception {
 /// existing interface — the same status
 /// [FirestoreCurriculumTrackRepositoryAdapter]
 /// (`lib/features/tracks/setup/data/repositories/
-/// curriculum_track_repository_impl.dart`) documents for the curriculum-
 /// track lifecycle. Ready for a future task to extract a genuine
 /// `StudyDayConfigRepository` interface and rewire those four call sites —
 /// out of this task's `data/repositories/`-only scope.
@@ -77,7 +75,7 @@ class FirestoreStudyDayConfigRepositoryAdapter {
 
   /// Re-reads `firestoreStudyDayConfigRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner
-  /// profile). See `FirestoreBookmarkRepositoryAdapter._resolveOrNull`'s doc
+  /// profile). See this adapter's `_resolveOrNull`'s doc
   /// comment for why this re-reads on every call rather than caching.
   Future<FirestoreStudyDayConfigRepository?> _resolveOrNull() {
     return _ref.read(firestoreStudyDayConfigRepositoryProvider.future);
@@ -119,11 +117,23 @@ class FirestoreStudyDayConfigRepositoryAdapter {
 
   /// Creates or updates a single day's config. Throws
   /// [StudyDayConfigRepositoryNotReadyException] when not ready.
+  ///
+  /// In a tutored session the write is the governed
+  /// `tutorUpsertStudyDayConfig` callable (Story 1.24, DNI-486), never a
+  /// client write to the talmid's tree.
   Future<void> setDayConfig({
     required CurriculumId curriculumId,
     required int dayOfWeek,
     required DayType dayType,
   }) async {
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      return tutorReplaceStudyDays(
+        _ref,
+        curriculumId: curriculumId,
+        studyDays: {dayOfWeek: dayType},
+        existing: const [],
+      );
+    }
     final repo = await _resolve();
     await repo.setDayConfig(
       curriculumId: curriculumId,
@@ -135,10 +145,21 @@ class FirestoreStudyDayConfigRepositoryAdapter {
   /// Replaces the full set of day configs for [curriculumId] with exactly
   /// [studyDays]. Throws [StudyDayConfigRepositoryNotReadyException] when
   /// not ready.
+  ///
+  /// In a tutored session the replace is governed callables only
+  /// (Story 1.24, DNI-486): see [tutorReplaceStudyDays].
   Future<void> replaceAllForCurriculum({
     required CurriculumId curriculumId,
     required Map<int, DayType> studyDays,
   }) async {
+    if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      return tutorReplaceStudyDays(
+        _ref,
+        curriculumId: curriculumId,
+        studyDays: studyDays,
+        existing: await getConfigsForCurriculum(curriculumId),
+      );
+    }
     final repo = await _resolve();
     await repo.replaceAllForCurriculum(
       curriculumId: curriculumId,
@@ -153,4 +174,38 @@ class FirestoreStudyDayConfigRepositoryAdapter {
     final repo = await _resolve();
     await repo.initializeDefaults(curriculumId);
   }
+}
+
+/// A tutor's study-day write (Story 1.24, DNI-486): upserts [studyDays]
+/// and tombstones every [existing] day absent from it as ONE governed
+/// `tutorReplaceStudyDays` action after the tutor preflight. Throws when
+/// the preflight refuses or the callable fails; then nothing was written.
+Future<void> tutorReplaceStudyDays(
+  Ref ref, {
+  required CurriculumId curriculumId,
+  required Map<int, DayType> studyDays,
+  required List<StudyDayConfigEntry> existing,
+}) async {
+  final writes = await requireTutorGovernedWrites(ref);
+  String docId(int day) => DocIds.studyDayConfigDocId({
+    'curriculum_id': curriculumId.storageKey,
+    'day_of_week': day,
+  });
+  await writes.replaceStudyDays(
+    curriculumId: curriculumId.storageKey,
+    upserts: [
+      for (final MapEntry(key: day, value: type) in studyDays.entries)
+        (
+          docId: docId(day),
+          data: StudyDayConfigEntry(
+            dayOfWeek: day,
+            dayType: type,
+          ).toFirestore(curriculumId: curriculumId),
+        ),
+    ],
+    removedDocIds: [
+      for (final entry in existing)
+        if (!studyDays.containsKey(entry.dayOfWeek)) docId(entry.dayOfWeek),
+    ],
+  );
 }

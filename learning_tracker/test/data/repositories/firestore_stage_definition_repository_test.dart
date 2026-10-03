@@ -1,7 +1,7 @@
 /// Unit tests for
 /// `lib/data/repositories/firestore_stage_definition_repository.dart` — the
 /// SECOND reference Firestore repository (Epic B), chosen to exercise the
-/// composite-index query workflow `FirestoreBookmarkRepository` never
+/// composite-index query workflow `FirestoreGoalRepository` never
 /// touches. Covers: doc-id correctness, the composite-index query shape,
 /// model round-trip, the stream emitting on change, the "one bad document
 /// doesn't blank the list" behavior (both the stream AND the one-shot

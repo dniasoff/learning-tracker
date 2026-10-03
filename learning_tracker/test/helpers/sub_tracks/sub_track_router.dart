@@ -75,6 +75,7 @@ final class _AllowPin extends PinGuard {
 /// The router, with the real [ParentSessionGuard] over [isParentSession].
 AppRouter subTrackTestRouter({required bool Function() isParentSession}) =>
     AppRouter(
+      sacredTimeLocationGuard: _AllowAll(),
       authGuard: _AllowAll(),
       profileGuard: _AllowProfile(),
       childModeGuard: _AllowChildMode(),

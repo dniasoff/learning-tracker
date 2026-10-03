@@ -1517,6 +1517,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tutors cannot mark live completions';
 
   @override
+  String get tutorCaptureKeptNotCounted =>
+      'Kept, not counted — Shabbos / Yom Tov had started';
+
+  @override
+  String get tutorCaptureLearnerLocked => 'Shabbos / Yom Tov';
+
+  @override
+  String tutorCaptureNoEditAccess(String learner) {
+    return '$learner\'s parent hasn\'t given you editing access';
+  }
+
+  @override
+  String get tutorCaptureOnlineRequired => 'Online required';
+
+  @override
   String get tutorWriteForbiddenTitle => 'Action not allowed';
 
   @override
@@ -3810,7 +3825,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'App is silenced and locked during $term and Yom Tov. Times computed locally from your location with a 15-minute cushion.';
+    return 'App is silenced and locked during $term and Yom Tov, from 10 minutes before candle-lighting until 10 minutes after tzeis at this learner\'s location.';
   }
 
   @override
@@ -3862,6 +3877,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get sacredTimeLocationDetectErrorGeneric =>
       'Could not detect location. Try again, or choose a city instead.';
+
+  @override
+  String get sacredTimeLocationPromptAction => 'Set location';
+
+  @override
+  String sacredTimeLocationPromptMessage(String term) {
+    return 'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
+  }
+
+  @override
+  String sacredTimeLocationPromptMessageNamed(String name, String term) {
+    return '$name has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
+  }
+
+  @override
+  String get sacredTimeSettingsNotSaved =>
+      'Couldn\'t save this learner\'s Sacred Time settings. Try again.';
+
+  @override
+  String get sacredTimeSettingsUnavailable =>
+      'Sacred Time settings can be changed only for your own learners.';
 
   @override
   String get newPasswordLabel => 'New Password';
@@ -7081,4 +7117,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backupImportError =>
       'Couldn\'t restore the backup. Please try again.';
+
+  @override
+  String get backupImportNotSaved =>
+      'Not saved — part of the backup was not restored. Retry?';
 }

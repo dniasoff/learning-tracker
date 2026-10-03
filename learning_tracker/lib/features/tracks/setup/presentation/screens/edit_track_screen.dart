@@ -307,9 +307,18 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
           stackTrace: st,
         );
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.errorSaveTrackFailed)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                tutorSaveErrorText(
+                  l10n,
+                  e,
+                  fallback: l10n.errorSaveTrackFailed,
+                  learnerName: ref.read(tutorLearnerNameProvider),
+                ),
+              ),
+            ),
+          );
         }
         return;
       }
@@ -378,28 +387,50 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     }
 
     // Re-anchor: move tracking_start_date to today (UTC midnight). A tutor
-    // cannot write the owner's profile namespace directly; the Firestore
-    // rules allow this mutation only for the owner, so use the existing
-    // owner-scoped callable in a tutored session.
+    // cannot write the owner's profile namespace directly: in a tutored
+    // session the write is the governed `tutorSetProfileProgram` callable
+    // after the tutor preflight (Story 1.24, DNI-486).
     final selection = ref.read(activeTutoredProfileSelectionProvider);
     if (selection != null) {
-      final result = await ref
-          .read(tutorWriteServiceProvider)
-          .setProfileProgram(
-        grantId: selection.grantId,
-        ownerUid: selection.ownerUid,
-        profileId: selection.profileId,
-        programId: curriculum.storageKey,
-        programData: {
-          'profile_id': selection.profileId,
-          'curriculum_id': curriculum.storageKey,
-          'program_id': enrollment.programId,
-          'tracking_start_date': todayUtc.toIso8601String(),
-          'tracking_start_ref': todayRef,
-        },
-      );
-      if (result is TutorWriteFailure) {
-        throw StateError(result.message);
+      final writes = await ref.read(tutorGovernedWritesProvider.future);
+      try {
+        if (writes == null) {
+          throw StateError('Tutored context is not ready for a governed write');
+        }
+        await writes.setProfileProgram(
+          curriculumId: curriculum.storageKey,
+          data: {
+            'profile_id': selection.profileId,
+            'curriculum_id': curriculum.storageKey,
+            'program_id': enrollment.programId,
+            'tracking_start_date': todayUtc.toIso8601String(),
+            'tracking_start_ref': todayRef,
+            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+          },
+        );
+      } catch (e, st) {
+        // A refused or failed governed write changed nothing: show the
+        // existing save error; a retry reuses the frozen action id.
+        AppLogger.instance.error(
+          event: 'edit_track_clear_overdue_failed',
+          exception: e,
+          stackTrace: st,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                tutorSaveErrorText(
+                  l10n,
+                  e,
+                  fallback: l10n.errorSaveTrackFailed,
+                  learnerName: ref.read(tutorLearnerNameProvider),
+                ),
+              ),
+            ),
+          );
+        }
+        return;
       }
     } else {
       await programRepo.setProgram(
@@ -423,9 +454,10 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-    // AD-53: one permission gates every learning edit for tutors.
-    final canSave = tutorPerms == null || tutorPerms.canEditLearning;
+    // AD-53 / DNI-486: a tutor saves only with the parent's
+    // can_edit_learning, online, and the talmid outside a lock; otherwise
+    // Save stays visible but disabled, with one note saying why.
+    final canSave = ref.watch(tutorWriteAvailabilityProvider).allowsWrite;
 
     if (_loading) {
       return Scaffold(
@@ -457,15 +489,14 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               ),
             )
           else
-            TextButton(
-              onPressed: canSave
-                  ? _save
-                  : () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.tutorPermissionDenied)),
-                    ),
-              child: Text(
-                l10n.trackEditSaveButton,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+            TutorDisabledControl(
+              blocked: !canSave,
+              child: TextButton(
+                onPressed: canSave ? _save : null,
+                child: Text(
+                  l10n.trackEditSaveButton,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ),
         ],
@@ -473,6 +504,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const TutorWriteNote(padding: EdgeInsets.only(bottom: 12)),
           _SectionCard(
             title: l10n.trackEditSectionName,
             child: TextField(
@@ -741,6 +773,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         ? _pendingDelays()
         : _currentChazaraDelays;
     final summary = _chazaraSummary(delays, l10n);
+    final tutored = ref.watch(activeTutoredProfileSelectionProvider) != null;
 
     return Row(
       children: [
@@ -758,14 +791,20 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             ],
           ),
         ),
-        OutlinedButton(
-          onPressed: () => _openChazaraSheet(context, l10n),
-          style: OutlinedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+        // DNI-486: the chazara stage set has no governed tutor path yet
+        // (learning-tracker-fyh.226), so a tutor sees it but cannot change
+        // it; TrackEditService refuses it before any write as well.
+        TutorDisabledControl(
+          blocked: tutored,
+          child: OutlinedButton(
+            onPressed: tutored ? null : () => _openChazaraSheet(context, l10n),
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
+            child: Text(l10n.trackEditChangeReview),
           ),
-          child: Text(l10n.trackEditChangeReview),
         ),
       ],
     );
@@ -820,20 +859,25 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   }
 
   Widget _buildClearOverdueSection(ThemeData theme, AppLocalizations l10n) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _hasOverdue ? _clearOverdue : null,
-        icon: const Icon(Icons.clear_all_rounded),
-        label: Text(l10n.trackEditClearOverdueButton),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _hasOverdue ? Colors.red.shade600 : null,
-          side: BorderSide(
-            color: _hasOverdue ? Colors.red.shade300 : theme.disabledColor,
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+    // DNI-486: a governed write for a tutor — gated like Save.
+    final canWrite = ref.watch(tutorWriteAvailabilityProvider).allowsWrite;
+    return TutorDisabledControl(
+      blocked: !canWrite,
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _hasOverdue && canWrite ? _clearOverdue : null,
+          icon: const Icon(Icons.clear_all_rounded),
+          label: Text(l10n.trackEditClearOverdueButton),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _hasOverdue ? Colors.red.shade600 : null,
+            side: BorderSide(
+              color: _hasOverdue ? Colors.red.shade300 : theme.disabledColor,
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
         ),
       ),

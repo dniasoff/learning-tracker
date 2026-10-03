@@ -6,7 +6,8 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/location_service_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Stand-alone screen that requests notification and location permissions.
@@ -18,8 +19,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///     pushed with [isOnboarding] = true)
 ///
 /// Uses the existing [notificationServiceProvider].requestPermission and
-/// [SacredLocationNotifier].detect infrastructure, which already handle
-/// Android 13+ POST_NOTIFICATIONS, Android 12+ exact-alarm, and iOS alerts.
+/// the location detect of [learnerSettingsEditorProvider] (which writes a
+/// detected fix onto the active learner as a governed `learnerSettings`
+/// change, DNI-481), which already handle Android 13+ POST_NOTIFICATIONS,
+/// Android 12+ exact-alarm, and iOS alerts.
 @RoutePage()
 class PermissionPromptScreen extends ConsumerStatefulWidget {
   const PermissionPromptScreen({
@@ -109,7 +112,8 @@ class _PermissionPromptScreenState
     if (_locationStatus == _PermissionStatus.requesting) return;
     setState(() => _locationStatus = _PermissionStatus.requesting);
 
-    final result = await ref.read(sacredLocationProvider.notifier).detect();
+    final result =
+        (await ref.read(learnerSettingsEditorProvider).detect()).fetch;
 
     if (!mounted) return;
     setState(() {

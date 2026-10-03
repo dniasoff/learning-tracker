@@ -2,8 +2,11 @@
 // (DNI-465 T3: AD-33 schedulableRefs, current unit and position).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_position.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
 import '../../helpers/learner_state_fixtures.dart';
@@ -142,6 +145,68 @@ void main() {
       );
       expect(record.currentUnit, isNull);
       expect(record.position, 'Mishnah Berakhot 1:1');
+    });
+
+    test(
+      'engine position follows governed order and start after learn/void',
+      () {
+        final baseIntent = engineIntent(trackingStartRef: 'Mishnah Peah 1:1');
+        MainTrackOrderEntry order(NodeEntry node, int sort) =>
+            MainTrackOrderEntry(
+              docId: '${engineCurriculum}_${node.level}_${node.ref}',
+              curriculumId: engineCurriculum,
+              level: node.level,
+              ref: node.ref,
+              userSortOrder: sort,
+              lastChangeId: engineUlid(900 + sort),
+            );
+        final intent = MainTrackIntent(
+          curriculumId: engineCurriculum,
+          track: baseIntent.track,
+          program: baseIntent.program,
+          order: [order(peah, 0), order(berakhot, 1)],
+        );
+        final inputs = (List<LearningEvent> events) => engineInputs(
+          events: events,
+          intents: {engineCurriculum: intent},
+          intentHistory: [
+            engineStartEntry(800, 'Mishnah Peah 1:1', minutes: 2),
+          ],
+        );
+        const engine = LearnerStateEngine();
+
+        final before = engine.run(inputs(const []))[engineCurriculum]!;
+        final afterLearn = engine.run(
+          inputs([engineLearn(1, 'Mishnah Peah 1:1', stage: 1, minutes: 10)]),
+        )[engineCurriculum]!;
+        final afterVoid = engine.run(
+          inputs([
+            engineLearn(1, 'Mishnah Peah 1:1', stage: 1, minutes: 10),
+            engineVoid(2, 1, minutes: 20),
+          ]),
+        )[engineCurriculum]!;
+
+        expect(before.mainTrackPosition, 'Mishnah Peah 1:1');
+        expect(afterLearn.mainTrackPosition, 'Mishnah Peah 1:2');
+        expect(afterVoid.mainTrackPosition, 'Mishnah Peah 1:1');
+        expect(afterLearn.schedulableRefs, isNot(contains('Mishnah Peah 1:1')));
+        expect(afterVoid.schedulableRefs, contains('Mishnah Peah 1:1'));
+      },
+    );
+
+    test('position is null when all leaves are counted', () {
+      final leaves = corpus.leaves;
+      final state = const LearnerStateEngine().run(
+        engineInputs(
+          events: [
+            for (var i = 0; i < leaves.length; i++)
+              engineLearn(i + 1, leaves[i], stage: 1, minutes: i + 1),
+          ],
+        ),
+      )[engineCurriculum]!;
+
+      expect(state.schedulableRefs, isEmpty);
+      expect(state.mainTrackPosition, isNull);
     });
   });
 }

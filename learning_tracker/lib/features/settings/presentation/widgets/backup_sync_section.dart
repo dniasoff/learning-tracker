@@ -306,13 +306,45 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
 
     setState(() => _busy = true);
     try {
-      await service.importData(json);
-      if (mounted) _showMessage(l10n.backupImportSuccess);
+      final report = await service.importData(json);
+      if (!mounted) return;
+      if (report.saved) {
+        _showMessage(l10n.backupImportSuccess);
+      } else if (report.notSavedCount > 0) {
+        _showNotSaved(report);
+      } else if (report.queued) {
+        // Queued offline (AD-54): restored locally and syncing. A queued
+        // write the server later rejects is "not saved — retry" then.
+        _showMessage(l10n.backupImportSuccess);
+        report.settled.then((_) {
+          if (mounted && report.notSavedCount > 0) _showNotSaved(report);
+        }).ignore();
+      } else {
+        // Refused before writing (locked, or the record was invalid).
+        _showMessage(l10n.backupImportError);
+      }
     } catch (_) {
       if (mounted) _showMessage(l10n.backupImportError);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// AD-54 Recovery: the restore's refused writes are "not saved — retry";
+  /// Retry re-sends exactly those writes (DNI-482).
+  void _showNotSaved(BackupImportReport report) {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.backupImportNotSaved),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: l10n.actionRetry,
+          // A retry that fails again stays "not saved"; nothing to show.
+          onPressed: () => report.retryNotSaved().ignore(),
+        ),
+      ),
+    );
   }
 
   Future<String?> _showPasteDialog() {

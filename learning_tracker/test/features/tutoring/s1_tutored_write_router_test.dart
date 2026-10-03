@@ -16,8 +16,18 @@ import 'package:learning_tracker/features/tutoring/data/services/tutor_write_ser
 class _FakeInvokerRecord {
   final List<({String fn, Map<String, dynamic> args})> calls = [];
 
-  Future<void> call(String fn, Map<String, dynamic> args) async {
+  /// Records the call and answers with the governed callables'
+  /// `writeWithChangeLog` receipt (one change_log entry, server `at`).
+  Future<Object?> call(String fn, Map<String, dynamic> args) async {
     calls.add((fn: fn, args: Map<String, dynamic>.from(args)));
+    return {
+      'success': true,
+      'action_id': args['actionId'] ?? '01JT7T0SV0AAAAAAAAAAAAAAAA',
+      'change_ids': const ['01JT7T0SV0AAAAAAAAAAAAAAAA'],
+      'at': '2026-10-02T15:20:00.000Z',
+      'replayed': false,
+      'noop': false,
+    };
   }
 
   ({String fn, Map<String, dynamic> args})? get lastCall =>
@@ -420,52 +430,6 @@ void main() {
       );
 
       expect(result, isA<TutorWriteFailure>());
-    });
-  });
-
-  group('S4-C — completion reset', () {
-    test('tutored: completion id forwarded to CF', () async {
-      final record = _FakeInvokerRecord();
-      final result = await _service(record).resetCompletion(
-        grantId: _grantId,
-        ownerUid: _ownerUid,
-        profileId: _profileId,
-        completionId: 'completion_xyz_123',
-      );
-
-      expect(result, isA<TutorWriteSuccess>());
-      expect(record.lastCall!.fn, 'tutorResetCompletion');
-      expect(record.lastCall!.args['completionId'], 'completion_xyz_123');
-      expect(record.lastCall!.args['grantId'], _grantId);
-    });
-
-    test('non-tutored: passes through to delegate (no-op in outbox)', () {
-      markTestSkipped(
-        'RETIRED: verified the deleted router/facade were the only current '
-        'pass-through implementation; TutorWriteService has no non-tutored mode.',
-      );
-    });
-
-    test('CF failure → TutorWriteFailure', () async {
-      final service = TutorWriteService(
-        invoker: (_, __) async => throw Exception('CF timeout'),
-      );
-
-      final result = await service.resetCompletion(
-        grantId: _grantId,
-        ownerUid: _ownerUid,
-        profileId: _profileId,
-        completionId: 'comp_fail',
-      );
-
-      expect(result, isA<TutorWriteFailure>());
-    });
-
-    test('AC3 extended: deleteCompletion in tutored mode: 0 outbox depth', () {
-      markTestSkipped(
-        'RETIRED: verified the deleted SyncWriteFacade outbox was the only '
-        'depth being measured; TutorWriteService has no outbox integration.',
-      );
     });
   });
 

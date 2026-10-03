@@ -4,30 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 /// Widget observer that, on app resume:
 ///   1. Re-detects the device timezone (IANA zone) and updates [tz.local].
-///   2. Invalidates the [SacredWindowRepository] in-memory cache so the next
-///      notification scheduling recomputes windows for the new timezone.
-///   3. Triggers a reschedule of the 14-day reminder batch via
-///      [reminderSyncEffectProvider].
+///   2. Triggers a reschedule of the 14-day reminder batch via
+///      [reminderSyncEffectProvider]. The Sacred Time lock itself needs no
+///      invalidation: it is computed from each learner's own IANA zone
+///      (DNI-481, AD-41), never the device's.
 ///
 /// DNI-367 (Story 26.24) — acceptance criterion 3.
 ///
 /// Mount this widget above [MaterialApp] or alongside [SyncLifecycleObserver]
 /// so it receives lifecycle events for the full app lifetime.
 class TimezoneLifecycleObserver extends ConsumerStatefulWidget {
-  const TimezoneLifecycleObserver({
-    required this.child,
-    required this.sacredWindowRepository,
-    super.key,
-  });
+  const TimezoneLifecycleObserver({required this.child, super.key});
 
   final Widget child;
-  final SacredWindowRepository sacredWindowRepository;
 
   @override
   ConsumerState<TimezoneLifecycleObserver> createState() =>
@@ -71,10 +65,7 @@ class _TimezoneLifecycleObserverState
       );
     }
 
-    // 2. Invalidate Sacred Window cache so next scheduling recomputes.
-    widget.sacredWindowRepository.invalidate();
-
-    // 3. Trigger reschedule by invalidating the Riverpod provider.
+    // 2. Trigger reschedule by invalidating the Riverpod provider.
     if (mounted) {
       // ignore: unused_result — side-effect-only provider
       ref.invalidate(reminderSyncEffectProvider);

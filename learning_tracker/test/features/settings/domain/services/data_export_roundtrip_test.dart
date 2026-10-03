@@ -77,24 +77,6 @@ void main() {
     expect(documentData(goals.single)['description'], 'Finish the tract');
   });
 
-  test('exports bookmark rows', () async {
-    final firestore = await profileStore();
-    await seedBookmark(
-      firestore,
-      uid: testUid,
-      profileId: testProfileId,
-      curriculumId: CurriculumId.mishnayos,
-      sefariaRef: 'Berakhot.1.1',
-    );
-    final profile = profileFrom(
-      await exportedMap(backupService(firestore)),
-      testProfileId,
-    );
-    final bookmarks = collectionDocuments(profile, 'bookmarks');
-    expect(bookmarks, hasLength(1));
-    expect(documentData(bookmarks.single)['sefaria_ref'], 'Berakhot.1.1');
-  });
-
   test('exports main-track order rows (track_learning_order; the retired '
       'learning_order collection is merged into it, DNI-476)', () async {
     final firestore = await profileStore();
@@ -116,19 +98,24 @@ void main() {
     expect(documentData(rows.single)['ref'], 'Zeraim');
   });
 
-  test('exports streak_events rows', () async {
+  test('retired streak_events and learning_ledger are not exported '
+      '(DNI-479, AD-49)', () async {
     final firestore = await profileStore();
     await profileCollection(
       firestore,
       'streak_events',
     ).doc('event-1').set({'event_type': 'completion', 'day_utc': '2026-01-01'});
+    await profileCollection(
+      firestore,
+      'learning_ledger',
+    ).doc('entry-1').set({'unit_identifier': 'unit-1'});
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
       testProfileId,
     );
-    final rows = collectionDocuments(profile, 'streak_events');
-    expect(rows, hasLength(1));
-    expect(documentData(rows.single)['event_type'], 'completion');
+    final collections = profile['collections'] as Map<String, dynamic>;
+    expect(collections.containsKey('streak_events'), isFalse);
+    expect(collections.containsKey('learning_ledger'), isFalse);
   });
 
   test(
@@ -176,24 +163,6 @@ void main() {
     expect(restored.docs.single.data()['curriculum_id'], 'mishnayos');
   });
 
-  test('importData imports bookmarks', () async {
-    final source = await profileStore();
-    await seedBookmark(
-      source,
-      uid: testUid,
-      profileId: testProfileId,
-      curriculumId: CurriculumId.mishnayos,
-      sefariaRef: 'Berakhot.1.1',
-    );
-    final target = FakeFirebaseFirestore();
-    await backupService(
-      target,
-    ).importData(await backupService(source).exportData());
-    final restored = await profileCollection(target, 'bookmarks').get();
-    expect(restored.docs, hasLength(1));
-    expect(restored.docs.single.data()['sefaria_ref'], 'Berakhot.1.1');
-  });
-
   test('importData imports the main-track order', () async {
     final source = await profileStore();
     await profileCollection(source, 'track_learning_order')
@@ -209,21 +178,6 @@ void main() {
     ).get();
     expect(restored.docs, hasLength(1));
     expect(restored.docs.single.data()['ref'], 'Zeraim');
-  });
-
-  test('importData imports streak_events', () async {
-    final source = await profileStore();
-    await profileCollection(
-      source,
-      'streak_events',
-    ).doc('event-1').set({'event_type': 'completion'});
-    final target = FakeFirebaseFirestore();
-    await backupService(
-      target,
-    ).importData(await backupService(source).exportData());
-    final restored = await profileCollection(target, 'streak_events').get();
-    expect(restored.docs, hasLength(1));
-    expect(restored.docs.single.data()['event_type'], 'completion');
   });
 
   test(

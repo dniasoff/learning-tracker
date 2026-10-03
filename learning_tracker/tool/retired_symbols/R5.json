@@ -3,17 +3,17 @@
   "title": "learning_ledger / LearningLedgerEntry",
   "description": "Action: delete. The rules/deletes.ts remnants of `learning_ledger` are R14's.",
   "entries": [
-    {"symbol": "learning_ledger", "kind": "collection", "state": "pending", "owner": "DNI-479", "paths": {"include": ["lib/**", "functions/src/**"], "exclude": ["functions/src/deletes.ts"]}},
-    {"symbol": "LearningLedgerEntry", "kind": "type", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "LearningLedgerEntryFirestoreCodec", "kind": "type", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "LedgerEntryDraft", "kind": "type", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "LearningLedgerRepository", "kind": "type", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "LearningLedgerRepositoryNotReadyException", "kind": "type", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "FirestoreLearningLedgerRepository", "kind": "service", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "FirestoreLearningLedgerRepositoryAdapter", "kind": "service", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "FirestoreGamificationLedgerRepository", "kind": "service", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "GamificationLedgerNotReadyException", "kind": "type", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "learningLedgerProvider", "kind": "service", "state": "pending", "owner": "DNI-479"},
-    {"symbol": "curriculumLedgerProvider", "kind": "service", "state": "pending", "owner": "DNI-479"}
+    {"symbol": "learning_ledger", "kind": "collection", "state": "retired", "owner": "DNI-479", "paths": {"include": ["lib/**", "functions/src/**"], "exclude": ["functions/src/deletes.ts"]}},
+    {"symbol": "LearningLedgerEntry", "kind": "type", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "LearningLedgerEntryFirestoreCodec", "kind": "type", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "LedgerEntryDraft", "kind": "type", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "LearningLedgerRepository", "kind": "type", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "LearningLedgerRepositoryNotReadyException", "kind": "type", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "FirestoreLearningLedgerRepository", "kind": "service", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "FirestoreLearningLedgerRepositoryAdapter", "kind": "service", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "FirestoreGamificationLedgerRepository", "kind": "service", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "GamificationLedgerNotReadyException", "kind": "type", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "learningLedgerProvider", "kind": "service", "state": "retired", "owner": "DNI-479"},
+    {"symbol": "curriculumLedgerProvider", "kind": "service", "state": "retired", "owner": "DNI-479"}
   ]
 }

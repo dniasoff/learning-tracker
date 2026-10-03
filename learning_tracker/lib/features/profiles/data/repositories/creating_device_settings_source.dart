@@ -7,15 +7,16 @@
 ///   the tz database throws [LearnerTimeZoneUnavailableException] and the
 ///   profile is not created (never a silent device-offset or UTC
 ///   fallback).
-/// - `latitude` / `longitude` / `in_israel` are the device's Sacred Time
-///   location and in-Israel flag as currently set on this device. A device
-///   with no location yet seeds none (the AD-36 fail-closed lock fallback
-///   applies until a location is set through a governed change); the
-///   in-Israel flag seeds its current value (default `false`).
+/// - No location is seeded (DNI-481 AC-4: nothing reads or copies device
+///   preferences into a profile — the device-global Sacred Time
+///   preferences are deleted). The AD-36 fail-closed lock fallback applies
+///   until a parent sets the learner's location through a governed change,
+///   and the after-lock prompt asks for it (AC-2).
+/// - `in_israel` seeds `false` (diaspora: two-day yom tov, the fail-closed
+///   superset of the Israel days) until set through a governed change.
 ///
-/// This is the only place the creating device's Sacred Time preferences
-/// feed a learner's settings; afterwards every reader goes through
-/// `learnerLockSettingsProvider` (AD-37).
+/// Afterwards every reader goes through `learnerLockSettingsProvider`
+/// (AD-37).
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,8 +25,6 @@ import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
-import 'package:learning_tracker/features/sacred_time/data/services/sacred_time_preferences.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// The raw settings the creating device reports.
 final class CreatingDeviceSettings {
@@ -40,13 +39,15 @@ final class CreatingDeviceSettings {
   /// The device's IANA zone id, or null when it could not be read.
   final String? timeZone;
 
-  /// The device's Sacred Time latitude, if a location is set.
+  /// The seed latitude, if a location is known (none from the platform
+  /// source).
   final double? latitude;
 
-  /// The device's Sacred Time longitude, if a location is set.
+  /// The seed longitude, if a location is known (none from the platform
+  /// source).
   final double? longitude;
 
-  /// The device's in-Israel flag.
+  /// The seed in-Israel flag.
   final bool inIsrael;
 
   /// The seed [LearnerSettings] of new profile [profileId].
@@ -90,8 +91,9 @@ abstract interface class CreatingDeviceSettingsSource {
   Future<CreatingDeviceSettings> read();
 }
 
-/// The platform [CreatingDeviceSettingsSource]: `flutter_timezone` and the
-/// device's Sacred Time preferences.
+/// The platform [CreatingDeviceSettingsSource]: the device's IANA zone from
+/// `flutter_timezone`, no location and diaspora (DNI-481: no device
+/// preference is read).
 final class PlatformCreatingDeviceSettingsSource
     implements CreatingDeviceSettingsSource {
   /// Creates the source.
@@ -105,14 +107,7 @@ final class PlatformCreatingDeviceSettingsSource
     } on Object {
       zone = null; // unreadable: creation is blocked by seedFor
     }
-    final prefs = await SharedPreferences.getInstance();
-    final location = SacredTimePreferences.readLocation(prefs);
-    return CreatingDeviceSettings(
-      timeZone: zone,
-      latitude: location?.latitude,
-      longitude: location?.longitude,
-      inIsrael: SacredTimePreferences.readInIsrael(prefs),
-    );
+    return CreatingDeviceSettings(timeZone: zone, inIsrael: false);
   }
 }
 

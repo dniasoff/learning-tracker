@@ -61,7 +61,7 @@ void main() {
     });
   });
 
-  test('seeds track, completion, and learning-ledger documents', () async {
+  test('seeds track and completion documents', () async {
     await seedTrack(
       firestore,
       uid: _uid,
@@ -79,19 +79,6 @@ void main() {
       completedAt: _time,
       points: 7,
     );
-    const ledgerUlid = 'FIXTURELEDGER000000000001';
-    await seedLedgerEntry(
-      firestore,
-      uid: _uid,
-      profileId: _profileId,
-      ulid: ledgerUlid,
-      curriculumId: CurriculumId.bavli,
-      unitIdentifier: 'daf-2a',
-      completedAt: _time,
-      markedBy: _profileId,
-      completionNumber: 2,
-    );
-
     final profilePath = firestore
         .collection('users')
         .doc(_uid)
@@ -114,18 +101,9 @@ void main() {
     expect(completion.data(), containsPair('curriculum_id', 'bavli'));
     expect(completion.data(), containsPair('sefaria_ref', 'Daf 2a'));
     expect(completion.data()!['completed_at'], isA<Timestamp>());
-
-    final ledger = await profilePath
-        .collection('learning_ledger')
-        .doc(ledgerUlid)
-        .get();
-    expect(ledger.data(), containsPair('ulid', ledgerUlid));
-    expect(ledger.data(), containsPair('curriculum_id', 'bavli'));
-    expect(ledger.data(), containsPair('completion_number', 2));
-    expect(ledger.data()!['completed_at'], isA<Timestamp>());
   });
 
-  test('seeds goal and bookmark documents', () async {
+  test('seeds goal documents', () async {
     final goalId = await seedGoal(
       firestore,
       uid: _uid,
@@ -133,14 +111,6 @@ void main() {
       curriculumId: CurriculumId.mishnayos,
       description: 'Finish the tractate',
       createdAt: _time,
-    );
-    await seedBookmark(
-      firestore,
-      uid: _uid,
-      profileId: _profileId,
-      curriculumId: CurriculumId.mishnayos,
-      sefariaRef: 'Mishnah 3',
-      updatedAt: _time,
     );
 
     final profilePath = firestore
@@ -154,15 +124,6 @@ void main() {
     expect(goal.data(), isNot(contains('updated_at')));
     expect(goal.data(), containsPair('description', 'Finish the tractate'));
 
-    final bookmark = await profilePath
-        .collection('bookmarks')
-        .doc(CurriculumId.mishnayos.storageKey)
-        .get();
-    expect(bookmark.data(), {
-      'curriculum_id': 'mishnayos',
-      'sefaria_ref': 'Mishnah 3',
-      'updated_at': _time.toIso8601String(),
-    });
   });
 
   test('seeds the three default stage definitions as one batch', () async {

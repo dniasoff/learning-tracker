@@ -44,7 +44,7 @@ class ContentIndex {
   /// (sorted by `sortOrder`), or null when the curriculum is unknown or has
   /// no leaf items.
   ///
-  /// Used by [BookmarkRepositoryImpl._getFirstItemId] to avoid an O(N) scan.
+  /// Used by the content index to avoid an O(N) scan.
   String? firstLeaf(CurriculumId curriculumId) {
     final leaves = _leavesByCurriculum[curriculumId.storageKey];
     return leaves != null && leaves.isNotEmpty ? leaves.first.sefariaRef : null;

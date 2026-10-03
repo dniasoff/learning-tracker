@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/domain/value_objects/program_starting_posi
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
@@ -40,46 +39,47 @@ const kDefaultStudyDays = <int, String>{
 ///
 /// Adding a curriculum whose track was removed re-adds it (AD-38, ruling
 /// B13): `ended_at` is cleared and the prior config is kept, so the flow's
-/// own config (and the program's starting bookmark) is not applied — see
+/// own config (and the program's starting reference) is not applied — see
 /// [AddTrackActionRepository.applyAddTrack].
 ///
-/// The starting bookmark of a program track is not a governed entity
-/// (bookmarks are retired by AD-49); it is written after the action, and
-/// the post-success `logTrackAdded` analytics event follows — both only
-/// once the track is confirmed (deferred for an action queued offline, see
+/// The program's starting reference is the governed `tracking_start_ref`;
+/// the post-success `logTrackAdded` analytics event follows only once the
+/// track is confirmed (deferred for an action queued offline, see
 /// [createTrack]).
 class TrackCreationService {
   TrackCreationService({
     required AddTrackActionRepository actionRepository,
     required LearningProcessWizardService wizardService,
-    required BookmarkRepository bookmarkRepository,
     AnalyticsService? analytics,
+    bool Function() isTutoredSession = _ownerSession,
   }) : _actionRepository = actionRepository,
        _wizardService = wizardService,
-       _bookmarkRepository = bookmarkRepository,
-       _analytics = analytics ?? const NullAnalyticsService();
+       _analytics = analytics ?? const NullAnalyticsService(),
+       _isTutoredSession = isTutoredSession;
+
+  static bool _ownerSession() => false;
 
   final AddTrackActionRepository _actionRepository;
   final LearningProcessWizardService _wizardService;
-  // The SAME repository the rest of the app reads bookmarks through
-  // (Firestore-backed, ULID-profile-keyed — see bookmark_providers.dart).
-  final BookmarkRepository _bookmarkRepository;
   final AnalyticsService _analytics;
+  final bool Function() _isTutoredSession;
 
   /// Persist all track configuration from the AddTrackFlow result as one
   /// governed action.
   ///
-  /// The non-governed follow-ups (the starting bookmark and the
-  /// `logTrackAdded` event) run only once the track is confirmed: right
+  /// The `logTrackAdded` event runs only once the track is confirmed: right
   /// away for a saved action, and for an action queued offline once the
   /// server accepts it — never if it refuses it (AD-54: the refused action
-  /// is rolled back and surfaces as a pending failure), so no bookmark or
-  /// analytics event outlives a track that was never added.
+  /// is rolled back and surfaces as a pending failure), so no analytics
+  /// event outlives a track that was never added.
   Future<void> createTrack({required AddTrackResult result}) async {
+    if (_isTutoredSession()) {
+      throw const TutorTrackCreationUnsupportedException();
+    }
     final plan = planFor(result);
     final outcome = await _actionRepository.applyAddTrack(plan);
     if (!outcome.queued) {
-      await _afterTrackAdded(result, plan, outcome);
+      await _afterTrackAdded(result);
       return;
     }
     AppLogger.instance.info(
@@ -87,12 +87,11 @@ class TrackCreationService {
           'TrackCreationService: track for '
           '${result.curriculumId.storageKey} queued offline',
     );
-    unawaited(_afterConfirmed(result, plan, outcome));
+    unawaited(_afterConfirmed(result, outcome));
   }
 
   Future<void> _afterConfirmed(
     AddTrackResult result,
-    AddTrackPlan plan,
     AddTrackOutcome outcome,
   ) async {
     if (!await outcome.whenConfirmed()) {
@@ -103,7 +102,7 @@ class TrackCreationService {
       return;
     }
     try {
-      await _afterTrackAdded(result, plan, outcome);
+      await _afterTrackAdded(result);
     } on Object catch (error, stackTrace) {
       AppLogger.instance.warning(
         event: 'track_creation_deferred_follow_up_failed',
@@ -114,24 +113,8 @@ class TrackCreationService {
     }
   }
 
-  /// The non-governed follow-ups of a confirmed Add track action.
-  Future<void> _afterTrackAdded(
-    AddTrackResult result,
-    AddTrackPlan plan,
-    AddTrackOutcome outcome,
-  ) async {
-    // The bookmark is a SEPARATE, non-governed write (not part of the
-    // program enrolment); `tracking_start_ref` is the durable record of the
-    // chosen starting ref. A re-add keeps the prior program, so the plan's
-    // starting ref was not applied and no bookmark is written for it.
-    final bookmarkRef = outcome.reAdded ? null : plan.program?.trackingStartRef;
-    if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
-      await _bookmarkRepository.setBookmark(
-        curriculumId: result.curriculumId,
-        sefariaRef: bookmarkRef,
-      );
-    }
-
+  /// The analytics follow-up of a confirmed Add track action.
+  Future<void> _afterTrackAdded(AddTrackResult result) async {
     AppLogger.instance.info(
       event:
           'TrackCreationService: track "${result.label}" created for '
@@ -154,8 +137,8 @@ class TrackCreationService {
   @visibleForTesting
   AddTrackPlan planFor(AddTrackResult result) {
     final curriculum = result.curriculumId;
-    final (:bookmarkRef, :trackingStartDate) = result.programId == null
-        ? (bookmarkRef: null, trackingStartDate: null)
+    final (:trackingStartRef, :trackingStartDate) = result.programId == null
+        ? (trackingStartRef: null, trackingStartDate: null)
         : _parseProgramStartingRef(result.startingRef);
     final wizardResult =
         result.wizardResult?.wizardResult ??
@@ -177,7 +160,7 @@ class TrackCreationService {
           : AddTrackProgram(
               programId: result.programId!,
               trackingStartDate: trackingStartDate,
-              trackingStartRef: bookmarkRef,
+              trackingStartRef: trackingStartRef,
             ),
       goal: goal == null
           ? null
@@ -190,17 +173,16 @@ class TrackCreationService {
     );
   }
 
-  /// Parse the raw startingRef string into a bookmark ref and tracking-start date.
+  /// Parse the raw startingRef string into a governed tracking start and date.
   ///
   /// The format may be:
   ///   - null → start from beginning
   ///   - "offset:N|ref:<sefariaRef>" → calendar offset + resolved unit
   ///   - "offset:N" → legacy day-offset format
   ///   - a sefariaRef string (e.g. "Berakhot 42a") → content-based position
-  ({String? bookmarkRef, DateTime? trackingStartDate}) _parseProgramStartingRef(
-    String? rawStartingRef,
-  ) {
-    var bookmarkRef = rawStartingRef;
+  ({String? trackingStartRef, DateTime? trackingStartDate})
+  _parseProgramStartingRef(String? rawStartingRef) {
+    var trackingStartRef = rawStartingRef;
     String? offsetToken;
 
     if (rawStartingRef != null && rawStartingRef.contains('|')) {
@@ -209,7 +191,7 @@ class TrackCreationService {
         if (token.startsWith('ref:')) {
           final parsedRef = token.substring('ref:'.length);
           if (parsedRef.isNotEmpty) {
-            bookmarkRef = parsedRef;
+            trackingStartRef = parsedRef;
           }
         }
       }
@@ -241,6 +223,19 @@ class TrackCreationService {
       }
     }
 
-    return (bookmarkRef: bookmarkRef, trackingStartDate: trackingStartDate);
+    return (
+      trackingStartRef: trackingStartRef,
+      trackingStartDate: trackingStartDate,
+    );
   }
+}
+
+/// A tutor cannot use the owner-only Add track path until a governed add-track
+/// callable exists. Refusal occurs before any action is prepared or written.
+final class TutorTrackCreationUnsupportedException implements Exception {
+  /// Creates the exception.
+  const TutorTrackCreationUnsupportedException();
+
+  @override
+  String toString() => 'Add track is not available in a tutored session';
 }

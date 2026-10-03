@@ -338,7 +338,7 @@ void main() {
   group('E2E-117 — Permission prompts: both granted, no re-prompt', () {
     testWidgets(
       'SKIP device/harness: PermissionPromptScreen uses native platform channels '
-      '(NotificationGateway.requestPermission / SacredLocationNotifier.detect)',
+      '(NotificationGateway.requestPermission / LearnerSettingsEditor.detect)',
       skip: true,
       (tester) async {},
     );

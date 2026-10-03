@@ -203,6 +203,15 @@ enum MishnaCorrectionOutcome {
 
   /// The command refused or failed; the original row is restored.
   rolledBack,
+
+  /// A tutor correction the server stamped inside the learner's lock: it is
+  /// stored but not counted (AD-36, DNI-486 AC-7), so the row is unchanged.
+  keptNotCounted,
+
+  /// A tutor correction refused because the parent turned off "Can edit
+  /// learning" (AD-53; DNI-487 AC-6): nothing was written, the row is
+  /// unchanged, and the screen says so instead of the rollback notice.
+  editingTurnedOff,
 }
 
 /// The optimistic look of [item] once [request] is applied: a removal, or
@@ -362,14 +371,20 @@ final class MishnaHistoryCorrections
   /// original row — before this future completes, so the caller's
   /// snackbar always follows the rollback. On success the overlay stays
   /// (pending) until the history confirms the correction.
+  ///
+  /// A tutor's correction is online-only and never optimistic (AD-53,
+  /// DNI-486 AC-3): the row changes only once the `tutorVoidLearning`
+  /// callable has succeeded; a rejection leaves it untouched.
   Future<MishnaCorrectionOutcome> correct(
     MishnaHistoryItem item,
     MishnaCorrectionRequest request,
   ) async {
     final id = item.eventId;
-    state = state.copyWith(
+    final tutored = ref.read(activeTutoredProfileSelectionProvider) != null;
+    void overlay() => state = state.copyWith(
       overlays: {...state.overlays, id: optimisticItem(item, request)},
     );
+    if (!tutored) overlay();
     CaptureResult result;
     LearningCommands? commands;
     try {
@@ -387,15 +402,21 @@ final class MishnaHistoryCorrections
     }
     final outcome = switch (result) {
       CaptureSuccess(queued: true) => MishnaCorrectionOutcome.queued,
+      CaptureSuccess(keptNotCounted: [_, ...]) =>
+        MishnaCorrectionOutcome.keptNotCounted,
       CaptureSuccess() => MishnaCorrectionOutcome.applied,
       CaptureChildLimit() => MishnaCorrectionOutcome.childLimit,
+      CaptureRejected(reason: CaptureRejection.editingTurnedOff) =>
+        MishnaCorrectionOutcome.editingTurnedOff,
       _ => MishnaCorrectionOutcome.rolledBack,
     };
     if (!ref.mounted) return outcome;
-    if (result is! CaptureSuccess) {
+    if (result is! CaptureSuccess ||
+        outcome == MishnaCorrectionOutcome.keptNotCounted) {
       _dropOverlays({id});
       return outcome;
     }
+    if (tutored) overlay();
     if (result.queued && commands != null) {
       _queued[id] = {...result.eventIds};
       _watchFailures(commands);

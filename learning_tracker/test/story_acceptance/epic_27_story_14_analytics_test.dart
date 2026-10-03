@@ -8,10 +8,13 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/features/notifications/domain/services/curriculum_streak_alerts.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
@@ -132,11 +135,18 @@ void main() {
   group('27.14 — streak_milestone_reached', () {
     test('logStreakMilestoneReached fires with milestone param', () async {
       final analytics = FakeAnalyticsService();
-      await analytics.logStreakMilestoneReached(milestone: 7);
+      await analytics.logStreakMilestoneReached(
+        curriculumId: 'bavli',
+        milestone: 7,
+      );
       expect(analytics.countOf(AnalyticsEvent.streakMilestoneReached), 1);
       expect(
         analytics.lastParamsOf(AnalyticsEvent.streakMilestoneReached),
         containsPair('milestone', 7),
+      );
+      expect(
+        analytics.lastParamsOf(AnalyticsEvent.streakMilestoneReached),
+        containsPair('curriculum_id', 'bavli'),
       );
     });
 
@@ -260,36 +270,35 @@ void main() {
 
   // ── 9b. notification_fired (streak_alert) ──────────────────────────────────
   group('27.14 — notification_fired / streak_alert', () {
-    test('StreakAlertService.scheduleAlert fires notification_fired', () async {
+    test('StreakAlertService.evaluate fires notification_fired when it '
+        'schedules a curriculum alert (DNI-479)', () async {
       final analytics = FakeAnalyticsService();
-      final notifSvc = _MockNotificationGateway();
       const profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      when(
-        () => notifSvc.scheduleStreakAlertForProfile(
-          profileId: any(named: 'profileId'),
-          hour: any(named: 'hour'),
-          minute: any(named: 'minute'),
-          body: any(named: 'body'),
-        ),
-      ).thenAnswer((_) async {});
-
-      final svcProvider = Provider<StreakAlertService>(
-        (ref) => StreakAlertService(
-          ref: ref,
-          notificationService: notifSvc,
-          profileId: profileId,
-          hasCompletionsInRange: (start, end) async => false,
-          analytics: analytics,
-        ),
+      final svc = StreakAlertService(
+        notifications: _NoOpStreakAlerts(),
+        markers: _NoMarkers(),
+        profileId: profileId,
+        // Noon UTC; the learner's zone is UTC, the alert is at 20:00.
+        clock: () => DateTime.utc(2026, 3, 16, 12),
+        analytics: analytics,
       );
-      final svc = container.read(svcProvider);
 
-      await svc.scheduleAlert(hour: 20, minute: 0, currentStreak: 5);
+      final outcome = await svc.evaluate(
+        curriculumId: 'mishnayos',
+        streak: const CurriculumStreak(
+          current: 5,
+          best: 5,
+          lastDay: '2026-03-15',
+        ),
+        settingsHistory: LearnerSettingsHistory.constant(
+          const LearnerSettings(profileId: profileId, timeZone: 'UTC'),
+        ),
+        hour: 20,
+        minute: 0,
+      );
       await Future<void>.delayed(Duration.zero);
 
+      expect(outcome, StreakAlertOutcome.scheduled);
       expect(analytics.countOf(AnalyticsEvent.notificationFired), 1);
       expect(
         analytics.lastParamsOf(AnalyticsEvent.notificationFired),
@@ -404,4 +413,42 @@ void main() {
       expect(analytics.lastParamsOf(AnalyticsEvent.appLaunch), isNull);
     });
   });
+}
+
+class _NoOpStreakAlerts implements StreakAlertNotifications {
+  @override
+  Future<void> schedule({
+    required String profileId,
+    required String curriculumId,
+    required DateTime fireAtUtc,
+    required String title,
+    required String body,
+  }) async {}
+
+  @override
+  Future<void> cancel({
+    required String profileId,
+    required String curriculumId,
+  }) async {}
+
+  @override
+  Future<void> cancelAll(String profileId) async {}
+}
+
+class _NoMarkers implements StreakAlertMarkers {
+  @override
+  Future<String?> read(String profileId, String curriculumId) async => null;
+
+  @override
+  Future<void> write(
+    String profileId,
+    String curriculumId,
+    String marker,
+  ) async {}
+
+  @override
+  Future<void> clear(String profileId, String curriculumId) async {}
+
+  @override
+  Future<void> clearAll(String profileId) async {}
 }

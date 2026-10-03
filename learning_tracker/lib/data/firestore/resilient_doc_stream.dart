@@ -12,10 +12,8 @@
 /// supervisor: no fleet of channels, no dead-channel registry, no recovery-
 /// pull triggers — one stream in, one self-healing stream out. Every
 /// repository with a "watch one document" or "watch a query" need should
-/// call one of these rather than hand-roll its own resubscribe loop — see
-/// `lib/data/repositories/firestore_bookmark_repository.dart` (doc) and
-/// `lib/data/repositories/firestore_stage_definition_repository.dart`
-/// (query) for the reference callers.
+/// call one of these rather than hand-roll its own resubscribe loop. The
+/// repository classes use these helpers for document and query streams.
 ///
 /// Both share the exact same backoff/lifecycle skeleton
 /// ([_resilientStream]) — attempt counting, capped jittered delay,

@@ -38,7 +38,7 @@ abstract class AccountEntity with _$AccountEntity {
   const factory AccountEntity({
     /// Firebase uid — also the `users/{uid}` doc-id. Not written into the
     /// document body itself (the path already carries it; matches
-    /// `GoalEntity`/`BookmarkEntity` never re-storing their own doc-id
+    /// `GoalEntity`/`persisted entity` never re-storing their own doc-id
     /// components redundantly).
     required String uid,
 

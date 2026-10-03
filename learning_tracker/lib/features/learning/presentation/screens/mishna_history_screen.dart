@@ -30,6 +30,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The history of one leaf ([leafRef]) of one curriculum ([curriculumId],
@@ -106,6 +107,12 @@ class MishnaHistoryScreen extends ConsumerWidget {
       );
     }
     final viewer = ref.watch(mishnaHistoryViewerProvider);
+    // Story 1.24 (DNI-486, AC-4/AC-5): a tutor reads what the grant allows;
+    // without editing access or a connection the corrections stay visible
+    // but disabled, with one note saying why.
+    final writeBlocked =
+        viewer == MishnaHistoryViewer.tutor &&
+        ref.watch(tutorWriteAvailabilityProvider).blocksTutor;
     final history = ref.watch(mishnaHistoryViewProvider(_args));
     // Story 2.10 (AC-10): the sub-track sources Change source offers, kept
     // ready for the picker (empty on a tutor device, AC-11).
@@ -159,14 +166,17 @@ class MishnaHistoryScreen extends ConsumerWidget {
           data: (data) => MishnaHistoryBody(
             history: data,
             viewer: viewer,
-            onRowTap: (item, actions) => openMishnaCorrections(
-              context,
-              ref,
-              args: _args,
-              history: data,
-              item: item,
-              actions: actions,
-            ),
+            writeBlocked: writeBlocked,
+            onRowTap: writeBlocked
+                ? null
+                : (item, actions) => openMishnaCorrections(
+                    context,
+                    ref,
+                    args: _args,
+                    history: data,
+                    item: item,
+                    actions: actions,
+                  ),
           ),
         ),
       ),
@@ -182,6 +192,7 @@ class MishnaHistoryBody extends StatelessWidget {
     required this.history,
     required this.viewer,
     required this.onRowTap,
+    this.writeBlocked = false,
   });
 
   /// The history to show.
@@ -194,6 +205,10 @@ class MishnaHistoryBody extends StatelessWidget {
   final void Function(MishnaHistoryItem item, Set<MishnaCorrection> actions)?
   onRowTap;
 
+  /// A tutor who may not write now: the correction controls stay visible
+  /// but disabled, under the tutor write note (DNI-486).
+  final bool writeBlocked;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -202,6 +217,8 @@ class MishnaHistoryBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 32),
       children: [
+        if (viewer == MishnaHistoryViewer.tutor)
+          const TutorWriteNote(padding: EdgeInsets.only(bottom: 12)),
         _HistoryHeader(history: history),
         if (rows.isNotEmpty) ...[
           const SizedBox(height: 16),
@@ -223,6 +240,7 @@ class MishnaHistoryBody extends StatelessWidget {
                 hasPlaceChoices: history.placeChoices.isNotEmpty,
               ),
               onTap: onRowTap,
+              writeBlocked: writeBlocked,
             ),
             const SizedBox(height: 8),
           ],
@@ -310,6 +328,7 @@ class MishnaHistoryEventRow extends StatelessWidget {
     required this.item,
     required this.actions,
     required this.onTap,
+    this.writeBlocked = false,
   });
 
   /// The row.
@@ -321,6 +340,10 @@ class MishnaHistoryEventRow extends StatelessWidget {
   /// Opens the corrections; null disables taps.
   final void Function(MishnaHistoryItem item, Set<MishnaCorrection> actions)?
   onTap;
+
+  /// The row's corrections exist but the tutor may not write now: the
+  /// actions control shows at 40% opacity with disabled semantics.
+  final bool writeBlocked;
 
   @override
   Widget build(BuildContext context) {
@@ -340,7 +363,8 @@ class MishnaHistoryEventRow extends StatelessWidget {
       if (item.pending) l10n.mishnaHistorySaving,
     ];
     final ordinal = item.ordinal;
-    final tappable = onTap != null && actions.isNotEmpty;
+    final tappable = onTap != null && actions.isNotEmpty && !writeBlocked;
+    final disabledControl = writeBlocked && actions.isNotEmpty;
     final dimmed = item.status != MishnaHistoryStatus.counted || item.pending;
 
     final content = Opacity(
@@ -423,6 +447,16 @@ class MishnaHistoryEventRow extends StatelessWidget {
             ),
             if (tappable)
               Icon(Icons.more_vert, size: 20, color: colors.brandInkMuted),
+            if (disabledControl)
+              Opacity(
+                key: const Key('mishnaHistoryActionsDisabled'),
+                opacity: tutorDisabledControlOpacity,
+                child: Icon(
+                  Icons.more_vert,
+                  size: 20,
+                  color: colors.brandInkMuted,
+                ),
+              ),
           ],
         ),
       ),
@@ -430,7 +464,8 @@ class MishnaHistoryEventRow extends StatelessWidget {
 
     return Semantics(
       container: true,
-      button: tappable,
+      button: tappable || disabledControl,
+      enabled: disabledControl ? false : null,
       hint: tappable ? l10n.mishnaHistoryActionsHint : null,
       onTap: tappable ? () => onTap!(item, actions) : null,
       label: [
@@ -633,6 +668,11 @@ Future<void> openMishnaCorrections(
       l10n.mishnaHistoryCorrectionChildLimit,
     MishnaCorrectionOutcome.rolledBack =>
       l10n.mishnaHistoryCorrectionRolledBack,
+    MishnaCorrectionOutcome.keptNotCounted => l10n.tutorCaptureKeptNotCounted,
+    MishnaCorrectionOutcome.editingTurnedOff => tutorEditingTurnedOffText(
+      l10n,
+      learnerName: ref.read(tutorLearnerNameProvider),
+    ),
   };
   if (message != null) {
     messenger.showSnackBar(SnackBar(content: Text(message)));

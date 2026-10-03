@@ -22,6 +22,7 @@ sealed class CaptureResult {
     List<ChangedSinceField> changedSince,
     List<String> rejectedEventIds,
     List<LeafRef> alreadyRecordedRefs,
+    List<String> keptNotCounted,
   }) = CaptureSuccess;
 
   /// Refused: the learner is inside lock [window] (AD-36).
@@ -52,6 +53,7 @@ final class CaptureSuccess extends CaptureResult {
     this.changedSince = const [],
     this.rejectedEventIds = const [],
     this.alreadyRecordedRefs = const [],
+    this.keptNotCounted = const [],
   });
 
   /// The refs of a `skipRecorded` capture that the persisted log already
@@ -83,6 +85,21 @@ final class CaptureSuccess extends CaptureResult {
   /// Fields someone else changed since the caller last read them.
   final List<ChangedSinceField> changedSince;
 
+  /// Events of [eventIds] that were stored but are not counted: a tutor
+  /// callable stamped them inside the learner's lock window (AD-36,
+  /// deviation #2; Story 1.24 / DNI-486 AC-7). They are kept, never rolled
+  /// back, and no Undo is offered for them; surfaces show "Kept, not
+  /// counted" and change no position or count for them.
+  final List<String> keptNotCounted;
+
+  /// [eventIds] minus [keptNotCounted]: the events that count.
+  List<String> get countedEventIds => keptNotCounted.isEmpty
+      ? eventIds
+      : [
+          for (final id in eventIds)
+            if (!keptNotCounted.contains(id)) id,
+        ];
+
   @override
   bool operator ==(Object other) =>
       other is CaptureSuccess &&
@@ -92,7 +109,8 @@ final class CaptureSuccess extends CaptureResult {
       other.queued == queued &&
       _listEquals(other.changedSince, changedSince) &&
       _listEquals(other.rejectedEventIds, rejectedEventIds) &&
-      _listEquals(other.alreadyRecordedRefs, alreadyRecordedRefs);
+      _listEquals(other.alreadyRecordedRefs, alreadyRecordedRefs) &&
+      _listEquals(other.keptNotCounted, keptNotCounted);
 
   @override
   int get hashCode => Object.hash(
@@ -103,12 +121,14 @@ final class CaptureSuccess extends CaptureResult {
     Object.hashAll(changedSince),
     Object.hashAll(rejectedEventIds),
     Object.hashAll(alreadyRecordedRefs),
+    Object.hashAll(keptNotCounted),
   );
 
   @override
   String toString() =>
       'CaptureResult.success(${eventIds.length} events, '
-      '${changeIds.length} changes, queued: $queued)';
+      '${changeIds.length} changes, queued: $queued'
+      '${keptNotCounted.isEmpty ? '' : ', ${keptNotCounted.length} kept, not counted'})';
 }
 
 /// Refused inside a lock window.
@@ -212,6 +232,12 @@ enum CaptureRejection {
   /// in `LearningCommands.watchPendingFailures` with a retry (AD-54
   /// Recovery, parent AD-30). Added by DNI-469.
   notSaved,
+
+  /// A tutor's write was refused because the learner's parent turned off
+  /// "Can edit learning" for the grant (AD-53 per-call check). Nothing was
+  /// written and nothing is pending; the surface says "{learner}'s parent
+  /// has turned off editing". Added by DNI-486 for DNI-487 AC-6.
+  editingTurnedOff,
 }
 
 /// A field someone else changed since the caller read it.

@@ -17,10 +17,12 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../../../../../helpers/firestore_fake.dart';
 import '../../../../../helpers/firestore_fixtures.dart';
+import '../../../../../helpers/tutoring/tutor_learning_harness.dart';
 
 const _uid = 'track-detail-screen-test-uid';
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY6';
@@ -31,9 +33,18 @@ CurriculumTrackEntity _track() => CurriculumTrackEntity(
   activatedAt: DateTime.utc(2026, 1, 1),
 );
 
+class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
+  _FixedTutoredSelection(this._fixed);
+  final TutoredProfileSelection _fixed;
+
+  @override
+  TutoredProfileSelection? build() => _fixed;
+}
+
 Widget _app({
   required FakeFirebaseFirestore firestore,
   required CurriculumTrackEntity track,
+  TutorWriteAvailability? tutorAvailability,
   bool program = false,
   bool chazara = false,
   double dashboardCompletion = 0,
@@ -41,6 +52,13 @@ Widget _app({
   double lifetime = 0,
 }) => ProviderScope(
   overrides: [
+    if (tutorAvailability != null) ...[
+      activeTutoredProfileSelectionProvider.overrideWith(
+        () => _FixedTutoredSelection(tutorSelection()),
+      ),
+      tutorWriteAvailabilityProvider.overrideWithValue(tutorAvailability),
+      tutorLearnerNameOverride(),
+    ],
     firestoreGoalRepositoryProvider.overrideWith(
       (ref) async => FirestoreGoalRepository(
         firestore: firestore,
@@ -193,5 +211,87 @@ void main() {
     );
     await tester.pump(const Duration(seconds: 1));
     expect(find.textContaining('Chazara'), findsNothing);
+  });
+
+  group('DNI-486 tutored session', () {
+    bool disabled(WidgetTester tester, String key) {
+      final tile = tester.widget<ListTile>(find.byKey(ValueKey(key)));
+      final dimmed = find.ancestor(
+        of: find.byKey(ValueKey(key)),
+        matching: find.byKey(const Key('tutorDisabledControl')),
+      );
+      return tile.onTap == null &&
+          !tile.enabled &&
+          dimmed.evaluate().isNotEmpty;
+    }
+
+    testWidgets('delete and reorder are never offered to a tutor, even with '
+        'editing access: they act on the active (tutor) profile', (
+      tester,
+    ) async {
+      final firestore = await _seed();
+      await tester.pumpWidget(
+        _app(
+          firestore: firestore,
+          track: _track(),
+          tutorAvailability: TutorWriteAvailability.available,
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(disabled(tester, 'trackDetail.deleteTile'), isTrue);
+      expect(disabled(tester, 'trackDetail.reorderTile'), isTrue);
+      expect(disabled(tester, 'trackDetail.editTile'), isFalse);
+      expect(disabled(tester, 'trackDetail.studyDaysTile'), isFalse);
+
+      await tester.tap(find.text('Delete Track'), warnIfMissed: false);
+      await tester.pump();
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    for (final availability in [
+      TutorWriteAvailability.noEditAccess,
+      TutorWriteAvailability.offline,
+      TutorWriteAvailability.locked,
+    ]) {
+      testWidgets('${availability.name}: every write entry point is visible '
+          'but disabled', (tester) async {
+        final firestore = await _seed();
+        await tester.pumpWidget(
+          _app(
+            firestore: firestore,
+            track: _track(),
+            tutorAvailability: availability,
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        for (final key in [
+          'trackDetail.bulkPriorTile',
+          'trackDetail.goalTile',
+          'trackDetail.studyDaysTile',
+          'trackDetail.editTile',
+          'trackDetail.deleteTile',
+          'trackDetail.reorderTile',
+        ]) {
+          expect(disabled(tester, key), isTrue, reason: key);
+        }
+      });
+    }
+
+    testWidgets('the owner keeps every action enabled', (tester) async {
+      final firestore = await _seed();
+      await tester.pumpWidget(_app(firestore: firestore, track: _track()));
+      await tester.pump(const Duration(seconds: 1));
+      for (final key in [
+        'trackDetail.bulkPriorTile',
+        'trackDetail.studyDaysTile',
+        'trackDetail.editTile',
+        'trackDetail.deleteTile',
+        'trackDetail.reorderTile',
+      ]) {
+        expect(disabled(tester, key), isFalse, reason: key);
+      }
+    });
   });
 }

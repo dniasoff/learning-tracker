@@ -1,7 +1,7 @@
 // Cloud Functions entry point.
 //
 // AUD-firebase-15: this file used to hold five unrelated concerns (account
-// deletion, the scheduled audit-log purge, the bulk-completion proxy, the
+// deletion, the scheduled audit-log purge, the learning callables, the
 // tutor invite/grant lifecycle, and the tutor CRUD write-paths) in one
 // 2000+ line god-file. It is now a barrel that only re-exports the deployed
 // Cloud Functions from their focused modules below — deployed function
@@ -16,7 +16,6 @@ export {
   onUserDeleted,
   deleteLearnerProfile,
   deleteCurriculumTrack,
-  deleteBulkMarkedCompletions,
   deleteAccountData,
 } from "./deletes";
 
@@ -34,6 +33,7 @@ export {
   tutorUpsertSubTrack,
   tutorVoidLearning,
 } from "./tutor_learning";
+export { tutorRecordLearning, tutorUnlearn, tutorUpsertSubTrack, tutorVoidLearning } from "./tutor_learning";
 
 export {
   inviteTutor,
@@ -49,7 +49,6 @@ export {
 export { updateTutorGrantPermissions } from "./tutor_invites";
 
 export {
-  tutorResetCompletion,
   tutorUpsertGoal,
   tutorDeleteGoal,
   tutorUpsertTrack,
@@ -57,8 +56,8 @@ export {
   tutorUpsertStageDefinition,
   tutorUpsertStudyDayConfig,
   tutorDeleteStudyDayConfig,
+  tutorReplaceStudyDays,
   tutorUpdateGamificationSettings,
-  tutorUpsertBookmark,
   tutorSetProfileProgram,
   tutorUpsertCurriculumScope,
   tutorEditProfile,

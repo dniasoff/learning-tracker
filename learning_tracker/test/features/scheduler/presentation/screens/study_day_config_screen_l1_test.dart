@@ -18,7 +18,9 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/sched
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_write_availability.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_governed_writer.dart';
@@ -34,6 +36,7 @@ Widget _app({
   bool useHebrewTerms = false,
   Stream<List<StudyDayConfigEntry>>? configStream,
   TutorPermissions? tutorPermissions,
+  TutorWriteAvailability? availability,
 }) => pumpApp(
   child: const StudyDayConfigScreen(curriculumId: CurriculumId.mishnayos),
   locale: locale,
@@ -50,6 +53,10 @@ Widget _app({
     ),
     allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
     activeTutorPermissionsProvider.overrideWithValue(tutorPermissions),
+    // DNI-486: the toggles gate on the tutor write availability (grant,
+    // connection, the talmid's lock).
+    if (availability != null)
+      tutorWriteAvailabilityProvider.overrideWithValue(availability),
     useHebrewTermsProvider.overrideWithValue(useHebrewTerms),
     currentTransliterationVariantProvider.overrideWithValue(
       TransliterationVariant.ashkenazi,
@@ -179,31 +186,38 @@ void main() {
     );
   });
 
-  testWidgets('read-only tutor cannot write a day, editable tutor can', (
-    tester,
-  ) async {
+  testWidgets('a read-only or offline tutor cannot write a day (visible, '
+      'disabled); a writable session can', (tester) async {
     final firestore = createFakeFirestore(authenticatedUid: _uid);
     final repository = _repository(firestore);
-    await tester.pumpWidget(
-      _app(
-        hasChazara: true,
-        repository: repository,
-        tutorPermissions: TutorPermissions.readOnly(),
-      ),
-    );
-    await tester.pump();
-    await tester.tap(find.text('Sun'));
-    await tester.pump();
-    expect(
-      await repository.getConfigsForCurriculum(CurriculumId.mishnayos),
-      isEmpty,
-    );
+    for (final blocked in [
+      TutorWriteAvailability.noEditAccess,
+      TutorWriteAvailability.offline,
+    ]) {
+      await tester.pumpWidget(
+        _app(
+          hasChazara: true,
+          repository: repository,
+          tutorPermissions: TutorPermissions.readOnly(),
+          availability: blocked,
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Sun'), findsOneWidget);
+      await tester.tap(find.text('Sun'), warnIfMissed: false);
+      await tester.pump();
+      expect(
+        await repository.getConfigsForCurriculum(CurriculumId.mishnayos),
+        isEmpty,
+        reason: blocked.name,
+      );
+    }
 
     await tester.pumpWidget(
       _app(
         hasChazara: true,
         repository: repository,
-        tutorPermissions: const TutorPermissions(canEditLearning: true),
+        availability: TutorWriteAvailability.owner,
       ),
     );
     await tester.pump();

@@ -219,6 +219,54 @@ void main() {
       expect(h.at(DateTime.utc(2026, 3)).timeZone, 'Asia/Jerusalem');
     });
 
+    test('an import-time seed leads the history it was replayed under '
+        '(DNI-482, AD-49)', () {
+      // The destination profile was created (seeded) at importSeedAt; the
+      // import then replayed the source history with older original_at.
+      final importSeedAt = DateTime.utc(2027);
+      final importSeed = settingsEntry(
+        ulidA,
+        importSeedAt,
+        before: {'time_zone': null, 'in_israel': null},
+        after: {'time_zone': 'UTC', 'in_israel': false},
+      );
+      final replayedSeed = settingsEntry(
+        ulidB,
+        DateTime.utc(2027, 2),
+        originalAt: seedAt,
+        before: {'time_zone': 'UTC', 'in_israel': false},
+        after: {'time_zone': 'Asia/Jerusalem', 'in_israel': true},
+      );
+      final replayedMove = settingsEntry(
+        ulidC,
+        DateTime.utc(2027, 2),
+        originalAt: moved,
+        before: {'time_zone': 'Asia/Jerusalem', 'in_israel': true},
+        after: {'time_zone': 'America/New_York', 'in_israel': false},
+      );
+      final h = LearnerSettingsHistory.reconstruct(
+        current: const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'America/New_York',
+          inIsrael: false,
+        ),
+        entries: [replayedMove, importSeed, replayedSeed],
+      );
+      expect(h.spans.map((s) => s.fromUtc), [null, seedAt, moved]);
+      expect(h.at(seedAt).timeZone, 'Asia/Jerusalem');
+      expect(h.at(moved).timeZone, 'America/New_York');
+      // After the import-time seed's instant the replayed state still holds.
+      expect(h.at(importSeedAt).timeZone, 'America/New_York');
+    });
+
+    test('an update that fills an absent optional field is not a seed', () {
+      final h = LearnerSettingsHistory.reconstruct(
+        current: current,
+        entries: [locate(), seed(), move()],
+      );
+      expect(h.spans.map((s) => s.fromUtc), [null, moved, movedAgain]);
+    });
+
     test('entries of other entities or profiles are ignored', () {
       final other = ChangeLogEntry(
         id: ulidD,

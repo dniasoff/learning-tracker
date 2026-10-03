@@ -3,7 +3,6 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/bookmark_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
@@ -37,7 +36,6 @@ final goalRepositoryProvider = Provider<GoalRepository>((ref) {
 final beforeTrackingRecorderProvider = Provider<BeforeTrackingRecorder>((ref) {
   return BeforeTrackingRecorder(
     contentRepository: ref.watch(contentRepositoryProvider),
-    bookmarkRepository: ref.watch(bookmarkRepositoryProvider),
     commands: () => ref.read(learningCommandsProvider.future),
     events: () async {
       final scope = await ref.read(activeLearnerScopeProvider.future);

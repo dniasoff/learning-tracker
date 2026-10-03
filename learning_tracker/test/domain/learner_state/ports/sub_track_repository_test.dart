@@ -55,6 +55,56 @@ void main() {
     expect(change.entry.after, {'sub_tracks/$ulidB.rate_per_week': 9});
   });
 
+  group('create (DNI-482: AD-49 replay writes sub-tracks under fresh ids)', () {
+    test('is a create with an all-null baseline', () {
+      final change = SubTrackChange.create(
+        subTrackId: ulidB,
+        changedFields: {'name': 'Shiur'},
+        entry: _entry({'sub_tracks/$ulidB.name': 'Shiur'}),
+      );
+      expect(change.isCreate, isTrue);
+      expect(
+        SubTrackChange.fields(
+          subTrackId: ulidB,
+          changedFields: {'name': 'Shiur'},
+          entry: _entry({'sub_tracks/$ulidB.name': 'Shiur'}),
+        ).isCreate,
+        isFalse,
+      );
+    });
+
+    test('rejects a non-null before and a tombstone', () {
+      expect(
+        () => SubTrackChange.create(
+          subTrackId: ulidB,
+          changedFields: {'name': 'Shiur'},
+          entry: ChangeLogEntry(
+            id: ulidA,
+            entity: GovernedEntity.subTrack,
+            entityId: ulidB,
+            actionId: ulidA,
+            before: {'sub_tracks/$ulidB.name': 'Old'},
+            after: {'sub_tracks/$ulidB.name': 'Shiur'},
+            at: t0,
+            actor: parentActor,
+          ),
+        ),
+        throwsA(isA<StorageFormatException>()),
+      );
+      expect(
+        () => SubTrackChange.create(
+          subTrackId: ulidB,
+          changedFields: {'ended_at': t1, 'end_reason': 'ended'},
+          entry: _entry({
+            'sub_tracks/$ulidB.ended_at': t1,
+            'sub_tracks/$ulidB.end_reason': 'ended',
+          }),
+        ),
+        throwsA(isA<StorageFormatException>()),
+      );
+    });
+  });
+
   test('tombstone sets ended_at and end_reason together', () {
     final change = SubTrackChange.tombstone(
       subTrackId: ulidB,

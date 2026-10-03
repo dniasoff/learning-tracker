@@ -162,6 +162,7 @@ class _Harness {
           );
     }
     router = AppRouter(
+      sacredTimeLocationGuard: _AllowAll(),
       authGuard: _AllowAll(),
       profileGuard: _AllowProfile(),
       childModeGuard: _AllowChildMode(),

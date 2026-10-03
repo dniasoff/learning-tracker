@@ -17,7 +17,6 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
@@ -616,7 +615,6 @@ class _LifetimeCurriculumMarkingScreenState
     ref.invalidate(dashboardCompletionPercentageProvider(_curriculum));
     ref.invalidate(dashboardLastCompletionProvider(_curriculum));
     ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider);
-    ref.invalidate(curriculumLedgerProvider(widget.curriculumId));
     // The Lifetime KNOWLEDGE screen's TREE watches these two view providers
     // (all-sources / track-only). Without invalidating them, the headline count
     // refreshed after a save but the tree below stayed stale until the

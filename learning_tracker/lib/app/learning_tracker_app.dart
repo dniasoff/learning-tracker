@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
@@ -10,6 +13,12 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/learner_location_prompt.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_back_button_dispatcher.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Root application widget.
@@ -34,7 +43,14 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     // Keep a single router config instance for the app lifetime.
     // Re-creating appRouter.config() during rebuilds can trigger
     // duplicate GlobalKey / root-router overlay instability.
-    _routerConfig = ref.read(routerProvider).config();
+    // DNI-481: system back is swallowed while a Sacred Time lock is in
+    // force (the lock overlay sits above the router's navigator).
+    _routerConfig = withSacredTimeBackBlock(
+      ref.read(routerProvider).config(),
+      isLocked: () =>
+          ref.read(currentSacredWindowProvider) != null ||
+          ref.read(currentTutoredSacredWindowProvider) != null,
+    );
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -52,6 +68,48 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     // a BuildContext — also track a runtime device-language change.
     ref.invalidate(currentAppLocaleProvider);
     super.didChangeLocales(locales);
+  }
+
+  /// The after-lock location prompt's action (DNI-481 AC-2): the existing
+  /// city picker for the prompt's learner, behind every Parent PIN that
+  /// guards it — the device holder's and, for another learner, the
+  /// TARGET's own ([guardLearnerLocationPromptAccess]). The city picker
+  /// edits the ACTIVE learner, so a prompt for another own learner (a
+  /// sibling with no location on a multi-learner account) then makes that
+  /// learner the active one — the profile switcher's canonical switch (PIN
+  /// session locked, shell reloaded) — and opens the picker straight away.
+  Future<void> _openLearnerLocationPicker(LearnerLocationPrompt prompt) {
+    final router = ref.read(routerProvider);
+    return runLearnerLocationPromptAction(
+      prompt,
+      selectedProfileId: () => ref.read(selectedProfileIdProvider),
+      authorize: (targetProfileId) async {
+        final navigatorContext = router.navigatorKey.currentContext;
+        if (navigatorContext == null) return false;
+        return await guardLearnerLocationPromptAccess(
+              navigatorContext,
+              ref,
+              targetProfileId,
+            ) &&
+            mounted;
+      },
+      switchTo: (profileId) async {
+        router.pinGuard.lock();
+        ref.read(selectedProfileIdProvider.notifier).select(profileId);
+        await router.replaceAll([const AppShellRoute()]);
+        return mounted;
+      },
+      openCityPicker: () async {
+        if (mounted) await router.push(const CityPickerRoute());
+      },
+    );
+  }
+
+  /// The tutor's exit from a tutored session whose talmid is locked: the
+  /// same exit as the tutor-mode bar (back to the tutor's own app shell).
+  void _exitTutoredSession() {
+    ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+    unawaited(ref.read(routerProvider).replaceAll([const AppShellRoute()]));
   }
 
   @override
@@ -93,8 +151,23 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
       // the SAME bar above every PUSHED sub-route, which would otherwise lose
       // it. Mounted here so it wraps the entire router output and survives all
       // route pushes/pops.
-      builder: (context, child) =>
-          PersistentSwitcherScaffold(child: child ?? const SizedBox.shrink()),
+      //
+      // DNI-481 (AD-36): the Sacred Time lock overlay wraps EVERYTHING the
+      // router renders (tabs, pushed routes, dialogs, the switcher bar), and
+      // the after-lock location prompt listens beside it.
+      builder: (context, child) => LearnerLocationPromptListener(
+        onSetLocation: _openLearnerLocationPicker,
+        child: SacredTimeLockOverlay(
+          // A locked talmid in a tutored session covers only the talmid's
+          // screens and keeps the tutor's exit reachable (AD-36).
+          child: TutoredLearnerLockOverlay(
+            onExit: _exitTutoredSession,
+            child: PersistentSwitcherScaffold(
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

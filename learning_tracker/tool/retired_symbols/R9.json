@@ -3,12 +3,22 @@
   "title": "Lock windows and settings",
   "description": "Action: rewire to lockWindows / learnerLockSettingsProvider; delete the old window service and prefs.",
   "entries": [
-    {"symbol": "ZmanimWindowService", "kind": "service", "state": "pending", "owner": "DNI-481"},
-    {"symbol": "computeWindows", "kind": "service", "state": "pending", "owner": "DNI-481", "note": "ZmanimWindowService.computeWindows"},
-    {"symbol": "SacredTimePreferences", "kind": "service", "state": "pending", "owner": "DNI-481"},
-    {"symbol": "SacredLocationNotifier", "kind": "service", "state": "pending", "owner": "DNI-481"},
-    {"symbol": "sacredLocationProvider", "kind": "service", "state": "pending", "owner": "DNI-481"},
-    {"symbol": "InIsraelNotifier", "kind": "service", "state": "pending", "owner": "DNI-481"},
-    {"symbol": "inIsraelProvider", "kind": "service", "state": "pending", "owner": "DNI-481"}
+    {"symbol": "ZmanimWindowService", "kind": "service", "state": "retired", "owner": "DNI-481"},
+    {"symbol": "computeWindows", "kind": "service", "state": "retired", "owner": "DNI-481", "note": "ZmanimWindowService.computeWindows"},
+    {"symbol": "SacredTimePreferences", "kind": "service", "state": "retired", "owner": "DNI-481"},
+    {"symbol": "SacredLocationNotifier", "kind": "service", "state": "retired", "owner": "DNI-481"},
+    {"symbol": "sacredLocationProvider", "kind": "service", "state": "retired", "owner": "DNI-481"},
+    {"symbol": "InIsraelNotifier", "kind": "service", "state": "retired", "owner": "DNI-481"},
+    {"symbol": "inIsraelProvider", "kind": "service", "state": "retired", "owner": "DNI-481"},
+    {"symbol": "SacredWindowRepository", "kind": "service", "state": "retired", "owner": "DNI-481", "note": "the fail-open notification window cache"},
+    {"symbol": "sacredWindowRepositoryProvider", "kind": "service", "state": "retired", "owner": "DNI-481"},
+    {"symbol": "sacredWindowsProvider", "kind": "service", "state": "retired", "owner": "DNI-481", "note": "the 6-month device-prefs window list"},
+    {"symbol": "sacred_time_latitude", "kind": "field", "state": "retired", "owner": "DNI-481", "note": "SacredTimePreferences SharedPreferences key"},
+    {"symbol": "sacred_time_longitude", "kind": "field", "state": "retired", "owner": "DNI-481", "note": "SacredTimePreferences SharedPreferences key"},
+    {"symbol": "sacred_time_country_code", "kind": "field", "state": "retired", "owner": "DNI-481", "note": "SacredTimePreferences SharedPreferences key"},
+    {"symbol": "sacred_time_city_label", "kind": "field", "state": "retired", "owner": "DNI-481", "note": "SacredTimePreferences SharedPreferences key"},
+    {"symbol": "sacred_time_source", "kind": "field", "state": "retired", "owner": "DNI-481", "note": "SacredTimePreferences SharedPreferences key"},
+    {"symbol": "sacred_time_fixed_at_ms", "kind": "field", "state": "retired", "owner": "DNI-481", "note": "SacredTimePreferences SharedPreferences key"},
+    {"symbol": "sacred_time_in_israel", "kind": "field", "state": "retired", "owner": "DNI-481", "note": "SacredTimePreferences SharedPreferences key"}
   ]
 }

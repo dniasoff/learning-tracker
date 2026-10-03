@@ -430,6 +430,45 @@ describe('AC-1 / AC-2 — before-tracking and replacement shapes', () => {
   });
 });
 
+// ── DNI-486: a tutor void stays on main-track learning of one curriculum ─────
+
+describe('DNI-486 — tutorVoidLearning targets main-track learning only', () => {
+  const seedOwnerEvent = (id, fields) => eventsCol().doc(id).set({
+    kind: 'learn', curriculum_id: C, ref: 'Berakhot 2:1', date_state: 'dated', learned_on: '2026-10-01',
+    recorded_at: admin.firestore.Timestamp.now(),
+    actor: { uid: PARENT, role: 'parent', display_name: 'Parent' },
+    ...fields,
+  });
+
+  test('a void or replace of a sub-track learn event is rejected, writing nothing', async () => {
+    await seedOwnerEvent(ulid(1), { source: ulid(50) });
+    await expectHttpsError(call(fns.tutorVoidLearning, routing({ eventId: ulid(2), targetId: ulid(1) })),
+      'invalid-argument');
+    await expectHttpsError(call(fns.tutorVoidLearning, routing({
+      eventId: ulid(3), targetId: ulid(1), replacement: dated(ulid(4), 'Berakhot 2:1'),
+    })), 'invalid-argument');
+    assert.equal((await eventsCol().get()).size, 1, 'only the seeded sub-track event');
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('a plain void of an absent target is rejected', async () => {
+    await expectHttpsError(call(fns.tutorVoidLearning, routing({ eventId: ulid(2), targetId: ulid(1) })),
+      'not-found');
+    await assertNothingWritten();
+  });
+
+  test('a replacement on another curriculum is rejected, writing nothing', async () => {
+    await record([dated(ulid(1), 'Berakhot 2:1')]);
+    const before = (await eventsCol().get()).size;
+    await expectHttpsError(call(fns.tutorVoidLearning, routing({
+      eventId: ulid(2), targetId: ulid(1),
+      replacement: dated(ulid(3), 'Berakhot 2:1', { curriculum_id: 'bavli' }),
+    })), 'invalid-argument');
+    assert.equal((await eventsCol().get()).size, before);
+    assert.equal((await eventsCol().doc(ulid(3)).get()).exists, false);
+  });
+});
+
 // ── AC-1 / AC-4: unlearn with partial node coverage ───────────────────────────
 
 describe('AC-1 / AC-4 — tutorUnlearn(curriculum, leafSet)', () => {
@@ -530,6 +569,42 @@ describe('AC-1 / AC-4 — tutorUnlearn(curriculum, leafSet)', () => {
     }
     await expectHttpsError(call(fns.tutorUnlearn, unlearnArgs({
       nodeReissues: [{ targetEventId: ulid(99), reissues: [] }],
+    })), 'not-found');
+    assert.equal((await eventsCol().get()).size, before);
+  });
+
+  test('DNI-486 AC-7: with leafEventIds only the named (counted) events are voided — a stored lock-window learn of the same ref stays unvoided', async () => {
+    await record([dated(ulid(1), 'Berakhot 3:1')]);
+    // Stored but not counted by the engine (recorded inside the lock window).
+    await record([dated(ulid(2), 'Berakhot 3:1', { learned_on: '2026-09-05' })]);
+
+    const res = await call(fns.tutorUnlearn, routing({
+      actionId: ulid(40), curriculumId: C, leafSet: ['Berakhot 3:1'], leafEventIds: [ulid(1)],
+    }));
+
+    const events = await allEvents();
+    const voidTargets = [...events.values()].filter((e) => e.kind === 'void').map((e) => e.target_id);
+    assert.deepEqual(voidTargets, [ulid(1)]);
+    assert.ok(events.has(ulid(2)), 'the lock-window event stays stored');
+    assert.equal(res.event_ids.length, 1);
+
+    const replay = await call(fns.tutorUnlearn, routing({
+      actionId: ulid(40), curriculumId: C, leafSet: ['Berakhot 3:1'], leafEventIds: [ulid(1)],
+    }));
+    assert.equal(replay.replayed, true);
+    assert.deepEqual(replay.event_ids, res.event_ids);
+  });
+
+  test('leafEventIds that are not main learn events of the curriculum with a ref in leafSet are rejected', async () => {
+    await seedUnlearnFixture();
+    const before = (await eventsCol().get()).size;
+    for (const leafEventIds of [[ulid(5)] /* a void */, [ulid(6)] /* other curriculum */, [ulid(3)] /* ref not in leafSet */, ['x']]) {
+      await expectHttpsError(call(fns.tutorUnlearn, unlearnArgs({
+        leafSet: ['Berakhot 2:1'], nodeReissues: [], leafEventIds,
+      })), 'invalid-argument');
+    }
+    await expectHttpsError(call(fns.tutorUnlearn, unlearnArgs({
+      leafSet: ['Berakhot 2:1'], nodeReissues: [], leafEventIds: [ulid(98)],
     })), 'not-found');
     assert.equal((await eventsCol().get()).size, before);
   });

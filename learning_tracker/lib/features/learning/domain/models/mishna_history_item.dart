@@ -369,12 +369,14 @@ Set<MishnaCorrection> allowedCorrections(
     return const {};
   }
   return switch (viewer) {
-    MishnaHistoryViewer.tutor => const {},
     MishnaHistoryViewer.child => {
       MishnaCorrection.remove,
       if (item.isCatchUp) MishnaCorrection.changeDate,
     },
-    MishnaHistoryViewer.parent => {
+    // A tutor with editing access corrects what the parent can (deviation
+    // #7, DNI-486); the screen disables the controls when the grant, the
+    // connection or the learner's lock does not allow a write.
+    MishnaHistoryViewer.parent || MishnaHistoryViewer.tutor => {
       MishnaCorrection.remove,
       if (hasPlaceChoices) MishnaCorrection.changePlace,
       MishnaCorrection.changeSource,

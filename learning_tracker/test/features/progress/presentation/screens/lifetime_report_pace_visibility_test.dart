@@ -233,6 +233,7 @@ class _ChildHarness {
           .setAuthenticated(_profileId);
     }
     router = AppRouter(
+      sacredTimeLocationGuard: _AllowAll(),
       authGuard: _AllowAll(),
       profileGuard: _AllowProfile(),
       childModeGuard: _AllowChildMode(),

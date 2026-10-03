@@ -305,6 +305,64 @@ void main() {
       expect((await repo.collectionFor(scope).doc(ulidB).get()).exists, false);
     });
 
+    test('a create admits an absent target: doc + entry in one batch '
+        '(DNI-482, AD-49 replay)', () async {
+      final firestore = _SpyFirestore();
+      final repo = FirestoreSubTrackRepository(firestore: firestore);
+      final fields = {..._storedSubTrack(1)}..remove('last_change_id');
+      await repo.applyGovernedChange(
+        scope,
+        SubTrackChange.create(
+          subTrackId: ulidB,
+          changedFields: fields,
+          entry: _entry(
+            ulidB,
+            {
+              for (final MapEntry(:key, :value) in fields.entries)
+                'sub_tracks/$ulidB.$key': value,
+            },
+            before: {for (final k in fields.keys) 'sub_tracks/$ulidB.$k': null},
+          ),
+        ),
+      );
+      final stored = fromFirestoreMap(
+        (await repo.collectionFor(scope).doc(ulidB).get()).data()!,
+      );
+      expect(SubTrack.fromStorage(ulidB, stored).name, 'Shiur 1');
+      expect(stored['last_change_id'], ulidD);
+      expect(firestore.ops.where((op) => op.startsWith('set')), hasLength(2));
+    });
+
+    test('a create over an existing target fails its all-null baseline and '
+        'writes nothing', () async {
+      final firestore = _SpyFirestore();
+      final repo = FirestoreSubTrackRepository(firestore: firestore);
+      await repo.collectionFor(scope).doc(ulidB).set(_storedSubTrack(0));
+      firestore.ops.clear();
+      final fields = {..._storedSubTrack(1)}..remove('last_change_id');
+      await expectLater(
+        repo.applyGovernedChange(
+          scope,
+          SubTrackChange.create(
+            subTrackId: ulidB,
+            changedFields: fields,
+            entry: _entry(
+              ulidB,
+              {
+                for (final MapEntry(:key, :value) in fields.entries)
+                  'sub_tracks/$ulidB.$key': value,
+              },
+              before: {
+                for (final k in fields.keys) 'sub_tracks/$ulidB.$k': null,
+              },
+            ),
+          ),
+        ),
+        throwsA(isA<ChangeBaselineMismatchException>()),
+      );
+      expect(firestore.ops, isEmpty);
+    });
+
     for (final (label, fields) in <(String, Map<String, Object?>)>[
       ('type school_year without academic_year', {'type': 'school_year'}),
       ('window_end before window_start', {'window_end': '2026-08-01'}),

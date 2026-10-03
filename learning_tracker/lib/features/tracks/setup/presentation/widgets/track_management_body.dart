@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/af
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// TS-16: Returns true when Archive/Delete operations are allowed for the
@@ -67,7 +68,10 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
       SubTrackListDetailLayout(list: _buildHub(context));
 
   Widget _buildHub(BuildContext context) {
-    if (_addingTrack) {
+    // Tutors cannot add, archive or delete tracks because these actions
+    // have no governed tutor path (DNI-486).
+    final tutored = ref.watch(activeTutoredProfileSelectionProvider) != null;
+    if (_addingTrack && !tutored) {
       return Scaffold(
         body: AddTrackFlow(
           isOnboarding: false,
@@ -126,7 +130,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         loading: () => null,
         error: (_, __) => null,
         data: (activeTracks) =>
-            activeTracks.isNotEmpty ? _buildAddTrackFab() : null,
+            activeTracks.isNotEmpty && !tutored ? _buildAddTrackFab() : null,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: activeAsync.when(
@@ -138,7 +142,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         ),
         data: (activeTracks) {
           if (activeTracks.isEmpty) {
-            return _buildEmptyState(l10n);
+            return _buildEmptyState(l10n, canAdd: !tutored);
           }
 
           return ListView(
@@ -160,7 +164,9 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
                     showProgress: true,
                     onTap: () =>
                         context.router.push(TrackDetailRoute(track: track)),
-                    onLongPress: () => _showDeleteDialog(track),
+                    onLongPress: tutored
+                        ? null
+                        : () => _showDeleteDialog(track),
                   ),
                 ),
                 // DNI-495: the parent-only Sub-tracks group under each
@@ -233,7 +239,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n) {
+  Widget _buildEmptyState(AppLocalizations l10n, {required bool canAdd}) {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
@@ -248,20 +254,22 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
             ),
             const SizedBox(height: 16),
             Text(l10n.noTracksYet, style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              l10n.firstTrackPrompt,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            if (canAdd) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.firstTrackPrompt,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () => setState(() => _addingTrack = true),
-              icon: const Icon(Icons.add),
-              label: Text(l10n.addYourFirstTrack),
-            ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => setState(() => _addingTrack = true),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.addYourFirstTrack),
+              ),
+            ],
           ],
         ),
       ),

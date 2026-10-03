@@ -904,7 +904,7 @@ void main() {
     test('a provider identifier mentioned ONLY in a `///` doc comment '
         'outside data/repositories/ stays DEAD — reproduced against the '
         'real tree pre-fix: 8 of the 10 non-declaration occurrences of '
-        'firestoreBookmarkRepositoryProvider in lib/** are exactly this '
+        'the profile repository provider in lib/** are exactly this '
         'shape (see the library doc comment\'s F5 section)', () async {
       final tempDir = await buildDormantFixture(
         'profile_path_keying_f5_doccomment_',
@@ -959,9 +959,8 @@ void main() {
     test('a provider identifier mentioned ONLY inside a string literal '
         '(e.g. an exception message) outside data/repositories/ also stays '
         'DEAD — modeled on the real '
-        'BookmarkRepositoryNotReadyException.toString() in '
-        'bookmark_repository_impl.dart, which embeds '
-        'firestoreBookmarkRepositoryProvider inside a plain string message '
+        'a repository-not-ready exception toString() in a repository '
+        'adapter, which embeds a provider identifier inside a plain string message '
         '(P2-10: no longer citing a specific line number here — the exact '
         'line drifts every time that file is edited; the shape being '
         'tested, a provider name inside an exception toString(), is the '

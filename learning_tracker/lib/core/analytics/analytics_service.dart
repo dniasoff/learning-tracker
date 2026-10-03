@@ -112,9 +112,15 @@ abstract class AnalyticsService {
     parameters: {'curriculum_id': curriculumId},
   );
 
-  Future<void> logStreakMilestoneReached({required int milestone}) => logEvent(
+  /// DNI-479 (AD-40, AD-47): per curriculum — the `curriculum_id` enum and
+  /// the milestone count only, never a profile, learner, event or content
+  /// identifier (PV-1).
+  Future<void> logStreakMilestoneReached({
+    required String curriculumId,
+    required int milestone,
+  }) => logEvent(
     AnalyticsEvent.streakMilestoneReached,
-    parameters: {'milestone': milestone},
+    parameters: {'curriculum_id': curriculumId, 'milestone': milestone},
   );
 
   Future<void> logSyncFailed({required String reason}) =>

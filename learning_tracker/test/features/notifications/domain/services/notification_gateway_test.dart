@@ -34,9 +34,11 @@
 @Tags(['notifications', 'unit'])
 library;
 
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -671,6 +673,49 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('scheduleBatchRemindersForProfile', () {
+    test(
+      'DNI-481 AC-5: cancels the legacy repeating daily reminder '
+      '(offset 0) so an upgraded device cannot fire it inside a lock',
+      () async {
+        // An upgraded device still carries a pre-DNI-367 REPEATING reminder
+        // under the profile's offset-0 id. Every fire time of the replacement
+        // batch is inside a lock, so nothing may be scheduled AND the legacy
+        // repeating id must be cancelled — otherwise it fires unfiltered.
+        final scheduler = NotificationScheduler(
+          service: gw,
+          isLockedAt: (_) => true,
+        );
+        await scheduler.scheduleReminderForProfile(
+          profileId: _profile1,
+          time: const TimeOfDay(hour: 19, minute: 0),
+          title: 'T',
+          body: 'B',
+        );
+
+        verify(
+          () => plugin.cancel(id: dailyReminderIdForProfile(_profile1)),
+        ).called(1);
+        verifyNever(
+          () => plugin.zonedSchedule(
+            id: any<int>(named: 'id'),
+            scheduledDate: any<tz.TZDateTime>(named: 'scheduledDate'),
+            notificationDetails: any<NotificationDetails>(
+              named: 'notificationDetails',
+            ),
+            androidScheduleMode: any<AndroidScheduleMode>(
+              named: 'androidScheduleMode',
+            ),
+            title: any<String>(named: 'title'),
+            body: any<String>(named: 'body'),
+            payload: any<String>(named: 'payload'),
+            matchDateTimeComponents: any<DateTimeComponents>(
+              named: 'matchDateTimeComponents',
+            ),
+          ),
+        );
+      },
+    );
+
     test('cancels profile batch range before scheduling', () async {
       final times = _futureTimes(3);
       // Profile 1's base is derived from its ULID hash.
@@ -797,19 +842,15 @@ void main() {
   // per-profile streak alert
   // -------------------------------------------------------------------------
 
-  group('scheduleStreakAlertForProfile', () {
-    test('uses the deterministic ULID-derived streak ID', () async {
-      await gw.scheduleStreakAlertForProfile(
-        profileId: _profile4,
-        hour: 21,
-        minute: 0,
-        body: 'body',
-      );
-
-      final idsCaptured = verify(
+  group(
+    'scheduleStreakAlertForProfile (DNI-481 AC-5: lock-filtered batch)',
+    () {
+      List<Object?> captured(String name) => verify(
         () => plugin.zonedSchedule(
-          id: captureAny<int>(named: 'id'),
-          scheduledDate: any<tz.TZDateTime>(named: 'scheduledDate'),
+          id: name == 'id' ? captureAny<int>(named: 'id') : any(named: 'id'),
+          scheduledDate: name == 'scheduledDate'
+              ? captureAny<tz.TZDateTime>(named: 'scheduledDate')
+              : any<tz.TZDateTime>(named: 'scheduledDate'),
           notificationDetails: any<NotificationDetails>(
             named: 'notificationDetails',
           ),
@@ -818,66 +859,112 @@ void main() {
           ),
           title: any<String>(named: 'title'),
           body: any<String>(named: 'body'),
-          payload: any<String>(named: 'payload'),
-          matchDateTimeComponents: any<DateTimeComponents>(
-            named: 'matchDateTimeComponents',
-          ),
+          payload: name == 'payload'
+              ? captureAny<String>(named: 'payload')
+              : any<String>(named: 'payload'),
         ),
       ).captured;
 
-      expect(idsCaptured.single, equals(1695185001));
-    });
-
-    test(
-      'embeds profileId in payload: "streak_protection:<profileId>"',
-      () async {
+      test('schedules 14 one-shots under the streak batch IDs, after '
+          'cancelling the legacy repeating id and the old batch', () async {
         await gw.scheduleStreakAlertForProfile(
-          profileId: _profile9,
+          profileId: _profile4,
           hour: 21,
           minute: 0,
           body: 'body',
         );
 
-        final payloadsCaptured = verify(
-          () => plugin.zonedSchedule(
-            id: any<int>(named: 'id'),
-            scheduledDate: any<tz.TZDateTime>(named: 'scheduledDate'),
-            notificationDetails: any<NotificationDetails>(
-              named: 'notificationDetails',
-            ),
-            androidScheduleMode: any<AndroidScheduleMode>(
-              named: 'androidScheduleMode',
-            ),
-            title: any<String>(named: 'title'),
-            body: any<String>(named: 'body'),
-            payload: captureAny<String>(named: 'payload'),
-            matchDateTimeComponents: any<DateTimeComponents>(
-              named: 'matchDateTimeComponents',
-            ),
-          ),
-        ).captured;
+        verify(() => plugin.cancel(id: 1695185001)).called(1);
+        expect(captured('id'), List.generate(14, (i) => 1695185030 + i));
+      });
 
-        expect(
-          payloadsCaptured.single,
-          equals('$streakAlertPayload:$_profile9'),
+      test(
+        'embeds profileId in payload: "streak_protection:<profileId>"',
+        () async {
+          await gw.scheduleStreakAlertForProfile(
+            profileId: _profile9,
+            hour: 21,
+            minute: 0,
+            body: 'body',
+          );
+
+          expect(captured('payload').toSet(), {
+            '$streakAlertPayload:$_profile9',
+          });
+        },
+      );
+
+      test('drops every occurrence the lock predicate covers', () async {
+        // Lock every Saturday (UTC): no alert is scheduled on one, even
+        // though the app is not reopened before it (the batch is fixed now).
+        await gw.scheduleStreakAlertForProfile(
+          profileId: _profile4,
+          hour: 21,
+          minute: 0,
+          body: 'body',
+          isLockedAt: (utc) => utc.weekday == DateTime.saturday,
         );
-      },
-    );
 
-    test('different profiles produce non-overlapping streak IDs', () {
-      final id0 = streakAlertIdForProfile(_profile0);
-      final id1 = streakAlertIdForProfile(_profile1);
-      expect(id0, isNot(equals(id1)));
-      // streak IDs must not collide with daily reminder IDs.
-      expect(id0, isNot(equals(dailyReminderIdForProfile(_profile0))));
-    });
-  });
+        final dates = captured('scheduledDate').cast<tz.TZDateTime>();
+        expect(dates, hasLength(12));
+        expect(
+          dates.where((d) => d.toUtc().weekday == DateTime.saturday),
+          isEmpty,
+        );
+      });
+
+      test('different profiles produce non-overlapping streak IDs', () {
+        final id0 = streakAlertIdForProfile(_profile0);
+        final id1 = streakAlertIdForProfile(_profile1);
+        expect(id0, isNot(equals(id1)));
+        // streak IDs must not collide with daily reminder IDs.
+        expect(id0, isNot(equals(dailyReminderIdForProfile(_profile0))));
+      });
+    },
+  );
 
   group('cancelStreakAlertForProfile', () {
-    test('cancels the deterministic streak ID for the profile', () async {
+    test('cancels the legacy streak ID and the streak batch', () async {
       await gw.cancelStreakAlertForProfile(_profile2);
 
       verify(() => plugin.cancel(id: 1250423001)).called(1);
+      for (var i = 0; i < 14; i++) {
+        verify(() => plugin.cancel(id: 1250423030 + i)).called(1);
+      }
+    });
+  });
+
+  group('lockFilteredDailyFireTimes (DNI-481 AC-5)', () {
+    final utc = tz.UTC;
+
+    test('starts today when the time is still ahead, else tomorrow', () {
+      final morning = tz.TZDateTime(utc, 2026, 9, 1, 8);
+      expect(
+        lockFilteredDailyFireTimes(now: morning, hour: 21, minute: 0).first,
+        tz.TZDateTime(utc, 2026, 9, 1, 21),
+      );
+      final night = tz.TZDateTime(utc, 2026, 9, 1, 22);
+      final times = lockFilteredDailyFireTimes(now: night, hour: 21, minute: 0);
+      expect(times.first, tz.TZDateTime(utc, 2026, 9, 2, 21));
+      expect(times, hasLength(14));
+    });
+
+    test('a future occurrence inside a lock window is never scheduled', () {
+      // Tuesday 2026-09-01; the lock covers Fri 18:00Z – Sat 20:00Z.
+      bool locked(DateTime t) =>
+          !t.isBefore(DateTime.utc(2026, 9, 4, 18)) &&
+          !t.isAfter(DateTime.utc(2026, 9, 5, 20));
+      final times = lockFilteredDailyFireTimes(
+        now: tz.TZDateTime(utc, 2026, 9, 1, 8),
+        hour: 19,
+        minute: 0,
+        isLockedAt: locked,
+      );
+      expect(times, isNot(contains(tz.TZDateTime(utc, 2026, 9, 4, 19))));
+      expect(times, isNot(contains(tz.TZDateTime(utc, 2026, 9, 5, 19))));
+      expect(times, contains(tz.TZDateTime(utc, 2026, 9, 3, 19)));
+      expect(times, contains(tz.TZDateTime(utc, 2026, 9, 6, 19)));
+      expect(times, hasLength(12));
     });
   });
 

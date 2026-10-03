@@ -40,7 +40,7 @@ class CurriculumScopeEntity {
   /// Encodes this scope for a Firestore write.
   ///
   /// `profile_id` is deliberately NOT included — same reasoning as
-  /// `BookmarkEntity.toFirestore`/`StageDefinitionFirestoreCodec.toFirestore`:
+  /// `persisted entity.toFirestore`/`StageDefinitionFirestoreCodec.toFirestore`:
   /// the document already lives at `.../learner_profiles/{profileId}/
   /// curriculum_scopes/{scopeId}`, so profile identity is carried by the
   /// path, not duplicated into the body. R16 (DNI-484): the governed

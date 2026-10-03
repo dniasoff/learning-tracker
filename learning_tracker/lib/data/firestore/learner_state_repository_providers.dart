@@ -139,6 +139,15 @@ final activeLearnerScopeProvider = FutureProvider<LearnerScope?>((ref) async {
   // live Auth uid the shared seam returns for this branch.
   final accountId = ref.watch(activeAccountIdProvider);
   if (accountId == null) return null;
+  final pathUid = await _persistedPathUid(ref, accountId);
+  if (pathUid == null) return null;
+  return LearnerScope(ownerUid: pathUid, profileId: profileId);
+}, retry: (retryCount, error) => null);
+
+/// The persisted `users/{uid}` path uid of account [accountId] (AD-24 rule
+/// 2), or null while it is unbound. A pending AD-19 re-home throws
+/// [LearnerScopeRehomePendingException] (see the library doc).
+Future<String?> _persistedPathUid(Ref ref, String accountId) async {
   await ref.watch(_registryAccountsProvider.future);
   final pathUid = await ref
       .watch(learnerStatePathUidResolverProvider)
@@ -158,7 +167,20 @@ final activeLearnerScopeProvider = FutureProvider<LearnerScope?>((ref) async {
       pathUid: pathUid,
     );
   }
-  return LearnerScope(ownerUid: pathUid, profileId: profileId);
+  return pathUid;
+}
+
+/// The signed-in account's OWN persisted path uid — the owner of every
+/// learner profile of the account (DNI-481: the lock overlay is the union
+/// of their lock windows, AD-36). Null while no account is active, the
+/// account is unauthenticated or its path uid is unbound; a pending AD-19
+/// re-home is an error ([LearnerScopeRehomePendingException]). Never the
+/// grant owner of a tutored session.
+final ownAccountPathUidProvider = FutureProvider<String?>((ref) async {
+  if (await _readyHandles(ref) == null) return null;
+  final accountId = ref.watch(activeAccountIdProvider);
+  if (accountId == null) return null;
+  return _persistedPathUid(ref, accountId);
 }, retry: (retryCount, error) => null);
 
 /// [LearningEventRepository] over the active account's Firestore handle,

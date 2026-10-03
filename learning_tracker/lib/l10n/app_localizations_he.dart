@@ -1507,6 +1507,21 @@ class AppLocalizationsHe extends AppLocalizations {
       'מדריכים אינם יכולים לסמן השלמות חיות';
 
   @override
+  String get tutorCaptureKeptNotCounted =>
+      'נשמר, לא נספר — שבת / יום טוב כבר התחילו';
+
+  @override
+  String get tutorCaptureLearnerLocked => 'שבת / יום טוב';
+
+  @override
+  String tutorCaptureNoEditAccess(String learner) {
+    return 'ההורה של $learner לא נתן לך הרשאת עריכה';
+  }
+
+  @override
+  String get tutorCaptureOnlineRequired => 'נדרש חיבור לאינטרנט';
+
+  @override
   String get tutorWriteForbiddenTitle => 'פעולה לא מורשית';
 
   @override
@@ -3764,7 +3779,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
+    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב, מ-10 דקות לפני הדלקת נרות ועד 10 דקות אחרי צאת הכוכבים לפי המיקום של הלומד.';
   }
 
   @override
@@ -3814,6 +3829,27 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get sacredTimeLocationDetectErrorGeneric =>
       'לא ניתן לזהות מיקום. נסו שוב, או בחרו עיר במקום.';
+
+  @override
+  String get sacredTimeLocationPromptAction => 'הגדרת מיקום';
+
+  @override
+  String sacredTimeLocationPromptMessage(String term) {
+    return 'ללומד זה אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
+  }
+
+  @override
+  String sacredTimeLocationPromptMessageNamed(String name, String term) {
+    return 'ל$name אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
+  }
+
+  @override
+  String get sacredTimeSettingsNotSaved =>
+      'לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.';
+
+  @override
+  String get sacredTimeSettingsUnavailable =>
+      'ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.';
 
   @override
   String get newPasswordLabel => 'סיסמה חדשה';
@@ -7007,4 +7043,8 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get backupImportError => 'לא ניתן לשחזר את הגיבוי. נסו שוב.';
+
+  @override
+  String get backupImportNotSaved =>
+      'לא נשמר — חלק מהגיבוי לא שוחזר. לנסות שוב?';
 }

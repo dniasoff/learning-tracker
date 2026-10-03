@@ -6,11 +6,9 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
 /// Thrown by [FirestoreStageDefinitionRepositoryAdapter]'s write methods
-/// when `firestoreStageDefinitionRepositoryProvider` resolves to `null` —
-/// see `BookmarkRepositoryNotReadyException`'s doc comment
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// for the read-vs-write split this mirrors: reads reuse the interface's own
-/// empty-list value, writes have no such value to reuse and throw instead.
+/// when `firestoreStageDefinitionRepositoryProvider` resolves to `null`.
+/// Reads reuse the interface's empty-list value; writes have no such value
+/// and throw instead.
 class StageDefinitionRepositoryNotReadyException implements Exception {
   const StageDefinitionRepositoryNotReadyException();
 
@@ -22,18 +20,15 @@ class StageDefinitionRepositoryNotReadyException implements Exception {
       'a stage-definitions write until one is active.';
 }
 
-/// Firestore-backed [StageDefinitionRepository] adapter — second application
-/// of the pattern `FirestoreBookmarkRepositoryAdapter`
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`)
-/// establishes; read that class's doc comment first. This one only
-/// calls out what is DIFFERENT for stage definitions.
+/// Firestore-backed [StageDefinitionRepository] adapter using the shared
+/// provider re-resolution pattern.
 ///
 /// ## `null` → the interface's own empty value, not a sentinel
 ///
 /// Every read method here ([getStagesForCurriculum], [getAllStageDefinitions])
 /// already returns a `List`, which has an honest "nothing yet" value of its
 /// own — `[]` — so "not ready" reuses that exactly the way
-/// `FirestoreBookmarkRepositoryAdapter.getBookmark` reuses `null`. The write
+/// other read adapters reuse `null`. The write
 /// methods ([initializeDefaults], [resetToDefaults]) have no such value and
 /// throw [StageDefinitionRepositoryNotReadyException] instead.
 ///
@@ -52,8 +47,7 @@ class FirestoreStageDefinitionRepositoryAdapter
 
   /// Re-reads `firestoreStageDefinitionRepositoryProvider`, resolving to
   /// `null` exactly when it does (no active account, or no active learner
-  /// profile). See `FirestoreBookmarkRepositoryAdapter._resolveOrNull`'s doc
-  /// comment for why this re-reads on every call rather than caching.
+  /// profile). This re-reads on every call so profile switches are picked up.
   Future<FirestoreStageDefinitionRepository?> _resolveOrNull() {
     return _ref.read(firestoreStageDefinitionRepositoryProvider.future);
   }

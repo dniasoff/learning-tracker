@@ -66,7 +66,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
@@ -767,48 +766,45 @@ void main() {
 
   // ── K. MarkLiveCompletionUseCase — domain invariant ──────────────────────────
 
-  test('K1: Owner session → delegate called and result returned', () async {
-    final session = ResolvedSession.forOwner(
-      selection: const OwnProfileSelection(profileId: 'p1', ownerUid: 'u1'),
-      isChildMode: false,
+  test(
+    'K1: Owner session → owner delegate called and result returned',
+    () async {
+      final session = ResolvedSession.forOwner(
+        selection: const OwnProfileSelection(profileId: 'p1', ownerUid: 'u1'),
+        isChildMode: false,
+      );
+      final useCase = MarkLiveCompletionUseCase<String>(session: session);
+
+      var delegateCalled = false;
+      final result = await useCase.call(() async {
+        delegateCalled = true;
+        return 'ok';
+      }, tutorWrite: () async => 'tutor');
+
+      expect(delegateCalled, isTrue);
+      expect(result, equals('ok'));
+    },
+  );
+
+  test('K2: Tutor session → tutor write (callable) runs, owner delegate never '
+      '(DNI-486)', () async {
+    const selection = TutoredProfileSelection(
+      profileId: 'child-1',
+      ownerUid: 'owner-1',
+      grantId: 'grant-1',
+      permissions: TutorPermissions(canEditLearning: true),
     );
+    final session = ResolvedSession.forTutor(selection: selection);
     final useCase = MarkLiveCompletionUseCase<String>(session: session);
 
     var delegateCalled = false;
     final result = await useCase.call(() async {
       delegateCalled = true;
-      return 'ok';
-    });
-
-    expect(delegateCalled, isTrue);
-    expect(result, equals('ok'));
+      return 'should-not-reach';
+    }, tutorWrite: () async => 'tutor');
+    expect(result, 'tutor');
+    expect(delegateCalled, isFalse);
   });
-
-  test(
-    'K2: Tutor session → TutorWriteForbiddenException thrown, delegate not called',
-    () async {
-      const selection = TutoredProfileSelection(
-        profileId: 'child-1',
-        ownerUid: 'owner-1',
-        grantId: 'grant-1',
-        permissions: TutorPermissions(),
-      );
-      final session = ResolvedSession.forTutor(selection: selection);
-      final useCase = MarkLiveCompletionUseCase<String>(session: session);
-
-      var delegateCalled = false;
-      expect(
-        () => useCase.call(() async {
-          delegateCalled = true;
-          return 'should-not-reach';
-        }),
-        throwsA(isA<TutorWriteForbiddenException>()),
-      );
-      // Give the async path time to run
-      await Future<void>.delayed(Duration.zero);
-      expect(delegateCalled, isFalse);
-    },
-  );
 
   // ── Extra: Gematriya correctness ─────────────────────────────────────────────
 

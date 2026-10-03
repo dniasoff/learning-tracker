@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
+import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:test/test.dart';
 
 import '../helpers/data_export_firestore_test_support.dart';
@@ -20,7 +21,8 @@ void main() {
         backupService(firestore, appVersion: '3.4.5'),
       );
 
-      expect(payload['version'], 1);
+      expect(payload['version'], DataExportImportService.formatVersion);
+      expect(payload['version'], 2);
       expect(payload['appVersion'], '3.4.5');
     });
 
@@ -61,10 +63,12 @@ void main() {
         final payload = await exportedMap(backupService(firestore));
         final profile = profileFrom(payload, testProfileId);
         final collections = profile['collections'] as Map<String, dynamic>;
+        // The AD-49 learning record plus the raw profile collections; the
+        // retired completion stores are gone (DNI-482).
         const expected = [
-          'completions',
-          'streak_events',
-          'learning_ledger',
+          'learning_events',
+          'sub_tracks',
+          'change_log',
           'points_ledger',
           'reward_redemptions',
           'settings',
@@ -86,6 +90,7 @@ void main() {
         // The retired `learning_order` (AD-49 R13) is merged into
         // `track_learning_order` (DNI-476).
         expect(collections, isNot(contains('learning_order')));
+        expect(collections, isNot(contains('completions')));
         expect(payload, isNot(contains('syncQueue')));
         expect(payload, isNot(contains('outbox')));
       },
@@ -168,25 +173,14 @@ void main() {
           profileId: testProfileId,
           curriculumId: CurriculumId.mishnayos,
         );
-        await seedCompletion(
-          source,
-          uid: testUid,
-          profileId: secondTestProfileId,
-          curriculumId: CurriculumId.bavli,
-          sefariaRef: 'Berakhot.2a',
-        );
-        await seedLedgerEntry(
-          source,
-          uid: testUid,
-          profileId: testProfileId,
-          ulid: '01ARZ3NDEKTSV4RRFFQ69G5BB0',
-        );
-        await seedBookmark(
-          source,
-          uid: testUid,
-          profileId: secondTestProfileId,
-          curriculumId: CurriculumId.bavli,
-        );
+        await source
+            .collection('users')
+            .doc(testUid)
+            .collection('learner_profiles')
+            .doc(secondTestProfileId)
+            .collection('bookmarks')
+            .doc('bavli')
+            .set({'curriculum_id': 'bavli'});
         await seedStageDefinitions(
           source,
           uid: testUid,
@@ -199,11 +193,32 @@ void main() {
         await backupService(restored).importData(exported);
         final restoredExport = await backupService(restored).exportData();
 
+        // Governed docs restore as logged updates (AD-49): each gains a
+        // `last_change_id` and a change-log entry, so the record is
+        // compared by identity rather than byte for byte.
         final before = jsonDecode(exported) as Map<String, dynamic>;
         final after = jsonDecode(restoredExport) as Map<String, dynamic>;
-        before.remove('exportedAt');
-        after.remove('exportedAt');
-        expect(after, before);
+        expect(after['account'], before['account']);
+        for (final profileId in [testProfileId, secondTestProfileId]) {
+          final was = profileFrom(before, profileId);
+          final now = profileFrom(after, profileId);
+          expect(
+            (now['data'] as Map)['display_name'],
+            (was['data'] as Map)['display_name'],
+          );
+          for (final name in [
+            'curriculum_tracks',
+            'goals',
+            'stage_definitions',
+            'bookmarks',
+          ]) {
+            expect(
+              collectionDocuments(now, name).map((d) => d['id']),
+              collectionDocuments(was, name).map((d) => d['id']),
+              reason: '$profileId $name',
+            );
+          }
+        }
       },
     );
 
@@ -228,31 +243,5 @@ void main() {
         );
       },
     );
-
-    test('C3 purged_at tombstone survives export/import', () async {
-      final source = FakeFirebaseFirestore();
-      await seedProfile(source, uid: testUid, profileId: testProfileId);
-      final purgedAt = DateTime.utc(2026, 3, 1, 12);
-      await seedCompletion(
-        source,
-        uid: testUid,
-        profileId: testProfileId,
-        sefariaRef: 'Berakhot.3a',
-        purgedAt: purgedAt,
-      );
-      final target = FakeFirebaseFirestore();
-      await backupService(
-        target,
-      ).importData(await backupService(source).exportData());
-      final docs = await target
-          .collection('users')
-          .doc(testUid)
-          .collection('learner_profiles')
-          .doc(testProfileId)
-          .collection('completions')
-          .get();
-      expect(docs.docs, hasLength(1));
-      expect(docs.docs.single.data()['purged_at'], isNotNull);
-    });
   });
 }

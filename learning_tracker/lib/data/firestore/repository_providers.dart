@@ -80,28 +80,23 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_bookmark_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_diagnostic_log_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_redemption_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_tutor_audit_log_repository.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 // Direct import, not the tutoring barrel: this file lives outside
 // lib/features/** and lib/domain/**, so it is outside audit check 102's
@@ -328,65 +323,6 @@ final firestoreLearnerProfileRepositoryProvider =
       );
     }, retry: (retryCount, error) => null);
 
-/// The two local, non-Firestore collaborators [FirestoreBookmarkRepository]
-/// needs, supplied by the caller. This file resolves Firestore handles and
-/// nothing else: `ContentRepository` lives under `lib/features/`, and the
-/// policy for what to do while `contentIndexProvider` is still loading
-/// (pass `null`, fall back to the O(N) scan) belongs to the feature layer
-/// that already owns it — see
-/// `lib/features/learning/presentation/providers/bookmark_providers.dart`.
-typedef BookmarkRepositoryDeps = ({
-  ContentRepository contentRepository,
-  ContentIndex? contentIndex,
-});
-
-/// `.../bookmarks/{curriculumId}`.
-///
-/// Family-parameterized on [BookmarkRepositoryDeps]:
-/// [FirestoreBookmarkRepository] requires a [ContentRepository] for its
-/// natural-content-order fallback (see that class's "Custom learning order
-/// is honoured" doc section) and accepts an optional [ContentIndex] for the
-/// O(1) adjacent-item fast path — both are local, non-Firestore domain
-/// collaborators this file has no business resolving on its own; this file
-/// only knows how to resolve Firestore handles. The caller (a feature's own
-/// `data/repositories/bookmark_repository_impl.dart`, see the library doc
-/// comment on reaching this file) already has, or can reach, its feature's
-/// own `contentRepositoryProvider`/`contentIndexProvider` and supplies the
-/// resolved pair here as one record. The [FirestoreTrackLearningOrderRepository]
-/// [FirestoreBookmarkRepository] also requires (the main-track order, read
-/// only) is NOT part of that record — it IS a Firestore repository this file
-/// already knows how to build, so it is constructed inline below from the
-/// exact same `(handles, profileId)` pair every other provider in this file
-/// resolves through, with no extra `await` and no second provider
-/// dependency.
-final firestoreBookmarkRepositoryProvider =
-    FutureProvider.family<FirestoreBookmarkRepository?, BookmarkRepositoryDeps>(
-      (ref, deps) async {
-        // Bookmark writes are intentionally unavailable while a tutor is
-        // acting inside a talmid context. Do this at the provider boundary so
-        // the adapter receives the documented null/not-ready signal instead
-        // of resolving the generic profile tuple through the active grant.
-        if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
-          return null;
-        }
-        final resolved = await _watchActiveAccountAndProfile(ref);
-        if (resolved == null) return null;
-        final (handles, ownerUid, profileId) = resolved;
-        return FirestoreBookmarkRepository(
-          firestore: handles.firestore,
-          uid: ownerUid,
-          profileId: profileId,
-          contentRepository: deps.contentRepository,
-          contentIndex: deps.contentIndex,
-          learningOrderRepository: FirestoreTrackLearningOrderRepository(
-            firestore: handles.firestore,
-            uid: ownerUid,
-            profileId: profileId,
-          ),
-        );
-      },
-    );
-
 /// `.../completions/{completionId}`.
 final firestoreCompletionRepositoryProvider =
     FutureProvider<FirestoreCompletionRepository?>((ref) async {
@@ -439,19 +375,6 @@ final firestoreGoalRepositoryProvider =
         uid: ownerUid,
         profileId: profileId,
         writer: ref.watch(ownerGovernedWriterProvider),
-      );
-    });
-
-/// `.../learning_ledger/{entryId}`.
-final firestoreLearningLedgerRepositoryProvider =
-    FutureProvider<FirestoreLearningLedgerRepository?>((ref) async {
-      final resolved = await _watchActiveAccountAndProfile(ref);
-      if (resolved == null) return null;
-      final (handles, ownerUid, profileId) = resolved;
-      return FirestoreLearningLedgerRepository(
-        firestore: handles.firestore,
-        uid: ownerUid,
-        profileId: profileId,
       );
     });
 
@@ -535,19 +458,6 @@ final firestoreTrackLearningOrderRepositoryProvider =
         uid: ownerUid,
         profileId: profileId,
         writer: ref.watch(ownerGovernedWriterProvider),
-      );
-    });
-
-/// `.../streak_events/{eventId}`.
-final firestoreStreakEventRepositoryProvider =
-    FutureProvider<FirestoreStreakEventRepository?>((ref) async {
-      final resolved = await _watchActiveAccountAndProfile(ref);
-      if (resolved == null) return null;
-      final (handles, ownerUid, profileId) = resolved;
-      return FirestoreStreakEventRepository(
-        firestore: handles.firestore,
-        uid: ownerUid,
-        profileId: profileId,
       );
     });
 

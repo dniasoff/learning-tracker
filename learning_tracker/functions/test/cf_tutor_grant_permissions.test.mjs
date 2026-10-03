@@ -307,56 +307,6 @@ describe('updateTutorGrantPermissions — AC-6 revocation applies on the next tu
   });
 });
 
-// DNI-487 review: the legacy completion callables read the grant inside the
-// same transaction as their write, so a turn-off that commits first leaves
-// the learning record untouched — all-or-nothing, never a write after the
-// parent's revocation is confirmed.
-describe('updateTutorGrantPermissions — AC-6 legacy completion callables', () => {
-  const completionId = 'c1';
-  const completionRef = () => profileRef().collection('completions').doc(completionId);
-  const owner = { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE };
-  const bulkArgs = {
-    ...owner,
-    completions: [{
-      completionId: 'c2', curriculumId: 'talmud_bavli', sefariaRef: 'Berakhot.2a',
-      stageId: 1, trackType: 'standard', completedAt: '2020-01-01T00:00:00.000Z', points: 10,
-    }],
-  };
-  const turnOff = () =>
-    call(fns.updateTutorGrantPermissions, { grantId: GRANT, canEditLearning: false }, parentAuth);
-
-  beforeEach(async () => {
-    await clearFirestore();
-    await seedProfile();
-    await seedActiveGrant({ can_edit_learning: true });
-    await completionRef().set({ completion_id: completionId, points: 10 });
-  });
-
-  test('after turn-off, bulk and reset are rejected and change nothing', async () => {
-    await turnOff();
-    await expectHttpsError(call(fns.tutorBulkPriorCompletions, bulkArgs), 'permission-denied');
-    await expectHttpsError(
-      call(fns.tutorResetCompletion, { ...owner, completionId }), 'permission-denied');
-    assert.equal((await completionRef().get()).exists, true, 'reset deleted nothing');
-    assert.equal(
-      (await profileRef().collection('completions').doc('c2').get()).exists, false,
-      'bulk wrote nothing');
-  });
-
-  test('racing a turn-off, each write either lands whole and reports success, or nothing', async () => {
-    const [bulk, reset] = await Promise.allSettled([
-      call(fns.tutorBulkPriorCompletions, bulkArgs),
-      call(fns.tutorResetCompletion, { ...owner, completionId }),
-      turnOff(),
-    ]);
-    const c2 = (await profileRef().collection('completions').doc('c2').get()).exists;
-    assert.equal(c2, bulk.status === 'fulfilled', 'bulk wrote iff it reported success');
-    const c1 = (await completionRef().get()).exists;
-    assert.equal(!c1, reset.status === 'fulfilled', 'reset deleted iff it reported success');
-    assert.equal((await grantDoc()).permissions.can_edit_learning, false);
-  });
-});
-
 // The grant check and the write must be ONE transaction on every learning-write
 // path (DNI-487 review). The window between a separate grant read and the write
 // is made deterministic: the turn-off commits right before the callable's
@@ -364,8 +314,6 @@ describe('updateTutorGrantPermissions — AC-6 legacy completion callables', () 
 // (or never opens one) lands the write after the turn-off and fails here.
 describe('updateTutorGrantPermissions — AC-6 a turn-off between check and write', () => {
   const owner = { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE };
-  const bookmarkId = 'talmud_bavli_standard';
-  const bookmarkRef = () => profileRef().collection('bookmarks').doc(bookmarkId);
   const settingsRef = () =>
     profileRef().collection('preferences').doc('gamification_settings');
   const originalRunTransaction = db.runTransaction;
@@ -390,26 +338,6 @@ describe('updateTutorGrantPermissions — AC-6 a turn-off between check and writ
 
   afterEach(() => {
     db.runTransaction = originalRunTransaction;
-  });
-
-  test('tutorUpsertBookmark: a turn-off that commits first → denied, no bookmark', async () => {
-    interleaveBeforeNextTransaction(() =>
-      call(fns.updateTutorGrantPermissions, { grantId: GRANT, canEditLearning: false }, parentAuth));
-    await expectHttpsError(
-      call(fns.tutorUpsertBookmark, {
-        ...owner, bookmarkId, bookmarkData: { sefaria_ref: 'Berakhot.2a', stage_id: 'stage-1' },
-      }),
-      'permission-denied',
-    );
-    assert.ok(interleaved, 'the turn-off ran inside the check-to-write window');
-    assert.equal((await bookmarkRef().get()).exists, false, 'no bookmark after turn-off');
-  });
-
-  test('tutorUpsertBookmark: with editing on, the bookmark is written', async () => {
-    await call(fns.tutorUpsertBookmark, {
-      ...owner, bookmarkId, bookmarkData: { sefaria_ref: 'Berakhot.2a', stage_id: 'stage-1' },
-    });
-    assert.equal((await bookmarkRef().get()).data().sefaria_ref, 'Berakhot.2a');
   });
 
   test('tutorUpdateGamificationSettings: a revoke that commits first → denied, nothing written', async () => {

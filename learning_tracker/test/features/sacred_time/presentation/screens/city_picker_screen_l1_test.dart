@@ -10,8 +10,8 @@
 //   • Error state: generic "Search failed…" shown when citySearchProvider
 //     errors; the raw exception text never renders, in EN or he locale
 //     (AUD-sacred_time-03, EH-5).
-//   • Selecting a city calls sacredLocationProvider.notifier.setManualCity()
-//     with the correct lat/lng/cityLabel/countryCode.
+//   • Selecting a city writes ONE governed learnerSettings change for the
+//     active learner (DNI-481 AC-3): its lat/lng, IANA zone and Israel flag.
 //   • Selecting a city triggers router.pop with the chosen City.
 //   • Subtitle includes admin1 and countryCode separated by " · ".
 //   • Subtitle omits admin1 when it is null/empty.
@@ -39,14 +39,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/domain/learner_settings_change.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
-import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart';
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../helpers/learner_state_fixtures.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -54,36 +61,34 @@ class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
-// ── Fake SacredLocationNotifier ────────────────────────────────────────────────
+// ── Fake LearningCommands ──────────────────────────────────────────────────────
 //
-// Captures the setManualCity call arguments so tests can assert on them
-// without triggering real SharedPreferences I/O or sync pushes.
+// Records the governed actions the picker writes (DNI-481 AC-3) and answers
+// with [result], without any repository.
 
-class _FakeSacredLocationNotifier extends SacredLocationNotifier {
-  SacredLocation? lastSet;
+class _RecordingCommands extends Fake implements LearningCommands {
+  _RecordingCommands([
+    this.result = const CaptureResult.success(changeIds: []),
+  ]);
+
+  final CaptureResult result;
+  final List<GovernedAction> applied = [];
 
   @override
-  SacredLocation? build() => null; // skip SharedPreferences load
-
-  @override
-  Future<void> setManualCity({
-    required double latitude,
-    required double longitude,
-    required String cityLabel,
-    required String countryCode,
-  }) async {
-    lastSet = SacredLocation(
-      latitude: latitude,
-      longitude: longitude,
-      source: SacredLocationSource.manualCity,
-      fixedAt: DateTime.utc(2026, 1, 1),
-      countryCode: countryCode,
-      cityLabel: cityLabel,
-    );
-    state = lastSet;
-    // Do NOT call super — avoids SharedPreferences + sync side-effects.
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) async {
+    applied.add(action);
+    return result;
   }
 }
+
+LearnerSettingsEditor _editorOver(_RecordingCommands commands) =>
+    LearnerSettingsEditor(
+      commands: () async => commands,
+      scope: () async =>
+          LearnerScope(ownerUid: 'owner-uid', profileId: profileUlid),
+      locationService: const LocationService(),
+      deviceTimeZone: () async => null,
+    );
 
 // ── Sample data ────────────────────────────────────────────────────────────────
 
@@ -107,6 +112,17 @@ const _cityTelAviv = City(
   admin1: 'Tel Aviv District',
 );
 
+const _cityLakewood = City(
+  id: 4,
+  name: 'Lakewood',
+  countryCode: 'US',
+  latitude: 40.0821,
+  longitude: -74.2097,
+  population: 100000,
+  admin1: 'NJ',
+  timezone: 'America/New_York',
+);
+
 const _cityNoAdmin = City(
   id: 3,
   name: 'Nomadville',
@@ -121,14 +137,16 @@ const _cityNoAdmin = City(
 
 Widget _buildApp({
   required _MockStackRouter router,
-  required _FakeSacredLocationNotifier locationNotifier,
+  _RecordingCommands? commands,
 
   /// Override for citySearchProvider('<query>'). Key = query string.
   Map<String, Future<List<City>> Function(Ref)> citySearchOverrides = const {},
   Locale locale = const Locale('en'),
 }) {
   final overrides = <Override>[
-    sacredLocationProvider.overrideWith(() => locationNotifier),
+    learnerSettingsEditorProvider.overrideWithValue(
+      _editorOver(commands ?? _RecordingCommands()),
+    ),
     ...citySearchOverrides.entries.map(
       (e) => citySearchProvider(e.key).overrideWith(e.value),
     ),
@@ -196,12 +214,7 @@ void main() {
 
   group('CityPickerScreen — initial render', () {
     testWidgets('AppBar title shows "Choose a city"', (tester) async {
-      await tester.pumpWidget(
-        _buildApp(
-          router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
-        ),
-      );
+      await tester.pumpWidget(_buildApp(router: _defaultRouter()));
       await _pump(tester);
 
       expect(find.text('Choose a city'), findsOneWidget);
@@ -210,12 +223,7 @@ void main() {
     });
 
     testWidgets('search TextField with hint text is present', (tester) async {
-      await tester.pumpWidget(
-        _buildApp(
-          router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
-        ),
-      );
+      await tester.pumpWidget(_buildApp(router: _defaultRouter()));
       await _pump(tester);
 
       expect(find.byType(TextField), findsOneWidget);
@@ -225,12 +233,7 @@ void main() {
     });
 
     testWidgets('idle hint shown when query is empty', (tester) async {
-      await tester.pumpWidget(
-        _buildApp(
-          router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
-        ),
-      );
+      await tester.pumpWidget(_buildApp(router: _defaultRouter()));
       await _pump(tester);
 
       expect(
@@ -243,12 +246,7 @@ void main() {
     });
 
     testWidgets('idle hint shown when query is exactly 1 char', (tester) async {
-      await tester.pumpWidget(
-        _buildApp(
-          router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
-        ),
-      );
+      await tester.pumpWidget(_buildApp(router: _defaultRouter()));
       await _pump(tester);
 
       await tester.enterText(find.byType(TextField), 'J');
@@ -272,7 +270,6 @@ void main() {
         await tester.pumpWidget(
           _buildApp(
             router: _defaultRouter(),
-            locationNotifier: _FakeSacredLocationNotifier(),
             citySearchOverrides: {'Je': (_) => completer.future},
           ),
         );
@@ -295,7 +292,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'Je': (_) async => [_cityJerusalem, _cityTelAviv],
           },
@@ -314,7 +310,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'Je': (_) async => [_cityJerusalem],
           },
@@ -336,7 +331,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'No': (_) async => [_cityNoAdmin],
           },
@@ -356,7 +350,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'Je': (_) async => [_cityJerusalem],
           },
@@ -380,7 +373,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {'Xy': (_) async => []},
         ),
       );
@@ -400,7 +392,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {'Xy': (_) async => []},
         ),
       );
@@ -424,7 +415,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             // Retry is null on the generated CitySearchProvider so the error
             // is surfaced immediately without indefinite AsyncLoading.
@@ -458,7 +448,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'Er': (_) async => throw Exception('specific db error'),
           },
@@ -485,7 +474,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'Er': (_) async => throw TimeoutException(
               'Time limit reached while waiting for position update.',
@@ -515,13 +503,13 @@ void main() {
 
   group('CityPickerScreen — city selection', () {
     testWidgets(
-      'tapping a city calls setManualCity with correct lat/lng/label/country',
+      'tapping a city writes its location and Israel flag onto the learner',
       (tester) async {
-        final locationNotifier = _FakeSacredLocationNotifier();
+        final commands = _RecordingCommands();
         await tester.pumpWidget(
           _buildApp(
             router: _defaultRouter(),
-            locationNotifier: locationNotifier,
+            commands: commands,
             citySearchOverrides: {
               'Je': (_) async => [_cityJerusalem],
             },
@@ -533,58 +521,76 @@ void main() {
         await tester.tap(find.text('Jerusalem'));
         await _pump(tester);
 
-        expect(
-          locationNotifier.lastSet,
-          isNotNull,
-          reason: 'setManualCity must have been called',
-        );
-        expect(
-          locationNotifier.lastSet!.latitude,
-          closeTo(_cityJerusalem.latitude, 0.0001),
-        );
-        expect(
-          locationNotifier.lastSet!.longitude,
-          closeTo(_cityJerusalem.longitude, 0.0001),
-        );
-        expect(locationNotifier.lastSet!.countryCode, equals('IL'));
-        expect(
-          locationNotifier.lastSet!.cityLabel,
-          equals('Jerusalem, Jerusalem District, IL'),
-        );
-
-        await _teardown(tester);
-      },
-    );
-
-    testWidgets(
-      'tapping a city without admin1 produces label without admin1 segment',
-      (tester) async {
-        final locationNotifier = _FakeSacredLocationNotifier();
-        await tester.pumpWidget(
-          _buildApp(
-            router: _defaultRouter(),
-            locationNotifier: locationNotifier,
-            citySearchOverrides: {
-              'No': (_) async => [_cityNoAdmin],
-            },
+        expect(commands.applied, [
+          learnerSettingsAction(
+            profileUlid,
+            LearnerSettingsEdit(
+              latitude: _cityJerusalem.latitude,
+              longitude: _cityJerusalem.longitude,
+              inIsrael: true,
+            ),
           ),
-        );
-        await tester.enterText(find.byType(TextField), 'No');
-        await _pump(tester);
-
-        await tester.tap(find.text('Nomadville'));
-        await _pump(tester);
-
-        expect(locationNotifier.lastSet, isNotNull);
-        expect(
-          locationNotifier.lastSet!.cityLabel,
-          equals('Nomadville, US'),
-          reason: 'Label must omit admin1 when null',
-        );
+        ]);
 
         await _teardown(tester);
       },
     );
+
+    testWidgets('a city outside Israel with a known zone writes that zone and '
+        'in_israel false', (tester) async {
+      final commands = _RecordingCommands();
+      await tester.pumpWidget(
+        _buildApp(
+          router: _defaultRouter(),
+          commands: commands,
+          citySearchOverrides: {
+            'La': (_) async => [_cityLakewood],
+          },
+        ),
+      );
+      await tester.enterText(find.byType(TextField), 'La');
+      await _pump(tester);
+
+      await tester.tap(find.text('Lakewood'));
+      await _pump(tester);
+
+      final fields = commands.applied.single.changes.single.docs.single.fields;
+      expect(fields['time_zone'], 'America/New_York');
+      expect(fields['in_israel'], isFalse);
+
+      await _teardown(tester);
+    });
+
+    testWidgets('a change that is not saved keeps the picker open with a '
+        'message', (tester) async {
+      final router = _defaultRouter();
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          commands: _RecordingCommands(
+            const CaptureResult.rejected(CaptureRejection.notSaved),
+          ),
+          citySearchOverrides: {
+            'Je': (_) async => [_cityJerusalem],
+          },
+        ),
+      );
+      await tester.enterText(find.byType(TextField), 'Je');
+      await _pump(tester);
+
+      await tester.tap(find.text('Jerusalem'));
+      await _pump(tester);
+
+      verifyNever(() => router.pop<City>(any<City>()));
+      expect(
+        find.text(
+          "Couldn't save this learner's Sacred Time settings. Try again.",
+        ),
+        findsOneWidget,
+      );
+
+      await _teardown(tester);
+    });
 
     testWidgets('tapping a city calls router.pop with the chosen City', (
       tester,
@@ -593,7 +599,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: router,
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'Je': (_) async => [_cityJerusalem],
           },
@@ -620,7 +625,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'Je': (_) async => [_cityJerusalem],
           },
@@ -647,7 +651,6 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
           citySearchOverrides: {
             'Je': (_) async => [_cityJerusalem, _cityTelAviv],
           },
@@ -668,11 +671,7 @@ void main() {
       'idle hint renders without overflow under he locale (query < 2)',
       (tester) async {
         await tester.pumpWidget(
-          _buildApp(
-            router: _defaultRouter(),
-            locationNotifier: _FakeSacredLocationNotifier(),
-            locale: const Locale('he'),
-          ),
+          _buildApp(router: _defaultRouter(), locale: const Locale('he')),
         );
         await _pump(tester);
 
@@ -686,11 +685,7 @@ void main() {
     testWidgets('idle hint shows the localized Hebrew string under he locale, '
         'not the English literal', (tester) async {
       await tester.pumpWidget(
-        _buildApp(
-          router: _defaultRouter(),
-          locationNotifier: _FakeSacredLocationNotifier(),
-          locale: const Locale('he'),
-        ),
+        _buildApp(router: _defaultRouter(), locale: const Locale('he')),
       );
       await _pump(tester);
 

@@ -6,9 +6,8 @@ import 'package:learning_tracker/features/learning/domain/repositories/track_rep
 
 /// Thrown by [FirestoreTrackRepositoryAdapter]'s write methods when
 /// `firestoreCurriculumTrackRepositoryProvider` resolves to `null` — no active
-/// account, or no active learner profile yet. See
-/// [BookmarkRepositoryNotReadyException] for the read-vs-write split this mirrors:
-/// reads reuse a natural "nothing yet" value, writes have no such value and throw.
+/// account, or no active learner profile yet. Read methods can reuse a natural
+/// "nothing yet" value; writes have no such value and throw.
 class TrackRepositoryNotReadyException implements Exception {
   const TrackRepositoryNotReadyException();
 
@@ -22,8 +21,7 @@ class TrackRepositoryNotReadyException implements Exception {
 /// Firestore-backed adapter over [FirestoreCurriculumTrackRepository],
 /// implementing the [TrackRepository] interface for the learning feature.
 ///
-/// Follows the pattern established by [FirestoreBookmarkRepositoryAdapter]
-/// (`lib/features/learning/data/repositories/bookmark_repository_impl.dart`):
+/// Uses the shared provider re-resolution pattern:
 /// - Takes a [Ref] and re-resolves the provider on every call
 /// - Construction stays synchronous; the provider is an async nullable FutureProvider
 /// - Write methods throw [TrackRepositoryNotReadyException] when not ready

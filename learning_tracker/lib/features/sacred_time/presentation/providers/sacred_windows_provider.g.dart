@@ -8,88 +8,48 @@ part of 'sacred_windows_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// 6-month rolling list of pre-computed Sacred Time block windows. Recomputed
-/// whenever the user's location or in-Israel flag changes.
-// keepAlive: read by both the lock overlay and CurrentSacredWindow's per-30s timer; dropping it on last-listener-loss would force a recompute on every screen navigation.
-
-@ProviderFor(sacredWindows)
-final sacredWindowsProvider = SacredWindowsProvider._();
-
-/// 6-month rolling list of pre-computed Sacred Time block windows. Recomputed
-/// whenever the user's location or in-Israel flag changes.
-// keepAlive: read by both the lock overlay and CurrentSacredWindow's per-30s timer; dropping it on last-listener-loss would force a recompute on every screen navigation.
-
-final class SacredWindowsProvider
-    extends
-        $FunctionalProvider<
-          List<SacredWindow>,
-          List<SacredWindow>,
-          List<SacredWindow>
-        >
-    with $Provider<List<SacredWindow>> {
-  /// 6-month rolling list of pre-computed Sacred Time block windows. Recomputed
-  /// whenever the user's location or in-Israel flag changes.
-  // keepAlive: read by both the lock overlay and CurrentSacredWindow's per-30s timer; dropping it on last-listener-loss would force a recompute on every screen navigation.
-  SacredWindowsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'sacredWindowsProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$sacredWindowsHash();
-
-  @$internal
-  @override
-  $ProviderElement<List<SacredWindow>> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  List<SacredWindow> create(Ref ref) {
-    return sacredWindows(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<SacredWindow> value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<List<SacredWindow>>(value),
-    );
-  }
-}
-
-String _$sacredWindowsHash() => r'c20beb5cbb41b482ca0f1447057b1dcf0cebae0d';
-
-/// Currently-active window (the one whose [start, end] contains "now"), or
-/// null if not currently in Sacred Time.
+/// The device lock in force now (AD-36), or null when the app is open.
 ///
-/// Recomputed every minute via an internal timer so the lock screen drops
-/// without manual invalidation when tzais passes.
-// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
+/// The union of `lockWindows` over every learner profile of the signed-in
+/// account ([accountLockHistoriesProvider]), judged by [sacredWindowAt] —
+/// the app-wide overlay, notification suppression and the Mishna history
+/// all read this one value. A tutored talmid never drives it (see
+/// [CurrentTutoredSacredWindow]). A learner whose settings are loading or
+/// unreadable is judged fail-closed. Re-judged at the next lock boundary
+/// (exactly) and at least every [sacredWindowRecheck], so the overlay
+/// appears at the lock's start and lifts just after its end without any
+/// other input changing.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock appears and lifts on time, not just on the next rebuild.
 
 @ProviderFor(CurrentSacredWindow)
 final currentSacredWindowProvider = CurrentSacredWindowProvider._();
 
-/// Currently-active window (the one whose [start, end] contains "now"), or
-/// null if not currently in Sacred Time.
+/// The device lock in force now (AD-36), or null when the app is open.
 ///
-/// Recomputed every minute via an internal timer so the lock screen drops
-/// without manual invalidation when tzais passes.
-// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
+/// The union of `lockWindows` over every learner profile of the signed-in
+/// account ([accountLockHistoriesProvider]), judged by [sacredWindowAt] —
+/// the app-wide overlay, notification suppression and the Mishna history
+/// all read this one value. A tutored talmid never drives it (see
+/// [CurrentTutoredSacredWindow]). A learner whose settings are loading or
+/// unreadable is judged fail-closed. Re-judged at the next lock boundary
+/// (exactly) and at least every [sacredWindowRecheck], so the overlay
+/// appears at the lock's start and lifts just after its end without any
+/// other input changing.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock appears and lifts on time, not just on the next rebuild.
 final class CurrentSacredWindowProvider
     extends $NotifierProvider<CurrentSacredWindow, SacredWindow?> {
-  /// Currently-active window (the one whose [start, end] contains "now"), or
-  /// null if not currently in Sacred Time.
+  /// The device lock in force now (AD-36), or null when the app is open.
   ///
-  /// Recomputed every minute via an internal timer so the lock screen drops
-  /// without manual invalidation when tzais passes.
-  // keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
+  /// The union of `lockWindows` over every learner profile of the signed-in
+  /// account ([accountLockHistoriesProvider]), judged by [sacredWindowAt] —
+  /// the app-wide overlay, notification suppression and the Mishna history
+  /// all read this one value. A tutored talmid never drives it (see
+  /// [CurrentTutoredSacredWindow]). A learner whose settings are loading or
+  /// unreadable is judged fail-closed. Re-judged at the next lock boundary
+  /// (exactly) and at least every [sacredWindowRecheck], so the overlay
+  /// appears at the lock's start and lifts just after its end without any
+  /// other input changing.
+  // keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock appears and lifts on time, not just on the next rebuild.
   CurrentSacredWindowProvider._()
     : super(
         from: null,
@@ -118,16 +78,118 @@ final class CurrentSacredWindowProvider
 }
 
 String _$currentSacredWindowHash() =>
-    r'cdbd0a66551f3f62b7cfc2940c2bd8218da3ca62';
+    r'1b7adf968755aa68e1685a8ccf22fb8016c48e03';
 
-/// Currently-active window (the one whose [start, end] contains "now"), or
-/// null if not currently in Sacred Time.
+/// The device lock in force now (AD-36), or null when the app is open.
 ///
-/// Recomputed every minute via an internal timer so the lock screen drops
-/// without manual invalidation when tzais passes.
-// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
+/// The union of `lockWindows` over every learner profile of the signed-in
+/// account ([accountLockHistoriesProvider]), judged by [sacredWindowAt] —
+/// the app-wide overlay, notification suppression and the Mishna history
+/// all read this one value. A tutored talmid never drives it (see
+/// [CurrentTutoredSacredWindow]). A learner whose settings are loading or
+/// unreadable is judged fail-closed. Re-judged at the next lock boundary
+/// (exactly) and at least every [sacredWindowRecheck], so the overlay
+/// appears at the lock's start and lifts just after its end without any
+/// other input changing.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock appears and lifts on time, not just on the next rebuild.
 
 abstract class _$CurrentSacredWindow extends $Notifier<SacredWindow?> {
+  SacredWindow? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<SacredWindow?, SacredWindow?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<SacredWindow?, SacredWindow?>,
+              SacredWindow?,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// The lock of the talmid an active tutored session shows, or null when
+/// no tutored session is active or that talmid is not locked (DNI-481
+/// AC-1 tutor rule, AD-36).
+///
+/// Judged from [tutoredLearnerLockHistoryProvider] (fail-closed while the
+/// talmid's settings load or cannot be read) with the same [sacredWindowAt]
+/// as the device lock, and re-judged at the talmid's lock boundaries. It
+/// covers only the talmid's screens: it never feeds the account lock, the
+/// notification predicate or the after-lock prompt.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the cover appears and lifts on time.
+
+@ProviderFor(CurrentTutoredSacredWindow)
+final currentTutoredSacredWindowProvider =
+    CurrentTutoredSacredWindowProvider._();
+
+/// The lock of the talmid an active tutored session shows, or null when
+/// no tutored session is active or that talmid is not locked (DNI-481
+/// AC-1 tutor rule, AD-36).
+///
+/// Judged from [tutoredLearnerLockHistoryProvider] (fail-closed while the
+/// talmid's settings load or cannot be read) with the same [sacredWindowAt]
+/// as the device lock, and re-judged at the talmid's lock boundaries. It
+/// covers only the talmid's screens: it never feeds the account lock, the
+/// notification predicate or the after-lock prompt.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the cover appears and lifts on time.
+final class CurrentTutoredSacredWindowProvider
+    extends $NotifierProvider<CurrentTutoredSacredWindow, SacredWindow?> {
+  /// The lock of the talmid an active tutored session shows, or null when
+  /// no tutored session is active or that talmid is not locked (DNI-481
+  /// AC-1 tutor rule, AD-36).
+  ///
+  /// Judged from [tutoredLearnerLockHistoryProvider] (fail-closed while the
+  /// talmid's settings load or cannot be read) with the same [sacredWindowAt]
+  /// as the device lock, and re-judged at the talmid's lock boundaries. It
+  /// covers only the talmid's screens: it never feeds the account lock, the
+  /// notification predicate or the after-lock prompt.
+  // keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the cover appears and lifts on time.
+  CurrentTutoredSacredWindowProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentTutoredSacredWindowProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentTutoredSacredWindowHash();
+
+  @$internal
+  @override
+  CurrentTutoredSacredWindow create() => CurrentTutoredSacredWindow();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SacredWindow? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SacredWindow?>(value),
+    );
+  }
+}
+
+String _$currentTutoredSacredWindowHash() =>
+    r'e786a2ea4dcbbc315fa3e996774358e8621213ee';
+
+/// The lock of the talmid an active tutored session shows, or null when
+/// no tutored session is active or that talmid is not locked (DNI-481
+/// AC-1 tutor rule, AD-36).
+///
+/// Judged from [tutoredLearnerLockHistoryProvider] (fail-closed while the
+/// talmid's settings load or cannot be read) with the same [sacredWindowAt]
+/// as the device lock, and re-judged at the talmid's lock boundaries. It
+/// covers only the talmid's screens: it never feeds the account lock, the
+/// notification predicate or the after-lock prompt.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the cover appears and lifts on time.
+
+abstract class _$CurrentTutoredSacredWindow extends $Notifier<SacredWindow?> {
   SacredWindow? build();
   @$mustCallSuper
   @override

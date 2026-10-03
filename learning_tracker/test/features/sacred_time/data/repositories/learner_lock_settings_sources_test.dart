@@ -9,6 +9,8 @@ import 'package:learning_tracker/features/sacred_time/data/repositories/learner_
 
 void main() {
   test('re-exports the identical provider instances', () {
+    expect(activeLearnerScopeProvider, same(ring.activeLearnerScopeProvider));
+    expect(ownAccountPathUidProvider, same(ring.ownAccountPathUidProvider));
     expect(changeLogRepositoryProvider, same(ring.changeLogRepositoryProvider));
     expect(
       learnerSettingsReaderProvider,

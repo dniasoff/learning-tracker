@@ -2,10 +2,13 @@
 /// settings only with a real IANA zone.
 library;
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/learner_state_fixtures.dart';
 
@@ -67,5 +70,34 @@ void main() {
       expect(seed.longitude, isNull);
       expect(seed.inIsrael, isTrue);
     }
+  });
+
+  group('PlatformCreatingDeviceSettingsSource (DNI-481 AC-4)', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+
+    test('reads only the device zone: no device preference (the retired '
+        'Sacred Time location / in-Israel keys) reaches the seed', () async {
+      SharedPreferences.setMockInitialValues({
+        'sacred_time_latitude': 31.778,
+        'sacred_time_longitude': 35.235,
+        'sacred_time_fixed_at_ms': 1,
+        'sacred_time_in_israel': true,
+      });
+      const channel = MethodChannel('flutter_timezone');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+        channel,
+        (call) async => 'Asia/Jerusalem',
+      );
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+      final reading = await const PlatformCreatingDeviceSettingsSource().read();
+      expect(reading.timeZone, 'Asia/Jerusalem');
+      expect(reading.latitude, isNull);
+      expect(reading.longitude, isNull);
+      expect(reading.inIsrael, isFalse);
+      expect(reading.seedFor(profileUlid).hasLocation, isFalse);
+    });
   });
 }

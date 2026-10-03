@@ -2681,6 +2681,30 @@ abstract class AppLocalizations {
   /// **'Tutors cannot mark live completions'**
   String get tutorCannotMarkLiveCompletion;
 
+  /// DNI-486 AC-7: a tutor capture the server stamped inside the learner's lock window. The event is stored but does not count.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept, not counted — Shabbos / Yom Tov had started'**
+  String get tutorCaptureKeptNotCounted;
+
+  /// DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data.
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos / Yom Tov'**
+  String get tutorCaptureLearnerLocked;
+
+  /// DNI-486 AC-4: note under a tutor's disabled write controls when the grant's can_edit_learning is false.
+  ///
+  /// In en, this message translates to:
+  /// **'{learner}\'s parent hasn\'t given you editing access'**
+  String tutorCaptureNoEditAccess(String learner);
+
+  /// DNI-486 AC-5: tutor writes are online-only (AD-53); shown on disabled tutor write controls while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online required'**
+  String get tutorCaptureOnlineRequired;
+
   /// No description provided for @tutorWriteForbiddenTitle.
   ///
   /// In en, this message translates to:
@@ -6498,7 +6522,7 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeCardDescription.
   ///
   /// In en, this message translates to:
-  /// **'App is silenced and locked during {term} and Yom Tov. Times computed locally from your location with a 15-minute cushion.'**
+  /// **'App is silenced and locked during {term} and Yom Tov, from 10 minutes before candle-lighting until 10 minutes after tzeis at this learner\'s location.'**
   String sacredTimeCardDescription(String term);
 
   /// No description provided for @sacredTimeShabbosModeLabel.
@@ -6584,6 +6608,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not detect location. Try again, or choose a city instead.'**
   String get sacredTimeLocationDetectErrorGeneric;
+
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner.
+  ///
+  /// In en, this message translates to:
+  /// **'Set location'**
+  String get sacredTimeLocationPromptAction;
+
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for a learner with no location.
+  ///
+  /// In en, this message translates to:
+  /// **'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
+  String sacredTimeLocationPromptMessage(String term);
+
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
+  String sacredTimeLocationPromptMessageNamed(String name, String term);
+
+  /// DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save this learner\'s Sacred Time settings. Try again.'**
+  String get sacredTimeSettingsNotSaved;
+
+  /// DRAFT copy, pending zc4. DNI-481: no own learner is active (none selected, or a tutored session), so no learnerSettings change can be written.
+  ///
+  /// In en, this message translates to:
+  /// **'Sacred Time settings can be changed only for your own learners.'**
+  String get sacredTimeSettingsUnavailable;
 
   /// No description provided for @newPasswordLabel.
   ///
@@ -11609,6 +11663,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t restore the backup. Please try again.'**
   String get backupImportError;
+
+  /// Snackbar after a backup restore when the server refused some of the replayed learning writes (AD-49, AD-54 Recovery: not saved — retry). Shown with a Retry action that re-sends exactly those writes. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Not saved — part of the backup was not restored. Retry?'**
+  String get backupImportNotSaved;
 }
 
 class _AppLocalizationsDelegate

@@ -33,6 +33,7 @@ import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repo
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
@@ -173,6 +174,10 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> reAddTrack(String curriculumId) =>
       _fake.reAddTrack(curriculumId);
+
+  @override
+  Future<BackupReplayResult> importBackup(BackupReplayInput input) =>
+      _fake.importBackup(input);
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>

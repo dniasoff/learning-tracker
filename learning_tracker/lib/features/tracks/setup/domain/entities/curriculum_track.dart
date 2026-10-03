@@ -59,7 +59,7 @@ class CurriculumTrackEntity {
   /// `FirestoreGatewayImpl.pushTrack`/`TrackCodec.encode` wrote them: the
   /// document already lives at `.../learner_profiles/{profileId}/
   /// curriculum_tracks/{curriculumId}`, so profile identity is carried by
-  /// the path (same reasoning as `BookmarkEntity`/`StageDefinition`'s
+  /// the path (same reasoning as `persisted entity`/`StageDefinition`'s
   /// `toFirestore` — unlike `ProfileProgramEntity`, which keeps `profile_id`
   /// only because it is the profile-scoped String ULID with an existing
   /// live writer to stay byte-compatible with; there is no equivalent

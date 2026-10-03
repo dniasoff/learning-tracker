@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
@@ -642,6 +643,15 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     // user is following a program (Daf Yomi, Mishna Yomi, etc.) the
     // pace and order are dictated by the program, so showing those
     // controls is misleading.
+    //
+    // DNI-486 (AC-4/5/6): in a tutored session every write entry point
+    // follows the tutor write availability (parent's can_edit_learning,
+    // online, the talmid outside a lock) — visible but disabled, with the
+    // one note. Archive / delete and reorder have no target-scoped tutor
+    // path (they act on the ACTIVE profile, i.e. the tutor's own), so a
+    // tutor never gets them (learning-tracker-fyh.227).
+    final canWrite = ref.watch(tutorWriteAvailabilityProvider).allowsWrite;
+    final tutored = ref.watch(activeTutoredProfileSelectionProvider) != null;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: context.colors.brandCreamCard,
@@ -660,6 +670,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
+            if (tutored)
+              const TutorWriteNote(padding: EdgeInsets.fromLTRB(16, 16, 16, 0)),
             if (!hasProgramEnrollment) ...[
               // W5-B (Task #16): Bulk-prior path — visually differentiated
               // from a "Mark complete" (live) action with outlined/secondary
@@ -667,162 +679,205 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               // with live completion (which credits engagement). The icon and
               // foreground colour both use the secondary outline treatment.
               // Copy hardcoded English for now — l10n sweep follows.
-              ListTile(
-                key: const ValueKey('trackDetail.bulkPriorTile'),
-                shape: RoundedRectangleBorder(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24),
+              TutorDisabledControl(
+                blocked: !canWrite,
+                child: ListTile(
+                  key: const ValueKey('trackDetail.bulkPriorTile'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                    // brandBlueDeep (not blueMedium): this border/tile-tint/
+                    // icon/text sits directly on the card, so it needs the ink
+                    // token that lightens in dark to stay visible — blueMedium
+                    // is now a hero-FILL token pinned deep for white content
+                    // painted over it, which would go near-invisible here
+                    // (run-9 audit).
+                    side: BorderSide(
+                      color: context.colors.brandBlueDeep.withValues(
+                        alpha: 0.4,
+                      ),
+                      width: 1,
+                    ),
                   ),
-                  // brandBlueDeep (not blueMedium): this border/tile-tint/
-                  // icon/text sits directly on the card, so it needs the ink
-                  // token that lightens in dark to stay visible — blueMedium
-                  // is now a hero-FILL token pinned deep for white content
-                  // painted over it, which would go near-invisible here
-                  // (run-9 audit).
-                  side: BorderSide(
-                    color: context.colors.brandBlueDeep.withValues(alpha: 0.4),
-                    width: 1,
+                  tileColor: context.colors.brandBlueDeep.withValues(
+                    alpha: 0.06,
                   ),
+                  leading: Icon(
+                    Icons.history_edu_outlined,
+                    color: context.colors.brandBlueDeep,
+                  ),
+                  title: Text(
+                    AppLocalizations.of(context)!.trackMarkPreviouslyLearned,
+                    style: TextStyle(color: context.colors.brandBlueDeep),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.colors.brandBlueDeep,
+                  ),
+                  enabled: canWrite,
+                  onTap: curriculum != null && canWrite
+                      ? () => _openBulkMark(track, curriculum)
+                      : null,
                 ),
-                tileColor: context.colors.brandBlueDeep.withValues(alpha: 0.06),
-                leading: Icon(
-                  Icons.history_edu_outlined,
-                  color: context.colors.brandBlueDeep,
-                ),
-                title: Text(
-                  AppLocalizations.of(context)!.trackMarkPreviouslyLearned,
-                  style: TextStyle(color: context.colors.brandBlueDeep),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: context.colors.brandBlueDeep,
-                ),
-                onTap: curriculum != null
-                    ? () => _openBulkMark(track, curriculum)
-                    : null,
               ),
               const Divider(height: 1, indent: 56),
-              ListTile(
-                leading: Icon(
-                  Icons.swap_vert_rounded,
-                  // brandBlueDeep: bare icon on the card — see the
-                  // bulkPriorTile comment above for why blueMedium
-                  // (hero-fill role) is wrong here.
-                  color: context.colors.brandBlueDeep,
-                ),
-                title: Text(AppLocalizations.of(context)!.trackReorderContent),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: curriculum != null
-                    ? () => Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
-                          builder: (_) => TrackLearningOrderScreen(
-                            curriculumId: curriculum,
+              TutorDisabledControl(
+                blocked: tutored,
+                child: ListTile(
+                  key: const ValueKey('trackDetail.reorderTile'),
+                  enabled: !tutored,
+                  leading: Icon(
+                    Icons.swap_vert_rounded,
+                    // brandBlueDeep: bare icon on the card — see the
+                    // bulkPriorTile comment above for why blueMedium
+                    // (hero-fill role) is wrong here.
+                    color: context.colors.brandBlueDeep,
+                  ),
+                  title: Text(
+                    AppLocalizations.of(context)!.trackReorderContent,
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: curriculum != null && !tutored
+                      ? () => Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(
+                            builder: (_) => TrackLearningOrderScreen(
+                              curriculumId: curriculum,
+                            ),
                           ),
-                        ),
-                      )
-                    : null,
+                        )
+                      : null,
+                ),
               ),
               const Divider(height: 1, indent: 56),
             ],
             if (curriculum != null) ...[
               Builder(
                 builder: (context) {
-                  final tutorPerms = ref.watch(activeTutorPermissionsProvider);
-                  final canEditGoals =
-                      tutorPerms == null || tutorPerms.canEditLearning;
+                  // DNI-486: permission, connection and the talmid's lock.
+                  final canEditGoals = ref
+                      .watch(tutorWriteAvailabilityProvider)
+                      .allowsWrite;
                   final hasGoal =
                       ref
                           .watch(_trackGoalProvider(track.curriculumId))
                           .asData
                           ?.value !=
                       null;
-                  return ListTile(
-                    key: const ValueKey('trackDetail.goalTile'),
-                    shape: hasProgramEnrollment
-                        ? const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(24),
-                            ),
-                          )
-                        : null,
-                    enabled: canEditGoals,
-                    leading: Icon(
-                      Icons.flag_outlined,
-                      color: context.colors.brandBlueDeep,
+                  return TutorDisabledControl(
+                    blocked: !canEditGoals,
+                    child: ListTile(
+                      key: const ValueKey('trackDetail.goalTile'),
+                      shape: hasProgramEnrollment
+                          ? const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(24),
+                              ),
+                            )
+                          : null,
+                      enabled: canEditGoals,
+                      leading: Icon(
+                        Icons.flag_outlined,
+                        color: context.colors.brandBlueDeep,
+                      ),
+                      title: Text(
+                        hasGoal
+                            ? AppLocalizations.of(context)!.trackEditGoalLabel
+                            : AppLocalizations.of(context)!.trackSetGoalLabel,
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: canEditGoals
+                          ? () => _openGoalEdit(track, curriculum)
+                          : null,
                     ),
-                    title: Text(
-                      hasGoal
-                          ? AppLocalizations.of(context)!.trackEditGoalLabel
-                          : AppLocalizations.of(context)!.trackSetGoalLabel,
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: canEditGoals
-                        ? () => _openGoalEdit(track, curriculum)
-                        : null,
                   );
                 },
               ),
               const Divider(height: 1, indent: 56),
             ],
             if (!hasProgramEnrollment && curriculum != null) ...[
-              ListTile(
-                key: const ValueKey('trackDetail.studyDaysTile'),
-                leading: Icon(
-                  Icons.calendar_today_outlined,
-                  color: context.colors.brandBlueDeep,
-                ),
-                title: Text(AppLocalizations.of(context)!.studyDaysTitle),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.router.push(
-                  StudyDayConfigRoute(curriculumId: curriculum),
+              TutorDisabledControl(
+                blocked: !canWrite,
+                child: ListTile(
+                  key: const ValueKey('trackDetail.studyDaysTile'),
+                  enabled: canWrite,
+                  leading: Icon(
+                    Icons.calendar_today_outlined,
+                    color: context.colors.brandBlueDeep,
+                  ),
+                  title: Text(AppLocalizations.of(context)!.studyDaysTitle),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: canWrite
+                      ? () => context.router.push(
+                          StudyDayConfigRoute(curriculumId: curriculum),
+                        )
+                      : null,
                 ),
               ),
               const Divider(height: 1, indent: 56),
             ],
-            ListTile(
-              leading: Icon(
-                Icons.edit_outlined,
-                color: context.colors.brandBlueDeep,
+            TutorDisabledControl(
+              blocked: !canWrite,
+              child: ListTile(
+                key: const ValueKey('trackDetail.editTile'),
+                enabled: canWrite,
+                leading: Icon(
+                  Icons.edit_outlined,
+                  color: context.colors.brandBlueDeep,
+                ),
+                title: Text(AppLocalizations.of(context)!.trackEditLabel),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: !canWrite
+                    ? null
+                    : () async {
+                        await Navigator.of(context).push<void>(
+                          MaterialPageRoute(
+                            builder: (_) => EditTrackScreen(track: track),
+                          ),
+                        );
+                        if (mounted) {
+                          ref.invalidate(
+                            _trackGoalProvider(track.curriculumId),
+                          );
+                          ref.invalidate(_trackLearnerStateProvider(track));
+                          // B-EDIT-NAME: refresh the resolved title so an edited name
+                          // surfaces immediately in the header on return.
+                          ref.invalidate(
+                            trackCustomNameProvider(track.curriculumId),
+                          );
+                        }
+                      },
               ),
-              title: Text(AppLocalizations.of(context)!.trackEditLabel),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () async {
-                await Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => EditTrackScreen(track: track),
-                  ),
-                );
-                if (mounted) {
-                  ref.invalidate(_trackGoalProvider(track.curriculumId));
-                  ref.invalidate(_trackLearnerStateProvider(track));
-                  // B-EDIT-NAME: refresh the resolved title so an edited name
-                  // surfaces immediately in the header on return.
-                  ref.invalidate(trackCustomNameProvider(track.curriculumId));
-                }
-              },
             ),
             const Divider(height: 1, indent: 56),
-            ListTile(
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(24),
+            TutorDisabledControl(
+              blocked: tutored,
+              child: ListTile(
+                key: const ValueKey('trackDetail.deleteTile'),
+                enabled: !tutored,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(24),
+                  ),
                 ),
-              ),
-              leading: Icon(
-                Icons.delete_outline_rounded,
-                color: theme.colorScheme.error,
-              ),
-              title: Text(
-                AppLocalizations.of(context)!.trackDeleteLabel,
-                style: theme.textTheme.bodyLarge?.copyWith(
+                leading: Icon(
+                  Icons.delete_outline_rounded,
                   color: theme.colorScheme.error,
                 ),
+                title: Text(
+                  AppLocalizations.of(context)!.trackDeleteLabel,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: theme.colorScheme.error,
+                ),
+                onTap: tutored
+                    ? null
+                    : () => _showDeleteDialog(track, curriculum),
               ),
-              trailing: Icon(
-                Icons.chevron_right_rounded,
-                color: theme.colorScheme.error,
-              ),
-              onTap: () => _showDeleteDialog(track, curriculum),
             ),
           ],
         ),
@@ -867,24 +922,46 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final repo = ref.read(goalRepositoryProvider);
     final paceTarget = result.paceTarget;
 
-    if (existingEntity == null) {
-      await repo.createGoal(
-        curriculumId: curriculum,
-        paceTarget: paceTarget,
-        description: result.description,
-        dateType: result.dateType,
-        paceGranularity: result.paceGranularityKey,
+    try {
+      if (existingEntity == null) {
+        await repo.createGoal(
+          curriculumId: curriculum,
+          paceTarget: paceTarget,
+          description: result.description,
+          dateType: result.dateType,
+          paceGranularity: result.paceGranularityKey,
+        );
+      } else {
+        await repo.updateGoal(
+          goal: existingEntity,
+          paceTarget: paceTarget,
+          clearPaceTarget: paceTarget == null,
+          description: result.description,
+          paceGranularity: result.paceGranularity,
+          clearLearningUnit: result.paceGranularityKey == null,
+        );
+      }
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event: 'track_detail_goal_save_failed',
+        exception: e,
+        stackTrace: st,
       );
-    } else {
-      await repo.updateGoal(
-        goal: existingEntity,
-        paceTarget: paceTarget,
-        // 'none' goals clear the pace target entirely.
-        clearPaceTarget: paceTarget == null,
-        description: result.description,
-        paceGranularity: result.paceGranularity,
-        clearLearningUnit: result.paceGranularityKey == null,
-      );
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              tutorSaveErrorText(
+                l10n,
+                e,
+                fallback: l10n.errorSaveFailed,
+                learnerName: ref.read(tutorLearnerNameProvider),
+              ),
+            ),
+          ),
+        );
+      }
+      return;
     }
 
     await onTrackChanged(ref);
@@ -930,6 +1007,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     CurriculumId? curriculum,
   ) async {
     final l10n = AppLocalizations.of(context)!;
+
+    // DNI-486: archive / wipe act on the ACTIVE profile — never from a
+    // tutored session, where that would be the tutor's own namespace.
+    if (ref.read(activeTutoredProfileSelectionProvider) != null) return;
 
     // FR-fix: removing the LAST active track is blocked by the min-1 invariant
     // (TRK-HUB-04) — for BOTH Archive and Delete-and-wipe. Pre-check here and

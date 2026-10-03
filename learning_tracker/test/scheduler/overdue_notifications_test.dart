@@ -130,6 +130,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
     required int minute,
     required String body,
     String title = 'Streak at Risk!',
+    bool Function(DateTime utc)? isLockedAt,
   }) async {}
 
   @override
@@ -257,8 +258,6 @@ void main() {
         time: const TimeOfDay(hour: 19, minute: 0),
         title: 'Learning Reminder',
         body: expectedBody,
-        location: null,
-        inIsrael: false,
       );
 
       // Then: scheduleBatchRemindersForProfile was called exactly once with
@@ -370,8 +369,6 @@ void main() {
         time: time,
         title: title,
         body: bodyBefore,
-        location: null,
-        inIsrael: false,
       );
       expect(
         notifService.scheduledBatches,
@@ -386,8 +383,6 @@ void main() {
         time: time,
         title: title,
         body: bodyAfter,
-        location: null,
-        inIsrael: false,
       );
 
       // Two scheduleBatchRemindersForProfile calls recorded (cancel-then-

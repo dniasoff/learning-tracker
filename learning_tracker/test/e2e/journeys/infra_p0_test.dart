@@ -12,8 +12,9 @@
 /// ### E2E-1101 — City Picker manual selection
 /// Overrides [citySearchProvider] with a stub that returns a small fixed list
 /// of cities, bypassing the bundled 33k-city SQLite asset which is not
-/// available in the headless test environment.  After tapping a city,
-/// [sacredLocationProvider] must reflect the chosen city's coordinates.
+/// available in the headless test environment.  After tapping a city, the
+/// active learner gets ONE governed learnerSettings change with the city's
+/// coordinates and Israel flag (DNI-481 AC-3), and the picker pops.
 ///
 /// The idle-hint widget renders a multi-line Text containing both
 /// "Start typing to search ~33,000 cities." and "Type at least 2 letters."
@@ -67,8 +68,16 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/router_provider.dart'
     show routerProvider;
+import 'package:learning_tracker/domain/learner_state/governed_change.dart'
+    show GovernedAction;
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart'
+    show LearnerScope;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider;
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart'
+    show CaptureResult;
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart'
+    show LearningCommands;
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
     show NotificationPreferencesRepository;
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart'
@@ -79,10 +88,16 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
         notificationServiceProvider,
         reminderSyncEffectProvider,
         streakAlertSyncEffectProvider;
+import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart'
+    show LocationService;
+import 'package:learning_tracker/features/sacred_time/domain/learner_settings_change.dart'
+    show LearnerSettingsEdit, learnerSettingsAction;
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart'
     show City;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart'
     show citySearchProvider;
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart'
+    show LearnerSettingsEditor, learnerSettingsEditorProvider;
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
 
@@ -93,6 +108,20 @@ import '../harness/e2e_harness.dart';
 
 /// No-op [NotificationGateway] stub.  All calls complete immediately without
 /// touching the flutter_local_notifications plugin (not available headless).
+/// The learner whose settings the city picker edits (DNI-481).
+const _learnerId = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+
+/// [LearningCommands] stub recording the governed settings changes.
+class _RecordingCommands extends Fake implements LearningCommands {
+  final List<GovernedAction> applied = [];
+
+  @override
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) async {
+    applied.add(action);
+    return const CaptureResult.success(changeIds: []);
+  }
+}
+
 class _FakeNotificationGateway extends Fake implements NotificationGateway {
   @override
   Future<bool> hasPermission() async => true;
@@ -138,95 +167,114 @@ void main() {
     //  • Typing < 2 chars shows the idle hint containing "Type at least 2 letters."
     //    (R-IC12: single-char query shows hint, not results)
     //  • Typing 2+ chars: stub returns 2 cities; both city names visible
-    //  • Tapping a city calls sacredLocationProvider.notifier.setManualCity
-    //    → screen pops (CityPickerScreen title no longer visible)
+    //  • Tapping a city writes ONE governed learnerSettings change for the
+    //    active learner → screen pops (CityPickerScreen title gone)
     //
     // The idle-hint is a single Text widget with "\n" in its data, so it cannot
     // be matched by the exact-text [expectOnScreen] helper.  We use
     // [find.textContaining] for that assertion.
 
-    testWidgets('typing 1 char shows idle hint; 2+ chars shows stub cities; '
-        'tapping a city pops CityPickerScreen (sacredLocationProvider updated)', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'city1101@test.com',
-        displayName: 'CityUser',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
+    testWidgets(
+      'typing 1 char shows idle hint; 2+ chars shows stub cities; '
+      'tapping a city writes the learner settings and pops CityPickerScreen',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(
+          email: 'city1101@test.com',
+          displayName: 'CityUser',
+        );
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
 
-      const fakeJerusalem = City(
-        id: 1,
-        name: 'Jerusalem',
-        countryCode: 'IL',
-        latitude: 31.76,
-        longitude: 35.21,
-        population: 900000,
-        admin1: 'Jerusalem District',
-      );
-      const fakeTelAviv = City(
-        id: 2,
-        name: 'Tel Aviv',
-        countryCode: 'IL',
-        latitude: 32.08,
-        longitude: 34.78,
-        population: 450000,
-        admin1: 'Tel Aviv District',
-      );
+        const fakeJerusalem = City(
+          id: 1,
+          name: 'Jerusalem',
+          countryCode: 'IL',
+          latitude: 31.76,
+          longitude: 35.21,
+          population: 900000,
+          admin1: 'Jerusalem District',
+        );
+        const fakeTelAviv = City(
+          id: 2,
+          name: 'Tel Aviv',
+          countryCode: 'IL',
+          latitude: 32.08,
+          longitude: 34.78,
+          population: 450000,
+          admin1: 'Tel Aviv District',
+        );
 
-      await h.pumpApp(
-        path: '/sacred-time/city',
-        extraOverrides: [
-          sacredWindowNullOverride(),
-          ...h.dashboardSilenceOverrides,
-          // Stub citySearch to return our two fake cities for any 2+ char
-          // query, bypassing the bundled SQLite asset.
-          citySearchProvider.overrideWith((ref, String query) async {
-            if (query.length < 2) return [];
-            return [fakeJerusalem, fakeTelAviv];
-          }),
-        ],
-      );
+        final commands = _RecordingCommands();
+        await h.pumpApp(
+          path: '/sacred-time/city',
+          extraOverrides: [
+            sacredWindowNullOverride(),
+            ...h.dashboardSilenceOverrides,
+            learnerSettingsEditorProvider.overrideWithValue(
+              LearnerSettingsEditor(
+                commands: () async => commands,
+                scope: () async =>
+                    LearnerScope(ownerUid: 'owner-uid', profileId: _learnerId),
+                locationService: const LocationService(),
+                deviceTimeZone: () async => null,
+              ),
+            ),
+            // Stub citySearch to return our two fake cities for any 2+ char
+            // query, bypassing the bundled SQLite asset.
+            citySearchProvider.overrideWith((ref, String query) async {
+              if (query.length < 2) return [];
+              return [fakeJerusalem, fakeTelAviv];
+            }),
+          ],
+        );
 
-      // Screen must be visible.
-      h.expectOnScreen('Choose a city', routeName: 'CityPickerScreen');
+        // Screen must be visible.
+        h.expectOnScreen('Choose a city', routeName: 'CityPickerScreen');
 
-      // (R-IC12) Single-char query shows idle hint text, not results.
-      await h.enterText(find.byType(TextField), 'J');
-      await h.pump(const Duration(milliseconds: 300));
+        // (R-IC12) Single-char query shows idle hint text, not results.
+        await h.enterText(find.byType(TextField), 'J');
+        await h.pump(const Duration(milliseconds: 300));
 
-      // The idle hint is a single Text widget with a newline, so use
-      // textContaining rather than exact-text matching.
-      expect(
-        find.textContaining('Type at least 2 letters'),
-        findsWidgets,
-        reason: 'Idle hint must show when query < 2 chars (R-IC12)',
-      );
-      h.expectNotOnScreen('Jerusalem');
+        // The idle hint is a single Text widget with a newline, so use
+        // textContaining rather than exact-text matching.
+        expect(
+          find.textContaining('Type at least 2 letters'),
+          findsWidgets,
+          reason: 'Idle hint must show when query < 2 chars (R-IC12)',
+        );
+        h.expectNotOnScreen('Jerusalem');
 
-      // Two-char query: stub returns cities.
-      await h.enterText(find.byType(TextField), 'Je');
-      await h.pump(const Duration(milliseconds: 300));
-      await h.pump(const Duration(milliseconds: 300));
+        // Two-char query: stub returns cities.
+        await h.enterText(find.byType(TextField), 'Je');
+        await h.pump(const Duration(milliseconds: 300));
+        await h.pump(const Duration(milliseconds: 300));
 
-      h.expectOnScreen('Jerusalem', routeName: 'CityPickerScreen');
-      h.expectOnScreen('Tel Aviv');
+        h.expectOnScreen('Jerusalem', routeName: 'CityPickerScreen');
+        h.expectOnScreen('Tel Aviv');
 
-      // Tap Jerusalem → setManualCity called → screen pops.
-      await h.tapText('Jerusalem', settle: const Duration(milliseconds: 500));
-      await h.pump(const Duration(milliseconds: 300));
+        // Tap Jerusalem → governed learnerSettings change → screen pops.
+        await h.tapText('Jerusalem', settle: const Duration(milliseconds: 500));
+        await h.pump(const Duration(milliseconds: 300));
 
-      // Key assertion: screen popped (CityPickerScreen title gone), which means
-      // sacredLocationProvider.notifier.setManualCity was called successfully.
-      expect(
-        find.text('Choose a city'),
-        findsNothing,
-        reason:
-            'CityPickerScreen must pop after city selection, indicating '
-            'sacredLocationProvider.setManualCity was called successfully',
-      );
-    });
+        // Key assertions: the learner's settings change was written, and the
+        // screen popped (CityPickerScreen title gone).
+        expect(commands.applied, [
+          learnerSettingsAction(
+            _learnerId,
+            const LearnerSettingsEdit(
+              latitude: 31.76,
+              longitude: 35.21,
+              inIsrael: true,
+            ),
+          ),
+        ]);
+        expect(
+          find.text('Choose a city'),
+          findsNothing,
+          reason: 'CityPickerScreen must pop after a saved city selection',
+        );
+      },
+    );
   });
 
   // ── E2E-1103 — DEVICE ONLY ───────────────────────────────────────────────────

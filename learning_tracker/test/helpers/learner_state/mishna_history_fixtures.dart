@@ -16,6 +16,7 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -285,6 +286,10 @@ final class GatedLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> reAddTrack(String curriculumId) =>
       _held(() => inner.reAddTrack(curriculumId));
+
+  @override
+  Future<BackupReplayResult> importBackup(BackupReplayInput input) =>
+      inner.importBackup(input);
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>

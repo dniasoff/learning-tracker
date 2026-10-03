@@ -22,7 +22,6 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 
 export 'package:learning_tracker/core/content/hierarchy_selection.dart';
 
@@ -184,20 +183,13 @@ BeforeTrackingBatch planBeforeTracking({
 /// The outcome of [BeforeTrackingRecorder.record].
 final class BeforeTrackingResult {
   /// Creates the result.
-  const BeforeTrackingResult({
-    required this.capture,
-    required this.itemCount,
-    this.bookmarkSefariaRef,
-  });
+  const BeforeTrackingResult({required this.capture, required this.itemCount});
 
   /// What the capture did.
   final CaptureResult capture;
 
   /// The leaves the batch covers.
   final int itemCount;
-
-  /// Where the reading-order bookmark was set, if it was.
-  final String? bookmarkSefariaRef;
 
   /// The learning events written.
   int get eventCount => switch (capture) {
@@ -222,16 +214,13 @@ class BeforeTrackingRecorder {
   /// learner's commands and complete event log (null when none is active).
   BeforeTrackingRecorder({
     required ContentRepository contentRepository,
-    required BookmarkRepository bookmarkRepository,
     required Future<LearningCommands?> Function() commands,
     required Future<List<LearningEvent>?> Function() events,
   }) : _content = contentRepository,
-       _bookmarks = bookmarkRepository,
        _commands = commands,
        _events = events;
 
   final ContentRepository _content;
-  final BookmarkRepository _bookmarks;
   final Future<LearningCommands?> Function() _commands;
   final Future<List<LearningEvent>?> Function() _events;
 
@@ -250,9 +239,7 @@ class BeforeTrackingRecorder {
     selections,
   );
 
-  /// Records [selections] as one `before_tracking` capture. On success the
-  /// legacy reading-order bookmark moves to the first leaf not yet learnt
-  /// (R4 co-write, retired by DNI-478).
+  /// Records [selections] as one `before_tracking` capture.
   Future<BeforeTrackingResult> record({
     required CurriculumId curriculumId,
     required List<HierarchySelection> selections,
@@ -260,19 +247,17 @@ class BeforeTrackingRecorder {
     final items = await _content.getContentForCurriculum(curriculumId);
     return _capture(
       curriculumId,
-      items,
       planBeforeTracking(
         curriculumId: curriculumId,
         items: items,
         selections: selections,
       ),
-      moveBookmark: true,
     );
   }
 
   /// Records the Lifetime Marking [scopes] — `(level, qualified unit id)`
   /// pairs (`scopeUnitIdentifier`) — as one `before_tracking` capture
-  /// (lifetime knowledge, so the reading-order bookmark is not moved).
+  /// (lifetime knowledge, with the same event capture semantics).
   Future<BeforeTrackingResult> recordScopes({
     required CurriculumId curriculumId,
     required List<({int level, String unitId})> scopes,
@@ -280,18 +265,14 @@ class BeforeTrackingRecorder {
     final items = await _content.getContentForCurriculum(curriculumId);
     return _capture(
       curriculumId,
-      items,
       planScopeMarks(curriculumId: curriculumId, items: items, scopes: scopes),
-      moveBookmark: false,
     );
   }
 
   Future<BeforeTrackingResult> _capture(
     CurriculumId curriculumId,
-    List<ContentItem> items,
-    BeforeTrackingBatch batch, {
-    required bool moveBookmark,
-  }) async {
+    BeforeTrackingBatch batch,
+  ) async {
     if (batch.isEmpty) {
       return const BeforeTrackingResult(
         capture: CaptureResult.success(),
@@ -306,26 +287,9 @@ class BeforeTrackingRecorder {
       source: LearningEvent.sourceMain,
       dateState: DateState.beforeTracking,
     );
-    String? bookmark;
-    if (moveBookmark && capture is CaptureSuccess) {
-      final learnt = {
-        ...await _learntRefs(curriculumId, items),
-        for (final leaf in batch.leaves) leaf.sefariaRef,
-      };
-      bookmark = _orderedLeaves(
-        items,
-      ).map((l) => l.sefariaRef).where((r) => !learnt.contains(r)).firstOrNull;
-      if (bookmark != null) {
-        await _bookmarks.setBookmark(
-          curriculumId: curriculumId,
-          sefariaRef: bookmark,
-        );
-      }
-    }
     return BeforeTrackingResult(
       capture: capture,
       itemCount: batch.leaves.length,
-      bookmarkSefariaRef: bookmark,
     );
   }
 

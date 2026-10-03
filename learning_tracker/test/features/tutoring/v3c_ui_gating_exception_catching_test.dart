@@ -183,24 +183,26 @@ void main() {
       );
     });
 
-    test('watches activeTutorPermissionsProvider', () {
+    test('watches the tutor write availability (DNI-486)', () {
       expect(
         editTrackSrc,
-        contains('activeTutorPermissionsProvider'),
+        contains('tutorWriteAvailabilityProvider'),
         reason:
-            'edit_track_screen must watch activeTutorPermissionsProvider '
-            'to derive canEditLearning (R3 M1+M2)',
+            'edit_track_screen must gate Save on the tutor write '
+            'availability: AD-53 canEditLearning, a positive connectivity '
+            'probe and the talmid outside a lock (DNI-486)',
       );
     });
 
-    test('derives canSave from the AD-53 canEditLearning permission', () {
+    test('derives canSave from the availability', () {
       expect(
         editTrackSrc,
-        contains('canSave = tutorPerms == null || tutorPerms.canEditLearning'),
+        contains(
+          'canSave = ref.watch(tutorWriteAvailabilityProvider).allowsWrite',
+        ),
         reason:
-            'AD-53 (DNI-487): one permission gates every learning edit, so '
-            'the save affordance follows canEditLearning and is null-safe '
-            'for owners (R3 M1+M2)',
+            'AD-53: one permission gates every learning edit (and DNI-486 '
+            'adds online-only and the lock), null-safe for owners',
       );
     });
 
@@ -214,14 +216,10 @@ void main() {
       );
     });
 
-    test('shows tutorPermissionDenied snackbar when !canSave', () {
-      expect(
-        editTrackSrc,
-        contains('tutorPermissionDenied'),
-        reason:
-            'edit_track_screen must show tutorPermissionDenied snackbar '
-            'when save is tapped but !canSave (R3 M1+M2)',
-      );
+    test('a blocked Save stays visible but disabled under the tutor note '
+        '(DNI-486 AC-4)', () {
+      expect(editTrackSrc, contains('TutorDisabledControl('));
+      expect(editTrackSrc, contains('TutorWriteNote('));
     });
   });
 }

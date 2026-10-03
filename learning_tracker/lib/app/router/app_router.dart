@@ -75,6 +75,11 @@ class AppRouter extends RootStackRouter {
   /// DNI-513: refuses tutored sessions on parent-only views.
   final OwnSessionGuard ownSessionGuard;
 
+  /// Guards the city picker, which writes the active learner's lock
+  /// settings: a child holder with a Parent PIN must have verified it
+  /// (DNI-481 AC-3, AUD-sacred_time-08) — also on a direct deep link.
+  final AutoRouteGuard sacredTimeLocationGuard;
+
   AppRouter({
     required this.authGuard,
     required this.profileGuard,
@@ -82,6 +87,7 @@ class AppRouter extends RootStackRouter {
     required this.pinGuard,
     ParentSessionGuard? parentSessionGuard,
     OwnSessionGuard? ownSessionGuard,
+    required this.sacredTimeLocationGuard,
     super.navigatorKey,
   }) : parentSessionGuard = parentSessionGuard ?? ParentSessionGuard.denyAll(),
        ownSessionGuard = ownSessionGuard ?? OwnSessionGuard.denyAll();
@@ -252,7 +258,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/sacred-time/city',
       page: CityPickerRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, sacredTimeLocationGuard],
     ),
     AutoRoute(
       path: '/parent-mode/settings',

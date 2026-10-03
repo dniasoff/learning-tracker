@@ -4,7 +4,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
@@ -19,8 +18,6 @@ class _Stages extends Mock implements StageDefinitionRepository {}
 
 class _Programs extends Mock implements ProfileProgramRepository {}
 
-class _Bookmarks extends Mock implements BookmarkRepository {}
-
 void main() {
   test('no wizard result seeds exactly the לימוד stage', () async {
     final actions = RecordingAddTrackActions();
@@ -31,7 +28,6 @@ void main() {
         learningProgramRepo: LearningProgramRepository.instance,
         profileProgramRepository: _Programs(),
       ),
-      bookmarkRepository: _Bookmarks(),
     ).createTrack(
       result: const AddTrackResult(
         curriculumId: CurriculumId.mishnayos,

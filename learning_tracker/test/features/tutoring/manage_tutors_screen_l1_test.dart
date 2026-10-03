@@ -2068,6 +2068,7 @@ void main() {
       profileGuard: _MockProfileGuard(),
       childModeGuard: childModeGuard,
       pinGuard: pinGuard,
+      sacredTimeLocationGuard: _MockAuthGuard(),
     );
     for (final path in ['/tutor/manage-tutors', '/tutor/invite']) {
       final route = appRouter.routes.firstWhere((r) => r.path == path);

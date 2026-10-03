@@ -30,6 +30,11 @@
 //  F. isSacredTimeActive — derived boolean
 //     F1. Returns false when currentSacredWindowProvider returns null
 //     F2. Returns true when currentSacredWindowProvider returns a window
+//     F3. (DNI-481 AC-5) the scheduler suppresses with the SAME lock
+//         predicate as the overlay: start, inside and end of a lock are
+//         suppressed, an unlocked fire time stays eligible
+//     F4. (DNI-481 edge) a learner-settings change moves future
+//         suppression only; a past instant keeps the settings then
 //
 //  G. Signature / cloud-sync gate (_persistNotificationSettingsToCloud)
 //     G1. Same settings produce the same canonical signature string format
@@ -64,13 +69,18 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
+import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../helpers/learner_state/lock_fixtures.dart';
 
 // ---------------------------------------------------------------------------
 // Per-profile overrides — extend the Notifier and hardcode build() to avoid
@@ -475,6 +485,65 @@ void main() {
 
       expect(container.read(isSacredTimeActiveProvider), isTrue);
     });
+
+    test('F3. the scheduler suppresses with the overlay lock predicate: '
+        'start, inside and end locked; outside eligible', () {
+      final lakewoodH = constantHistory(lakewood);
+      final lock = lockWindows(
+        lakewoodH,
+        DateTime.utc(2026, 9, 5, 12),
+        DateTime.utc(2026, 9, 5, 12),
+      ).single;
+      final container = ProviderContainer(
+        overrides: [
+          accountLockHistoriesProvider.overrideWithValue([lakewoodH]),
+          notificationServiceProvider.overrideWithValue(_NoGateway()),
+        ],
+      );
+      addTearDown(container.dispose);
+      final scheduler = container.read(notificationSchedulerProvider);
+      final isLocked = scheduler.isLockedAt!;
+      expect(isLocked(lock.startUtc), isTrue);
+      expect(isLocked(lock.startUtc.add(const Duration(hours: 5))), isTrue);
+      expect(isLocked(lock.endUtc), isTrue);
+      expect(
+        isLocked(lock.startUtc.subtract(const Duration(minutes: 1))),
+        isFalse,
+      );
+      expect(isLocked(lock.endUtc.add(const Duration(minutes: 1))), isFalse);
+      // The same predicate the overlay judges with.
+      expect(
+        identical(
+          scheduler.isLockedAt,
+          container.read(deviceLockPredicateProvider),
+        ),
+        isTrue,
+      );
+    });
+
+    test('F4. a settings change moves future suppression only', () {
+      // No location (fail-closed Fri 12:00 → Sun 01:00 New York) until a
+      // move to Lakewood on Wednesday 2026-09-09.
+      final moved = movedHistory(
+        newYorkNoLocation,
+        DateTime.utc(2026, 9, 9),
+        lakewood,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          accountLockHistoriesProvider.overrideWithValue([moved]),
+          notificationServiceProvider.overrideWithValue(_NoGateway()),
+        ],
+      );
+      addTearDown(container.dispose);
+      final isLocked = container
+          .read(notificationSchedulerProvider)
+          .isLockedAt!;
+      // Past Friday 13:00 EDT: inside the fallback, still locked.
+      expect(isLocked(DateTime.utc(2026, 9, 4, 17)), isTrue);
+      // Next Friday 13:00 EDT: before candle-lighting at Lakewood — open.
+      expect(isLocked(DateTime.utc(2026, 9, 11, 17)), isFalse);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -737,3 +806,6 @@ void main() {
     });
   });
 }
+
+/// A gateway the F3/F4 scheduler is built over; never called.
+class _NoGateway extends Fake implements NotificationGateway {}
