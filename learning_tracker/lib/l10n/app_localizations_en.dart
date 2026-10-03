@@ -6529,6 +6529,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get parentPushTitle => 'Tutor change';
+
+  @override
+  String parentPushBody(String tutorName, String learnerName, String kind) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'deadline': 'deadline',
+      'pace': 'daily pace',
+      'mainTrack': 'main track',
+      'mainTrackOrder': 'learning order',
+      'mainTrackProgram': 'program',
+      'mainTrackStudyDays': 'study days',
+      'other': 'learning plan',
+    });
+    return '$tutorName changed $learnerName\'s $_temp0';
+  }
+
+  @override
+  String get parentPushTutorFallback => 'Your tutor';
+
+  @override
+  String get parentPushLearnerFallback => 'your child';
+
+  @override
+  String get parentPushChannelName => 'Tutor changes';
+
+  @override
+  String get parentPushChannelDescription =>
+      'When a tutor changes a deadline or a main track';
+
+  @override
   String get onboardingNamePrompt => 'What should we call you?';
 
   @override

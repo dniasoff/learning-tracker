@@ -10832,6 +10832,42 @@ abstract class AppLocalizations {
   /// **'Your {currentStreak}-day streak is at risk!'**
   String notificationStreakBody(int currentStreak);
 
+  /// Title of the push a parent gets when a tutor changes a learner's deadline or main track (Story 4.7).
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor change'**
+  String get parentPushTitle;
+
+  /// Body of the tutor-change push, e.g. 'Rav Cohen changed Yehuda's deadline'. kind is the change kind the server reports.
+  ///
+  /// In en, this message translates to:
+  /// **'{tutorName} changed {learnerName}\'s {kind, select, deadline{deadline} pace{daily pace} mainTrack{main track} mainTrackOrder{learning order} mainTrackProgram{program} mainTrackStudyDays{study days} other{learning plan}}'**
+  String parentPushBody(String tutorName, String learnerName, String kind);
+
+  /// No description provided for @parentPushTutorFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Your tutor'**
+  String get parentPushTutorFallback;
+
+  /// No description provided for @parentPushLearnerFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'your child'**
+  String get parentPushLearnerFallback;
+
+  /// No description provided for @parentPushChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor changes'**
+  String get parentPushChannelName;
+
+  /// No description provided for @parentPushChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When a tutor changes a deadline or a main track'**
+  String get parentPushChannelDescription;
+
   /// No description provided for @onboardingNamePrompt.
   ///
   /// In en, this message translates to:

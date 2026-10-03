@@ -3829,6 +3829,25 @@
       }
     }
   },
+  "parentPushTitle": "שינוי של המורה",
+  "parentPushBody": "{tutorName} שינה את {kind, select, deadline{תאריך היעד} pace{הקצב היומי} mainTrack{המסלול הראשי} mainTrackOrder{סדר הלימוד} mainTrackProgram{התוכנית} mainTrackStudyDays{ימי הלימוד} other{תוכנית הלימוד}} של {learnerName}",
+  "@parentPushBody": {
+    "placeholders": {
+      "tutorName": {
+        "type": "String"
+      },
+      "learnerName": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "parentPushTutorFallback": "המורה",
+  "parentPushLearnerFallback": "ילדכם",
+  "parentPushChannelName": "שינויים של המורה",
+  "parentPushChannelDescription": "כשמורה משנה תאריך יעד או מסלול ראשי",
   "onboardingNamePrompt": "מה נקרא לך?",
   "onboardingLearningExperience": "חוויית למידה",
   "onboardingCalendarLabel": "לוח שנה",

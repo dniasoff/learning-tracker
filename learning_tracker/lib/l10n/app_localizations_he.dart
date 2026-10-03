@@ -6464,6 +6464,36 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get parentPushTitle => 'שינוי של המורה';
+
+  @override
+  String parentPushBody(String tutorName, String learnerName, String kind) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'deadline': 'תאריך היעד',
+      'pace': 'הקצב היומי',
+      'mainTrack': 'המסלול הראשי',
+      'mainTrackOrder': 'סדר הלימוד',
+      'mainTrackProgram': 'התוכנית',
+      'mainTrackStudyDays': 'ימי הלימוד',
+      'other': 'תוכנית הלימוד',
+    });
+    return '$tutorName שינה את $_temp0 של $learnerName';
+  }
+
+  @override
+  String get parentPushTutorFallback => 'המורה';
+
+  @override
+  String get parentPushLearnerFallback => 'ילדכם';
+
+  @override
+  String get parentPushChannelName => 'שינויים של המורה';
+
+  @override
+  String get parentPushChannelDescription =>
+      'כשמורה משנה תאריך יעד או מסלול ראשי';
+
+  @override
   String get onboardingNamePrompt => 'מה נקרא לך?';
 
   @override

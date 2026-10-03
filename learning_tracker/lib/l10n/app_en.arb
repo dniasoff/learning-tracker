@@ -4980,6 +4980,29 @@
       }
     }
   },
+  "parentPushTitle": "Tutor change",
+  "@parentPushTitle": {
+    "description": "Title of the push a parent gets when a tutor changes a learner's deadline or main track (Story 4.7)."
+  },
+  "parentPushBody": "{tutorName} changed {learnerName}'s {kind, select, deadline{deadline} pace{daily pace} mainTrack{main track} mainTrackOrder{learning order} mainTrackProgram{program} mainTrackStudyDays{study days} other{learning plan}}",
+  "@parentPushBody": {
+    "description": "Body of the tutor-change push, e.g. 'Rav Cohen changed Yehuda's deadline'. kind is the change kind the server reports.",
+    "placeholders": {
+      "tutorName": {
+        "type": "String"
+      },
+      "learnerName": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "parentPushTutorFallback": "Your tutor",
+  "parentPushLearnerFallback": "your child",
+  "parentPushChannelName": "Tutor changes",
+  "parentPushChannelDescription": "When a tutor changes a deadline or a main track",
   "onboardingNamePrompt": "What should we call you?",
   "onboardingLearningExperience": "Learning Experience",
   "onboardingCalendarLabel": "Calendar",
