@@ -4,6 +4,8 @@
 /// backup round-trip integration test.
 library;
 
+import 'dart:async';
+
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/ports/backup_record_write_port.dart';
@@ -86,8 +88,15 @@ final class LoggingChangeLog implements ChangeLogRepository {
   /// The failure.
   Exception failWith = const PermanentWriteRejection('permission-denied');
 
+  /// Entry ids whose next commit waits for its completer (the SDK queued
+  /// it offline): completing it acknowledges the batch, completing it with
+  /// an error rejects it.
+  final Map<String, Completer<void>> hold = {};
+
   @override
   Future<void> commitGoverned(LearnerScope scope, GovernedBatch batch) async {
+    final held = hold.remove(batch.entry.id);
+    if (held != null) await held.future;
     if (fail.contains(batch.entry.id)) throw failWith;
     log.add('governed:${batch.entry.entity.storage}');
     await inner.commitGoverned(scope, batch);

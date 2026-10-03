@@ -2,6 +2,8 @@
 // `lib/features/learning/domain/commands/backup_import_replay.dart`
 // (DNI-482 AC-2 replay order and mapping; AC-4 AD-54 chunking and the
 // "not saved — retry" recovery of a rejected chunk).
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
@@ -564,6 +566,68 @@ void main() {
       expect(await h.commands.retry(engineUlid(5000)), isA<CaptureSuccess>());
       expect(await h.commands.watchPendingFailures().first, isEmpty);
     });
+
+    test(
+      'a queued event chunk the server rejects after the ack wait is '
+      '"not saved — retry", and the import is never reported saved',
+      () async {
+        final h = BackupReplayHarness();
+        h.events.holdNext();
+        final result = await h.commands.importBackup(
+          BackupReplayInput(events: [engineLearn(1, _b11, minutes: 10)]),
+        );
+        expect(result.result, isA<CaptureSuccess>());
+        expect(result.queued, isTrue);
+        expect(result.saved, isFalse);
+        expect(result.notSaved, isEmpty);
+
+        final queuedChunk = h.writePort.attempts.single;
+        h.events.reject(const PermanentWriteRejection('permission-denied'));
+        await result.settled;
+        expect(result.isSettled, isTrue);
+        expect(result.saved, isFalse);
+        expect(result.queued, isFalse);
+        final failure = result.notSaved.single;
+        expect(failure.id, queuedChunk.events.first.id);
+
+        expect(await h.commands.retry(failure.id), isA<CaptureSuccess>());
+        expect(identical(h.writePort.attempts.last, queuedChunk), isTrue);
+        expect(result.notSaved, isEmpty);
+        expect(result.saved, isTrue);
+      },
+    );
+
+    test('a queued governed batch the server rejects late is "not saved — '
+        'retry" too', () async {
+      final h = _destination();
+      final held = Completer<void>();
+      h.changeLog.hold[engineUlid(5000)] = held;
+      final result = await h.commands.importBackup(_fixture());
+      expect(result.queued, isTrue);
+      expect(result.saved, isFalse);
+
+      held.completeError(const PermanentWriteRejection('permission-denied'));
+      await result.settled;
+      expect(result.saved, isFalse);
+      expect(result.notSaved.single.changeIds, [engineUlid(5000)]);
+      expect(await h.commands.retry(engineUlid(5000)), isA<CaptureSuccess>());
+      expect(result.saved, isTrue);
+    });
+
+    test(
+      'a queued write the server later acknowledges settles saved',
+      () async {
+        final h = BackupReplayHarness();
+        h.events.holdNext();
+        final result = await h.commands.importBackup(
+          BackupReplayInput(events: [engineLearn(1, _b11, minutes: 10)]),
+        );
+        expect(result.queued, isTrue);
+        h.events.release();
+        await result.settled;
+        expect(result.saved, isTrue);
+      },
+    );
 
     test('when every write is rejected the import is not saved', () async {
       final h = BackupReplayHarness()

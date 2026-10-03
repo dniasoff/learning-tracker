@@ -10,6 +10,7 @@ import 'package:learning_tracker/domain/learner_state/ports/backup_record_write_
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/backup_learning_port.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -66,18 +67,31 @@ final class BackupImportReport {
 
   final BackupLearningPort _learning;
 
-  /// Whether every learning write was saved (or queued): no profile was
-  /// refused and none left a "not saved — retry" failure.
+  /// Whether every learning write was saved: no profile was refused, none
+  /// has a "not saved — retry" failure and none still awaits the server.
   bool get saved => profiles.values.every((r) => r.saved);
 
-  /// The writes the server did not save.
+  /// Whether nothing failed so far but some write still awaits the server
+  /// (queued offline); [settled] completes when it is acknowledged or
+  /// rejected, after which [saved] and [notSavedCount] are final.
+  bool get queued =>
+      notSavedCount == 0 &&
+      profiles.values.every((r) => r.result is CaptureSuccess) &&
+      profiles.values.any((r) => !r.isSettled);
+
+  /// Completes once every queued write was acknowledged or rejected.
+  Future<void> get settled =>
+      Future.wait([for (final r in profiles.values) r.settled]);
+
+  /// The writes the server did not save, including a queued write it
+  /// rejected after the ack wait.
   int get notSavedCount =>
       profiles.values.fold(0, (n, r) => n + r.notSaved.length);
 
   /// Re-sends every write that was not saved, unchanged (AD-54 Recovery).
   Future<void> retryNotSaved() async {
     for (final MapEntry(key: profileId, value: result) in profiles.entries) {
-      for (final failure in result.notSaved) {
+      for (final failure in [...result.notSaved]) {
         await _learning.retry(profileId, failure.id);
       }
     }

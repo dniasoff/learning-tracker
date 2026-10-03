@@ -312,6 +312,13 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         _showMessage(l10n.backupImportSuccess);
       } else if (report.notSavedCount > 0) {
         _showNotSaved(report);
+      } else if (report.queued) {
+        // Queued offline (AD-54): restored locally and syncing. A queued
+        // write the server later rejects is "not saved — retry" then.
+        _showMessage(l10n.backupImportSuccess);
+        report.settled.then((_) {
+          if (mounted && report.notSavedCount > 0) _showNotSaved(report);
+        }).ignore();
       } else {
         // Refused before writing (locked, or the record was invalid).
         _showMessage(l10n.backupImportError);

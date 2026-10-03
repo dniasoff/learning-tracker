@@ -43,9 +43,10 @@
 /// Every id, time and payload is fixed before the first write. Events go
 /// out in AD-54 chunks of at most [LearningWriteChunk.maxWrites] writes,
 /// each event with its `pts_` entry. A batch or chunk the server does not
-/// save becomes one "not saved — retry" [PendingFailure]
-/// ([watchPendingFailures], [retry]); the result lists them in
-/// [BackupReplayResult.notSaved] and never reports the import as saved.
+/// save — within the ack wait or after it was queued — becomes one "not
+/// saved — retry" [PendingFailure] ([watchPendingFailures], [retry]); the
+/// result lists them in [BackupReplayResult.notSaved] and never reports
+/// the import as saved, nor while a queued write is unacknowledged.
 ///
 /// Imports only `lib/domain/learner_state/**`, this directory and `dart:`.
 library;
@@ -177,23 +178,51 @@ enum BackupReplayStep {
 }
 
 /// What an import did.
+///
+/// A write the server has not acknowledged within the ack wait is queued
+/// (the SDK holds it offline). It is never counted as saved: the result
+/// stays [queued] until every such write settles, and a queued write the
+/// server then rejects joins [notSaved] as a retryable "not saved — retry"
+/// failure (AD-54).
 final class BackupReplayResult {
-  /// Creates the result.
+  /// Creates the result. [notSaved] is the failures known now;
+  /// [liveNotSaved], when given, supersedes it with the failures as they
+  /// stand (late rejections in, retried writes out). [isSettled] and
+  /// [settled] report the queued writes (none when omitted).
   const BackupReplayResult({
     required this.result,
-    this.notSaved = const [],
+    List<PendingFailure> notSaved = const [],
     this.subTrackIds = const {},
     this.eventIds = const {},
     this.steps = const [],
-  });
+    List<PendingFailure> Function()? liveNotSaved,
+    bool Function()? isSettled,
+    Future<void>? settled,
+  }) : _notSaved = notSaved,
+       _liveNotSaved = liveNotSaved,
+       _isSettled = isSettled,
+       _settled = settled;
 
   /// The command result: a success for the writes saved or queued, the
   /// gate's lock, `invalid` for a backup that cannot be replayed, or
   /// `notSaved` when nothing was saved.
   final CaptureResult result;
 
-  /// The "not saved — retry" failures this import left behind.
-  final List<PendingFailure> notSaved;
+  final List<PendingFailure> _notSaved;
+  final List<PendingFailure> Function()? _liveNotSaved;
+  final bool Function()? _isSettled;
+  final Future<void>? _settled;
+
+  /// The "not saved — retry" failures this import has now, including a
+  /// queued write the server rejected after the ack wait.
+  List<PendingFailure> get notSaved => _liveNotSaved?.call() ?? _notSaved;
+
+  /// Whether every write was acknowledged or failed (none still queued).
+  bool get isSettled => _isSettled?.call() ?? true;
+
+  /// Completes once every queued write was acknowledged or failed; never
+  /// with an error. Offline it waits for the connection.
+  Future<void> get settled => _settled ?? Future<void>.value();
 
   /// Old → new sub-track ids.
   final Map<String, String> subTrackIds;
@@ -204,8 +233,12 @@ final class BackupReplayResult {
   /// The steps that wrote, in write order.
   final List<BackupReplayStep> steps;
 
-  /// Whether every write was saved or queued: no "not saved" failure.
-  bool get saved => result is CaptureSuccess && notSaved.isEmpty;
+  /// Whether every write was saved: acknowledged, none "not saved".
+  bool get saved => result is CaptureSuccess && notSaved.isEmpty && isSettled;
+
+  /// Whether nothing failed so far but some write still awaits the
+  /// server ([settled]).
+  bool get queued => result is CaptureSuccess && notSaved.isEmpty && !isSettled;
 
   @override
   String toString() =>
@@ -764,6 +797,14 @@ final class BackupImportReplay {
     final steps = <BackupReplayStep>[];
     final savedChanges = <String>[];
     final failedUnits = <String>[];
+    // This import's failure ids: its governed/record units and its event
+    // chunks (each by its first event id).
+    final unitIds = <String>{};
+    final chunkIds = <String>{};
+    // The writes still queued when the ack wait ran out: each settles
+    // (never with an error) once acknowledged or rejected; a rejection is
+    // recorded as a pending failure first.
+    final unsettled = <Future<void>>[];
     var queued = false;
     var attempted = 0;
     String? actionId;
@@ -777,6 +818,7 @@ final class BackupImportReplay {
       actionId ??= units.first.actionId;
       for (final unit in units) {
         attempted++;
+        unitIds.add(unit.id);
         final pending = unit.send();
         try {
           final acked = await pending
@@ -784,7 +826,7 @@ final class BackupImportReplay {
               .timeout(ackWait, onTimeout: () => false);
           if (!acked) {
             queued = true;
-            unawaited(
+            unsettled.add(
               pending.then<void>(
                 (_) {},
                 onError: (Object e) => _failures.record(_kind, unit, e),
@@ -817,9 +859,15 @@ final class BackupImportReplay {
       if (plan.learns.isNotEmpty) steps.add(BackupReplayStep.learnEvents);
       if (plan.voids.isNotEmpty) steps.add(BackupReplayStep.voidEvents);
       attempted += chunks.length;
+      chunkIds.addAll(chunks.map((c) => c.events.first.id));
       try {
         final outcome = await _events.dispatch(_kind, chunks);
         queued = queued || outcome.queued;
+        if (outcome.queued) {
+          // Completes once every chunk settled; a late rejection is a
+          // pending failure of the dispatcher by then.
+          unsettled.add(outcome.acknowledgedLearnEventIds.then((_) {}));
+        }
         eventIds.addAll(outcome.eventIds);
         final saved = outcome.eventIds.toSet();
         for (final c in chunks) {
@@ -867,9 +915,19 @@ final class BackupImportReplay {
             actionId: actionId,
             queued: queued,
           );
+    var isSettled = unsettled.isEmpty;
+    final settled = Future.wait(unsettled).then((_) => isSettled = true);
     return BackupReplayResult(
       result: result,
       notSaved: notSaved,
+      liveNotSaved: () => [
+        for (final f in _events.pendingFailures)
+          if (chunkIds.contains(f.id)) f,
+        for (final f in _failures.pendingFailures)
+          if (unitIds.contains(f.id)) f,
+      ],
+      isSettled: () => isSettled,
+      settled: settled,
       subTrackIds: Map.unmodifiable(plan.subTrackIds),
       eventIds: Map.unmodifiable(plan.eventIds),
       steps: List.unmodifiable(steps),
