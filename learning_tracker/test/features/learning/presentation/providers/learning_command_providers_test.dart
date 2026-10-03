@@ -19,7 +19,6 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_settings_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -508,7 +507,6 @@ void main() {
         );
       });
     }
-
   });
   group('ownerGovernedWriterProvider (DNI-476)', () {
     test('writes through the current LearningCommands', () async {

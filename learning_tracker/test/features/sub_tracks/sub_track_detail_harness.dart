@@ -254,6 +254,9 @@ final class _CapacityCurriculumState implements CurriculumState {
   @override
   int get mainTrackRemaining => _inner.mainTrackRemaining;
   @override
+  MainTrackDayStart mainTrackAtStartOf(CivilDate date) =>
+      _inner.mainTrackAtStartOf(date);
+  @override
   List<LeafRef> programAssignments(CivilDate date) =>
       _inner.programAssignments(date);
   @override

@@ -190,6 +190,7 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
     required String source,
     required DateState dateState,
     CivilDate? learnedOn,
+    bool skipRecorded = false,
     int? stage,
   }) => _fake.capture(
     curriculumId: curriculumId,
@@ -198,6 +199,7 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
     source: source,
     dateState: dateState,
     learnedOn: learnedOn,
+    skipRecorded: skipRecorded,
     stage: stage,
   );
 

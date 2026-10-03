@@ -862,7 +862,7 @@ final class DefaultLearningCommands implements LearningCommands {
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {
     final events = _dispatcher.watchPendingFailures();
-    Stream<List<PendingFailure>> latest = events;
+    var latest = events;
     final governed = _governed;
     if (governed != null) {
       latest = _concatLatest(latest, governed.watchPendingFailures());
