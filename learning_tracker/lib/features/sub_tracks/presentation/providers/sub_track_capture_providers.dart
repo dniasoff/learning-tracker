@@ -37,16 +37,19 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_capture_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Whether the session may write sub-track learning: false on a tutor
-/// device (tutor sub-track writes are read-only until a later epic, Story
-/// 2.9 AC-9; AC-11). It gates sub-track surfaces only, never main-track
-/// capture ([mainTrackCaptureAllowedProvider]).
+/// Whether the session may write sub-track learning now: always for an
+/// owner session; for a tutor only while his grant has `can_edit_learning`,
+/// the device is online and the talmid is outside a lock (Story 4.2,
+/// DNI-510, AC-1, AC-5, AC-6; [subTrackWritesBlockedProvider]). It gates
+/// sub-track surfaces only, never main-track capture
+/// ([mainTrackCaptureAllowedProvider]).
 final subTrackWritesAllowedProvider = Provider.autoDispose<bool>(
-  (ref) => ref.watch(activeTutoredProfileSelectionProvider) == null,
+  (ref) => !ref.watch(subTrackWritesBlockedProvider),
 );
 
 /// Whether the session can capture main-track learning (AC-5): exactly
@@ -69,9 +72,10 @@ final mainTrackCaptureAllowedProvider = Provider.autoDispose<bool>(
 typedef SubTrackSourceChoice = ({String id, String name});
 
 /// The sub-track sources offered for [curriculumId] (AC-9, AC-10): its
-/// `onHome` sub-tracks by name, in hub order. Empty in a tutored session
-/// (AC-11) and while the list is loading or failed — Home and Before
-/// tracking stay available either way. Watch it where the choice is
+/// `onHome` sub-tracks by name, in hub order. On a tutor device they are
+/// the talmid's, offered while the tutor may write (Story 4.2 AC-1); empty
+/// while he may not, and while the list is loading or failed — Home and
+/// Before tracking stay available either way. Watch it where the choice is
 /// offered so it is ready when the sheet opens.
 final subTrackSourceChoicesProvider = Provider.autoDispose
     .family<List<SubTrackSourceChoice>, String>((ref, curriculumId) {

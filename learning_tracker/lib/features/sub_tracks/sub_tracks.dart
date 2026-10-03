@@ -22,6 +22,7 @@ export 'presentation/providers/sub_track_capture_providers.dart'
         subTrackSourceChoicesProvider,
         subTrackWritesAllowedProvider;
 export 'presentation/providers/sub_track_detail_actions.dart';
+export 'presentation/providers/sub_track_editor_session.dart';
 export 'presentation/providers/sub_track_providers.dart';
 export 'presentation/providers/sub_track_session.dart';
 export 'presentation/providers/up_to_picker_providers.dart'
