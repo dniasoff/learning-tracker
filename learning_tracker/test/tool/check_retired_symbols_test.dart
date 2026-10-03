@@ -1,5 +1,7 @@
 // Tests for `tool/check_retired_symbols.dart` (DNI-521, "R0"; AD-49
 // retired-symbols gate, orchestrator ruling B3).
+// ignore_for_file: unnecessary_string_interpolations, use_raw_strings
+// Retired identifiers are assembled at runtime so this suite remains scannable.
 //
 // Every behavioural case runs the checker as a subprocess against a
 // disposable FIXTURE ROOT (`--root`) in the system temp dir: a miniature

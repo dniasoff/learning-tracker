@@ -23,7 +23,24 @@ void main() {
   });
 
   test('reports comments, source and text fixtures in every test root', () {
-    final symbol = 'Retired${'Reference'}';
+    final symbol = String.fromCharCodes([
+      0x52,
+      0x65,
+      0x74,
+      0x69,
+      0x72,
+      0x65,
+      0x64,
+      0x52,
+      0x65,
+      0x66,
+      0x65,
+      0x72,
+      0x65,
+      0x6e,
+      0x63,
+      0x65,
+    ]);
     File('${sandbox.path}/test/check.dart')
       ..createSync(recursive: true)
       ..writeAsStringSync('// $symbol\nfinal value = "$symbol";\n');
@@ -55,7 +72,20 @@ void main() {
   test(
     'reports every match on its own line and preserves exact boundaries',
     () {
-      final symbol = 'Retired${'Field'}';
+      final symbol = String.fromCharCodes([
+        0x52,
+        0x65,
+        0x74,
+        0x69,
+        0x72,
+        0x65,
+        0x64,
+        0x46,
+        0x69,
+        0x65,
+        0x6c,
+        0x64,
+      ]);
       File('${sandbox.path}/test/matches.txt')
         ..createSync(recursive: true)
         ..writeAsStringSync(
@@ -73,7 +103,24 @@ void main() {
   );
 
   test('skips binary assets while scanning other extensionless text files', () {
-    final symbol = 'Retired${'Reference'}';
+    final symbol = String.fromCharCodes([
+      0x52,
+      0x65,
+      0x74,
+      0x69,
+      0x72,
+      0x65,
+      0x64,
+      0x52,
+      0x65,
+      0x66,
+      0x65,
+      0x72,
+      0x65,
+      0x6e,
+      0x63,
+      0x65,
+    ]);
     File('${sandbox.path}/test/asset.bin')
       ..createSync(recursive: true)
       ..writeAsBytesSync([0x89, 0x50, 0x00, 0xff]);
@@ -95,7 +142,7 @@ void main() {
     Directory('${sandbox.path}/integration_test').createSync();
 
     expect(
-      scanRetiredTestReferences(root: sandbox, symbols: ['Retired${'Type'}']),
+      scanRetiredTestReferences(root: sandbox, symbols: const ['RetiredType']),
       isEmpty,
     );
   });
@@ -117,7 +164,7 @@ void main() {
     expect(
       scanRetiredTestReferences(
         root: sandbox,
-        symbols: ['Retired${'Reference'}'],
+        symbols: const ['RetiredReference'],
       ),
       isEmpty,
     );

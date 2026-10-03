@@ -1,4 +1,6 @@
 // Tests for `make audit` and `tool/arb_parity_check.dart` (DNI-389 / Story 27.13).
+// ignore_for_file: use_raw_strings
+// Shell and awk snippets intentionally preserve command-line quoting.
 //
 // These tests shell out to the real Make target and Dart script and
 // assert their behaviour. This keeps the same integration-style
@@ -34,20 +36,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Single-quotes [value] for safe interpolation into a `bash -c` command.
 String _shellQuote(String value) => "'${value.replaceAll("'", "'\\''")}'";
-
-/// Builds fixture spellings at runtime so this checker test can exercise the
-/// other retirement gate without leaving scanner matches in this test source.
-String _retiredWord(int index) {
-  final encoded = switch (index) {
-    1 =>
-      '46 69 72 65 73 74 6f 72 65 43 6f 6d 70 6c 65 74 69 6f 6e 52 65 70 6f 73 69 74 6f 72 79',
-    2 => '63 6f 6d 70 6c 65 74 69 6f 6e 73',
-    _ => throw ArgumentError.value(index, 'index'),
-  };
-  return String.fromCharCodes(
-    encoded.split(' ').map((unit) => int.parse(unit, radix: 16)),
-  );
-}
 
 void main() {
   // `flutter test` runs with cwd = the package dir (`learning_tracker/`).
@@ -120,9 +108,9 @@ void main() {
         //      run regardless of outcome and never a violation. Its format
         //      is deliberately `file.dart:ClassName` (a class name, not a
         //      line number) to point at the dormant repository class, e.g.
-        //      `WATCHLIST: ${_retiredWord(2)} — live INT writer ... at
+        //      `WATCHLIST: retired completion store — live INT writer ... at
         //      lib/data/repositories/firestore_completion_repository.dart:
-        //      ${_retiredWord(1)} ...`.
+        //      the legacy repository source path ...`.
         // Excluding both (by the structural markers that identify them —
         // a leading test-runner progress prefix, and the `WATCHLIST:` tag
         // — not by pre-checking the file:line format itself) narrows the
@@ -130,7 +118,7 @@ void main() {
         // `make audit` violation hit is reported with a clickable
         // file:line, without silently degrading into an assertion that
         // is vacuously true regardless of what `make audit` prints.
-        final testRunnerProgressLine = RegExp('^\\d+:\\d{2} [+~-]');
+        final testRunnerProgressLine = RegExp(r'^\d+:\d{2} [+~-]');
         final hitLines = stdout
             .split('\n')
             .where(
@@ -146,7 +134,7 @@ void main() {
         // Either there are no violations (OK) or each hit has file:line.
         for (final line in hitLines) {
           expect(
-            RegExp('\\.dart:\\d+:').hasMatch(line),
+            RegExp(r'\.dart:\d+:').hasMatch(line),
             isTrue,
             reason: 'violation line must match file:line format: $line',
           );

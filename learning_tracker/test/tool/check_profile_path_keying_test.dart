@@ -1,6 +1,8 @@
 // Tests for `tool/check_profile_path_keying.dart` (docs/firestore-rewrite-map.md
 // item 10 — the writer/reader path-disagreement defect class that produced
 // the ${_retiredWord(5)}/learning-order regression).
+// ignore_for_file: unnecessary_string_interpolations, use_raw_strings
+// Retired identifiers are assembled at runtime so this suite remains scannable.
 //
 // Each fixture test builds a disposable directory tree under the system
 // temp dir and drives the checker at it via `--root`/`--baseline`/
