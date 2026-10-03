@@ -589,6 +589,7 @@ class _SlowCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
   }) {
     calls.add('capture');
     return release.future;

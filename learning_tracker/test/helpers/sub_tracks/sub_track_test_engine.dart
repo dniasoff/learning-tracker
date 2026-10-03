@@ -187,6 +187,7 @@ final class EngineBackedCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
   }) async {
     final result = await inner.capture(
       curriculumId: curriculumId,
@@ -196,6 +197,7 @@ final class EngineBackedCommands implements LearningCommands {
       dateState: dateState,
       learnedOn: learnedOn,
       stage: stage,
+      skipRecorded: skipRecorded,
     );
     await gate?.future;
     if (result case CaptureSuccess(:final eventIds)) {
