@@ -577,4 +577,12 @@ final class TutorLearningCommands implements LearningCommands {
       return _dispatch(current.$2, history: history);
     });
   }
+
+  // Track lifecycle is an owner-only command. Keep the shared interface
+  // complete while refusing to expose those operations in a tutor session.
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) async => _invalid;
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async => _invalid;
 }

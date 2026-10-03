@@ -839,7 +839,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                           ref.invalidate(
                             _trackGoalProvider(track.curriculumId),
                           );
-                          ref.invalidate(_trackPaceCalcProvider(track));
                           ref.invalidate(_trackLearnerStateProvider(track));
                           // B-EDIT-NAME: refresh the resolved title so an edited name
                           // surfaces immediately in the header on return.

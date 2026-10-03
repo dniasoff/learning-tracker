@@ -188,7 +188,6 @@ Future<void> tutorReplaceStudyDays(
   required List<StudyDayConfigEntry> existing,
 }) async {
   final writes = await requireTutorGovernedWrites(ref);
-  final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
   String docId(int day) => DocIds.studyDayConfigDocId({
     'curriculum_id': curriculumId.storageKey,
     'day_of_week': day,
@@ -202,7 +201,7 @@ Future<void> tutorReplaceStudyDays(
           data: StudyDayConfigEntry(
             dayOfWeek: day,
             dayType: type,
-          ).toFirestore(curriculumId: curriculumId, updatedAt: now),
+          ).toFirestore(curriculumId: curriculumId),
         ),
     ],
     removedDocIds: [
