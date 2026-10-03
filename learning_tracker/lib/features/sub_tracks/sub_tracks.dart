@@ -12,8 +12,6 @@ export 'presentation/providers/catch_up_record_controller.dart'
         catchUpRecordAllOf,
         catchUpRecordStatusProvider,
         recordCatchUpAll;
-export 'presentation/providers/sub_track_providers.dart';
-export 'presentation/providers/sub_track_session.dart';
 export 'presentation/providers/sub_track_capture_providers.dart'
     show
         SubTrackSourceChoice,

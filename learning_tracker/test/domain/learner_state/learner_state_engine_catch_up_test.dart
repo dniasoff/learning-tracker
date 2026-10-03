@@ -12,9 +12,7 @@ import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
-import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
-import 'package:learning_tracker/domain/learner_state/tri_state.dart';
 
 import '../../helpers/learner_state/catch_up_card_harness.dart';
 import '../../helpers/learner_state/engine_fixtures.dart';
