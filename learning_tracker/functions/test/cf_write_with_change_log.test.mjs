@@ -34,6 +34,10 @@ import {
   tutorAuth,
   ulid,
 } from './_cf_helpers.mjs';
+import { retiredKeysOf } from './_retired_inventory.mjs';
+
+// The retired R16 goal keys, read from the AD-49 inventory (DNI-489).
+const GOAL_REPOSITORY = 'lib/data/repositories/firestore_goal_repository.dart';
 
 const helper = await import('../lib/write_with_change_log.js');
 
@@ -190,7 +194,8 @@ describe('writeWithChangeLog — payload validation (AD-52, AD-38 mapping, AD-43
 
   const badGoalPayloads = [
     ['unknown field', { ...DEADLINE, sneaky: true }],
-    ['retired target_percent', { ...DEADLINE, target_percent: 50 }],
+    ...retiredKeysOf(GOAL_REPOSITORY).filter((key) => key.includes('percent'))
+      .map((key) => [`retired ${key}`, { ...DEADLINE, [key]: 50 }]),
     ['camelCase drift', { goalType: 'deadline', targetDate: '2027-06-01' }],
     ['malformed date', { ...DEADLINE, target_date: 'next summer' }],
     ['impossible date', { ...DEADLINE, target_date: '2027-02-30' }],
@@ -698,8 +703,7 @@ describe('writeWithChangeLog — create claim and field-level merge', () => {
     assert.equal(res.at, entry.at.toDate().toISOString(), 'returns the server-stamped at');
     const goal = (await profileRef().collection('goals').doc(`${C}_deadline`).get()).data();
     assert.equal(goal.last_change_id, ulid(1));
-    assert.equal(goal.updated_at, undefined);
-    assert.equal(goal.synced_at, undefined);
+    for (const key of retiredKeysOf(GOAL_REPOSITORY)) assert.equal(goal[key], undefined, key);
   });
 
   test('an existing target is an ordinary update: only changed fields logged, unrelated fields survive', async () => {

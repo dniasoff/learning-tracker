@@ -23,6 +23,12 @@ import {
   ulid,
 } from './_cf_helpers.mjs';
 import { describeGovernedContract } from './_governed_contract.mjs';
+import { retiredKeysOf } from './_retired_inventory.mjs';
+
+// The retired R16 keys of the goal and curriculum-track codecs, read from the
+// AD-49 inventory (DNI-489) so no test spells a retired name.
+const GOAL_REPOSITORY = 'lib/data/repositories/firestore_goal_repository.dart';
+const TRACK_REPOSITORY = 'lib/data/repositories/firestore_curriculum_track_repository.dart';
 
 const C = 'mishnah';
 const base = { grantId: GRANT, ownerUid: PARENT, profileId: PROFILE };
@@ -92,15 +98,12 @@ describe('tutor goal / track callables — AC-3 behaviour', () => {
     assert.equal(goal.profile_id, undefined);
   });
 
-  // DNI-484 (R16): every retired goal key — target_percent, its camelCase
+  // DNI-484 (R16): every retired goal key — the percent target, its camelCase
   // alias and the governed timestamps (both spellings) — is rejected, never
   // silently dropped, and nothing is written.
   test('tutorUpsertGoal rejects each R16 retired goal field, aliases included', async () => {
-    for (const [key, value] of [
-      ['target_percent', 80], ['targetPercent', 80],
-      ['updated_at', '2026-01-01T00:00:00Z'], ['updatedAt', '2026-01-01T00:00:00Z'],
-      ['synced_at', '2026-01-01T00:00:00Z'], ['syncedAt', '2026-01-01T00:00:00Z'],
-    ]) {
+    for (const key of [...retiredKeysOf(GOAL_REPOSITORY, { aliases: true }), 'updatedAt', 'syncedAt']) {
+      const value = /percent/i.test(key) ? 80 : '2026-01-01T00:00:00Z';
       await assert.rejects(
         call(fns.tutorUpsertGoal, { ...base, goalId: `${C}_deadline`, goalData: { ...DEADLINE, [key]: value } }),
         (e) => e.code === 'invalid-argument', key);
@@ -179,17 +182,9 @@ describe('tutor goal / track callables — AC-3 behaviour', () => {
   // aliases are rejected; state and the display-only activated_at still pass.
   test('tutorUpsertTrack rejects each R16 retired track field, aliases included', async () => {
     const stamp = '2026-01-01T00:00:00.000Z';
-    for (const [key, value] of [
-      ['state_changed_at', stamp], ['stateChangedAt', stamp],
-      ['purged', true], ['purged_at', stamp],
-      ['pace_reset_date', stamp], ['paceResetDate', stamp],
-      ['last_reorder_at', stamp], ['lastReorderAt', stamp],
-      ['progress_schema_version', 1], ['progress_computed_at', stamp],
-      ['progress_model', 'x'], ['program_progress', {}], ['self_paced_progress', {}],
-      ['updated_at', stamp], ['updatedAt', stamp], ['synced_at', stamp], ['syncedAt', stamp],
-    ]) {
+    for (const key of [...retiredKeysOf(TRACK_REPOSITORY, { aliases: true }), 'updatedAt', 'syncedAt']) {
       await assert.rejects(
-        call(fns.tutorUpsertTrack, { ...base, trackId: C, trackData: { state: 'active', [key]: value } }),
+        call(fns.tutorUpsertTrack, { ...base, trackId: C, trackData: { state: 'active', [key]: stamp } }),
         (e) => e.code === 'invalid-argument', key);
     }
     assert.deepEqual(await changeLog(), []);
