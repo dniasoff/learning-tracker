@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/catch_up_cards_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/erev_planned_tasks_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/erev_banner.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/also_learning_slot.dart';
@@ -108,6 +109,7 @@ class LearningScreen extends ConsumerWidget {
                 onRefresh: () async {
                   ref.invalidate(allDailyTasksProvider);
                   ref.invalidate(erevWindowProvider);
+                  ref.invalidate(catchUpCardWindowsProvider);
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
                   ref.invalidate(dashboardStreakProvider);
                 },
@@ -124,15 +126,18 @@ class LearningScreen extends ConsumerWidget {
                     // Erev (DNI-504): the banner is the tab's first
                     // focusable element (AC-11); zero size otherwise.
                     const ErevBannerSlot(),
+                    // Catch-up cards sit at the top of the tab, before the
+                    // streak and today's tasks (DNI-505 AC-2, UX-DR-57).
+                    const CatchUpCardsSlot(),
                     _StreakHeroCard(
                       streakAsync: streakAsync,
                       onRetry: () => ref.invalidate(dashboardStreakProvider),
                     ),
                     const SizedBox(height: 36),
-                    // Named Learn sections (DNI-500): each slot is its own
-                    // widget file and takes no space while empty, so the
-                    // stories that fill them never edit this body.
-                    const CatchUpCardsSlot(),
+// Named Learn sections (DNI-500; catch-up is above):
+                    // each slot is its own widget file and takes no space
+                    // while empty, so the stories that fill them never edit
+                    // this body.
                     // DNI-502: today against the daily target, with
                     // encouragement only (every role; no parent status).
                     const LearnerTodaySection(),
