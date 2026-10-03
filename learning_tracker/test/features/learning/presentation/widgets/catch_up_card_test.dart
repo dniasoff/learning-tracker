@@ -7,6 +7,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -24,19 +25,26 @@ import 'package:learning_tracker/features/learning/presentation/providers/catch_
 import 'package:learning_tracker/features/learning/presentation/providers/erev_planned_tasks_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/catch_up_card.dart';
+import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/catch_up_reminder_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/catch_up_reminder_fakes.dart';
 import '../../../../helpers/learner_state/catch_up_card_harness.dart';
 import '../../../../helpers/learner_state/fake_learner_state.dart';
 import '../../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
+import '../../../notifications/support/mock_notification_gateway.dart';
 
 class _EnglishTerms extends UseHebrewTerms {
   @override
@@ -530,4 +538,83 @@ void main() {
       await _unmount(tester);
     });
   });
+
+  // Story 3.5 (DNI-508) AC-8: notification permission denied or not yet
+  // granted never gates the card, and nothing around the lock (the
+  // reminder reconcile included) asks for the permission.
+  group('DNI-508 AC-8: permission denied or undetermined', () {
+    for (final granted in [false, null]) {
+      testWidgets('the card stays visible and usable; no prompt '
+          '(${granted == null ? 'undetermined' : 'denied'})', (tester) async {
+        final gateway = MockNotificationGateway();
+        when(gateway.hasPermission).thenAnswer((_) async => granted ?? false);
+        when(gateway.requestPermission).thenAnswer((_) async => true);
+        await _pumpSection(
+          tester,
+          overrides: [
+            ...catchUpOverrides(
+              states: (_) => Stream.value(_plain()),
+              history: _lakewood,
+            ),
+            notificationServiceProvider.overrideWithValue(gateway),
+            lockDrivingScopesProvider.overrideWithValue(
+              AsyncData([catchUpScope]),
+            ),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value([
+                LearnerProfileEntity(
+                  profileId: catchUpScope.profileId,
+                  displayName: 'Yehuda',
+                  mode: ProfileMode.child,
+                  createdAt: DateTime.utc(2026),
+                  updatedAt: DateTime.utc(2026),
+                ),
+              ]),
+            ),
+            learnerLockSettingsProvider.overrideWith(
+              (ref, scope) => Stream.value(_lakewood),
+            ),
+            catchUpReminderLedgerProvider.overrideWithValue(
+              MemoryCatchUpLedger(),
+            ),
+            catchUpReminderClockProvider.overrideWithValue(
+              () => catchUpSunday,
+            ),
+            catchUpReminderResumeCountProvider.overrideWith(_NoResume.new),
+          ],
+        );
+        // The reminder reconcile runs beside the card, as at app start.
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(CatchUpCardsSection)),
+        );
+        final sub = container.listen(
+          catchUpReminderSyncEffectProvider,
+          (_, _) {},
+        );
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 10));
+        }
+        expect(_card, findsOneWidget);
+        expect(_yesAll, findsOneWidget);
+        verify(gateway.hasPermission).called(greaterThanOrEqualTo(1));
+        verifyNever(gateway.requestPermission);
+        verifyNever(
+          () => gateway.scheduleCatchUpReminder(
+            id: any(named: 'id'),
+            profileId: any(named: 'profileId'),
+            fireAtUtc: any(named: 'fireAtUtc'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+          ),
+        );
+        sub.close();
+        await _unmount(tester);
+      });
+    }
+  });
+}
+
+class _NoResume extends CatchUpReminderResumeCount {
+  @override
+  int build() => 0;
 }
