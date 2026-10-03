@@ -206,7 +206,6 @@ GoalEntity? goalEntityOf(CurriculumId curriculum, CurriculumGoals? goals) {
       curriculumId: curriculum,
       targetDate: DateTime(date.year, date.month, date.day),
       createdAt: now,
-      updatedAt: now,
     );
   }
   final pace = prefilledPaceOf(goals);
@@ -220,7 +219,6 @@ GoalEntity? goalEntityOf(CurriculumId curriculum, CurriculumGoals? goals) {
       paceGranularity: granularity,
       rawLearningUnit: granularity == null ? pace.paceGranularity : null,
       createdAt: now,
-      updatedAt: now,
     );
   }
   return null;

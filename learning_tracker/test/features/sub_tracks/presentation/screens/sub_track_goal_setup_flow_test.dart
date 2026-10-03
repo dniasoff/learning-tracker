@@ -84,7 +84,6 @@ void main() {
     curriculumId: CurriculumId.mishnayos,
     targetDate: date,
     createdAt: DateTime.utc(2026, 10, 2),
-    updatedAt: DateTime.utc(2026, 10, 2),
   );
 
   testWidgets('opens the existing goal setup for the same curriculum', (
@@ -260,6 +259,66 @@ void main() {
     expect(entity.paceGranularityKey, 'perek');
   });
 
+  group('a fractional stored pace (1.5)', () {
+    const stored = PaceGoal(
+      curriculumId: 'mishnayos',
+      paceValue: 1.5,
+      paceUnit: 'per_week',
+      paceGranularity: kLeafPaceGranularity,
+    );
+    const goals = CurriculumGoals(pace: stored);
+
+    GoalEntity paceResult(int value, {String unit = 'per_week'}) => GoalEntity(
+      curriculumId: CurriculumId.mishnayos,
+      goalType: 'pace',
+      paceValue: value,
+      pacePeriod: unit,
+      createdAt: DateTime.utc(2026),
+    );
+
+    GovernedAction? save(GoalEntity result) => governedGoalAction(
+      curriculumId: 'mishnayos',
+      choice: goalChoiceOf(result, prefilledPace: prefilledPaceOf(goals))!,
+      current: goals,
+      nowUtc: DateTime.utc(2026, 10, 2),
+    );
+
+    test(
+      'round-trips untouched: the stored value is kept, nothing written',
+      () {
+        final prefill = goalEntityOf(CurriculumId.mishnayos, goals)!;
+        expect(prefill.paceValue, 2);
+        expect(
+          goalChoiceOf(paceResult(2), prefilledPace: prefilledPaceOf(goals)),
+          isA<PaceGoalChoice>().having((c) => c.value, 'value', 1.5),
+        );
+        expect(save(paceResult(2)), isNull);
+      },
+    );
+
+    test('a changed value is written as entered', () {
+      final fields = save(paceResult(3))!.changes.single.docs.single.fields;
+      expect(fields, {'pace_value': 3});
+    });
+
+    test('a changed unit writes the entered value, not the stored one', () {
+      final fields = save(
+        paceResult(2, unit: 'per_day'),
+      )!.changes.single.docs.single.fields;
+      expect(fields, {'pace_value': 2, 'pace_unit': 'per_day'});
+    });
+
+    test('a live deadline prefill never keeps the stored pace', () {
+      const both = CurriculumGoals(
+        deadline: DeadlineGoal(
+          curriculumId: 'mishnayos',
+          targetDate: '2028-06-01',
+        ),
+        pace: stored,
+      );
+      expect(prefilledPaceOf(both), isNull);
+    });
+  });
   test('a goal-screen result maps to a governed choice', () {
     expect(
       goalChoiceOf(deadline(DateTime(2028, 6, 1))),
@@ -277,7 +336,6 @@ void main() {
           paceValue: 3,
           pacePeriod: 'per_day',
           createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
         ),
       ),
       isA<PaceGoalChoice>()
@@ -291,7 +349,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           goalType: 'none',
           createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
         ),
       ),
       isA<NoGoalChoice>(),
@@ -301,7 +358,6 @@ void main() {
         GoalEntity(
           curriculumId: CurriculumId.mishnayos,
           createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
         ),
       ),
       isNull,

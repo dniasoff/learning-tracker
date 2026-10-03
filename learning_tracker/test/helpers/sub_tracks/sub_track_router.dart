@@ -91,7 +91,6 @@ List<Override> subTrackHubCardOverrides() => [
       CurriculumTrackEntity(
         curriculumId: CurriculumId.mishnayos,
         state: 'active',
-        stateChangedAt: DateTime.utc(2026),
         activatedAt: DateTime.utc(2026),
       ),
     ]),
