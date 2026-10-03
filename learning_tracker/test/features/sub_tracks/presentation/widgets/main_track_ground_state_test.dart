@@ -6,6 +6,7 @@
 // scheduled, returned on end, overlap kept) is in
 // test/domain/learner_state/ground_holds_main_track_test.dart.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/content_tree.dart';
@@ -97,7 +98,7 @@ Future<void> _pump(WidgetTester tester, Map<String, List<String>> held) async {
           (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
         ),
         anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
-        mainTrackHeldGroundProvider.overrideWith((ref, _) async => held),
+        mainTrackHeldGroundProvider.overrideWith((ref, _) => AsyncData(held)),
       ],
       child: const ContentHierarchyScreen(
         curriculumId: 'mishnayos',
