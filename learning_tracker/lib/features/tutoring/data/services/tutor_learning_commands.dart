@@ -239,9 +239,13 @@ final class TutorLearningCommands implements LearningCommands {
     int? stage,
   }) => _preflight((now, history) async {
     // Epic 1: tutors record main-track learning, dated or before tracking.
+    // A skip-recorded (Up to…) capture needs the talmid's counted log,
+    // which the tutor callable does not check yet: refused, never
+    // written twice (integ post-merge; follow-up bead).
     if (curriculumId.isEmpty ||
         source != LearningEvent.sourceMain ||
-        dateState == DateState.catchUp) {
+        dateState == DateState.catchUp ||
+        skipRecorded) {
       return _invalid;
     }
     if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
