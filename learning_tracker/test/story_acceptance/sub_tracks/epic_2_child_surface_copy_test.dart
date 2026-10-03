@@ -8,24 +8,34 @@
 // done", warm encouragement and the streak of the curriculum in view
 // (UX-DR-67).
 //
-// Scope note: the sub-track detail surface (Story 2.6, DNI-497) and the
-// Dashboard sub-track summary cards (Story 2.9, DNI-500) are not on
-// integ/sub-tracks yet. Each of those stories adds its surface to
-// [_surfaces] below when it lands (the rulings order this sweep last in
-// Epic 2).
+// The sweep covers the Dashboard (with the learner's sub-track summary
+// cards, Story 2.9 / DNI-500), the Learn tab (with its sub-track rows) and
+// the sub-track detail (Story 2.6 / DNI-497), whose capacity bar carries a
+// parent/tutor-only shortfall tag. A later Epic 2 surface joins [_surfaces]
+// below (the rulings order this sweep last in Epic 2).
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_sub_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/shortfall_warning_card.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_home_row.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/sub_tracks/sub_track_detail_harness.dart';
 import '../../helpers/dashboard/epic2_surfaces.dart';
 import '../../helpers/dashboard/forecast_fixtures.dart';
+import '../../helpers/learner_state/engine_fixtures.dart';
+import '../../helpers/pump_app.dart';
 
 /// Every parent-only forecast string, in both locales, reduced to its
 /// fixed text (placeholders removed), plus the PRD's "off track".
@@ -44,6 +54,8 @@ List<String> _bannedFragments() {
       l10n.onTrackProjectedFinish('\u0000'),
       l10n.onTrackDailyTarget('\u0000', '\u0000'),
       l10n.reportOnTrackCalendarBehind('\u0000', '\u0000'),
+      // The sub-track detail's parent/tutor-only tag (DNI-497).
+      l10n.subTrackDetailShortfall(0).replaceAll('0', '\u0000'),
       l10n.shortfallCardMessage(
         '\u0000',
         '\u0000',
@@ -94,15 +106,85 @@ LearnerState _state(ProjectionStatus status) => forecastState([
   ),
 ]);
 
-typedef _Surface =
-    Widget Function(StackRouter router, bool parent, LearnerState state);
+/// The learner's two sub-tracks behind [_state]'s sub-track states, so the
+/// Dashboard summary cards and the Learn rows render for them.
+SubTrack _subTrack(String id, String name) => SubTrack(
+  id: id,
+  curriculumId: forecastCurriculum,
+  name: name,
+  type: SubTrackType.ongoing,
+  windowStart: '2026-09-01',
+  ratePerWeek: 3,
+  weeksPerYear: 40,
+  learnsOnShabbos: false,
+  ground: const [NodeEntry(level: 'masechta', ref: 'Mishnah Berakhot')],
+  lastChangeId: '01J6Q2H4A8M7K3P9R5T6V8WX90',
+);
+
+List<Override> _withSubTracks() => [
+  subTracksForScopeProvider.overrideWith(
+    (ref, _) => Stream.value([
+      _subTrack(schoolSubTrackId, 'School'),
+      _subTrack(rebbeSubTrackId, 'Rebbe'),
+    ]),
+  ),
+];
+
+/// One Epic 2 surface: how to pump it for a session whose role is
+/// `parent`, what proves its Epic 2 content rendered (so the sweep is not
+/// vacuous), and whether it carries the child's today section (UX-DR-67).
+typedef _Surface = ({
+  Widget Function(StackRouter router, bool parent, LearnerState state) pump,
+  Finder Function() rendered,
+  bool showsToday,
+});
+
+/// The sub-track detail (DNI-497) over the real engine, with a positive
+/// shortfall forced on School so the parent would see the tag; one per
+/// test.
+late DetailHarness _detail;
 
 final Map<String, _Surface> _surfaces = {
-  'Dashboard': (router, parent, state) =>
-      dashboardSurface(router: router, parent: parent, state: state),
-  'Learn': (router, parent, state) =>
-      learnSurface(router: router, parent: parent, state: state),
+  'Dashboard': (
+    pump: (router, parent, state) => dashboardSurface(
+      router: router,
+      parent: parent,
+      state: state,
+      extra: _withSubTracks(),
+    ),
+    rendered: () => find.byType(DashboardSubTrackCard),
+    showsToday: true,
+  ),
+  'Learn': (
+    pump: (router, parent, state) => learnSurface(
+      router: router,
+      parent: parent,
+      state: state,
+      extra: _withSubTracks(),
+    ),
+    rendered: () => find.byType(SubTrackHomeRow),
+    showsToday: true,
+  ),
+  'Sub-track detail': (
+    pump: (router, parent, _) => pumpApp(
+      overrides: _detail.overrides(
+        role: parent ? SubTrackDetailRole.parent : SubTrackDetailRole.child,
+      ),
+      child: StackRouterScope(
+        controller: router,
+        stateHash: 0,
+        child: SubTrackDetailScreen(subTrackId: _detailTrack.id),
+      ),
+    ),
+    rendered: () => find.text('Ground (in order)'),
+    showsToday: false,
+  ),
 };
+
+final _detailTrack = detailSubTrack(10, 'School 2026–27', const [
+  berakhot1,
+  peah,
+], windowEnd: '2027-07-31');
 
 /// Every visible string and every semantics label on screen.
 List<String> _everything(WidgetTester tester) {
@@ -124,8 +206,14 @@ void main() {
   setUp(() {
     final mock = Epic2MockRouter();
     when(() => mock.isRouteActive(any())).thenReturn(false);
+    when(mock.canPop).thenReturn(false);
     router = mock;
+    _detail = DetailHarness()
+      ..seed(subTracks: [_detailTrack])
+      ..deadline = '2026-12-31'
+      ..capacities[_detailTrack.id] = (capacity: 2, shortfall: 2);
   });
+  tearDown(() => _detail.dispose());
 
   final banned = _bannedFragments();
 
@@ -137,10 +225,15 @@ void main() {
     ]) {
       testWidgets('$name in child mode (${status.name}): no status, '
           'projection or shortfall anywhere', (tester) async {
+        // Tall enough that every lazily built section (the Dashboard's
+        // sub-track summary cards sit below the fold) is on screen.
+        await tester.binding.setSurfaceSize(const Size(400, 3200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
         final semantics = tester.ensureSemantics();
-        await tester.pumpWidget(surface(router, false, _state(status)));
+        await tester.pumpWidget(surface.pump(router, false, _state(status)));
         await tester.pumpAndSettle();
 
+        expect(surface.rendered(), findsWidgets);
         expect(find.byType(OnTrackCard), findsNothing);
         expect(find.byType(ShortfallWarningCard), findsNothing);
         final everything = _everything(tester);
@@ -151,11 +244,19 @@ void main() {
             reason: '"$fragment" leaked on the child $name',
           );
         }
-        // No shortfall count either.
+        // No shortfall count or tag either.
         for (final count in const ['About 40', 'About 12', 'כ־40', 'כ־12']) {
           expect(everything.where((t) => t.contains(count)), isEmpty);
         }
+        expect(
+          find.byKey(const ValueKey('subTrackShortfallTag')),
+          findsNothing,
+        );
 
+        if (!surface.showsToday) {
+          semantics.dispose();
+          return;
+        }
         // Encouragement, today against the target and the streak remain.
         expect(find.text('Today 3 of 4 done'), findsOneWidget);
         expect(
@@ -189,6 +290,24 @@ void main() {
     );
     // The parent sees the target on the card, not the child's section.
     expect(find.text('Today 3 of 4 done'), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('control: the parent sub-track detail shows its shortfall tag', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _surfaces['Sub-track detail']!.pump(
+        router,
+        true,
+        _state(ProjectionStatus.behindPace),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('subTrackShortfallTag')), findsOneWidget);
+    final everything = _everything(tester);
+    expect(everything.where((t) => t.contains('Shortfall:')), isNotEmpty);
     semantics.dispose();
   });
 }

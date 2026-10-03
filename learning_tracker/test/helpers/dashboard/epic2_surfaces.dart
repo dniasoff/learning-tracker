@@ -130,16 +130,21 @@ List<Override> epic2SurfaceOverrides({
 Widget _routed(StackRouter router, Widget child) =>
     StackRouterScope(controller: router, stateHash: 0, child: child);
 
-/// The Dashboard body for a session whose role is [parent].
+/// The Dashboard body for a session whose role is [parent]; [extra]
+/// overrides come last (e.g. the learner's sub-tracks).
 Widget dashboardSurface({
   required StackRouter router,
   required bool parent,
   required LearnerState state,
   ProfileMode mode = ProfileMode.child,
   ThemeData? theme,
+  List<Override> extra = const [],
 }) => pumpApp(
   theme: theme ?? AppTheme.lightTheme(),
-  overrides: epic2SurfaceOverrides(parent: parent, state: state, mode: mode),
+  overrides: [
+    ...epic2SurfaceOverrides(parent: parent, state: state, mode: mode),
+    ...extra,
+  ],
   child: _routed(
     router,
     Scaffold(
@@ -152,14 +157,19 @@ Widget dashboardSurface({
   ),
 );
 
-/// The Learn tab for a session whose role is [parent].
+/// The Learn tab for a session whose role is [parent]; [extra] overrides
+/// come last.
 Widget learnSurface({
   required StackRouter router,
   required bool parent,
   required LearnerState state,
   ProfileMode mode = ProfileMode.child,
+  List<Override> extra = const [],
 }) => pumpApp(
   theme: AppTheme.lightTheme(),
-  overrides: epic2SurfaceOverrides(parent: parent, state: state, mode: mode),
+  overrides: [
+    ...epic2SurfaceOverrides(parent: parent, state: state, mode: mode),
+    ...extra,
+  ],
   child: _routed(router, const LearningScreen()),
 );
