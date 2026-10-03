@@ -48,9 +48,12 @@ import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculu
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_governed_writer.dart';
+import '../../helpers/retired_inventory.dart';
 
 const _uid = 'uid-1';
 const _profileId = governedTestProfileId;
+const _scopeRepository =
+    'lib/data/repositories/firestore_curriculum_scope_repository.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -225,9 +228,13 @@ void main() {
 
   group('merge write preserves an out-of-band field', () {
     test('insertScopes merges rather than replacing — a pre-existing field '
-        'outside the client shape (e.g. a tutor-CF-stamped synced_at) '
-        'survives a subsequent owner write to the SAME doc-id', () async {
+        'outside the client shape (e.g. a legacy retired stamp) survives a '
+        'subsequent owner write to the SAME doc-id', () async {
       final repo = buildRepo();
+      final legacy = legacyKeys(
+        retiredKeysOf(_scopeRepository),
+        value: 'server-stamped-value',
+      );
       await rawDoc(
         curriculumId: CurriculumId.mishnayos,
         scopeLevel: 1,
@@ -237,7 +244,7 @@ void main() {
         'scope_level': 1,
         'scope_value': 'Seder Zeraim',
         'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
-        'synced_at': 'server-stamped-value',
+        ...legacy,
       });
 
       await repo.insertScopes(
@@ -250,7 +257,10 @@ void main() {
         scopeLevel: 1,
         scopeValue: 'Seder Zeraim',
       ).get();
-      expect(snapshot.data()!['synced_at'], 'server-stamped-value');
+      expect(
+        snapshot.data(),
+        containsPair(legacy.keys.last, 'server-stamped-value'),
+      );
     });
   });
 

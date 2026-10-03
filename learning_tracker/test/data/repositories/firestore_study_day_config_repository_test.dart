@@ -42,9 +42,12 @@ import 'package:learning_tracker/features/scheduler/domain/models/study_day_conf
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_governed_writer.dart';
+import '../../helpers/retired_inventory.dart';
 
 const _uid = 'uid-1';
 const _profileId = governedTestProfileId;
+const _studyDayRepository =
+    'lib/data/repositories/firestore_study_day_config_repository.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -190,15 +193,18 @@ void main() {
     });
 
     test('setDayConfig merges rather than replacing — a pre-existing field '
-        'outside the client whitelist (e.g. a tutor-CF-stamped synced_at) '
-        'survives a subsequent owner write', () async {
+        'outside the client whitelist (e.g. a legacy retired stamp) survives '
+        'a subsequent owner write', () async {
       final repo = buildRepo();
+      final legacy = legacyKeys(
+        retiredKeysOf(_studyDayRepository),
+        value: 'server-stamped-value',
+      );
       await rawDoc(curriculumId: CurriculumId.chumash, dayOfWeek: 1).set({
         'curriculum_id': CurriculumId.chumash.storageKey,
         'day_of_week': 1,
         'day_type': DayType.study.storageKey,
-        'updated_at': DateTime.utc(2026, 1, 1).toIso8601String(),
-        'synced_at': 'server-stamped-value',
+        ...legacy,
       });
 
       await repo.setDayConfig(
@@ -211,7 +217,10 @@ void main() {
         curriculumId: CurriculumId.chumash,
         dayOfWeek: 1,
       ).get();
-      expect(snapshot.data()!['synced_at'], 'server-stamped-value');
+      expect(
+        snapshot.data(),
+        containsPair(legacy.keys.last, 'server-stamped-value'),
+      );
       expect(snapshot.data()!['day_type'], DayType.review.storageKey);
     });
   });

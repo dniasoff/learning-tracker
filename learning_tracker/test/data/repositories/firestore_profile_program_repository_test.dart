@@ -35,9 +35,12 @@ import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_p
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_governed_writer.dart';
+import '../../helpers/retired_inventory.dart';
 
 const _uid = 'uid-1';
 const _profileId = governedTestProfileId;
+const _programRepository =
+    'lib/data/repositories/firestore_profile_program_repository.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -122,11 +125,13 @@ void main() {
       expect(read.trackingStartDate, DateTime.utc(2026, 1, 1));
       expect(read.trackingStartRef, 'Genesis.1.1');
       // AD-52 shapes: program_id is a string, the start a civil date;
-      // updated_at is retired from governed docs.
+      // the governed timestamps are retired (R16).
       final raw = (await rawDoc(CurriculumId.chumash).get()).data()!;
       expect(raw['program_id'], '7');
       expect(raw['tracking_start_date'], '2026-01-01');
-      expect(raw.keys, isNot(contains('updated_at')));
+      for (final key in retiredKeysOf(_programRepository)) {
+        expect(raw.keys, isNot(contains(key)), reason: key);
+      }
       expect(written.programId, 7);
     });
 
@@ -200,21 +205,27 @@ void main() {
 
   group('merge write preserves an out-of-band field', () {
     test('setProgram merges rather than replacing — a pre-existing field '
-        'outside the client whitelist (e.g. a tutor-CF-stamped synced_at) '
-        'survives a subsequent owner write', () async {
+        'outside the client whitelist (e.g. a legacy retired stamp) survives '
+        'a subsequent owner write', () async {
       final repo = buildRepo();
+      final legacy = legacyKeys(
+        retiredKeysOf(_programRepository),
+        value: 'server-stamped-value',
+      );
       await rawDoc(CurriculumId.chumash).set({
         'profile_id': _profileId,
         'curriculum_id': CurriculumId.chumash.storageKey,
         'program_id': 1,
-        'updated_at': DateTime.utc(2026, 1, 1).toIso8601String(),
-        'synced_at': 'server-stamped-value',
+        ...legacy,
       });
 
       await repo.setProgram(curriculumId: CurriculumId.chumash, programId: 2);
 
       final snapshot = await rawDoc(CurriculumId.chumash).get();
-      expect(snapshot.data()!['synced_at'], 'server-stamped-value');
+      expect(
+        snapshot.data(),
+        containsPair(legacy.keys.last, 'server-stamped-value'),
+      );
       expect(snapshot.data()!['program_id'], '2');
     });
   });
@@ -297,7 +308,6 @@ void main() {
         () => profileProgramFromFirestore({
           'curriculum_id': 'not-a-real-curriculum',
           'program_id': 1,
-          'updated_at': DateTime.utc(2026, 1, 1).toIso8601String(),
         }),
         throwsA(isA<ArgumentError>()),
       );
@@ -307,7 +317,6 @@ void main() {
       expect(
         () => profileProgramFromFirestore({
           'curriculum_id': CurriculumId.mishnayos.storageKey,
-          'updated_at': DateTime.utc(2026, 1, 1).toIso8601String(),
         }),
         throwsA(isA<FormatException>()),
       );

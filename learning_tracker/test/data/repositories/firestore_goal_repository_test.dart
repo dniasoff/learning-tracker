@@ -23,9 +23,11 @@ import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.da
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_governed_writer.dart';
+import '../../helpers/retired_inventory.dart';
 
 const _uid = 'uid-1';
 const _profileId = governedTestProfileId;
+const _goalRepository = 'lib/data/repositories/firestore_goal_repository.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -76,8 +78,9 @@ void main() {
         'created_at': governedTestNow.toIso8601String(),
         'last_change_id': entry.id,
       });
-      expect(doc.keys, isNot(contains('updated_at')));
-      expect(doc.keys, isNot(contains('target_percent')));
+      for (final key in retiredKeysOf(_goalRepository)) {
+        expect(doc.keys, isNot(contains(key)), reason: key);
+      }
     });
 
     test('a pace goal is goals/{c}_pace with its pace fields', () async {
@@ -333,13 +336,15 @@ void main() {
         'goal_type': 'deadline',
         'target_date': '2027-06-01T00:00:00.000Z',
         'created_at': '2026-01-01T00:00:00.000Z',
-        'updated_at': '2026-01-02T00:00:00.000Z',
+        ...legacyKeys(retiredKeysOf(_goalRepository)),
       });
       final goal = (await buildRepo().getGoals(CurriculumId.mishnayos)).single;
       expect(goal.targetDate, DateTime.utc(2027, 6, 1));
       expect(goal.createdAt, DateTime.utc(2026));
-      // R16: a legacy updated_at is ignored on decode.
-      expect(goal.toFirestore(), isNot(contains('updated_at')));
+      // R16: legacy retired keys are ignored on decode.
+      for (final key in retiredKeysOf(_goalRepository)) {
+        expect(goal.toFirestore(), isNot(contains(key)), reason: key);
+      }
     });
   });
 }

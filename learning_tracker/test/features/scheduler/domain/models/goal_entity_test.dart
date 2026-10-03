@@ -2,6 +2,9 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:test/test.dart';
 
+import '../../../../helpers/retired_inventory.dart';
+
+const _goalEntity = 'lib/features/scheduler/domain/models/goal_entity.dart';
 void main() {
   group('PaceGranularity', () {
     test('fromStorageKey returns correct enum for known keys', () {
@@ -208,8 +211,9 @@ void main() {
   group('R16 retired goal fields (DNI-484)', () {
     final createdAt = DateTime.utc(2026, 1, 1);
 
-    test('encode omits target_percent and the governed updated_at / '
-        'synced_at; deadline and pace fields remain', () {
+    test('encode omits every retired goal key (the percent target and the '
+        'governed timestamps, camelCase aliases included); deadline and pace '
+        'fields remain', () {
       final deadline = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
         targetDate: DateTime.utc(2027, 6, 1),
@@ -224,12 +228,9 @@ void main() {
         createdAt: createdAt,
       ).toFirestore();
       for (final payload in [deadline, pace]) {
-        for (final key in const [
-          'target_percent',
-          'targetPercent',
-          'updated_at',
+        for (final key in [
+          ...retiredKeysOf(_goalEntity, aliases: true),
           'updatedAt',
-          'synced_at',
         ]) {
           expect(payload, isNot(contains(key)), reason: key);
         }
@@ -242,8 +243,8 @@ void main() {
       expect(pace['pace_granularity'], 'item');
     });
 
-    test('decode ignores target_percent, its targetPercent alias and the '
-        'governed timestamps, keeping the live deadline / pace fields', () {
+    test('decode ignores the retired goal keys and their camelCase aliases, '
+        'keeping the live deadline / pace fields', () {
       final decoded = GoalEntity.fromFirestore({
         'curriculum_id': 'mishnayos',
         'goal_type': 'pace',
@@ -251,11 +252,8 @@ void main() {
         'pace_unit': 'per_week',
         'pace_granularity': 'perek',
         'created_at': '2026-01-01T00:00:00.000Z',
-        'target_percent': 40,
-        'targetPercent': 40,
-        'updated_at': '2026-02-01T00:00:00.000Z',
+        ...legacyKeys(retiredKeysOf(_goalEntity, aliases: true), value: 40),
         'updatedAt': '2026-02-01T00:00:00.000Z',
-        'synced_at': '2026-02-01T00:00:00.000Z',
       });
       expect(
         decoded.paceTarget,
@@ -264,8 +262,9 @@ void main() {
       expect(decoded.paceGranularity, PaceGranularity.perek);
       expect(decoded.createdAt, createdAt);
       final reEncoded = decoded.toFirestore();
-      expect(reEncoded, isNot(contains('target_percent')));
-      expect(reEncoded, isNot(contains('updated_at')));
+      for (final key in retiredKeysOf(_goalEntity, aliases: true)) {
+        expect(reEncoded, isNot(contains(key)), reason: key);
+      }
     });
   });
 }

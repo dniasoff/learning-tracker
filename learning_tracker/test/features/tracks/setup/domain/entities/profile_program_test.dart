@@ -12,7 +12,7 @@
 /// `.hasOnly()` field whitelist** (`firestore.rules`, `match
 /// /profile_programs/{curriculumId}`): `profile_id`, `curriculum_id`,
 /// `program_id`, `tracking_start_date`, `tracking_start_ref` plus the AD-38
-/// keys (R16, DNI-484: the governed `updated_at` / `synced_at` are retired).
+/// keys (R16, DNI-484: the governed timestamps are retired).
 /// The field-name test below asserts `toFirestore`'s key set
 /// is a subset of exactly that list — a key outside it would be silently
 /// accepted by every local test (`fake_cloud_firestore`'s rules companion
@@ -23,6 +23,11 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
+
+import '../../../../../helpers/retired_inventory.dart';
+
+const _programEntity =
+    'lib/features/tracks/setup/domain/entities/profile_program.dart';
 
 /// The exact firestore.rules `profile_programs` `.hasOnly()` whitelist.
 const _rulesWhitelist = <String>{
@@ -74,19 +79,20 @@ void main() {
       expect(decoded.trackingStartRef, isNull);
     });
 
-    test('R16: the governed updated_at / synced_at are never written and '
-        'are ignored on decode', () {
+    test('R16: the retired governed keys are never written and are ignored '
+        'on decode', () {
+      final retired = retiredKeysOf(_programEntity);
       final decoded = profileProgramFromFirestore({
         'curriculum_id': 'nach',
         'program_id': 1,
-        'updated_at': '2026-01-04T00:00:00.000Z',
-        'synced_at': '2026-01-06T00:00:00.000Z',
+        ...legacyKeys(retired),
       });
       final payload = decoded.toFirestore(
         profileId: '01J6Q2H4A8M7K3P9R5T6V8WXYB',
       );
-      expect(payload, isNot(contains('updated_at')));
-      expect(payload, isNot(contains('synced_at')));
+      for (final key in retired) {
+        expect(payload, isNot(contains(key)), reason: key);
+      }
     });
   });
 
@@ -147,7 +153,6 @@ void main() {
       'program_id': 7,
       'tracking_start_date': '2026-01-01T00:00:00.000Z',
       'tracking_start_ref': 'Genesis.1.1',
-      'updated_at': '2026-01-02T00:00:00.000Z',
     };
 
     test('throws ArgumentError for an unrecognised curriculum_id', () {
@@ -174,10 +179,9 @@ void main() {
       );
     });
 
-    test('a governed doc without the retired updated_at decodes (AD-38, '
+    test('a governed doc without any retired timestamp decodes (AD-38, '
         'DNI-476)', () {
-      final data = validMap()..remove('updated_at');
-      expect(profileProgramFromFirestore(data).programId, 7);
+      expect(profileProgramFromFirestore(validMap()).programId, 7);
     });
 
     test('decodes the AD-52 shapes: a string program_id and a civil-date '
