@@ -732,9 +732,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get subTrackDetailEdit => 'עריכה';
 
   @override
-  String get subTrackDetailHubTitle => 'תתי-מסלולים';
-
-  @override
   String get subTrackDetailMoveUp => 'הזזה למעלה';
 
   @override

@@ -1346,12 +1346,6 @@ abstract class AppLocalizations {
   /// **'Edit'**
   String get subTrackDetailEdit;
 
-  /// Manage tracks hub: heading of the interim sub-track rows; a row opens the sub-track detail (DNI-497 AC-1, UX-DR-53). Replaced by the DNI-495 hub section when it lands.
-  ///
-  /// In en, this message translates to:
-  /// **'Sub-tracks'**
-  String get subTrackDetailHubTitle;
-
   /// Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging up (DNI-497 AC-5, UX-DR-155).
   ///
   /// In en, this message translates to:
