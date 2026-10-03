@@ -880,8 +880,7 @@ void main() {
       final grant = _activeGrant(tutorEmail: 'rebbe@example.com');
       final mockRevoke = _MockRevoke();
       when(() => mockRevoke.call(grant: any(named: 'grant'))).thenAnswer(
-        (_) async =>
-            const TutorGrantFailure(message: 'x', code: 'unavailable'),
+        (_) async => const TutorGrantFailure(message: 'x', code: 'unavailable'),
       );
 
       await tester.pumpWidget(

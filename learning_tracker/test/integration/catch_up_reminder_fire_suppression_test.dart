@@ -117,13 +117,16 @@ void main() {
       if (s.fireAtUtc == lock.endUtc) s,
   ];
 
-  test('a card that will list something: one neutral reminder at L.end', () async {
-    await start();
-    final reminder = forLock().single;
-    expect(reminder.title, 'Shabbos is over');
-    expect(reminder.body, 'Avi, record what you learnt?');
-    expect(reminder.profileId, catchUpScope.profileId);
-  });
+  test(
+    'a card that will list something: one neutral reminder at L.end',
+    () async {
+      await start();
+      final reminder = forLock().single;
+      expect(reminder.title, 'Shabbos is over');
+      expect(reminder.body, 'Avi, record what you learnt?');
+      expect(reminder.profileId, catchUpScope.profileId);
+    },
+  );
 
   test('a card that would be empty gets no reminder', () async {
     plan.value = const {};

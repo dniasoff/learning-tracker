@@ -65,9 +65,9 @@ Future<void> bootstrapNotifications({
             .read(profileRepositoryProvider)
             .getProfileById(profileId);
         if (profile == null) return false;
-         container.read(selectedProfileIdProvider.notifier).select(profileId);
-         return true;
-       },
+        container.read(selectedProfileIdProvider.notifier).select(profileId);
+        return true;
+      },
     );
     await notificationInitializer.initialize();
     // Kick off sync effects so scheduled notifications reflect current

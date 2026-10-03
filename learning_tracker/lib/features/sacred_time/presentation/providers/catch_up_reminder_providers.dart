@@ -55,10 +55,9 @@ final catchUpReminderLedgerProvider = Provider<CatchUpReminderLedger>(
 /// The scheduler's notification port: the shared gateway.
 final catchUpReminderNotificationsProvider =
     Provider<CatchUpReminderNotifications>(
-      (ref) =>
-          GatewayCatchUpReminderNotifications(
-            ref.watch(notificationServiceProvider),
-          ),
+      (ref) => GatewayCatchUpReminderNotifications(
+        ref.watch(notificationServiceProvider),
+      ),
     );
 
 /// The scheduler's clock (UTC).
@@ -230,9 +229,6 @@ final catchUpReminderSyncEffectProvider = FutureProvider<void>((ref) async {
       if (until < delay) delay = until;
     }
   }
-  final timer = Timer(
-    delay + const Duration(seconds: 1),
-    ref.invalidateSelf,
-  );
+  final timer = Timer(delay + const Duration(seconds: 1), ref.invalidateSelf);
   ref.onDispose(timer.cancel);
 });

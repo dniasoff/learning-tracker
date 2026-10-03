@@ -41,18 +41,17 @@ final class _FixedPoints implements PointsAmountReader {
   Future<int> pointsAmount(LearnerScope s, String c, int? stage) async => 7;
 }
 
-Map<String, Object?> _school({List<Map<String, String>> ground = const []}) =>
-    {
-      'curriculum_id': engineCurriculum,
-      'name': 'School',
-      'type': 'ongoing',
-      'window_start': '2026-09-01',
-      'rate_per_week': 10,
-      'weeks_per_year': 39,
-      'learns_on_shabbos': false,
-      'ground': ground,
-      'last_change_id': ulidE,
-    };
+Map<String, Object?> _school({List<Map<String, String>> ground = const []}) => {
+  'curriculum_id': engineCurriculum,
+  'name': 'School',
+  'type': 'ongoing',
+  'window_start': '2026-09-01',
+  'rate_per_week': 10,
+  'weeks_per_year': 39,
+  'learns_on_shabbos': false,
+  'ground': ground,
+  'last_change_id': ulidE,
+};
 
 void main() {
   final scope = c0Scope();

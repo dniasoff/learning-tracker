@@ -141,7 +141,8 @@ void main() {
       ).single;
       expect(lockedDays(chained, h), hasLength(3));
       final inChain = notifications.schedules.where(
-        (s) => !s.fireAtUtc.isBefore(chained.startUtc) &&
+        (s) =>
+            !s.fireAtUtc.isBefore(chained.startUtc) &&
             !s.fireAtUtc.isAfter(chained.endUtc),
       );
       expect(inChain.map((s) => s.fireAtUtc), [chained.endUtc]);
@@ -185,10 +186,10 @@ void main() {
         notifications.schedules.map((s) => s.fireAtUtc),
         isNot(anyOf(contains(a.endUtc), contains(b.endUtc))),
       );
-      expect(ledger.state.consumed.keys, containsAll([
-        catchUpReminderKey(_p1, a),
-        catchUpReminderKey(_p1, b),
-      ]));
+      expect(
+        ledger.state.consumed.keys,
+        containsAll([catchUpReminderKey(_p1, a), catchUpReminderKey(_p1, b)]),
+      );
     });
   });
 
@@ -201,8 +202,7 @@ void main() {
       final locks = lockWindows(moved, now, now.add(catchUpReminderHorizon));
       // The pending set is exactly the new lockWindows output.
       expect(
-        notifications.osPending.values.map((s) => s.fireAtUtc).toList()
-          ..sort(),
+        notifications.osPending.values.map((s) => s.fireAtUtc).toList()..sort(),
         [for (final l in locks) l.endUtc],
       );
       // Every cancel precedes every schedule.
@@ -370,15 +370,18 @@ void main() {
       expect(s.profileId, _p1);
     });
 
-    test('a changed copy (locale, name) is re-scheduled under its id', () async {
-      final h = constantHistory(lakewood);
-      await run([target(_p1, h, name: 'Avi')]);
-      final ids = notifications.schedules.map((s) => s.id).toList();
-      notifications.calls.clear();
-      await run([target(_p1, h, name: 'Avraham')]);
-      expect(notifications.schedules.map((s) => s.id), ids);
-      expect(notifications.cancels, isEmpty);
-    });
+    test(
+      'a changed copy (locale, name) is re-scheduled under its id',
+      () async {
+        final h = constantHistory(lakewood);
+        await run([target(_p1, h, name: 'Avi')]);
+        final ids = notifications.schedules.map((s) => s.id).toList();
+        notifications.calls.clear();
+        await run([target(_p1, h, name: 'Avraham')]);
+        expect(notifications.schedules.map((s) => s.id), ids);
+        expect(notifications.cancels, isEmpty);
+      },
+    );
 
     test('the ledger stores no name or copy', () {
       final raw = encodeCatchUpReminderLedger(

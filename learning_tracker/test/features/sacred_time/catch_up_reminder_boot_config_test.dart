@@ -15,10 +15,7 @@ void main() {
   ).readAsStringSync();
 
   test('RECEIVE_BOOT_COMPLETED is declared', () {
-    expect(
-      manifest,
-      contains('android.permission.RECEIVE_BOOT_COMPLETED'),
-    );
+    expect(manifest, contains('android.permission.RECEIVE_BOOT_COMPLETED'));
   });
 
   test('the plugin boot receiver listens for BOOT_COMPLETED', () {

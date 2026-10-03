@@ -146,10 +146,9 @@ void main() {
     test('its capacity counts only from window_start (AD-44)', () {
       const deadline = '2026-12-31';
       // Empty interval: capacity 0, nothing credited to the main track.
-      final before = _run(
-        [future],
-        deadline: '2026-09-30',
-      ).subTracks[future.id]!;
+      final before = _run([
+        future,
+      ], deadline: '2026-09-30').subTracks[future.id]!;
       expect(before.capacity, 0);
       expect(before.expectedNewGround, 0);
 

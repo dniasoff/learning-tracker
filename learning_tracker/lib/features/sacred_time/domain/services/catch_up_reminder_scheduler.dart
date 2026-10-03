@@ -67,7 +67,8 @@ typedef CatchUpReminderCopyBuilder =
 /// Whether the card of the lock in [card] would list anything (Story 3.2
 /// empty rule, AC-3). Null when it cannot be told on this device (only
 /// the active learner's plan is loaded); the reminder is then scheduled.
-typedef CatchUpCardContentCheck = Future<bool?> Function(CatchUpCardWindow card);
+typedef CatchUpCardContentCheck =
+    Future<bool?> Function(CatchUpCardWindow card);
 
 /// One owner profile on the device and what its reminders derive from.
 final class CatchUpReminderTarget {
@@ -426,8 +427,7 @@ class CatchUpReminderScheduler {
   /// the derived slots of pending reminders apart.
   static int? _freeSlot(DateTime fireAtUtc, Set<int> used) {
     final day =
-        fireAtUtc.toUtc().millisecondsSinceEpoch ~/
-        Duration.millisecondsPerDay;
+        fireAtUtc.toUtc().millisecondsSinceEpoch ~/ Duration.millisecondsPerDay;
     for (var i = 0; i < catchUpReminderSlots; i++) {
       final slot = (day + i) % catchUpReminderSlots;
       if (!used.contains(slot)) return slot;
@@ -457,7 +457,11 @@ List<CatchUpCardWindow> upcomingCatchUpCards(
 ) {
   final now = nowUtc.toUtc();
   return [
-    for (final lock in lockWindows(history, now, now.add(catchUpReminderHorizon)))
+    for (final lock in lockWindows(
+      history,
+      now,
+      now.add(catchUpReminderHorizon),
+    ))
       if (lock.endUtc.isAfter(now)) ?_cardOf(history, lock),
   ];
 }

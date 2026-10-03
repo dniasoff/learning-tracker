@@ -97,7 +97,11 @@ void main() {
     final now = DateTime.now().toUtc();
     await run(now);
     final expected = [
-      for (final l in lockWindows(_history, now, now.add(catchUpReminderHorizon)))
+      for (final l in lockWindows(
+        _history,
+        now,
+        now.add(catchUpReminderHorizon),
+      ))
         if (l.endUtc.isAfter(now)) l,
     ];
     expect(await pendingCatchUpIds(), hasLength(expected.length));
@@ -112,8 +116,9 @@ void main() {
     expect(await pendingCatchUpIds(), before);
   });
 
-  testWidgets('an end that passed while the app was down is not sent late',
-      (_) async {
+  testWidgets('an end that passed while the app was down is not sent late', (
+    _,
+  ) async {
     final now = DateTime.now().toUtc();
     await run(now);
     final first = lockWindows(
@@ -124,10 +129,7 @@ void main() {
     // The app next starts after that end.
     final later = first.endUtc.add(const Duration(hours: 1));
     final result = await run(later, rearm: true);
-    expect(
-      result.scheduled.where((e) => !e.fireAtUtc.isAfter(later)),
-      isEmpty,
-    );
+    expect(result.scheduled.where((e) => !e.fireAtUtc.isAfter(later)), isEmpty);
     expect(result.consumed, hasLength(1));
   });
 }

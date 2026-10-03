@@ -92,23 +92,24 @@ void main() {
     Map<String, CurriculumState> curricula, {
     LearnerSettingsHistory? history,
     List<LearningEvent> countedLearns = const [],
-  }) => StreakAlertService(
-    notifications: alerts,
-    markers: _Markers(),
-    profileId: profileUlid,
-    clock: () => now,
-  ).evaluateAll(
-    state: fakeLearnerState(
-      curricula: curricula,
-      countedLearns: countedLearns,
-      nowUtc: now,
-    ),
-    settingsHistory: history ?? catchUpHistory,
-    hour: 21,
-    minute: 0,
-    title: 'Streak at risk',
-    localizedBody: (n) => 'Your $n-day streak is at risk!',
-  );
+  }) =>
+      StreakAlertService(
+        notifications: alerts,
+        markers: _Markers(),
+        profileId: profileUlid,
+        clock: () => now,
+      ).evaluateAll(
+        state: fakeLearnerState(
+          curricula: curricula,
+          countedLearns: countedLearns,
+          nowUtc: now,
+        ),
+        settingsHistory: history ?? catchUpHistory,
+        hour: 21,
+        minute: 0,
+        title: 'Streak at risk',
+        localizedBody: (n) => 'Your $n-day streak is at risk!',
+      );
 
   test('the only gap is the pending Shabbos: no alert for that curriculum, '
       'while an unrelated curriculum still follows the alert rule', () async {

@@ -94,7 +94,9 @@ void main() {
       expect(tutorScopeAccessLost(const AsyncData<Object?>(1)), isFalse);
       expect(tutorScopeAccessLost(const AsyncLoading<Object?>()), isFalse);
       expect(
-        tutorScopeAccessLost(const AsyncError<Object?>('boom', StackTrace.empty)),
+        tutorScopeAccessLost(
+          const AsyncError<Object?>('boom', StackTrace.empty),
+        ),
         isFalse,
       );
     });

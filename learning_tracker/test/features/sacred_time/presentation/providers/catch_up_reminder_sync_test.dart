@@ -85,9 +85,7 @@ void main() {
       overrides: [
         if (tutored)
           activeTutoredProfileSelectionProvider.overrideWith(_Tutored.new),
-        lockDrivingScopesProvider.overrideWith(
-          (ref) => ref.watch(ownerScopes),
-        ),
+        lockDrivingScopesProvider.overrideWith((ref) => ref.watch(ownerScopes)),
         profileListStreamProvider.overrideWith((ref) => profiles.stream()),
         activeLearnerScopeProvider.overrideWith((ref) async => catchUpScope),
         learnerLockSettingsProvider.overrideWith(
@@ -117,10 +115,9 @@ void main() {
   }
 
   Future<void> start({bool tutored = false}) async {
-    build(tutored: tutored).listen(
-      catchUpReminderSyncEffectProvider,
-      (_, _) {},
-    );
+    build(
+      tutored: tutored,
+    ).listen(catchUpReminderSyncEffectProvider, (_, _) {});
     await settle();
   }
 
@@ -276,10 +273,9 @@ void main() {
       profiles.value = [_profile(catchUpScope.profileId, 'Avi')];
       await settle();
       expect(notifications.cancels.map((c) => c.id).toSet(), otherIds);
-      expect(
-        notifications.osPending.values.map((s) => s.profileId).toSet(),
-        {catchUpScope.profileId},
-      );
+      expect(notifications.osPending.values.map((s) => s.profileId).toSet(), {
+        catchUpScope.profileId,
+      });
     });
   });
 
@@ -294,9 +290,9 @@ void main() {
       final sites = [
         for (final f in dartFiles('lib'))
           if (!f.path.endsWith('catch_up_reminder_scheduler.dart') &&
-              RegExp(r'\bCatchUpReminderScheduler\(').hasMatch(
-                f.readAsStringSync(),
-              ))
+              RegExp(
+                r'\bCatchUpReminderScheduler\(',
+              ).hasMatch(f.readAsStringSync()))
             f.path,
       ];
       expect(sites, hasLength(1));

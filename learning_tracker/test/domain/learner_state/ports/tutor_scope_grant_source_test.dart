@@ -102,10 +102,7 @@ void main() {
         isNot(const TutorScopeGranted('g2')),
       );
       expect(
-        TutorScopeAccessDeniedException(
-          scope,
-          TutorScopeDenialReason.noGrant,
-        ),
+        TutorScopeAccessDeniedException(scope, TutorScopeDenialReason.noGrant),
         TutorScopeAccessDeniedException(
           LearnerScope(ownerUid: _parent, profileId: profileUlid),
           TutorScopeDenialReason.noGrant,

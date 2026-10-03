@@ -40,7 +40,9 @@ void main() {
   }
 
   test('the English example wording (A-6 default)', () {
-    final copy = catchUpReminderCopy(lookupAppLocalizations(const Locale('en')));
+    final copy = catchUpReminderCopy(
+      lookupAppLocalizations(const Locale('en')),
+    );
     expect(copy(ErevKind.shabbos, 'Avi'), (
       title: 'Shabbos is over',
       body: 'Avi, record what you learnt?',

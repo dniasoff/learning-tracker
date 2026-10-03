@@ -2,7 +2,6 @@
 // gating (AC-5), the default wiring, the resume counter (AC-7) and the sync
 // effect's reconcile / no-op / failure-retry behaviour.
 
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

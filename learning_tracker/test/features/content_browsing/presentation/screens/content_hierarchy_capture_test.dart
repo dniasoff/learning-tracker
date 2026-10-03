@@ -329,11 +329,9 @@ void main() {
       'Berakhot 2:1',
       'Berakhot 2:2',
     ]);
-    expect(
-      flow.written.map((e) => e.source).toSet(),
-      {LearningEvent.sourceMain},
-      reason: 'the chosen source advances over every leaf',
-    );
+    expect(flow.written.map((e) => e.source).toSet(), {
+      LearningEvent.sourceMain,
+    }, reason: 'the chosen source advances over every leaf');
     expect(flow.analytics.captureSummaries, [
       {
         'curriculum_id': 'mishnayos',

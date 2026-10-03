@@ -577,9 +577,7 @@ void main() {
             catchUpReminderLedgerProvider.overrideWithValue(
               MemoryCatchUpLedger(),
             ),
-            catchUpReminderClockProvider.overrideWithValue(
-              () => catchUpSunday,
-            ),
+            catchUpReminderClockProvider.overrideWithValue(() => catchUpSunday),
             catchUpReminderResumeCountProvider.overrideWith(_NoResume.new),
           ],
         );
