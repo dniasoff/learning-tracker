@@ -50,6 +50,11 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/exceptions/permission_exception.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
@@ -125,6 +130,58 @@ void main() {
 
   setUp(() {
     analytics = FakeAnalyticsService();
+  });
+
+  test('DNI-503 event summaries contain only enums and integer counts', () {
+    final emitted = <(LearningAnalyticsEvent, Map<String, Object>)>[];
+    final emitter = SinkLearningAnalytics((event, parameters) {
+      emitted.add((event, parameters));
+    });
+    emitter.captureSummary(
+      curriculumId: 'synthetic-curriculum',
+      sourceType: CaptureSourceType.schoolYear,
+      dateState: DateState.dated,
+      gesture: CaptureGesture.taskTick,
+      eventCount: 2,
+      skippedCount: 0,
+      taps: 1,
+    );
+    emitter.subTrackLifecycleSummary(
+      curriculumId: 'synthetic-curriculum',
+      type: SubTrackType.schoolYear,
+      action: SubTrackLifecycleAction.create,
+      groundEntries: 1,
+      leaves: 3,
+    );
+    emitter.subTrackForecastVsActual(
+      type: SubTrackType.schoolYear,
+      forecast: 12,
+      actual: 9,
+      windowWeeks: 40,
+    );
+
+    const expectedKeys = [
+      {
+        'curriculum_id',
+        'source_type',
+        'gesture',
+        'event_count',
+        'skipped_count',
+        'taps',
+      },
+      {'curriculum_id', 'type', 'action', 'ground_entries', 'leaves'},
+      {'type', 'forecast', 'actual', 'window_weeks'},
+    ];
+    expect(emitted.map((event) => event.$1), [
+      LearningAnalyticsEvent.capture,
+      LearningAnalyticsEvent.subTrackLifecycle,
+      LearningAnalyticsEvent.subTrackForecastVsActual,
+    ]);
+    for (var i = 0; i < emitted.length; i++) {
+      final (event, params) = emitted[i];
+      expect(params.keys.toSet(), expectedKeys[i]);
+      _assertNoBannedPii(params, event.name);
+    }
   });
 
   /// Asserts the LAST fired [eventName]'s parameter map contains no

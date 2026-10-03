@@ -29,6 +29,7 @@ import '../../../../helpers/learner_state_fixtures.dart';
 
 const _berakhot = NodeEntry(level: 'masechta', ref: 'Berakhot');
 const _shabbat = NodeEntry(level: 'masechta', ref: 'Shabbat');
+const _megillah = NodeEntry(level: 'masechta', ref: 'Megillah');
 const _today = '2026-10-01';
 final _now = DateTime.utc(2026, 10, 1, 9);
 
@@ -703,6 +704,14 @@ void main() {
       await tracked.editSubTrack(ulidD, const SubTrackEdit(ratePerWeek: 9));
       await tracked.editSubTrack(
         ulidD,
+        const SubTrackEdit(ground: [_berakhot, _shabbat, _megillah]),
+      );
+      await tracked.editSubTrack(
+        ulidD,
+        const SubTrackEdit(ground: [_berakhot, _shabbat]),
+      );
+      await tracked.editSubTrack(
+        ulidD,
         const SubTrackEdit(ground: [_shabbat, _berakhot]),
       );
       await tracked.endSubTrack(ulidD);
@@ -718,6 +727,18 @@ void main() {
           curriculumId: 'shas',
           type: SubTrackType.ongoing,
           action: SubTrackLifecycleAction.edit,
+          groundEntries: 2,
+        ),
+        (
+          curriculumId: 'shas',
+          type: SubTrackType.ongoing,
+          action: SubTrackLifecycleAction.groundAdd,
+          groundEntries: 3,
+        ),
+        (
+          curriculumId: 'shas',
+          type: SubTrackType.ongoing,
+          action: SubTrackLifecycleAction.remove,
           groundEntries: 2,
         ),
         (
@@ -751,6 +772,20 @@ void main() {
         {
           'curriculum_id': 'shas',
           'type': 'ongoing',
+          'action': 'ground_add',
+          'ground_entries': 3,
+          'leaves': 0,
+        },
+        {
+          'curriculum_id': 'shas',
+          'type': 'ongoing',
+          'action': 'remove',
+          'ground_entries': 2,
+          'leaves': 0,
+        },
+        {
+          'curriculum_id': 'shas',
+          'type': 'ongoing',
           'action': 'reorder',
           'ground_entries': 2,
           'leaves': 0,
@@ -768,6 +803,64 @@ void main() {
       ]);
       await tracked.dispose();
     });
+
+    test(
+      'Add next year summarizes the new track and forecasts the source',
+      () async {
+        final analytics = RecordingLearningAnalytics();
+        final forecasted = <String>[];
+        final tracked = SubTrackCommands(
+          scope: scope,
+          actor: parentActor,
+          subTracks: repo,
+          intent: intent,
+          today: () => _today,
+          nowUtc: () => _now,
+          newId: _ids(),
+          analytics: analytics,
+          forecastComparison: (track) async {
+            forecasted.add(track.id);
+            return const SubTrackForecastComparison(
+              forecast: 40,
+              actual: 12,
+              windowWeeks: 40,
+            );
+          },
+          ackTimeout: const Duration(milliseconds: 50),
+        );
+        await tracked.createSubTrack(
+          _draft(
+            type: SubTrackType.schoolYear,
+            academicYear: 2026,
+            windowStart: '2026-09-01',
+            windowEnd: '2027-07-31',
+          ),
+          subTrackId: ulidD,
+        );
+        await tracked.createSubTrack(
+          _draft(
+            type: SubTrackType.schoolYear,
+            academicYear: 2027,
+            windowStart: '2027-09-01',
+            windowEnd: '2028-07-31',
+          ),
+          subTrackId: ulidC,
+          nextYearOf: ulidD,
+        );
+        await pumpEventQueue();
+        expect(analytics.lifecycleSummaries.last['action'], 'add_next_year');
+        expect(forecasted, [ulidD]);
+        expect(analytics.forecastComparisons, [
+          {
+            'type': 'school_year',
+            'forecast': 40,
+            'actual': 12,
+            'window_weeks': 40,
+          },
+        ]);
+        await tracked.dispose();
+      },
+    );
 
     test('a rejected command emits nothing', () async {
       final analytics = RecordingLearningAnalytics();

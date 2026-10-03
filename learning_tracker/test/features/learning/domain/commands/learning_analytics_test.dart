@@ -47,17 +47,26 @@ void main() {
       skippedCount: 1,
       taps: 3,
     );
-    expect(sent.single, (
-      LearningAnalyticsEvent.capture,
-      {
-        'curriculum_id': 'mishnayos',
-        'source_type': 'school_year',
-        'gesture': 'up_to',
-        'event_count': 4,
-        'skipped_count': 1,
-        'taps': 3,
-      },
-    ));
+    expect(sent.single.$1, LearningAnalyticsEvent.capture);
+    expect(sent.single.$2, {
+      'curriculum_id': 'mishnayos',
+      'source_type': 'school_year',
+      'gesture': 'up_to',
+      'event_count': 4,
+      'skipped_count': 1,
+      'taps': 3,
+    });
+    expect(sent.single.$2.keys.toSet(), {
+      'curriculum_id',
+      'source_type',
+      'gesture',
+      'event_count',
+      'skipped_count',
+      'taps',
+    });
+    expect(sent.single.$2['source_type'], 'school_year');
+    expect(sent.single.$2['gesture'], 'up_to');
+    expect(sent.single.$2['event_count'], isA<int>());
   });
 
   test('lifecycle summary and forecast have no content identifiers', () {
@@ -76,22 +85,38 @@ void main() {
       actual: 9,
       windowWeeks: 8,
     );
-    expect(sent, [
-      (
-        LearningAnalyticsEvent.subTrackLifecycle,
-        {
-          'curriculum_id': 'mishnayos',
-          'type': 'ongoing',
-          'action': 'end',
-          'ground_entries': 2,
-          'leaves': 15,
-        },
-      ),
-      (
-        LearningAnalyticsEvent.subTrackForecastVsActual,
-        {'type': 'ongoing', 'forecast': 12, 'actual': 9, 'window_weeks': 8},
-      ),
+    expect(sent.map((e) => e.$1), [
+      LearningAnalyticsEvent.subTrackLifecycle,
+      LearningAnalyticsEvent.subTrackForecastVsActual,
     ]);
+    expect(sent.map((e) => e.$2).toList(), [
+      {
+        'curriculum_id': 'mishnayos',
+        'type': 'ongoing',
+        'action': 'end',
+        'ground_entries': 2,
+        'leaves': 15,
+      },
+      {'type': 'ongoing', 'forecast': 12, 'actual': 9, 'window_weeks': 8},
+    ]);
+    for (final (_, parameters) in sent) {
+      expect(
+        parameters.keys,
+        everyElement(
+          isNot(
+            anyOf(
+              contains('profile'),
+              contains('ref'),
+              contains('name'),
+              contains('date'),
+            ),
+          ),
+        ),
+      );
+      for (final value in parameters.values) {
+        expect(value, anyOf(isA<int>(), isA<String>()));
+      }
+    }
   });
 
   test('forecast comparison is registered in the AnalyticsEvent catalog', () {
