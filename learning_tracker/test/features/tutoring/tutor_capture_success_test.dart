@@ -23,7 +23,6 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/learner_state/learner_state_overrides.dart';
@@ -97,9 +96,6 @@ Widget _app(TutorHarness h) {
       contentTreeProvider.overrideWith((ref) async => tree),
       curriculumContentProvider.overrideWith(
         (ref, id) => content.getContentForCurriculum(id),
-      ),
-      completionCountProvider.overrideWith(
-        (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
       ),
       anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
       localDayClockProvider.overrideWithValue(

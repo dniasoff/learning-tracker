@@ -43,7 +43,7 @@ import '../harness/e2e_harness.dart';
 
 // ── Stubs and fakes ──────────────────────────────────────────────────────────
 //
-// FakeCompletionRepository and FakeContentRepository were extracted to the
+// FakeContentRepository was extracted to the
 // shared ../fakes/e2e_fakes.dart module (AUD-t-cross-10) — this file's copy
 // of filterByLevel used to silently ignore every level argument instead of
 // filtering; the shared implementation filters correctly and is exercised
@@ -369,7 +369,7 @@ void main() {
           reason: 'ContentItemTile must be visible after search',
         );
 
-        // Extra pumps to ensure completionCountProvider and
+        // Extra pumps to ensure itemStageBreakdownProvider and
         // anyActiveTrackHasChazaraProvider async values resolve (so count=1
         // and showReviewBadge=true are reflected in the ListTile.onLongPress).
         await tester.pump(const Duration(milliseconds: 200));
@@ -480,12 +480,11 @@ void main() {
   group('E2E-310 — Idempotent re-mark — duplicate completion not re-enqueued', () {
     // When a task is already marked (isStageCompletedProvider returns true)
     // the Mark Complete button shows "Completed (…)" and its onPressed is null —
-    // so a second tap does nothing and the fake repo receives 0 mark calls.
+    // so a second tap does nothing.
     //
     // We assert:
     //   • Button label changes to the "Completed (stageName)" form.
     //   • completionCommittedProvider does NOT increment on a second tap.
-    //   • fakeRepo.markedRequests is empty (button was disabled).
 
     testWidgets(
       'already-completed item shows "Completed (Limud)" label and disables '
@@ -497,7 +496,6 @@ void main() {
 
         const alreadyDoneRef = 'Mishnah_Berachot.1.1';
         final task = _finePacedTask(sefariaRef: alreadyDoneRef);
-        final fakeRepo = FakeCompletionRepository();
 
         await h.pumpApp(
           path: '/text/$alreadyDoneRef',
@@ -505,7 +503,6 @@ void main() {
             ..._textDisplayBaseOverrides(),
             allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
             coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
-            completionRepositoryProvider.overrideWithValue(fakeRepo),
             ..._textContentOverrides(alreadyDoneRef),
             adjacentContentRefsProvider(
               alreadyDoneRef,
@@ -554,14 +551,6 @@ void main() {
           reason:
               'completionCommittedProvider must NOT increment when button is '
               'disabled for an already-completed item',
-        );
-
-        // Key assertion: the fake repo received zero mark calls.
-        expect(
-          fakeRepo.markedRequests,
-          isEmpty,
-          reason:
-              'no completion must be written when the button is already-done',
         );
       },
     );

@@ -41,7 +41,6 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
@@ -420,10 +419,6 @@ void main() {
         addTearDown(container.dispose);
 
         expect(
-          await container.read(firestoreCompletionRepositoryProvider.future),
-          isNull,
-        );
-        expect(
           await container.read(
             firestoreCurriculumScopeRepositoryProvider.future,
           ),
@@ -475,10 +470,6 @@ void main() {
       addTearDown(container.dispose);
       container.read(activeProfileDocIdProvider.notifier).set(_profileId);
 
-      expect(
-        await container.read(firestoreCompletionRepositoryProvider.future),
-        isA<FirestoreCompletionRepository>(),
-      );
       expect(
         await container.read(firestoreCurriculumScopeRepositoryProvider.future),
         isA<FirestoreCurriculumScopeRepository>(),

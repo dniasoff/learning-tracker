@@ -21,15 +21,10 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
-
-class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -45,7 +40,6 @@ void main() {
     'AppLogger, not swallowed silently (AUD-onboarding-11)',
     (tester) async {
       final contentRepo = _MockContentRepository();
-      final completionRepo = _MockCompletionRepository();
 
       when(
         () => contentRepo.getContentForCurriculum(any()),
@@ -56,9 +50,6 @@ void main() {
           query: any(named: 'query'),
         ),
       ).thenAnswer((_) async => []);
-      when(
-        () => completionRepo.getCompletionsByCurriculum(any()),
-      ).thenAnswer((_) async => <CompletionEntity>[]);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -69,7 +60,6 @@ void main() {
                   contentRepo.getContentForCurriculum(curriculumId),
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-            completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(_profileId),
           ],
           child: const MaterialApp(

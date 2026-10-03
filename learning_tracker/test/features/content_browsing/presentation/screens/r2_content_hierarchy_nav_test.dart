@@ -23,7 +23,6 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -99,9 +98,6 @@ void main() {
     return ProviderScope(
       overrides: [
         contentRepositoryProvider.overrideWithValue(mockRepo),
-        completionCountProvider.overrideWith(
-          (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
-        ),
         contentTreeProvider.overrideWith((ref) async => emptyTree),
         curriculumContentProvider.overrideWith(
           (ref, CurriculumId cid) async => const <ContentItem>[],

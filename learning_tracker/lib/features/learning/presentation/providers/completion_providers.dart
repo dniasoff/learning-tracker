@@ -16,8 +16,6 @@ import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -127,26 +125,4 @@ Future<Map<int, int>> itemStageBreakdown(
     curriculumId: params.curriculumId,
     sefariaRef: params.sefariaRef,
   );
-}
-
-/// Provides the legacy completion repository (R1). No screen reads it any
-/// more; Story 1.21 (DNI-483) deletes it with its tests.
-@riverpod
-CompletionRepository completionRepository(Ref ref) {
-  return FirestoreCompletionRepositoryAdapter(ref: ref);
-}
-
-/// Legacy per-item completion count (R1, no production reader); deleted
-/// with [completionRepository].
-@riverpod
-Future<int> completionCount(
-  Ref ref, {
-  required String curriculumId,
-  required String sefariaRef,
-}) async {
-  final repository = ref.watch(completionRepositoryProvider);
-  final completions = await repository.getCompletionsForContentItem(sefariaRef);
-  return completions
-      .where((c) => c.curriculumId.storageKey == curriculumId)
-      .length;
 }

@@ -64,7 +64,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_study_days.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -206,10 +205,6 @@ Widget _buildContentHierarchyApp({
       useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
       contentRepositoryProvider.overrideWithValue(mockRepo),
       contentTreeProvider.overrideWith((ref) async => emptyTree),
-      // Override completionCountProvider to always return 0 (no DB needed).
-      completionCountProvider.overrideWith(
-        (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
-      ),
       filteredContentProvider.overrideWith((
         Ref ref,
         ({
@@ -639,9 +634,6 @@ void main() {
             contentRepositoryProvider.overrideWithValue(mockRepo),
             // Resolves immediately to empty tree.
             contentTreeProvider.overrideWith((ref) async => emptyTree),
-            completionCountProvider.overrideWith(
-              (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
-            ),
             // Never completes → loading state for filteredContent.
             filteredContentProvider.overrideWith(
               (
