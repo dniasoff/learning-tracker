@@ -390,23 +390,37 @@ final class _Context {
 
   /// The summary of [events] recorded at [at], in a row stamped [rowAt]
   /// (the fallback instant for the source name; [at] when omitted).
+  ///
+  /// A capture's events share their source, date state and date. A void
+  /// row's targets need not: an un-learn voids learning of one curriculum
+  /// on every source, so a field the targets do not share is never read
+  /// off the first one ([SeveralSources]; no date tag).
   LearningSummary _learnSummary(
     List<LearningEvent> events,
     DateTime at, {
     bool void_ = false,
     DateTime? rowAt,
   }) {
-    final first = events.first;
-    final source = first.source;
+    T? shared<T>(T? Function(LearningEvent) field) {
+      final values = events.map(field).toSet();
+      return values.length == 1 ? values.single : null;
+    }
+
+    final sources = events.map((e) => e.source).toSet();
+    final source = sources.length == 1 ? sources.single : null;
     return LearningSummary(
       kind: void_ ? LearningEventKind.void_ : LearningEventKind.learn,
       refs: [
         for (final e in events)
           if (e.ref case final ref?) ref,
       ],
-      source: source == null ? null : _sourceOf(source, at, rowAt ?? at),
-      dateState: first.dateState,
-      learnedOn: first.learnedOn,
+      source: sources.length > 1
+          ? const SeveralSources()
+          : source == null
+          ? null
+          : _sourceOf(source, at, rowAt ?? at),
+      dateState: shared((e) => e.dateState),
+      learnedOn: shared((e) => e.learnedOn),
     );
   }
 

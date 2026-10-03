@@ -155,6 +155,7 @@ String changeHistoryRefsText(
 String _source(AppLocalizations l10n, HistorySourceLabel? source) =>
     switch (source) {
       MainTrackSource() => l10n.changeHistorySourceMain,
+      SeveralSources() => l10n.changeHistorySourceSeveral,
       SubTrackSource(:final name) => name ?? l10n.changeHistorySubTrackUnnamed,
       null => l10n.changeHistorySubTrackUnnamed,
     };

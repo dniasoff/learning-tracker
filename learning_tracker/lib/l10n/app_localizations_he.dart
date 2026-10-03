@@ -1934,6 +1934,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get changeHistorySourceMain => 'מסלול ראשי';
 
   @override
+  String get changeHistorySourceSeveral => 'כמה מסלולים';
+
+  @override
   String get changeHistoryStagesChanged => 'שינה את שלבי החזרה';
 
   @override

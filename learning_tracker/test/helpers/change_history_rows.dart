@@ -58,7 +58,7 @@ ChangeHistoryRow governedHistoryRow({
   undoneBy: undoneBy,
 );
 
-/// A learning row of [refs] on the main track.
+/// A learning row of [refs] on [source] (the main track by default).
 ChangeHistoryRow learningHistoryRow({
   List<String> refs = const ['Mishnah Berakhot 1:1'],
   LearningEventKind kind = LearningEventKind.learn,
@@ -68,6 +68,7 @@ ChangeHistoryRow learningHistoryRow({
   HistoryStamp? voidedBy,
   int voidedCount = 0,
   Actor actor = historyParent,
+  HistorySourceLabel source = const MainTrackSource(),
 }) => ChangeHistoryRow(
   key: 'events:learn',
   kind: ChangeHistoryRowKind.learning,
@@ -80,7 +81,7 @@ ChangeHistoryRow learningHistoryRow({
   summary: LearningSummary(
     kind: kind,
     refs: refs,
-    source: const MainTrackSource(),
+    source: source,
     dateState: dateState,
     learnedOn: learnedOn,
   ),
