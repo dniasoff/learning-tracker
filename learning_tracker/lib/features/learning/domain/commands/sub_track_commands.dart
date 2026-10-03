@@ -235,6 +235,9 @@ final class SubTrackCommands {
   final LearningAnalytics? _analytics;
 
   final Map<String, (PendingFailure, SubTrackChange)> _pending = {};
+
+  /// Pending-failure ids whose retry is in flight.
+  final Set<String> _retrying = {};
   final _pendingController = StreamController<List<PendingFailure>>.broadcast(
     sync: true,
   );
@@ -515,14 +518,31 @@ final class SubTrackCommands {
 
   /// Re-sends the identical batch of pending failure [pendingFailureId]
   /// (AD-46: the retry payload carries no freshly stamped time).
+  ///
+  /// The pending record stays listed until the retry is accepted (saved,
+  /// or queued again; a queued retry the server later refuses is recorded
+  /// afresh under the same id). A retry refused at once or one that throws
+  /// leaves the identical record in place, so the "not saved — retry"
+  /// entry is never lost for an operation that did not succeed. A second
+  /// retry of the same record while one is in flight is `targetNotFound`
+  /// (it is not re-sent twice).
   Future<CaptureResult> retry(String pendingFailureId) async {
     final pending = _pending[pendingFailureId];
-    if (pending == null) {
+    if (pending == null || !_retrying.add(pendingFailureId)) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
-    _pending.remove(pendingFailureId);
-    _publishPending();
-    return _commit(pending.$2);
+    try {
+      final result = await _commit(pending.$2);
+      if (result is CaptureSuccess &&
+          // Records have no identity; compare the failure object.
+          identical(_pending[pendingFailureId]?.$1, pending.$1)) {
+        _pending.remove(pendingFailureId);
+        _publishPending();
+      }
+      return result;
+    } finally {
+      _retrying.remove(pendingFailureId);
+    }
   }
 
   /// Closes the pending-failure feed.
