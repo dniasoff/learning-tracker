@@ -4,15 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_export_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_view.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/pace_report_view.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/per_source_pace_report_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/services/lifetime_report_export_service.dart';
+import 'package:learning_tracker/features/progress/presentation/services/lifetime_report_pdf_composer.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_report_sections.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/on_track_report_block.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/per_source_pace_section.dart';
@@ -37,8 +44,16 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Per-source pace section of an evaluated curriculum
 /// ([perSourcePaceReportProvider]); a retired or archived curriculum keeps
 /// only its lifetime totals (AC-9). Both are built only inside the parent
-/// session this screen already requires (AC-10). *Export PDF* arrives
-/// with Story 5.4.
+/// session this screen already requires (AC-10).
+///
+/// Story 5.4 (DNI-519) adds the primary *Export PDF* pill (UX-DR-43) at
+/// the foot of the screen, for a parent session only (AC-12). It is
+/// disabled until the report's inputs are complete (AC-10) and while an
+/// export runs (AC-7), and stays enabled for a report with no counted
+/// events (AC-1). It exports exactly the views on screen
+/// ([composeLifetimeReportPdf]) and anchors the share sheet to itself
+/// (AC-8); a failed export keeps the report open with a Retry snackbar
+/// (AC-9, UX-DR-145).
 @RoutePage()
 class LifetimeReportScreen extends ConsumerStatefulWidget {
   /// Creates the screen for [curriculumId] (a storage key); null picks
@@ -94,6 +109,57 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
     });
   }
 
+  /// The Export PDF pill: its bounds anchor the iPad share sheet.
+  final _exportKey = GlobalKey();
+
+  /// Exports the report on screen (AC-2) and opens the share sheet.
+  Future<void> _export() async {
+    final report = ref.read(lifetimeReportProvider(_curriculumId));
+    final pace = ref.read(perSourcePaceReportProvider(_curriculumId));
+    if (report case AsyncData(:final value) when !pace.isLoading) {
+      final l10n = AppLocalizations.of(context)!;
+      final messenger = ScaffoldMessenger.of(context);
+      final learner = ref.read(activeProfileProvider).value?.displayName ?? '';
+      final today =
+          ref.read(activeLearnerStateProvider).value?.today ??
+          formatCivilDay(DateTime.now().toUtc());
+      final document = composeLifetimeReportPdf(
+        view: value,
+        pace: pace.value,
+        l10n: l10n,
+        localeTag: Localizations.localeOf(context).toLanguageTag(),
+        rtl: Directionality.of(context) == TextDirection.rtl,
+        useHebrewTerms: ref.read(effectiveUseHebrewTermsProvider),
+        variant: ref.read(currentTransliterationVariantProvider),
+        learnerName: learner,
+        today: today,
+      );
+      final fileName = lifetimeReportFileName(
+        learner: learner,
+        curriculum: value.curriculumId,
+        date: today,
+      );
+      final box = _exportKey.currentContext?.findRenderObject();
+      final origin = box is RenderBox && box.hasSize
+          ? box.localToGlobal(Offset.zero) & box.size
+          : null;
+      final result = await ref
+          .read(lifetimeReportExportProvider.notifier)
+          .export(document: document, fileName: fileName, origin: origin);
+      if (!mounted || result != LifetimeReportExportResult.failed) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            key: const ValueKey('lifetimeReportExportError'),
+            behavior: SnackBarBehavior.floating,
+            content: Text(l10n.reportExportError),
+            action: SnackBarAction(label: l10n.retry, onPressed: _export),
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -104,6 +170,7 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
     final allowed =
         !access.isLoading && !access.hasError && access.value == true;
     final Widget body;
+    Widget? export;
     if (!allowed) {
       // Loading the session, or leaving: nothing of the report is built,
       // and the report provider (auto-dispose) is dropped.
@@ -114,6 +181,21 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
       final report = ref.watch(lifetimeReportProvider(_curriculumId));
       // The same state as the report: data together with it.
       final pace = ref.watch(perSourcePaceReportProvider(_curriculumId));
+      final busy = ref.watch(lifetimeReportExportProvider);
+      // The learner's name for the PDF and its file name.
+      final profile = ref.watch(activeProfileProvider);
+      // AC-10: only a complete report (never a loading or paging one) is
+      // exported; AC-1: an empty report is complete too.
+      final ready =
+          report is AsyncData<LifetimeReportView> &&
+          pace is AsyncData &&
+          profile.hasValue;
+      export = _ExportPill(
+        anchorKey: _exportKey,
+        enabled: ready && !busy,
+        busy: busy,
+        onPressed: _export,
+      );
       body = report.when(
         data: (view) => _ReportBody(
           view: view,
@@ -142,6 +224,68 @@ class _LifetimeReportScreenState extends ConsumerState<LifetimeReportScreen> {
         title: Text(l10n.reportTitle),
       ),
       body: body,
+      bottomNavigationBar: export,
+    );
+  }
+}
+
+/// The primary *Export PDF* pill (UX-DR-43): full width at the foot of
+/// the report, centred and capped on wider windows (UX-DR-162).
+class _ExportPill extends StatelessWidget {
+  const _ExportPill({
+    required this.anchorKey,
+    required this.enabled,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  /// On the button itself: its bounds anchor the iPad share sheet.
+  final Key anchorKey;
+  final bool enabled;
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final label = busy ? l10n.reportExportBusy : l10n.reportExportAction;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 12),
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: SizedBox(
+              key: anchorKey,
+              width: double.infinity,
+              child: Semantics(
+                hint: l10n.reportExportSemantics,
+                child: FilledButton.icon(
+                  key: const ValueKey('lifetimeReportExportPdf'),
+                  style: FilledButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    minimumSize: const Size.fromHeight(52),
+                    textStyle: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onPressed: enabled ? onPressed : null,
+                  icon: busy
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.picture_as_pdf_outlined),
+                  label: Text(label),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

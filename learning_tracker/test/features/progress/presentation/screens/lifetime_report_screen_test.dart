@@ -149,14 +149,18 @@ void main() {
       }
     });
 
-    testWidgets('"Reviews" appears nowhere, and no pace or export control '
-        'ships in this story', (tester) async {
+    testWidgets('"Reviews" appears nowhere, and no pace section for a '
+        'curriculum the engine has no velocity for', (tester) async {
       await _pump(tester, state: reportState([fullReport()]));
       await _toggle(tester, 'school');
       final painted = _paintedText(tester).join('\n');
       expect(painted.toLowerCase(), isNot(contains('review')));
       expect(painted, isNot(contains('Per-source pace')));
-      expect(painted, isNot(contains('Export PDF')));
+      // Story 5.4 (DNI-519) adds the one action, Export PDF.
+      expect(
+        find.byKey(const ValueKey('lifetimeReportExportPdf')),
+        findsOneWidget,
+      );
     });
   });
 
@@ -365,7 +369,16 @@ void main() {
     expect(find.byType(ReportSourceChip), findsNWidgets(2));
     expect(find.text('School years'), findsNothing);
     expect(find.textContaining('sub-track'), findsNothing);
-    expect(find.byType(FilledButton), findsNothing);
+    // No create-a-sub-track prompt: the only filled button is Story 5.4's
+    // Export PDF pill.
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is FilledButton &&
+            w.key != const ValueKey('lifetimeReportExportPdf'),
+      ),
+      findsNothing,
+    );
     expect(find.byType(ElevatedButton), findsNothing);
   });
 
