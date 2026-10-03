@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/study_day_config_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/data/repositories/tutor_study_day_writes.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/study_day_write_repository.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';

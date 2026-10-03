@@ -29,6 +29,7 @@ final accountAuthGatewayProvider = Provider<AccountAuthGateway>(
 ///
 /// Tests override this with a fake gateway via
 /// `ProviderScope(overrides: [firebaseAuthGatewayProvider.overrideWithValue(fake)])`.
+// keepAlive: app-wide session state, rebuilt only on account switch.
 @Riverpod(keepAlive: true)
 FirebaseAuthGateway firebaseAuthGateway(Ref ref) {
   final accountId = ref.watch(activeAccountIdProvider);

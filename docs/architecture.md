@@ -235,7 +235,7 @@ lib/features/<feature>/
 
 ## Feature Dependency Graph
 
-> **AUD-docs-15 regenerated 2026-08-17** by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from a real grep of `import 'package:learning_tracker/features/...'` across every file. The full cross-feature import graph is dense — **89 edges among 14 nodes** — so this diagram keeps only "significant" dependencies (an edge survives if ≥6 distinct files make that import) plus, for any node that would otherwise be edge-less at that threshold, its single heaviest real edge. Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node here — every feature module imports `core/` (databases, navigation, shared services); that edge is universal, not differentiating. `sync` dropped out as a node in this revision — `lib/features/sync/` was deleted wholesale in the Firestore-native rewrite (Phase 3 P3-5).
+> **AUD-docs-15 regenerated 2026-10-03** (1.28 cutover release; adds the `learner_state` feature) by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from a real grep of `import 'package:learning_tracker/features/...'` across every file. The full cross-feature import graph is dense — **99 edges among 15 nodes** — so this diagram keeps only "significant" dependencies (an edge survives if ≥6 distinct files make that import) plus, for any node that would otherwise be edge-less at that threshold, its single heaviest real edge. Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node here — every feature module imports `core/` (databases, navigation, shared services); that edge is universal, not differentiating. `sync` dropped out as a node in this revision — `lib/features/sync/` was deleted wholesale in the Firestore-native rewrite (Phase 3 P3-5).
 
 ```mermaid
 graph TD
@@ -243,6 +243,7 @@ graph TD
     content_browsing["content_browsing"]
     dashboard["dashboard"]
     gamification["gamification"]
+    learner_state["learner_state"]
     learning["learning"]
     notifications["notifications"]
     onboarding["onboarding"]
@@ -254,29 +255,30 @@ graph TD
     tracks["tracks"]
     tutoring["tutoring"]
 
-    content_browsing --> dashboard
+    content_browsing --> learning
     dashboard --> scheduler
     dashboard --> tracks
     gamification --> learning
-    notifications --> sacred_time
+    learner_state --> content_browsing
+    notifications --> learner_state
     onboarding --> tracks
-    progress --> learning
-    progress --> tracks
-    scheduler --> tracks
+    profiles --> tutoring
+    progress --> content_browsing
+    sacred_time --> profiles
     settings --> account
     tracks --> onboarding
     tracks --> scheduler
     tracks --> settings
+    tracks --> tutoring
     tutoring --> account
     tutoring --> profiles
 ```
 
 ### Dependency Notes
 
-- **tracks** sits at the center of the graph, with edges to and from `dashboard`, `onboarding`, `scheduler`, `settings`, and `progress` — `onboarding` and `scheduler` each show an edge in **both** directions at this weight threshold (real mutual imports between the two features, not a diagram artifact).
-- **notifications --> sacred_time**: the Shabbos/Yom Tov quiet-mode check remains notifications' only edge above the noise floor.
-- **settings --> account**, **tutoring --> account**, **tutoring --> profiles**: unchanged consumer relationships — settings and tutoring read account/profile domain state; see `docs/api-contracts.md` §1.3 for the Firestore-side (`tutor_grants`/`tutor_active_access`) inverse relationship (Cloud Functions writing into the owner's data on the tutor's behalf).
-- **content_browsing --> dashboard**, **gamification --> learning**: both new edges since the prior (2026-07-13) revision, reflecting import changes elsewhere in this session's Firestore-native rewrite rather than any deliberate restructuring of these two features.
+- **learner_state** (new in the sub-tracks Epic 1 cutover) hosts the `LearnerState` providers over the pure engine in `lib/domain/learner_state/`. Readers such as `notifications` consume it instead of the retired completion/ledger stores (AD-35, AD-49).
+- **tracks** still sits at the center of the graph, with edges to `onboarding`, `scheduler`, `settings` and `tutoring`; tutor-mode editing routes through `tutoring`'s `TutorWriteService` (Stories 1.24-1.25).
+- **settings --> account**, **tutoring --> account**, **tutoring --> profiles**: settings and tutoring read account/profile domain state; see `docs/api-contracts.md` §1.3 for the Firestore-side (`tutor_grants`/`tutor_active_access`) inverse relationship.
 - Every feature module also imports `core/` for databases, navigation, and shared services — a universal edge omitted from the diagram above as non-differentiating (see the diagram's own caption).
 
 ---

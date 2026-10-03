@@ -1214,6 +1214,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
   Color get sacredTimeLockYomKippurBg =>
       _dark ? const Color(0xFF141B27) : const Color(0xFF1A2333);
 
+  /// Text/icon ink painted ON the sacred-time lock backgrounds above. Those
+  /// fills stay deep in BOTH themes, so their ink stays light in both too
+  /// (same "stays coloured" role as [introCtaLabel]).
+  Color get sacredTimeLockInk => const Color(0xFFFFFFFF);
+
   /// Settings-card header background, paired with the lock-badge icon.
   Color get sacredTimeHeaderBg =>
       _dark ? const Color(0xFF0D2B7C) : const Color(0xFF11389F);

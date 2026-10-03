@@ -21,9 +21,13 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Wraps the router output; covers it while the tutored learner is locked.
-class TutoredLearnerLockOverlay extends ConsumerWidget {
+///
+/// Renamed from `TutoredLearnerLockOverlay` at the 1.28 release (AG-4: that
+/// public name is the DNI-481 overlay in `sacred_time_lock_overlay.dart`,
+/// which is the one `LearningTrackerApp` mounts).
+class TutoredLearnerLockCover extends ConsumerWidget {
   /// Creates the overlay.
-  const TutoredLearnerLockOverlay({required this.child, super.key});
+  const TutoredLearnerLockCover({required this.child, super.key});
 
   /// Everything below.
   final Widget child;

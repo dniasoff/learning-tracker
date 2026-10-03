@@ -255,7 +255,9 @@ class _LockScreen extends StatelessWidget {
                       Icon(
                         spec.icon,
                         size: 96,
-                        color: Colors.white.withValues(alpha: 0.92),
+                        color: context.colors.sacredTimeLockInk.withValues(
+                          alpha: 0.92,
+                        ),
                       ),
                       const SizedBox(height: 28),
                       Text(
@@ -263,7 +265,7 @@ class _LockScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.displaySmall
                             ?.copyWith(
-                              color: Colors.white,
+                              color: context.colors.sacredTimeLockInk,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.5,
                             ),
@@ -274,7 +276,8 @@ class _LockScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.78),
+                              color: context.colors.sacredTimeLockInk
+                                  .withValues(alpha: 0.78),
                               height: 1.4,
                             ),
                       ),
@@ -285,7 +288,8 @@ class _LockScreen extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.78),
+                                color: context.colors.sacredTimeLockInk
+                                    .withValues(alpha: 0.78),
                               ),
                         ),
                         const SizedBox(height: 8),
@@ -293,8 +297,10 @@ class _LockScreen extends StatelessWidget {
                           key: const Key('tutoredLearnerLockExit'),
                           onPressed: onExit,
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white),
+                            foregroundColor: context.colors.sacredTimeLockInk,
+                            side: BorderSide(
+                              color: context.colors.sacredTimeLockInk,
+                            ),
                             minimumSize: const Size(
                               kMinInteractiveDimension,
                               kMinInteractiveDimension,

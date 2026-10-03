@@ -151,7 +151,7 @@ void main() {
   });
 
   group('overlay (edge AC-6 multi-learner isolation)', () {
-    Widget host() => const TutoredLearnerLockOverlay(
+    Widget host() => const TutoredLearnerLockCover(
       child: Scaffold(body: Text('Talmid data')),
     );
 

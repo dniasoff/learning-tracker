@@ -32,8 +32,8 @@ import 'package:learning_tracker/features/gamification/presentation/screens/chil
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/firestore_fake.dart';
-import '../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
 
 const _uid = 'points-engine-readers-user';
 const _profileId = '01J0000000000000000000P480';

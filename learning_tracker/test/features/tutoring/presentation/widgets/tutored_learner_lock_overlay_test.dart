@@ -32,7 +32,7 @@ final _lockState = NotifierProvider<_LockState, AsyncValue<bool>>(
 
 Widget _host(AsyncValue<bool> lock, {VoidCallback? onTap}) => pumpApp(
   overrides: [tutoredLearnerLockProvider.overrideWithValue(lock)],
-  child: TutoredLearnerLockOverlay(
+  child: TutoredLearnerLockCover(
     child: Column(
       children: [
         const Text('Talmid data'),
@@ -71,11 +71,11 @@ void main() {
             (ref) => ref.watch(_lockState),
           ),
         ],
-        child: const TutoredLearnerLockOverlay(child: Text('Talmid data')),
+        child: const TutoredLearnerLockCover(child: Text('Talmid data')),
       ),
     );
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(TutoredLearnerLockOverlay)),
+      tester.element(find.byType(TutoredLearnerLockCover)),
     );
     expect(find.byKey(_pending), findsOneWidget);
 
