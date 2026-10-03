@@ -6,11 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/data/repositories/firestore_fcm_token_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
+import 'package:learning_tracker/features/notifications/data/parent_push_receiver.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_celebration.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
@@ -64,6 +67,52 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   // signed-in session rather than on every rebuild. Reset on sign-out so a
   // later sign-in re-triggers it — mirrors `_didJumpToSettings` below.
   bool _autoSelectRan = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // DNI-515 (AC-1): a tapped tutor-change push — queued by the notification
+    // tap handler, including the tap that launched the app — opens that
+    // learner's Change history. fireImmediately picks up a launch tap queued
+    // before this shell existed; the open runs after the frame.
+    ref.listenManual<Object?>(pendingParentPushTapProvider, (_, tap) {
+      if (tap == null) return;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => unawaited(_openPendingParentPushTap()),
+      );
+    }, fireImmediately: true);
+  }
+
+  /// Opens the queued tutor-change push target only in the owning account,
+  /// in an own (not tutored) session, with that learner selected. The
+  /// Change history route still runs its own-session, child-profile and
+  /// parent PIN guards — the tap never bypasses or pre-authenticates them.
+  Future<void> _openPendingParentPushTap() async {
+    if (!mounted) return;
+    final tap = ref.read(pendingParentPushTapProvider.notifier).take();
+    if (tap == null) return;
+    String? ownerUid;
+    try {
+      ownerUid = (await ref.read(currentFcmTokenOwnerProvider.future))?.uid;
+    } on Object catch (e, stack) {
+      AppLogger.instance.warning(
+        event: 'parent_push_tap_owner_failed',
+        exception: e,
+        stackTrace: stack,
+      );
+    }
+    if (!mounted) return;
+    final opens = tap.opensHistory(
+      currentOwnerUid: ownerUid,
+      selectedProfileId: ref.read(selectedProfileIdProvider),
+      isTutoredSession: ref.read(activeTutoredProfileSelectionProvider) != null,
+    );
+    if (!opens) {
+      AppLogger.instance.info(event: 'parent_push_tap_not_opened');
+      return;
+    }
+    unawaited(ref.read(routerProvider).push(const ChangeHistoryRoute()));
+  }
 
   @override
   Widget build(BuildContext context) {

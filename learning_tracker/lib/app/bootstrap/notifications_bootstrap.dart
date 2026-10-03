@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/features/notifications/data/parent_push_receiver.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -44,6 +45,10 @@ Future<void> bootstrapNotifications({
         if (profile == null) return;
         container.read(selectedProfileIdProvider.notifier).select(profileId);
       },
+      // DNI-515: a tapped tutor-change push is queued for the app shell,
+      // which opens the learner's Change history behind its usual guards.
+      onParentPushTap: (tap) =>
+          container.read(pendingParentPushTapProvider.notifier).set(tap),
     );
     await notificationInitializer.initialize();
     // Kick off sync effects so scheduled notifications reflect current
