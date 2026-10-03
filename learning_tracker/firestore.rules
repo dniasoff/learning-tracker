@@ -11,14 +11,14 @@ rules_version = '2';
 // users/{uid}/learner_profiles/{profileId}/<coll>/...
 //
 // Per-profile subcollections:
-//   completions/{completionId}     — append-only; doc-id = structured natural-key
-//   streak_events/{ulid}           — append-only streak events (W3.37)
-//   learning_ledger/{ulid}         — append-only daily ledger; doc-id = ULID (W3.36)
+//   completions/{completionId}     — RETIRED (AD-49): reads only, writes denied
+//   streak_events/{ulid}           — RETIRED (AD-49): reads only, writes denied
+//   learning_ledger/{ulid}         — RETIRED (AD-49): reads only, writes denied
 //   settings/{curriculumId}        — curriculum preference snapshots
 //   stage_definitions/{stageId}    — per-track stage config; split from settings (W3.32)
 //   curriculum_tracks/{trackId}    — per-curriculum track config snapshots
-//   bookmarks/{bookmarkId}         — current bookmark positions
-//   learning_order/{orderId}       — whole-curriculum learning-order snapshots
+//   bookmarks/{bookmarkId}         — RETIRED (AD-49): reads only, writes denied
+//   learning_order/{orderId}       — RETIRED (AD-49): reads only, writes denied
 //   track_learning_order/{orderId} — per-track (sedarim/masechtos) learning-
 //                                    order snapshots; a SEPARATE collection
 //                                    from learning_order — see doc_ids.dart's
@@ -52,20 +52,24 @@ rules_version = '2';
 //                                    doc-id: {tutorUid}_{parentUid}_{profileId}
 //                                    Written by acceptInvite CF; deleted by revoke/resign CFs.
 //
-// Append-only collections (`completions`, `streak_events`, `learning_ledger`,
-// `points_ledger`) deny `delete` and deny value mutation on `update` — only
-// an idempotent identical replay (`request.resource.data == resource.data`)
-// is allowed, so an outbox retry can re-push the same row without stranding
-// it, but a changed value is always rejected (SR-1). Those same 4 collections
-// split `read` into `get` (unrestricted) and `list` (capped at
-// request.query.limit <= 500, matching the app's kListenerPageSize) so an
-// unbounded list can't exfiltrate a child's entire event history in one
-// query (SR-4). The 3 event collections that carry a client-supplied
-// timestamp (`streak_events.created_at`, `learning_ledger.completed_at`,
-// `points_ledger.created_at`) reject any value that isn't a real Firestore
-// Timestamp `<= request.time` when the field is present (SR-3), mirroring
-// completions' `completed_at` guard (`points_ledger.created_at` takes the
-// AD-54 amendment: `<= request.time + 10 min`). Snapshot collections deny `delete` and
+// RETIRED COLLECTIONS (AD-49 cutover, DNI-490): `completions`,
+// `learning_ledger`, `streak_events`, `bookmarks` and `learning_order` keep
+// their read grants but deny every client write (`allow write: if false`).
+// learning_events is the only write target for learning. The release after
+// (DNI-491) removes these matches.
+//
+// Append-only collections (`points_ledger`) deny `delete` and deny value
+// mutation on `update` — only an idempotent identical replay
+// (`request.resource.data == resource.data`) is allowed, so an outbox retry
+// can re-push the same row without stranding it, but a changed value is
+// always rejected (SR-1). They split `read` into `get` (unrestricted) and
+// `list` (capped at request.query.limit <= 500, matching the app's
+// kListenerPageSize) so an unbounded list can't exfiltrate a child's entire
+// event history in one query (SR-4). `points_ledger.created_at`, when
+// present, must be a real Firestore Timestamp `<= request.time + 10 min`
+// (SR-3 with the AD-54 amendment).
+//
+// Snapshot collections deny `delete` and
 // gate writes through `.hasOnly(...)` field whitelists, plus per-field
 // type/size caps on their free-text values (SR-2) where the field set is
 // known; open-bag collections (no whitelist by design) get a top-level
@@ -526,135 +530,44 @@ service cloud.firestore {
 
         // ── Append-only event collections ──────────────────────────────────
 
-        // completions — one doc per discrete completion act.
-        //
-        // Doc-id: structured natural key derived from
-        //   (profileId, sefariaRef, stageId, trackType, curriculumId) — all
-        //   percent-encoded and joined with `_`. This is deterministic and
-        //   injective so retries are idempotent (W3.35).
-        //
-        // `completed_at` MUST be a Firestore Timestamp (not a string) so that
-        // `completed_at <= request.time` evaluates correctly.
-        //
-        // TUTOR WRITE BLOCK (W3.41) — LOAD-BEARING SECURITY BOUNDARY:
-        //   `allow create: if isOwner(uid)` means ONLY the profile owner
-        //   (request.auth.uid == uid) may write a completion. Tutors have a
-        //   different uid, so `isOwner(uid)` is always false for them — even
-        //   with an active grant. Tutor bulk-prior completions go through the
-        //   Cloud Function proxy (W3.43) which writes as the owner uid via
-        //   Admin SDK and enforces the canMarkLiveCompletion=false policy.
-        //
-        // TUTOR READ (V2-R3 C2): tutors may read completions to view progress.
+        // completions — RETIRED (AD-49, R1/R14): the learning record is
+        // learning_events. Reads keep their SR-4 split and list cap.
+        // TUTOR WRITE BLOCK (W3.41): no client, owner or tutor, writes here.
         match /completions/{completionId} {
-          // SR-4: single-doc reads are unrestricted; `list` queries are
-          // capped at 500 (the app's kListenerPageSize) so an unbounded
-          // list can't exfiltrate a child's entire completion history in
-          // one query — get() and list() are split from a single `read`
-          // because `request.query.limit` is only meaningful on list().
+          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
+          // write is denied; the read grants stay unchanged until the release
+          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
+          // allowlists exactly this deny-all block.
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
             && request.query.limit <= 500;
-          // SECURITY: isOwner(uid) ensures request.auth.uid == uid.
-          // A tutor (different uid) is rejected here. This is the primary
-          // defence — no tutor can write a live completion from the client.
-          allow create: if isOwner(uid)
-            && (
-              ('points' in request.resource.data)
-                ? (request.resource.data.points is number
-                    && request.resource.data.points >= 0
-                    && request.resource.data.points <= 100)
-                : true
-            )
-            && (
-              !('completed_at' in request.resource.data)
-                || request.resource.data.completed_at <= request.time
-            );
-          // SR-1 (append-only): the push uses set(merge:true) on a
-          // natural-key doc-id, so an outbox retry after a
-          // committed-but-unacked push is an UPDATE — allow ONLY an
-          // idempotent identical replay of the existing value, never a
-          // changed value (an owner-authenticated client silently
-          // overwriting points/completed_at on an existing completion is
-          // exactly the record-tampering SR-1 exists to prevent). A tutor
-          // (different uid) is still rejected by isOwner.
-          // D-L (owner ruling 2026-08-10): key fields stay immutable, but a
-          // narrow status allowlist may change so that un-ticking a bulk-marked
-          // item can tombstone it (`purged_at`), a re-mark can clear that
-          // tombstone, and a bulkInTrack row can be upgraded to `live` (B8).
-          // An idempotent identical replay still passes: affectedKeys() is
-          // empty and hasOnly([]) is true. `points` is deliberately NOT in the
-          // allowlist. SR-3's time bound is re-asserted here so `completed_at`
-          // cannot be back- or forward-dated by an update.
-          allow update: if isOwner(uid)
-            && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['purged_at', 'source', 'completed_at'])
-            && (
-              !('completed_at' in request.resource.data)
-                || (request.resource.data.completed_at is timestamp
-                    && request.resource.data.completed_at <= request.time)
-            );
-          allow delete: if false;
+          allow write: if false;
         }
 
-        // streak_events — append-only per-event streak docs (W3.37).
-        // Each streak event gets its own document keyed by a ULID.
-        // Replaces the previous streak/data snapshot document.
+        // streak_events — RETIRED (AD-49, R6/R14): the streak is derived per
+        // curriculum by the engine from learning_events.
         match /streak_events/{streakEventId} {
-          // SR-4: cap list() at 500; single-doc get() is unrestricted.
+          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
+          // write is denied; the read grants stay unchanged until the release
+          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
+          // allowlists exactly this deny-all block.
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
             && request.query.limit <= 500;
-          // SR-3: created_at, when present, must be a server-bounded
-          // Firestore Timestamp <= request.time — the same optional-field
-          // guard as completions' completed_at above. The gateway
-          // (FirestoreGatewayImpl._timestampifyField) converts the outbox's
-          // ISO-8601 created_at string to a real Timestamp before this write
-          // lands, so the comparison below is type-sound.
-          allow create: if isOwner(uid)
-            && (
-              !('created_at' in request.resource.data)
-                || (request.resource.data.created_at is timestamp
-                    && request.resource.data.created_at <= request.time)
-            );
-          // SR-1 (append-only): update is allowed ONLY for the idempotent
-          // merge:true re-push of the same ULID doc on outbox retry — the
-          // new value must equal the existing value. A changed-value update
-          // (tampering with an already-recorded streak event) is denied.
-          allow update: if isOwner(uid) && request.resource.data == resource.data;
-          allow delete: if false;
+          allow write: if false;
         }
 
-        // learning_ledger — append-only daily ledger entries.
-        // Doc-id: ULID from the payload (W3.36 — idempotent retries).
+        // learning_ledger — RETIRED (AD-49, R5/R14): the daily ledger is
+        // derived by the engine from learning_events.
         match /learning_ledger/{entryId} {
-          // SR-4: cap list() at 500; single-doc get() is unrestricted.
+          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
+          // write is denied; the read grants stay unchanged until the release
+          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
+          // allowlists exactly this deny-all block.
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
             && request.query.limit <= 500;
-          // ULID doc-id + set(merge:true): an outbox retry of an already-
-          // committed entry is an UPDATE, so `update: false` would strand it
-          // (permission-denied). Append-only is enforced by the
-          // deterministic doc-id.
-          // SR-3: completed_at, when present, must be a server-bounded
-          // Firestore Timestamp <= request.time (same optional-field guard
-          // as completions / streak_events above).
-          allow create: if isOwner(uid)
-            && (
-              !('completed_at' in request.resource.data)
-                || (request.resource.data.completed_at is timestamp
-                    && request.resource.data.completed_at <= request.time)
-            );
-          // SR-1 (append-only): update is allowed ONLY for the idempotent
-          // identical re-push, matching points_ledger below — a
-          // changed-value update is denied.
-          // D-M (owner ruling 2026-08-10): retracting a bulk-marked completion
-          // must also retract the siyum it earned, so `purged_at` — and only
-          // `purged_at` — may change here. Identical replay still passes
-          // (affectedKeys() is empty). Every other field remains immutable.
-          allow update: if isOwner(uid)
-            && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['purged_at']);
-          allow delete: if false;
+          allow write: if false;
         }
 
         // points_ledger — append-only points ledger entries (WS9 Wave-B /
@@ -789,45 +702,26 @@ service cloud.firestore {
           allow delete: if false;
         }
 
+        // bookmarks — RETIRED (AD-49, R8/R14): the position is derived
+        // (AD-33).
         match /bookmarks/{bookmarkId} {
+          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
+          // write is denied; the read grants stay unchanged until the release
+          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
+          // allowlists exactly this deny-all block.
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          // SR-2: hasOnly() only gates key sets — a compromised client could
-          // still store an oversized/wrong-typed value under a whitelisted
-          // key. sefaria_ref and curriculum_id are capped and type-checked
-          // (when present) so a several-hundred-KB string can't ride in on
-          // a legitimate field and drive the doc toward the 1 MiB ceiling.
-          allow create, update: if isOwner(uid)
-            && request.resource.data.keys().hasOnly([
-              'profile_id', 'curriculum_id',
-              'content_item_id', 'sefaria_ref', 'stage_id', 'updated_at',
-              'synced_at'
-            ])
-            && (
-              !('sefaria_ref' in request.resource.data)
-                || (request.resource.data.sefaria_ref is string
-                    && request.resource.data.sefaria_ref.size() <= 500)
-            )
-            && (
-              !('curriculum_id' in request.resource.data)
-                || (request.resource.data.curriculum_id is string
-                    && request.resource.data.curriculum_id.size() <= 100)
-            );
-          allow delete: if false;
+          allow write: if false;
         }
 
+        // learning_order — RETIRED (AD-49, R13/R14): ordering lives in the
+        // governed track_learning_order collection.
         match /learning_order/{orderId} {
+          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
+          // write is denied; the read grants stay unchanged until the release
+          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
+          // allowlists exactly this deny-all block.
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow create, update: if isOwner(uid)
-            && request.resource.data.keys().hasOnly([
-              'curriculum_id', 'sefaria_ref', 'ref', 'user_sort_order',
-              'updated_at', 'synced_at'
-            ]);
-          // Owner delete permitted — matches the `goals` precedent above
-          // (see its rationale comment at the `goals` block): `create`/
-          // `update` are already owner-writable here, so a client can
-          // already replace a learning-order entry's fields arbitrarily;
-          // forbidding removal protected nothing.
-          allow delete: if isOwner(uid);
+          allow write: if false;
         }
 
         // track_learning_order — per-track (sedarim/masechtos) custom

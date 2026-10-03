@@ -11,10 +11,10 @@
 ///   survives refactors and CI runs without requiring the emulator.
 ///
 /// INVARIANTS ASSERTED:
-///   1. TUTOR WRITE BLOCK — completions create is gated by `isOwner(uid)`.
-///      A tutor (uid ≠ profile owner uid) always fails this check. No
-///      tutor-bypass clause (`isTutorOf`, `isActiveTutorGrant`) appears in
-///      the completions block.
+///   1. TUTOR WRITE BLOCK — since the AD-49 cutover (DNI-490) the completions
+///      block denies every client write (`allow write: if false`), so no
+///      tutor can write one. No tutor-bypass clause (`isTutorOf`,
+///      `isActiveTutorGrant`) appears in the completions block.
 ///
 ///   2. CLIENT WRITE LOCK — `tutor_grants` collection denies all client
 ///      writes (create/update/delete: if false). This prevents a malicious
@@ -24,9 +24,8 @@
 ///      client writes. All audit entries are written exclusively by Cloud
 ///      Functions (Admin SDK) — W3.42.
 ///
-///   4. OWNER POSITIVE PATH — The completions block must retain the
-///      `allow create: if isOwner(uid)` path so legitimate owners can still
-///      write completions.
+///   4. OWNER POSITIVE PATH — learning_events, the one learning write target
+///      (AD-49), keeps its `allow create: if isOwner(uid)` path.
 ///
 ///   5. GRANT READ SCOPE — `tutor_grants` allows reads only to tutor_uid or
 ///      parent_uid, requiring authentication.
@@ -57,16 +56,15 @@ void main() {
 
   group('W3.41 completions — tutor write-block', () {
     test(
-      'completions create is gated by isOwner(uid) — non-owner (tutor) is denied',
+      'completions denies every client write (AD-49 cutover) — a tutor is denied',
       () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
         expect(
           block,
-          contains('isOwner(uid)'),
+          contains('allow write: if false;'),
           reason:
-              'The completions create rule MUST use isOwner(uid). '
-              'A tutor whose request.auth.uid differs from uid always fails '
-              'this check, making the create always false for non-owners.',
+              'After the AD-49 cutover (DNI-490) no client, owner or tutor, '
+              'writes a completion; learning_events is the only write target.',
         );
       },
     );
@@ -104,48 +102,32 @@ void main() {
       );
     });
 
-    test('completions block denies update from non-owners and denies delete', () {
+    test('completions block grants no create, update or delete', () {
       final block = _extractRuleBlock(rules, 'completions/{completionId}');
-      // Update must be gated by isOwner(uid) — either as a combined
-      // "create, update" or a separate rule (including the SR-1
-      // idempotent-replay guard — AUD-docs-01 — which is owner-only PLUS
-      // value-unchanged, strictly stronger than plain owner-only). A tutor
-      // (uid ≠ profileId owner) always fails isOwner(uid), so no tutor can
-      // update a completion.
       expect(
-        block,
-        anyOf(
-          contains('allow update: if false'),
-          contains('allow create, update: if isOwner'),
-          contains(
-            'allow update: if isOwner(uid) && request.resource.data == resource.data',
-          ),
-          matches(RegExp(r'allow update:\s+if isOwner\(uid\)')),
-        ),
-        reason: 'completions update MUST be owner-only or explicitly denied.',
+        RegExp(r'allow\s+(create|update|delete)\b').hasMatch(block),
+        isFalse,
+        reason: 'the retired completions block must deny every write.',
       );
-      expect(block, contains('allow delete: if false'));
     });
   });
 
   // ── 2. Owner positive path (regression guard) ───────────────────────────
+  //
+  // After the AD-49 cutover the owner records learning as learning_events;
+  // that block must keep its isOwner(uid) create path.
 
-  group('W3.41 completions — owner positive path', () {
+  group('W3.41 learning_events — owner positive path', () {
     test(
-      'completions block allows owner create (isOwner(uid) positive path)',
+      'learning_events allows owner create (isOwner(uid) positive path)',
       () {
-        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+        final block = _extractRuleBlock(rules, 'learning_events/{eventId}');
         expect(
           block,
-          // Accepts both "allow create: if isOwner" and "allow create, update: if isOwner"
-          anyOf(
-            contains('allow create: if isOwner(uid)'),
-            contains('allow create, update: if isOwner(uid)'),
-          ),
+          contains('allow create: if isOwner(uid)'),
           reason:
-              'The owner MUST be able to create completions. '
-              'isOwner(uid) is the ONLY allow path. Removing it would silently '
-              'break all completion recording.',
+              'The owner MUST be able to record learning events. Removing it '
+              'would silently break all learning capture.',
         );
       },
     );
@@ -332,23 +314,16 @@ void main() {
       );
     });
 
-    test(
-      'completions write block isOwner(uid) guard is not weakened by C2 change',
-      () {
-        final block = _extractRuleBlock(rules, 'completions/{completionId}');
-        // The create rule must be isOwner-only — accepts combined create,update.
-        expect(
-          block,
-          anyOf(
-            contains('allow create: if isOwner(uid)'),
-            contains('allow create, update: if isOwner(uid)'),
-          ),
-          reason:
-              'Adding tutor read access MUST NOT have weakened the write '
-              'block. allow create must still be isOwner(uid) only.',
-        );
-      },
-    );
+    test('completions write block is not weakened by the C2 read change', () {
+      final block = _extractRuleBlock(rules, 'completions/{completionId}');
+      expect(
+        block,
+        contains('allow write: if false;'),
+        reason:
+            'Adding tutor read access MUST NOT have opened a write path: '
+            'the retired completions block denies every client write.',
+      );
+    });
   });
 
   // ── 6. V2-R3 C4 — expirePendingInvites exists in Cloud Functions ────────

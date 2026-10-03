@@ -39,77 +39,26 @@ void main() {
           rules = _readProjectRules();
         });
 
-        // W3.35 — completions in the nested layout enforce points + timestamp.
-        test('completions/{completionId} enforces 0 <= points <= 100', () {
-          final block = _extractRuleBlock(rules, 'completions/{completionId}');
-          expect(block, contains('points >= 0'));
-          expect(block, contains('points <= 100'));
+        // W3.35-W3.37 — the old per-event collections. At the AD-49 cutover
+        // (DNI-490) they are retired: every client write is denied and only
+        // their owner/tutor reads remain until the release after (DNI-491).
+        test('retired collections deny every client write (AD-49 cutover)', () {
+          for (final c in [
+            'completions/{completionId}',
+            'streak_events/{streakEventId}',
+            'learning_ledger/{entryId}',
+            'bookmarks/{bookmarkId}',
+            'learning_order/{orderId}',
+          ]) {
+            final block = _extractRuleBlock(rules, c);
+            expect(block, contains('allow write: if false;'), reason: c);
+            expect(
+              RegExp(r'allow\s+(create|update|delete)\b').hasMatch(block),
+              isFalse,
+              reason: '$c must keep no create/update/delete grant',
+            );
+          }
         });
-
-        test(
-          'completions/{completionId} enforces completed_at <= request.time',
-          () {
-            final block = _extractRuleBlock(
-              rules,
-              'completions/{completionId}',
-            );
-            expect(block, contains('completed_at <= request.time'));
-          },
-        );
-
-        test(
-          'completions/{completionId} denies non-owner update and delete',
-          () {
-            final block = _extractRuleBlock(
-              rules,
-              'completions/{completionId}',
-            );
-            // The current SR-1/D-L rule permits only owner-authenticated,
-            // allowlisted status updates. That still denies every non-owner
-            // update while allowing idempotent retries and tombstones.
-            expect(
-              block,
-              contains('allow update: if isOwner(uid)'),
-              reason:
-                  'completions update must be owner-authenticated so non-owners '
-                  'cannot mutate a completion',
-            );
-            expect(
-              block,
-              contains("hasOnly(['purged_at', 'source', 'completed_at'])"),
-              reason:
-                  'completion updates must stay within the status allowlist',
-            );
-            expect(block, contains('allow delete: if false'));
-          },
-        );
-
-        // W3.37 — streak_events is now a per-event collection.
-        // W3.36 — learning_ledger uses ULID doc-ids; still append-only.
-        test(
-          'streak_events and learning_ledger deny non-owner update and delete',
-          () {
-            for (final c in [
-              'streak_events/{streakEventId}',
-              'learning_ledger/{entryId}',
-            ]) {
-              final block = _extractRuleBlock(rules, c);
-              expect(
-                block,
-                contains('allow update: if isOwner(uid)'),
-                reason: '$c update must be owner-only or explicitly denied',
-              );
-              expect(
-                block,
-                c.startsWith('streak_events')
-                    ? contains('request.resource.data == resource.data')
-                    : contains("hasOnly(['purged_at'])"),
-                reason: '$c update must remain narrowly allowlisted',
-              );
-              expect(block, contains('allow delete: if false'), reason: c);
-            }
-          },
-        );
 
         // Snapshot collections in the nested layout gate writes through
         // a .hasOnly() whitelist.
@@ -118,7 +67,6 @@ void main() {
           () {
             // Collections with write field whitelist + delete-denied.
             for (final c in [
-              'bookmarks/{bookmarkId}',
               'stage_definitions/{stageId}',
               'import_metadata/{docId}', // W3.34: renamed
             ]) {
@@ -226,19 +174,17 @@ void main() {
       //       and `allow delete: if false` guards.
       //   (d) The load-bearing comment keyword is present to aid future audit.
 
-      test(
-        'completions create is gated by isOwner(uid) — non-owner (tutor) is denied',
-        () {
-          final block = _extractRuleBlock(rules, 'completions/{completionId}');
-          expect(
-            block,
-            contains('isOwner(uid)'),
-            reason:
-                'completions create MUST use isOwner(uid); a tutor whose '
-                'request.auth.uid != uid always fails this check',
-          );
-        },
-      );
+      test('completions denies every client write — the tutor write block is '
+          'subsumed by the AD-49 cutover', () {
+        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+        expect(
+          block,
+          contains('allow write: if false;'),
+          reason:
+              'no client (owner or tutor) may write a completion after the '
+              'AD-49 cutover',
+        );
+      });
 
       test('completions block contains no tutor-bypass allow clause', () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
@@ -258,21 +204,12 @@ void main() {
         );
       });
 
-      test('completions block denies non-owner update and delete', () {
+      test('completions block grants no create, update or delete', () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
         expect(
-          block,
-          contains('allow update: if isOwner(uid)'),
-          reason:
-              'completions update must be owner-authenticated so tutors '
-              'cannot mutate a completion',
+          RegExp(r'allow\s+(create|update|delete)\b').hasMatch(block),
+          isFalse,
         );
-        expect(
-          block,
-          contains("hasOnly(['purged_at', 'source', 'completed_at'])"),
-          reason: 'completion updates must stay within the status allowlist',
-        );
-        expect(block, contains('allow delete: if false'));
       });
 
       test(
@@ -330,19 +267,15 @@ void main() {
       // succeed. We verify the rule allows the isOwner() path (structural).
 
       test(
-        'completions allow create rule has an isOwner path (owner can write)',
+        'learning_events allow create rule has an isOwner path (owner can write)',
         () {
-          final block = _extractRuleBlock(rules, 'completions/{completionId}');
-          // The rule body must contain an isOwner(uid) create path — accepts
-          // both "allow create:" and "allow create, update:" forms.
+          // AD-49: learning_events is the one learning write target.
+          final block = _extractRuleBlock(rules, 'learning_events/{eventId}');
           expect(
             block,
-            anyOf(
-              contains('allow create: if isOwner(uid)'),
-              contains('allow create, update: if isOwner(uid)'),
-            ),
+            contains('allow create: if isOwner(uid)'),
             reason:
-                'The owner MUST be able to create completions; '
+                'The owner MUST be able to record learning events; '
                 'isOwner(uid) is the positive branch',
           );
         },
