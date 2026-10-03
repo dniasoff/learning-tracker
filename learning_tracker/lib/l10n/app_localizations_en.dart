@@ -7455,4 +7455,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get siyumimPreviouslyLearnedDate => 'Previously learned';
+
+  @override
+  String get subTrackLifecycleActiveGroup => 'Sub-tracks';
+
+  @override
+  String get subTrackLifecycleMoreOptions => 'More options';
+
+  @override
+  String get subTrackLifecycleNotFound =>
+      'This sub-track is no longer available.';
+
+  @override
+  String subTrackLifecycleWindow(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String subTrackLifecycleWindowOpen(String start) {
+    return 'From $start';
+  }
+
+  @override
+  String subTrackLifecycleNextYearFor(String yearLabel) {
+    return 'School year $yearLabel';
+  }
+
+  @override
+  String get subTrackLifecycleFieldName => 'Name';
+
+  @override
+  String get subTrackLifecycleFieldRate => 'Units per week';
+
+  @override
+  String get subTrackLifecycleFieldWeeks => 'Weeks per year';
+
+  @override
+  String get subTrackLifecycleFieldShabbos => 'Learns on Shabbos';
+
+  @override
+  String get subTrackLifecycleFieldStartMonth => 'Starts';
+
+  @override
+  String get subTrackLifecycleFieldEndMonth => 'Ends';
+
+  @override
+  String get subTrackLifecycleNoEndMonth => 'No end month';
+
+  @override
+  String get subTrackLifecycleSave => 'Save sub-track';
+
+  @override
+  String get subTrackLifecycleNameRequired => 'Enter a name';
+
+  @override
+  String get subTrackLifecyclePositiveNumber => 'Enter a number above 0';
+
+  @override
+  String get subTrackLifecycleWindowReversed =>
+      'The end month is before the start month';
+
+  @override
+  String get subTrackLifecycleSaveFailed =>
+      'Couldn\'t save the sub-track. Try again.';
 }

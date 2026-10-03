@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/academic_year_picker.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The *Add next year ({Y+1}–{Y+2 short})* pill.
@@ -33,7 +34,7 @@ class AddNextYearAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = context.colors;
-    final yearLabel = subTrackAcademicYearLabel(nextAcademicYear);
+    final yearLabel = academicYearLabel(nextAcademicYear);
     final enabled = availability == NextYearAvailability.available;
     final reason = switch (availability) {
       NextYearAvailability.yearUsed => l10n.subTrackLifecycleAddNextYearUsed(

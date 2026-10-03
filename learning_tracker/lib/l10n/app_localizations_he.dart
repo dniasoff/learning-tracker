@@ -7378,4 +7378,65 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get siyumimPreviouslyLearnedDate => 'נלמד בעבר';
+
+  @override
+  String get subTrackLifecycleActiveGroup => 'מסלולי משנה';
+
+  @override
+  String get subTrackLifecycleMoreOptions => 'אפשרויות נוספות';
+
+  @override
+  String get subTrackLifecycleNotFound => 'מסלול המשנה הזה כבר לא זמין.';
+
+  @override
+  String subTrackLifecycleWindow(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String subTrackLifecycleWindowOpen(String start) {
+    return 'החל מ$start';
+  }
+
+  @override
+  String subTrackLifecycleNextYearFor(String yearLabel) {
+    return 'שנת הלימודים $yearLabel';
+  }
+
+  @override
+  String get subTrackLifecycleFieldName => 'שם';
+
+  @override
+  String get subTrackLifecycleFieldRate => 'יחידות בשבוע';
+
+  @override
+  String get subTrackLifecycleFieldWeeks => 'שבועות בשנה';
+
+  @override
+  String get subTrackLifecycleFieldShabbos => 'לומד בשבת';
+
+  @override
+  String get subTrackLifecycleFieldStartMonth => 'מתחיל';
+
+  @override
+  String get subTrackLifecycleFieldEndMonth => 'מסתיים';
+
+  @override
+  String get subTrackLifecycleNoEndMonth => 'ללא חודש סיום';
+
+  @override
+  String get subTrackLifecycleSave => 'שמירת מסלול המשנה';
+
+  @override
+  String get subTrackLifecycleNameRequired => 'יש להזין שם';
+
+  @override
+  String get subTrackLifecyclePositiveNumber => 'יש להזין מספר גדול מ-0';
+
+  @override
+  String get subTrackLifecycleWindowReversed => 'חודש הסיום לפני חודש ההתחלה';
+
+  @override
+  String get subTrackLifecycleSaveFailed =>
+      'לא ניתן היה לשמור את מסלול המשנה. נסו שוב.';
 }
