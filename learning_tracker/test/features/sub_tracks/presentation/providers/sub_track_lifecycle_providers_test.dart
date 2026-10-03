@@ -13,6 +13,7 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
@@ -112,5 +113,52 @@ void main() {
     final stored = repo.tracksOf(scope).firstWhere((t) => t.id == ulidB);
     expect(stored.endedAt, isNull);
     expect(stored.endReason, isNull);
+  });
+
+  group("the school-year form's today follows the learner's time zone, never "
+      "the device's (AD-41)", () {
+    Future<String> formToday(ProviderContainer c) async {
+      c
+        ..listen(subTrackTodayProvider, (_, _) {})
+        ..listen(learnerLockSettingsProvider(scope), (_, _) {});
+      await c.read(learnerLockSettingsProvider(scope).future);
+      return c.read(subTrackTodayProvider);
+    }
+
+    test('the same instant is two days apart for learners at +14 and -11, '
+        'so no device date can match both', () async {
+      // 10:30 UTC on 6 Sep: 00:30 on 7 Sep at Kiritimati (+14), 23:30 on
+      // 5 Sep at Pago Pago (-11).
+      clock.setNow(DateTime.utc(2026, 9, 6, 10, 30));
+      final east = container(timeZone: 'Pacific/Kiritimati');
+      final west = container(timeZone: 'Pacific/Pago_Pago');
+      expect(await formToday(east), '2026-09-07');
+      expect(await formToday(west), '2026-09-05');
+      // The form, the hub split and *Add next year* share one "today".
+      expect(east.read(subTrackLifecycleTodayProvider), '2026-09-07');
+      expect(west.read(subTrackLifecycleTodayProvider), '2026-09-05');
+    });
+
+    test("the academic-year options turn over at the learner's midnight on "
+        '1 Sep, whatever the device date', () async {
+      // 21:30 UTC on 31 Aug: still 31 Aug for a UTC device, already 1 Sep
+      // (00:30) in Jerusalem.
+      clock.setNow(DateTime.utc(2026, 8, 31, 21, 30));
+      final jerusalem = container();
+      final utc = container(timeZone: 'UTC');
+      final learnerToday = await formToday(jerusalem);
+      final deviceToday = await formToday(utc);
+      expect(learnerToday, '2026-09-01');
+      expect(deviceToday, '2026-08-31');
+      expect(
+        academicYearOptions(today: learnerToday),
+        isNot(academicYearOptions(today: deviceToday)),
+      );
+      expect(
+        academicYearOptions(today: learnerToday).first,
+        2026,
+        reason: '2025-26 has ended for the learner',
+      );
+    });
   });
 }
