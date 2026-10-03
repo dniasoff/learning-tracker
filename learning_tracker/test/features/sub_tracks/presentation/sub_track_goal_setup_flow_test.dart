@@ -78,7 +78,6 @@ void main() {
     curriculumId: CurriculumId.mishnayos,
     targetDate: date,
     createdAt: DateTime.utc(2026, 10, 2),
-    updatedAt: DateTime.utc(2026, 10, 2),
   );
 
   testWidgets('opens the existing goal setup for the same curriculum', (
@@ -174,7 +173,6 @@ void main() {
           paceValue: 3,
           pacePeriod: 'per_day',
           createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
         ),
       ),
       isA<PaceGoalChoice>()
@@ -187,7 +185,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           goalType: 'none',
           createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
         ),
       ),
       isA<NoGoalChoice>(),
@@ -197,7 +194,6 @@ void main() {
         GoalEntity(
           curriculumId: CurriculumId.mishnayos,
           createdAt: DateTime.utc(2026),
-          updatedAt: DateTime.utc(2026),
         ),
       ),
       isNull,

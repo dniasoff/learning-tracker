@@ -129,6 +129,15 @@ final class _FakeChangeLog implements ChangeLogRepository {
   }
 
   @override
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
+  ) async => [
+    for (final e in _store.entries)
+      if (e.entity == entity) e,
+  ];
+
+  @override
   Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>
       throw UnimplementedError('not read by the Change history');
 

@@ -35,7 +35,6 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
@@ -198,6 +197,10 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> retry(String pendingFailureId) =>
       subTracks.retry(pendingFailureId);
+
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) =>
+      _fake.whenSubTrackChangeConfirmed(changeId);
 
   @override
   Future<CaptureResult> capture({

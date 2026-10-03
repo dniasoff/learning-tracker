@@ -55,6 +55,8 @@ import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart'
+    show CaptureGesture;
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_event_plans.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
@@ -264,6 +266,9 @@ final class TutorLearningCommands implements LearningCommands {
     CivilDate? learnedOn,
     int? stage,
     bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int skippedCount = 0,
+    int taps = 1,
   }) => _preflight((now, history) async {
     // Epic 1: tutors record main-track learning, dated or before tracking.
     // Story 4.2 (AC-1): or the talmid's sub-track learning — the Story 4.1
@@ -362,6 +367,10 @@ final class TutorLearningCommands implements LearningCommands {
     }
     return result;
   });
+
+  @override
+  Future<CaptureResult> recordCatchUp(CatchUpAction action) async =>
+      const CaptureResult.rejected(CaptureRejection.invalid);
 
   /// The leaves of [curriculumId] the talmid's log already records in the
   /// track [source] (see `capture`'s `skipRecorded`): for a sub-track, its

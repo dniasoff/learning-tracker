@@ -183,6 +183,7 @@ void main() {
     late InMemoryChangeLogRepository changeLog;
     late InMemorySubTrackRepository subTracks;
     late InMemoryGovernedIntentRepository intent;
+    late FakeAnalyticsService analytics;
 
     List<Override> ready({
       bool lockSettings = true,
@@ -190,6 +191,7 @@ void main() {
       Override? subTrackRepo,
       DateTime? now,
     }) => [
+      analyticsServiceProvider.overrideWithValue(analytics),
       learningCommandClockProvider.overrideWithValue(
         () => now ?? engineAt(600),
       ),
@@ -222,6 +224,7 @@ void main() {
     ];
 
     setUp(() {
+      analytics = FakeAnalyticsService();
       port = InMemoryLearningWritePort();
       changeLog = InMemoryChangeLogRepository();
       subTracks = InMemorySubTrackRepository();

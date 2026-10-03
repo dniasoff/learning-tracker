@@ -11,7 +11,6 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongo
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
 
-import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/sub_tracks/sub_track_harness.dart';
@@ -60,9 +59,6 @@ Future<SubTrackHarness> _pump(
           FakeLocalDayClock(DateTime.utc(2026, 10, 2, 12)),
         ),
         ongoingSubTrackParentSessionProvider.overrideWith((ref) async => true),
-        ongoingSubTrackWriteScopeProvider.overrideWith(
-          (ref) async => c0Scope(),
-        ),
       ],
       retry: (_, _) => null,
       child: Scaffold(

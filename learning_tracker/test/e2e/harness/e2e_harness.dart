@@ -132,8 +132,8 @@ import 'package:learning_tracker/features/profiles/domain/models/learner_profile
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';

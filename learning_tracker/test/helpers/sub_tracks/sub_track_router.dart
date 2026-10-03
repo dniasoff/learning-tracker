@@ -80,7 +80,6 @@ AppRouter subTrackTestRouter({required bool Function() isParentSession}) =>
       profileGuard: _AllowProfile(),
       childModeGuard: _AllowChildMode(),
       pinGuard: _AllowPin(),
-      sacredTimeLocationGuard: _AllowAll(),
       parentSessionGuard: ParentSessionGuard(
         isParentSession: () async => isParentSession(),
       ),

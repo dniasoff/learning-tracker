@@ -91,9 +91,7 @@ class NotificationInitializer {
       );
     }
 
-    await service.initialize(
-      onNotificationTap: _handleNotificationTap,
-    );
+    await service.initialize(onNotificationTap: _handleNotificationTap);
     final parentPushTap = onParentPushTap;
     if (parentPushTap != null) {
       try {
@@ -151,13 +149,13 @@ class NotificationInitializer {
           onSwitchProfile!(profileId);
         }
       }
-      router.navigate(const SchedulerRoute());
+      unawaited(router.navigate(const SchedulerRoute()));
     } else if (payload == dailyReminderPayload ||
         payload == streakAlertPayload) {
       // Legacy payload (no profileId suffix) — open Scheduler for active profile.
-      router.navigate(const SchedulerRoute());
+      unawaited(router.navigate(const SchedulerRoute()));
     } else if (payload == rewardMilestonePayload) {
-      router.navigate(const GamificationRoute());
+      unawaited(router.navigate(const GamificationRoute()));
     }
   }
 }

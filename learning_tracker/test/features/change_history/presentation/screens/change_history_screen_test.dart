@@ -81,6 +81,12 @@ final class _PerLearnerLog implements ChangeLogRepository {
   ) => _of(scope).entriesOfAction(scope, actionId);
 
   @override
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
+  ) => _of(scope).entriesForEntity(scope, entity);
+
+  @override
   Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>
       _of(scope).watchIntentHistory(scope);
 

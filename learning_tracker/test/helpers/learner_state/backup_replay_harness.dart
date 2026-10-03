@@ -117,19 +117,18 @@ final class LoggingChangeLog implements ChangeLogRepository {
   ) => inner.entriesOfAction(scope, actionId);
 
   @override
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
+  ) => inner.entriesForEntity(scope, entity);
+
+  @override
   Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>
       inner.watchIntentHistory(scope);
 
   @override
   Stream<bool> watchIsReverted(LearnerScope scope, String actionId) =>
       inner.watchIsReverted(scope, actionId);
-
-  @override
-  Future<HistoryPage<ChangeLogEntry>> historyPage(
-    LearnerScope scope, {
-    HistoryCursor? after,
-    int limit = kChangeHistoryPageSize,
-  }) => inner.historyPage(scope, after: after, limit: limit);
 }
 
 /// A [SubTrackRepository] that logs each change to [log].

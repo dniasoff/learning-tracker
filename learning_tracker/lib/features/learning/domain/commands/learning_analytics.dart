@@ -81,7 +81,16 @@ enum SubTrackLifecycleAction {
 
   /// A school-year sub-track was rolled into the next academic year: a
   /// create from the detail's *Add next year* (Story 2.8 / DNI-499).
-  addNextYear('add_next_year');
+  addNextYear('add_next_year'),
+
+  /// Ground was appended to a sub-track.
+  groundAdd('ground_add'),
+
+  /// Ground was removed from a sub-track.
+  remove('remove'),
+
+  /// Ground entries were reordered.
+  reorder('reorder');
 
   const SubTrackLifecycleAction(this.storage);
 
@@ -113,6 +122,7 @@ abstract interface class LearningAnalytics {
   void captureSummary({
     required String curriculumId,
     required CaptureSourceType sourceType,
+    required DateState dateState,
     required CaptureGesture gesture,
     required int eventCount,
     required int skippedCount,
@@ -207,6 +217,7 @@ final class SinkLearningAnalytics implements LearningAnalytics {
   void captureSummary({
     required String curriculumId,
     required CaptureSourceType sourceType,
+    required DateState dateState,
     required CaptureGesture gesture,
     required int eventCount,
     required int skippedCount,
@@ -266,7 +277,9 @@ final class SinkLearningAnalytics implements LearningAnalytics {
     required int eventCount,
     required bool withinWindow,
   }) {
-    assert(lockedDaysOffered >= 0 && lockedDaysRecorded >= 0 && eventCount >= 0);
+    assert(
+      lockedDaysOffered >= 0 && lockedDaysRecorded >= 0 && eventCount >= 0,
+    );
     sink(LearningAnalyticsEvent.catchupCompleted, {
       'curriculum_id': curriculumId,
       'mode': mode.storage,

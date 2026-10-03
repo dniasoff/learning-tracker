@@ -54,6 +54,7 @@ import 'package:learning_tracker/domain/learner_state/append_ground.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/expand_ground.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
@@ -192,6 +193,26 @@ final class SubTrackEdit {
   final List<NodeEntry>? appendGround;
 }
 
+/// The in-memory comparison of a track's creation forecast with its
+/// distinct in-window leaves. This is never persisted.
+final class SubTrackForecastComparison {
+  /// Creates a forecast comparison.
+  const SubTrackForecastComparison({
+    required this.forecast,
+    required this.actual,
+    required this.windowWeeks,
+  });
+
+  /// Capacity forecast when the track was created.
+  final int forecast;
+
+  /// Distinct leaves learned in the original window.
+  final int actual;
+
+  /// Length of the original window in weeks.
+  final int windowWeeks;
+}
+
 /// The sub-track lifecycle commands for one learner and actor.
 final class SubTrackCommands {
   /// Creates the commands.
@@ -212,6 +233,8 @@ final class SubTrackCommands {
     Future<Corpus?> Function(String curriculumId)? corpusOf,
     LearningAnalytics? analytics,
     SubTrackWriteLedger? ledger,
+    Future<SubTrackForecastComparison?> Function(SubTrack track)?
+    forecastComparison,
     this.ackTimeout = const Duration(seconds: 3),
     this.readTimeout = const Duration(seconds: 10),
   }) : _ledger = ledger ?? SubTrackWriteLedger(),
@@ -222,7 +245,8 @@ final class SubTrackCommands {
        _nowUtc = nowUtc,
        _newId = newId,
        _corpusOf = corpusOf,
-       _analytics = analytics;
+       _analytics = analytics,
+       _forecastComparison = forecastComparison;
 
   /// The learner the commands write for.
   final LearnerScope scope;
@@ -245,6 +269,8 @@ final class SubTrackCommands {
   final String Function() _newId;
   final Future<Corpus?> Function(String curriculumId)? _corpusOf;
   final LearningAnalytics? _analytics;
+  final Future<SubTrackForecastComparison?> Function(SubTrack track)?
+  _forecastComparison;
 
   final SubTrackWriteLedger _ledger;
   final bool _ownsLedger;
@@ -327,6 +353,7 @@ final class SubTrackCommands {
         nextYearOf != null
             ? SubTrackLifecycleAction.addNextYear
             : SubTrackLifecycleAction.create,
+        forecastTrack: nextYearOf == null ? null : _find(siblings, nextYearOf),
       ),
     );
   }
@@ -394,7 +421,10 @@ final class SubTrackCommands {
         changedFields: after,
         entry: entry,
       ),
-      onConfirmed: _emitter(candidate, SubTrackLifecycleAction.edit),
+      onConfirmed: _emitter(
+        candidate,
+        _groundAction(current.ground, candidate.ground),
+      ),
     );
   }
 
@@ -531,7 +561,7 @@ final class SubTrackCommands {
     final track = written;
     if (change == null || track == null) return const CaptureResult.success();
     // The latest-row transaction is online-only: committed means accepted.
-    _emitter(track, SubTrackLifecycleAction.edit)();
+    _emitter(track, SubTrackLifecycleAction.groundAdd)();
     return CaptureResult.success(
       changeIds: [change.entry.id],
       actionId: change.entry.actionId,
@@ -641,15 +671,77 @@ final class SubTrackCommands {
     );
   }
 
-  /// The AD-47 `subtrack_lifecycle` emission — enums and counts only —
-  /// that [_commit] runs once the server has accepted the write.
-  void Function() _emitter(SubTrack track, SubTrackLifecycleAction action) =>
-      () => _analytics?.subTrackLifecycle(
-        curriculumId: track.curriculumId,
-        type: track.type,
-        action: action,
-        groundEntries: track.ground.length,
-      );
+  /// The AD-47 lifecycle summary — enums and counts only — that [_commit]
+  /// runs once the server has accepted the write. An end, delete or *Add
+  /// next year* also reports SM-5 for [forecastTrack] (the closed school
+  /// year of an *Add next year*), else for [track].
+  void Function() _emitter(
+    SubTrack track,
+    SubTrackLifecycleAction action, {
+    SubTrack? forecastTrack,
+  }) => () => unawaited(
+    _emitLifecycleSummary(track, action, forecastTrack ?? track),
+  );
+
+  Future<void> _emitLifecycleSummary(
+    SubTrack track,
+    SubTrackLifecycleAction action,
+    SubTrack forecastTrack,
+  ) async {
+    var leaves = 0;
+    if (_analytics != null && _corpusOf != null) {
+      try {
+        final corpus = await _corpusOf(track.curriculumId);
+        if (corpus != null) leaves = expandGround(track.ground, corpus).length;
+      } on Object {
+        // Analytics is best-effort and must never fail a durable command.
+      }
+    }
+    _analytics?.subTrackLifecycleSummary(
+      curriculumId: track.curriculumId,
+      type: track.type,
+      action: action,
+      groundEntries: track.ground.length,
+      leaves: leaves,
+    );
+    if (_forecastComparison != null &&
+        (action == SubTrackLifecycleAction.end ||
+            action == SubTrackLifecycleAction.delete ||
+            action == SubTrackLifecycleAction.addNextYear)) {
+      try {
+        final comparison = await _forecastComparison(forecastTrack);
+        if (comparison != null) {
+          _analytics?.subTrackForecastVsActual(
+            type: forecastTrack.type,
+            forecast: comparison.forecast,
+            actual: comparison.actual,
+            windowWeeks: comparison.windowWeeks,
+          );
+        }
+      } on Object {
+        // A missing history page cannot fail an already durable close.
+      }
+    }
+  }
+
+  static SubTrackLifecycleAction _groundAction(
+    List<NodeEntry> before,
+    List<NodeEntry> after,
+  ) {
+    if (after.length > before.length && after.toSet().containsAll(before)) {
+      return SubTrackLifecycleAction.groundAdd;
+    }
+    if (after.length < before.length && before.toSet().containsAll(after)) {
+      return SubTrackLifecycleAction.remove;
+    }
+    if (after.length == before.length &&
+        after.toSet().length == before.toSet().length &&
+        after.toSet().containsAll(before) &&
+        after.indexed.any((entry) => entry.$2 != before[entry.$1])) {
+      return SubTrackLifecycleAction.reorder;
+    }
+    return SubTrackLifecycleAction.edit;
+  }
 
   /// The complete sub-track read of [scope] (live and ended), or a refusal:
   /// - `onlineRequired` when it is not available within [readTimeout]
