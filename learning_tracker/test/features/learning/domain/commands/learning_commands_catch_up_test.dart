@@ -5,6 +5,9 @@
 // partial action counted when a chunk is rejected.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/catch_up_card_projection.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
@@ -13,12 +16,30 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 
 import '../../../../helpers/learner_state/catch_up_card_harness.dart';
 import '../../../../helpers/learner_state/catch_up_command_harness.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 
 /// [n] distinct main-track leaves (refs need not be in the corpus).
 List<CatchUpLeaf> _mainLeaves(int n) => [
   for (var i = 0; i < n; i++) mainCatchUpLeaf('Mishnah Berakhot 9:$i'),
 ];
+
+/// The engine's state over [h]'s committed events at its clock.
+LearnerState _state(CatchUpCommandHarness h) => const LearnerStateEngine().run(
+  engineInputs(
+    events: h.written,
+    settingsHistory: catchUpHistory,
+    nowUtc: h.now,
+  ),
+);
+
+/// Whether the Shabbos card is pending at [h]'s clock for Mishnayos:
+/// its window holds now and no counted catch_up completes it (A-5).
+bool _cardPending(CatchUpCommandHarness h) {
+  final windows = catchUpCardWindowsAt(catchUpHistory, h.now);
+  return windows.isNotEmpty &&
+      !catchUpRecorded(windows.single, 'mishnayos', _state(h));
+}
 
 Future<void> _settle() =>
     Future<void>.delayed(const Duration(milliseconds: 120));
@@ -336,6 +357,63 @@ void main() {
       await _settle();
       expect(h.log().counted.learns, isEmpty);
       expect(await h.pending(), isEmpty);
+    });
+  });
+
+  group('AC-7: undo of one catch-up action', () {
+    test(
+      'voids every event of the action in one undo; the card returns',
+      () async {
+        final h = CatchUpCommandHarness(actor: catchUpChild);
+        expect(_cardPending(h), isTrue);
+        final result = await h.commands.recordCatchUp(
+          catchUpAllAction([
+            mainCatchUpLeaf('Mishnah Berakhot 2:1'),
+            mainCatchUpLeaf('Mishnah Berakhot 2:2'),
+            subCatchUpLeaf('Mishnah Peah 1:1'),
+          ]),
+        );
+        final ids = (result as CaptureSuccess).eventIds;
+        h.sync();
+        expect(_cardPending(h), isFalse);
+
+        h.now = h.now.add(const Duration(minutes: 1));
+        final undo = await h.commands.undoEvents(ids);
+        expect(undo, isA<CaptureSuccess>());
+        final voids = [
+          for (final e in h.written)
+            if (e.isVoid) e,
+        ];
+        expect({for (final v in voids) v.targetId}, ids.toSet());
+        expect(voids.map((v) => v.revertsActionId).toSet(), {ids.first});
+        // The original learn events are never mutated or deleted.
+        expect(
+          h.written.where((e) => e.isLearn).map((e) => e.id).toList(),
+          ids,
+        );
+        expect(_state(h).countedLearns, isEmpty);
+        expect(_state(h).earningEventIds, isEmpty);
+        expect(_cardPending(h), isTrue);
+
+        h.sync();
+        expect(
+          await h.commands.undoEvents(ids),
+          const CaptureResult.rejected(CaptureRejection.undoNotOffered),
+        );
+      },
+    );
+
+    test('an undo after the window leaves no card to return', () async {
+      final h = CatchUpCommandHarness();
+      final result = await h.commands.recordCatchUp(
+        catchUpAllAction([mainCatchUpLeaf('Mishnah Berakhot 2:1')]),
+      );
+      h
+        ..sync()
+        ..now = catchUpZone.at(DateTime.utc(2026, 10, 13), hour: 9);
+      await h.commands.undoEvents((result as CaptureSuccess).eventIds);
+      expect(_state(h).countedLearns, isEmpty);
+      expect(_cardPending(h), isFalse);
     });
   });
 }
