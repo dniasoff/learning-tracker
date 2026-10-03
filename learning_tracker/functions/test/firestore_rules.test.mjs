@@ -10,8 +10,9 @@
 //   • owner-only read/write of the user subtree (lockout cause),
 //   • the tutor WRITE BLOCK — a tutor (different uid) can never write a
 //     completion even with an active grant (canMarkLiveCompletion=false, site 3),
-//   • the AD-49 cutover: the five retired collections deny every client
-//     write (DNI-490 AC-2),
+//   • the AD-49 retirement: the five retired collections have no match since
+//     the release after the cutover (DNI-491), so the global default-deny
+//     denies every client read and write on them,
 //   • Admin-SDK-only tutor_grants / tutor_active_access.
 //
 // Coverage: 25/25 match paths in firestore.rules.
@@ -92,7 +93,6 @@ const PROFILE = '5';
 
 // Subcollection path prefixes
 const LP = `users/${OWNER}/learner_profiles/${PROFILE}`;
-const COMPLETIONS = `${LP}/completions`;
 const GOALS = `${LP}/goals`;
 
 // hasActiveTutorAccess() looks up the deterministic id {tutor}_{owner}_{profile}.
@@ -181,11 +181,6 @@ beforeEach(async () => {
       tutor_uid: TUTOR,
       parent_uid: OWNER,
       state: 'active',
-    });
-    // Pre-existing completion so the tutor read + owner update paths have a doc.
-    await setDoc(doc(db, `${COMPLETIONS}/c1`), {
-      points: 10,
-      completed_at: pastTs,
     });
     // Pre-existing learner profile doc.
     await setDoc(doc(db, `users/${OWNER}/learner_profiles/${PROFILE}`), {
@@ -401,10 +396,10 @@ describe('SR-5 — revoked/expired tutor access (tutor_active_access absent) den
     await assertFails(getDoc(doc(tutor(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
   });
 
-  test('revoked tutor cannot read completions (was readable while active)', async () => {
-    await assertSucceeds(getDoc(doc(tutor(), `${COMPLETIONS}/c1`)));
+  test('revoked tutor cannot read learning_events (was readable while active)', async () => {
+    await assertSucceeds(getDoc(doc(tutor(), `${LP}/learning_events/e1`)));
     await revokeAccess();
-    await assertFails(getDoc(doc(tutor(), `${COMPLETIONS}/c1`)));
+    await assertFails(getDoc(doc(tutor(), `${LP}/learning_events/e1`)));
   });
 
   test('revoked tutor cannot read goals (was readable while active)', async () => {
@@ -417,35 +412,46 @@ describe('SR-5 — revoked/expired tutor access (tutor_active_access absent) den
     // even without a prior active state, i.e. hasActiveTutorAccess() never
     // defaults to true when the lookup doc is simply missing.
     await revokeAccess();
-    await assertFails(getDoc(doc(tutor(), `${LP}/streak_events/s1`)));
-    await assertFails(getDoc(doc(tutor(), `${LP}/learning_ledger/ll1`)));
+    await assertFails(getDoc(doc(tutor(), `${LP}/learning_events/e1`)));
+    await assertFails(getDoc(doc(tutor(), `${LP}/change_log/cl1`)));
   });
 });
 
-// ── DNI-490 (story 1.28) AC-2 — the AD-49 cutover: retired collections ─────
+// ── DNI-491 (story 1.29) AC-1 / AC-3 — the release after the AD-49 cutover ──
 //
 // `completions`, `learning_ledger`, `streak_events`, `bookmarks` and
-// `learning_order` deny EVERY client write, owner and tutor alike, including
-// an identical replay of a document already there; learning_events is the
-// only write target for learning. The match blocks stay as deny-all blocks
-// (allowlisted by tool/check_retired_symbols.dart) with their read grants
-// UNCHANGED, and the release after (DNI-491) removes them. Each payload is
-// one the pre-cutover rules accepted, so a denial here is the retirement,
-// not a malformed document.
+// `learning_order` were retired at the cutover (DNI-490: deny-all match
+// blocks, every client write denied, reads kept). The release after removes
+// those matches, so nothing in firestore.rules names them and the global
+// default-deny `match /{document=**}` decides: every client read, list and
+// write is denied for owner, tutor, stranger and anonymous alike, including
+// an identical replay of a document already there. learning_events is the
+// only write target for learning. Each payload is one the pre-cutover rules
+// accepted, so a denial here is the retirement, not a malformed document.
 const RETIRED_COLLECTIONS = [
-  { name: 'completions', payload: () => ({ points: 5, completed_at: pastTs }), listCapped: true },
-  { name: 'learning_ledger', payload: () => ({ ...PAYLOADS.learning_ledger }), listCapped: true },
-  { name: 'streak_events', payload: () => ({ ...PAYLOADS.streak_events }), listCapped: true },
-  { name: 'bookmarks', payload: () => ({ ...PAYLOADS.bookmarks }), listCapped: false },
-  { name: 'learning_order', payload: () => ({ ...PAYLOADS.learning_order }), listCapped: false },
+  { name: 'completions', payload: () => ({ points: 5, completed_at: pastTs }) },
+  { name: 'learning_ledger', payload: () => ({ ...PAYLOADS.learning_ledger }) },
+  { name: 'streak_events', payload: () => ({ ...PAYLOADS.streak_events }) },
+  { name: 'bookmarks', payload: () => ({ ...PAYLOADS.bookmarks }) },
+  { name: 'learning_order', payload: () => ({ ...PAYLOADS.learning_order }) },
 ];
 
-describe('DNI-490 AC-2 — retired collections deny every client write (AD-49)', () => {
+describe('DNI-491 AC-1/AC-3 — retired collections fall to the global default-deny (AD-49)', () => {
   test('the five retired collections are exactly the R14 set', () => {
     assert.deepStrictEqual(
       RETIRED_COLLECTIONS.map((rc) => rc.name).sort(),
       ['bookmarks', 'completions', 'learning_ledger', 'learning_order', 'streak_events'],
     );
+  });
+
+  test('firestore.rules has no match block for any retired collection', () => {
+    const rules = readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+    for (const rc of RETIRED_COLLECTIONS) {
+      assert.ok(!rules.includes(`match /${rc.name}/`), `${rc.name} must have no match`);
+    }
+    // The governed per-track ordering is a different collection and stays.
+    assert.ok(rules.includes('match /track_learning_order/{orderId}'));
+    assert.ok(rules.includes('match /{document=**}'));
   });
 
   for (const rc of RETIRED_COLLECTIONS) {
@@ -501,18 +507,12 @@ describe('DNI-490 AC-2 — retired collections deny every client write (AD-49)',
         await assertFails(setDoc(doc(anon(), `${coll}/x`), rc.payload()));
       });
 
-      test('reads are not changed by the write cutover', async () => {
+      test('reads and lists are denied for everyone, owner and active tutor included', async () => {
         const path = `${coll}/readable`;
         await seed(path, rc.payload());
-        await assertSucceeds(getDoc(doc(owner(), path)));
-        await assertSucceeds(getDoc(doc(tutor(), path)));
-        await assertFails(getDoc(doc(stranger(), path)));
-        await assertFails(getDoc(doc(anon(), path)));
-        if (rc.listCapped) {
-          // SR-4 stays: list() capped at limit(500).
-          await expectSR4ListLimitCap(coll);
-        } else {
-          await assertSucceeds(getDocs(collection(owner(), coll)));
+        for (const [who, db] of [['owner', owner()], ['tutor', tutor()], ['stranger', stranger()], ['anon', anon()]]) {
+          await assertFails(getDoc(doc(db, path)), `${who} get`);
+          await assertFails(getDocs(query(collection(db, coll), limit(500))), `${who} list`);
         }
       });
     });
@@ -521,8 +521,7 @@ describe('DNI-490 AC-2 — retired collections deny every client write (AD-49)',
 
 // ── SR-4 helper: list() queries are capped at request.query.limit <= 500 ────
 // (AUD-firebase-09) get() (single-doc read) stays unrestricted (exercised
-// elsewhere by expectOwnerWriteTutorRead / the DNI-490 retired-collections block
-// above); list() (a collection query) must specify limit(500) or fewer to
+// elsewhere by expectOwnerWriteTutorRead); list() (a collection query) must specify limit(500) or fewer to
 // succeed — a larger or absent limit is denied, regardless of how many
 // documents actually exist in the collection.
 async function expectSR4ListLimitCap(collectionPath) {
@@ -677,10 +676,10 @@ describe('curriculum_tracks — owner write with key whitelist, tutor read, dele
 
 // ── Path 16b: track_learning_order (Gap 1 — hasOnly whitelist, SR-4 cap) ────
 //
-// A SEPARATE collection from learning_order — see doc_ids.dart's
-// trackLearningOrderDocId doc comment for why the two orderings cannot share
-// one collection. Mirrors learning_order's owner/tutor/whitelist shape, plus
-// an SR-4 list() cap that learning_order itself does not have.
+// A SEPARATE collection from the retired learning_order (AD-49, R13/R14) —
+// see doc_ids.dart's trackLearningOrderDocId doc comment. Owner/tutor/
+// whitelist shape plus an SR-4 list() cap. DNI-491 AC-3: removing the retired
+// learning_order match left this governed match fully functional.
 // DNI-471: governed entity `mainTrackOrder` (AD-38).
 describe('track_learning_order — owner write with key whitelist, tutor read, delete denied, SR-4 cap', () => {
   const GOV = { entity: 'mainTrackOrder', entityId: 'c1' };
@@ -711,23 +710,29 @@ describe('track_learning_order — owner write with key whitelist, tutor read, d
   test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
     await expectSR4ListLimitCap(`${LP}/track_learning_order`);
   });
-  // Regression guard: this is a genuinely separate collection from
-  // learning_order, not an accidental alias of the same rules block — a
-  // write to one never appears when querying the other.
-  test('regression: track_learning_order and learning_order are independent ' +
-      'collections — a write to one is invisible from the other', async () => {
+  // Regression guard (DNI-491 AC-1/AC-3): the retired learning_order match is
+  // gone, but track_learning_order still follows its governed rules, and the
+  // two never alias — the retired path is default-denied for the same owner,
+  // and a governed write never lands in it.
+  test('regression: track_learning_order keeps its governed rules while the ' +
+      'retired learning_order path is default-denied', async () => {
     const db = owner();
     await assertSucceeds(
       governedWrite(db, `${LP}/track_learning_order/independence_check`, validTrackOrder,
         GOV.entity, GOV.entityId),
     );
-    const learningOrderDocs = await getDocs(
-      query(collection(db, `${LP}/learning_order`), limit(500)),
+    await assertSucceeds(getDoc(doc(db, `${LP}/track_learning_order/independence_check`)));
+    await assertFails(getDoc(doc(db, `${LP}/learning_order/independence_check`)));
+    await assertFails(
+      getDocs(query(collection(db, `${LP}/learning_order`), limit(500))),
     );
-    assert.ok(
-      !learningOrderDocs.docs.some((d) => d.id === 'independence_check'),
-      'a track_learning_order write must never appear in learning_order',
+    await assertFails(
+      setDoc(doc(db, `${LP}/learning_order/independence_check`), validTrackOrder),
     );
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const snap = await getDoc(doc(ctx.firestore(), `${LP}/learning_order/independence_check`));
+      assert.ok(!snap.exists(), 'a track_learning_order write must never appear in learning_order');
+    });
   });
 });
 
@@ -834,16 +839,14 @@ describe('goals — owner write with key whitelist (AD-38 governed), tutor read-
     });
 
     // Regression guard: confirm this change did not widen delete permission
-    // on a genuinely append-only collection — learning_ledger still denies
+    // on a genuinely append-only collection — learning_events still denies
     // owner delete outright (no isOwner-based allow delete at all).
-    test('regression guard: learning_ledger (append-only) still denies owner delete', async () => {
+    test('regression guard: learning_events (append-only) still denies owner delete', async () => {
       await env.withSecurityRulesDisabled(async (ctx) => {
-        await setDoc(doc(ctx.firestore(), `${LP}/learning_ledger/ULID_del`), {
-          ulid: 'ULID_del',
-        });
+        await setDoc(doc(ctx.firestore(), `${LP}/learning_events/ULID_del`), learnEvent());
       });
       await assertFails(
-        deleteDoc(doc(owner(), `${LP}/learning_ledger/ULID_del`)),
+        deleteDoc(doc(owner(), `${LP}/learning_events/ULID_del`)),
       );
     });
   });
@@ -1080,8 +1083,8 @@ describe('PHASE D — permission-denied oracle: all legitimate owner writes succ
     // 1. learner_profiles document itself
     await assertSucceeds(setDoc(doc(db, profilePath), { name: 'Alice' }));
     // (2, 3, 9, 11, 12: completions, bookmarks, learning_order,
-    // learning_ledger and streak_events are retired — DNI-490 AC-2 above
-    // asserts they deny every client write.)
+    // learning_ledger and streak_events are retired and have no match —
+    // DNI-491 above asserts the default-deny covers them.)
     // 4. settings — open bag; no whitelist
     await assertSucceeds(setDoc(doc(db, `${LP}/settings/c1`), PAYLOADS.settings));
     // 5–8, 10, 15: AD-38 governed collections (DNI-471) — the legitimate

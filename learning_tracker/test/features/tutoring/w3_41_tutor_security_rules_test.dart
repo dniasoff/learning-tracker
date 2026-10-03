@@ -11,10 +11,12 @@
 ///   survives refactors and CI runs without requiring the emulator.
 ///
 /// INVARIANTS ASSERTED:
-///   1. TUTOR WRITE BLOCK — since the AD-49 cutover (DNI-490) the completions
-///      block denies every client write (`allow write: if false`), so no
-///      tutor can write one. No tutor-bypass clause (`isTutorOf`,
-///      `isActiveTutorGrant`) appears in the completions block.
+///   1. TUTOR WRITE BLOCK — learning_events, the one learning write target
+///      (AD-49), grants writes to the owner only. No tutor-bypass clause
+///      (`isTutorOf`, `isActiveTutorGrant`, `hasActiveTutorAccess`) appears
+///      in its write grants. The retired completions collection has no
+///      match since the release after the cutover (DNI-491), so the global
+///      default-deny covers it.
 ///
 ///   2. CLIENT WRITE LOCK — `tutor_grants` collection denies all client
 ///      writes (create/update/delete: if false). This prevents a malicious
@@ -52,47 +54,41 @@ void main() {
     rules = _readProjectRules();
   });
 
-  // ── 1. Completions write-block ──────────────────────────────────────────
+  // ── 1. Learning write-block ──────────────────────────────────────────────
 
-  group('W3.41 completions — tutor write-block', () {
-    test(
-      'completions denies every client write (AD-49 cutover) — a tutor is denied',
-      () {
-        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+  group('W3.41 learning_events — tutor write-block', () {
+    test('the retired completions collection has no match (AD-49, DNI-491) '
+        '— the default-deny denies a tutor', () {
+      expect(
+        rules,
+        isNot(contains('match /completions/')),
+        reason:
+            'The release after the AD-49 cutover removes the retired '
+            'completions match; learning_events is the only write target.',
+      );
+    });
+
+    test('learning_events write grants contain no tutor bypass', () {
+      final block = _extractRuleBlock(rules, 'learning_events/{eventId}');
+      for (final bypass in const ['isTutorOf', 'isActiveTutorGrant']) {
         expect(
           block,
-          contains('allow write: if false;'),
+          isNot(contains(bypass)),
           reason:
-              'After the AD-49 cutover (DNI-490) no client, owner or tutor, '
-              'writes a completion; learning_events is the only write target.',
+              '$bypass MUST NOT appear in the learning_events block. Tutor '
+              'learning writes go through the Cloud Functions only.',
         );
-      },
-    );
-
-    test('completions block contains no isTutorOf bypass', () {
-      final block = _extractRuleBlock(rules, 'completions/{completionId}');
+      }
       expect(
-        block,
-        isNot(contains('isTutorOf')),
-        reason:
-            'isTutorOf MUST NOT appear in the completions block. '
-            'Tutors may never write live completions via the client. '
-            'All tutor completion writes go through the Cloud Function proxy (W3.43).',
+        RegExp(
+          r'allow\s+(create|update|write)[^;]*hasActiveTutorAccess',
+        ).hasMatch(block),
+        isFalse,
+        reason: 'tutor read access must not open a learning write path.',
       );
     });
 
-    test('completions block contains no isActiveTutorGrant bypass', () {
-      final block = _extractRuleBlock(rules, 'completions/{completionId}');
-      expect(
-        block,
-        isNot(contains('isActiveTutorGrant')),
-        reason:
-            'isActiveTutorGrant MUST NOT appear in the completions block. '
-            'Grant status is irrelevant — no tutor may write live completions.',
-      );
-    });
-
-    test('completions block documents the load-bearing security boundary', () {
+    test('the rules document the load-bearing security boundary', () {
       expect(
         rules,
         contains('TUTOR WRITE BLOCK'),
@@ -102,13 +98,9 @@ void main() {
       );
     });
 
-    test('completions block grants no create, update or delete', () {
-      final block = _extractRuleBlock(rules, 'completions/{completionId}');
-      expect(
-        RegExp(r'allow\s+(create|update|delete)\b').hasMatch(block),
-        isFalse,
-        reason: 'the retired completions block must deny every write.',
-      );
+    test('learning_events denies client deletes', () {
+      final block = _extractRuleBlock(rules, 'learning_events/{eventId}');
+      expect(block, contains('allow delete: if false;'));
     });
   });
 
@@ -270,14 +262,15 @@ void main() {
       );
     });
 
-    test('completions read includes tutor access path', () {
-      final block = _extractRuleBlock(rules, 'completions/{completionId}');
+    test('learning_events read includes tutor access path', () {
+      final block = _extractRuleBlock(rules, 'learning_events/{eventId}');
       expect(
         block,
         contains('hasActiveTutorAccess(uid, profileId)'),
         reason:
-            'Tutors MUST be able to read completions to view learner progress. '
-            'V2-R3 C2: hasActiveTutorAccess gate allows active tutors to read.',
+            'Tutors MUST be able to read learning events to view learner '
+            'progress. V2-R3 C2: hasActiveTutorAccess gate allows active '
+            'tutors to read.',
       );
     });
 
@@ -292,14 +285,12 @@ void main() {
       );
     });
 
-    test('bookmarks read includes tutor access path', () {
-      final block = _extractRuleBlock(rules, 'bookmarks/{bookmarkId}');
+    test('sub_tracks read includes tutor access path', () {
+      final block = _extractRuleBlock(rules, 'sub_tracks/{subTrackId}');
       expect(
         block,
         contains('hasActiveTutorAccess(uid, profileId)'),
-        reason:
-            'Tutors MUST be able to read bookmarks per FR-3 (tutors can '
-            'advance bookmarks).',
+        reason: 'Tutors MUST be able to read a learner\'s sub-tracks.',
       );
     });
 
@@ -314,14 +305,17 @@ void main() {
       );
     });
 
-    test('completions write block is not weakened by the C2 read change', () {
-      final block = _extractRuleBlock(rules, 'completions/{completionId}');
+    test('learning_events write grants are not weakened by the C2 read '
+        'change', () {
+      final block = _extractRuleBlock(rules, 'learning_events/{eventId}');
+      expect(block, contains('allow create: if isOwner(uid)'));
+      expect(block, contains('allow update: if isOwner(uid)'));
       expect(
         block,
-        contains('allow write: if false;'),
+        contains('allow delete: if false;'),
         reason:
             'Adding tutor read access MUST NOT have opened a write path: '
-            'the retired completions block denies every client write.',
+            'only the owner writes learning events.',
       );
     });
   });

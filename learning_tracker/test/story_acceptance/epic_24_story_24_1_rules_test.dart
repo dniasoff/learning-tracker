@@ -35,38 +35,20 @@ void main() {
         rules = _readRules();
       });
 
-      // ── retired event collections (AD-49 cutover, DNI-490) ────────────
+      // ── retired event collections (AD-49, R14) ────────────────────────
       //
       // `completions`, `streak_events` and `learning_ledger` were the
-      // Story 24.1 per-collection event rules. At the AD-49 cutover they are
-      // retired: the match blocks stay, keep their owner/tutor reads with the
-      // SR-4 list cap, and deny every client write. learning_events is the
-      // only write target for learning.
-      for (final match in const [
-        'completions/{completionId}',
-        'streak_events/{streakEventId}',
-        'learning_ledger/{entryId}',
+      // Story 24.1 per-collection event rules. The AD-49 cutover (DNI-490)
+      // denied every client write to them; the release after (DNI-491)
+      // removed their match blocks, so the global default-deny covers them.
+      // learning_events is the only write target for learning.
+      for (final collection in const [
+        'completions',
+        'streak_events',
+        'learning_ledger',
       ]) {
-        group('retired $match', () {
-          test('keeps its per-collection match', () {
-            expect(rules, contains('match /$match'));
-          });
-
-          test('denies every client write', () {
-            final block = _extractBlock(rules, match);
-            expect(block, contains('allow write: if false;'));
-            expect(
-              RegExp(r'allow\s+(create|update|delete)\b').hasMatch(block),
-              isFalse,
-              reason: 'no create/update/delete grant may remain',
-            );
-          });
-
-          test('keeps owner/tutor reads with the SR-4 list cap', () {
-            final block = _extractBlock(rules, match);
-            expect(block, contains('allow get: if isOwner(uid)'));
-            expect(block, contains('request.query.limit <= 500'));
-          });
+        test('retired $collection has no match block', () {
+          expect(rules, isNot(contains('match /$collection/')));
         });
       }
 
@@ -120,23 +102,31 @@ void main() {
           // any collection not yet reached would no longer inherit the hard
           // deny) would not have failed this test. Assert the actual
           // ordering against the first collection-specific match block.
-          final completionsPos = rules.indexOf(
-            'match /completions/{completionId}',
-          );
+          // Every per-collection match (all but the service-level
+          // `/databases/...` wrapper and the wildcard itself) must follow it.
+          final collectionMatches = [
+            for (final m in RegExp(r'match /([^\s{]+)').allMatches(rules))
+              if (!m.group(1)!.startsWith('databases/') &&
+                  !rules.startsWith('match /{document=**}', m.start))
+                m.start,
+          ];
           expect(
-            completionsPos,
-            greaterThan(-1),
-            reason: 'completions match block not found',
+            collectionMatches,
+            isNotEmpty,
+            reason: 'no collection-specific match block found',
+          );
+          final firstCollectionPos = collectionMatches.reduce(
+            (a, b) => a < b ? a : b,
           );
           expect(
             denyPos,
-            lessThan(completionsPos),
+            lessThan(firstCollectionPos),
             reason:
-                'The deny-all rule must precede the completions '
-                'collection-specific match block so any collection not '
-                'explicitly listed inherits a hard deny. Found deny-all at '
-                'offset $denyPos and completions match at offset '
-                '$completionsPos.',
+                'The deny-all rule must precede every collection-specific '
+                'match block so any collection not explicitly listed '
+                '(including the AD-49 retired ones) inherits a hard deny. '
+                'Found deny-all at offset $denyPos and the first '
+                'collection match at offset $firstCollectionPos.',
           );
         });
       });

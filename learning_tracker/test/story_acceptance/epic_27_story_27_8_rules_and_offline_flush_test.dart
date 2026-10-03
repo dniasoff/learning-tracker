@@ -9,11 +9,11 @@
 ///     completion_events, etc.) were removed in W3.30. Tests now assert
 ///     the live nested layout under users/{uid}/learner_profiles/{profileId}.
 ///
-///     1. `delete()` is rejected by the key nested-layout collections:
-///        completions, streak_events, learning_ledger, import_metadata.
-///     2. Field-validator clauses for completions (points range,
-///        future `completed_at`) and the snapshot field whitelists are
-///        present in the rules file.
+///     1. The five collections retired at the AD-49 cutover have no match
+///        block since the release after (DNI-491); the global default-deny
+///        covers them.
+///     2. The snapshot field whitelists and delete guards are present in
+///        the rules file.
 ///
 /// The retired offline-completion flush group has been removed.
 @Tags(['epic_27'])
@@ -39,25 +39,23 @@ void main() {
           rules = _readProjectRules();
         });
 
-        // W3.35-W3.37 — the old per-event collections. At the AD-49 cutover
-        // (DNI-490) they are retired: every client write is denied and only
-        // their owner/tutor reads remain until the release after (DNI-491).
-        test('retired collections deny every client write (AD-49 cutover)', () {
+        // W3.35-W3.37 — the old per-event collections. The AD-49 cutover
+        // (DNI-490) denied every client write to them; the release after
+        // (DNI-491) removed their matches, so the global default-deny now
+        // denies every client read and write.
+        test('retired collections have no match block (AD-49, DNI-491)', () {
           for (final c in [
-            'completions/{completionId}',
-            'streak_events/{streakEventId}',
-            'learning_ledger/{entryId}',
-            'bookmarks/{bookmarkId}',
-            'learning_order/{orderId}',
+            'completions',
+            'streak_events',
+            'learning_ledger',
+            'bookmarks',
+            'learning_order',
           ]) {
-            final block = _extractRuleBlock(rules, c);
-            expect(block, contains('allow write: if false;'), reason: c);
-            expect(
-              RegExp(r'allow\s+(create|update|delete)\b').hasMatch(block),
-              isFalse,
-              reason: '$c must keep no create/update/delete grant',
-            );
+            expect(rules, isNot(contains('match /$c/')), reason: c);
           }
+          // The governed per-track ordering is a different collection and
+          // keeps its match.
+          expect(rules, contains('match /track_learning_order/{orderId}'));
         });
 
         // Snapshot collections in the nested layout gate writes through
@@ -144,10 +142,11 @@ void main() {
   // proves that the correct guards are present).
   //
   // The LOAD-BEARING security invariant tested here:
-  //   • The `completions` rule gate is `isOwner(uid)` — which evaluates to
-  //     `request.auth.uid == uid` where `uid` is the Firestore path segment
-  //     for the profile owner. A tutor has a different uid and cannot satisfy
-  //     this condition, making the create rule always false for non-owners.
+  //   • The `learning_events` create gate is `isOwner(uid)` — which
+  //     evaluates to `request.auth.uid == uid` where `uid` is the Firestore
+  //     path segment for the profile owner. A tutor has a different uid and
+  //     cannot satisfy this condition, making the create rule always false
+  //     for non-owners.
   //   • The `tutor_grants` collection rules deny all client writes (create /
   //     update / delete: if false), preventing a malicious client from forging
   //     an active-state grant.
@@ -155,7 +154,7 @@ void main() {
   //     also deny all client writes.
 
   group(
-    'W3.41 — Tutor security boundary: completions write-block and grant rules',
+    'W3.41 — Tutor security boundary: learning write-block and grant rules',
     tags: ['story_w3_41_tutor_security'],
     () {
       late String rules;
@@ -163,57 +162,48 @@ void main() {
         rules = _readProjectRules();
       });
 
-      // ── 1. Completions write-block — non-owner cannot write ─────────────
+      // ── 1. Learning write-block — non-owner cannot write ────────────────
       //
-      // The completion create rule is `isOwner(uid)` which expands to
-      // `request.auth.uid == uid`. A tutor (different uid) can never satisfy
-      // this condition. We assert:
-      //   (a) The completions block uses isOwner() — NOT a tutor helper.
-      //   (b) No tutor-bypass path exists in the completions block.
-      //   (c) The block still carries the mandatory `allow update: if false`
-      //       and `allow delete: if false` guards.
-      //   (d) The load-bearing comment keyword is present to aid future audit.
+      // learning_events is the one learning write target (AD-49). Its create
+      // rule is `isOwner(uid)`, which expands to `request.auth.uid == uid`.
+      // A tutor (different uid) can never satisfy it. We assert:
+      //   (a) No tutor-bypass path exists in the learning_events block.
+      //   (b) The block denies client deletes.
+      //   (c) The load-bearing comment keyword is present to aid future audit.
+      //   (d) The retired completions collection has no match at all.
 
-      test('completions denies every client write — the tutor write block is '
-          'subsumed by the AD-49 cutover', () {
-        final block = _extractRuleBlock(rules, 'completions/{completionId}');
-        expect(
-          block,
-          contains('allow write: if false;'),
-          reason:
-              'no client (owner or tutor) may write a completion after the '
-              'AD-49 cutover',
-        );
-      });
-
-      test('completions block contains no tutor-bypass allow clause', () {
-        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+      test('learning_events block contains no tutor-bypass write clause', () {
+        final block = _extractRuleBlock(rules, 'learning_events/{eventId}');
         expect(
           block,
           isNot(contains('isTutorOf')),
           reason:
-              'isTutorOf MUST NOT appear in the completions block — '
-              'tutors may never write live completions directly',
+              'isTutorOf MUST NOT appear in the learning_events block — '
+              'tutors may never write learning directly',
         );
         expect(
           block,
           isNot(contains('isActiveTutorGrant')),
           reason:
-              'isActiveTutorGrant MUST NOT appear in the completions block '
-              '— tutor completion writes go through Cloud Functions only',
+              'isActiveTutorGrant MUST NOT appear in the learning_events '
+              'block — tutor learning writes go through Cloud Functions only',
         );
+        expect(
+          RegExp(
+            r'allow\s+(create|update|write)[^;]*hasActiveTutorAccess',
+          ).hasMatch(block),
+          isFalse,
+          reason: 'tutor read access must not open a write path',
+        );
+        expect(block, contains('allow delete: if false;'));
       });
 
-      test('completions block grants no create, update or delete', () {
-        final block = _extractRuleBlock(rules, 'completions/{completionId}');
-        expect(
-          RegExp(r'allow\s+(create|update|delete)\b').hasMatch(block),
-          isFalse,
-        );
+      test('the retired completions collection has no match block', () {
+        expect(rules, isNot(contains('match /completions/')));
       });
 
       test(
-        'completions block documents the load-bearing security boundary',
+        'learning_events block documents the load-bearing security boundary',
         () {
           // The keyword comment is a searchable audit trail.
           expect(

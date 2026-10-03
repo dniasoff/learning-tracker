@@ -11,19 +11,13 @@ rules_version = '2';
 // users/{uid}/learner_profiles/{profileId}/<coll>/...
 //
 // Per-profile subcollections:
-//   completions/{completionId}     — RETIRED (AD-49): reads only, writes denied
-//   streak_events/{ulid}           — RETIRED (AD-49): reads only, writes denied
-//   learning_ledger/{ulid}         — RETIRED (AD-49): reads only, writes denied
 //   settings/{curriculumId}        — curriculum preference snapshots
 //   stage_definitions/{stageId}    — per-track stage config; split from settings (W3.32)
 //   curriculum_tracks/{trackId}    — per-curriculum track config snapshots
-//   bookmarks/{bookmarkId}         — RETIRED (AD-49): reads only, writes denied
-//   learning_order/{orderId}       — RETIRED (AD-49): reads only, writes denied
 //   track_learning_order/{orderId} — per-track (sedarim/masechtos) learning-
-//                                    order snapshots; a SEPARATE collection
-//                                    from learning_order — see doc_ids.dart's
+//                                    order snapshots — see doc_ids.dart's
 //                                    trackLearningOrderDocId doc comment for
-//                                    why these cannot share one collection
+//                                    its doc-id formula
 //   preferences/{scope}            — unified preference bag (W3.33)
 //                                    scopes: notification_settings,
 //                                            gamification_settings,
@@ -52,11 +46,12 @@ rules_version = '2';
 //                                    doc-id: {tutorUid}_{parentUid}_{profileId}
 //                                    Written by acceptInvite CF; deleted by revoke/resign CFs.
 //
-// RETIRED COLLECTIONS (AD-49 cutover, DNI-490): `completions`,
-// `learning_ledger`, `streak_events`, `bookmarks` and `learning_order` keep
-// their read grants but deny every client write (`allow write: if false`).
-// learning_events is the only write target for learning. The release after
-// (DNI-491) removes these matches.
+// RETIRED COLLECTIONS (AD-49, R14): the five collections the cutover
+// release (DNI-490) retired have no match block since the release after
+// (DNI-491). The global default-deny below denies every client read and
+// write on them, and tool/check_retired_symbols.dart (empty allowlist) fails
+// CI if a match for one of them comes back. learning_events is the only
+// write target for learning.
 //
 // Append-only collections (`points_ledger`) deny `delete` and deny value
 // mutation on `update` — only an idempotent identical replay
@@ -413,7 +408,6 @@ service cloud.firestore {
     //
     // Security posture:
     //   WRITES — ALL mutations go through Cloud Functions (Admin SDK).
-    //     - W3.43: bulk-prior proxy writes completions as the owner uid.
     //     - The invite/accept/revoke lifecycle is server-side only.
     //     - Client may NEVER create, update or delete a grant doc.
     //
@@ -509,6 +503,9 @@ service cloud.firestore {
         // learning_events/{ulid} — the single learning record (AD-31).
         // Create-only plus SR-1 identical replay; owner actor only; zero
         // document-access calls; list capped at 500 (SR-4).
+        // TUTOR WRITE BLOCK (W3.41): only the owner writes learning; a tutor
+        // (different uid) is denied even with active access, and tutor
+        // learning writes go through the Cloud Functions (Admin SDK).
         match /learning_events/{eventId} {
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId)) && request.query.limit <= 500;
@@ -538,46 +535,6 @@ service cloud.firestore {
         }
 
         // ── Append-only event collections ──────────────────────────────────
-
-        // completions — RETIRED (AD-49, R1/R14): the learning record is
-        // learning_events. Reads keep their SR-4 split and list cap.
-        // TUTOR WRITE BLOCK (W3.41): no client, owner or tutor, writes here.
-        match /completions/{completionId} {
-          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
-          // write is denied; the read grants stay unchanged until the release
-          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
-          // allowlists exactly this deny-all block.
-          allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
-            && request.query.limit <= 500;
-          allow write: if false;
-        }
-
-        // streak_events — RETIRED (AD-49, R6/R14): the streak is derived per
-        // curriculum by the engine from learning_events.
-        match /streak_events/{streakEventId} {
-          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
-          // write is denied; the read grants stay unchanged until the release
-          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
-          // allowlists exactly this deny-all block.
-          allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
-            && request.query.limit <= 500;
-          allow write: if false;
-        }
-
-        // learning_ledger — RETIRED (AD-49, R5/R14): the daily ledger is
-        // derived by the engine from learning_events.
-        match /learning_ledger/{entryId} {
-          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
-          // write is denied; the read grants stay unchanged until the release
-          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
-          // allowlists exactly this deny-all block.
-          allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
-            && request.query.limit <= 500;
-          allow write: if false;
-        }
 
         // points_ledger — append-only points ledger entries (WS9 Wave-B /
         // C#2). Event entries live at `pts_{event_id}` (AD-46 / AD-50) and
@@ -655,12 +612,8 @@ service cloud.firestore {
         // this: profile is already the collection-path scope, and
         // trackId == curriculumId).
         //
-        // `points` is range-checked 1..100 on BOTH create and update:
-        // CompletionOrchestrator.markComplete stamps calculatePoints'
-        // result straight onto the completion document, and this same
-        // file's `completions.points <= 100` cap would otherwise
-        // PERMISSION_DENY every completion write for a stage whose
-        // override exceeds it.
+        // `points` is range-checked 1..100 on BOTH create and update, the
+        // range the per-stage point ladder has always used.
         //
         // Unlike stage_definitions/study_day_configs, delete IS allowed:
         // an attacker who can already set points to 1 via the
@@ -711,37 +664,11 @@ service cloud.firestore {
           allow delete: if false;
         }
 
-        // bookmarks — RETIRED (AD-49, R8/R14): the position is derived
-        // (AD-33).
-        match /bookmarks/{bookmarkId} {
-          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
-          // write is denied; the read grants stay unchanged until the release
-          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
-          // allowlists exactly this deny-all block.
-          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow write: if false;
-        }
-
-        // learning_order — RETIRED (AD-49, R13/R14): ordering lives in the
-        // governed track_learning_order collection.
-        match /learning_order/{orderId} {
-          // AD-49 cutover (DNI-490, R14): a retired collection. Every client
-          // write is denied; the read grants stay unchanged until the release
-          // after (DNI-491) removes this match. tool/check_retired_symbols.dart
-          // allowlists exactly this deny-all block.
-          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow write: if false;
-        }
-
         // track_learning_order — per-track (sedarim/masechtos) custom
-        // reordering. A SEPARATE collection from learning_order, purely
-        // additive: does NOT alter the learning_order block above at all.
-        // Doc-id: DocIds.trackLearningOrderDocId — see that formula's doc
-        // comment for why this cannot share learning_order's collection
-        // (both orderings draw from the same sefariaRef universe and
-        // curriculum_id is the sole canonical track key post-AD-25, so a
-        // shared collection would compute identical doc-ids for a
-        // curriculum-scoped and a track-scoped write of the same pair).
+        // reordering. Doc-id: DocIds.trackLearningOrderDocId — see that
+        // formula's doc comment. Its own governed match; the retired
+        // curriculum-scoped ordering collection (AD-49, R13/R14) has no match
+        // and falls to the global default-deny.
         //
         // Governed entity `mainTrackOrder` (AD-38): entity_id = curriculum_id;
         // `level` / `ref` are the AD-52 doc fields; client delete denied.
