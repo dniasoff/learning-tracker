@@ -20,7 +20,8 @@ void main() {
     final symbols = loadRetiredTestSymbols(Directory.current);
     expect(symbols, contains('Completion${'Entity'}'));
     expect(symbols, contains('tutor${'ResetCompletion'}'));
-    expect(symbols, isNot(contains('c0${'Stub'}')));
+    // DNI-490 deleted the C0 contract stub (R15), so it is retired too.
+    expect(symbols, contains('c0${'Stub'}'));
     // R14 keeps the collection's rules/deletes.ts remnant pending until the
     // cutover release, so the collection is not yet a deleted symbol.
     expect(symbols, isNot(contains('comp${'letions'}')));

@@ -155,7 +155,6 @@ const _topLevel = [
   'learningEventRepositoryProvider',
   'subTrackRepositoryProvider',
   // C0
-  'c0Stub',
   'CivilDate',
   'LeafRef',
   'civilDate',

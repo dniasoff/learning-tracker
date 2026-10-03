@@ -35,109 +35,40 @@ void main() {
         rules = _readRules();
       });
 
-      // ── completions ──────────────────────────────────────────────────
+      // ── retired event collections (AD-49 cutover, DNI-490) ────────────
       //
-      // The Firestore collection is still named `completions` (nested under
-      // users/{uid}/learner_profiles/{profileId}/completions/{completionId}).
-      group('completions collection', () {
-        test('has per-collection match for completions/{completionId}', () {
-          expect(rules, contains('match /completions/{completionId}'));
+      // `completions`, `streak_events` and `learning_ledger` were the
+      // Story 24.1 per-collection event rules. At the AD-49 cutover they are
+      // retired: the match blocks stay, keep their owner/tutor reads with the
+      // SR-4 list cap, and deny every client write. learning_events is the
+      // only write target for learning.
+      for (final match in const [
+        'completions/{completionId}',
+        'streak_events/{streakEventId}',
+        'learning_ledger/{entryId}',
+      ]) {
+        group('retired $match', () {
+          test('keeps its per-collection match', () {
+            expect(rules, contains('match /$match'));
+          });
+
+          test('denies every client write', () {
+            final block = _extractBlock(rules, match);
+            expect(block, contains('allow write: if false;'));
+            expect(
+              RegExp(r'allow\s+(create|update|delete)\b').hasMatch(block),
+              isFalse,
+              reason: 'no create/update/delete grant may remain',
+            );
+          });
+
+          test('keeps owner/tutor reads with the SR-4 list cap', () {
+            final block = _extractBlock(rules, match);
+            expect(block, contains('allow get: if isOwner(uid)'));
+            expect(block, contains('request.query.limit <= 500'));
+          });
         });
-
-        test('allows create (not wildcard read/write)', () {
-          // AUD-t-story-acceptance-20: scoped to the completions block (not
-          // the whole `rules` string) so this fails if the points bound is
-          // removed from completions even when coincidentally-matching text
-          // survives elsewhere in the file -- points_ledger and
-          // streak_events have no such bound today.
-          final block = _extractBlock(rules, 'completions/{completionId}');
-          expect(block, contains('points >= 0'));
-          expect(block, contains('points <= 100'));
-        });
-
-        test('enforces completed_at <= request.time', () {
-          // AUD-t-story-acceptance-20: scoped to the completions block, see
-          // above.
-          final block = _extractBlock(rules, 'completions/{completionId}');
-          expect(block, contains('completed_at <= request.time'));
-        });
-
-        test('denies update on completions', () {
-          final block = _extractBlock(rules, 'completions/{completionId}');
-          expect(
-            block,
-            anyOf(
-              contains('allow update, delete: if false'),
-              contains('allow update: if false'),
-              contains('allow delete: if false'),
-            ),
-          );
-        });
-      });
-
-      // ── streak_events ────────────────────────────────────────────────
-
-      group('streak_events collection', () {
-        test('has per-collection match for streak_events/{streakEventId}', () {
-          expect(rules, contains('match /streak_events/{streakEventId}'));
-        });
-
-        test('create-only with timestamp clamp', () {
-          final streakBlock = _extractBlock(
-            rules,
-            'streak_events/{streakEventId}',
-          );
-          expect(streakBlock, contains('created_at <= request.time'));
-        });
-
-        test('denies delete on streak_events', () {
-          final streakBlock = _extractBlock(
-            rules,
-            'streak_events/{streakEventId}',
-          );
-          expect(
-            streakBlock,
-            anyOf(
-              contains('allow update, delete: if false'),
-              contains('allow update: if false'),
-              contains('allow delete: if false'),
-            ),
-          );
-        });
-      });
-
-      // ── learning_ledger ──────────────────────────────────────────────
-
-      group('learning_ledger collection', () {
-        test('has per-collection match for learning_ledger/{entryId}', () {
-          expect(rules, contains('match /learning_ledger/{entryId}'));
-        });
-
-        test('create-only (no timestamp clamp on learning_ledger)', () {
-          // learning_ledger create is owner-gated without a timestamp clamp;
-          // the ULID doc-id provides idempotency. Accepts combined create,update.
-          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{entryId}');
-          expect(
-            ledgerBlock,
-            anyOf(
-              contains('allow create: if isOwner(uid)'),
-              contains('allow create, update: if isOwner(uid)'),
-            ),
-          );
-        });
-
-        test('denies delete on learning_ledger', () {
-          final ledgerBlock = _extractBlock(rules, 'learning_ledger/{entryId}');
-          expect(
-            ledgerBlock,
-            anyOf(
-              contains('allow update, delete: if false'),
-              contains('allow update: if false'),
-              contains('allow delete: if false'),
-            ),
-          );
-        });
-      });
+      }
 
       // ── settings ─────────────────────────────────────────────────────
       //

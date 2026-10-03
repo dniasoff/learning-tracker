@@ -101,8 +101,8 @@ check-profile-path-keying: ## Run the profile-scoped-collection keying-split gat
 check-retired-test-references: ## Fail when a retired symbol appears in test/, integration_test/ or functions/test/ (DNI-489)
 	dart run tool/check_retired_test_references.dart
 
-check-retired-symbols: ## Run the AD-49 retired-symbols gate standalone (DNI-521; inventory in tool/retired_symbols/)
-	dart run tool/check_retired_symbols.dart
+check-retired-symbols: ## Run the AD-49 retired-symbols gate standalone, enforced since the cutover (DNI-521/DNI-490; inventory in tool/retired_symbols/)
+	dart run tool/check_retired_symbols.dart --enforce
 
 check-dependency-direction: ## Run the AD-23 dependency-direction + AD-35 pure-domain gate standalone (hard gate, no baseline)
 	dart run tool/check_dependency_direction.dart
@@ -1264,8 +1264,8 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	  cat /tmp/profile_path_keying_check.$$$$.log; \
 	  rm -f /tmp/profile_path_keying_check.$$$$.log; \
 	fi; \
-	echo "105/105 — AD-49 RETIRED-SYMBOLS (DNI-521): no retired symbol from tool/retired_symbols/R1-R16.json remains in lib/, functions/src/, firestore.rules or firestore.indexes.json outside tool/retired_symbols/allowlist.json — pending entries are reported only; a retired entry still referenced fails the gate"; \
-	if ! dart run tool/check_retired_symbols.dart > /tmp/retired_symbols_check.$$$$.log 2>&1; then \
+	echo "105/105 — AD-49 RETIRED-SYMBOLS (DNI-521, --enforce since the DNI-490 cutover): no symbol from tool/retired_symbols/R1-R16.json remains in lib/, functions/src/, firestore.rules or firestore.indexes.json outside tool/retired_symbols/allowlist.json, and the allowlist matches the R14 remnants exactly"; \
+	if ! dart run tool/check_retired_symbols.dart --enforce > /tmp/retired_symbols_check.$$$$.log 2>&1; then \
 	  cat /tmp/retired_symbols_check.$$$$.log; \
 	  rm -f /tmp/retired_symbols_check.$$$$.log; \
 	  FAIL=1; \

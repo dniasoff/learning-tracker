@@ -2,10 +2,11 @@
 //
 // AD-54: `firebase deploy --only firestore:rules,firestore:indexes,functions`
 // is a gated CI step that must pass before the app release that depends on
-// it. AD-49: nothing reaches production before the cutover release (DNI-490),
-// so in this story the gate runs in DRY-RUN mode only — it validates the
+// it. In ci.yml this gate runs in DRY-RUN mode only — it validates the
 // deploy inputs and prints the exact command it would run, and REFUSES
-// `--mode deploy`. DNI-490 owns flipping it to a real deploy (rulings B5).
+// `--mode deploy`. The production deploy belongs to the release workflow:
+// deploy-play-store.yml's backend-deploy job runs
+// tool/firebase_backend_release.mjs (DNI-490, the AD-49 cutover; rulings B5).
 //
 // Wiring (ci.yml job `backend-deploy-gate`):
 //   needs: [firestore-rules, functions]  — the emulator rules suite (+ TQ-9)
@@ -162,10 +163,10 @@ export function validateDeployTargets(projectDir) {
  */
 export function decide(mode) {
   if (mode === 'dry-run') {
-    return { ok: true, message: `DRY-RUN — would run: ${DEPLOY_COMMAND} (production deploy is not enabled before the AD-49 cutover release, DNI-490)` };
+    return { ok: true, message: `DRY-RUN — would run: ${DEPLOY_COMMAND} (the production deploy runs only in deploy-play-store.yml backend-deploy, DNI-490)` };
   }
   if (mode === 'deploy') {
-    return { ok: false, message: 'mode=deploy is refused: the production backend deploy is enabled only by the AD-49 cutover release (DNI-490). This gate is dry-run only.' };
+    return { ok: false, message: 'mode=deploy is refused here: the production backend deploy runs only in deploy-play-store.yml (backend-deploy job, tool/firebase_backend_release.mjs, DNI-490). This CI gate is dry-run only.' };
   }
   return { ok: false, message: `unknown mode ${JSON.stringify(mode)} (expected dry-run)` };
 }

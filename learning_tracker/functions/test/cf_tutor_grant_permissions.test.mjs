@@ -132,6 +132,23 @@ describe('updateTutorGrantPermissions — AC-1 owner update', () => {
     assert.deepEqual((await grantDoc()).permissions, first);
   });
 
+  // DNI-490 (AD-49 cutover): the callable strips every key outside the AD-53
+  // set from the stored grant instead of naming the retired keys in
+  // functions/src, so the R16 retired-symbol gate passes under --enforce.
+  test('strips every stored key outside the AD-53 set, not only the five ' +
+      'legacy keys', async () => {
+    await seedActiveGrant({ ...LEGACY_PERMISSIONS, can_mark_live_completion: false });
+    await call(fns.updateTutorGrantPermissions, { grantId: GRANT, canEditLearning: true }, parentAuth);
+    const { permissions } = await grantDoc();
+    assert.deepEqual(Object.keys(permissions).sort(), [
+      'can_edit_learning',
+      'can_edit_points',
+      'can_edit_rewards',
+      'can_view_content',
+      'can_view_progress',
+    ]);
+  });
+
   test('ignores a client-supplied role and legacy keys in the request', async () => {
     await call(
       fns.updateTutorGrantPermissions,

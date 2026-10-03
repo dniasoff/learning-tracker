@@ -909,9 +909,8 @@ void main() {
         final perms = (capturedParams!['permissions'] as Map)
             .cast<String, dynamic>();
         expect(perms['can_edit_learning'], value);
-        for (final legacy in kLegacyTutorEditPermissionKeys) {
-          expect(perms.containsKey(legacy), isFalse, reason: legacy);
-        }
+        // Exactly the AD-53 keys, so none of the retired edit keys.
+        expect(perms.keys.toSet(), _ad53PermissionKeys);
       }
     });
 
@@ -1413,3 +1412,13 @@ void main() {
     });
   });
 }
+
+/// The AD-53 permission keys a grant carries (DNI-487); every pre-AD-53
+/// per-operation edit key is retired (R16).
+const _ad53PermissionKeys = <String>{
+  'can_view_progress',
+  'can_view_content',
+  'can_edit_learning',
+  'can_edit_rewards',
+  'can_edit_points',
+};

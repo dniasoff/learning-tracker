@@ -185,8 +185,7 @@ void main() {
       }
     });
 
-    test('every seeded entry names an owner story and the allowlist starts '
-        'empty (DNI-490 fills it at the cutover)', () {
+    test('every seeded entry names an owner story', () {
       final dir = Directory('$packageDir/tool/retired_symbols');
       for (var n = 1; n <= 16; n++) {
         final data =
@@ -197,10 +196,59 @@ void main() {
           expect((e! as _Json)['owner'], matches(RegExp('^DNI-\\d+\$')));
         }
       }
+    });
+
+    // DNI-490 (AC-4): the cutover allowlist holds EXACTLY the R14 remnants:
+    // one deny-all `match` block per retired collection in firestore.rules,
+    // plus each retired collection's index in firestore.indexes.json.
+    // functions/src/deletes.ts names none of them (recursiveDelete), so it
+    // has no entry. The names come from R14.json, not from this file.
+    test('the allowlist is exactly the R14 cutover remnants (DNI-490)', () {
+      final dir = Directory('$packageDir/tool/retired_symbols');
+      final r14 =
+          jsonDecode(File('${dir.path}/R14.json').readAsStringSync()) as _Json;
+      final collections = [
+        for (final e in (r14['entries']! as List<Object?>).cast<_Json>())
+          if (e['kind'] == 'collection') e['symbol']! as String,
+      ];
+      expect(collections, hasLength(5));
+      final indexes = File(
+        '$packageDir/firestore.indexes.json',
+      ).readAsStringSync();
+      final expected = <String>{
+        for (final c in collections) 'firestore.rules|$c|1',
+        for (final c in collections)
+          if (RegExp('"collectionGroup":\\s*"$c"').allMatches(indexes)
+              case final m when m.isNotEmpty)
+            'firestore.indexes.json|$c|${m.length}',
+      };
       final allow =
           jsonDecode(File('${dir.path}/allowlist.json').readAsStringSync())
               as _Json;
-      expect(allow['entries'], isEmpty);
+      final actual = <String>{
+        for (final e in (allow['entries']! as List<Object?>).cast<_Json>())
+          '${e['path']}|${e['symbol']}|${e['count']}',
+      };
+      expect(actual, expected);
+      expect(
+        actual.where((k) => k.startsWith('firestore.indexes.json|')),
+        hasLength(2),
+        reason: 'the streak_events and learning_order indexes',
+      );
+      expect(actual.where((k) => k.startsWith('functions/')), isEmpty);
+    });
+
+    test('the real tree passes --enforce (the cutover gate)', () async {
+      final result = await Process.run('dart', [
+        kernelPath,
+        '--enforce',
+      ], workingDirectory: packageDir);
+      expect(result.exitCode, 0, reason: out(result));
+      expect(result.stdout.toString(), contains('--enforce'));
+      expect(
+        result.stdout.toString(),
+        contains('Retired-symbols check OK (AD-49).'),
+      );
     });
 
     test('the gate is wired into make audit, make ci and the ci.yml '
@@ -219,7 +267,15 @@ void main() {
       final ci = File(
         '${Directory(packageDir).parent.path}/.github/workflows/ci.yml',
       ).readAsStringSync();
-      expect(ci, contains('dart run tool/check_retired_symbols.dart'));
+      expect(
+        ci,
+        contains('dart run tool/check_retired_symbols.dart --enforce'),
+        reason: 'DNI-490: CI runs the gate in cutover (--enforce) mode',
+      );
+      expect(
+        makefile,
+        contains('dart run tool/check_retired_symbols.dart --enforce'),
+      );
     });
   });
 

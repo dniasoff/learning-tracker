@@ -10,7 +10,8 @@
 //   • owner-only read/write of the user subtree (lockout cause),
 //   • the tutor WRITE BLOCK — a tutor (different uid) can never write a
 //     completion even with an active grant (canMarkLiveCompletion=false, site 3),
-//   • completions field validation (points∈[0,100], completed_at<=now),
+//   • the AD-49 cutover: the five retired collections deny every client
+//     write (DNI-490 AC-2),
 //   • Admin-SDK-only tutor_grants / tutor_active_access.
 //
 // Coverage: 25/25 match paths in firestore.rules.
@@ -35,6 +36,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  updateDoc,
   deleteDoc,
   deleteField,
   collection,
@@ -420,56 +422,106 @@ describe('SR-5 — revoked/expired tutor access (tutor_active_access absent) den
   });
 });
 
-// ── Path 7: completions — owner write + validation + TUTOR WRITE BLOCK ───────
-describe('completions — owner write + validation + TUTOR WRITE BLOCK', () => {
-  test('owner creates valid completion (points in range, no future date)', async () => {
-    await assertSucceeds(
-      setDoc(doc(owner(), `${COMPLETIONS}/ok`), { points: 50, completed_at: pastTs }),
-    );
-    await assertSucceeds(
-      setDoc(doc(owner(), `${COMPLETIONS}/nopoints`), { sefaria_ref: 'Berakhot.2a' }),
-    );
-  });
-  test('owner cannot write invalid points or a future completed_at', async () => {
-    await assertFails(setDoc(doc(owner(), `${COMPLETIONS}/neg`), { points: -1 }));
-    await assertFails(setDoc(doc(owner(), `${COMPLETIONS}/big`), { points: 101 }));
-    await assertFails(setDoc(doc(owner(), `${COMPLETIONS}/str`), { points: '50' }));
-    await assertFails(
-      setDoc(doc(owner(), `${COMPLETIONS}/future`), { completed_at: futureTs }),
-    );
-  });
-  test('tutor with active grant CAN read completions', async () => {
-    await assertSucceeds(getDoc(doc(tutor(), `${COMPLETIONS}/c1`)));
-  });
-  test('tutor with active grant CANNOT create or update a completion (write block)', async () => {
-    await assertFails(setDoc(doc(tutor(), `${COMPLETIONS}/x`), { points: 1, completed_at: pastTs }));
-    await assertFails(setDoc(doc(tutor(), `${COMPLETIONS}/c1`), { points: 99 }));
-  });
-  test('non-owner non-tutor cannot read; nobody can delete', async () => {
-    await assertFails(getDoc(doc(stranger(), `${COMPLETIONS}/c1`)));
-    await assertFails(deleteDoc(doc(owner(), `${COMPLETIONS}/c1`)));
-  });
-  // SR-1 (AUD-docs-01): append-only collections deny value mutation on
-  // update — only an idempotent identical replay is permitted. c1 is
-  // seeded in beforeEach with points: 10.
-  test('SR-1: owner CANNOT change points on an existing completion (value mutation denied)', async () => {
-    await assertFails(
-      setDoc(doc(owner(), `${COMPLETIONS}/c1`), { points: 99, completed_at: pastTs }),
+// ── DNI-490 (story 1.28) AC-2 — the AD-49 cutover: retired collections ─────
+//
+// `completions`, `learning_ledger`, `streak_events`, `bookmarks` and
+// `learning_order` deny EVERY client write, owner and tutor alike, including
+// an identical replay of a document already there; learning_events is the
+// only write target for learning. The match blocks stay as deny-all blocks
+// (allowlisted by tool/check_retired_symbols.dart) with their read grants
+// UNCHANGED, and the release after (DNI-491) removes them. Each payload is
+// one the pre-cutover rules accepted, so a denial here is the retirement,
+// not a malformed document.
+const RETIRED_COLLECTIONS = [
+  { name: 'completions', payload: () => ({ points: 5, completed_at: pastTs }), listCapped: true },
+  { name: 'learning_ledger', payload: () => ({ ...PAYLOADS.learning_ledger }), listCapped: true },
+  { name: 'streak_events', payload: () => ({ ...PAYLOADS.streak_events }), listCapped: true },
+  { name: 'bookmarks', payload: () => ({ ...PAYLOADS.bookmarks }), listCapped: false },
+  { name: 'learning_order', payload: () => ({ ...PAYLOADS.learning_order }), listCapped: false },
+];
+
+describe('DNI-490 AC-2 — retired collections deny every client write (AD-49)', () => {
+  test('the five retired collections are exactly the R14 set', () => {
+    assert.deepStrictEqual(
+      RETIRED_COLLECTIONS.map((rc) => rc.name).sort(),
+      ['bookmarks', 'completions', 'learning_ledger', 'learning_order', 'streak_events'],
     );
   });
-  test('SR-1: owner CAN replay the identical completion value (idempotent retry)', async () => {
-    await assertSucceeds(
-      setDoc(doc(owner(), `${COMPLETIONS}/c1`), { points: 10, completed_at: pastTs }),
-    );
-  });
-  test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
-    await expectSR4ListLimitCap(COMPLETIONS);
-  });
+
+  for (const rc of RETIRED_COLLECTIONS) {
+    const coll = `${LP}/${rc.name}`;
+
+    describe(rc.name, () => {
+      test('owner and tutor create are denied', async () => {
+        await assertFails(setDoc(doc(owner(), `${coll}/created_by_owner`), rc.payload()));
+        await assertFails(setDoc(doc(tutor(), `${coll}/created_by_tutor`), rc.payload()));
+        await assertFails(
+          setDoc(doc(owner(), `${coll}/merged_by_owner`), rc.payload(), { merge: true }),
+        );
+      });
+
+      test('an already-seeded document: owner and tutor update and delete are denied, ' +
+          'and the document is left untouched', async () => {
+        const path = `${coll}/seeded`;
+        const seeded = rc.payload();
+        await seed(path, seeded);
+        for (const [who, db] of [['owner', owner()], ['tutor', tutor()]]) {
+          // An identical replay (the old outbox-retry carve-out) is a write too.
+          await assertFails(setDoc(doc(db, path), seeded), `${who} identical replay`);
+          await assertFails(
+            setDoc(doc(db, path), { tampered: true }, { merge: true }),
+            `${who} merge`,
+          );
+          await assertFails(updateDoc(doc(db, path), { tampered: true }), `${who} update`);
+          await assertFails(deleteDoc(doc(db, path)), `${who} delete`);
+        }
+        await env.withSecurityRulesDisabled(async (ctx) => {
+          const snap = await getDoc(doc(ctx.firestore(), path));
+          assert.ok(snap.exists(), 'the seeded document must survive');
+          assert.ok(!('tampered' in snap.data()), 'the seeded document must be unchanged');
+        });
+      });
+
+      test('an owner batch that co-writes a learning event and a retired document ' +
+          'is rejected whole', async () => {
+        const db = owner();
+        const batch = writeBatch(db);
+        const eventId = nextUlid();
+        batch.set(doc(db, `${LP}/learning_events/${eventId}`), learnEvent());
+        batch.set(doc(db, `${coll}/co_written`), rc.payload());
+        await assertFails(batch.commit());
+        // The same event alone is accepted: the retired write is the denial.
+        await assertSucceeds(
+          setDoc(doc(db, `${LP}/learning_events/${eventId}`), learnEvent()),
+        );
+      });
+
+      test('stranger and anonymous writes stay denied', async () => {
+        await assertFails(setDoc(doc(stranger(), `${coll}/x`), rc.payload()));
+        await assertFails(setDoc(doc(anon(), `${coll}/x`), rc.payload()));
+      });
+
+      test('reads are not changed by the write cutover', async () => {
+        const path = `${coll}/readable`;
+        await seed(path, rc.payload());
+        await assertSucceeds(getDoc(doc(owner(), path)));
+        await assertSucceeds(getDoc(doc(tutor(), path)));
+        await assertFails(getDoc(doc(stranger(), path)));
+        await assertFails(getDoc(doc(anon(), path)));
+        if (rc.listCapped) {
+          // SR-4 stays: list() capped at limit(500).
+          await expectSR4ListLimitCap(coll);
+        } else {
+          await assertSucceeds(getDocs(collection(owner(), coll)));
+        }
+      });
+    });
+  }
 });
 
 // ── SR-4 helper: list() queries are capped at request.query.limit <= 500 ────
 // (AUD-firebase-09) get() (single-doc read) stays unrestricted (exercised
-// elsewhere by expectOwnerWriteTutorRead / the completions describe block
+// elsewhere by expectOwnerWriteTutorRead / the DNI-490 retired-collections block
 // above); list() (a collection query) must specify limit(500) or fewer to
 // succeed — a larger or absent limit is denied, regardless of how many
 // documents actually exist in the collection.
@@ -495,62 +547,6 @@ async function expectSR1ChangedValueDenied(path, seedDoc, changedDoc) {
   await assertFails(setDoc(doc(owner(), path), changedDoc));
   await assertSucceeds(setDoc(doc(owner(), path), seedDoc));
 }
-
-// ── Path 8: streak_events ────────────────────────────────────────────────────
-describe('streak_events — owner write, tutor read, delete denied', () => {
-  test('owner-write + tutor-read + stranger-deny matrix', async () => {
-    await expectOwnerWriteTutorRead(`${LP}/streak_events/s1`, { event: 'start' });
-  });
-  test('tutor cannot write streak_events', async () => {
-    await assertFails(setDoc(doc(tutor(), `${LP}/streak_events/x`), { event: 'x' }));
-  });
-  test('SR-1: owner CANNOT change an existing streak_events value (identical replay still allowed)', async () => {
-    await expectSR1ChangedValueDenied(
-      `${LP}/streak_events/s2`,
-      { event: 'start' },
-      { event: 'tampered' },
-    );
-  });
-  test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
-    await expectSR4ListLimitCap(`${LP}/streak_events`);
-  });
-  test('SR-3: owner cannot write a future created_at; past created_at succeeds', async () => {
-    await assertFails(
-      setDoc(doc(owner(), `${LP}/streak_events/future`), { event: 'x', created_at: futureTs }),
-    );
-    await assertSucceeds(
-      setDoc(doc(owner(), `${LP}/streak_events/past`), { event: 'x', created_at: pastTs }),
-    );
-  });
-});
-
-// ── Path 9: learning_ledger ──────────────────────────────────────────────────
-describe('learning_ledger — owner write, tutor read, delete denied', () => {
-  test('owner-write + tutor-read + stranger-deny matrix', async () => {
-    await expectOwnerWriteTutorRead(`${LP}/learning_ledger/ll1`, { minutes: 30 });
-  });
-  test('tutor cannot write learning_ledger', async () => {
-    await assertFails(setDoc(doc(tutor(), `${LP}/learning_ledger/x`), { minutes: 1 }));
-  });
-  test('SR-1: owner CANNOT change an existing learning_ledger value (identical replay still allowed)', async () => {
-    await expectSR1ChangedValueDenied(
-      `${LP}/learning_ledger/ll2`,
-      { minutes: 30 },
-      { minutes: 9999 },
-    );
-  });
-  test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
-    await expectSR4ListLimitCap(`${LP}/learning_ledger`);
-  });
-  test('SR-3: owner cannot write a future completed_at; past completed_at succeeds', async () => {
-    await assertFails(
-      setDoc(doc(owner(), `${LP}/learning_ledger/future`), { minutes: 1, completed_at: futureTs }),
-    );
-    await assertSucceeds(
-      setDoc(doc(owner(), `${LP}/learning_ledger/past`), { minutes: 1, completed_at: pastTs }),
-    );
-  });
-});
 
 // ── Path 10: points_ledger ───────────────────────────────────────────────────
 describe('points_ledger — owner write, tutor read, delete denied', () => {
@@ -677,82 +673,6 @@ describe('curriculum_tracks — owner write with key whitelist, tutor read, dele
   });
   // R16 (DNI-484): the old reorder-amnesty baseline is
   // retired with the other legacy track fields — see the DNI-484 block.
-});
-
-// ── Path 15: bookmarks (with hasOnly whitelist) ───────────────────────────────
-describe('bookmarks — owner write with key whitelist, tutor read, delete denied', () => {
-  // NOTE: no `track_type` — removed from the schema (W3.22) and absent from the
-  // bookmarks hasOnly() allowlist. A stale fixture carrying track_type made this
-  // rules test red on dev (invisible because test-rules isn't wired into `make ci`).
-  const validBookmark = {
-    profile_id: PROFILE,
-    curriculum_id: 'c1',
-    content_item_id: 'item1',
-    sefaria_ref: 'Berakhot.2a',
-    stage_id: 's1',
-    updated_at: pastTs,
-    synced_at: pastTs,
-  };
-
-  test('owner-write + tutor-read + stranger-deny matrix', async () => {
-    await expectOwnerWriteTutorRead(`${LP}/bookmarks/bk1`, validBookmark);
-  });
-  test('owner write with unknown field is rejected (whitelist)', async () => {
-    await assertFails(
-      setDoc(doc(owner(), `${LP}/bookmarks/bk1`), {
-        ...validBookmark,
-        unknown_field: 'x',
-      }),
-    );
-  });
-  test('tutor cannot write bookmarks', async () => {
-    await assertFails(setDoc(doc(tutor(), `${LP}/bookmarks/bk1`), validBookmark));
-  });
-  test('SR-2: an oversized sefaria_ref (>500 chars) is denied', async () => {
-    await assertFails(
-      setDoc(doc(owner(), `${LP}/bookmarks/bk2`), {
-        ...validBookmark,
-        sefaria_ref: 'x'.repeat(501),
-      }),
-    );
-  });
-  test('SR-2: a wrong-typed curriculum_id (number, not string) is denied', async () => {
-    await assertFails(
-      setDoc(doc(owner(), `${LP}/bookmarks/bk3`), {
-        ...validBookmark,
-        curriculum_id: 12345,
-      }),
-    );
-  });
-});
-
-// ── Path 16: learning_order (with hasOnly whitelist; owner DELETE allowed) ───
-describe('learning_order — owner write+delete with key whitelist, tutor read', () => {
-  const validOrder = {
-    curriculum_id: 'c1',
-    sefaria_ref: 'Berakhot.2a',
-    ref: 'Berakhot 2a',
-    user_sort_order: 1,
-    updated_at: pastTs,
-    synced_at: pastTs,
-  };
-
-  test('owner-write + tutor-read + stranger-deny matrix (owner can delete)', async () => {
-    await expectOwnerWriteTutorRead(`${LP}/learning_order/o1`, validOrder, {
-      ownerCanDelete: true,
-    });
-  });
-  test('owner write with unknown field is rejected (whitelist)', async () => {
-    await assertFails(
-      setDoc(doc(owner(), `${LP}/learning_order/o1`), {
-        ...validOrder,
-        bad_field: 99,
-      }),
-    );
-  });
-  test('tutor cannot write learning_order', async () => {
-    await assertFails(setDoc(doc(tutor(), `${LP}/learning_order/o1`), validOrder));
-  });
 });
 
 // ── Path 16b: track_learning_order (Gap 1 — hasOnly whitelist, SR-4 cap) ────
@@ -1159,10 +1079,9 @@ describe('PHASE D — permission-denied oracle: all legitimate owner writes succ
 
     // 1. learner_profiles document itself
     await assertSucceeds(setDoc(doc(db, profilePath), { name: 'Alice' }));
-    // 2. completions — requires Timestamp for completed_at <= request.time rule
-    await assertSucceeds(setDoc(doc(db, `${LP}/completions/d1`), { points: 5, completed_at: pastTs }));
-    // 3. bookmarks — minimal codec shape; hasOnly allows these keys
-    await assertSucceeds(setDoc(doc(db, `${LP}/bookmarks/bk_d`), PAYLOADS.bookmarks));
+    // (2, 3, 9, 11, 12: completions, bookmarks, learning_order,
+    // learning_ledger and streak_events are retired — DNI-490 AC-2 above
+    // asserts they deny every client write.)
     // 4. settings — open bag; no whitelist
     await assertSucceeds(setDoc(doc(db, `${LP}/settings/c1`), PAYLOADS.settings));
     // 5–8, 10, 15: AD-38 governed collections (DNI-471) — the legitimate
@@ -1175,14 +1094,8 @@ describe('PHASE D — permission-denied oracle: all legitimate owner writes succ
     await assertSucceeds(governedWrite(db, `${LP}/study_day_configs/c1_1_1`, PAYLOADS.study_day_configs, 'mainTrackStudyDays', 'c1'));
     // 8. goals — wide hasOnly whitelist (camelCase + snake_case)
     await assertSucceeds(governedWrite(db, `${GOALS}/g1`, PAYLOADS.goals, 'goal', 'g1'));
-    // 9. learning_order — whitelist allows curriculum_id, sefaria_ref, user_sort_order, updated_at
-    await assertSucceeds(setDoc(doc(db, `${LP}/learning_order/c1_ref`), PAYLOADS.learning_order));
     // 10. profile_programs — whitelist allows profile_id, curriculum_id, program_id, tracking_start_date, tracking_start_ref
     await assertSucceeds(governedWrite(db, `${LP}/profile_programs/c1`, PAYLOADS.profile_programs, 'mainTrackProgram', 'c1'));
-    // 11. learning_ledger — no hasOnly; open write (append-only by ULID doc-id)
-    await assertSucceeds(setDoc(doc(db, `${LP}/learning_ledger/ULID001`), PAYLOADS.learning_ledger));
-    // 12. streak_events — no hasOnly; append-only
-    await assertSucceeds(setDoc(doc(db, `${LP}/streak_events/ULID002`), PAYLOADS.streak_events));
     // 13. preferences — no hasOnly; open bag
     await assertSucceeds(setDoc(doc(db, `${LP}/preferences/notification_settings`), { enabled: true }));
     // 14. import_metadata — whitelist allows profile_id, curriculum_id, item_count, imported_at
@@ -1197,9 +1110,9 @@ describe('PHASE D — permission-denied oracle: all legitimate owner writes succ
 
   test('oracle canary: unknown key in hasOnly-guarded collection is denied (oracle is live, not trivially green)', async () => {
     const db = owner();
-    // bookmarks hasOnly denies any key not in its allowlist
-    await assertFails(setDoc(doc(db, `${LP}/bookmarks/canary`), {
-      ...PAYLOADS.bookmarks,
+    // import_metadata hasOnly denies any key not in its allowlist
+    await assertFails(setDoc(doc(db, `${LP}/import_metadata/canary`), {
+      ...PAYLOADS.import_metadata,
       canary_unknown_field: true,
     }));
     // curriculum_tracks hasOnly also denies unknown keys (even on a
@@ -1229,21 +1142,6 @@ describe('PHASE E — cross-device replication round-trip (same uid, two Firesto
   // Each test case: a collection, the full Firestore path, the write payload,
   // and one key+value to assert on read-back.
   const COLLECTIONS = [
-    {
-      name: 'completions',
-      path: `${LP}/completions/rt1`,
-      // completions rules validate completed_at <= request.time: use pastTs
-      payload: { points: 10, completed_at: pastTs },
-      assertField: 'points',
-      assertValue: 10,
-    },
-    {
-      name: 'bookmarks',
-      path: `${LP}/bookmarks/bk_e`,
-      payload: { ...PAYLOADS.bookmarks },
-      assertField: 'curriculum_id',
-      assertValue: 'c1',
-    },
     {
       name: 'settings',
       path: `${LP}/settings/c1_e`,
@@ -1285,26 +1183,12 @@ describe('PHASE E — cross-device replication round-trip (same uid, two Firesto
       assertValue: PROFILE,
     },
     {
-      name: 'learning_order',
-      path: `${LP}/learning_order/c1_Berakhot_2a`,
-      payload: { ...PAYLOADS.learning_order },
-      assertField: 'user_sort_order',
-      assertValue: 1,
-    },
-    {
       name: 'profile_programs',
       governed: { entity: 'mainTrackProgram', entityId: 'c1' },
       path: `${LP}/profile_programs/c1_e`,
       payload: { ...PAYLOADS.profile_programs },
       assertField: 'curriculum_id',
       assertValue: 'c1',
-    },
-    {
-      name: 'learning_ledger',
-      path: `${LP}/learning_ledger/ULID0001`,
-      payload: { ...PAYLOADS.learning_ledger },
-      assertField: 'ulid',
-      assertValue: 'ULID0001',
     },
     {
       // AUD-firebase-05

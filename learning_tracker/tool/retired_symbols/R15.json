@@ -3,6 +3,6 @@
   "title": "Tests and fixtures",
   "description": "Action: port to engine/command tests or delete. This gate scans lib/, functions/src/, firestore.rules and firestore.indexes.json only; the test-root sweep is DNI-489's own scanner. The one lib/ entry is the C0 (DNI-524) contract-stub helper, which DNI-490 deletes at cutover.",
   "entries": [
-    {"symbol": "c0Stub", "kind": "service", "state": "pending", "owner": "DNI-490", "paths": {"include": ["lib/**"]}, "note": "C0 contract stubs; --enforce at cutover requires zero"}
+    {"symbol": "c0Stub", "kind": "service", "state": "retired", "owner": "DNI-490", "paths": {"include": ["lib/**"]}, "note": "C0 contract stubs; --enforce at cutover requires zero"}
   ]
 }
