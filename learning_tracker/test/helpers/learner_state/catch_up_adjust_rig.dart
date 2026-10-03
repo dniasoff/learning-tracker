@@ -113,12 +113,14 @@ final class AdjustRig {
 
   /// The overrides; [actions] replaces the recording card actions, and
   /// [realActions] keeps the production ones (then the caller overrides
-  /// `learningCommandsProvider`).
+  /// `learningCommandsProvider`). [labelOf] names a leaf row (the ref
+  /// without "Mishnah " by default).
   List<Override> overrides({
     CatchUpCardActions? actions,
     bool realActions = false,
     bool hebrewTerms = false,
     bool realLabels = false,
+    String Function(LeafRef leaf)? labelOf,
   }) => [
     useHebrewTermsProvider.overrideWith(
       hebrewTerms ? _HebrewTerms.new : _EnglishTerms.new,
@@ -136,10 +138,12 @@ final class AdjustRig {
     ),
     if (!realLabels) ...[
       upToLeafLabelProvider.overrideWith(
-        (ref, leaf) => leaf.replaceFirst('Mishnah ', ''),
+        (ref, leaf) => labelOf?.call(leaf) ?? leaf.replaceFirst('Mishnah ', ''),
       ),
       upToUnitLabelsProvider.overrideWith(
-        (ref, _) => (one: 'mishna', many: 'mishnayos'),
+        (ref, _) => hebrewTerms
+            ? (one: 'משנה', many: 'משניות')
+            : (one: 'mishna', many: 'mishnayos'),
       ),
     ],
     upToSliceProvider.overrideWith((ref, request) {

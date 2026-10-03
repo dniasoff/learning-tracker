@@ -404,25 +404,28 @@ class _CatchUpCardViewState extends ConsumerState<CatchUpCardView> {
                       )
                     : Text(l10n.catchUpCardYesAll),
               ),
-              Semantics(
-                expanded: recordAdjusted == null ? null : adjusting,
-                child: OutlinedButton.icon(
-                  key: const ValueKey('catchUpCardAdjust'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: pillMin,
-                    shape: const StadiumBorder(),
+              // One node: the pill announces its expanded state itself.
+              MergeSemantics(
+                child: Semantics(
+                  expanded: recordAdjusted == null ? null : adjusting,
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('catchUpCardAdjust'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: pillMin,
+                      shape: const StadiumBorder(),
+                    ),
+                    iconAlignment: IconAlignment.end,
+                    onPressed: recordAdjusted == null || recording
+                        ? null
+                        : () => setState(() => _adjusting = !_adjusting),
+                    icon: Icon(
+                      adjusting
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
+                      size: 20,
+                    ),
+                    label: Text(l10n.catchUpCardAdjust),
                   ),
-                  iconAlignment: IconAlignment.end,
-                  onPressed: recordAdjusted == null || recording
-                      ? null
-                      : () => setState(() => _adjusting = !_adjusting),
-                  icon: Icon(
-                    adjusting
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 20,
-                  ),
-                  label: Text(l10n.catchUpCardAdjust),
                 ),
               ),
             ],
