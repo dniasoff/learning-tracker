@@ -14,10 +14,27 @@
 //
 // After a successful CF call the caller is responsible for refreshing the
 // local mirror (trigger a tutored pull) so the change is visible in the UI.
+//
+// Story 1.24 (DNI-486): the learning commands (`recordLearning`,
+// `voidLearning`, `replaceLearning`, `unlearn`) call the Story 1.23
+// callables and return the decoded result, including the server-stamped
+// `recorded_at` the client re-runs `CaptureGate` on (AD-36). Every event id
+// and action id is a client ULID the CALLER allocates before the first
+// invocation, so a retry after a timeout re-sends the identical payload and
+// the callable's idempotent replay returns the stored result (AD-31, AD-38).
+//
+// Story 4.1 (DNI-509): the sub-track lifecycle (`createSubTrack`,
+// `editSubTrack`, `endSubTrack`, `deleteSubTrack`) calls
+// `tutorUpsertSubTrack`, and a capture may carry a sub-track `source`.
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 
 /// Result type for tutor write operations.
 sealed class TutorWriteResult {
@@ -28,10 +45,77 @@ class TutorWriteSuccess extends TutorWriteResult {
   const TutorWriteSuccess();
 }
 
+/// A successful Story 1.23 learning callable (DNI-486): the action and the
+/// learning events it wrote, with the server-stamped `recorded_at` the
+/// client re-runs `CaptureGate` on (AD-36, deviation #2).
+class TutorLearningWritten extends TutorWriteSuccess {
+  const TutorLearningWritten({
+    required this.actionId,
+    this.eventIds = const [],
+    this.recordedAt,
+    this.replayed = false,
+  });
+
+  /// The governed action id (a client ULID).
+  final String actionId;
+
+  /// The learning events the action wrote (a replay returns the stored ids).
+  final List<String> eventIds;
+
+  /// The server-stamped `recorded_at` of the action's events, null when no
+  /// event was written.
+  final DateTime? recordedAt;
+
+  /// The callable returned an already-stored action (a retry after an
+  /// ambiguous timeout): nothing new was written.
+  final bool replayed;
+}
+
+/// A successful Story 1.10 governed callable (DNI-486): the action id and
+/// the `change_log` entries it wrote (AD-38). Only built from a validated
+/// answer (see `TutorWriteService._decodeGoverned`).
+class TutorGovernedWritten extends TutorWriteSuccess {
+  const TutorGovernedWritten({
+    required this.actionId,
+    this.changeIds = const [],
+    this.at,
+    this.replayed = false,
+  });
+
+  /// The governed action id the server confirmed.
+  final String actionId;
+
+  /// The action's `change_log` entry ids.
+  final List<String> changeIds;
+
+  /// The server-stamped `change_log.at`; null only for a no-op action.
+  final DateTime? at;
+
+  /// The callable returned an already-stored action.
+  final bool replayed;
+}
+
 class TutorWriteFailure extends TutorWriteResult {
   const TutorWriteFailure({required this.message, this.code});
   final String message;
   final String? code;
+
+  /// The write may not have reached the server, or its answer was lost (a
+  /// timeout, no network, a transient server error). Nothing is shown as
+  /// written; a retry re-sends the SAME client ULIDs, so a write that did
+  /// commit is replayed, never duplicated (DNI-486 AC-5).
+  bool get isRetryable => _retryableCodes.contains(code);
+
+  static const _retryableCodes = {
+    TutorWriteInvalidResponse.invalidResponseCode,
+    'deadline-exceeded',
+    'unavailable',
+    'aborted',
+    'internal',
+    'resource-exhausted',
+    'unknown',
+    'unknown-error',
+  };
 }
 
 /// AD-53 (DNI-487 AC-6): the callable's per-call grant check rejected the
@@ -44,24 +128,132 @@ class TutorWriteEditingTurnedOff extends TutorWriteFailure {
     : super(code: 'permission-denied');
 }
 
+/// A Story 1.23 learning or Story 1.10 governed callable answered without
+/// throwing, but its answer is not a valid success: not a map, `success` is
+/// not true, or the action id, event / change ids or server stamp do not
+/// match the request (DNI-486). Nothing is shown as written and no success analytics are
+/// emitted. It is retryable: the retry re-sends the SAME client ULIDs, so an
+/// action that did commit is replayed by the server, never duplicated.
+class TutorWriteInvalidResponse extends TutorWriteFailure {
+  const TutorWriteInvalidResponse({required super.message})
+    : super(code: invalidResponseCode);
+
+  /// The [TutorWriteFailure.code] of a malformed or unsuccessful answer.
+  static const invalidResponseCode = 'invalid-response';
+}
+
 /// The server's AD-53 rejection reads "Grant lacks can_edit_learning"
 /// (writeWithChangeLog, verifyTutorGrant and tutorBulkPriorCompletions).
 bool _isEditingTurnedOff(FirebaseFunctionsException e) =>
     e.code == 'permission-denied' &&
     (e.message ?? '').contains('can_edit_learning');
 
-/// Injectable callable: given a function name and args, calls the CF.
-/// Production builds it from the active account's named app (DNI-520);
-/// overridable in tests.
+/// One tutor `learn` event in the Story 1.23 wire shape (`{id, fields}`,
+/// AD-52 storage names). [id] is the client ULID — the `learning_events`
+/// doc id — allocated once and re-sent unchanged on retry. The caller
+/// never supplies `actor`, `recorded_at` or `original_recorded_at`.
+final class TutorLearnEvent {
+  /// Creates the event. [dateState] is `dated` (with [learnedOn]) or
+  /// `before_tracking` (no [learnedOn]; a node ref carries [level]).
+  ///
+  /// [source] is `main` (default) or, for a capture on the tutor's sub-track
+  /// row (Story 4.1, DNI-509), the sub-track's ULID: then the event is
+  /// `dated` and carries no [stage] or [level].
+  const TutorLearnEvent({
+    required this.id,
+    required this.curriculumId,
+    required this.ref,
+    required this.dateState,
+    this.learnedOn,
+    this.level,
+    this.stage,
+    this.source = LearningEvent.sourceMain,
+  }) : assert(
+         dateState != DateState.catchUp,
+         'a tutor capture is dated or before_tracking (catch_up is owner-only)',
+       ),
+       assert(
+         source == LearningEvent.sourceMain ||
+             (dateState == DateState.dated && stage == null && level == null),
+         'a sub-track capture is a dated leaf event with no stage',
+       );
+
+  /// The client ULID.
+  final String id;
+
+  /// The curriculum storage key.
+  final String curriculumId;
+
+  /// The leaf ref, or the node ref of a `before_tracking` [level] event.
+  final String ref;
+
+  /// `dated` or `before_tracking`.
+  final DateState dateState;
+
+  /// `YYYY-MM-DD` for a dated event; null for `before_tracking`.
+  final String? learnedOn;
+
+  /// The ContentIndex level of a `before_tracking` node event.
+  final String? level;
+
+  /// The review stage of a main-track event.
+  final int? stage;
+
+  /// `main`, or the ULID of the sub-track the event is learning on.
+  final String source;
+
+  /// The `{id, fields}` request object. Optional keys are omitted, never
+  /// sent as null, except `learned_on` (null on `before_tracking`).
+  Map<String, Object?> toWire() => {
+    'id': id,
+    'fields': {
+      'kind': 'learn',
+      'curriculum_id': curriculumId,
+      'ref': ref,
+      'source': source,
+      'date_state': dateState.storage,
+      'learned_on': dateState == DateState.beforeTracking ? null : learnedOn,
+      if (level != null) 'level': level,
+      if (stage != null) 'stage': stage,
+    },
+  };
+}
+
+/// One counted node event an un-learn voids, with the client ULIDs of the
+/// maximal complement nodes re-issued in its place (ruling B9).
+final class TutorNodeReissue {
+  /// Creates the entry.
+  const TutorNodeReissue({required this.targetEventId, required this.reissues});
+
+  /// The node event to void.
+  final String targetEventId;
+
+  /// The re-issued `before_tracking` nodes.
+  final List<({String eventId, String ref, String level})> reissues;
+
+  /// The `nodeReissues[]` request object.
+  Map<String, Object?> toWire() => {
+    'targetEventId': targetEventId,
+    'reissues': [
+      for (final r in reissues)
+        {'eventId': r.eventId, 'ref': r.ref, 'level': r.level},
+    ],
+  };
+}
+
+/// Injectable callable: given a function name and args, calls the CF and
+/// returns its response data (null when it has none). Production builds it
+/// from the active account's named app (DNI-520); overridable in tests.
 typedef TutorCallableInvoker =
-    Future<void> Function(String functionName, Map<String, dynamic> args);
+    Future<Object?> Function(String functionName, Map<String, dynamic> args);
 
 TutorCallableInvoker _accountInvoker(AccountFunctionsResolver resolve) =>
     (functionName, args) async {
       final functions = await resolve();
-      await functions
+      final result = await functions
           .httpsCallable(functionName)
-          .call<Map<String, dynamic>>(args);
+          .call<Object?>(args);
+      return result.data;
     };
 
 /// Cloud-Functions-backed write proxy for tutor-originated mutations on a
@@ -73,16 +265,22 @@ TutorCallableInvoker _accountInvoker(AccountFunctionsResolver resolve) =>
 class TutorWriteService {
   /// Pass [invoker] (tests) or [resolveFunctions] (production: the active
   /// account's named-app Cloud Functions client).
+  ///
+  /// [analytics] receives the registered `capture` event after a
+  /// successful learning capture (AD-47: the callables emit nothing).
   TutorWriteService({
     TutorCallableInvoker? invoker,
     AccountFunctionsResolver? resolveFunctions,
+    LearningAnalytics? analytics,
   }) : assert(
          invoker != null || resolveFunctions != null,
          'TutorWriteService needs an invoker or a functions resolver',
        ),
-       _invoker = invoker ?? _accountInvoker(resolveFunctions!);
+       _invoker = invoker ?? _accountInvoker(resolveFunctions!),
+       _analytics = analytics;
 
   final TutorCallableInvoker _invoker;
+  final LearningAnalytics? _analytics;
 
   // ── Internal helper ──────────────────────────────────────────────────────────
 
@@ -90,16 +288,28 @@ class TutorWriteService {
     String functionName,
     Map<String, dynamic> args,
   ) async {
+    final (_, failure) = await _invoke(functionName, args);
+    return failure ?? const TutorWriteSuccess();
+  }
+
+  /// Invokes [functionName]; its response data, or the typed failure. The
+  /// single failure mapping every tutor callable shares.
+  Future<(Object?, TutorWriteFailure?)> _invoke(
+    String functionName,
+    Map<String, dynamic> args,
+  ) async {
     try {
-      await _invoker(functionName, args);
-      return const TutorWriteSuccess();
+      return (await _invoker(functionName, args), null);
     } on FirebaseFunctionsException catch (e) {
       if (_isEditingTurnedOff(e)) {
-        return TutorWriteEditingTurnedOff(message: e.message!);
+        return (null, TutorWriteEditingTurnedOff(message: e.message!));
       }
-      return TutorWriteFailure(
-        message: e.message ?? 'Cloud Function call failed',
-        code: e.code,
+      return (
+        null,
+        TutorWriteFailure(
+          message: e.message ?? 'Cloud Function call failed',
+          code: e.code,
+        ),
       );
     } catch (e, st) {
       // AUD-tutoring-11: log the real exception for diagnostics, but never
@@ -112,11 +322,326 @@ class TutorWriteService {
         exception: e,
         stackTrace: st,
       );
-      return const TutorWriteFailure(
-        message: 'An unexpected error occurred.',
-        code: 'unknown-error',
+      return (
+        null,
+        const TutorWriteFailure(
+          message: 'An unexpected error occurred.',
+          code: 'unknown-error',
+        ),
       );
     }
+  }
+
+  /// A Story 1.10 governed callable: [_invoke], decoded as
+  /// [TutorGovernedWritten] only once the answer is a validated success
+  /// (see [_decodeGoverned]); anything else is a [TutorWriteInvalidResponse]
+  /// — retryable, so a caller holding a frozen [actionId] keeps it until a
+  /// validated receipt arrives. [actionId] (a client ULID) is sent only when
+  /// given, so a retry replays the stored action instead of writing twice.
+  Future<TutorWriteResult> _callGoverned(
+    String functionName,
+    Map<String, dynamic> args, {
+    String? actionId,
+  }) async {
+    final (data, failure) = await _invoke(functionName, {
+      ...args,
+      if (actionId != null) 'actionId': actionId,
+    });
+    if (failure != null) return failure;
+    final (written, reason) = _decodeGoverned(data, actionId: actionId);
+    if (written != null) return written;
+    // The reason names only the failed check — never ids or payload.
+    AppLogger.instance.warning(
+      event: 'TutorWriteService.$functionName invalid response',
+      fields: {'reason': reason},
+    );
+    return const TutorWriteInvalidResponse(
+      message: 'The server answer could not be confirmed.',
+    );
+  }
+
+  /// Validates a Story 1.10 governed success answer (the
+  /// `writeWithChangeLog` result): a map with `success == true`, a string
+  /// `action_id` (exactly [actionId] when one was sent), a duplicate-free
+  /// string list `change_ids`, a boolean `replayed`, and — whenever a
+  /// change was logged — a valid ISO-8601 server `at` stamp. An answer with
+  /// no change ids is valid only as the server's explicit `noop: true`.
+  /// Returns the decoded result, or null with the name of the failed check.
+  static (TutorGovernedWritten?, String) _decodeGoverned(
+    Object? data, {
+    required String? actionId,
+  }) {
+    if (data is! Map) return (null, 'not-a-map');
+    if (data['success'] != true) return (null, 'not-success');
+    final action = data['action_id'];
+    if (action is! String || action.isEmpty) return (null, 'action-id');
+    if (actionId != null && action != actionId) return (null, 'action-id');
+    final rawIds = data['change_ids'];
+    if (rawIds is! List || rawIds.any((v) => v is! String)) {
+      return (null, 'change-ids');
+    }
+    final ids = rawIds.cast<String>().toList(growable: false);
+    if (ids.toSet().length != ids.length) return (null, 'change-ids');
+    final replayed = data['replayed'];
+    if (replayed is! bool) return (null, 'replayed');
+    final at = _instant(data['at']);
+    if (ids.isEmpty) {
+      if (data['noop'] != true) return (null, 'empty-without-noop');
+    } else if (at == null) {
+      return (null, 'at');
+    }
+    return (
+      TutorGovernedWritten(
+        actionId: action,
+        changeIds: ids,
+        at: at,
+        replayed: replayed,
+      ),
+      '',
+    );
+  }
+
+  /// A Story 1.23 learning callable: [_invoke], decoded as
+  /// [TutorLearningWritten] only once the answer is a validated success
+  /// (see [_decodeLearning]); anything else is a [TutorWriteInvalidResponse].
+  Future<TutorWriteResult> _callLearning(
+    String functionName,
+    Map<String, dynamic> args, {
+    required String actionId,
+    required List<String> expectedEventIds,
+    bool exactEventIds = true,
+    int minEventCount = 0,
+  }) async {
+    final (data, failure) = await _invoke(functionName, args);
+    if (failure != null) return failure;
+    final (written, reason) = _decodeLearning(
+      data,
+      actionId: actionId,
+      expectedEventIds: expectedEventIds,
+      exactEventIds: exactEventIds,
+      minEventCount: minEventCount,
+    );
+    if (written != null) return written;
+    // The reason names only the failed check — never ids, refs or payload.
+    AppLogger.instance.warning(
+      event: 'TutorWriteService.$functionName invalid response',
+      fields: {'reason': reason},
+    );
+    return const TutorWriteInvalidResponse(
+      message: 'The server answer could not be confirmed.',
+    );
+  }
+
+  /// Validates a Story 1.23 success answer (the `writeWithChangeLog` result):
+  /// a map with `success == true`, `action_id == actionId`, a string list
+  /// `event_ids` holding [expectedEventIds] (exactly, when [exactEventIds];
+  /// at least [minEventCount] ids otherwise), a boolean `replayed`, and —
+  /// whenever an event was written — a valid ISO-8601 `recorded_at`. An
+  /// answer with no event ids is valid only as the server's explicit
+  /// `noop: true` of an un-learn with nothing counted. Returns the decoded
+  /// result, or null with the name of the failed check.
+  static (TutorLearningWritten?, String) _decodeLearning(
+    Object? data, {
+    required String actionId,
+    required List<String> expectedEventIds,
+    required bool exactEventIds,
+    required int minEventCount,
+  }) {
+    if (data is! Map) return (null, 'not-a-map');
+    if (data['success'] != true) return (null, 'not-success');
+    if (data['action_id'] != actionId) return (null, 'action-id');
+    final rawIds = data['event_ids'];
+    if (rawIds is! List || rawIds.any((v) => v is! String)) {
+      return (null, 'event-ids');
+    }
+    final ids = rawIds.cast<String>().toList(growable: false);
+    final idSet = ids.toSet();
+    if (idSet.length != ids.length) return (null, 'event-ids');
+    if (exactEventIds
+        ? (idSet.length != expectedEventIds.length ||
+              !idSet.containsAll(expectedEventIds))
+        : !idSet.containsAll(expectedEventIds)) {
+      return (null, 'event-ids');
+    }
+    if (ids.length < minEventCount) return (null, 'event-ids');
+    final replayed = data['replayed'];
+    if (replayed is! bool) return (null, 'replayed');
+    final recordedAt = _instant(data['recorded_at']);
+    if (ids.isEmpty) {
+      if (data['noop'] != true) return (null, 'empty-without-noop');
+    } else if (recordedAt == null) {
+      return (null, 'recorded-at');
+    }
+    return (
+      TutorLearningWritten(
+        actionId: actionId,
+        eventIds: ids,
+        recordedAt: recordedAt,
+        replayed: replayed,
+      ),
+      '',
+    );
+  }
+
+  /// An ISO-8601 server stamp, as UTC; null when absent or malformed.
+  static DateTime? _instant(Object? raw) =>
+      raw is String ? DateTime.tryParse(raw)?.toUtc() : null;
+
+  // ── Learning events (Story 1.23 callables, DNI-486) ─────────────────────────
+  //
+  // Wire shapes are the Story 1.23 contract (functions/src/tutor_learning.ts);
+  // no field is added here. The caller supplies every client ULID.
+
+  /// Records [events] (`learn`, `source = main`) for the talmid through
+  /// `tutorRecordLearning`. [actionId] defaults, on the server, to the first
+  /// event's id — the same value is passed here so a retry is stable.
+  ///
+  /// After a successful, newly written capture it emits the registered
+  /// `capture` event through [LearningAnalytics] — once per curriculum and
+  /// date state, enums and a count only (AD-47). A failure, or a replay of
+  /// an already-stored action (a retry after a lost answer), emits nothing.
+  Future<TutorWriteResult> recordLearning({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required List<TutorLearnEvent> events,
+    String? actionId,
+  }) async {
+    assert(events.isNotEmpty, 'recordLearning needs at least one event');
+    final action = actionId ?? events.first.id;
+    final result = await _callLearning(
+      'tutorRecordLearning',
+      {
+        'grantId': grantId,
+        'ownerUid': ownerUid,
+        'profileId': profileId,
+        'actionId': action,
+        'events': [for (final e in events) e.toWire()],
+      },
+      actionId: action,
+      expectedEventIds: [for (final e in events) e.id],
+    );
+    if (result is TutorLearningWritten && !result.replayed) {
+      _emitCapture(events);
+    }
+    return result;
+  }
+
+  void _emitCapture(List<TutorLearnEvent> events) {
+    final analytics = _analytics;
+    if (analytics == null) return;
+    final counts = <(String, CaptureSourceKind, DateState), int>{};
+    for (final e in events) {
+      final kind = e.source == LearningEvent.sourceMain
+          ? CaptureSourceKind.main
+          : CaptureSourceKind.subTrack;
+      final key = (e.curriculumId, kind, e.dateState);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    for (final MapEntry(
+          key: (curriculumId, sourceKind, dateState),
+          value: count,
+        )
+        in counts.entries) {
+      analytics.capture(
+        curriculumId: curriculumId,
+        sourceKind: sourceKind,
+        dateState: dateState,
+        count: count,
+      );
+    }
+  }
+
+  /// Voids the `learn` event [targetId] with the void event [eventId]
+  /// through `tutorVoidLearning` (AD-31: the server rejects a non-learn
+  /// target).
+  Future<TutorWriteResult> voidLearning({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String eventId,
+    required String targetId,
+  }) => _callLearning(
+    'tutorVoidLearning',
+    {
+      'grantId': grantId,
+      'ownerUid': ownerUid,
+      'profileId': profileId,
+      'actionId': eventId,
+      'eventId': eventId,
+      'targetId': targetId,
+    },
+    actionId: eventId,
+    expectedEventIds: [eventId],
+  );
+
+  /// Replaces [targetId]: its void [eventId] plus the corrected learn event
+  /// [replacement], in ONE `tutorVoidLearning` transaction (the server
+  /// stamps the copy's `original_recorded_at = effectiveAt(target)`).
+  Future<TutorWriteResult> replaceLearning({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String eventId,
+    required String targetId,
+    required TutorLearnEvent replacement,
+  }) => _callLearning(
+    'tutorVoidLearning',
+    {
+      'grantId': grantId,
+      'ownerUid': ownerUid,
+      'profileId': profileId,
+      'actionId': eventId,
+      'eventId': eventId,
+      'targetId': targetId,
+      'replacement': replacement.toWire(),
+    },
+    actionId: eventId,
+    expectedEventIds: [eventId, replacement.id],
+  );
+
+  /// Un-learns [leafSet] of [curriculumId] (AD-31) through `tutorUnlearn`,
+  /// carrying the client-computed plan's [nodeReissues] (ruling B9).
+  /// [actionId] is required: the server mints the void ids, so only the
+  /// client action id makes a retry replay instead of re-plan.
+  ///
+  /// [leafEventIds], when given, names the exact leaf learn events to void —
+  /// the ones the engine COUNTS. The server cannot evaluate the AD-36 lock /
+  /// count predicate, so without them it would void every stored learn event
+  /// whose ref is in [leafSet], including a lock-window event that is stored
+  /// but not counted (DNI-486 AC-7). Tutor surfaces always pass them.
+  Future<TutorWriteResult> unlearn({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String actionId,
+    required String curriculumId,
+    required List<String> leafSet,
+    List<String>? leafEventIds,
+    List<TutorNodeReissue> nodeReissues = const [],
+  }) {
+    final reissueIds = [
+      for (final n in nodeReissues) ...[for (final r in n.reissues) r.eventId],
+    ];
+    return _callLearning(
+      'tutorUnlearn',
+      {
+        'grantId': grantId,
+        'ownerUid': ownerUid,
+        'profileId': profileId,
+        'actionId': actionId,
+        'curriculumId': curriculumId,
+        'leafSet': leafSet,
+        'leafEventIds': ?leafEventIds,
+        'nodeReissues': [for (final n in nodeReissues) n.toWire()],
+      },
+      actionId: actionId,
+      // Void ids are minted on the server: the answer must carry every
+      // re-issue and at least one void per named node target.
+      expectedEventIds: reissueIds,
+      exactEventIds: false,
+      minEventCount: reissueIds.length + nodeReissues.length,
+    );
   }
 
   // ── Completion reset (canEditLearning, AD-53) ────────────────────────────────────
@@ -134,6 +659,11 @@ class TutorWriteService {
     'completionId': completionId,
   });
 
+  // ── Main-track governed (Story 1.10 callables via writeWithChangeLog) ──────
+  //
+  // Each governed method takes an optional client [actionId] ULID: pass the
+  // same one on a retry so the server replays the stored action (AD-38).
+
   // ── Goals (canEditLearning, AD-53) ─────────────────────────────────────────────────────
 
   /// Creates or updates a goal document in the child's profile.
@@ -143,13 +673,14 @@ class TutorWriteService {
     required String profileId,
     required String goalId,
     required Map<String, dynamic> goalData,
-  }) => _call('tutorUpsertGoal', {
+    String? actionId,
+  }) => _callGoverned('tutorUpsertGoal', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'goalId': goalId,
     'goalData': goalData,
-  });
+  }, actionId: actionId);
 
   /// Deletes a goal document from the child's profile.
   Future<TutorWriteResult> deleteGoal({
@@ -157,12 +688,13 @@ class TutorWriteService {
     required String ownerUid,
     required String profileId,
     required String goalId,
-  }) => _call('tutorDeleteGoal', {
+    String? actionId,
+  }) => _callGoverned('tutorDeleteGoal', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'goalId': goalId,
-  });
+  }, actionId: actionId);
 
   // ── Tracks (canEditLearning, AD-53) ───────────────────────────────────────────────────
 
@@ -173,13 +705,14 @@ class TutorWriteService {
     required String profileId,
     required String trackId,
     required Map<String, dynamic> trackData,
-  }) => _call('tutorUpsertTrack', {
+    String? actionId,
+  }) => _callGoverned('tutorUpsertTrack', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'trackId': trackId,
     'trackData': trackData,
-  });
+  }, actionId: actionId);
 
   /// Deletes a curriculum_tracks document from the child's profile.
   Future<TutorWriteResult> deleteTrack({
@@ -187,12 +720,13 @@ class TutorWriteService {
     required String ownerUid,
     required String profileId,
     required String trackId,
-  }) => _call('tutorDeleteTrack', {
+    String? actionId,
+  }) => _callGoverned('tutorDeleteTrack', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'trackId': trackId,
-  });
+  }, actionId: actionId);
 
   // ── Stage definitions (canEditLearning, AD-53) ───────────────────────────────────────
 
@@ -203,13 +737,14 @@ class TutorWriteService {
     required String profileId,
     required String stageId,
     required Map<String, dynamic> stageData,
-  }) => _call('tutorUpsertStageDefinition', {
+    String? actionId,
+  }) => _callGoverned('tutorUpsertStageDefinition', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'stageId': stageId,
     'stageData': stageData,
-  });
+  }, actionId: actionId);
 
   // ── Study day configs (canEditLearning, AD-53) ─────────────────────────────────────
 
@@ -220,13 +755,14 @@ class TutorWriteService {
     required String profileId,
     required String configId,
     required Map<String, dynamic> configData,
-  }) => _call('tutorUpsertStudyDayConfig', {
+    String? actionId,
+  }) => _callGoverned('tutorUpsertStudyDayConfig', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'configId': configId,
     'configData': configData,
-  });
+  }, actionId: actionId);
 
   /// Deletes a study_day_configs document from the child's profile.
   Future<TutorWriteResult> deleteStudyDayConfig({
@@ -234,12 +770,223 @@ class TutorWriteService {
     required String ownerUid,
     required String profileId,
     required String configId,
-  }) => _call('tutorDeleteStudyDayConfig', {
+    String? actionId,
+  }) => _callGoverned('tutorDeleteStudyDayConfig', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'configId': configId,
-  });
+  }, actionId: actionId);
+
+  /// Replaces [curriculumId]'s study-day schedule as ONE governed action
+  /// through `tutorReplaceStudyDays` (Story 1.24, DNI-486): every upsert in
+  /// [upserts] (config id → storage fields) and every `ended_at` tombstone
+  /// in [removedConfigIds] is one `mainTrackStudyDays` change_log entry
+  /// under the one [actionId], written in one server transaction — all or
+  /// nothing.
+  Future<TutorWriteResult> replaceStudyDays({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String curriculumId,
+    required Map<String, Map<String, dynamic>> upserts,
+    List<String> removedConfigIds = const [],
+    String? actionId,
+  }) => _callGoverned('tutorReplaceStudyDays', {
+    'grantId': grantId,
+    'ownerUid': ownerUid,
+    'profileId': profileId,
+    'curriculumId': curriculumId,
+    'upserts': [
+      for (final MapEntry(key: configId, value: configData) in upserts.entries)
+        {'configId': configId, 'configData': configData},
+    ],
+    'removedConfigIds': removedConfigIds,
+  }, actionId: actionId);
+
+  // ── Sub-tracks (Story 4.1, DNI-509: tutorUpsertSubTrack) ───────────────────
+  //
+  // Each lifecycle command is ONE `tutorUpsertSubTrack` call — one governed
+  // action, one `subTrack` change_log entry — confirmed only by a validated
+  // receipt (see [_callGoverned]). The wire fields are the AD-52 intent
+  // fields of the owner path ([SubTrackCommands.intentFieldsOf]); the server
+  // (writeWithChangeLog) authorises, validates AD-52 / AD-45 and logs. Pass
+  // the SAME client ULIDs on a retry so the server replays a committed
+  // action instead of writing it twice. After a newly written action (not a
+  // replay, not a no-op) the registered `subtrack_lifecycle` event is
+  // emitted through [LearningAnalytics] — enums and counts only (AD-47).
+
+  /// Creates the sub-track [subTrackId] (a new client ULID) from [draft].
+  /// *Add next year* is a create too: a new ULID with `academic_year + 1`.
+  /// [actionId] defaults to [subTrackId] — the create's stable replay key.
+  Future<TutorWriteResult> createSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String subTrackId,
+    required SubTrackDraft draft,
+    String? actionId,
+  }) async {
+    final action = actionId ?? subTrackId;
+    final created = SubTrack(
+      id: subTrackId,
+      curriculumId: draft.curriculumId,
+      name: draft.name,
+      type: draft.type,
+      academicYear: draft.academicYear,
+      windowStart: draft.windowStart,
+      windowEnd: draft.windowEnd,
+      ratePerWeek: draft.ratePerWeek,
+      weeksPerYear: draft.weeksPerYear,
+      learnsOnShabbos: draft.learnsOnShabbos,
+      ground: draft.ground,
+      lastChangeId: action,
+    );
+    // Absent optional fields are not sent (a create clears nothing).
+    final fields = SubTrackCommands.intentFieldsOf(created)
+      ..removeWhere((_, v) => v == null);
+    final result = await _callSubTrack(
+      grantId: grantId,
+      ownerUid: ownerUid,
+      profileId: profileId,
+      subTrackId: subTrackId,
+      op: 'create',
+      fields: fields,
+      actionId: action,
+    );
+    _emitSubTrackLifecycle(result, created, SubTrackLifecycleAction.create);
+    return result;
+  }
+
+  /// Edits [current] with [edit]: any field but `curriculum_id`; `ground`
+  /// (ground add, reorder or remove) is replaced whole. Only the changed
+  /// fields are sent (`null` clears `academic_year` / `window_end`); an
+  /// edit that changes nothing calls nothing and returns
+  /// [TutorWriteSuccess]. [actionId] is the edit's client ULID.
+  Future<TutorWriteResult> editSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required SubTrack current,
+    required SubTrackEdit edit,
+    required String actionId,
+  }) async {
+    final edited = SubTrackCommands.applyEdit(current, edit);
+    final before = SubTrackCommands.intentFieldsOf(current);
+    final after = SubTrackCommands.intentFieldsOf(edited);
+    final changed = <String, Object?>{
+      for (final MapEntry(:key, :value) in after.entries)
+        if (!storageValueEquals(before[key], value)) key: value,
+    };
+    if (changed.isEmpty) return const TutorWriteSuccess();
+    final result = await _callSubTrack(
+      grantId: grantId,
+      ownerUid: ownerUid,
+      profileId: profileId,
+      subTrackId: current.id,
+      op: 'edit',
+      fields: changed,
+      actionId: actionId,
+    );
+    _emitSubTrackLifecycle(result, edited, SubTrackLifecycleAction.edit);
+    return result;
+  }
+
+  /// Ends [subTrack]: `ended_at` + `end_reason = ended` (a tombstone).
+  Future<TutorWriteResult> endSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required SubTrack subTrack,
+    required String actionId,
+  }) => _tombstoneSubTrack(
+    grantId: grantId,
+    ownerUid: ownerUid,
+    profileId: profileId,
+    subTrack: subTrack,
+    actionId: actionId,
+    op: 'end',
+    action: SubTrackLifecycleAction.end,
+  );
+
+  /// Deletes [subTrack] as a tombstone: `ended_at` + `end_reason =
+  /// deleted`. No document is ever hard-deleted; its learning events stay.
+  Future<TutorWriteResult> deleteSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required SubTrack subTrack,
+    required String actionId,
+  }) => _tombstoneSubTrack(
+    grantId: grantId,
+    ownerUid: ownerUid,
+    profileId: profileId,
+    subTrack: subTrack,
+    actionId: actionId,
+    op: 'delete',
+    action: SubTrackLifecycleAction.delete,
+  );
+
+  Future<TutorWriteResult> _tombstoneSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required SubTrack subTrack,
+    required String actionId,
+    required String op,
+    required SubTrackLifecycleAction action,
+  }) async {
+    final result = await _callSubTrack(
+      grantId: grantId,
+      ownerUid: ownerUid,
+      profileId: profileId,
+      subTrackId: subTrack.id,
+      op: op,
+      actionId: actionId,
+    );
+    _emitSubTrackLifecycle(result, subTrack, action);
+    return result;
+  }
+
+  /// One `tutorUpsertSubTrack` call (the Story 4.1 wire shape, see
+  /// `functions/src/tutor_learning.ts`).
+  Future<TutorWriteResult> _callSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String subTrackId,
+    required String op,
+    required String actionId,
+    Map<String, Object?>? fields,
+  }) => _callGoverned('tutorUpsertSubTrack', {
+    'grantId': grantId,
+    'ownerUid': ownerUid,
+    'profileId': profileId,
+    'subTrackId': subTrackId,
+    'op': op,
+    'fields': ?fields,
+  }, actionId: actionId);
+
+  /// Emits `subtrack_lifecycle` for a newly written action only: a failure,
+  /// a replay of an already-stored action or a server no-op (e.g. ending an
+  /// already-ended sub-track) emits nothing.
+  void _emitSubTrackLifecycle(
+    TutorWriteResult result,
+    SubTrack track,
+    SubTrackLifecycleAction action,
+  ) {
+    if (result is! TutorGovernedWritten ||
+        result.replayed ||
+        result.changeIds.isEmpty) {
+      return;
+    }
+    _analytics?.subTrackLifecycle(
+      curriculumId: track.curriculumId,
+      type: track.type,
+      action: action,
+      groundEntries: track.ground.length,
+    );
+  }
 
   // ── Gamification settings: rewards + points ──────────────────────────────────
 
@@ -286,13 +1033,14 @@ class TutorWriteService {
     required String profileId,
     required String programId,
     required Map<String, dynamic> programData,
-  }) => _call('tutorSetProfileProgram', {
+    String? actionId,
+  }) => _callGoverned('tutorSetProfileProgram', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'programId': programId,
     'programData': programData,
-  });
+  }, actionId: actionId);
 
   // ── Curriculum scope (canEditLearning, AD-53) ─────────────────────────────────────────
 
@@ -303,13 +1051,14 @@ class TutorWriteService {
     required String profileId,
     required String scopeId,
     required Map<String, dynamic> scopeData,
-  }) => _call('tutorUpsertCurriculumScope', {
+    String? actionId,
+  }) => _callGoverned('tutorUpsertCurriculumScope', {
     'grantId': grantId,
     'ownerUid': ownerUid,
     'profileId': profileId,
     'scopeId': scopeId,
     'scopeData': scopeData,
-  });
+  }, actionId: actionId);
 
   // ── Profile edit (always allowed for active tutors) ──────────────────────────
 
