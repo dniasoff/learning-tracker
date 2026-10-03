@@ -293,12 +293,13 @@ jobs:
 
       # AD-49 retired-symbols gate (DNI-521). Belt-and-suspenders with
       # `make audit`'s 105/105 check and the `ci:` Makefile target's
-      # check-retired-symbols prerequisite. Later Epic 1 stories only edit
-      # tool/retired_symbols/R<n>.json; the cutover (DNI-490) fills the
-      # allowlist and adds --enforce here.
+      # check-retired-symbols prerequisite. Since the cutover (DNI-490) it
+      # runs with --enforce: every inventory entry counts as retired and
+      # tool/retired_symbols/allowlist.json must match exactly (the R14
+      # deny-all rules matches and indexes). DNI-491 empties the allowlist.
       - name: Assert no retired symbol survives outside the AD-49 allowlist
         working-directory: learning_tracker
-        run: dart run tool/check_retired_symbols.dart
+        run: dart run tool/check_retired_symbols.dart --enforce
 
       - name: Assert retired symbols are absent from test roots
         working-directory: learning_tracker
