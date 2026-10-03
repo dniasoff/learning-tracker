@@ -8,7 +8,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:learning_tracker/features/notifications/data/repositories/firestore_notifications_completion_adapter.dart';
 import 'package:learning_tracker/features/notifications/data/repositories/shared_prefs_streak_alert_markers.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
