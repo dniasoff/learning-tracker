@@ -298,28 +298,36 @@ void main() {
       );
     });
 
-    test('AC3: learning_screen reads activeTutorPermissionsProvider', () {
-      expect(
-        learningSrc,
-        contains('activeTutorPermissionsProvider'),
-        reason:
-            'learning_screen.dart must read activeTutorPermissionsProvider '
-            'so that tutors with canEditLearning can see the Add Track CTA',
-      );
-    });
-
+    // DNI-486 (learning-tracker-fyh.212): adding a track has no governed
+    // tutor path yet, so a tutored session never gets the Add Track CTA,
+    // whatever the grant's canEditLearning says. The behavioural assertion
+    // lives in learning_screen_l1_test.dart ("empty state (tutor,
+    // canEditLearning=true): no Add Track button"); this source check pins
+    // the gate expression.
     test(
-      'AC3: learning_screen gates Add Track CTA on canEditLearning for tutors',
+      'AC3 (DNI-486): Add Track CTA is never offered in a tutored session',
       () {
         expect(
-          learningSrc,
-          contains('canEditLearning'),
+          RegExp(
+            r'canAddTrack\s*=\s*!isChildMode\s*&&\s*!isTutoredSession\s*;',
+          ).hasMatch(learningSrc),
+          isTrue,
           reason:
-              'learning_screen.dart must gate the Add Track CTA on '
-              'tutorPerms.canEditLearning (parent-equivalent for track management)',
+              'learning_screen.dart must hide the Add Track CTA for every '
+              'tutored session (canAddTrack = !isChildMode && !isTutoredSession)',
         );
       },
     );
+
+    test('AC3 (DNI-486): Add Track CTA no longer reads tutor permissions', () {
+      expect(
+        learningSrc,
+        isNot(contains('activeTutorPermissionsProvider')),
+        reason:
+            'canEditLearning must not re-open the Add Track CTA for tutors '
+            'until a governed add-track path exists (fyh.212)',
+      );
+    });
   });
 
   group(
