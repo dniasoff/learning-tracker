@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
@@ -22,16 +23,37 @@ class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo<Object?> {}
 
+/// [track] as a school-year sub-track (the fixture is ongoing).
+SubTrack _schoolYear(SubTrack track) => SubTrack(
+  id: track.id,
+  curriculumId: track.curriculumId,
+  name: track.name,
+  type: SubTrackType.schoolYear,
+  academicYear: 2026,
+  windowStart: track.windowStart,
+  windowEnd: '2027-06-30',
+  ratePerWeek: track.ratePerWeek,
+  weeksPerYear: track.weeksPerYear,
+  learnsOnShabbos: track.learnsOnShabbos,
+  ground: track.ground,
+  lastChangeId: track.lastChangeId,
+);
+
 void main() {
   setUpAll(() => registerFallbackValue(_FakePageRouteInfo()));
 
   final school = detailSubTrack(10, 'School', const [peah]);
 
   group('⋮ registry', () {
-    test('Edit is absent until a form launcher is bound', () {
+    test('Edit opens the metadata form by default, and shows only for a '
+        'sub-track type that has a form (school year; ongoing is DNI-496)', () {
       final c = ProviderContainer();
       addTearDown(c.dispose);
-      expect(c.read(subTrackDetailMenuActionsProvider), isEmpty);
+      expect(c.read(subTrackFormLauncherProvider), isNotNull);
+      final edit = c.read(subTrackDetailMenuActionsProvider).single;
+      expect(edit.id, 'edit');
+      expect(edit.visibleFor(engineDetail(_schoolYear(school))), isTrue);
+      expect(edit.visibleFor(engineDetail(school)), isFalse, reason: 'ongoing');
     });
 
     test('a bound launcher adds Edit, visible to the parent on a live '
@@ -40,6 +62,9 @@ void main() {
         overrides: [
           subTrackFormLauncherProvider.overrideWithValue(
             (context, track) async {},
+          ),
+          subTrackFormTypesProvider.overrideWithValue(
+            SubTrackType.values.toSet(),
           ),
         ],
       );
@@ -52,6 +77,41 @@ void main() {
       }
       final ended = detailSubTrack(11, 'Old', const [peah], ended: true);
       expect(edit.visibleFor(engineDetail(ended)), isFalse);
+    });
+
+    test('no launcher: no Edit', () {
+      final c = ProviderContainer(
+        overrides: [subTrackFormLauncherProvider.overrideWithValue(null)],
+      );
+      addTearDown(c.dispose);
+      expect(c.read(subTrackDetailMenuActionsProvider), isEmpty);
+    });
+
+    testWidgets('the default launcher pushes the school-year form for that '
+        'sub-track (UX-DR-53)', (tester) async {
+      final router = _MockStackRouter();
+      when(() => router.push<Object?>(any())).thenAnswer((_) async => null);
+      final track = _schoolYear(school);
+      await tester.pumpWidget(
+        pumpApp(
+          child: StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => openSubTrackForm(context, track),
+                child: const Text('edit'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('edit'));
+      final pushed =
+          verify(() => router.push<Object?>(captureAny())).captured.single
+              as SchoolYearSubTrackFormRoute;
+      expect(pushed.args!.curriculumId, engineCurriculum);
+      expect(pushed.args!.subTrackId, track.id);
     });
   });
 

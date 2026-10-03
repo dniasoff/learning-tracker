@@ -183,18 +183,58 @@ void main() {
       expect(find.text('Sub-tracks · 1 active'), findsOneWidget);
     });
 
-    testWidgets("tapping a school-year row opens that track's edit form", (
+    // Story 2.6 (DNI-497, AC-1, UX-DR-53): a row opens the sub-track
+    // detail; metadata Edit moved into the detail's ⋮.
+    for (final (label, stored) in [
+      ('school-year', storedSchoolYear(_a)),
+      ('ongoing', storedOngoing(_a, name: 'Rebbe')),
+    ]) {
+      testWidgets('on a phone, tapping a $label row pushes its sub-track '
+          'detail and selects it', (tester) async {
+        h = SubTrackHarness(seed: [stored]);
+        final router = await _pumpHub(tester, h);
+        final row = find.byKey(const ValueKey('subTrackHubRow:$_a'));
+        expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+        await tester.tap(row);
+        await tester.pump();
+        final pushed =
+            verify(() => router.push<Object?>(captureAny())).captured.single
+                as SubTrackDetailRoute;
+        expect(pushed.args!.subTrackId, _a);
+        await tester.pump();
+        expect(tester.widget<ListTile>(row).selected, isTrue);
+      });
+    }
+
+    testWidgets('from 840dp a row tap selects it and shows its detail beside '
+        'the hub without pushing; the next tap moves the selection', (
       tester,
     ) async {
-      h = SubTrackHarness(seed: [storedSchoolYear(_a)]);
-      final router = await _pumpHub(tester, h);
-      await tester.tap(find.byType(SubTrackHubRow));
+      h = SubTrackHarness(
+        seed: [
+          storedSchoolYear(_a),
+          storedOngoing(_b, name: 'Rebbe'),
+        ],
+      );
+      final router = await _pumpHub(tester, h, size: const Size(1100, 1600));
+      final pane = find.byKey(const ValueKey('subTrackSplitDetail'));
+      expect(pane, findsNothing);
+      ListTile tile(String id) =>
+          tester.widget<ListTile>(find.byKey(ValueKey('subTrackHubRow:$id')));
+
+      await tester.tap(find.byKey(const ValueKey('subTrackHubRow:$_a')));
       await tester.pump();
-      final pushed =
-          verify(() => router.push<Object?>(captureAny())).captured.single
-              as SchoolYearSubTrackFormRoute;
-      expect(pushed.args!.curriculumId, 'mishnayos');
-      expect(pushed.args!.subTrackId, _a);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(pane, findsOneWidget);
+      expect(tile(_a).selected, isTrue);
+
+      await tester.tap(find.byKey(const ValueKey('subTrackHubRow:$_b')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(pane, findsOneWidget);
+      expect(tile(_b).selected, isTrue);
+      expect(tile(_a).selected, isFalse);
+      verifyNever(() => router.push<Object?>(any()));
     });
 
     testWidgets('Add sub-track offers School year and Ongoing', (tester) async {

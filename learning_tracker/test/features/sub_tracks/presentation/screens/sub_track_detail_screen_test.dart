@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
@@ -177,14 +178,17 @@ void main() {
 
   group('⋮ actions', () {
     final launched = <String>[];
-    final launcher = subTrackFormLauncherProvider.overrideWithValue(
-      (context, track) async => launched.add(track.id),
-    );
+    final launcher = [
+      subTrackFormLauncherProvider.overrideWithValue(
+        (context, track) async => launched.add(track.id),
+      ),
+      subTrackFormTypesProvider.overrideWithValue(SubTrackType.values.toSet()),
+    ];
     setUp(launched.clear);
 
     testWidgets('the parent edits metadata from ⋮ → Edit', (tester) async {
       h.seed(subTracks: [school]);
-      await pump(tester, extra: [launcher]);
+      await pump(tester, extra: launcher);
       await tester.tap(find.byKey(const ValueKey('subTrackDetailMenu')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Edit'));
@@ -192,7 +196,8 @@ void main() {
       expect(launched, [school.id]);
     });
 
-    testWidgets('the menu is hidden while no action is bound', (tester) async {
+    testWidgets('the menu is hidden while no action applies (the ongoing '
+        'form is DNI-496, so Edit has no form to open yet)', (tester) async {
       h.seed(subTracks: [school]);
       await pump(tester);
       expect(find.byKey(const ValueKey('subTrackDetailMenu')), findsNothing);
@@ -210,6 +215,9 @@ void main() {
       extra: [
         subTrackFormLauncherProvider.overrideWithValue(
           (context, track) async {},
+        ),
+        subTrackFormTypesProvider.overrideWithValue(
+          SubTrackType.values.toSet(),
         ),
       ],
     );

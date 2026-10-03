@@ -36,11 +36,35 @@ typedef SubTrackDeadlineSetup =
       String curriculumId,
     );
 
-/// The form launcher behind ⋮ → *Edit*. Null until the form stories
-/// (DNI-495 / DNI-496) bind their routes; *Edit* is hidden while null.
+/// The form launcher behind ⋮ → *Edit*: [openSubTrackForm]. *Edit* is
+/// hidden while this is null.
 final subTrackFormLauncherProvider = Provider<SubTrackFormLauncher?>(
-  (ref) => null,
+  (ref) => openSubTrackForm,
 );
+
+/// The sub-track types whose metadata form exists; ⋮ → *Edit* shows only
+/// for these. Story 2.4 (DNI-495) built the school-year form; Story 2.5
+/// (DNI-496) adds [SubTrackType.ongoing] here and to [openSubTrackForm].
+final subTrackFormTypesProvider = Provider<Set<SubTrackType>>(
+  (ref) => const {SubTrackType.schoolYear},
+);
+
+/// Opens [track]'s metadata form (UX-DR-53: Edit moved from the hub row
+/// into the detail's ⋮). Only called for a type in
+/// [subTrackFormTypesProvider].
+Future<void> openSubTrackForm(BuildContext context, SubTrack track) async {
+  switch (track.type) {
+    case SubTrackType.schoolYear:
+      await context.router.push(
+        SchoolYearSubTrackFormRoute(
+          curriculumId: track.curriculumId,
+          subTrackId: track.id,
+        ),
+      );
+    case SubTrackType.ongoing:
+      throw UnsupportedError('The ongoing sub-track form is DNI-496');
+  }
+}
 
 /// The goal-setup launcher behind the no-deadline note's link:
 /// [openSubTrackDeadlineSetup] over DNI-495's goal setup. Null leaves the
@@ -130,6 +154,7 @@ final class SubTrackDetailMenuAction {
 final subTrackDetailMenuActionsProvider =
     Provider<List<SubTrackDetailMenuAction>>((ref) {
       final edit = ref.watch(subTrackFormLauncherProvider);
+      final formTypes = ref.watch(subTrackFormTypesProvider);
       return [
         // Story 2.4 / 2.5: metadata Edit moved from the hub row (UX-DR-53).
         if (edit != null)
@@ -137,7 +162,8 @@ final subTrackDetailMenuActionsProvider =
             id: 'edit',
             icon: Icons.edit_outlined,
             label: (l10n) => l10n.subTrackDetailEdit,
-            visibleFor: (detail) => detail.canEdit,
+            visibleFor: (detail) =>
+                detail.canEdit && formTypes.contains(detail.track.type),
             onSelected: (context, detail) => edit(context, detail.track),
           ),
         // DNI-499 (Story 2.8) adds End and Delete here.

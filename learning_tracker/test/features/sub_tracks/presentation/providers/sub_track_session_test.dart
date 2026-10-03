@@ -95,14 +95,19 @@ void main() {
     expect(await _role(), SubTrackViewerRole.child);
   });
 
-  test('the default navigator opens only the hub: no unbuilt destination '
-      'is reported, so its entry point stays disabled', () {
+  test('the default navigator opens the hub and the detail (DNI-497); no '
+      'unbuilt destination is reported, so its entry point stays '
+      'disabled', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final navigator = container.read(subTrackNavigatorProvider);
-    expect(navigator, isA<HubOnlySubTrackNavigator>());
+    expect(navigator, isA<RoutedSubTrackNavigator>());
     for (final destination in SubTrackDestination.values) {
-      expect(navigator.canOpen(destination), isFalse, reason: '$destination');
+      expect(
+        navigator.canOpen(destination),
+        destination == SubTrackDestination.detail,
+        reason: '$destination',
+      );
     }
   });
 }

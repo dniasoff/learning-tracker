@@ -386,10 +386,9 @@ void main() {
   }
 
   for (final role in [SubTrackViewerRole.child, SubTrackViewerRole.parent]) {
-    testWidgets('production navigator (${role.name}): an unbuilt destination '
-        'leaves its entry point disabled instead of routing elsewhere', (
-      tester,
-    ) async {
+    testWidgets('production navigator (${role.name}): the row opens the '
+        'sub-track detail (DNI-497); an unbuilt destination leaves its entry '
+        'point disabled instead of routing elsewhere', (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 1800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final router = _MockStackRouter();
@@ -405,7 +404,7 @@ void main() {
       await tester.pumpWidget(
         _screen(
           _screenOverrides(
-            // No navigator override: the production HubOnlySubTrackNavigator.
+            // No navigator override: the production RoutedSubTrackNavigator.
             subTracks: subTrackEngineOverrides(
               engine: engine,
               commands: EngineBackedCommands(engine),
@@ -418,15 +417,22 @@ void main() {
       );
       await _settle(tester);
 
-      // The row body has no detail to open: not tappable, nothing pushed.
-      final body = tester.widget<InkWell>(
-        find.byKey(const Key('subTrackHomeRow-$schoolId')),
-      );
-      expect(body.onTap, isNull);
+      // The row body opens the sub-track detail route, for any role.
       await tester.tap(find.text('School'));
       await tester.pump();
-      verifyNever(
-        () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+      final pushed = verify(
+        () => router.push<Object?>(
+          captureAny(),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).captured;
+      expect(
+        pushed.single,
+        isA<SubTrackDetailRoute>().having(
+          (r) => r.args?.subTrackId,
+          'subTrackId',
+          schoolId,
+        ),
       );
 
       // Up to… has no picker yet: visible, disabled; +1 still records.

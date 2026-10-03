@@ -90,27 +90,31 @@ abstract interface class SubTrackNavigator {
   void openHub(BuildContext context);
 }
 
-/// The production navigator until the sibling destinations land: only the
-/// hub exists, so every other destination reports `canOpen == false` and
-/// its entry point stays disabled (no tap is mis-routed to the hub).
+/// The production navigator: the hub and the sub-track detail (DNI-497,
+/// Story 2.6) are built; every other destination still reports
+/// `canOpen == false`, so its entry point stays disabled (no tap is
+/// mis-routed to the hub).
 ///
 /// Scope boundary (DNI-500 unblock, 2026-10-02): DNI-500 owns the entry
 /// points and this seam; DNI-497, DNI-498 and DNI-501 own the screens and
-/// replace [subTrackNavigatorProvider] when they land (bead
-/// learning-tracker-fyh.128). AC-7 and the *Add ground* half of AC-3/AC-4
-/// are met at that point. Nothing here reaches a user before then: the
-/// sub-track UI ships only from `integ/sub-tracks`, after the DNI-490
-/// cutover (AD-49 ship hold), and fyh.128 gates that merge.
-final class HubOnlySubTrackNavigator implements SubTrackNavigator {
+/// each reports its destination here when it lands (bead
+/// learning-tracker-fyh.128). DNI-497 wired the detail, which meets AC-7;
+/// the *Add ground* half of AC-3/AC-4 waits for DNI-498 and *Up to…* for
+/// DNI-501. Nothing here reaches a user before the cutover: the sub-track
+/// UI ships only from `integ/sub-tracks`, after DNI-490 (AD-49 ship hold).
+final class RoutedSubTrackNavigator implements SubTrackNavigator {
   /// Creates the navigator.
-  const HubOnlySubTrackNavigator();
+  const RoutedSubTrackNavigator();
 
   @override
-  bool canOpen(SubTrackDestination destination) => false;
+  bool canOpen(SubTrackDestination destination) =>
+      destination == SubTrackDestination.detail;
 
+  /// Any role opens the detail (DNI-497 AC-1); the child and tutor see it
+  /// read-only.
   @override
   void openDetail(BuildContext context, SubTrackHomeItem item) =>
-      throw UnsupportedError('Sub-track detail is not wired (DNI-497)');
+      context.router.push(SubTrackDetailRoute(subTrackId: item.subTrackId));
 
   @override
   void openGroundPicker(BuildContext context, SubTrackHomeItem item) =>
@@ -127,5 +131,5 @@ final class HubOnlySubTrackNavigator implements SubTrackNavigator {
 
 /// The active [SubTrackNavigator].
 final subTrackNavigatorProvider = Provider<SubTrackNavigator>(
-  (ref) => const HubOnlySubTrackNavigator(),
+  (ref) => const RoutedSubTrackNavigator(),
 );
