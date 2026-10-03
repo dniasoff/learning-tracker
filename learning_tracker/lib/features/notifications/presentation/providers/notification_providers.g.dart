@@ -499,21 +499,24 @@ abstract class _$RewardNotificationEnabled extends $AsyncNotifier<bool> {
 
 /// Returns true if notifications should currently be suppressed because
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
-/// notifications follow the same window the lock screen does.
+/// notifications follow the same lock the overlay does (DNI-481 AC-5: the
+/// union of `lockWindows` over the account's learners, fail-closed).
 
 @ProviderFor(isSacredTimeActive)
 final isSacredTimeActiveProvider = IsSacredTimeActiveProvider._();
 
 /// Returns true if notifications should currently be suppressed because
 /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
-/// notifications follow the same window the lock screen does.
+/// notifications follow the same lock the overlay does (DNI-481 AC-5: the
+/// union of `lockWindows` over the account's learners, fail-closed).
 
 final class IsSacredTimeActiveProvider
     extends $FunctionalProvider<bool, bool, bool>
     with $Provider<bool> {
   /// Returns true if notifications should currently be suppressed because
   /// Sacred Time is active. Backed by [currentSacredWindowProvider] —
-  /// notifications follow the same window the lock screen does.
+  /// notifications follow the same lock the overlay does (DNI-481 AC-5: the
+  /// union of `lockWindows` over the account's learners, fail-closed).
   IsSacredTimeActiveProvider._()
     : super(
         from: null,
@@ -549,89 +552,6 @@ final class IsSacredTimeActiveProvider
 
 String _$isSacredTimeActiveHash() =>
     r'd1c02e4f2f10995baf550dbfde9fbfd589492dc6';
-
-/// Provides the [SacredWindowRepository] singleton.
-///
-/// Kept alive so the in-memory cache survives across provider rebuilds.
-/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
-/// on resume (DNI-367).
-///
-/// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
-/// dead — nothing in Dart read the windows back, and no native SQLite reader
-/// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
-/// device-local ("Stays local, never leaves the device") — it is not a
-/// Firestore migration target, so the repository is constructed bare.
-
-@ProviderFor(sacredWindowRepository)
-final sacredWindowRepositoryProvider = SacredWindowRepositoryProvider._();
-
-/// Provides the [SacredWindowRepository] singleton.
-///
-/// Kept alive so the in-memory cache survives across provider rebuilds.
-/// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
-/// on resume (DNI-367).
-///
-/// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
-/// dead — nothing in Dart read the windows back, and no native SQLite reader
-/// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
-/// device-local ("Stays local, never leaves the device") — it is not a
-/// Firestore migration target, so the repository is constructed bare.
-
-final class SacredWindowRepositoryProvider
-    extends
-        $FunctionalProvider<
-          SacredWindowRepository,
-          SacredWindowRepository,
-          SacredWindowRepository
-        >
-    with $Provider<SacredWindowRepository> {
-  /// Provides the [SacredWindowRepository] singleton.
-  ///
-  /// Kept alive so the in-memory cache survives across provider rebuilds.
-  /// [TimezoneLifecycleObserver] calls [SacredWindowRepository.invalidate]
-  /// on resume (DNI-367).
-  ///
-  /// No DB tier: the Drift-era `SacredWindowDao` persistence is deleted (proven
-  /// dead — nothing in Dart read the windows back, and no native SQLite reader
-  /// exists), and `docs/firestore-rewrite-map.md` keeps the derived zmanim cache
-  /// device-local ("Stays local, never leaves the device") — it is not a
-  /// Firestore migration target, so the repository is constructed bare.
-  SacredWindowRepositoryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'sacredWindowRepositoryProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$sacredWindowRepositoryHash();
-
-  @$internal
-  @override
-  $ProviderElement<SacredWindowRepository> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  SacredWindowRepository create(Ref ref) {
-    return sacredWindowRepository(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SacredWindowRepository value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SacredWindowRepository>(value),
-    );
-  }
-}
-
-String _$sacredWindowRepositoryHash() =>
-    r'352f72aa0a86150457c461db1bea1a2ad7b69a86';
 
 /// Provides the [NotificationScheduler] instance.
 
@@ -684,7 +604,7 @@ final class NotificationSchedulerProvider
 }
 
 String _$notificationSchedulerHash() =>
-    r'03597a17d9f0f098a5e5e09a941b7b808db154bb';
+    r'ecdfb6c6c1e09df57f75f14e5a1d0356e3855bfa';
 
 /// Watches reminder settings and daily tasks, then schedules or cancels
 /// the notification accordingly.
@@ -777,7 +697,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'6cbbfbddf193a5543eb3a7333cf02c4477a598a2';
+    r'b43ca4cf80aa6c2f3993a09a9218cfd72a5a5745';
 
 /// Provides the [StreakAlertService] instance for [profileId].
 ///
@@ -866,7 +786,7 @@ final class StreakAlertServiceProvider
 }
 
 String _$streakAlertServiceHash() =>
-    r'22b9132d80180fb05f897157c35356f6033a7f85';
+    r'0ccf8bfa1b7043875211e752ae1f2668c5b95ddb';
 
 /// Provides the [StreakAlertService] instance for [profileId].
 ///
@@ -961,7 +881,7 @@ final class AllProfilesReminderBootstrapProvider
 }
 
 String _$allProfilesReminderBootstrapHash() =>
-    r'1c7efc5a8183e9c1dedd081250cfda116675f2fb';
+    r'6287882d2b7b97989371d48f6b8c2c5311018e47';
 
 /// Watches the streak-alert settings and the active learner's state, and
 /// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
