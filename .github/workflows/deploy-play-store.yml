@@ -64,9 +64,10 @@ jobs:
 
   # ── backend-deploy (DNI-490 AC-3 / AC-6; AD-49 cutover, AD-54) ─────────────
   # The gated production backend release. It runs ONCE per release run, after
-  # gate-ci-status (a green ci.yml run — rules, functions and the dry-run
-  # backend-deploy-gate — for this exact SHA), and the app `deploy` job needs
-  # it, so the app never ships against an older backend. Through
+  # perf-gate (the AD-54 benchmark, below) and gate-ci-status (a green
+  # ci.yml run — rules, functions and the dry-run backend-deploy-gate — for
+  # this exact SHA), and the app `deploy` job needs it, so the app never ships
+  # against an older backend. Through
   # tool/firebase_backend_release.mjs it:
   #   1. lists the deployed functions and explicitly deletes the four retired
   #      callables (tutorResetCompletion, tutorBulkPriorCompletions,
@@ -79,9 +80,18 @@ jobs:
   # fails this job and therefore the app release. Every Play track shares the
   # one production Firebase project, so every release run takes this gate.
   # Credential: the FIREBASE_TOKEN repo secret (rulings B5, approved).
+  #
+  # fyh.324: it also needs `perf-gate`. The backend cutover (rules deny, the
+  # four callables deleted) is only safe when the app that matches it ships in
+  # the same run, and the app `deploy` job needs `perf-gate`. Without this, a
+  # red perf gate would skip the app but still release the backend, leaving
+  # every client on the current app against the cut-over backend (an outage).
+  # No job-level `if:`
+  # here, so GitHub's default applies: the job runs only when every job in
+  # `needs` succeeded; a failed, cancelled or skipped dependency skips it.
   backend-deploy:
     name: backend-deploy
-    needs: gate-ci-status
+    needs: [gate-ci-status, perf-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -134,6 +144,8 @@ jobs:
   # runner until the reference device is named — checklist P9). The cold
   # first load is in the uploaded run record and never fails the gate.
   # In ci.yml the same benchmark runs in the non-blocking perf job.
+  # It runs BEFORE backend-deploy, which needs it (fyh.324): a red perf gate
+  # blocks the production backend release as well as the app release.
   perf-gate:
     name: perf-gate
     needs: gate-ci-status

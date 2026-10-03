@@ -181,7 +181,7 @@ jobs:
     steps:
       - run: node tool/check_deploy_ci_gate.mjs
   backend-deploy:
-    needs: gate-ci-status
+    needs: [gate-ci-status, perf-gate]
     runs-on: ubuntu-latest
     steps:
       # Comments may mention firebase deploy and functions:delete.
@@ -217,8 +217,25 @@ test('AC-5: the workflow contract requires the perf gate before the app release'
 });
 
 test('the workflow contract rejects a backend job that skips the CI gate', () => {
-  const bad = GOOD.replace('    needs: gate-ci-status\n    runs-on: ubuntu-latest\n    steps:\n      # Comments', '    runs-on: ubuntu-latest\n    steps:\n      # Comments');
-  assert.match(validateReleaseWorkflow(bad).join('\n'), /must need `gate-ci-status`/);
+  const bad = GOOD.replace('    needs: [gate-ci-status, perf-gate]\n', '    needs: [perf-gate]\n');
+  assert.match(validateReleaseWorkflow(bad).join('\n'), /`backend-deploy` must need `gate-ci-status`/);
+});
+
+test('fyh.324: the backend cutover waits for the perf gate', () => {
+  // A red perf gate skips the app; the backend must not release without it.
+  const single = GOOD.replace('    needs: [gate-ci-status, perf-gate]\n', '    needs: gate-ci-status\n');
+  assert.match(validateReleaseWorkflow(single).join('\n'), /`backend-deploy` must need `perf-gate`/);
+  const block = GOOD.replace('    needs: [gate-ci-status, perf-gate]\n', '    needs:\n      - gate-ci-status\n      - perf-gate\n');
+  assert.deepEqual(validateReleaseWorkflow(block), []);
+  // An `if: always()` (or any job-level if) would run it after a red perf gate.
+  const always = GOOD.replace('  backend-deploy:\n', '  backend-deploy:\n    if: always()\n');
+  assert.match(validateReleaseWorkflow(always).join('\n'), /`backend-deploy` must not be conditional/);
+  const softPerf = GOOD.replace('  perf-gate:\n', '  perf-gate:\n    if: ${{ !cancelled() }}\n');
+  assert.match(validateReleaseWorkflow(softPerf).join('\n'), /`perf-gate` must not be conditional/);
+  const ungatedPerf = GOOD.replace('  perf-gate:\n    needs: gate-ci-status\n', '  perf-gate:\n');
+  assert.match(validateReleaseWorkflow(ungatedPerf).join('\n'), /`perf-gate` must need `gate-ci-status`/);
+  const softCi = GOOD.replace('  gate-ci-status:\n', '  gate-ci-status:\n    continue-on-error: true\n');
+  assert.match(validateReleaseWorkflow(softCi).join('\n'), /`gate-ci-status` must fail closed/);
 });
 
 test('the workflow contract rejects a soft or conditional backend job', () => {

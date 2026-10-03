@@ -22,8 +22,9 @@
 // Wiring: .github/workflows/deploy-play-store.yml job `backend-deploy` runs
 // `node tool/firebase_backend_release.mjs --mode deploy --project
 // torah-study-tracker` after `gate-ci-status` (green ci.yml for the release
-// SHA); the app `deploy` job `needs` it and the AD-54 `perf-gate` job
-// (DNI-490 AC-5). validateReleaseWorkflow() pins that
+// SHA) and the AD-54 `perf-gate` job (DNI-490 AC-5; fyh.324 — a red perf
+// gate blocks the backend cutover, not just the app); the app `deploy` job
+// `needs` both. validateReleaseWorkflow() pins that
 // wiring and runs in this file's tests (ci.yml backend-deploy-gate job) and in
 // the release workflow itself.
 //
@@ -183,11 +184,22 @@ export function validateReleaseWorkflow(text) {
     if (!jobNeeds(app).includes(PERF_GATE_JOB)) {
       errors.push(`the app release job \`${APP_JOB}\` must need \`${PERF_GATE_JOB}\``);
     }
+    // fyh.324: the production backend cutover must not release when the perf
+    // gate is red (or skipped) — that would ship the backend without the app.
+    // The no-job-level-if rule below keeps GitHub's default: a job runs only
+    // when every job in `needs` succeeded.
+    if (!jobNeeds(backend).includes(PERF_GATE_JOB)) {
+      errors.push(`\`${BACKEND_JOB}\` must need \`${PERF_GATE_JOB}\` (a red perf gate must block the backend cutover too)`);
+    }
+    if (!jobNeeds(perf).includes(CI_GATE_JOB)) {
+      errors.push(`\`${PERF_GATE_JOB}\` must need \`${CI_GATE_JOB}\``);
+    }
     if (!/learner_state_engine_benchmark_test\.dart/.test(perf.replace(/^\s*#.*$/gm, ''))) {
       errors.push(`\`${PERF_GATE_JOB}\` must run test/benchmark/learner_state_engine_benchmark_test.dart`);
     }
   }
-  for (const [name, job] of [[BACKEND_JOB, backend], [APP_JOB, app], [PERF_GATE_JOB, perf ?? '']]) {
+  const gate = extractJob(text, CI_GATE_JOB) ?? '';
+  for (const [name, job] of [[CI_GATE_JOB, gate], [BACKEND_JOB, backend], [APP_JOB, app], [PERF_GATE_JOB, perf ?? '']]) {
     if (/^ {4}continue-on-error:\s*true/m.test(job) || /^ {8}continue-on-error:\s*true/m.test(job)) {
       errors.push(`\`${name}\` must fail closed (no continue-on-error)`);
     }
