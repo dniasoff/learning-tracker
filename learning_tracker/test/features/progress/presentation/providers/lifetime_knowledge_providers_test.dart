@@ -2,6 +2,8 @@
 // `lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart`
 // (DNI-474: lifetime trees, totals, header counters and dual metrics read
 // the engine's LearnerState only).
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -96,6 +98,49 @@ void main() {
     );
     expect(totals.learnedSections, 3);
     expect(totals.totalSections, 9);
+  });
+
+  // DNI-489 (R15 port of the bulk-mark staleness case): a persistently
+  // mounted Lifetime tile no longer waits for a hand-fired commit signal.
+  // The bulk mark records a before_tracking capture (covered by
+  // bulk_mark_learning_events_test.dart); the tile updates because it
+  // derives from the learner-state stream, which emits the new learning.
+  test('a mounted lifetime totals listener updates when the learner state '
+      'emits before-tracking learning', () async {
+    final states = StreamController<LearnerState>();
+    addTearDown(states.close);
+    final container = ProviderContainer.test(
+      overrides: [
+        ...progressOverrides(null, states: states.stream),
+        profileProgramsByProfileProvider.overrideWith((ref) async => const {}),
+      ],
+    );
+    final seen = <int>[];
+    container.listen<AsyncValue<LifetimeTotals>>(
+      lifetimeTotalsAcrossAllCurriculaProvider,
+      (_, next) {
+        final value = next.value;
+        if (value != null && !next.isLoading) seen.add(value.learnedSections);
+      },
+      fireImmediately: true,
+    );
+
+    states.add(progressState(const []));
+    await readFuture(
+      container,
+      lifetimeTotalsAcrossAllCurriculaProvider.future,
+    );
+    expect(seen.last, 0);
+
+    states.add(
+      progressState([progressGround(1, 'Mishnah Berakhot', 'masechta')]),
+    );
+    await pumpEventQueue();
+    await readFuture(
+      container,
+      lifetimeTotalsAcrossAllCurriculaProvider.future,
+    );
+    expect(seen.last, 5, reason: 'the mounted listener saw the new learning');
   });
 
   group('header counters', () {
