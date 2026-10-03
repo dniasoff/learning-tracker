@@ -23,7 +23,7 @@ sealed class HistoryItem {
   const HistoryItem();
 
   /// Stable identity across page loads (never changes as more of the same
-  /// action or batch is read).
+  /// action is read, nor once a learning batch is visible).
   String get key;
 
   /// The instant the item sorts by (UTC).
@@ -84,10 +84,16 @@ final class GovernedActionItem extends HistoryItem {
   }
 }
 
-/// The `learning_events` of one capture: same kind, actor, source,
-/// curriculum, date state, civil date and effective instant.
+/// The `learning_events` of one capture: written by one command
+/// ([writtenByOneCommand]: one raw `recorded_at`, one actor) with the same
+/// kind, source, curriculum, date state, civil date and effective instant.
+///
+/// The command boundary keeps apart events whose visible fields agree but
+/// that two commands wrote: a correction's replacement or an un-learn's
+/// re-issue carries `original_recorded_at = effectiveAt(target)` and would
+/// otherwise join the capture it corrects.
 final class LearningBatchItem extends HistoryItem {
-  /// Creates the item; [events] are non-empty and share the batch key.
+  /// Creates the item; [events] are non-empty and pairwise [sameBatch].
   LearningBatchItem(List<LearningEvent> events)
     : events = List.unmodifiable(
         <LearningEvent>[...events]..sort((a, b) => a.id.compareTo(b.id)),
@@ -106,8 +112,13 @@ final class LearningBatchItem extends HistoryItem {
   /// Whether the batch records learning (not a `void`).
   bool get isLearn => first.isLearn;
 
+  /// The batch's smallest event id. Events belong to one batch each, so
+  /// it is unique; and it is final once the item is visible: `learning_events`
+  /// pages run by `recorded_at` descending, so a visible item (effective
+  /// instant above the merge frontier, hence `recorded_at` above the page
+  /// watermark) has every event of its command loaded.
   @override
-  String get key => 'events:${batchKeyOf(first)}';
+  String get key => 'events:${first.id}';
 
   /// `original_recorded_at ?? recorded_at` (AD-31).
   @override
@@ -119,8 +130,13 @@ final class LearningBatchItem extends HistoryItem {
   @override
   int get sourceRank => 1;
 
-  /// The grouping key of [event]: events with equal keys were written by
-  /// one capture.
+  /// Whether [a] and [b] belong to one batch: one command
+  /// ([writtenByOneCommand]) and equal [batchKeyOf].
+  static bool sameBatch(LearningEvent a, LearningEvent b) =>
+      writtenByOneCommand(a, b) && batchKeyOf(a) == batchKeyOf(b);
+
+  /// The visible fields a batch shares. Equal keys are necessary, not
+  /// sufficient: two commands can write equal keys ([sameBatch]).
   static String batchKeyOf(LearningEvent event) => [
     event.kind.storage,
     effectiveAt(event).microsecondsSinceEpoch,
