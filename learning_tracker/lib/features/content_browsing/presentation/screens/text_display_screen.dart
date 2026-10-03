@@ -800,9 +800,15 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       if (recorded.isNotEmpty) {
         _recordedKeys.addAll(recorded);
         _applyOptimistic(recorded);
-        // Legacy planner position (R4, retired by DNI-478): the bookmark
-        // still advances so today's list moves on exactly as before.
-        await _advanceBookmark(task, markRefs.last);
+        // Legacy planner position (R4, retired by DNI-478): the owner's
+        // bookmark still advances as before. A tutor never writes it: the
+        // bookmark is owner-only by the Firestore rules and the tutor's one
+        // write is the callable, whose validated receipt is [result]
+        // (DNI-486). Today's list derives from the learning events, so the
+        // tutor's reader moves on without it.
+        if (!session.isTutorSession) {
+          await _advanceBookmark(task, markRefs.last);
+        }
       }
 
       if (mounted) {
