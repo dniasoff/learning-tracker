@@ -153,9 +153,6 @@ void main() {
       }
     });
 
-<<<<<<< HEAD
-    test('mode storage values and catalog registration', () {
-=======
     test('DNI-507 T5: an adjusted record sends mode adjusted, counts only', () {
       final sent = <(LearningAnalyticsEvent, Map<String, Object>)>[];
       SinkLearningAnalytics((e, p) => sent.add((e, p))).catchupCompleted(
@@ -180,8 +177,6 @@ void main() {
       });
     });
 
-    test('mode storage values', () {
->>>>>>> 9aad6a5e7 (test(sub-tracks): DNI-507 T5 catchup_completed carries mode adjusted)
       expect(CatchUpMode.all.storage, 'all');
       expect(CatchUpMode.adjusted.storage, 'adjusted');
       expect(AnalyticsEvent.catchupCompleted, 'catchup_completed');
