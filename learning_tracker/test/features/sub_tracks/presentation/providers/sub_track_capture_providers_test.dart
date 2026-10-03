@@ -1,15 +1,22 @@
 // Story 2.10 (DNI-501) T3: the pending-capture overlay that moves a row on
 // in the same frame and rolls it back on Undo or a rejected write.
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_capture_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learner_state.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
+import '../../../../helpers/pump_app.dart';
 
 final _scope = c0Scope();
 
@@ -166,10 +173,8 @@ void main() {
       expect(state.refsOf(null, _c, _school), isEmpty);
     });
 
-    test('a capture still queued for learner A is not recorded for '
-        'learner B after a profile switch, and is again for A on the way '
-        'back', () async {
-      final switching = ProviderContainer(
+    ProviderContainer switchingContainer() {
+      final out = ProviderContainer(
         overrides: [
           // The overlay prunes on the active learner's engine state.
           learnerStateProvider.overrideWith(
@@ -180,7 +185,20 @@ void main() {
           ),
         ],
       );
-      addTearDown(switching.dispose);
+      addTearDown(out.dispose);
+      return out;
+    }
+
+    Future<void> select(ProviderContainer c, LearnerScope? scope) async {
+      c.read(_activeScope.notifier).select(scope);
+      await c.read(activeLearnerScopeProvider.future);
+      await pumpEventQueue();
+    }
+
+    test('a capture still queued for learner A is not recorded for '
+        'learner B after a profile switch, and the switch drops it: A\'s '
+        'commands, the only feed of its rejections, are gone', () async {
+      final switching = switchingContainer();
       const key = (curriculumId: _c, source: 'main');
       final refs = switching.listen(activePendingRefsProvider(key), (_, _) {});
       addTearDown(refs.close);
@@ -193,18 +211,107 @@ void main() {
       expect(refs.read(), {_a, _b});
 
       // Switch to learner B: the same curriculum and source shows nothing
-      // pending, and B's engine state prunes none of A's entries.
-      switching.read(_activeScope.notifier).select(_sibling);
-      await switching.read(activeLearnerScopeProvider.future);
-      await pumpEventQueue();
+      // pending, and A's entry is gone (a rejection of it while B is
+      // active would never be heard).
+      await select(switching, _sibling);
       expect(refs.read(), isEmpty);
-      expect(switching.read(pendingCapturesProvider).entries, hasLength(1));
+      expect(switching.read(pendingCapturesProvider).entries, isEmpty);
 
-      // Back to A: the queued capture still reads as recorded.
-      switching.read(_activeScope.notifier).select(_scope);
+      // Back to A: the rows read A's engine state only, which holds a
+      // queued write and not a rejected one; the overlay keeps nothing.
+      await select(switching, _scope);
+      expect(refs.read(), isEmpty);
+    });
+
+    test('a capture for A whose command answers after a switch binds '
+        'nothing', () async {
+      final switching = switchingContainer();
+      final sub = switching.listen(pendingCapturesProvider, (_, _) {});
+      addTearDown(sub.close);
+      await switching.read(activeLearnerScopeProvider.future);
+      final notifier = switching.read(pendingCapturesProvider.notifier);
+      final token = notifier.add(_scope, _c, _school, [_a]);
+
+      await select(switching, _sibling);
+      notifier.bind(token, [_e1]);
+      expect(switching.read(pendingCapturesProvider).entries, isEmpty);
+    });
+
+    test('the active learner\'s own entries survive its scope '
+        're-resolving to the same learner', () async {
+      final switching = switchingContainer();
+      final sub = switching.listen(pendingCapturesProvider, (_, _) {});
+      addTearDown(sub.close);
+      await switching.read(activeLearnerScopeProvider.future);
+      final notifier = switching.read(pendingCapturesProvider.notifier);
+      notifier.add(_scope, _c, _school, [_a]);
+
+      switching.invalidate(activeLearnerScopeProvider);
       await switching.read(activeLearnerScopeProvider.future);
       await pumpEventQueue();
-      expect(refs.read(), {_a, _b});
+      expect(
+        switching.read(pendingCapturesProvider).refsOf(_scope, _c, _school),
+        {_a},
+      );
     });
+  });
+
+  testWidgets('a profile switch while the commands resolve writes nothing: '
+      'the capture is not saved and its overlay entry is dropped', (
+    tester,
+  ) async {
+    final resolving = Completer<LearningCommands?>();
+    final commands = FakeLearningCommands();
+    late ProviderContainer scope;
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: [
+          learnerStateProvider.overrideWith(
+            (ref, _) => Stream.value(fakeLearnerState()),
+          ),
+          activeLearnerScopeProvider.overrideWith(
+            (ref) async => ref.watch(_activeScope),
+          ),
+          learningCommandsProvider.overrideWith((ref) => resolving.future),
+        ],
+        child: Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) {
+              scope = ProviderScope.containerOf(context);
+              ref.watch(pendingCapturesProvider);
+              return TextButton(
+                onPressed: () => captureLeaves(
+                  context,
+                  ref,
+                  curriculumId: _c,
+                  source: _school,
+                  refs: const [_a, _b],
+                ),
+                child: const Text('record'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('record'));
+    await tester.pump();
+    expect(scope.read(pendingCapturesProvider).refsOf(_scope, _c, _school), {
+      _a,
+      _b,
+    });
+
+    // The child switches to a sibling profile before the commands resolve;
+    // they resolve bound to the sibling.
+    scope.read(_activeScope.notifier).select(_sibling);
+    await tester.pump();
+    resolving.complete(commands);
+    await tester.pumpAndSettle();
+
+    expect(commands.calls, isEmpty, reason: 'nothing written to B');
+    expect(scope.read(pendingCapturesProvider).entries, isEmpty);
+    expect(find.textContaining('Not saved'), findsOneWidget);
   });
 }

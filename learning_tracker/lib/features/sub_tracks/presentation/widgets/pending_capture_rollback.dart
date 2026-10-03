@@ -8,7 +8,10 @@
 /// leaves in `pendingCapturesProvider` and is announced once with Retry
 /// ([PendingCaptureFailureListener]); a saved retry lets the engine show
 /// them again. It keeps itself alive inside a lazy list, so scrolling the
-/// Learn tab never unmounts it.
+/// Learn tab never unmounts it. It hears the ACTIVE learner's commands
+/// only; a profile switch drops the left learner's pending entries
+/// (`PendingCapturesNotifier`), so none outlives the feed that could roll
+/// it back.
 library;
 
 import 'package:flutter/material.dart';
