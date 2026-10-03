@@ -37,6 +37,7 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -585,4 +586,10 @@ final class TutorLearningCommands implements LearningCommands {
 
   @override
   Future<CaptureResult> reAddTrack(String curriculumId) async => _invalid;
+
+  // Backup import is an owner-only operation; a tutor session cannot replay
+  // a backup into the learner's account.
+  @override
+  Future<BackupReplayResult> importBackup(BackupReplayInput input) async =>
+      const BackupReplayResult(result: _invalid);
 }

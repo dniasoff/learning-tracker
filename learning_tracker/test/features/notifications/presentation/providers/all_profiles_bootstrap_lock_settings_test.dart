@@ -115,6 +115,7 @@ class _PredicateStreakService implements StreakAlertService {
     required int minute,
     String? title,
     String Function(int currentStreak)? localizedBody,
+    bool doneToday = false,
   }) async {
     await _gateway.scheduleStreakAlertForProfile(
       profileId: _profileId,

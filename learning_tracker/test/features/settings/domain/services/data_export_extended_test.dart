@@ -28,12 +28,14 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.bavli,
     );
-    await seedBookmark(
-      firestore,
-      uid: testUid,
-      profileId: testProfileId,
-      curriculumId: CurriculumId.bavli,
-    );
+    await firestore
+        .collection('users')
+        .doc(testUid)
+        .collection('learner_profiles')
+        .doc(testProfileId)
+        .collection('bookmarks')
+        .doc('bavli')
+        .set({'curriculum_id': 'bavli'});
 
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
