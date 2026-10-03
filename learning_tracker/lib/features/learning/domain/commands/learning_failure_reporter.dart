@@ -33,7 +33,10 @@ enum LearningCommandKind {
   undoAction('undo_action'),
 
   /// `retry` of a pending failure.
-  retry('retry');
+  retry('retry'),
+
+  /// `importBackup` (DNI-482, AD-49 replay).
+  backupImport('backup_import');
 
   const LearningCommandKind(this.storage);
 
