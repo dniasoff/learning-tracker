@@ -18,6 +18,7 @@ import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
@@ -192,6 +193,12 @@ final class FakeLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> reAddTrack(String curriculumId) async =>
       _record('reAddTrack', {'curriculumId': curriculumId}, changes: 1);
+
+  @override
+  Future<BackupReplayResult> importBackup(BackupReplayInput input) async =>
+      BackupReplayResult(
+        result: _record('importBackup', {'input': input}),
+      );
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {

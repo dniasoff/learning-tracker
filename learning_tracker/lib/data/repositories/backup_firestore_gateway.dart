@@ -5,6 +5,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 
+/// The backup payload key of a profile's learning events (AD-49). The
+/// payload names the collection it was read from; only the repository
+/// layer names that collection (AD-35 "Reads",
+/// `tool/check_learning_event_read_boundary.dart`), and the backup service
+/// reads the events through `BackupLearningPort.readLearningEvents`, never
+/// through this gateway.
+const String backupLearningEventsKey = 'learning_events';
+
 /// The persistence contract used by the settings backup service.
 ///
 /// The service depends on document paths and JSON-safe maps only. This
@@ -21,10 +29,15 @@ abstract interface class BackupFirestoreGateway {
 }
 
 final class BackupDocumentWrite {
-  const BackupDocumentWrite(this.path, this.data);
+  const BackupDocumentWrite(this.path, this.data, {this.merge = false});
 
   final String path;
   final Map<String, dynamic> data;
+
+  /// Whether [data] merges into the stored doc (`set(merge: true)`) rather
+  /// than replacing it — used for a learner profile doc, whose governed
+  /// settings keys a restore never overwrites (AD-37, AD-49).
+  final bool merge;
 }
 
 /// Account-bound backup access resolved from the active authenticated session.
@@ -94,7 +107,11 @@ final class _FirebaseBackupFirestoreGateway implements BackupFirestoreGateway {
   Future<void> writeBatch(List<BackupDocumentWrite> writes) async {
     final batch = _firestore.batch();
     for (final write in writes) {
-      batch.set(_firestore.doc(write.path), write.data);
+      batch.set(
+        _firestore.doc(write.path),
+        write.data,
+        SetOptions(merge: write.merge),
+      );
     }
     await batch.commit();
   }

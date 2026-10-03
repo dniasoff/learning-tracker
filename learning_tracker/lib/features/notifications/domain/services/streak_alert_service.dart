@@ -17,6 +17,7 @@ import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/notifications/domain/services/curriculum_streak_alerts.dart';
+import 'package:learning_tracker/features/notifications/domain/services/today_learning_done.dart';
 
 /// What one curriculum's evaluation did.
 enum StreakAlertOutcome {
@@ -48,17 +49,17 @@ class StreakAlertService {
     AnalyticsService? analytics,
     bool Function(DateTime utc)? isLockedAt,
   }) : _notifications = notifications,
-       _isLockedAt = isLockedAt,
        _markers = markers,
        _profileId = profileId,
        _clock = clock ?? DateTimeFactory.nowUtc,
+       _isLockedAt = isLockedAt,
        _analytics = analytics ?? const NullAnalyticsService();
 
   final StreakAlertNotifications _notifications;
   final StreakAlertMarkers _markers;
-  final bool Function(DateTime utc)? _isLockedAt;
   final String _profileId;
   final DateTime Function() _clock;
+  final bool Function(DateTime utc)? _isLockedAt;
   final AnalyticsService _analytics;
 
   /// Evaluates every curriculum of [state]: each evaluated curriculum with
@@ -76,6 +77,7 @@ class StreakAlertService {
     String Function(int currentStreak)? localizedBody,
   }) async {
     final outcomes = <String, StreakAlertOutcome>{};
+    final today = civilDate(_clock().toUtc(), settingsHistory);
     for (final MapEntry(key: curriculumId, value: curriculum)
         in state.curricula.entries) {
       if (!curriculum.evaluated) {
@@ -90,6 +92,13 @@ class StreakAlertService {
         minute: minute,
         title: title,
         localizedBody: localizedBody,
+        // DNI-482 AC-5: today's learning is read from LearnerState only.
+        doneToday: learnedToday(
+          state,
+          settingsHistory,
+          day: today,
+          curriculumId: curriculumId,
+        ),
       );
     }
     return outcomes;
@@ -99,8 +108,10 @@ class StreakAlertService {
   /// [hour]:[minute] on the learner's civil day (AD-41 zone from
   /// [settingsHistory]).
   ///
-  /// The streak is at risk when it is running (`current > 0`) and today is
-  /// not yet a streak day. A lock window holding now or the alert time
+  /// The streak is at risk when it is running (`current > 0`), today is
+  /// not yet a streak day and today's learning is not done ([doneToday]:
+  /// a counted learning event of the curriculum on today's civil date,
+  /// from `LearnerState`, DNI-482). A lock window holding now or the alert time
   /// suppresses the alert; a failure computing the lock windows cancels it
   /// and is rethrown (fail closed). Re-evaluating on the same civil day at
   /// the same time schedules nothing new.
@@ -112,10 +123,14 @@ class StreakAlertService {
     required int minute,
     String? title,
     String Function(int currentStreak)? localizedBody,
+    bool doneToday = false,
   }) async {
     final now = _clock().toUtc();
     final today = civilDate(now, settingsHistory);
-    if (streak == null || streak.current == 0 || streak.lastDay == today) {
+    if (streak == null ||
+        streak.current == 0 ||
+        streak.lastDay == today ||
+        doneToday) {
       await cancel(curriculumId);
       return StreakAlertOutcome.notAtRisk;
     }

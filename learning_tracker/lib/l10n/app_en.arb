@@ -4033,5 +4033,9 @@
   },
   "backupImportConfirm": "Restore backup",
   "backupImportSuccess": "Backup restored successfully.",
-  "backupImportError": "Couldn't restore the backup. Please try again."
+  "backupImportError": "Couldn't restore the backup. Please try again.",
+  "backupImportNotSaved": "Not saved — part of the backup was not restored. Retry?",
+  "@backupImportNotSaved": {
+    "description": "Snackbar after a backup restore when the server refused some of the replayed learning writes (AD-49, AD-54 Recovery: not saved — retry). Shown with a Retry action that re-sends exactly those writes. DRAFT copy, pending zc4."
+  }
 }

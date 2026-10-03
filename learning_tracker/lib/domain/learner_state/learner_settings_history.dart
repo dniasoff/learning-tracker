@@ -74,7 +74,10 @@ final class LearnerSettingsHistory {
   /// - Only `learnerSettings` entries of [current]'s profile count; any
   ///   other entry is ignored, so the whole intent history can be passed.
   /// - They are ordered by `original_at ?? at` (an import keeps its
-  ///   original chronology), ties by entry id.
+  ///   original chronology), ties by entry id. A seed (`before` all null)
+  ///   that is not already first leads, as the state from the beginning
+  ///   of time: an AD-49 import replays history older than the
+  ///   destination's import-time seed (DNI-482).
   /// - No entry: [current] holds from the beginning of time.
   /// - Otherwise the settings after the LAST entry are [current], and the
   ///   settings after each earlier entry are rebuilt backwards by applying
@@ -110,6 +113,19 @@ final class LearnerSettingsHistory {
             return byTime != 0 ? byTime : a.id.compareTo(b.id);
           });
     if (mine.isEmpty) return LearnerSettingsHistory.constant(current);
+    // An AD-49 import replays the source history with `original_at`
+    // instants that predate the destination's own seed (the import-time
+    // settings, written when the profile was created). A seed is the
+    // learner's state from the beginning of time, so it leads wherever its
+    // instant falls; every replayed entry then starts its own span.
+    final seeds = mine.where(_isSeed).toList();
+    final seedMoved = seeds.isNotEmpty && !identical(seeds.first, mine.first);
+    if (seedMoved) {
+      mine
+        ..removeWhere(_isSeed)
+        ..insertAll(0, seeds);
+    }
+    final firstFrom = seedMoved ? null : _effectiveAt(mine.first);
 
     // states[k]: the settings in force right after mine[k].
     final states = List<LearnerSettings>.filled(mine.length, current);
@@ -122,7 +138,9 @@ final class LearnerSettingsHistory {
     for (var k = 1; k < mine.length; k++) {
       final from = _effectiveAt(mine[k]);
       if (spans.last.fromUtc == from ||
-          (spans.length == 1 && !from.isAfter(_effectiveAt(mine.first)))) {
+          (spans.length == 1 &&
+              firstFrom != null &&
+              !from.isAfter(firstFrom))) {
         // Same instant as the previous span's start: the later one wins.
         spans[spans.length - 1] = SettingsSpan(
           fromUtc: spans.last.fromUtc,
@@ -134,6 +152,15 @@ final class LearnerSettingsHistory {
     }
     return LearnerSettingsHistory(spans);
   }
+
+  /// Whether [e] is a seed (AD-37): it sets `time_zone`, which is
+  /// required once seeded, and every `before` value is null. A later
+  /// change that only fills an absent optional field is not one.
+  static bool _isSeed(ChangeLogEntry e) =>
+      e.before.values.every((v) => v == null) &&
+      e.after.keys.any(
+        (k) => ChangedFieldKey.tryParse(k)?.field == LearnerSettings.kTimeZone,
+      );
 
   /// [after] with [entry]'s `before` values applied: the settings in force
   /// before [entry], last changed by [previousEntryId].

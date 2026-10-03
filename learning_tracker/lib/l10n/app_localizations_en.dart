@@ -5967,4 +5967,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backupImportError =>
       'Couldn\'t restore the backup. Please try again.';
+
+  @override
+  String get backupImportNotSaved =>
+      'Not saved — part of the backup was not restored. Retry?';
 }

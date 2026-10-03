@@ -62,10 +62,16 @@ void main() {
     );
   });
 
-  test('import rejects unsupported future versions', () async {
+  test('import rejects unsupported versions, including the retired '
+      'version 1 completion format (DNI-482, AD-13)', () async {
     final source = FakeFirebaseFirestore();
     final payload = await exportedMap(backupService(source));
-    payload['version'] = 2;
+    payload['version'] = 3;
+    expect(
+      () => backupService(source).importData(jsonEncode(payload)),
+      throwsA(isA<ImportValidationException>()),
+    );
+    payload['version'] = 1;
     expect(
       () => backupService(source).importData(jsonEncode(payload)),
       throwsA(isA<ImportValidationException>()),

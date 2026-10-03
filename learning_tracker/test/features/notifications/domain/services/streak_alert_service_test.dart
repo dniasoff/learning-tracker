@@ -8,11 +8,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/notifications/domain/services/curriculum_streak_alerts.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 
 import '../../../../helpers/learner_state/fake_learner_state.dart';
 import '../../../../helpers/learner_state/lock_fixtures.dart';
+import '../../../../helpers/learner_state_fixtures.dart';
 
 const _profileId = '01JQ8M9Y7V3K2N6P4R5T8W0X1Z';
 const _mishnayos = 'mishnayos';
@@ -185,6 +187,35 @@ void main() {
         expect(alerts.cancelled, contains(_mishnayos));
       },
     );
+
+    test('counted learning today from LearnerState keeps the streak safe '
+        'even before it is a streak day (DNI-482 AC-5)', () async {
+      final today = LearningEvent.learn(
+        id: '01JQ8M9Y7V3K2N6P4R5T8W0X2A',
+        curriculumId: _mishnayos,
+        ref: 'Mishnah Berakhot 1:1',
+        source: '01JQ8M9Y7V3K2N6P4R5T8W0X2B', // a sub-track
+        dateState: DateState.dated,
+        learnedOn: '2026-03-25',
+        recordedAt: _edt(25, 9),
+        actor: parentActor,
+      );
+      final outcomes = await service().evaluateAll(
+        state: fakeLearnerState(
+          curricula: {
+            _mishnayos: _curriculum(_mishnayos),
+            _bavli: _curriculum(_bavli),
+          },
+          countedLearns: [today],
+          countedEventIds: {today.id},
+        ),
+        settingsHistory: history,
+        hour: 21,
+        minute: 0,
+      );
+      expect(outcomes[_mishnayos], StreakAlertOutcome.notAtRisk);
+      expect(outcomes[_bavli], StreakAlertOutcome.scheduled);
+    });
 
     test('a curriculum the engine does not evaluate is cancelled', () async {
       final outcomes = await service().evaluateAll(
