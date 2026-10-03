@@ -11,7 +11,18 @@
 /// * `voidEvent` / `undoEvents` → [TutorWriteService.voidLearning];
 /// * `replace` → [TutorWriteService.replaceLearning];
 /// * `unlearn` → [TutorWriteService.unlearn] with the shared AD-31 planner
-///   (`planUnlearn`, ruling B9).
+///   (`planUnlearn`, ruling B9);
+/// * Story 4.2 (DNI-510): a capture whose `source` is one of the talmid's
+///   sub-tracks (the Learn row's *+1* / *Up to…*, the Browse free-tick
+///   sheet) → [TutorWriteService.recordLearning] with that source; a Mishna
+///   history correction of a main-track event to a sub-track source → ONE
+///   [TutorWriteService.replaceLearning] whose copy carries the sub-track
+///   source (the server checks the sub-track is live and writes the void
+///   and the copy in one transaction);
+/// * Story 4.2: `createSubTrack` / `editSubTrack` / `endSubTrack` /
+///   `deleteSubTrack` → the typed `tutorUpsertSubTrack` service methods
+///   (Story 4.1), one governed action each, its client ULIDs frozen in the
+///   session ledger until a definitive receipt so a retried save replays.
 ///
 /// Every command first checks, before any callable is invoked: the grant's
 /// `can_edit_learning` (AD-53), a positive connectivity probe (online-only,
@@ -29,20 +40,28 @@ library;
 
 import 'dart:async';
 
+import 'package:learning_tracker/domain/learner_state/append_ground.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
+import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart'
+    show CaptureGesture;
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_event_plans.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/unlearn_plan.dart';
+import 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_preflight.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -71,7 +90,11 @@ final class _PlannedCall {
 final class TutorLearningCommands implements LearningCommands {
   /// Creates the commands. [preflight] runs the permission, online and
   /// target-learner lock checks; [events] reads the talmid's complete event
-  /// log; [corpus] a curriculum's ContentIndex corpus.
+  /// log; [corpus] a curriculum's ContentIndex corpus. [subTracks] reads
+  /// the talmid's complete `sub_tracks` (null when unavailable — a
+  /// sub-track command then answers `onlineRequired`); [ledger] freezes a
+  /// sub-track action's client ULIDs until a definitive receipt (pass the
+  /// session-wide one, so a retried save from a re-opened form replays).
   TutorLearningCommands({
     required TutoredProfileSelection selection,
     required TutorWriteService service,
@@ -80,13 +103,17 @@ final class TutorLearningCommands implements LearningCommands {
     required Future<Corpus?> Function(String curriculumId) corpus,
     required UtcClock clock,
     required UlidSource newUlid,
+    Future<List<SubTrack>?> Function()? subTracks,
+    TutorGovernedActionLedger? ledger,
   }) : _selection = selection,
        _service = service,
        _checks = preflight,
        _events = events,
        _corpus = corpus,
        _clock = clock,
-       _newUlid = newUlid;
+       _newUlid = newUlid,
+       _subTracks = subTracks,
+       _ledger = ledger ?? TutorGovernedActionLedger();
 
   final TutoredProfileSelection _selection;
   final TutorWriteService _service;
@@ -95,6 +122,8 @@ final class TutorLearningCommands implements LearningCommands {
   final Future<Corpus?> Function(String) _corpus;
   final UtcClock _clock;
   final UlidSource _newUlid;
+  final Future<List<SubTrack>?> Function()? _subTracks;
+  final TutorGovernedActionLedger _ledger;
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -236,22 +265,50 @@ final class TutorLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int skippedCount = 0,
+    int taps = 1,
   }) => _preflight((now, history) async {
     // Epic 1: tutors record main-track learning, dated or before tracking.
-    if (curriculumId.isEmpty ||
-        source != LearningEvent.sourceMain ||
-        dateState == DateState.catchUp) {
+    // Story 4.2 (AC-1): or the talmid's sub-track learning — the Story 4.1
+    // contract: a dated leaf event with no stage.
+    if (curriculumId.isEmpty || dateState == DateState.catchUp) {
+      return _invalid;
+    }
+    final onSubTrack = source != LearningEvent.sourceMain;
+    if (onSubTrack &&
+        (!isUlid(source) ||
+            dateState != DateState.dated ||
+            nodes.isNotEmpty ||
+            stage != null)) {
       return _invalid;
     }
     if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
       return _invalid;
     }
     if (stage != null && stage < 0) return _invalid;
-    final leaves = refs.where((r) => r.isNotEmpty).toSet().toList();
+    var leaves = refs.where((r) => r.isNotEmpty).toSet().toList();
     final nodeList = nodes.toSet().toList();
     if (leaves.length != refs.toSet().length) return _invalid;
+    var alreadyRecorded = const <LeafRef>[];
+    if (skipRecorded && leaves.isNotEmpty) {
+      // DNI-501 AC-2 on a tutor device: a leaf the log already records in
+      // this track is never written twice.
+      final recorded = await _recordedIn(curriculumId, source, now, history);
+      if (recorded != null && recorded.isNotEmpty) {
+        alreadyRecorded = [
+          for (final r in leaves)
+            if (recorded.contains(r)) r,
+        ];
+        leaves = [
+          for (final r in leaves)
+            if (!recorded.contains(r)) r,
+        ];
+      }
+    }
     if (leaves.isEmpty && nodeList.isEmpty) {
-      return const CaptureResult.success();
+      return CaptureResult.success(alreadyRecordedRefs: alreadyRecorded);
     }
     String? day;
     if (dateState == DateState.dated) {
@@ -269,6 +326,7 @@ final class TutorLearningCommands implements LearningCommands {
           dateState: dateState,
           learnedOn: day,
           stage: stage,
+          source: source,
         ),
       for (final node in nodeList)
         TutorLearnEvent(
@@ -280,7 +338,7 @@ final class TutorLearningCommands implements LearningCommands {
           stage: stage,
         ),
     ];
-    return _dispatch(
+    final result = await _dispatch(
       [
         for (
           var start = 0;
@@ -297,7 +355,53 @@ final class TutorLearningCommands implements LearningCommands {
       eventIdsOf: (written) => [for (final (c, _) in written) ...c.eventIds],
       history: history,
     );
+    if (result case CaptureSuccess(
+      :final eventIds,
+      :final keptNotCounted,
+    ) when alreadyRecorded.isNotEmpty) {
+      return CaptureResult.success(
+        eventIds: eventIds,
+        keptNotCounted: keptNotCounted,
+        alreadyRecordedRefs: alreadyRecorded,
+      );
+    }
+    return result;
   });
+
+  @override
+  Future<CaptureResult> recordCatchUp(CatchUpAction action) async =>
+      const CaptureResult.rejected(CaptureRejection.invalid);
+
+  /// The leaves of [curriculumId] the talmid's log already records in the
+  /// track [source] (see `capture`'s `skipRecorded`): for a sub-track, its
+  /// counted learn events; for `main`, any counted learn event of the
+  /// curriculum. Null when the log or the corpus cannot be read.
+  Future<Set<LeafRef>?> _recordedIn(
+    String curriculumId,
+    String source,
+    DateTime now,
+    LearnerSettingsHistory history,
+  ) async {
+    try {
+      final (log, corpus) = await (
+        _log(now, history),
+        _corpus(curriculumId),
+      ).wait.timeout(_readWait);
+      return {
+        for (final e in log.counted.learns)
+          if (e.curriculumId == curriculumId &&
+              (source == LearningEvent.sourceMain || e.source == source))
+            ...?(corpus == null
+                ? (e.level == null && e.ref != null ? [e.ref!] : null)
+                : coveredLeaves(e, corpus)),
+      };
+    } on Object {
+      return null;
+    }
+  }
+
+  /// How long a tutor command waits for the talmid's log or sub-tracks.
+  static const Duration _readWait = Duration(seconds: 5);
 
   _PlannedCall _recordCall(List<TutorLearnEvent> chunk) => _PlannedCall(
     [for (final e in chunk) e.id],
@@ -307,6 +411,24 @@ final class TutorLearningCommands implements LearningCommands {
       profileId: _selection.profileId,
       actionId: chunk.first.id,
       events: chunk,
+    ),
+  );
+
+  /// ONE `tutorVoidLearning` replace: the void [ids] `[0]` of [targetId]
+  /// and its corrected [copy] (`ids[1]`), committed together.
+  _PlannedCall _replaceCall(
+    List<String> ids,
+    String targetId,
+    TutorLearnEvent copy,
+  ) => _PlannedCall(
+    ids,
+    () => _service.replaceLearning(
+      grantId: _selection.grantId,
+      ownerUid: _selection.ownerUid,
+      profileId: _selection.profileId,
+      eventId: ids[0],
+      targetId: targetId,
+      replacement: copy,
     ),
   );
 
@@ -382,13 +504,17 @@ final class TutorLearningCommands implements LearningCommands {
     }
     if (log.isVoided(targetId)) return _invalid;
     final fields = resolveReplacement(target, replacement, now, history);
-    // Epic 1 tutor captures are main-track and dated or before tracking.
+    // Epic 1 tutor captures are main-track and dated or before tracking;
+    // Story 4.1 keeps a tutor's corrections to main-track events.
     if (fields == null ||
-        fields.source != LearningEvent.sourceMain ||
+        target.source != LearningEvent.sourceMain ||
         fields.dateState == DateState.catchUp) {
       return _invalid;
     }
     if (fields.sameAs(target)) return const CaptureResult.success();
+    if (fields.source != LearningEvent.sourceMain) {
+      return _correctToSubTrack(targetId, target, fields, now, history);
+    }
     final ids = _ids(now, 2);
     final copy = TutorLearnEvent(
       id: ids[1],
@@ -400,24 +526,50 @@ final class TutorLearningCommands implements LearningCommands {
       stage: fields.stage,
     );
     return _dispatch(
-      [
-        _PlannedCall(
-          ids,
-          () => _service.replaceLearning(
-            grantId: _selection.grantId,
-            ownerUid: _selection.ownerUid,
-            profileId: _selection.profileId,
-            eventId: ids[0],
-            targetId: targetId,
-            replacement: copy,
-          ),
-        ),
-      ],
+      [_replaceCall(ids, targetId, copy)],
       rejection: _correctionRejection,
       eventIdsOf: (_) => ids,
       history: history,
     );
   });
+
+  /// Story 4.2 (AC-1): *Correct source* of the main-track event [targetId]
+  /// to one of the talmid's sub-tracks: ONE `replaceLearning` call whose
+  /// copy carries the sub-track source (a dated leaf event, no stage, its
+  /// `learned_on` kept). The server validates that the sub-track is live
+  /// and on the target's curriculum and commits the void and the copy in
+  /// one transaction, so a refused or failed correction leaves the
+  /// original counted — never a void without its replacement. Both ULIDs
+  /// are frozen before the call; a retry replays the stored result.
+  Future<CaptureResult> _correctToSubTrack(
+    String targetId,
+    LearningEvent target,
+    ResolvedReplacement fields,
+    DateTime now,
+    LearnerSettingsHistory history,
+  ) async {
+    if (!isUlid(fields.source) ||
+        fields.dateState != DateState.dated ||
+        fields.level != null ||
+        target.curriculumId == null) {
+      return _invalid;
+    }
+    final ids = _ids(now, 2);
+    final copy = TutorLearnEvent(
+      id: ids[1],
+      curriculumId: target.curriculumId!,
+      ref: fields.ref,
+      dateState: DateState.dated,
+      learnedOn: fields.learnedOn,
+      source: fields.source,
+    );
+    return _dispatch(
+      [_replaceCall(ids, targetId, copy)],
+      rejection: _correctionRejection,
+      eventIdsOf: (_) => ids,
+      history: history,
+    );
+  }
 
   @override
   Future<CaptureResult> unlearn(
@@ -586,6 +738,301 @@ final class TutorLearningCommands implements LearningCommands {
 
   @override
   Future<CaptureResult> reAddTrack(String curriculumId) async => _invalid;
+
+  // ── Sub-tracks (Story 4.2, DNI-510) ──────────────────────────────────────
+  //
+  // The shared Epic 2 forms, detail and ground picker call these; each is
+  // ONE typed `tutorUpsertSubTrack` call (Story 4.1) after the preflight,
+  // and its result comes only from the callable's answer: nothing is
+  // queued and nothing shows as saved before success (AD-53). The AD-45
+  // limits are checked here first against the talmid's sub-tracks, so the
+  // forms get the same violations as on the owner path; the server
+  // (`writeWithChangeLog`) re-validates and is the final authority, also
+  // for the calendar-program rule and the grant.
+
+  /// Creates a sub-track for the talmid. [subTrackId] is the new doc ULID
+  /// (frozen per draft in the session ledger when omitted); [nextYearOf]
+  /// names the school-year sub-track an *Add next year* rolls over — the
+  /// create is refused (`targetNotFound`) when it is missing or ended.
+  @override
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+    String? nextYearOf,
+  }) => _preflight((now, history) async {
+    if (subTrackId != null && !isUlid(subTrackId)) return _invalid;
+    final tracks = await _readSubTracks();
+    if (tracks == null) return const CaptureResult.onlineRequired();
+    if (nextYearOf != null) {
+      final source = _findSubTrack(tracks, nextYearOf);
+      if (source == null || source.isEnded) {
+        return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+      }
+    }
+    final fingerprint =
+        tutorGovernedActionFingerprint('tutorUpsertSubTrack:create', {
+          'profileId': _selection.profileId,
+          'subTrackId': subTrackId,
+          'nextYearOf': nextYearOf,
+          'fields': SubTrackCommands.intentFieldsOf(_draftTrack('', draft)),
+        });
+    final id = subTrackId ?? _ledger.reserve(fingerprint, () => _newUlid(now));
+    final candidate = _draftTrack(id, draft);
+    final refused = await _violations(candidate, null, tracks, now, history);
+    if (refused != null) return refused;
+    return _governedSubTrack(
+      fingerprint,
+      () => _service.createSubTrack(
+        grantId: _selection.grantId,
+        ownerUid: _selection.ownerUid,
+        profileId: _selection.profileId,
+        subTrackId: id,
+        draft: draft,
+        nextYear: nextYearOf != null,
+      ),
+    );
+  });
+
+  /// Edits the talmid's sub-track [subTrackId]: any field but
+  /// `curriculum_id`; `ground` replaced whole (reorder, remove) or, for an
+  /// [SubTrackEdit.appendGround] edit (the ground picker), the picked nodes
+  /// appended to the latest stored ground in ContentIndex order. An edit
+  /// that changes nothing calls nothing.
+  @override
+  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>
+      _preflight((now, history) async {
+        final tracks = await _readSubTracks();
+        if (tracks == null) return const CaptureResult.onlineRequired();
+        final current = _findSubTrack(tracks, subTrackId);
+        if (current == null) {
+          return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+        }
+        if (current.isEnded) return _invalid;
+        var effective = edit;
+        final picked = edit.appendGround;
+        if (picked != null) {
+          if (edit.ground != null) return _invalid;
+          final corpus = await _corpus(current.curriculumId);
+          if (corpus == null) return _invalid;
+          final foreign = [
+            for (final node in picked)
+              if (corpus.curriculumId != current.curriculumId ||
+                  !corpusHoldsNode(corpus, node))
+                SubTrackViolation(
+                  SubTrackLimit.crossCurriculumGround,
+                  subject: node.ref,
+                ),
+          ];
+          if (foreign.isNotEmpty) {
+            return CaptureResult.rejected(
+              CaptureRejection.invalid,
+              violations: foreign,
+            );
+          }
+          effective = _withGround(edit, [
+            ...current.ground,
+            ...groundToAppend(
+              current: current.ground,
+              selected: picked,
+              corpus: corpus,
+            ),
+          ]);
+        }
+        final candidate = SubTrackCommands.applyEdit(current, effective);
+        final before = SubTrackCommands.intentFieldsOf(current);
+        final after = SubTrackCommands.intentFieldsOf(candidate);
+        final changed = <String, Object?>{
+          for (final MapEntry(:key, :value) in after.entries)
+            if (!storageValueEquals(before[key], value)) key: value,
+        };
+        if (changed.isEmpty) return const CaptureResult.success();
+        final refused = await _violations(
+          candidate,
+          current,
+          tracks,
+          now,
+          history,
+        );
+        if (refused != null) return refused;
+        final fingerprint =
+            tutorGovernedActionFingerprint('tutorUpsertSubTrack:edit', {
+              'profileId': _selection.profileId,
+              'subTrackId': subTrackId,
+              'changed': changed,
+            });
+        final actionId = _ledger.reserve(fingerprint, () => _newUlid(now));
+        return _governedSubTrack(
+          fingerprint,
+          () => _service.editSubTrack(
+            grantId: _selection.grantId,
+            ownerUid: _selection.ownerUid,
+            profileId: _selection.profileId,
+            current: current,
+            edit: effective,
+            actionId: actionId,
+          ),
+        );
+      });
+
+  /// Ends the talmid's sub-track [subTrackId] (`end_reason = ended`).
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) =>
+      _tombstone(subTrackId, delete: false);
+
+  /// Deletes the talmid's sub-track [subTrackId] as a tombstone
+  /// (`end_reason = deleted`); its learning events stay.
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) =>
+      _tombstone(subTrackId, delete: true);
+
+  Future<CaptureResult> _tombstone(String subTrackId, {required bool delete}) =>
+      _preflight((now, _) async {
+        final tracks = await _readSubTracks();
+        if (tracks == null) return const CaptureResult.onlineRequired();
+        final current = _findSubTrack(tracks, subTrackId);
+        if (current == null) {
+          return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+        }
+        // Already ended: nothing to write (the server would no-op too).
+        if (current.isEnded) return const CaptureResult.success();
+        final op = delete ? 'delete' : 'end';
+        final fingerprint = tutorGovernedActionFingerprint(
+          'tutorUpsertSubTrack:$op',
+          {'profileId': _selection.profileId, 'subTrackId': subTrackId},
+        );
+        final actionId = _ledger.reserve(fingerprint, () => _newUlid(now));
+        return _governedSubTrack(
+          fingerprint,
+          () => delete
+              ? _service.deleteSubTrack(
+                  grantId: _selection.grantId,
+                  ownerUid: _selection.ownerUid,
+                  profileId: _selection.profileId,
+                  subTrack: current,
+                  actionId: actionId,
+                )
+              : _service.endSubTrack(
+                  grantId: _selection.grantId,
+                  ownerUid: _selection.ownerUid,
+                  profileId: _selection.profileId,
+                  subTrack: current,
+                  actionId: actionId,
+                ),
+        );
+      });
+
+  /// The talmid's complete `sub_tracks` read, or null when it cannot be
+  /// read in time (or no reader is bound).
+  Future<List<SubTrack>?> _readSubTracks() async {
+    final read = _subTracks;
+    if (read == null) return null;
+    try {
+      return await read().timeout(_readWait);
+    } on Object {
+      return null;
+    }
+  }
+
+  static SubTrack? _findSubTrack(List<SubTrack> tracks, String id) {
+    for (final t in tracks) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  static SubTrack _draftTrack(String id, SubTrackDraft draft) => SubTrack(
+    id: id,
+    curriculumId: draft.curriculumId,
+    name: draft.name,
+    type: draft.type,
+    academicYear: draft.academicYear,
+    windowStart: draft.windowStart,
+    windowEnd: draft.windowEnd,
+    ratePerWeek: draft.ratePerWeek,
+    weeksPerYear: draft.weeksPerYear,
+    learnsOnShabbos: draft.learnsOnShabbos,
+    ground: draft.ground,
+    lastChangeId: id,
+  );
+
+  /// [edit] with its `ground` replaced by [ground] and no append.
+  static SubTrackEdit _withGround(SubTrackEdit edit, List<NodeEntry> ground) =>
+      SubTrackEdit(
+        name: edit.name,
+        type: edit.type,
+        academicYear: edit.academicYear,
+        clearAcademicYear: edit.clearAcademicYear,
+        windowStart: edit.windowStart,
+        windowEnd: edit.windowEnd,
+        clearWindowEnd: edit.clearWindowEnd,
+        ratePerWeek: edit.ratePerWeek,
+        weeksPerYear: edit.weeksPerYear,
+        learnsOnShabbos: edit.learnsOnShabbos,
+        ground: ground,
+      );
+
+  /// The AD-45 refusal of writing [candidate] over [prior] (null: a
+  /// create) among the talmid's [tracks], or null. The ground's curriculum
+  /// is checked when its corpus is readable; the calendar-program rule is
+  /// left to the server.
+  Future<CaptureResult?> _violations(
+    SubTrack candidate,
+    SubTrack? prior,
+    List<SubTrack> tracks,
+    DateTime now,
+    LearnerSettingsHistory history,
+  ) async {
+    Corpus? corpus;
+    try {
+      corpus = await _corpus(candidate.curriculumId);
+    } on Object {
+      corpus = null;
+    }
+    final violations = [
+      ...subTrackIntentViolations(candidate, corpus: corpus),
+      ...subTrackLimitViolations(
+        candidate: candidate,
+        prior: prior,
+        siblings: tracks,
+        today: civilDate(now, history),
+        calendarProgramId: null,
+      ),
+    ];
+    if (violations.isEmpty) return null;
+    return CaptureResult.rejected(
+      CaptureRejection.invalid,
+      violations: violations,
+    );
+  }
+
+  /// Sends one sub-track action and maps its answer: success only from a
+  /// validated receipt; a retryable failure keeps the action's ULIDs frozen
+  /// (a re-tapped Save replays it) and answers `notSaved`; any definitive
+  /// answer releases them.
+  Future<CaptureResult> _governedSubTrack(
+    String fingerprint,
+    Future<TutorWriteResult> Function() send,
+  ) async {
+    final result = await send();
+    switch (result) {
+      case TutorGovernedWritten(:final actionId, :final changeIds):
+        _ledger.release(fingerprint);
+        return CaptureResult.success(changeIds: changeIds, actionId: actionId);
+      case TutorWriteSuccess():
+        _ledger.release(fingerprint);
+        return const CaptureResult.success();
+      case TutorWriteFailure():
+        if (result.isRetryable) {
+          return const CaptureResult.rejected(CaptureRejection.notSaved);
+        }
+        _ledger.release(fingerprint);
+        return _rejectionOf(result);
+    }
+  }
+
+  /// A tutor write is never queued (AD-53 online-only): nothing awaits.
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) async => true;
 
   // Backup import is an owner-only operation; a tutor session cannot replay
   // a backup into the learner's account.

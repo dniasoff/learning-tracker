@@ -14,6 +14,7 @@ import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 
 /// How much of a node is learnt.
 enum TriState {
@@ -167,6 +168,8 @@ final class Projection {
     required this.status,
     this.velocityPerDay,
     this.projectedFinish,
+    this.deadline,
+    this.newlyLearntToday = 0,
   });
 
   /// The status.
@@ -178,15 +181,36 @@ final class Projection {
   /// Projected finish day, if known.
   final CivilDate? projectedFinish;
 
+  /// The live deadline's `target_date` the status was judged against;
+  /// null with no live deadline (always so for
+  /// [ProjectionStatus.noDeadline]). The parent on-track card names it
+  /// beside [projectedFinish] (DNI-502, FR-18; additive C0 change).
+  final CivilDate? deadline;
+
+  /// Distinct leaves newly learnt (the AD-35 velocity rule: `dated` and
+  /// `catch_up`, not chazara, not before-tracking) whose `learned_on` is
+  /// the projection day, under 14 days of history too. The child's
+  /// "Today {done} of {target} done" reads it (DNI-502, UX-DR-67;
+  /// additive C0 change).
+  final int newlyLearntToday;
+
   @override
   bool operator ==(Object other) =>
       other is Projection &&
       other.status == status &&
       other.velocityPerDay == velocityPerDay &&
-      other.projectedFinish == projectedFinish;
+      other.projectedFinish == projectedFinish &&
+      other.deadline == deadline &&
+      other.newlyLearntToday == newlyLearntToday;
 
   @override
-  int get hashCode => Object.hash(status, velocityPerDay, projectedFinish);
+  int get hashCode => Object.hash(
+    status,
+    velocityPerDay,
+    projectedFinish,
+    deadline,
+    newlyLearntToday,
+  );
 
   @override
   String toString() => 'Projection(${status.name})';
@@ -202,13 +226,25 @@ final class SubTrackState {
     required this.onHome,
     this.position,
     this.groundExhausted = false,
+    this.ticked = 0,
+    this.remainingPath = const [],
+    this.recordedAhead = const {},
     this.capacity,
     this.expectedNewGround = 0,
     this.shortfall = 0,
+    this.shortfallLeaves = const [],
+    this.windowEnd,
+    this.lastShortfallNode,
+    this.name,
   });
 
   /// The sub-track ULID.
   final String subTrackId;
+
+  /// The sub-track's current `name`; FR-21 copy names the track
+  /// ("{name} may not reach …", DNI-502; additive C0 change). Null only
+  /// where a state is built without its sub-track.
+  final String? name;
 
   /// Whether it holds its ground off the main track.
   final bool holdsGround;
@@ -219,20 +255,64 @@ final class SubTrackState {
   /// Whether it shows on the home screen.
   final bool onHome;
 
-  /// The next unlearnt leaf of its ground, if any.
+  /// Its position (AD-33): the first leaf of `expandGround(ground)` with
+  /// no counted `learn` event whose `source` is this sub-track; null when
+  /// every ground leaf is ticked in it, or it has no ground. Events from
+  /// other sources never move it (FR-13).
   final LeafRef? position;
 
-  /// Whether every leaf of its ground is learnt.
+  /// Whether it has ground and every ground leaf is ticked in it (no
+  /// [position]); a groundless sub-track is not exhausted.
   final bool groundExhausted;
 
-  /// Remaining capacity in leaves, if bounded.
+  /// The distinct ground leaves with a counted `learn` event from this
+  /// sub-track (DNI-493).
+  final int ticked;
+
+  /// `expandGround(ground)` from [position] to the end, learnt or not;
+  /// empty with no [position] (DNI-493). The AD-44 `path` is this list
+  /// restricted to the learner's scoped corpus (AD-42).
+  final List<LeafRef> remainingPath;
+
+  /// The leaves of [remainingPath] that already have a counted `learn`
+  /// event from this sub-track (ticked out of order). The position never
+  /// is one; the Up to… picker shows them as already recorded and never
+  /// writes them again (DNI-501).
+  final Set<LeafRef> recordedAhead;
+
+  /// AD-44 capacity in leaves: `floor(rate_per_week × activeWeeksLeft)`
+  /// up to the deadline, 0 when the capacity interval is empty. Null when
+  /// not computed: no live deadline, a calendar-program curriculum, or a
+  /// sub-track that does not hold ground (DNI-494).
   final int? capacity;
 
-  /// Leaves of ground it is expected to cover.
+  /// `max(0, capacity − |path|)`, `path` being [remainingPath] in the
+  /// learner's scoped corpus: capacity left over for ground
+  /// not entered yet, credited against the main track (FR-19). 0 when
+  /// [capacity] is null.
   final int expectedNewGround;
 
-  /// Leaves it is behind.
+  /// The leaves of the scoped `path` this sub-track will not reach by the
+  /// deadline and that come back to the main track: unlearnt, at `path`
+  /// indices `≥ capacity`, not reached within capacity by another holder, each
+  /// counted under one sub-track only (DNI-494). Its sum over the
+  /// curriculum's sub-tracks is the FR-19 shortfall term. 0 when
+  /// [capacity] is null.
   final int shortfall;
+
+  /// The [shortfall] leaves, in [remainingPath] order (DNI-494, FR-21):
+  /// exactly the leaves this sub-track adds to the FR-19 numerator, so
+  /// `shortfallLeaves.length == shortfall`. Empty when not computed.
+  final List<LeafRef> shortfallLeaves;
+
+  /// The sub-track's `window_end` (AD-41 civil date, inclusive); null for
+  /// an open ongoing window. FR-21 copy names it.
+  final CivilDate? windowEnd;
+
+  /// The last entry of the sub-track's `ground` (list order, as entered)
+  /// that contains one of [shortfallLeaves]; null with no shortfall. FR-21
+  /// copy names it ("…won't finish <node> by <windowEnd>").
+  final NodeEntry? lastShortfallNode;
 
   @override
   bool operator ==(Object other) =>
@@ -243,9 +323,17 @@ final class SubTrackState {
       other.onHome == onHome &&
       other.position == position &&
       other.groundExhausted == groundExhausted &&
+      other.ticked == ticked &&
+      _sameLeaves(other.remainingPath, remainingPath) &&
+      other.recordedAhead.length == recordedAhead.length &&
+      other.recordedAhead.containsAll(recordedAhead) &&
       other.capacity == capacity &&
       other.expectedNewGround == expectedNewGround &&
-      other.shortfall == shortfall;
+      other.shortfall == shortfall &&
+      _sameLeaves(other.shortfallLeaves, shortfallLeaves) &&
+      other.windowEnd == windowEnd &&
+      other.lastShortfallNode == lastShortfallNode &&
+      other.name == name;
 
   @override
   int get hashCode => Object.hash(
@@ -255,13 +343,29 @@ final class SubTrackState {
     onHome,
     position,
     groundExhausted,
+    ticked,
+    Object.hashAll(remainingPath),
+    Object.hashAllUnordered(recordedAhead),
     capacity,
     expectedNewGround,
     shortfall,
+    Object.hashAll(shortfallLeaves),
+    windowEnd,
+    lastShortfallNode,
+    name,
   );
 
   @override
   String toString() => 'SubTrackState($subTrackId)';
+}
+
+bool _sameLeaves(List<LeafRef> a, List<LeafRef> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 /// The main track as it stood at the start of one civil day (DNI-477,
@@ -397,13 +501,12 @@ abstract interface class CurriculumState {
 
   /// Today's target in leaves. Calendar program: assigned through today
   /// minus learnt. Otherwise, with a live `goals/{c}_deadline`:
-  /// `max(0, ceil(numerator ÷ studyDaysToDeadline))`, or the numerator
-  /// when no study day is left (AD-44). Null with no deadline.
-  ///
-  /// The AD-44 numerator is the main track's remaining at the start of
-  /// today (`mainTrackAtStartOf(today)`), because `studyDaysToDeadline`
-  /// still counts today: the target holds for the whole day instead of
-  /// shrinking as today's leaves are learnt (DNI-477).
+  /// `max(0, ceil(numerator ÷ studyDaysToDeadline))`, or
+  /// `max(0, numerator)` when no study day is left (AD-44, B13). The
+  /// numerator is `mainTrackRemaining − Σ expectedNewGround +
+  /// Σ shortfall` over the `holdsGround` sub-tracks (DNI-494), where the
+  /// main-track remaining is measured at the start of today (DNI-477).
+  /// Null with no deadline.
   int? get dailyTarget;
 
   /// Leaves per study day from a live `goals/{c}_pace` doc (AD-43); null
@@ -411,15 +514,19 @@ abstract interface class CurriculumState {
   double? get paceRate;
 
   /// Leaves behind: the calendar backlog size on a calendar-program
-  /// curriculum; the AD-44 sub-track shortfall is DNI-494's. Null when not
-  /// derived.
+  /// curriculum; otherwise, with a live deadline, the FR-19 sub-track
+  /// shortfall term (each leaf once; the sum of [SubTrackState.shortfall],
+  /// DNI-494). Null when not derived (no deadline).
   int? get shortfall;
 
   /// The finish projection of an evaluated curriculum (AD-35): velocity =
   /// distinct leaves newly learnt per `learned_on` day from dated/catch_up
   /// non-chazara events over the trailing 28 days (all history at 14–27
-  /// days); [ProjectionStatus.tooEarly] under 14 days. Null when not
-  /// evaluated.
+  /// days); [ProjectionStatus.tooEarly] under 14 days. Projected finish =
+  /// today + ⌈remaining corpus ÷ velocity⌉; on track iff it is on or
+  /// before `target_date`. While a lock is active, the projection as
+  /// evaluated on the lock's start day, re-evaluated after the lock ends
+  /// (NFR-9, FR-23; DNI-494). Null when not evaluated.
   Projection? get projection;
 
   /// Completed units in completion order.
@@ -430,6 +537,11 @@ abstract interface class CurriculumState {
 
   /// Invalid intent found while planning (DNI-467); empty when valid.
   Set<CurriculumValidationError> get validationErrors;
+
+  /// The report projection (AD-48, FR-31, FR-32; DNI-516): lifetime and
+  /// per-source totals for every curriculum with a corpus, retired ones
+  /// included. The only input of any report total, count or velocity.
+  ReportProjection get report;
 }
 
 /// The whole learner's state at [nowUtc] (AD-35).

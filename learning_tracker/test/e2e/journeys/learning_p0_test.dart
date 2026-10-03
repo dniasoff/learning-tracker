@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -69,6 +70,10 @@ class _ThrowingCaptureCommands implements LearningCommands {
     required DateState dateState,
     String? learnedOn,
     int? stage,
+    bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) async => throw _error;
 
   @override
@@ -227,6 +232,11 @@ void main() {
               curricula: [CurriculumId.mishnayos],
               tasks: [task],
             ),
+            // The main-track Up to… gate (DNI-501) watches the commands; the
+            // real provider resolves the Drift-backed device registry, whose
+            // stream leaves a Duration.zero timer at teardown. This journey
+            // only checks rendering, so the session has no write path.
+            learningCommandsProvider.overrideWith((ref) async => null),
           ],
         );
 

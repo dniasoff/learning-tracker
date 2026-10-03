@@ -9,6 +9,8 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
@@ -19,6 +21,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/learning_pro
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/profile_program_repository_impl.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/features/tracks/tracks.dart'
     show activeTracksProvider;
@@ -239,10 +242,79 @@ class SchedulerNoActiveProfileException implements Exception {
 /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
 /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
 /// them out. Never persisted; it recomputes whenever the learner state
-/// changes. The erev planned list of an upcoming locked day is this
-/// provider for that date.
+/// changes. The erev planned lists of the upcoming locked days are
+/// [watchPlannedDaysAfterToday] for those dates (DNI-504).
 @riverpod
 Future<List<DailyTask>> plannedTasksForDate(Ref ref, String date) async {
+  final inputs = await _watchPlannerInputs(ref);
+  final tasks = await buildPlannedTasks(
+    state: inputs.state,
+    corpora: inputs.corpora,
+    date: date,
+    activeCurricula: inputs.activeCurricula,
+    activeTracks: inputs.activeTracks,
+    presentationFor: (curriculum) => inputs.presentationFor(curriculum, date),
+  );
+  return [...tasks.learning, ...tasks.reviews];
+}
+
+/// The planner's task lists for [lockedDates], in order, laid out in
+/// sequence after today's list over the active learner's live
+/// `LearnerState` (DNI-504, AD-49): each date's list is
+/// [plannedTasksForDate]'s for it, less what today or an earlier date
+/// already holds, and its main-track batch continues after theirs instead
+/// of restarting at the same position ([buildPlannedSequence]). Watches the
+/// same inputs as [plannedTasksForDate], so the calling provider recomputes
+/// with them.
+Future<List<List<DailyTask>>> watchPlannedDaysAfterToday(
+  Ref ref,
+  List<String> lockedDates,
+) async {
+  final inputs = await _watchPlannerInputs(ref);
+  final lists = await buildPlannedSequence(
+    state: inputs.state,
+    corpora: inputs.corpora,
+    dates: [inputs.state.today, ...lockedDates],
+    activeCurricula: inputs.activeCurricula,
+    activeTracks: inputs.activeTracks,
+    presentationFor: inputs.presentationFor,
+  );
+  return lists.sublist(1);
+}
+
+/// The planner's task lists for [dates], in order, laid out in sequence
+/// over the active learner's live `LearnerState` with nothing before them
+/// (DNI-505): [watchPlannedDaysAfterToday]'s layout without today's list
+/// in front. The catch-up cards read it for the locked days of every
+/// pending card, oldest first, so a later card continues after an earlier
+/// one (A-4). Watches the same inputs as [plannedTasksForDate].
+Future<List<List<DailyTask>>> watchPlannedDaysInSequence(
+  Ref ref,
+  List<String> dates,
+) async {
+  final inputs = await _watchPlannerInputs(ref);
+  return buildPlannedSequence(
+    state: inputs.state,
+    corpora: inputs.corpora,
+    dates: dates,
+    activeCurricula: inputs.activeCurricula,
+    activeTracks: inputs.activeTracks,
+    presentationFor: inputs.presentationFor,
+  );
+}
+
+/// Everything the planner reads besides the date: the live state, corpora,
+/// active curricula and tracks, and a per-date presentation loader.
+typedef _PlannerInputs = ({
+  LearnerState state,
+  Map<String, Corpus> corpora,
+  List<CurriculumId> activeCurricula,
+  List<CurriculumTrackEntity> activeTracks,
+  Future<CurriculumTaskPresentation> Function(CurriculumId, String date)
+  presentationFor,
+});
+
+Future<_PlannerInputs> _watchPlannerInputs(Ref ref) async {
   // Capture every dependency synchronously (before the first await).
   final stateFuture = watchActiveLearnerState(ref);
   final corporaFuture = watchCorpora(ref);
@@ -271,26 +343,25 @@ Future<List<DailyTask>> plannedTasksForDate(Ref ref, String date) async {
   final studyDays = FirestoreStudyDayReaderAdapter(ref: ref);
   final programs = FirestoreProfileProgramRepositoryAdapter(ref: ref);
 
-  final tasks = await buildPlannedTasks(
+  return (
     state: state,
     corpora: corpora,
-    date: date,
     activeCurricula: activeCurricula,
     activeTracks: activeTracks,
-    presentationFor: (curriculum) => loadCurriculumTaskPresentation(
-      curriculum: curriculum,
-      date: date,
-      trackLabel: curriculumLabelTextFromRef(ref, curriculum: curriculum),
-      stageRepository: stageRepository,
-      studyDayConfigs: studyDays.getConfigsForCurriculum,
-      profileProgramRepository: programs,
-      programRepository: programRepository,
-      calendarService: calendarService,
-      getScopedContent: (curriculumId) =>
-          ref.read(scopedCurriculumContentProvider(curriculumId).future),
-    ),
+    presentationFor: (CurriculumId curriculum, String date) =>
+        loadCurriculumTaskPresentation(
+          curriculum: curriculum,
+          date: date,
+          trackLabel: curriculumLabelTextFromRef(ref, curriculum: curriculum),
+          stageRepository: stageRepository,
+          studyDayConfigs: studyDays.getConfigsForCurriculum,
+          profileProgramRepository: programs,
+          programRepository: programRepository,
+          calendarService: calendarService,
+          getScopedContent: (curriculumId) =>
+              ref.read(scopedCurriculumContentProvider(curriculumId).future),
+        ),
   );
-  return [...tasks.learning, ...tasks.reviews];
 }
 
 /// All daily tasks across active curricula: today's [plannedTasksForDate],

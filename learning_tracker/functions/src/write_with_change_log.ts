@@ -4,6 +4,15 @@ import { logger } from "firebase-functions/v1";
 import { HttpsError } from "firebase-functions/v2/https";
 
 import { db } from "./shared";
+import {
+  calendarProgramSetViolations,
+  civilDateIn,
+  subTrackIntentViolations,
+  subTrackLimitViolations,
+  subTrackViolationCodes,
+  type SubTrackRow,
+  type SubTrackViolation,
+} from "./sub_track_limits";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // writeWithChangeLog — the one server-side write path for governed entities
@@ -123,10 +132,17 @@ const date: Check = (v) => {
   const d = new Date(`${v}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
 };
+/**
+ * AD-52 `NodeEntry{level, ref}`: both non-empty strings, exactly as the Dart
+ * `NodeEntry.fromStorage` decodes them (`requiredString`). A numeric level
+ * would land a doc the engine cannot read, and Rules cannot check list
+ * elements (see `isValidSubTrack`), so this is the only server-side guard on
+ * the Admin path.
+ */
 const groundItem: Check = (v) =>
   typeof v === "object" && v !== null && !Array.isArray(v) &&
   Object.keys(v).every((k) => k === "level" || k === "ref") &&
-  either(str(64), int)((v as Record<string, unknown>).level) &&
+  str(64)((v as Record<string, unknown>).level) &&
   str(500)((v as Record<string, unknown>).ref);
 
 const CURRICULUM_ID = str(200);
@@ -580,8 +596,11 @@ function validateFinalState(
   collection: string,
   docId: string,
   state: Record<string, unknown>,
-  created: boolean,
+  prior: Record<string, unknown> | null,
 ): void {
+  // Checked before the tombstone early return: the lifecycle pair is the one
+  // shape a tombstoned sub-track still has to hold.
+  if (collection === "sub_tracks") validateSubTrackLifecycle(state, prior);
   if (!isLive(state)) return; // a tombstoned doc needs no further shape
   for (const f of REQUIRED_LIVE_FIELDS[collection] ?? []) {
     if (state[f] === undefined || state[f] === null) {
@@ -609,15 +628,60 @@ function validateFinalState(
         reject("invalid-argument", "tracking_start_date is required when program_id is set");
       }
       break;
-    case "sub_tracks":
-      if (created) {
-        // AD-45 sub-track limits are not validated server-side yet (owned by
-        // the sub-track stories); until then the helper never creates one.
-        reject("failed-precondition", "sub-track creation is not supported by this callable");
+    case "sub_tracks": {
+      // AD-52 required fields on a live sub-track (create, edit or re-add).
+      for (const f of ["curriculum_id", "name", "type", "window_start", "rate_per_week",
+        "weeks_per_year", "learns_on_shabbos", "ground"]) {
+        if (state[f] === undefined || state[f] === null) {
+          reject("invalid-argument", `A live sub_tracks doc requires ${f}`);
+        }
       }
+      const school = state.type === "school_year";
+      if (school !== (state.academic_year !== undefined && state.academic_year !== null)) {
+        reject("invalid-argument", "academic_year is required for, and only for, a school_year sub-track");
+      }
+      // AC-5 intent shape (Story 2.1); AD-45 limits are checked across docs
+      // after the diff loop, against the transactional sibling set.
+      const shape = subTrackIntentViolations(state);
+      if (shape.length) rejectSubTrack("invalid-argument", shape);
       break;
+    }
     default:
       break;
+  }
+}
+
+/**
+ * Rejects an AD-45 sub-track violation with its stable wire codes in
+ * `details.sub_track_violations` (the same codes as the Dart
+ * `SubTrackLimit.code`).
+ */
+function rejectSubTrack(code: "invalid-argument" | "failed-precondition", violations: SubTrackViolation[]): never {
+  const codes = subTrackViolationCodes(violations);
+  throw new HttpsError(code, `Sub-track rule violated: ${codes.join(", ")}`, { sub_track_violations: codes });
+}
+
+/**
+ * AD-52 sub-track lifecycle: `ended_at` and `end_reason` are a coupled pair.
+ * A live sub-track carries neither; an ended one carries both. Ending writes
+ * both, re-adding clears both, and an ended sub-track's `end_reason` changes
+ * only when `ended_at` does (a repeated end/delete of an ended sub-track is a
+ * no-op upstream, so this only rejects a bare reason rewrite).
+ */
+function validateSubTrackLifecycle(
+  state: Record<string, unknown>,
+  prior: Record<string, unknown> | null,
+): void {
+  const ended = !isLive(state);
+  const hasReason = state.end_reason !== undefined && state.end_reason !== null;
+  if (ended && !hasReason) {
+    reject("invalid-argument", "An ended sub_tracks doc requires end_reason");
+  }
+  if (!ended && hasReason) {
+    reject("invalid-argument", "A live sub_tracks doc cannot carry end_reason");
+  }
+  if (ended && prior !== null && !isLive(prior) && !deepEqual(state.end_reason, prior.end_reason ?? null)) {
+    reject("invalid-argument", "end_reason can change only together with ended_at");
   }
 }
 
@@ -821,6 +885,11 @@ export async function writeWithChangeLog(
   const outcome: Outcome = await db.runTransaction(async (txn): Promise<Outcome> => {
     // ── 1. Authorise (re-read every call, so revocation stops the next one) ──
     const { actor, grantRef } = await resolveActor(txn, auth, req);
+    // An undo is a parent action (AD-38; DNI-514 AC-1): change_log entries
+    // carrying reverts_action_id are never written for a child or a tutor.
+    if (req.revertsActionId && actor.role !== "parent") {
+      reject("permission-denied", "Only a parent may undo a change");
+    }
     const profileSnap = await txn.get(profileRef);
     if (!profileSnap.exists) reject("not-found", "Learner profile not found");
 
@@ -925,6 +994,9 @@ export async function writeWithChangeLog(
         const tombstoneOnly = Object.keys(patch).every((f) => f === "ended_at" || f === "end_reason") &&
           patch.ended_at === TOMBSTONE;
         if (cur === null && tombstoneOnly) continue; // nothing to remove
+        // Already ended (end, delete, undo or track removal): a repeated
+        // tombstone is a no-op and never rewrites the stored end_reason.
+        if (cur !== null && !isLive(cur) && tombstoneOnly) continue;
         if (cur === null && patch.ended_at === TOMBSTONE) {
           reject("invalid-argument", "Cannot create a tombstoned doc");
         }
@@ -959,6 +1031,18 @@ export async function writeWithChangeLog(
           after[changeKey(d.collection, d.docId, field)] =
             value === TOMBSTONE && field === "ended_at" ? admin.firestore.FieldValue.serverTimestamp() : value;
         }
+        // An ended sub-track (end, delete, undo of its create, track removal)
+        // is frozen: a call may re-add it (clear ended_at, then edit in the
+        // same patch) but never change an intent field while it stays ended,
+        // so a tombstone and its history are not rewritten. Judged on the
+        // transactional prior, so an edit racing an end loses once the end
+        // commits. A parent undo (reverts_action_id, parent-only above) still
+        // restores a pre-end field value, matching AD-38 undo semantics.
+        if (d.collection === "sub_tracks" && cur !== null && !isLive(cur) && !isLive(finalState) &&
+          !req.revertsActionId &&
+          Object.keys(data).some((f) => f !== "ended_at" && f !== "end_reason")) {
+          reject("failed-precondition", "An ended sub-track cannot be edited");
+        }
         if (MAIN_TRACK_ENTITIES.has(e.entity)) {
           const cid = finalState.curriculum_id;
           if (typeof cid !== "string") reject("invalid-argument", "curriculum_id is required");
@@ -970,7 +1054,7 @@ export async function writeWithChangeLog(
         } else if ((e.entity === "goal" || e.entity === "subTrack") && d.docId !== entityId) {
           reject("invalid-argument", "entity_id must be the doc id");
         }
-        validateFinalState(d.collection, d.docId, finalState, cur === null);
+        validateFinalState(d.collection, d.docId, finalState, cur);
         finalStates.set(key, finalState);
         if (e.entity === "goal" && isLive(finalState)) goalCurricula.push(String(finalState.curriculum_id));
         if (Object.keys(data).length > 0) writes.push({ ref: docRef(d.collection, d.docId), data });
@@ -1000,6 +1084,12 @@ export async function writeWithChangeLog(
         }
       });
     }
+
+    // AD-45 (Story 2.1): sub-track limits and the calendar-program exclusion
+    // in both directions, judged per profile and curriculum on the
+    // transactional state after this call's patches. Single-field equality
+    // queries only — no index is added (AD-54).
+    await validateSubTrackRules(txn, profileRef, profileSnap.get("time_zone"), current, finalStates);
 
     // AD-31: a void's target must be a learn event (an absent target is fine).
     const requestKinds = new Map(events.map((ev) => [ev.id, ev.fields.kind]));
@@ -1137,6 +1227,85 @@ export async function writeWithChangeLog(
     replayed,
     noop,
   };
+}
+
+/**
+ * The AD-45 cross-document checks for every sub-track and calendar program
+ * this call writes. `current` holds each target doc as stored before the
+ * call, `finalStates` its state after the call's patches. Reads only
+ * (transaction-safe).
+ */
+async function validateSubTrackRules(
+  txn: admin.firestore.Transaction,
+  profileRef: admin.firestore.DocumentReference,
+  timeZone: unknown,
+  current: Map<string, Record<string, unknown> | null>,
+  finalStates: Map<string, Record<string, unknown>>,
+): Promise<void> {
+  const prefix = (k: string, c: string) => k.startsWith(`${c}/`) ? k.slice(c.length + 1) : null;
+  const tracks: SubTrackRow[] = [];
+  const programs: Array<{ curriculumId: string; programId: string }> = [];
+  for (const [key, state] of finalStates) {
+    const trackId = prefix(key, "sub_tracks");
+    if (trackId !== null) tracks.push({ id: trackId, data: state });
+    const programDoc = prefix(key, "profile_programs");
+    if (programDoc !== null && hasCalendarProgram(state)) {
+      const before = current.get(key) ?? null;
+      const newlySet = !hasCalendarProgram(before) || before?.program_id !== state.program_id;
+      if (newlySet) programs.push({ curriculumId: String(state.curriculum_id ?? programDoc), programId: String(state.program_id) });
+    }
+  }
+  const candidates = tracks.filter((t) => isLive(t.data));
+  const curricula = [...new Set([
+    ...candidates.map((t) => String(t.data.curriculum_id)),
+    ...programs.map((p) => p.curriculumId),
+  ])];
+  if (curricula.length === 0) return;
+
+  // Every sub-track of each affected curriculum, overlaid with this call's
+  // final states (a sub-track ended in the same call no longer counts).
+  const siblingsOf = new Map<string, SubTrackRow[]>();
+  for (const c of curricula) {
+    const snap = await txn.get(profileRef.collection("sub_tracks").where("curriculum_id", "==", c));
+    const rows = new Map<string, Record<string, unknown>>(snap.docs.map((d) => [d.id, d.data()]));
+    for (const t of tracks) if (t.data.curriculum_id === c) rows.set(t.id, t.data);
+    siblingsOf.set(c, [...rows].map(([id, data]) => ({ id, data })));
+  }
+
+  for (const p of programs) {
+    const violations = calendarProgramSetViolations({
+      curriculumId: p.curriculumId, programId: p.programId, subTracks: siblingsOf.get(p.curriculumId) ?? [],
+    });
+    if (violations.length) rejectSubTrack("failed-precondition", violations);
+  }
+
+  if (candidates.length === 0) return;
+  const today = civilDateIn(timeZone, new Date());
+  const programIds = new Map<string, string | null>();
+  const createdCurricula = [...new Set(candidates
+    .filter((t) => (current.get(`sub_tracks/${t.id}`) ?? null) === null)
+    .map((t) => String(t.data.curriculum_id)))];
+  if (createdCurricula.length) {
+    const programSnaps = await txn.getAll(
+      ...createdCurricula.map((c) => profileRef.collection("profile_programs").doc(c)));
+    createdCurricula.forEach((c, i) => {
+      const state = finalStates.get(`profile_programs/${c}`) ??
+        (programSnaps[i].exists ? programSnaps[i].data()! : null);
+      programIds.set(c, hasCalendarProgram(state) ? String(state!.program_id) : null);
+    });
+  }
+  for (const t of candidates) {
+    const c = String(t.data.curriculum_id);
+    const prior = current.get(`sub_tracks/${t.id}`) ?? null;
+    const violations = subTrackLimitViolations({
+      candidate: t,
+      prior,
+      siblings: siblingsOf.get(c) ?? [],
+      today,
+      calendarProgramId: programIds.get(c) ?? null,
+    });
+    if (violations.length) rejectSubTrack("failed-precondition", violations);
+  }
 }
 
 /**

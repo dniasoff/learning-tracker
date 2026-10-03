@@ -154,7 +154,7 @@ packages:
     source: hosted
     version: "1.2.0"
   bidi:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: bidi
       sha256: "77f475165e94b261745cf1032c751e2032b8ed92ccb2bf5716036db79320637d"
@@ -418,7 +418,7 @@ packages:
     source: hosted
     version: "0.3.5+2"
   crypto:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: crypto
       sha256: c8ea0233063ba03258fbcf2ca4d6dadfefe14f02fab57702265467a19f27fadf

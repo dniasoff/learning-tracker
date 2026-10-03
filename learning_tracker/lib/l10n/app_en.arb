@@ -248,6 +248,108 @@
   "visibleToChild": "Visible to child",
   "childCanSee": "Child can see this reward",
   "hiddenUntilEarned": "Hidden until earned (surprise)",
+  "shortfallCardGroundFallback": "all its ground",
+  "shortfallCardMessage": "{name} may not reach {ground} before {month}. About {count} {unit} will return to home learning.",
+  "@shortfallCardMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "ground": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "shortfallCardView": "View {name}",
+  "@shortfallCardView": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onTrackBehindPace": "Behind pace",
+  "onTrackDailyTarget": "Daily target: {count} {unit}/day",
+  "@onTrackDailyTarget": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "onTrackFinishUnknown": "not enough recent learning to project",
+  "onTrackLoading": "Loading pace status",
+  "onTrackOnTrack": "On track",
+  "onTrackProjectedFinish": "Projected finish: {finish}",
+  "@onTrackProjectedFinish": {
+    "placeholders": {
+      "finish": {
+        "type": "String"
+      }
+    }
+  },
+  "onTrackProjectedFinishWithDeadline": "Projected finish: {finish} · deadline {deadline}",
+  "@onTrackProjectedFinishWithDeadline": {
+    "placeholders": {
+      "finish": {
+        "type": "String"
+      },
+      "deadline": {
+        "type": "String"
+      }
+    }
+  },
+  "onTrackTooEarly": "Too early to tell",
+  "todayTargetAllCovered": "All covered — any extra learning is a bonus.",
+  "todayTargetGoalDone": "Today's goal is done — wonderful!",
+  "todayTargetLearntToday": "{count} learnt today",
+  "@todayTargetLearntToday": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "todayTargetLeft": "{count, plural, =1{Great pace! Only one left to finish today's goal.} other{Great pace! Only {count} left to finish today's goal.}}",
+  "@todayTargetLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "todayTargetProgress": "Today {done} of {target} done",
+  "@todayTargetProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "todayTargetStart": "Every step counts — let's begin!",
+  "todayTargetStreak": "{count, plural, =1{1-day streak} other{{count}-day streak}}",
+  "@todayTargetStreak": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "onboarding": "Onboarding",
   "getStarted": "Get Started",
   "ctaGetStartedTitle": "Get started",
@@ -387,6 +489,222 @@
   "addYourFirstTrack": "Add Your First Track",
   "addTrackButton": "ADD TRACK",
   "language": "Language",
+  "subTrackDetailCapacityTitle": "Capacity vs Path",
+  "@subTrackDetailCapacityTitle": {
+    "description": "Sub-track detail: capacity bar label (DNI-497 AC-2, UX-DR-26)."
+  },
+  "subTrackDetailCapacityValue": "{path} / {capacity}",
+  "@subTrackDetailCapacityValue": {
+    "description": "Sub-track detail: remaining path over total capacity, in leaves (DNI-497 AC-2).",
+    "placeholders": {
+      "path": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailCapacityCaption": "Remaining path: {path} · Total capacity: {capacity}",
+  "@subTrackDetailCapacityCaption": {
+    "description": "Sub-track detail: caption under the capacity bar (DNI-497 AC-2, UX-DR-26).",
+    "placeholders": {
+      "path": {
+        "type": "int"
+      },
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailNoShortfall": "No shortfall",
+  "@subTrackDetailNoShortfall": {
+    "description": "Sub-track detail: success tag when the engine shortfall is 0 (DNI-497 AC-2)."
+  },
+  "subTrackDetailShortfall": "Shortfall: {count}",
+  "@subTrackDetailShortfall": {
+    "description": "Sub-track detail: parent/tutor-only warning tag with the engine shortfall count; never shown to the child (DNI-497 AC-2, UX-DR-97). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailGroundTitle": "Ground (in order)",
+  "@subTrackDetailGroundTitle": {
+    "description": "Sub-track detail: section header over the ordered ground list (DNI-497 AC-1)."
+  },
+  "subTrackDetailGroundEmpty": "No ground yet",
+  "@subTrackDetailGroundEmpty": {
+    "description": "Sub-track detail: groundless state of the ground list (DNI-497 AC-4, UX-DR-122; EXPERIENCE.md [ASSUMPTION copy]). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailLearntOf": "{learnt} of {total} learnt",
+  "@subTrackDetailLearntOf": {
+    "description": "Sub-track detail: ground row count, all-source learning (DNI-497 AC-3, UX-DR-73).",
+    "placeholders": {
+      "learnt": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailLearntAtHome": "learnt at home",
+  "@subTrackDetailLearntAtHome": {
+    "description": "Sub-track detail: ground learnt on the main track, not in this sub-track (DNI-497 AC-3, UX-DR-91)."
+  },
+  "subTrackDetailLearntAt": "learnt at {source}",
+  "@subTrackDetailLearntAt": {
+    "description": "Sub-track detail: ground learnt in another sub-track, named by the parent (DNI-497 AC-3, UX-DR-91).",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailInUse": "{name} · In use",
+  "@subTrackDetailInUse": {
+    "description": "Sub-track detail: ground also held by another non-ended sub-track (DNI-497 AC-3, UX-DR-92).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailTriComplete": "complete",
+  "@subTrackDetailTriComplete": {
+    "description": "Sub-track detail: screen-reader state of a fully learnt ground row (DNI-497 AC-8, UX-DR-157)."
+  },
+  "subTrackDetailTriPartial": "partially learnt, {learnt} of {total}",
+  "@subTrackDetailTriPartial": {
+    "description": "Sub-track detail: screen-reader state of a partly learnt ground row (DNI-497 AC-8, UX-DR-157).",
+    "placeholders": {
+      "learnt": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailTriEmpty": "not learnt",
+  "@subTrackDetailTriEmpty": {
+    "description": "Sub-track detail: screen-reader state of an unlearnt ground row (DNI-497 AC-8, UX-DR-157)."
+  },
+  "subTrackDetailOpenHistory": "Open history",
+  "@subTrackDetailOpenHistory": {
+    "description": "Sub-track detail: screen-reader hint on a leaf label, which opens its Mishna history (DNI-497 AC-3)."
+  },
+  "subTrackDetailWindow": "{start} – {end}",
+  "@subTrackDetailWindow": {
+    "description": "Sub-track detail: the sub-track window, start and end month (DNI-497 AC-1).",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailWindowOpen": "From {start}",
+  "@subTrackDetailWindowOpen": {
+    "description": "Sub-track detail: the window of an open-ended sub-track (DNI-497 AC-1).",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailUpNext": "Up next",
+  "@subTrackDetailUpNext": {
+    "description": "Sub-track detail: label over this sub-track's engine position (DNI-497 AC-1)."
+  },
+  "subTrackDetailAllTicked": "All ground ticked",
+  "@subTrackDetailAllTicked": {
+    "description": "Sub-track detail: Up next when every ground leaf is ticked in this sub-track; no position (DNI-497 AC-1). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailTicked": "{count} ticked",
+  "@subTrackDetailTicked": {
+    "description": "Sub-track detail: distinct ground leaves ticked in this sub-track (DNI-497 AC-1).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDetailMoreOptions": "More options",
+  "@subTrackDetailMoreOptions": {
+    "description": "Sub-track detail: tooltip and screen-reader label of the ⋮ overflow menu (DNI-497 AC-1)."
+  },
+  "subTrackDetailEdit": "Edit",
+  "@subTrackDetailEdit": {
+    "description": "Sub-track detail: ⋮ action opening the sub-track's metadata form; Edit moved here from the hub row (DNI-497 AC-1, UX-DR-53)."
+  },
+  "subTrackDetailMoveUp": "Move up",
+  "@subTrackDetailMoveUp": {
+    "description": "Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging up (DNI-497 AC-5, UX-DR-155)."
+  },
+  "subTrackDetailMoveDown": "Move down",
+  "@subTrackDetailMoveDown": {
+    "description": "Sub-track detail: ground row ⋮ action, the non-drag equivalent of dragging down (DNI-497 AC-5, UX-DR-155)."
+  },
+  "subTrackDetailRemoveFrom": "Remove from {name}",
+  "@subTrackDetailRemoveFrom": {
+    "description": "Sub-track detail: ground row ⋮ action removing the entry from this sub-track (DNI-497 AC-6).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailRemoveTitle": "Remove {node} from {name}?",
+  "@subTrackDetailRemoveTitle": {
+    "description": "Sub-track detail: remove-ground confirmation title (DNI-497 AC-6).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailRemoveBody": "Learning already recorded is kept. Anything not yet learnt goes back to the main track unless another sub-track holds it.",
+  "@subTrackDetailRemoveBody": {
+    "description": "Sub-track detail: remove-ground confirmation body (DNI-497 AC-6, FR-12). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailRemoveConfirm": "Remove",
+  "@subTrackDetailRemoveConfirm": {
+    "description": "Sub-track detail: confirm button of the remove-ground dialog (DNI-497 AC-6)."
+  },
+  "subTrackDetailReorderFailed": "Couldn't save the new order. It's back as it was.",
+  "@subTrackDetailReorderFailed": {
+    "description": "Sub-track detail: snackbar when a reorder is rejected and rolled back (DNI-497 AC-6, UX-DR-124). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailRemoveFailed": "Couldn't remove it. The ground is back as it was.",
+  "@subTrackDetailRemoveFailed": {
+    "description": "Sub-track detail: snackbar when a removal is rejected and rolled back (DNI-497 AC-6, UX-DR-124). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailDragHandle": "Reorder {node}",
+  "@subTrackDetailDragHandle": {
+    "description": "Sub-track detail: screen-reader label of a ground row's drag handle (DNI-497 AC-5, UX-DR-160).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDetailEntryActions": "Actions for {node}",
+  "@subTrackDetailEntryActions": {
+    "description": "Sub-track detail: tooltip and screen-reader label of a ground row's ⋮ menu (DNI-497 AC-5).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
   "switchProfile": "Switch profile",
   "switchProfileSubtitle": "Change to a different profile or your account",
   "manageProfiles": "Manage Profiles",
@@ -551,6 +869,205 @@
   "statUnitsDone": "TASKS DONE",
   "statDayStreak": "DAY STREAK",
   "statActiveTracks": "ACTIVE TRACKS",
+  "subTrackLifecycleAddNextYear": "Add next year ({yearLabel})",
+  "@subTrackLifecycleAddNextYear": {
+    "description": "Outlined pill on a school-year sub-track detail that rolls it into the next academic year (UX-DR-28). yearLabel is e.g. 2027–28.",
+    "placeholders": {
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleAddNextYearUsed": "{yearLabel} already has a school-year sub-track",
+  "@subTrackLifecycleAddNextYearUsed": {
+    "description": "Why Add next year is disabled: the next academic year is used (UX-DR-36). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleAddNextYearOutOfRange": "{yearLabel} is past the years you can plan",
+  "@subTrackLifecycleAddNextYearOutOfRange": {
+    "description": "Why Add next year is disabled: the next academic year is past the academic-year picker range. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleEndAction": "End sub-track now",
+  "@subTrackLifecycleEndAction": {
+    "description": "Overflow menu action that ends a sub-track (AC-4). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleDeleteAction": "Delete track",
+  "@subTrackLifecycleDeleteAction": {
+    "description": "Overflow menu action that deletes a sub-track (UX-DR-29)."
+  },
+  "subTrackLifecycleDeleteTitle": "Delete {name}?",
+  "@subTrackLifecycleDeleteTitle": {
+    "description": "Title of the delete sub-track confirmation. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleDeleteBody": "Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.",
+  "@subTrackLifecycleDeleteBody": {
+    "description": "Message of the delete sub-track confirmation (UX-DR-81, FR-8). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleDeleteConfirm": "Delete",
+  "@subTrackLifecycleDeleteConfirm": {
+    "description": "Destructive confirm button of the delete sub-track confirmation. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleEndTitle": "End {name} now?",
+  "@subTrackLifecycleEndTitle": {
+    "description": "Title of the end sub-track confirmation. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleEndBody": "Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.",
+  "@subTrackLifecycleEndBody": {
+    "description": "Message of the end sub-track confirmation (AC-4). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleEndConfirm": "End sub-track",
+  "@subTrackLifecycleEndConfirm": {
+    "description": "Confirm button of the end sub-track confirmation. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleDeleted": "{name} deleted",
+  "@subTrackLifecycleDeleted": {
+    "description": "Snackbar after a sub-track is deleted. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleEnded": "{name} ended",
+  "@subTrackLifecycleEnded": {
+    "description": "Snackbar after a sub-track is ended. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleActionFailed": "Couldn't save the change. Try again.",
+  "@subTrackLifecycleActionFailed": {
+    "description": "Snackbar when ending or deleting a sub-track fails. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleEndedGroup": "Ended sub-tracks ({count})",
+  "@subTrackLifecycleEndedGroup": {
+    "description": "Collapsed group of ended sub-tracks on Manage tracks (UX-DR-44, UX-DR-70). Never say Completed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackLifecycleEndedOn": "Ended {date}",
+  "@subTrackLifecycleEndedOn": {
+    "description": "Muted subtitle of an ended sub-track row, e.g. Ended Jul 2026. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleEndedRowLabel": "{name}, ended",
+  "@subTrackLifecycleEndedRowLabel": {
+    "description": "Screen-reader label of an ended sub-track row. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleReadOnlyNote": "This sub-track has ended. It can't be changed.",
+  "@subTrackLifecycleReadOnlyNote": {
+    "description": "Note on the read-only detail of an ended sub-track (UX-DR-82). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleNextYearTitle": "Next school year",
+  "@subTrackLifecycleNextYearTitle": {
+    "description": "Title of the prefilled Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleNextYearSaved": "{name} added for {yearLabel}",
+  "@subTrackLifecycleNextYearSaved": {
+    "description": "Snackbar after Add next year saves. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleNextYearSourceEnded": "{name} was ended or deleted, so next year wasn't added.",
+  "@subTrackLifecycleNextYearSourceEnded": {
+    "description": "Snackbar when Add next year is saved after its source sub-track was ended or deleted (e.g. on another device). Nothing was saved. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleQueued": "Saved on this device. It will sync when you're back online.",
+  "@subTrackLifecycleQueued": {
+    "description": "Snackbar when an End, Delete or Add next year is queued offline and not yet accepted by the server (AD-54). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleSyncAddNextYear": "Adding {name} for {yearLabel}",
+  "@subTrackLifecycleSyncAddNextYear": {
+    "description": "Sync panel: a queued Add next year, used inside subTrackLifecycleSyncWaiting / subTrackLifecycleSyncNotSaved. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSyncDelete": "Deleting {name}",
+  "@subTrackLifecycleSyncDelete": {
+    "description": "Sync panel: a queued Delete track. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSyncEnd": "Ending {name}",
+  "@subTrackLifecycleSyncEnd": {
+    "description": "Sync panel: a queued End sub-track now. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSyncNotSaved": "{action}: not saved",
+  "@subTrackLifecycleSyncNotSaved": {
+    "description": "Sync panel row: the server refused the queued action for good; Retry re-sends it (AD-54 Recovery). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleSyncWaiting": "{action}: waiting to sync",
+  "@subTrackLifecycleSyncWaiting": {
+    "description": "Sync panel row: the action is applied on this device and not yet accepted by the server. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
   "progressChartsTile": "Progress Charts",
   "progressChartsTileSubtitle": "Completions, trends, and more",
   "learningLifetime": "Learning Lifetime",
@@ -745,6 +1262,73 @@
   "bubbleChazara": "CHAZARA",
   "talmidChochom": "Talmid Chochom",
   "talmidChochomCaps": "TALMID CHOCHOM",
+  "talmidimUnnamed": "Talmid",
+  "@talmidimUnnamed": {
+    "description": "Talmid row name when the server has no learner name; never the raw profile id (DNI-511)."
+  },
+  "talmidimTitle": "My talmidim",
+  "@talmidimTitle": {
+    "description": "My talmidim screen title and its entry in Settings (DNI-511, UX-DR-58)."
+  },
+  "talmidimAccessNote": "You see only learners whose parents gave you access.",
+  "@talmidimAccessNote": {
+    "description": "My talmidim footer info note (DNI-511 AC-1, UX-DR-39, UX-DR-68)."
+  },
+  "talmidimEmpty": "No talmidim yet — a parent needs to give you access.",
+  "@talmidimEmpty": {
+    "description": "My talmidim empty state (DNI-511 AC-6, UX-DR-134; EXPERIENCE.md [ASSUMPTION copy]). DRAFT copy, pending zc4."
+  },
+  "talmidimTrackNext": "{track}: next {position}",
+  "@talmidimTrackNext": {
+    "description": "Talmid row detail line: the tutor's sub-track and the engine's next position (DNI-511 AC-1).",
+    "placeholders": {
+      "track": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "talmidimTrackNoGround": "{track}: no ground yet",
+  "@talmidimTrackNoGround": {
+    "description": "Talmid row detail line for a groundless sub-track (DNI-511 AC-3, UX-DR-83).",
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "talmidimTrackAllRecorded": "{track}: all ground recorded",
+  "@talmidimTrackAllRecorded": {
+    "description": "Talmid row detail line when every ground leaf of the sub-track is recorded (DNI-511). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "talmidimLocked": "Shabbos / Yom Tov",
+  "@talmidimLocked": {
+    "description": "Talmid row while that learner is inside a lock window: no name, status, position or action (DNI-511 AC-4, AD-36)."
+  },
+  "talmidimRowLoadFailed": "Couldn't load this talmid's standing.",
+  "@talmidimRowLoadFailed": {
+    "description": "Talmid row whose learner state could not be loaded or timed out; shown with Retry (DNI-511 AC-7). DRAFT copy, pending zc4."
+  },
+  "talmidimSelectPrompt": "Choose a talmid to see his standing.",
+  "@talmidimSelectPrompt": {
+    "description": "Tablet My talmidim detail pane before a talmid is selected (DNI-511 AC-8). DRAFT copy, pending zc4."
+  },
+  "talmidimOpen": "Open {name}",
+  "@talmidimOpen": {
+    "description": "Tablet My talmidim detail pane action that opens the selected talmid through the tutor PIN gate (DNI-511 AC-5, AC-8). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "mainFocus": "MAIN FOCUS",
   "carouselCompletion": "Completion (with {chazara})",
   "@carouselCompletion": {
@@ -930,6 +1514,10 @@
     }
   },
   "tutorModeExit": "Exit",
+  "tutorModeSwitch": "Switch",
+  "@tutorModeSwitch": {
+    "description": "Story 4.2 (DNI-510, UX-DR-38): the tutor-mode bar's action that opens the profile switcher."
+  },
   "tutoredEntryPermissionDenied": "Access denied — the grant may have been revoked.",
   "tutoredEntryError": "Could not load talmid data. Please try again.",
   "tutoredEntryAborted": "Could not open the talmid profile on this account. Please try again.",
@@ -952,28 +1540,20 @@
     }
   },
   "switchIntoChildConfirm": "Switch in",
-  "tutorCannotMarkLiveCompletion": "Tutors cannot mark live completions",
-  "tutorCaptureKeptNotCounted": "Kept, not counted — Shabbos / Yom Tov had started",
-  "@tutorCaptureKeptNotCounted": {
-    "description": "DNI-486 AC-7: a tutor capture the server stamped inside the learner's lock window. The event is stored but does not count."
-  },
-  "tutorCaptureLearnerLocked": "Shabbos / Yom Tov",
-  "@tutorCaptureLearnerLocked": {
-    "description": "DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data."
-  },
-  "tutorCaptureNoEditAccess": "{learner}'s parent hasn't given you editing access",
-  "@tutorCaptureNoEditAccess": {
-    "description": "DNI-486 AC-4: note under a tutor's disabled write controls when the grant's can_edit_learning is false.",
+  "tutorAccessEnded": "Access to {name} has ended.",
+  "@tutorAccessEnded": {
+    "description": "DNI-512 AC-4 (UX-DR-136): shown to a tutor whose access to the open learner ended (the parent revoked it); the app then returns to the tutor's roster. DRAFT copy, pending zc4.",
     "placeholders": {
-      "learner": {
+      "name": {
         "type": "String"
       }
     }
   },
-  "tutorCaptureOnlineRequired": "Online required",
-  "@tutorCaptureOnlineRequired": {
-    "description": "DNI-486 AC-5: tutor writes are online-only (AD-53); shown on disabled tutor write controls while offline."
+  "tutorAccessEndedUnnamed": "Access to this learner has ended.",
+  "@tutorAccessEndedUnnamed": {
+    "description": "DNI-512 AC-4: the access-ended notice when the learner's name is not known. DRAFT copy, pending zc4."
   },
+  "tutorCannotMarkLiveCompletion": "Tutors cannot mark live completions",
   "tutorWriteForbiddenTitle": "Action not allowed",
   "tutorWriteForbiddenMessage": "Tutors cannot mark live forward completions. This action would credit the child's streak and rewards, which is reserved for the parent or child.",
   "tutorPermissionDenied": "You don't have permission to make this edit",
@@ -1217,6 +1797,117 @@
   },
   "journeyEmptyTitle": "No siyumim yet",
   "journeyEmptyBody": "When you complete a masechta or sefer, it will be recorded here as a permanent milestone.",
+  "changeHistoryUndoChangedSince": "{field} — changed since by {actor}",
+  "@changeHistoryUndoChangedSince": {
+    "description": "Change history undo (DNI-514 AC-3): a field the undo left alone because someone changed it since, and who. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUndoChangedSinceUnknown": "{field} — changed since",
+  "@changeHistoryUndoChangedSinceUnknown": {
+    "description": "Change history undo (DNI-514 AC-3): a field left alone when who changed it since is unknown. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUndoDone": "Change undone",
+  "@changeHistoryUndoDone": {
+    "description": "Change history undo (DNI-514 AC-1): snackbar after an undo is applied (or queued offline, AC-9). DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldDeadline": "Deadline",
+  "@changeHistoryUndoFieldDeadline": {
+    "description": "Change history undo: the goal target_date field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldGoal": "Goal",
+  "@changeHistoryUndoFieldGoal": {
+    "description": "Change history undo: any other goal field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldGround": "Sub-track ground",
+  "@changeHistoryUndoFieldGround": {
+    "description": "Change history undo: the sub-track ground field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldName": "Sub-track name",
+  "@changeHistoryUndoFieldName": {
+    "description": "Change history undo: the sub-track name field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldOrder": "Learning order",
+  "@changeHistoryUndoFieldOrder": {
+    "description": "Change history undo: a main-track order field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldProgram": "Program",
+  "@changeHistoryUndoFieldProgram": {
+    "description": "Change history undo: a main-track program field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldScope": "Scope",
+  "@changeHistoryUndoFieldScope": {
+    "description": "Change history undo: a main-track scope field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldSettings": "Location and time zone",
+  "@changeHistoryUndoFieldSettings": {
+    "description": "Change history undo: a learner settings field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldStages": "Review stages",
+  "@changeHistoryUndoFieldStages": {
+    "description": "Change history undo: a main-track stages field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldStudyDays": "Study days",
+  "@changeHistoryUndoFieldStudyDays": {
+    "description": "Change history undo: a main-track study days field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldSubTrack": "Sub-track",
+  "@changeHistoryUndoFieldSubTrack": {
+    "description": "Change history undo: any other sub-track field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoFieldTrack": "Track",
+  "@changeHistoryUndoFieldTrack": {
+    "description": "Change history undo: a main-track field. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoNotAllowed": "This change can't be undone",
+  "@changeHistoryUndoNotAllowed": {
+    "description": "Change history undo (DNI-514 AC-2, AC-7): an undo the app refused (final, already undone, or not offered). DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoNotSaved": "The undo couldn't be saved",
+  "@changeHistoryUndoNotSaved": {
+    "description": "Change history undo (DNI-514 AC-9, UX-DR-139): an undo the server rejected for good; shown with Retry. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoNothingToUndo": "Nothing to undo — changed since",
+  "@changeHistoryUndoNothingToUndo": {
+    "description": "Change history undo (DNI-514 AC-3): no field of the action could be undone; nothing was written. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoOnlineRequired": "Online required",
+  "@changeHistoryUndoOnlineRequired": {
+    "description": "Change history undo (DNI-514 AC-8): an undo over 10 documents needs a connection. DRAFT copy, pending zc4."
+  },
+  "changeHistoryUndoPartlyDone": "Undone, except: {fields}",
+  "@changeHistoryUndoPartlyDone": {
+    "description": "Change history undo (DNI-514 AC-3): an undo that left some fields alone; fields is the list of changed-since lines. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUndoRevertedChange": "Reverted change: {summary}",
+  "@changeHistoryUndoRevertedChange": {
+    "description": "Change history row (DNI-514 AC-1): the row of an undo, naming the change it reverted. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUndoUndoneTag": "Undone",
+  "@changeHistoryUndoUndoneTag": {
+    "description": "Change history row tag (DNI-514 AC-1): the original row of an undone action. DRAFT copy, pending zc4."
+  },
   "chartCumulativeProgress": "Cumulative Progress",
   "chartCumulativeProgressSubtitle": "Total completions over time",
   "chartPointsEarned": "Points Earned",
@@ -1586,6 +2277,194 @@
     }
   },
   "allDoneForToday": "All done for today!",
+  "groundHeldTagSemantics": "Held by {names}. Not on the home schedule.",
+  "@groundHeldTagSemantics": {
+    "description": "Main-track browse: screen-reader text of a greyed leaf held by a sub-track (DNI-498 AC-6, UX-DR-63, UX-DR-93).",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerAddGround": "Add ground",
+  "@groundPickerAddGround": {
+    "description": "Sub-track detail: parent action opening the ground picker (DNI-498 AC-1, UX-DR-54)."
+  },
+  "groundPickerAlreadyIn": "Already in {name}",
+  "@groundPickerAlreadyIn": {
+    "description": "Ground picker: tag and screen-reader state of a node already in this sub-track, pre-checked and disabled (DNI-498 AC-3, UX-DR-79).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerAvailableOnly": "Available only",
+  "@groundPickerAvailableOnly": {
+    "description": "Ground picker: filter hiding in-use, learnt and already-assigned ground (DNI-498 AC-3, UX-DR-125)."
+  },
+  "groundPickerChazara": "Chazara",
+  "@groundPickerChazara": {
+    "description": "Ground picker: tag on ground already learnt; it stays selectable (DNI-498 AC-3, UX-DR-92)."
+  },
+  "groundPickerClose": "Close",
+  "@groundPickerClose": {
+    "description": "Ground picker: close button tooltip; focus returns to Add ground (DNI-498 AC-9, UX-DR-160)."
+  },
+  "groundPickerCollapse": "Collapse {node}",
+  "@groundPickerCollapse": {
+    "description": "Ground picker: screen-reader action collapsing a tree row (DNI-498 AC-9).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerConfirm": "Add {count} {unit} to {name}",
+  "@groundPickerConfirm": {
+    "description": "Ground picker: sticky footer confirm pill with the live count in the curriculum's own level unit (DNI-498 AC-2, UX-DR-30).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerConfirmEmpty": "Add to {name}",
+  "@groundPickerConfirmEmpty": {
+    "description": "Ground picker: disabled confirm pill while nothing is picked (DNI-498 AC-2). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerExpand": "Expand {node}",
+  "@groundPickerExpand": {
+    "description": "Ground picker: screen-reader action expanding a tree row (DNI-498 AC-9).",
+    "placeholders": {
+      "node": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerFilterEmpty": "Everything here is already assigned or learnt.",
+  "@groundPickerFilterEmpty": {
+    "description": "Ground picker: Available only left nothing to show (DNI-498 AC-3, UX-DR-125)."
+  },
+  "groundPickerInUse": "{name} · In use",
+  "@groundPickerInUse": {
+    "description": "Ground picker: tag on ground held by another non-ended sub-track; it stays selectable (DNI-498 AC-3, UX-DR-92).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerLegendComplete": "Complete",
+  "@groundPickerLegendComplete": {
+    "description": "Ground picker: progress legend, every leaf learnt (DNI-498 AC-2, FR-15)."
+  },
+  "groundPickerLegendEmpty": "Empty",
+  "@groundPickerLegendEmpty": {
+    "description": "Ground picker: progress legend, nothing learnt (DNI-498 AC-2, FR-15)."
+  },
+  "groundPickerLegendPartial": "Partial",
+  "@groundPickerLegendPartial": {
+    "description": "Ground picker: progress legend, some leaves learnt (DNI-498 AC-2, FR-15)."
+  },
+  "groundPickerLoadError": "Couldn't load the curriculum.",
+  "@groundPickerLoadError": {
+    "description": "Ground picker: load failure above the AppErrorView retry (DNI-498 AC-2, UX-DR-126). DRAFT copy, pending zc4."
+  },
+  "groundPickerNoMatches": "Nothing matches “{query}”.",
+  "@groundPickerNoMatches": {
+    "description": "Ground picker: the search matched no node (DNI-498 edge). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerNotSelected": "Not selected",
+  "@groundPickerNotSelected": {
+    "description": "Ground picker: screen-reader selection state of an unpicked row (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerOnlineRequired": "You're offline. Ground can be added once you're back online. Nothing was changed.",
+  "@groundPickerOnlineRequired": {
+    "description": "Ground picker: snackbar when an assignment is refused because the device is offline; an append is never queued (DNI-498 AC-4, UX-DR-127). DRAFT copy, pending zc4."
+  },
+  "groundPickerPartlySelected": "Partly selected",
+  "@groundPickerPartlySelected": {
+    "description": "Ground picker: screen-reader selection state of a partly picked row (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerProgressComplete": "Complete",
+  "@groundPickerProgressComplete": {
+    "description": "Ground picker: screen-reader progress state, every leaf learnt (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerProgressEmpty": "Empty",
+  "@groundPickerProgressEmpty": {
+    "description": "Ground picker: screen-reader progress state, nothing learnt (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerProgressPartial": "Partial",
+  "@groundPickerProgressPartial": {
+    "description": "Ground picker: screen-reader progress state, some leaves learnt (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerRejected": "Couldn't add the ground. Nothing was changed.",
+  "@groundPickerRejected": {
+    "description": "Ground picker: snackbar after a rejected assignment rolled back (DNI-498 AC-4, UX-DR-127). DRAFT copy, pending zc4."
+  },
+  "groundPickerReset": "Reset changes",
+  "@groundPickerReset": {
+    "description": "Ground picker: sticky footer action clearing only the pending selection (DNI-498 AC-3, UX-DR-30)."
+  },
+  "groundPickerScheduleNote": "They'll leave the home schedule while {name} holds them.",
+  "@groundPickerScheduleNote": {
+    "description": "Ground picker: footer note under the confirm pill (DNI-498 AC-2, UX-DR-30).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerSearchHint": "Search",
+  "@groundPickerSearchHint": {
+    "description": "Ground picker: search field hint; matches English and Hebrew names (DNI-498 AC-2)."
+  },
+  "groundPickerSelected": "Selected",
+  "@groundPickerSelected": {
+    "description": "Ground picker: screen-reader selection state of a picked row (DNI-498 AC-9, UX-DR-157)."
+  },
+  "groundPickerTitle": "Add ground to {name}",
+  "@groundPickerTitle": {
+    "description": "Ground picker: screen title; focus lands here on open (DNI-498 AC-2, AC-9).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groundPickerUnavailable": "Ground can't be added here.",
+  "@groundPickerUnavailable": {
+    "description": "Ground picker: shown instead of the picker for a calendar-program curriculum, a child session or an unknown sub-track (DNI-498 AC-7, AC-8). DRAFT copy, pending zc4."
+  },
+  "groundPickerUnitCount": "{count} {unit}",
+  "@groundPickerUnitCount": {
+    "description": "Ground picker: a row's child count in the curriculum's own level name (DNI-498 AC-2).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
   "mishnaHistoryActionChangeDate": "Change date",
   "mishnaHistoryActionChangePlace": "Change place",
   "mishnaHistoryActionChangeSource": "Change source",
@@ -1634,6 +2513,185 @@
   "mishnaHistoryTagCatchUp": "catch-up",
   "mishnaHistoryTagChazara": "chazara",
   "mishnaHistoryTitle": "Mishna history",
+  "reportBySource": "By source",
+  "reportCountWithUnit": "{count} {unit}",
+  "@reportCountWithUnit": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportCurriculumLabel": "Curriculum",
+  "reportDistinctLabel": "Distinct",
+  "reportDistinctSemantics": "Distinct · {count} {unit}",
+  "@reportDistinctSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportEntry": "Report",
+  "reportEntryTooltip": "Open the lifetime report",
+  "reportGroupCollapseHint": "Hide years",
+  "reportGroupExpandHint": "Show years",
+  "reportGroupOngoing": "ongoing",
+  "reportLearningEventsLabel": "Learning events",
+  "reportLearningEventsSemantics": "Learning events · {count}",
+  "@reportLearningEventsSemantics": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "reportLineEnded": "Ended",
+  "reportLineInProgress": "In progress",
+  "reportOnTrackCalendarBehind": "{count} {unit} behind the calendar",
+  "@reportOnTrackCalendarBehind": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackDailyTarget": "Daily target: {count} {unit}/day",
+  "@reportOnTrackDailyTarget": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackFinish": "Projected finish: {date}",
+  "@reportOnTrackFinish": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackFinishTooEarly": "Projected finish: too early to tell",
+  "reportOnTrackFinishUnknown": "Projected finish: not enough recent learning to project",
+  "reportOnTrackShortfall": "{name} may not reach {node} before {month}. About {count} {unit} will return to home learning.",
+  "@reportOnTrackShortfall": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "node": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackShortfallNoEnd": "{name} may not reach {node} by the deadline. About {count} {unit} will return to home learning.",
+  "@reportOnTrackShortfallNoEnd": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "node": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackStatusBehind": "Behind pace",
+  "reportOnTrackStatusOnTrack": "On track",
+  "reportOnTrackStatusSemantics": "Status: {status}",
+  "@reportOnTrackStatusSemantics": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "reportOnTrackTitle": "Goal status",
+  "reportPaceEstimate": "{rate} / week estimate",
+  "@reportPaceEstimate": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPaceFootnote": "Before-tracking learning isn't counted in pace.",
+  "reportPaceRate": "{rate} / week",
+  "@reportPaceRate": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPaceSinceStart": "Since tracking started · {unit} per week",
+  "@reportPaceSinceStart": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPaceTitle": "Per-source pace",
+  "reportPaceTooEarly": "Too early to tell",
+  "reportPaceTrailing": "Last {days} days: {rate} / week",
+  "@reportPaceTrailing": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "reportSchoolYears": "School years",
+  "reportSourceBeforeTracking": "Before tracking",
+  "reportSourceCounts": "{events} learning events · {distinct} {unit}",
+  "@reportSourceCounts": {
+    "placeholders": {
+      "events": {
+        "type": "String"
+      },
+      "distinct": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "reportSourceHome": "Home",
+  "reportSourceUnknown": "Ended sub-track",
+  "reportTitle": "Lifetime report",
+  "reportUnitFallback": "items",
   "missedReview": "Missed review ({count})",
   "@missedReview": {
     "placeholders": {
@@ -1663,6 +2721,151 @@
   "tasksNoTasksRemainingTitle": "You have no tasks remaining for today.",
   "tasksNoOverdueTasksSubtitle": "No overdue tasks.",
   "undoLabel": "Undo",
+  "subTrackHomeSectionTitle": "Also learning · {count, plural, =1{1 sub-track} other{{count} sub-tracks}}",
+  "@subTrackHomeSectionTitle": {
+    "description": "Learn tab section header above the sub-track rows (DNI-500 AC-1).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackHomeNext": "Next: {position}",
+  "@subTrackHomeNext": {
+    "description": "Sub-track row position line (DNI-500 AC-1).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeNoGround": "No ground yet",
+  "@subTrackHomeNoGround": {
+    "description": "Sub-track row text when the track has no ground (DNI-500 AC-3). [ASSUMPTION copy] DRAFT copy, pending zc4."
+  },
+  "subTrackHomeAllRecorded": "All ground recorded",
+  "@subTrackHomeAllRecorded": {
+    "description": "Sub-track row text when every leaf of its ground is ticked (DNI-500 AC-4). [ASSUMPTION copy] DRAFT copy, pending zc4."
+  },
+  "subTrackHomeUpTo": "Up to…",
+  "@subTrackHomeUpTo": {
+    "description": "Sub-track row text button opening the Up to picker (DNI-500 AC-1)."
+  },
+  "subTrackHomePlusOne": "+1",
+  "@subTrackHomePlusOne": {
+    "description": "Sub-track row filled pill recording one leaf (DNI-500 AC-1)."
+  },
+  "subTrackHomeAddGround": "Add ground",
+  "@subTrackHomeAddGround": {
+    "description": "Parent action on a groundless or fully recorded sub-track row (DNI-500 AC-3, AC-4)."
+  },
+  "subTrackHomeRowSemantics": "{name}, next {position}",
+  "@subTrackHomeRowSemantics": {
+    "description": "Screen-reader label of a sub-track row (DNI-500 AC-10).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeRowNoGroundSemantics": "{name}, no ground yet",
+  "@subTrackHomeRowNoGroundSemantics": {
+    "description": "Screen-reader label of a groundless sub-track row (DNI-500 AC-3). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeRowAllRecordedSemantics": "{name}, all ground recorded",
+  "@subTrackHomeRowAllRecordedSemantics": {
+    "description": "Screen-reader label of a fully recorded sub-track row (DNI-500 AC-4). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomePlusOneSemantics": "{curriculum, select, mishnayos{Record one mishna for {name}} other{Record one for {name}}}",
+  "@subTrackHomePlusOneSemantics": {
+    "description": "Screen-reader label of the +1 pill; curriculum is the CurriculumId storage key (DNI-500 AC-10).",
+    "placeholders": {
+      "curriculum": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeUpToSemantics": "Record up to, {name}",
+  "@subTrackHomeUpToSemantics": {
+    "description": "Screen-reader label of the Up to button (DNI-500 AC-10).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeRecorded": "Recorded 1",
+  "@subTrackHomeRecorded": {
+    "description": "Snackbar after a sub-track +1; its action is undoLabel (DNI-500 AC-2)."
+  },
+  "subTrackHomeKeptNotCounted": "Kept, not counted — recorded during Shabbos",
+  "@subTrackHomeKeptNotCounted": {
+    "description": "Snackbar when a synced sub-track capture is found lock-stamped (DNI-500 AC-5)."
+  },
+  "subTrackHomeCaptureFailed": "Couldn't record that. Please try again.",
+  "@subTrackHomeCaptureFailed": {
+    "description": "Snackbar when a sub-track +1 is refused (DNI-500 AC-2). DRAFT copy, pending zc4."
+  },
+  "subTrackHomeNotSaved": "Not saved: +1 for {name}",
+  "@subTrackHomeNotSaved": {
+    "description": "Snackbar and inline entry when a queued sub-track +1 is refused by the server for good; its action is retry (DNI-500 AC-5, AD-30 'not saved — retry'). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHomeUndoFailed": "Couldn't undo",
+  "@subTrackHomeUndoFailed": {
+    "description": "Snackbar when Undo of a sub-track +1 does not go through; the capture stands (DNI-500 AC-2). DRAFT copy, pending zc4."
+  },
+  "subTrackHomeUndoNotSaved": "Undo not saved: {name}",
+  "@subTrackHomeUndoNotSaved": {
+    "description": "Snackbar and inline entry when a queued Undo of a sub-track +1 is refused by the server for good; its action is retry (DNI-500 AC-2, AD-30). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackDashboardTitle": "Sub-tracks ({count})",
+  "@subTrackDashboardTitle": {
+    "description": "Dashboard section header above the sub-track summary cards (DNI-500 AC-8).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackDashboardManage": "Manage",
+  "@subTrackDashboardManage": {
+    "description": "Parent-only Dashboard action opening the hub (DNI-500 AC-8)."
+  },
+  "subTrackDashboardTicked": "{count} ticked",
+  "@subTrackDashboardTicked": {
+    "description": "Dashboard sub-track card ticked count (DNI-500 AC-8).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "searchTitle": "Search",
   "searchHintEnterTerm": "Enter a search term above",
   "loadingText": "Loading text...",
@@ -1798,7 +3001,7 @@
   "textReaderTextUnavailableTitle": "Text not available",
   "textReaderCheckConnection": "Check your internet connection and try again.",
   "textReaderFailedToLoad": "Failed to load text",
-  "sacredTimeCardDescription": "App is silenced and locked during {term} and Yom Tov, from 10 minutes before candle-lighting until 10 minutes after tzeis at this learner's location.",
+  "sacredTimeCardDescription": "App is silenced and locked during {term} and Yom Tov. Times computed locally from your location with a 15-minute cushion.",
   "@sacredTimeCardDescription": {
     "placeholders": {
       "term": {
@@ -1833,39 +3036,6 @@
   "@sacredTimeLocationDetectErrorGeneric": {
     "description": "AUD-sacred_time-03 (EH-5): shown when LocationFetchError carries LocationErrorCode.unknown — never the raw exception text."
   },
-  "sacredTimeLocationPromptAction": "Set location",
-  "@sacredTimeLocationPromptAction": {
-    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner."
-  },
-  "sacredTimeLocationPromptMessage": "This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.",
-  "@sacredTimeLocationPromptMessage": {
-    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for a learner with no location.",
-    "placeholders": {
-      "term": {
-        "type": "String"
-      }
-    }
-  },
-  "sacredTimeLocationPromptMessageNamed": "{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.",
-  "@sacredTimeLocationPromptMessageNamed": {
-    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "term": {
-        "type": "String"
-      }
-    }
-  },
-  "sacredTimeSettingsNotSaved": "Couldn't save this learner's Sacred Time settings. Try again.",
-  "@sacredTimeSettingsNotSaved": {
-    "description": "DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved."
-  },
-  "sacredTimeSettingsUnavailable": "Sacred Time settings can be changed only for your own learners.",
-  "@sacredTimeSettingsUnavailable": {
-    "description": "DRAFT copy, pending zc4. DNI-481: no own learner is active (none selected, or a tutored session), so no learnerSettings change can be written."
-  },
   "newPasswordLabel": "New Password",
   "confirmNewPasswordLabel": "Confirm New Password",
   "passwordMinLengthError": "Password must be at least 6 characters",
@@ -1874,6 +3044,174 @@
   "currentPasswordLabel": "Current Password",
   "invalidPasswordError": "Invalid password. Please try again.",
   "calendarOffsetToday": "Today",
+  "catchUpAdjustLoadError": "What you can adjust couldn't load.",
+  "@catchUpAdjustLoadError": {
+    "description": "DRAFT copy, pending zc4. Inline error in a catch-up card's Adjust panel whose track data failed to load; a Retry action follows, Record is disabled and the card stays available (DNI-507 AC-7, UX-DR-109)."
+  },
+  "catchUpAdjustMainGroup": "Home · Main track",
+  "@catchUpAdjustMainGroup": {
+    "description": "DRAFT copy, pending zc4. Heading of the main-track group in a catch-up card's Adjust panel (DNI-507 AC-1)."
+  },
+  "catchUpAdjustMainGroupOf": "Home · Main track ({units})",
+  "@catchUpAdjustMainGroupOf": {
+    "description": "DRAFT copy, pending zc4. Main-track group heading in the Adjust panel when the card spans more than one curriculum (DNI-507 AC-1); {units} is the curriculum's leaf unit (e.g. mishnayos).",
+    "placeholders": {
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpAdjustNoMoreGround": "No more {units} in this track's ground",
+  "@catchUpAdjustNoMoreGround": {
+    "description": "DRAFT copy, pending zc4. Shown under a sub-track group in the Adjust panel when its ground has no leaf after the planned ones; Up to… is disabled (DNI-507 AC-6, UX-DR-108). {units} is the leaf unit plural (e.g. mishnayos).",
+    "placeholders": {
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpAdjustPickerConfirm": "Include {count} {unit}",
+  "@catchUpAdjustPickerConfirm": {
+    "description": "DRAFT copy, pending zc4. Confirm button of the shared Up to… picker opened from a catch-up card's Adjust panel: it returns the selection to the panel and writes nothing (DNI-507 AC-2). {unit} is the leaf unit for {count}.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpAdjustRecordItems": "Record {count, plural, =1{1 item} other{{count} items}}",
+  "@catchUpAdjustRecordItems": {
+    "description": "DRAFT copy, pending zc4. Record pill of the Adjust panel when the card spans more than one curriculum (DNI-507 AC-1); {count} is the live number of ticked leaves.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catchUpAdjustSubTrackGroup": "{name} (learns on {shabbos})",
+  "@catchUpAdjustSubTrackGroup": {
+    "description": "DRAFT copy, pending zc4. Heading of a sub-track group in a catch-up card's Adjust panel (DNI-507 AC-1): {name} is the sub-track's name, {shabbos} the Shabbos term in running text.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "shabbos": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardAdjust": "Adjust…",
+  "@catchUpCardAdjust": {
+    "description": "DRAFT copy, pending zc4. Outlined pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): opens the per-day adjust list (Story 3.4)."
+  },
+  "catchUpCardAvailableUntil": "Available until the end of {day}",
+  "@catchUpCardAvailableUntil": {
+    "description": "DRAFT copy, pending zc4. Catch-up card caption (DNI-505 AC-2): {day} is the weekday name of the last day of the card's catch-up window (learner-local). Never mentions the streak (NFR-18).",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardContentsError": "What was planned couldn't load.",
+  "@catchUpCardContentsError": {
+    "description": "DRAFT copy, pending zc4. Inline error on a catch-up card whose planned contents failed to load; a Retry action follows and the card stays available (DNI-505 AC-11, UX-DR-132)."
+  },
+  "catchUpCardQuestion": "{day} · {count} {units} planned — learnt them all?",
+  "@catchUpCardQuestion": {
+    "description": "DRAFT copy, pending zc4. Catch-up card question (DNI-505 AC-2, A-2): {day} is the lock's day label (Shabbos, Yom Tov, Yom Tov & Shabbos, Yom Kippur), {count} the main-track tasks planned for its locked days, {units} the curriculum's leaf unit for that count (e.g. mishnayos).",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardQuestionItems": "{day} · {count, plural, =1{1 item} other{{count} items}} planned — learnt them all?",
+  "@catchUpCardQuestionItems": {
+    "description": "DRAFT copy, pending zc4. Catch-up card question when main-track tasks of more than one curriculum are planned (DNI-505 AC-2); {day} as in catchUpCardQuestion.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catchUpCardQuestionNoCount": "{day} · learnt what was planned?",
+  "@catchUpCardQuestionNoCount": {
+    "description": "DRAFT copy, pending zc4. Catch-up card question when only sub-tracks planned something for the locked days (DNI-505 AC-7); {day} as in catchUpCardQuestion.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardRecording": "Recording…",
+  "@catchUpCardRecording": {
+    "description": "DRAFT copy, pending zc4. Screen-reader status of the catch-up card's Yes, all of it pill while the record action runs (DNI-506 T6)."
+  },
+  "catchUpCardSaveFailed": "Couldn't save — try again before the card expires.",
+  "@catchUpCardSaveFailed": {
+    "description": "DRAFT copy, pending zc4. Inline error on a catch-up card whose record action was not saved; the card stays and can be recorded again (DNI-506 AC-8, UX-DR-133). Never mentions the streak (NFR-18)."
+  },
+  "catchUpCardSourceLine": "{source} · {count} {units}",
+  "@catchUpCardSourceLine": {
+    "description": "DRAFT copy, pending zc4. One source's planned amount on a catch-up card (DNI-505 AC-7): {source} is Home (main track) or a sub-track's name, {units} the leaf unit for {count}.",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardYesAll": "Yes, all of it",
+  "@catchUpCardYesAll": {
+    "description": "DRAFT copy, pending zc4. Primary pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): records everything the card lists (Story 3.3)."
+  },
+  "catchUpEnded": "This catch-up has ended — you can still tick learning in Browse.",
+  "@catchUpEnded": {
+    "description": "DRAFT copy, pending zc4. Snackbar when a catch-up card is confirmed after its window ended (e.g. a stale screen at 00:01); nothing was recorded and the card disappears (DNI-506 AC-3). Never mentions the streak (NFR-18)."
+  },
+  "catchUpReminderBody": "{name}, record what you learnt?",
+  "@catchUpReminderBody": {
+    "description": "DRAFT copy, pending zc4. Body of the one catch-up reminder notification at a lock's end (DNI-508 AC-9, A-6): neutral and forward-looking, never the streak or being behind. {name} is the learner profile's display name, the only learner data allowed.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpReminderTitleShabbos": "Shabbos is over",
+  "@catchUpReminderTitleShabbos": {
+    "description": "DRAFT copy, pending zc4. Title of the catch-up reminder after a Shabbos lock (DNI-508 AC-9)."
+  },
+  "catchUpReminderTitleYomKippur": "Yom Kippur is over",
+  "@catchUpReminderTitleYomKippur": {
+    "description": "DRAFT copy, pending zc4. Title of the catch-up reminder after Yom Kippur (DNI-508 AC-9)."
+  },
+  "catchUpReminderTitleYomTov": "Yom Tov is over",
+  "@catchUpReminderTitleYomTov": {
+    "description": "DRAFT copy, pending zc4. Title of the catch-up reminder after a Yom Tov lock (DNI-508 AC-9)."
+  },
+  "catchUpReminderTitleYomTovAndShabbos": "Yom Tov and Shabbos are over",
+  "@catchUpReminderTitleYomTovAndShabbos": {
+    "description": "DRAFT copy, pending zc4. Title of the catch-up reminder after Yom Tov chained into Shabbos, one continuous lock (DNI-508 AC-2, AC-9)."
+  },
   "dayNameShabbos": "Shabbos",
   "statusPendingTapToAccept": "Pending — tap to accept",
   "calendarOffsetDay": "Day {offset}",
@@ -2279,6 +3617,256 @@
         "type": "String"
       }
     }
+  },
+  "subTrackHubHeader": "Sub-tracks · {count} active",
+  "@subTrackHubHeader": {
+    "description": "Manage tracks hub: Sub-tracks group header with the number of non-ended sub-tracks (DNI-495 AC-1, screens.md #04).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subTrackHubHelper": "Learning that happens outside home — school, a rebbe, a chavrusa.",
+  "@subTrackHubHelper": {
+    "description": "Manage tracks hub: helper under the Sub-tracks header (DNI-495 AC-1)."
+  },
+  "subTrackHubAdd": "Add sub-track",
+  "@subTrackHubAdd": {
+    "description": "Manage tracks hub: action that opens the sub-track type chooser (DNI-495 AC-1)."
+  },
+  "subTrackTypeSchoolYear": "School year",
+  "@subTrackTypeSchoolYear": {
+    "description": "Sub-track type chooser option and school-year form title (DNI-495 AC-1, AC-4)."
+  },
+  "subTrackTypeOngoing": "Ongoing",
+  "@subTrackTypeOngoing": {
+    "description": "Sub-track type chooser option for an ongoing sub-track (form in DNI-496) (DNI-495 AC-1)."
+  },
+  "subTrackRowSchoolYearSubtitle": "School year · {startMonth}–{endMonth} · {rate}/week",
+  "@subTrackRowSchoolYearSubtitle": {
+    "description": "Manage tracks hub: subtitle of a school-year sub-track row (screens.md #04).",
+    "placeholders": {
+      "startMonth": {
+        "type": "String"
+      },
+      "endMonth": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowOngoingSubtitle": "Ongoing · {rate}/week",
+  "@subTrackRowOngoingSubtitle": {
+    "description": "Manage tracks hub: subtitle of an ongoing sub-track row (screens.md #04).",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackHubDailyTarget": "Daily target: {count} {unit}",
+  "@subTrackHubDailyTarget": {
+    "description": "Manage tracks hub: the curriculum's recomputed daily target shown under its sub-tracks (DNI-495 AC-7/AC-8). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackSyncRejected": "Your change couldn't be saved.",
+  "@subTrackSyncRejected": {
+    "description": "Snackbar when a queued sub-track change is permanently rejected at sync (UX-DR-119, UX-DR-121)."
+  },
+  "subTrackSaveFailed": "Couldn't save the sub-track.",
+  "@subTrackSaveFailed": {
+    "description": "Retryable snackbar when saving the sub-track form fails; the form keeps its values (UX-DR-120). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackCalendarProgramRejected": "This track follows a calendar program, so it can't have sub-tracks.",
+  "@subTrackCalendarProgramRejected": {
+    "description": "Snackbar when a create is refused because the curriculum follows a calendar program (AD-45). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackFormEditSchoolYearTitle": "Edit school year",
+  "@subTrackFormEditSchoolYearTitle": {
+    "description": "School-year sub-track form title while editing (DNI-495 AC-8). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackFormNameLabel": "Sub-track name",
+  "@subTrackFormNameLabel": {
+    "description": "School-year form: name field label (DNI-495 AC-4)."
+  },
+  "subTrackFormAcademicYearLabel": "Academic year",
+  "@subTrackFormAcademicYearLabel": {
+    "description": "School-year form: academic-year chip row label (DNI-495 AC-4)."
+  },
+  "subTrackYearUsed": "Used",
+  "@subTrackYearUsed": {
+    "description": "Academic-year chip state: the year already has a school-year sub-track; the chip is disabled (UX-DR-32)."
+  },
+  "subTrackYearActive": "Active",
+  "@subTrackYearActive": {
+    "description": "Academic-year chip state: the current academic year (UX-DR-32)."
+  },
+  "subTrackYearOpen": "Open",
+  "@subTrackYearOpen": {
+    "description": "Academic-year chip state: a future year with no school-year sub-track (UX-DR-32)."
+  },
+  "subTrackFormStartMonthLabel": "Start month",
+  "@subTrackFormStartMonthLabel": {
+    "description": "School-year form: start month field label (DNI-495 AC-4)."
+  },
+  "subTrackFormEndMonthLabel": "End month",
+  "@subTrackFormEndMonthLabel": {
+    "description": "School-year form: end month field label (DNI-495 AC-4)."
+  },
+  "subTrackFormEndMonthOpen": "No end month",
+  "@subTrackFormEndMonthOpen": {
+    "description": "School-year form: end month choice that keeps an already open-ended sub-track open (window_end = null) (DNI-495 AC-8)."
+  },
+  "subTrackFormRateLabel": "{unit} per week",
+  "@subTrackFormRateLabel": {
+    "description": "School-year form: rate stepper label in the curriculum's leaf unit, e.g. 'Mishnayos per week' (DNI-495 AC-4, prd-deviations #12).",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormPerSchoolDay": "~{count} {unit} / school day",
+  "@subTrackFormPerSchoolDay": {
+    "description": "School-year form: per-school-day helper under the rate stepper (DNI-495 AC-4). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy]).",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormRateDecrease": "Decrease {unit} per week",
+  "@subTrackFormRateDecrease": {
+    "description": "Accessibility label for the rate stepper's minus button.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormRateIncrease": "Increase {unit} per week",
+  "@subTrackFormRateIncrease": {
+    "description": "Accessibility label for the rate stepper's plus button.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackFormWeeksLabel": "Weeks per year",
+  "@subTrackFormWeeksLabel": {
+    "description": "School-year form: weeks-per-year field label (DNI-495 AC-4)."
+  },
+  "subTrackFormWeeksHelper": "Prefilled — edit if the school year is shorter",
+  "@subTrackFormWeeksHelper": {
+    "description": "School-year form: helper under weeks per year (DNI-495 AC-4)."
+  },
+  "subTrackFormShabbosLabel": "Learns on shabbos / yom tov",
+  "@subTrackFormShabbosLabel": {
+    "description": "School-year form: shabbos switch label (DNI-495 AC-4)."
+  },
+  "subTrackFormShabbosHelper": "Include this source on the catch-up card after shabbos",
+  "@subTrackFormShabbosHelper": {
+    "description": "School-year form: shabbos switch helper (DNI-495 AC-4)."
+  },
+  "subTrackFormGroundNote": "You can add ground later — the school's masechtos don't need to be known yet.",
+  "@subTrackFormGroundNote": {
+    "description": "School-year form: info note about adding ground later (DNI-495 AC-4)."
+  },
+  "subTrackFormSave": "Save sub-track",
+  "@subTrackFormSave": {
+    "description": "School-year form: save pill (DNI-495 AC-4)."
+  },
+  "subTrackNoDeadlineNote": "Without a deadline, a sub-track can't lower the daily target.",
+  "@subTrackNoDeadlineNote": {
+    "description": "Sub-track forms: inline note when the curriculum has no deadline goal (DNI-495 AC-6, SPEC CAP-3). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackNoDeadlineLink": "Set a deadline",
+  "@subTrackNoDeadlineLink": {
+    "description": "Sub-track forms: link from the no-deadline note to the curriculum's goal setup (DNI-495 AC-6). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackGoalSaveFailed": "Couldn't save the goal.",
+  "@subTrackGoalSaveFailed": {
+    "description": "Snackbar when the goal opened from a sub-track form's no-deadline link could not be saved (DNI-495 AC-6)."
+  },
+  "subTrackErrorNameRequired": "Enter a name",
+  "@subTrackErrorNameRequired": {
+    "description": "Sub-track form inline error: blank name (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorYearRequired": "Choose an academic year",
+  "@subTrackErrorYearRequired": {
+    "description": "Sub-track form inline error: no academic year selected (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorYearUsed": "This academic year already has a school sub-track",
+  "@subTrackErrorYearUsed": {
+    "description": "Sub-track form inline error: the academic year is used (AD-45, UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorWindowOverlap": "These months overlap another school sub-track",
+  "@subTrackErrorWindowOverlap": {
+    "description": "Sub-track form inline error: overlapping school-year windows (AD-45, UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorWindowReversed": "The end month must come after the start month",
+  "@subTrackErrorWindowReversed": {
+    "description": "Sub-track form inline error: window start after window end (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackErrorPositiveNumber": "Enter a number greater than 0",
+  "@subTrackErrorPositiveNumber": {
+    "description": "Sub-track form inline error: blank, zero, negative or non-numeric rate or weeks (UX-DR-80). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackSummaryTitle": "Sub-tracks",
+  "@subTrackSummaryTitle": {
+    "description": "Tablet summary panel title next to the sub-track form (UX-DR-162)."
+  },
+  "subTrackSummaryEmpty": "No sub-tracks yet",
+  "@subTrackSummaryEmpty": {
+    "description": "Tablet summary panel when the curriculum has no sub-tracks. DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
+  },
+  "subTrackSummaryCapacity": "Capacity {count} {unit} ({rate}/wk × {weeks} weeks)",
+  "@subTrackSummaryCapacity": {
+    "description": "Tablet summary panel: one sub-track's capacity (AD-44, UX-DR-162).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackSummaryPlan": "{rate}/wk × {weeks} weeks",
+  "@subTrackSummaryPlan": {
+    "description": "Tablet summary panel: a sub-track's rate plan when capacity is not computed (no deadline, AD-44).",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSubTrackMention": "School and rebbe sub-tracks can be added later from Settings → Manage tracks.",
+  "@onboardingSubTrackMention": {
+    "description": "Onboarding goal step: the one passive sub-track mention; no button, link or field (FR-4a, UX-DR-33). DRAFT copy, pending zc4 (DNI-495 [ASSUMPTION copy])."
   },
   "startingPositionTitle": "Starting Position",
   "startingPositionHint": "Can start up to 30 days back from today",
@@ -4034,8 +5622,783 @@
   "backupImportConfirm": "Restore backup",
   "backupImportSuccess": "Backup restored successfully.",
   "backupImportError": "Couldn't restore the backup. Please try again.",
+  "tutorCaptureKeptNotCounted": "Kept, not counted — Shabbos / Yom Tov had started",
+  "@tutorCaptureKeptNotCounted": {
+    "description": "DNI-486 AC-7: a tutor capture the server stamped inside the learner's lock window. The event is stored but does not count."
+  },
+  "tutorCaptureLearnerLocked": "Shabbos / Yom Tov",
+  "@tutorCaptureLearnerLocked": {
+    "description": "DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data."
+  },
+  "tutorCaptureNoEditAccess": "{learner}'s parent hasn't given you editing access",
+  "@tutorCaptureNoEditAccess": {
+    "description": "DNI-486 AC-4: note under a tutor's disabled write controls when the grant's can_edit_learning is false.",
+    "placeholders": {
+      "learner": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorCaptureOnlineRequired": "Online required",
+  "@tutorCaptureOnlineRequired": {
+    "description": "DNI-486 AC-5: tutor writes are online-only (AD-53); shown on disabled tutor write controls while offline."
+  },
+  "changeHistoryAlsoChanged": "{count, plural, =1{+1 more change in this action} other{+{count} more changes in this action}}",
+  "@changeHistoryAlsoChanged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeHistoryBeforeTracking": "Before tracking",
+  "changeHistoryDateCatchUp": "catch-up",
+  "changeHistoryDayToday": "Today",
+  "changeHistoryDayYesterday": "Yesterday",
+  "changeHistoryDeadlineSet": "Changed the deadline to {date}",
+  "@changeHistoryDeadlineSet": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryDetailsTitle": "Change details",
+  "changeHistoryDetailsWhat": "What changed",
+  "changeHistoryDetailsWhen": "When",
+  "changeHistoryDetailsWho": "Changed by",
+  "changeHistoryEmpty": "No changes yet.",
+  "changeHistoryFieldDates": "dates",
+  "changeHistoryFieldGround": "what it covers",
+  "changeHistoryFieldLocation": "location",
+  "changeHistoryFieldName": "name",
+  "changeHistoryFieldOther": "settings",
+  "changeHistoryFieldPace": "pace",
+  "changeHistoryFieldShabbos": "Shabbos learning",
+  "changeHistoryFieldTimeZone": "time zone",
+  "changeHistoryFilterAll": "All",
+  "changeHistoryFilterLabel": "Show",
+  "changeHistoryFilterLearning": "Learning",
+  "changeHistoryFilterParent": "Parent",
+  "changeHistoryFilterTutor": "Tutor",
+  "changeHistoryGoalChanged": "Changed the goal",
+  "changeHistoryGoalCreated": "Set a goal",
+  "changeHistoryGoalEnded": "Removed the goal",
+  "changeHistoryLearned": "Learned {refs} · {source}",
+  "@changeHistoryLearned": {
+    "placeholders": {
+      "refs": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryLockIgnored": "kept, not counted — recorded during Shabbos/Yom Tov",
+  "changeHistoryMainTrackChanged": "Changed the main track",
+  "changeHistoryMainTrackCreated": "Added the main track",
+  "changeHistoryMainTrackEnded": "Removed the main track",
+  "changeHistoryNoMatches": "No changes match this filter.",
+  "changeHistoryNotAvailable": "Change history is open to the parent only.",
+  "changeHistoryNotified": "Parent notified",
+  "changeHistoryOrderChanged": "Changed the learning order",
+  "changeHistoryProgramChanged": "Changed the program",
+  "changeHistoryRefList": "{first}, {second}",
+  "@changeHistoryRefList": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "second": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryRefRange": "{first} – {last} ({count})",
+  "@changeHistoryRefRange": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeHistoryRemovedLearning": "Removed {refs} · {source}",
+  "@changeHistoryRemovedLearning": {
+    "placeholders": {
+      "refs": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryRemovedUnknown": "Removed an earlier learning record",
+  "changeHistoryReverted": "Reverted change: {summary}",
+  "@changeHistoryReverted": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryRoleChild": "Child",
+  "changeHistoryRoleParent": "Parent",
+  "changeHistoryRoleTutor": "Tutor",
+  "changeHistoryScopeChanged": "Changed what the main track covers",
+  "changeHistorySelectPrompt": "Select a change to see its details.",
+  "changeHistorySettingsChanged": "Changed learner settings: {fields}",
+  "@changeHistorySettingsChanged": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySettingsSubtitle": "Every change to tracks, goals and learning, by anyone",
+  "changeHistorySourceMain": "Main track",
+  "changeHistorySourceSeveral": "Several tracks",
+  "changeHistoryStagesChanged": "Changed the review stages",
+  "changeHistoryStudyDaysChanged": "Changed the study days",
+  "changeHistorySubTrackChanged": "Changed {name}: {fields}",
+  "@changeHistorySubTrackChanged": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackCreated": "Added {name}",
+  "@changeHistorySubTrackCreated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackEnded": "Ended {name}",
+  "@changeHistorySubTrackEnded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackRemoved": "Removed {name}",
+  "@changeHistorySubTrackRemoved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackRenamed": "Renamed a sub-track to {name}",
+  "@changeHistorySubTrackRenamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistorySubTrackUnnamed": "a sub-track",
+  "changeHistoryTitle": "Change history",
+  "changeHistoryUndo": "Undo",
+  "changeHistoryUndone": "Undone",
+  "changeHistoryUndoneBy": "Undone by {name} · {time}",
+  "@changeHistoryUndoneBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryUpdates": "{count, plural, =1{1 update} other{{count} updates}}",
+  "@changeHistoryUpdates": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "changeHistoryVoidedBy": "Removed by {name} · {time}",
+  "@changeHistoryVoidedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "changeHistoryVoidedSome": "{count} of {total} removed by {name} · {time}",
+  "@changeHistoryVoidedSome": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "ongoingSubTrackFormTitle": "Ongoing sub-track",
+  "@ongoingSubTrackFormTitle": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackEditTitle": "Edit ongoing sub-track",
+  "@ongoingSubTrackEditTitle": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackNameLabel": "Sub-track name",
+  "@ongoingSubTrackNameLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackRateLabel": "{unit} per week",
+  "@ongoingSubTrackRateLabel": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "ongoingSubTrackRateDecrease": "Fewer {unit} per week",
+  "@ongoingSubTrackRateDecrease": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "ongoingSubTrackRateIncrease": "More {unit} per week",
+  "@ongoingSubTrackRateIncrease": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "ongoingSubTrackBeinHazmanimLabel": "Not learning during bein hazmanim",
+  "@ongoingSubTrackBeinHazmanimLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackBeinHazmanimHelper": "Lowers weeks per year",
+  "@ongoingSubTrackBeinHazmanimHelper": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackWeeksLabel": "Weeks per year",
+  "@ongoingSubTrackWeeksLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackWeeksPrefillHelper": "Prefilled from bein hazmanim toggle — edit if needed",
+  "@ongoingSubTrackWeeksPrefillHelper": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackStartLabel": "Start date (optional)",
+  "@ongoingSubTrackStartLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackEndLabel": "End date (optional)",
+  "@ongoingSubTrackEndLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackClearDate": "Clear date",
+  "@ongoingSubTrackClearDate": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackShabbosLabel": "Learns on shabbos / yom tov",
+  "@ongoingSubTrackShabbosLabel": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackShabbosHelper": "Include this source on the catch-up card after shabbos",
+  "@ongoingSubTrackShabbosHelper": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackLimitLine": "You can have up to 5 ongoing sub-tracks. {count} in use.",
+  "@ongoingSubTrackLimitLine": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ongoingSubTrackLimitReached": "You already have 5 ongoing sub-tracks.",
+  "@ongoingSubTrackLimitReached": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackSave": "Save sub-track",
+  "@ongoingSubTrackSave": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackNameRequired": "Enter a name",
+  "@ongoingSubTrackNameRequired": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackPositiveNumber": "Enter a number above 0",
+  "@ongoingSubTrackPositiveNumber": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackEndBeforeStart": "The end date can't be before the start date",
+  "@ongoingSubTrackEndBeforeStart": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackSaveFailed": "Couldn't save the sub-track. Your entries are kept.",
+  "@ongoingSubTrackSaveFailed": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackStarts": "Starts {date}",
+  "@ongoingSubTrackStarts": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ongoingSubTrackRateSummary": "{rate}/wk × {weeks} weeks",
+  "@ongoingSubTrackRateSummary": {
+    "description": "DNI-496 ongoing sub-track form",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      },
+      "weeks": {
+        "type": "String"
+      }
+    }
+  },
+  "ongoingSubTrackTabletSummaryTitle": "This learner's sub-tracks",
+  "@ongoingSubTrackTabletSummaryTitle": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "ongoingSubTrackTabletSummaryEmpty": "No sub-tracks yet",
+  "@ongoingSubTrackTabletSummaryEmpty": {
+    "description": "DNI-496 ongoing sub-track form"
+  },
+  "reportExportAction": "Export PDF",
+  "@reportExportAction": {
+    "description": "Primary pill on the lifetime report that exports it as a PDF and opens the share sheet (UX-DR-43)."
+  },
+  "reportExportBusy": "Preparing PDF…",
+  "@reportExportBusy": {
+    "description": "The Export PDF pill while the PDF is being generated; the pill is disabled."
+  },
+  "reportExportError": "Couldn't export the report — try again.",
+  "@reportExportError": {
+    "description": "Floating snackbar when generating or saving the report PDF fails (UX-DR-145); shown with a Retry action."
+  },
+  "reportExportSemantics": "Export the lifetime report as a PDF and share it",
+  "@reportExportSemantics": {
+    "description": "Accessibility hint of the Export PDF pill."
+  },
+  "reportPdfGeneratedOn": "Generated on {date}",
+  "@reportPdfGeneratedOn": {
+    "description": "Line under the learner and curriculum in the report PDF; the date is the learner's civil date in their time zone.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "reportPdfPageLabel": "Page {page} of {total}",
+  "@reportPdfPageLabel": {
+    "description": "Footer on every page of the report PDF.",
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowAllRecorded": "All ground recorded",
+  "@subTrackRowAllRecorded": {
+    "description": "DNI-501 seam for the Story 2.9 (DNI-500) Learn row: every ground leaf is ticked in this sub-track. [ASSUMPTION copy] from DNI-500 AC-4."
+  },
+  "subTrackRowNext": "Next: {position}",
+  "@subTrackRowNext": {
+    "description": "Learn-tab sub-track row: the sub-track's next leaf (UX-DR-16).",
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowNoGround": "No ground yet",
+  "@subTrackRowNoGround": {
+    "description": "Learn-tab sub-track row of a sub-track with no ground; its actions are disabled (Story 2.9, UX-DR-88)."
+  },
+  "subTrackRowPlusOne": "+1",
+  "@subTrackRowPlusOne": {
+    "description": "Learn-tab sub-track row action: record the next leaf (UX-DR-17)."
+  },
+  "subTrackRowPlusOneSemantics": "Record one {unit} for {name}",
+  "@subTrackRowPlusOneSemantics": {
+    "description": "Screen-reader label of the +1 action (UX-DR-157); unit is the curriculum's singular leaf unit.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowSemantics": "{name}, next {position}",
+  "@subTrackRowSemantics": {
+    "description": "Screen-reader label of a Learn-tab sub-track row (UX-DR-157).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowsTitle": "Also learning · {count, plural, =1{1 sub-track} other{{count} sub-tracks}}",
+  "@subTrackRowsTitle": {
+    "description": "Header of the Learn-tab sub-track rows under today's tasks (UX-DR-46).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToPickerAction": "Up to…",
+  "@upToPickerAction": {
+    "description": "Action on a Learn-tab sub-track row and on the main-track today list: opens the Up to… picker (UX-DR-18)."
+  },
+  "upToPickerActionSemantics": "Record up to, {name}",
+  "@upToPickerActionSemantics": {
+    "description": "Screen-reader label of the Up to… action (UX-DR-157).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerExhausted": "No more {units} in {name}'s ground.",
+  "@upToPickerExhausted": {
+    "description": "Up to… on a track with no leaves left after its position (UX-DR-108); units is the curriculum's plural leaf unit.",
+    "placeholders": {
+      "units": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerInstruction": "Tap the last {unit} you learnt",
+  "@upToPickerInstruction": {
+    "description": "Up to… picker instruction (UX-DR-18); unit is the curriculum's singular leaf unit.",
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRecord": "Record {count} {unit}",
+  "@upToPickerRecord": {
+    "description": "Up to… picker confirm button with the live count of included rows (UX-DR-72, UX-DR-157); unit is the leaf unit, singular for 1.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRecorded": "Recorded {count}",
+  "@upToPickerRecorded": {
+    "description": "Snackbar after an Up to… capture, shown with Undo that voids all of its events (UX-DR-154).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToPickerRowSemantics": "{label}, {status}",
+  "@upToPickerRowSemantics": {
+    "description": "Screen-reader label of an Up to… picker row: the leaf and its state (UX-DR-157).",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRowTargetSemantics": "{label}, {status}, last one learnt",
+  "@upToPickerRowTargetSemantics": {
+    "description": "Screen-reader label of the highlighted target row of the Up to… picker (UX-DR-157).",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerSetTargetAction": "Make this the last one learnt",
+  "@upToPickerSetTargetAction": {
+    "description": "Screen-reader custom action on an Up to… picker row inside the run: makes it the last one learnt, cutting the run short there (UX-DR-157)."
+  },
+  "upToPickerStatusAlreadyRecorded": "already recorded",
+  "@upToPickerStatusAlreadyRecorded": {
+    "description": "Up to… row state: ticked in this track before; not selectable (UX-DR-157)."
+  },
+  "upToPickerStatusIncluded": "included",
+  "@upToPickerStatusIncluded": {
+    "description": "Up to… row state: will be recorded (UX-DR-157)."
+  },
+  "upToPickerStatusNextUp": "next up",
+  "@upToPickerStatusNextUp": {
+    "description": "Up to… row state: the track position, before a target is chosen (UX-DR-157)."
+  },
+  "upToPickerStatusNotSelected": "not selected",
+  "@upToPickerStatusNotSelected": {
+    "description": "Up to… row state: after the target (UX-DR-157)."
+  },
+  "upToPickerStatusSkipped": "skipped",
+  "@upToPickerStatusSkipped": {
+    "description": "Up to… row state: unticked inside the run; gets no event (UX-DR-157)."
+  },
+  "upToPickerTitle": "{name} · up to…",
+  "@upToPickerTitle": {
+    "description": "Up to… picker title (UX-DR-18).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sacredTimeLocationPromptAction": "Set location",
+  "@sacredTimeLocationPromptAction": {
+    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner."
+  },
+  "sacredTimeLocationPromptMessage": "This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.",
+  "@sacredTimeLocationPromptMessage": {
+    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for a learner with no location.",
+    "placeholders": {
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "sacredTimeLocationPromptMessageNamed": "{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.",
+  "@sacredTimeLocationPromptMessageNamed": {
+    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "term": {
+        "type": "String"
+      }
+    }
+  },
+  "sacredTimeSettingsNotSaved": "Couldn't save this learner's Sacred Time settings. Try again.",
+  "@sacredTimeSettingsNotSaved": {
+    "description": "DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved."
+  },
+  "sacredTimeSettingsUnavailable": "Sacred Time settings can be changed only for your own learners.",
+  "@sacredTimeSettingsUnavailable": {
+    "description": "DRAFT copy, pending zc4. DNI-481: no own learner is active (none selected, or a tutored session), so no learnerSettings change can be written."
+  },
+  "erevBannerBeginsAt": "{term} begins at {time} — record what you can before then.",
+  "@erevBannerBeginsAt": {
+    "description": "Erev banner line on the Learn tab (DNI-504, A-2): {term} is the lock's Shabbos/Yom Tov label per the Hebrew Terms setting, {time} the lock start (learner-local) from lockWindows. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "term": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "erevLockIgnoredSnackbar": "Some learning was kept, not counted — it was recorded during Shabbos.",
+  "@erevLockIgnoredSnackbar": {
+    "description": "Learn-tab snackbar when synced learning was recorded during a Shabbos/Yom Tov lock: it is stored but the engine does not count it (DNI-504 AC-9, UX-DR-107). DRAFT copy, pending zc4."
+  },
+  "erevPlannedForDay": "Planned for {day}",
+  "@erevPlannedForDay": {
+    "description": "Heading of one locked day's planned section on erev (DNI-504 AC-1); {day} is the weekday name, or the Shabbos term for Shabbos. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "erevPlannedTickSemantics": "Mark {item} as learnt",
+  "@erevPlannedTickSemantics": {
+    "description": "Screen-reader label of a planned row's tick control on erev (DNI-504 AC-3, AC-11). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "parentPushTitle": "Tutor change",
+  "@parentPushTitle": {
+    "description": "Title of the push a parent gets when a tutor changes a learner's deadline or main track (Story 4.7)."
+  },
+  "parentPushBody": "{tutorName} changed {learnerName}'s {kind, select, deadline{deadline} pace{daily pace} mainTrack{main track} mainTrackOrder{learning order} mainTrackProgram{program} mainTrackStudyDays{study days} other{learning plan}}",
+  "@parentPushBody": {
+    "description": "Body of the tutor-change push, e.g. 'Rav Cohen changed Yehuda's deadline'. kind is the change kind the server reports.",
+    "placeholders": {
+      "tutorName": {
+        "type": "String"
+      },
+      "learnerName": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "parentPushTutorFallback": "Your tutor",
+  "parentPushLearnerFallback": "your child",
+  "parentPushChannelName": "Tutor changes",
+  "parentPushChannelDescription": "When a tutor changes a deadline or a main track",
   "backupImportNotSaved": "Not saved — part of the backup was not restored. Retry?",
   "@backupImportNotSaved": {
     "description": "Snackbar after a backup restore when the server refused some of the replayed learning writes (AD-49, AD-54 Recovery: not saved — retry). Shown with a Retry action that re-sends exactly those writes. DRAFT copy, pending zc4."
+  },
+  "subTrackDetailNoDeadlineNote": "Without a deadline, a sub-track can't lower the daily target.",
+  "@subTrackDetailNoDeadlineNote": {
+    "description": "Sub-track detail: parent note when the curriculum has no deadline; Story 2.4 (DNI-495) wording, reused verbatim (DNI-497 AC-2). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailNoDeadlineLink": "Set a deadline",
+  "@subTrackDetailNoDeadlineLink": {
+    "description": "Sub-track detail: link from the no-deadline note to the curriculum's goal setup; Story 2.4 (DNI-495) wording (DNI-497 AC-2). DRAFT copy, pending zc4."
+  },
+  "subTrackDetailSelectPrompt": "Select a sub-track to see its details",
+  "@subTrackDetailSelectPrompt": {
+    "description": "Sub-track hub, tablet detail pane before a sub-track is selected (DNI-497 AC-8). DRAFT copy, pending zc4."
+  },
+  "siyumimPreviouslyLearnedDate": "Previously learned",
+  "@siyumimPreviouslyLearnedDate": {
+    "description": "Data-consistency fix (run-9 audit): replaces the achievement date on a Siyumim & Milestones row (and the timeline's month-group header) when the milestone's achievedAt is the bulk-mark-prior sentinel (kBulkPriorSentinelDate, 2000-01-01 UTC) rather than a real completion moment. Bulk-marked-as-previously-learned sections have no real completion date to show; formatting the sentinel through DateFormat rendered the nonsensical 'Jan 1, 2000' to the user. Do NOT change the stored sentinel — this only changes its presentation."
+  },
+  "subTrackLifecycleActiveGroup": "Sub-tracks",
+  "@subTrackLifecycleActiveGroup": {
+    "description": "Header of the sub-track rows on Manage tracks (interim hub section, Story 2.8). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleMoreOptions": "More options",
+  "@subTrackLifecycleMoreOptions": {
+    "description": "Tooltip of the sub-track detail overflow (⋮) menu. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleNotFound": "This sub-track is no longer available.",
+  "@subTrackLifecycleNotFound": {
+    "description": "Detail body when the sub-track cannot be found. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleWindow": "{start} – {end}",
+  "@subTrackLifecycleWindow": {
+    "description": "Sub-track window range on the lifecycle detail. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleWindowOpen": "From {start}",
+  "@subTrackLifecycleWindowOpen": {
+    "description": "Open-ended sub-track window on the lifecycle detail. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleNextYearFor": "School year {yearLabel}",
+  "@subTrackLifecycleNextYearFor": {
+    "description": "The academic year the Add next year form saves for. DRAFT copy, pending zc4.",
+    "placeholders": {
+      "yearLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackLifecycleFieldName": "Name",
+  "@subTrackLifecycleFieldName": {
+    "description": "Name field of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldRate": "Units per week",
+  "@subTrackLifecycleFieldRate": {
+    "description": "Rate field of the Add next year form (curriculum leaf units). DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldWeeks": "Weeks per year",
+  "@subTrackLifecycleFieldWeeks": {
+    "description": "Weeks-per-year field of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldShabbos": "Learns on Shabbos",
+  "@subTrackLifecycleFieldShabbos": {
+    "description": "Shabbos switch of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldStartMonth": "Starts",
+  "@subTrackLifecycleFieldStartMonth": {
+    "description": "Start month field of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleFieldEndMonth": "Ends",
+  "@subTrackLifecycleFieldEndMonth": {
+    "description": "End month field of the Add next year form. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleNoEndMonth": "No end month",
+  "@subTrackLifecycleNoEndMonth": {
+    "description": "End month choice for an open-ended school year. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleSave": "Save sub-track",
+  "@subTrackLifecycleSave": {
+    "description": "Save button of the Add next year form."
+  },
+  "subTrackLifecycleNameRequired": "Enter a name",
+  "@subTrackLifecycleNameRequired": {
+    "description": "Validation: the name is empty. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecyclePositiveNumber": "Enter a number above 0",
+  "@subTrackLifecyclePositiveNumber": {
+    "description": "Validation: rate or weeks is not a positive number. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleWindowReversed": "The end month is before the start month",
+  "@subTrackLifecycleWindowReversed": {
+    "description": "Validation: the window is reversed. DRAFT copy, pending zc4."
+  },
+  "subTrackLifecycleSaveFailed": "Couldn't save the sub-track. Try again.",
+  "@subTrackLifecycleSaveFailed": {
+    "description": "Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4."
   }
 }

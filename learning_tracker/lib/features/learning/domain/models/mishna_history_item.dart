@@ -71,7 +71,7 @@ enum MishnaCorrection {
   /// `LearningCommands.replace` with a new leaf `ref`.
   changePlace,
 
-  /// `LearningCommands.replace` to Home or Before tracking.
+  /// `LearningCommands.replace` to Home, a sub-track or Before tracking.
   changeSource,
 
   /// `LearningCommands.replace` with a new `learned_on`.
@@ -354,7 +354,7 @@ final class MishnaHistory {
 /// No action on a row that does not count (voided, or lock-ignored —
 /// AD-36: no Undo for a lock-ignored event), on a row with a correction in
 /// flight, on a Before-tracking node event (it spans other leaves), or for
-/// a tutor (Story 1.24). A child may remove, and re-date only a catch-up
+/// a tutor on a sub-track row (Story 4.1 corrections are main-only). A child may remove, and re-date only a catch-up
 /// event (its catch-up window is enforced by `LearningCommands`, which
 /// returns `childLimit` outside it). A parent may also change the place
 /// (when [placeChoices] is non-empty) and the source.
@@ -373,9 +373,17 @@ Set<MishnaCorrection> allowedCorrections(
       MishnaCorrection.remove,
       if (item.isCatchUp) MishnaCorrection.changeDate,
     },
+    // Story 4.1 keeps a tutor's corrections to main-track events (the
+    // callables refuse to void a sub-track event), so a tutor's sub-track
+    // row offers none (Story 4.2, DNI-510).
+    MishnaHistoryViewer.tutor
+        when item.event.source != LearningEvent.sourceMain =>
+      const {},
     // A tutor with editing access corrects what the parent can (deviation
-    // #7, DNI-486); the screen disables the controls when the grant, the
-    // connection or the learner's lock does not allow a write.
+    // #7, DNI-486) — a main-track row, its source now also to one of the
+    // talmid's sub-tracks (Story 4.2 AC-1); the screen disables the
+    // controls when the grant, the connection or the learner's lock does
+    // not allow a write.
     MishnaHistoryViewer.parent || MishnaHistoryViewer.tutor => {
       MishnaCorrection.remove,
       if (hasPlaceChoices) MishnaCorrection.changePlace,

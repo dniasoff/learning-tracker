@@ -967,6 +967,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       // TS-10 fix: pass the previously-set goal so Back+Forward navigation
       // restores the deadline/pace choice the user already made.
       initialGoal: _state.goalResult,
+      // DNI-495 AC-9: the one passive sub-track mention, onboarding only.
+      showSubTrackMention: widget.isOnboarding,
     );
   }
 

@@ -59,6 +59,8 @@ class ContentItemTile extends ConsumerWidget {
     this.onTick,
     this.onLongPress,
     this.tickDisabled = false,
+    this.heldBy = const [],
+    this.heldWhole = false,
   });
 
   final ContentItem item;
@@ -98,6 +100,15 @@ class ContentItemTile extends ConsumerWidget {
   /// handler, disabled semantics); "Tick up to here" is off too.
   final bool tickDisabled;
 
+  /// Story 2.7 (DNI-498 AC-6, UX-DR-63, UX-DR-93): the names of the
+  /// sub-tracks holding ground under this row. Each is a tag; the row stays
+  /// visible and tappable.
+  final List<String> heldBy;
+
+  /// Every leaf under the row is held: the row is greyed (it is not on the
+  /// home schedule) and says so to a screen reader.
+  final bool heldWhole;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -112,6 +123,56 @@ class ContentItemTile extends ConsumerWidget {
         ?.nodeProgress(item.sefariaRef);
     final count = reviewCount ?? progress?.events ?? 0;
     final state = progress?.state ?? TriState.empty;
+
+    final held = heldBy.isEmpty
+        ? null
+        : Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final name in heldBy)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.colors.brandBlueSoft,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      child: Text(
+                        name,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: context.colors.brandInk,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+    final baseSubtitle = showBreadcrumb
+        ? CurriculumLabel.parent(
+            item.sefariaRef,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          )
+        : (l10n != null &&
+              !item.isLeaf &&
+              progress != null &&
+              progress.total > 0)
+        ? Text(
+            l10n.learnerProgressCount(progress.learnt, progress.total),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          )
+        : null;
 
     final tile = ListTile(
       minLeadingWidth: 48,
@@ -136,24 +197,13 @@ class ContentItemTile extends ConsumerWidget {
         ),
         textAlign: TextAlign.start,
       ),
-      subtitle: showBreadcrumb
-          ? CurriculumLabel.parent(
-              item.sefariaRef,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          : (l10n != null &&
-                !item.isLeaf &&
-                progress != null &&
-                progress.total > 0)
-          ? Text(
-              l10n.learnerProgressCount(progress.learnt, progress.total),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          : null,
+      subtitle: held == null
+          ? baseSubtitle
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [?baseSubtitle, held],
+            ),
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
       onLongPress: tickDisabled && onLongPress != null
@@ -163,19 +213,33 @@ class ContentItemTile extends ConsumerWidget {
                     ? () => _showStageBreakdown(context, ref)
                     : null),
     );
-    if (progress == null || l10n == null) return tile;
+    final row = progress == null || l10n == null
+        ? tile
+        : Semantics(
+            label: learntTriStateSemantics(
+              l10n,
+              name: CurriculumLabelRenderer.renderForItem(
+                item,
+                useHebrew: domainTermLabels(ref).isHebrew,
+              ),
+              state: state,
+              learnt: progress.learnt,
+              total: progress.total,
+            ),
+            child: tile,
+          );
+    if (heldBy.isEmpty) return row;
     return Semantics(
-      label: learntTriStateSemantics(
-        l10n,
-        name: CurriculumLabelRenderer.renderForItem(
-          item,
-          useHebrew: domainTermLabels(ref).isHebrew,
-        ),
-        state: state,
-        learnt: progress.learnt,
-        total: progress.total,
-      ),
-      child: tile,
+      hint: heldWhole && l10n != null
+          ? l10n.groundHeldTagSemantics(heldBy.join(', '))
+          : null,
+      child: heldWhole
+          ? Opacity(
+              key: const ValueKey('heldGroundGreyed'),
+              opacity: 0.55,
+              child: row,
+            )
+          : row,
     );
   }
 

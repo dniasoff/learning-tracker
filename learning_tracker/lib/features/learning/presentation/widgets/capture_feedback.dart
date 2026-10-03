@@ -40,7 +40,9 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///
 /// [messenger] defaults to the one above [context]; pass it explicitly when
 /// the caller navigates away right after (the root messenger outlives the
-/// route).
+/// route). With [undoable] false no Undo is offered (a tutor's sub-track
+/// capture: Story 4.1 keeps a tutor's voids to main-track events; Story
+/// 4.2 / DNI-510).
 List<String> showCaptureOutcome(
   BuildContext context, {
   required CaptureResult result,
@@ -49,6 +51,7 @@ List<String> showCaptureOutcome(
   VoidCallback? onUndone,
   ScaffoldMessengerState? messenger,
   String? learnerName,
+  bool undoable = true,
 }) {
   final l10n = AppLocalizations.of(context)!;
   final target = messenger ?? ScaffoldMessenger.of(context);
@@ -64,7 +67,7 @@ List<String> showCaptureOutcome(
           content: Text(l10n.tutorCaptureKeptNotCounted),
           duration: const Duration(seconds: 6),
           persist: false,
-          action: counted.isEmpty
+          action: counted.isEmpty || !undoable
               ? null
               : SnackBarAction(
                   label: l10n.undoLabel,
@@ -89,7 +92,7 @@ List<String> showCaptureOutcome(
           duration: const Duration(seconds: 4),
           // The Undo window closes on its own; a failure notice persists.
           persist: false,
-          action: eventIds.isEmpty
+          action: eventIds.isEmpty || !undoable
               ? null
               : SnackBarAction(
                   label: l10n.undoLabel,
@@ -276,7 +279,12 @@ class _PendingCaptureFailureListenerState
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(l10n.captureNotSaved),
+          // An undo's failure says so (DNI-514 AC-9, UX-DR-139).
+          content: Text(
+            failure.isUndo
+                ? l10n.changeHistoryUndoNotSaved
+                : l10n.captureNotSaved,
+          ),
           backgroundColor: context.colors.warningSnackbarFill,
           duration: const Duration(seconds: 8),
           action: SnackBarAction(

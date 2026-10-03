@@ -11,10 +11,13 @@ library;
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
+import 'package:learning_tracker/domain/learner_state/lock_filter.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/study_days.dart';
 
 /// The fewest days of tracked history a projection needs.
@@ -44,13 +47,8 @@ Map<LeafRef, CivilDate> newlyLearntOn({
       known.addAll(coveredLeaves(e, corpus));
       continue;
     }
-    final day = e.learnedOn;
-    final stage = e.stage;
-    if (day == null ||
-        (e.dateState != DateState.dated && e.dateState != DateState.catchUp) ||
-        (stage != null && firstStage != null && stage > firstStage)) {
-      continue;
-    }
+    if (!isVelocityEvent(e, firstStage)) continue;
+    final day = e.learnedOn!;
     for (final leaf in coveredLeaves(e, corpus)) {
       if (!inScope(leaf)) continue;
       final current = firstDay[leaf];
@@ -59,6 +57,36 @@ Map<LeafRef, CivilDate> newlyLearntOn({
   }
   firstDay.removeWhere((leaf, _) => known.contains(leaf));
   return firstDay;
+}
+
+/// Whether counted [e] can newly learn a leaf for the velocity (AD-35,
+/// FR-32): a `dated` or `catch_up` event with a `learned_on` that is not
+/// chazara (`stage` ≤ [firstStage]; an event without a stage counts).
+/// `before_tracking` events never do. The one predicate the projection and
+/// the report velocities (`report_projection.dart`) share.
+bool isVelocityEvent(LearningEvent e, int? firstStage) {
+  final stage = e.stage;
+  return e.learnedOn != null &&
+      (e.dateState == DateState.dated || e.dateState == DateState.catchUp) &&
+      !(stage != null && firstStage != null && stage > firstStage);
+}
+
+/// The AD-35 velocity window of history running from [historyStart]
+/// through [through]: the trailing [projectionWindowDays] days, or all of
+/// it with [projectionMinHistoryDays]–27 days; null under
+/// [projectionMinHistoryDays] days or with no history ("too early").
+({CivilDate from, int days})? velocityWindow({
+  required CivilDate? historyStart,
+  required CivilDate through,
+}) {
+  final start = historyStart;
+  if (start == null) return null;
+  final history = civilDaySpan(start, through);
+  if (history < projectionMinHistoryDays) return null;
+  final from = history >= projectionWindowDays
+      ? shiftCivilDate(through, 1 - projectionWindowDays)
+      : start;
+  return (from: from, days: civilDaySpan(from, through));
 }
 
 /// The projection of one curriculum on [today].
@@ -71,12 +99,19 @@ Map<LeafRef, CivilDate> newlyLearntOn({
 /// * `velocityPerDay` = newly learnt leaves dated in the window ÷ window
 ///   days, the window being the trailing [projectionWindowDays] days, or
 ///   all history when shorter.
-/// * `projectedFinish` = the day the [remaining] leaves are done at that
-///   velocity, counting today as the first day; [today] when nothing
+/// * `projectedFinish` = `today + ⌈remaining ÷ velocity⌉` days (DNI-494
+///   AC-6), computed in integers as `⌈remaining × windowDays ÷ learnt⌉`
+///   so no floating-point error moves the date; [today] when nothing
 ///   remains; null at zero velocity.
+/// * During a lock the engine passes the civil day of the lock's start as
+///   [today] (see [projectionDay]), so status and projection hold still
+///   until the lock ends.
 /// * Status: [ProjectionStatus.noDeadline] without a live [deadline];
 ///   otherwise [ProjectionStatus.onTrack] when the finish is on or before
 ///   `target_date`, else [ProjectionStatus.behindPace].
+/// * `deadline` = the live [deadline]'s `target_date` (null without one)
+///   and `newlyLearntToday` = the [newlyLearnt] leaves dated [today], in
+///   every status (DNI-502).
 Projection deriveProjection({
   required Map<LeafRef, CivilDate> newlyLearnt,
   required CivilDate? historyStart,
@@ -84,16 +119,19 @@ Projection deriveProjection({
   required int remaining,
   required DeadlineGoal? deadline,
 }) {
-  final start = historyStart;
-  if (start == null) return const Projection(status: ProjectionStatus.tooEarly);
-  final history = _days(start, today);
-  if (history < projectionMinHistoryDays) {
-    return const Projection(status: ProjectionStatus.tooEarly);
+  var learntToday = 0;
+  for (final day in newlyLearnt.values) {
+    if (day == today) learntToday++;
   }
-  final windowStart = history >= projectionWindowDays
-      ? shiftCivilDate(today, 1 - projectionWindowDays)
-      : start;
-  final windowDays = _days(windowStart, today);
+  final window = velocityWindow(historyStart: historyStart, through: today);
+  if (window == null) {
+    return Projection(
+      status: ProjectionStatus.tooEarly,
+      deadline: deadline?.targetDate,
+      newlyLearntToday: learntToday,
+    );
+  }
+  final (from: windowStart, days: windowDays) = window;
   var learnt = 0;
   for (final day in newlyLearnt.values) {
     if (day.compareTo(windowStart) >= 0 && day.compareTo(today) <= 0) {
@@ -104,10 +142,12 @@ Projection deriveProjection({
   final CivilDate? finish;
   if (remaining <= 0) {
     finish = today;
-  } else if (velocity == 0) {
+  } else if (learnt == 0) {
     finish = null;
   } else {
-    finish = shiftCivilDate(today, (remaining / velocity).ceil() - 1);
+    // ⌈remaining ÷ (learnt ÷ windowDays)⌉ in integers.
+    final days = (remaining * windowDays + learnt - 1) ~/ learnt;
+    finish = shiftCivilDate(today, days);
   }
   final ProjectionStatus status;
   if (deadline == null) {
@@ -121,7 +161,24 @@ Projection deriveProjection({
     status: status,
     velocityPerDay: velocity,
     projectedFinish: finish,
+    deadline: deadline?.targetDate,
+    newlyLearntToday: learntToday,
   );
+}
+
+/// The civil day the projection is evaluated on at [nowUtc] (AD-35,
+/// NFR-9, FR-23): while [nowUtc] is inside one of [locks], the civil day
+/// of that lock's start, so status and projection stay as they were when
+/// the lock began; otherwise `civilDate(nowUtc)`. After the lock ends the
+/// next run evaluates on its own day again. [locks] are the engine run's
+/// [lockWindows] (ascending, disjoint, true bounds).
+CivilDate projectionDay({
+  required List<LockWindow> locks,
+  required DateTime nowUtc,
+  required LearnerSettingsHistory settingsHistory,
+}) {
+  final lock = lockAt(locks, nowUtc);
+  return civilDate(lock?.startUtc ?? nowUtc, settingsHistory);
 }
 
 /// The start of tracked history: [trackingStartDate], else the earliest
@@ -143,8 +200,9 @@ CivilDate? trackedHistoryStart(
   return earliest;
 }
 
-/// `days([a, b]) = b − a + 1` if `a ≤ b`, else 0 (AD-44).
-int _days(CivilDate a, CivilDate b) {
+/// `days([a, b]) = b − a + 1` if `a ≤ b`, else 0 (AD-44): inclusive
+/// civil days.
+int civilDaySpan(CivilDate a, CivilDate b) {
   final diff = parseCivilDay(b).difference(parseCivilDay(a)).inDays;
   return diff < 0 ? 0 : diff + 1;
 }

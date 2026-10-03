@@ -6,17 +6,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/data/repositories/firestore_fcm_token_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
+import 'package:learning_tracker/features/notifications/data/parent_push_receiver.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_celebration.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
     show incomingTutorGrantsProvider;
+import 'package:learning_tracker/features/tutoring/presentation/widgets/tutor_access_ended_listener.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Computes the rendered height of a context banner / the persistent
@@ -64,6 +68,52 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   // signed-in session rather than on every rebuild. Reset on sign-out so a
   // later sign-in re-triggers it — mirrors `_didJumpToSettings` below.
   bool _autoSelectRan = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // DNI-515 (AC-1): a tapped tutor-change push — queued by the notification
+    // tap handler, including the tap that launched the app — opens that
+    // learner's Change history. fireImmediately picks up a launch tap queued
+    // before this shell existed; the open runs after the frame.
+    ref.listenManual<Object?>(pendingParentPushTapProvider, (_, tap) {
+      if (tap == null) return;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => unawaited(_openPendingParentPushTap()),
+      );
+    }, fireImmediately: true);
+  }
+
+  /// Opens the queued tutor-change push target only in the owning account,
+  /// in an own (not tutored) session, with that learner selected. The
+  /// Change history route still runs its own-session, child-profile and
+  /// parent PIN guards — the tap never bypasses or pre-authenticates them.
+  Future<void> _openPendingParentPushTap() async {
+    if (!mounted) return;
+    final tap = ref.read(pendingParentPushTapProvider.notifier).take();
+    if (tap == null) return;
+    String? ownerUid;
+    try {
+      ownerUid = (await ref.read(currentFcmTokenOwnerProvider.future))?.uid;
+    } on Object catch (e, stack) {
+      AppLogger.instance.warning(
+        event: 'parent_push_tap_owner_failed',
+        exception: e,
+        stackTrace: stack,
+      );
+    }
+    if (!mounted) return;
+    final opens = tap.opensHistory(
+      currentOwnerUid: ownerUid,
+      selectedProfileId: ref.read(selectedProfileIdProvider),
+      isTutoredSession: ref.read(activeTutoredProfileSelectionProvider) != null,
+    );
+    if (!opens) {
+      AppLogger.instance.info(event: 'parent_push_tap_not_opened');
+      return;
+    }
+    unawaited(ref.read(routerProvider).push(const ChangeHistoryRoute()));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -155,6 +205,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       _autoSelectRan = false;
     }
 
+    ref.watch(profileAnalyticsIdentityProvider);
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final profiles = profilesAsync.asData?.value ?? <LearnerProfileEntity>[];
@@ -207,172 +258,176 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     );
     final offlineBannerVisible = isCloudBorn && !isOnline;
 
-    return SacredTimeLockOverlay(
-      // DNI-474 AC-4: celebrates newly completed units (engine-derived)
-      // while the app is in the foreground.
-      child: SiyumCelebrationListener(
-        child: AutoTabsScaffold(
-          routes: const [
-            DashboardRoute(),
-            LearningRoute(),
-            ProgressRoute(),
-            SettingsRoute(),
-          ],
-          // Epic 20.8: top offline banner — cloud-born only, tier-gated
-          // inside the widget so local-born users never see it.
-          // W6.15: When the user has active tutor grants, we show a subtle
-          // tutor-mode indicator alongside the offline banner.
-          appBarBuilder: (innerContext, tabsRouter) {
-            // Profile-less users land on the Settings tab (see hasNoOwnProfiles
-            // above). Scheduled here because AutoTabsScaffold hands us a valid
-            // tabsRouter; doing it from this State's own context would throw.
-            if (hasNoOwnProfiles && !_didJumpToSettings) {
-              _didJumpToSettings = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (tabsRouter.activeIndex != 3) tabsRouter.setActiveIndex(3);
-              });
-            }
-            final topInset = MediaQuery.of(innerContext).padding.top;
-            final textScaler = MediaQuery.textScalerOf(innerContext);
-            final bannerHeight = offlineBannerVisible ? 32.0 : 0.0;
-            // AUD-app-01: content-driven, textScaler-aware height (see
-            // _contextBarHeight) — no longer a literal magic-number `height:`.
-            final tutorHeight = hasActiveTutoredProfiles
-                ? _contextBarHeight(textScaler, fontSizeSp: 11)
-                : 0.0;
-            // WS4.banner: child-view bar height — only when no tutor bar.
-            final childViewHeight = isViewingChildProfile
-                ? _contextBarHeight(textScaler, fontSizeSp: 11)
-                : 0.0;
-            // §5 persistent switcher (feedback_profile_switcher_top): the
-            // profile/role switcher must be present at the TOP of EVERY context.
-            // The tutor and parent-child contexts have their own tappable bars
-            // (both open the switcher); the DEFAULT own-profile context — shown
-            // when neither of those bars is — previously had NO switcher at all.
-            // This slim, always-present identity bar is that switcher entry.
-            final showSwitcherBar =
-                !hasActiveTutoredProfiles && !isViewingChildProfile;
-            final switcherHeight = showSwitcherBar
-                ? _contextBarHeight(textScaler, fontSizeSp: 14)
-                : 0.0;
-            return PreferredSize(
-              preferredSize: Size.fromHeight(
-                topInset +
-                    bannerHeight +
-                    tutorHeight +
-                    childViewHeight +
-                    switcherHeight,
-              ),
-              // Bug 7: force the LIGHT theme around the shell's top bars. Under
-              // `ThemeMode.system` on a dark-mode device the ambient theme is dark,
-              // which flipped the switcher bar to a dark-navy, low-contrast strip
-              // while the rest of the (light-only) app stayed light. Pinning the
-              // light theme keeps the bar readable on every tab.
-              child: Theme(
-                data: AppTheme.lightTheme(),
-                child: Padding(
-                  // Push our custom appBar content below the system status bar.
-                  // Unlike Material's AppBar, raw PreferredSize doesn't inset
-                  // automatically, so we add the inset ourselves.
-                  padding: EdgeInsets.only(top: topInset),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      OfflineTopBanner(visible: offlineBannerVisible),
-                      // Tutor mode bar — tappable to open profile switcher.
-                      if (hasActiveTutoredProfiles)
-                        const TutorModeIndicatorBar(),
-                      // WS4.banner (DEC-25): "Viewing [child]" banner for the
-                      // parent/child-mode path. Only shown when a child profile is
-                      // active and no tutor bar is already displayed.
-                      // Now tappable → profile switcher (Fix 1).
-                      // Default context (own profile, not tutor, not parent-mode):
-                      // the always-present profile/role switcher bar.
-                      if (showSwitcherBar) const ProfileSwitcherBar(),
-                      if (isViewingChildProfile && viewingChildName != null)
-                        ChildViewBanner(
-                          childName: viewingChildName,
-                          profiles: profiles,
-                          onExit: () {
-                            // Exiting parent mode drops the elevation only — the
-                            // CHILD profile stays active and we land back in the
-                            // child's learning view. Locking the PIN guard clears
-                            // the parent-auth flag (via onSessionLocked), so the
-                            // banner disappears and the next parent-gated action
-                            // re-prompts. We do NOT switch to the adult profile;
-                            // the adult's own profile is reached via the switcher.
-                            ref.read(routerProvider).pinGuard.lock();
-                            innerContext.router.replaceAll([
-                              const AppShellRoute(),
-                            ]);
-                          },
-                        ),
-                    ],
-                  ),
+    // DNI-512: the one revoked tutored-session outcome — notice, cleared
+    // learner state, back to the roster — wherever the tutor was.
+    return TutorAccessEndedListener(
+      child: SacredTimeLockOverlay(
+        // DNI-474 AC-4: celebrates newly completed units (engine-derived)
+        // while the app is in the foreground.
+        child: SiyumCelebrationListener(
+          child: AutoTabsScaffold(
+            routes: const [
+              DashboardRoute(),
+              LearningRoute(),
+              ProgressRoute(),
+              SettingsRoute(),
+            ],
+            // Epic 20.8: top offline banner — cloud-born only, tier-gated
+            // inside the widget so local-born users never see it.
+            // W6.15: When the user has active tutor grants, we show a subtle
+            // tutor-mode indicator alongside the offline banner.
+            appBarBuilder: (innerContext, tabsRouter) {
+              // Profile-less users land on the Settings tab (see hasNoOwnProfiles
+              // above). Scheduled here because AutoTabsScaffold hands us a valid
+              // tabsRouter; doing it from this State's own context would throw.
+              if (hasNoOwnProfiles && !_didJumpToSettings) {
+                _didJumpToSettings = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  if (tabsRouter.activeIndex != 3) tabsRouter.setActiveIndex(3);
+                });
+              }
+              final topInset = MediaQuery.of(innerContext).padding.top;
+              final textScaler = MediaQuery.textScalerOf(innerContext);
+              final bannerHeight = offlineBannerVisible ? 32.0 : 0.0;
+              // AUD-app-01: content-driven, textScaler-aware height (see
+              // _contextBarHeight) — no longer a literal magic-number `height:`.
+              final tutorHeight = hasActiveTutoredProfiles
+                  ? _contextBarHeight(textScaler, fontSizeSp: 11)
+                  : 0.0;
+              // WS4.banner: child-view bar height — only when no tutor bar.
+              final childViewHeight = isViewingChildProfile
+                  ? _contextBarHeight(textScaler, fontSizeSp: 11)
+                  : 0.0;
+              // §5 persistent switcher (feedback_profile_switcher_top): the
+              // profile/role switcher must be present at the TOP of EVERY context.
+              // The tutor and parent-child contexts have their own tappable bars
+              // (both open the switcher); the DEFAULT own-profile context — shown
+              // when neither of those bars is — previously had NO switcher at all.
+              // This slim, always-present identity bar is that switcher entry.
+              final showSwitcherBar =
+                  !hasActiveTutoredProfiles && !isViewingChildProfile;
+              final switcherHeight = showSwitcherBar
+                  ? _contextBarHeight(textScaler, fontSizeSp: 14)
+                  : 0.0;
+              return PreferredSize(
+                preferredSize: Size.fromHeight(
+                  topInset +
+                      bannerHeight +
+                      tutorHeight +
+                      childViewHeight +
+                      switcherHeight,
                 ),
-              ),
-            );
-          },
-          bottomNavigationBuilder: (context, tabsRouter) {
-            // Parent mode (own child, PIN-elevated) navigates via the
-            // ParentSettingsScreen rows, so it has no bottom nav. The TUTOR
-            // talmid view, by contrast, is the full parent-equivalent app and
-            // needs the standard tabs (Dashboard/Learn/Progress/Settings) to
-            // move between the talmid's surfaces.
-            if (parentModeActive) {
-              return const SizedBox.shrink();
-            }
-            final l10n = AppLocalizations.of(context)!;
-            final items = [
-              (
-                icon: Icons.space_dashboard_rounded,
-                label: l10n.tabBarDashboard,
-              ),
-              (icon: Icons.menu_book_rounded, label: l10n.tabBarLearn),
-              (icon: Icons.auto_graph_rounded, label: l10n.tabBarProgress),
-              (icon: Icons.settings_rounded, label: l10n.tabBarSettings),
-            ];
-            return DecoratedBox(
-              decoration: BoxDecoration(
-                // brandCreamCard (not Colors.white): run-9 audit — this bar
-                // was hardcoded white while its siblings (navBarShadow,
-                // navSelectedBlue, navUnselectedText) were already migrated to
-                // brightness-aware tokens, leaving a stubbornly light bar under
-                // every dark screen (5554, 5562, 5564).
-                color: context.colors.brandCreamCard,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: context.colors.navBarShadow,
-                    blurRadius: 18,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                  child: Row(
-                    children: [
-                      for (var index = 0; index < items.length; index++)
-                        Expanded(
-                          child: _ShellNavItem(
-                            icon: items[index].icon,
-                            label: items[index].label,
-                            selected: tabsRouter.activeIndex == index,
-                            onTap: () => tabsRouter.setActiveIndex(index),
+                // Bug 7: force the LIGHT theme around the shell's top bars. Under
+                // `ThemeMode.system` on a dark-mode device the ambient theme is dark,
+                // which flipped the switcher bar to a dark-navy, low-contrast strip
+                // while the rest of the (light-only) app stayed light. Pinning the
+                // light theme keeps the bar readable on every tab.
+                child: Theme(
+                  data: AppTheme.lightTheme(),
+                  child: Padding(
+                    // Push our custom appBar content below the system status bar.
+                    // Unlike Material's AppBar, raw PreferredSize doesn't inset
+                    // automatically, so we add the inset ourselves.
+                    padding: EdgeInsets.only(top: topInset),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OfflineTopBanner(visible: offlineBannerVisible),
+                        // Tutor mode bar — tappable to open profile switcher.
+                        if (hasActiveTutoredProfiles)
+                          const TutorModeIndicatorBar(),
+                        // WS4.banner (DEC-25): "Viewing [child]" banner for the
+                        // parent/child-mode path. Only shown when a child profile is
+                        // active and no tutor bar is already displayed.
+                        // Now tappable → profile switcher (Fix 1).
+                        // Default context (own profile, not tutor, not parent-mode):
+                        // the always-present profile/role switcher bar.
+                        if (showSwitcherBar) const ProfileSwitcherBar(),
+                        if (isViewingChildProfile && viewingChildName != null)
+                          ChildViewBanner(
+                            childName: viewingChildName,
+                            profiles: profiles,
+                            onExit: () {
+                              // Exiting parent mode drops the elevation only — the
+                              // CHILD profile stays active and we land back in the
+                              // child's learning view. Locking the PIN guard clears
+                              // the parent-auth flag (via onSessionLocked), so the
+                              // banner disappears and the next parent-gated action
+                              // re-prompts. We do NOT switch to the adult profile;
+                              // the adult's own profile is reached via the switcher.
+                              ref.read(routerProvider).pinGuard.lock();
+                              innerContext.router.replaceAll([
+                                const AppShellRoute(),
+                              ]);
+                            },
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+            bottomNavigationBuilder: (context, tabsRouter) {
+              // Parent mode (own child, PIN-elevated) navigates via the
+              // ParentSettingsScreen rows, so it has no bottom nav. The TUTOR
+              // talmid view, by contrast, is the full parent-equivalent app and
+              // needs the standard tabs (Dashboard/Learn/Progress/Settings) to
+              // move between the talmid's surfaces.
+              if (parentModeActive) {
+                return const SizedBox.shrink();
+              }
+              final l10n = AppLocalizations.of(context)!;
+              final items = [
+                (
+                  icon: Icons.space_dashboard_rounded,
+                  label: l10n.tabBarDashboard,
+                ),
+                (icon: Icons.menu_book_rounded, label: l10n.tabBarLearn),
+                (icon: Icons.auto_graph_rounded, label: l10n.tabBarProgress),
+                (icon: Icons.settings_rounded, label: l10n.tabBarSettings),
+              ];
+              return DecoratedBox(
+                decoration: BoxDecoration(
+                  // brandCreamCard (not Colors.white): run-9 audit — this bar
+                  // was hardcoded white while its siblings (navBarShadow,
+                  // navSelectedBlue, navUnselectedText) were already migrated to
+                  // brightness-aware tokens, leaving a stubbornly light bar under
+                  // every dark screen (5554, 5562, 5564).
+                  color: context.colors.brandCreamCard,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: context.colors.navBarShadow,
+                      blurRadius: 18,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    child: Row(
+                      children: [
+                        for (var index = 0; index < items.length; index++)
+                          Expanded(
+                            child: _ShellNavItem(
+                              icon: items[index].icon,
+                              label: items[index].label,
+                              selected: tabsRouter.activeIndex == index,
+                              onTap: () => tabsRouter.setActiveIndex(index),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -835,19 +890,24 @@ class TutorModeIndicatorBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    // Bug 11: name the talmid being managed in the banner itself — not just a
-    // bare "Tutor mode". The active profile in a tutored session resolves to the
-    // talmid's synthetic mirror, so its displayName is the child's name. While
-    // the mirror is still resolving (name null/empty), fall back to the bare
-    // "Tutor mode" label so the banner is never blank.
-    final talmidName = ref
-        .watch(activeProfileProvider)
-        .asData
-        ?.value
-        ?.displayName
-        .trim();
-    final label = (talmidName != null && talmidName.isNotEmpty)
-        ? l10n.tutorModeIndicatorNamed(talmidName)
+    // Story 4.2 (DNI-510, AC-2, UX-DR-38): "Tutor mode · {tutor name}" — the
+    // tutor's own profile name, on every surface of the session — with
+    // *Switch*. The talmid is named on the surfaces themselves. While the
+    // name is unknown, fall back to the bare "Tutor mode" so the banner is
+    // never blank.
+    final selection = ref.watch(activeTutoredProfileSelectionProvider);
+    final tutorName = selection == null
+        ? null
+        : ref
+              .watch(profileListStreamProvider)
+              .asData
+              ?.value
+              .where((p) => p.profileId == selection.tutorOwnProfileId)
+              .firstOrNull
+              ?.displayName
+              .trim();
+    final label = (tutorName != null && tutorName.isNotEmpty)
+        ? l10n.tutorModeIndicatorNamed(tutorName)
         : l10n.tutorModeIndicator;
     return Container(
       // AUD-app-01: no literal `height:` — the Exit control below is floored
@@ -873,6 +933,32 @@ class TutorModeIndicatorBar extends ConsumerWidget {
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          // UX-DR-38: *Switch* opens the profile switcher (≥48dp target).
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              key: const Key('tutorModeIndicatorBarSwitch'),
+              onTap: () => showProfileSwitcherSheet(context),
+              borderRadius: BorderRadius.circular(4),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: kMinInteractiveDimension,
+                  minHeight: kMinInteractiveDimension,
+                ),
+                child: Center(
+                  child: Text(
+                    l10n.tutorModeSwitch,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

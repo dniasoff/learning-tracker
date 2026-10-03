@@ -294,8 +294,8 @@ String _$previouslySkippedRefsHash() =>
 /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
 /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
 /// them out. Never persisted; it recomputes whenever the learner state
-/// changes. The erev planned list of an upcoming locked day is this
-/// provider for that date.
+/// changes. The erev planned lists of the upcoming locked days are
+/// [watchPlannedDaysAfterToday] for those dates (DNI-504).
 
 @ProviderFor(plannedTasksForDate)
 final plannedTasksForDateProvider = PlannedTasksForDateFamily._();
@@ -304,8 +304,8 @@ final plannedTasksForDateProvider = PlannedTasksForDateFamily._();
 /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
 /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
 /// them out. Never persisted; it recomputes whenever the learner state
-/// changes. The erev planned list of an upcoming locked day is this
-/// provider for that date.
+/// changes. The erev planned lists of the upcoming locked days are
+/// [watchPlannedDaysAfterToday] for those dates (DNI-504).
 
 final class PlannedTasksForDateProvider
     extends
@@ -319,8 +319,8 @@ final class PlannedTasksForDateProvider
   /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
   /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
   /// them out. Never persisted; it recomputes whenever the learner state
-  /// changes. The erev planned list of an upcoming locked day is this
-  /// provider for that date.
+  /// changes. The erev planned lists of the upcoming locked days are
+  /// [watchPlannedDaysAfterToday] for those dates (DNI-504).
   PlannedTasksForDateProvider._({
     required PlannedTasksForDateFamily super.from,
     required String super.argument,
@@ -366,14 +366,14 @@ final class PlannedTasksForDateProvider
 }
 
 String _$plannedTasksForDateHash() =>
-    r'76d916a3f3357159b40262a1ba9818f0a8b88d75';
+    r'3afea2a0783df3cebd3f544ce8e7851b9bae654b';
 
 /// The planner's task list for civil [date] (`YYYY-MM-DD`), evaluated live
 /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
 /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
 /// them out. Never persisted; it recomputes whenever the learner state
-/// changes. The erev planned list of an upcoming locked day is this
-/// provider for that date.
+/// changes. The erev planned lists of the upcoming locked days are
+/// [watchPlannedDaysAfterToday] for those dates (DNI-504).
 
 final class PlannedTasksForDateFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<DailyTask>>, String> {
@@ -390,8 +390,8 @@ final class PlannedTasksForDateFamily extends $Family
   /// over the active learner's current `LearnerState` (AD-49, DNI-477): new
   /// learning and calendar days, then reviews, as [buildPlannedTasks] lays
   /// them out. Never persisted; it recomputes whenever the learner state
-  /// changes. The erev planned list of an upcoming locked day is this
-  /// provider for that date.
+  /// changes. The erev planned lists of the upcoming locked days are
+  /// [watchPlannedDaysAfterToday] for those dates (DNI-504).
 
   PlannedTasksForDateProvider call(String date) =>
       PlannedTasksForDateProvider._(argument: date, from: this);

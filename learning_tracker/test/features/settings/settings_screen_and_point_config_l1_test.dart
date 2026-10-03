@@ -41,6 +41,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -147,6 +148,22 @@ LearnerProfileEntity _adultProfile({
 }
 
 /// AUD-tutoring-08: a pending tutor-invite grant addressed to this tutor.
+TutorGrant _activeGrant({required String grantId}) {
+  final now = DateTime.utc(2026, 1, 1);
+  return TutorGrant.fromDoc(
+    TutorGrantDoc(
+      grantId: grantId,
+      parentUid: 'parent-uid-$grantId',
+      childProfileId: 'child-$grantId',
+      tutorEmail: 'tutor@example.com',
+      state: TutorGrantState.active,
+      invitedAt: now,
+      updatedAt: now,
+      childName: 'Talmid $grantId',
+    ),
+  );
+}
+
 TutorGrant _pendingInviteGrant({required String grantId}) {
   final now = DateTime.utc(2026, 1, 1);
   final doc = TutorGrantDoc(
@@ -257,6 +274,7 @@ Widget _buildSettings({
   TutorPermissions tutorPerms = const TutorPermissions(),
   Locale locale = const Locale('en'),
   List<TutorGrant> pendingInvites = const [],
+  List<TutorGrant> activeGrants = const [],
   List<Override> extraOverrides = const [],
 }) {
   final profile = profileMode == 'child'
@@ -290,7 +308,7 @@ Widget _buildSettings({
         isTutored ? tutorPerms : null,
       ),
       incomingTutorGrantsProvider.overrideWith(
-        (ref) => Future<List<TutorGrant>>.value([]),
+        (ref) => Future<List<TutorGrant>>.value(activeGrants),
       ),
       pendingTutorInvitesProvider.overrideWith(
         (ref) => Future<List<TutorGrant>>.value(pendingInvites),
@@ -742,6 +760,68 @@ void main() {
         await tester.pump(Duration.zero);
       },
     );
+
+    testWidgets('DNI-511: an active tutor reaches My talmidim from Settings', (
+      tester,
+    ) async {
+      final db = await _dbWithAdultProfile();
+      addTearDown(db.close);
+
+      await tester.pumpWidget(
+        _buildSettings(
+          db: db,
+          auth: auth,
+          router: router,
+          activeGrants: [_activeGrant(grantId: 'g1')],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final entry = find.byKey(const Key('settingsMyTalmidim'));
+      await tester.ensureVisible(entry);
+      await tester.pump();
+      expect(
+        find.descendant(of: entry, matching: find.text('My talmidim')),
+        findsOneWidget,
+      );
+      await tester.tap(entry);
+      await tester.pump();
+
+      final pushed = verify(
+        () => router.push<Object?>(
+          captureAny(),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).captured;
+      expect(pushed.single, isA<MyTalmidimRoute>());
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('DNI-511: no My talmidim entry without an active grant', (
+      tester,
+    ) async {
+      final db = await _dbWithAdultProfile();
+      addTearDown(db.close);
+
+      await tester.pumpWidget(
+        _buildSettings(
+          db: db,
+          auth: auth,
+          router: router,
+          pendingInvites: [_pendingInviteGrant(grantId: 'g0')],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byKey(const Key('settingsMyTalmidim')), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
 
     testWidgets(
       'AUD-tutoring-08: no "View all" row when the roster fits the cap',

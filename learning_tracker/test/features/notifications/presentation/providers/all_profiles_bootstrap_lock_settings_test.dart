@@ -75,6 +75,19 @@ class _RecordingNotificationGateway implements NotificationGateway {
   @override
   Future<void> cancelStreakAlertForProfile(String profileId) async {}
 
+  // DNI-508: the catch-up reminder API (unused here).
+  @override
+  Future<void> scheduleCatchUpReminder({
+    required int id,
+    required String profileId,
+    required DateTime fireAtUtc,
+    required String title,
+    required String body,
+  }) async {}
+
+  @override
+  Future<void> cancelCatchUpReminder(int id) async {}
+
   @override
   Future<bool> initialize({
     void Function(String? payload)? onNotificationTap,
@@ -110,6 +123,7 @@ class _PredicateStreakService implements StreakAlertService {
   Future<StreakAlertOutcome> evaluate({
     required String curriculumId,
     required CurriculumStreak? streak,
+    LearnerState? state,
     required LearnerSettingsHistory settingsHistory,
     required int hour,
     required int minute,

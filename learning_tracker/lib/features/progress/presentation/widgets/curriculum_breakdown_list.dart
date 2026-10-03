@@ -35,6 +35,7 @@ class CurriculumBreakdownList extends StatefulWidget {
     this.physics,
     this.padding,
     this.onLeafTap,
+    this.onExpansionChanged,
   });
 
   final List<CurriculumCompletionSummary> summaries;
@@ -44,6 +45,12 @@ class CurriculumBreakdownList extends StatefulWidget {
   /// is tapped — the Mishna-history entry point (Story 1.13). Null keeps
   /// leaf rows inert.
   final LeafTapCallback? onLeafTap;
+
+  /// Called when a curriculum card is expanded (`true`) or collapsed
+  /// (`false`). The Lifetime screen uses it to know which curriculum the
+  /// user is looking at (Story 5.2's Report entry). Null ignores it.
+  final void Function(CurriculumId curriculum, bool expanded)?
+  onExpansionChanged;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
   final EdgeInsetsGeometry? padding;
@@ -75,13 +82,17 @@ class _CurriculumBreakdownListState extends State<CurriculumBreakdownList> {
           l10n: l10n,
           showProvenance: widget.showProvenance,
           onLeafTap: widget.onLeafTap,
-          onExpandToggle: () => setState(() {
-            if (_expanded.contains(summary.curriculumId)) {
-              _expanded.remove(summary.curriculumId);
-            } else {
-              _expanded.add(summary.curriculumId);
-            }
-          }),
+          onExpandToggle: () {
+            final expanded = !_expanded.contains(summary.curriculumId);
+            setState(() {
+              if (expanded) {
+                _expanded.add(summary.curriculumId);
+              } else {
+                _expanded.remove(summary.curriculumId);
+              }
+            });
+            widget.onExpansionChanged?.call(summary.curriculumId, expanded);
+          },
           onTreeExpandToggle: (key, isExpanded) => setState(() {
             _treeExpanded[key] = isExpanded;
           }),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -5,12 +7,16 @@ import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/own_session_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
+import 'package:learning_tracker/features/notifications/data/fcm_parent_push_service.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_time_location_access_provider.dart';
@@ -50,6 +56,38 @@ final routerProvider = Provider<AppRouter>((ref) {
       // resolve it so the child-mode-gated parent-management routes open
       // for tutors (TUT-02/TUT-06).
       getActiveProfileId: () => ref.read(activeProfileIdProvider),
+      isTutoredSession: () =>
+          ref.read(activeTutoredProfileSelectionProvider) != null,
+    ),
+    parentSessionGuard: ParentSessionGuard(
+      // listen (not read) keeps the auto-dispose session provider alive
+      // until its future resolves.
+      isParentSession: () async {
+        final sub = ref.listen(parentSessionProvider.future, (_, _) {});
+        try {
+          return await sub.read();
+        } finally {
+          sub.close();
+        }
+      },
+    ),
+    // Story 4.2 (DNI-510, AC-2): the shared sub-track forms and ground
+    // picker open for a parent session or a tutor in tutor mode.
+    subTrackEditorGuard: ParentSessionGuard(
+      isParentSession: () async {
+        if (ref.read(activeTutoredProfileSelectionProvider) != null) {
+          return true;
+        }
+        final sub = ref.listen(parentSessionProvider.future, (_, _) {});
+        try {
+          return await sub.read();
+        } finally {
+          sub.close();
+        }
+      },
+    ),
+    // DNI-513: parent-only views refuse a tutored session.
+    ownSessionGuard: OwnSessionGuard(
       isTutoredSession: () =>
           ref.read(activeTutoredProfileSelectionProvider) != null,
     ),
@@ -117,6 +155,18 @@ final routerProvider = Provider<AppRouter>((ref) {
         // If a tutored session was active, exit it on lock.
         if (ref.read(activeTutoredProfileSelectionProvider) != null) {
           ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+        }
+      },
+      // DNI-515 (AD-39): a parent unlock registers this install for tutor
+      // change pushes; every lock clears the local parent-session marker at
+      // once and then deletes the install's token. Never in a tutored session.
+      onParentSessionChanged: (profileId) {
+        final push = ref.read(parentPushServiceProvider);
+        if (push == null) return;
+        if (profileId == null) {
+          unawaited(push.onParentLocked());
+        } else if (ref.read(activeTutoredProfileSelectionProvider) == null) {
+          unawaited(push.onParentUnlocked(profileId));
         }
       },
     ),

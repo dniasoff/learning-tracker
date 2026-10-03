@@ -17,6 +17,7 @@ import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
@@ -79,6 +80,9 @@ final tutorLearningCommandsProvider = FutureProvider<TutorLearningCommands?>((
   final events = await ref.watch(learningEventRepositoryProvider.future);
   if (preflight == null || events == null) return null;
   final corpora = ref.listen(corporaProvider.future, (_, _) {});
+  // Listened, not awaited: an unavailable sub-track repository makes only
+  // the sub-track commands answer onlineRequired, never captures.
+  final subTracks = ref.listen(subTrackRepositoryProvider.future, (_, _) {});
   final commands = TutorLearningCommands(
     selection: selection,
     service: ref.watch(tutorWriteServiceProvider),
@@ -92,6 +96,18 @@ final tutorLearningCommandsProvider = FutureProvider<TutorLearningCommands?>((
     corpus: (curriculumId) async => (await corpora.read())[curriculumId],
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
+    // Story 4.2 (DNI-510): the talmid's complete sub-track read; a read
+    // with undecodable rows is unavailable (AD-35 complete inputs).
+    subTracks: () async {
+      final repository = await subTracks.read();
+      if (repository == null) return null;
+      final ready = await repository
+          .watchAll(scope)
+          .firstWhere((r) => r is CompleteReadReady<SubTrack>);
+      final complete = ready as CompleteReadReady<SubTrack>;
+      return complete.isClean ? complete.items : null;
+    },
+    ledger: ref.watch(tutorGovernedActionLedgerProvider),
   );
   ref.onDispose(commands.dispose);
   return commands;

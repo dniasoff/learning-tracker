@@ -70,8 +70,9 @@ void main() {
       },
     );
 
-    test('a sub-track source or a catch-up capture is refused before any '
-        'call (Epic 1 tutor scope)', () async {
+    test('a before-tracking sub-track capture or a catch-up capture is '
+        'refused before any call (Story 4.1 tutor scope; a dated sub-track '
+        'capture is Story 4.2)', () async {
       final h = TutorHarness();
       addTearDown(h.dispose);
 
@@ -80,7 +81,7 @@ void main() {
           curriculumId: _curriculum,
           refs: const ['Mishnah Berakhot 2:1'],
           source: engineUlid(9),
-          dateState: DateState.dated,
+          dateState: DateState.beforeTracking,
         ),
         isA<CaptureRejected>(),
       );

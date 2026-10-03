@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
@@ -138,9 +139,11 @@ class _ParentTrackManagementScreenState
               bottom: 96,
             ),
             children: [
+              // DNI-495: reports a sub-track change refused at sync.
+              const SubTrackSyncRejectionListener(),
               _buildActiveHeader(context, activeTracks.length),
-              ...activeTracks.map(
-                (track) => Padding(
+              for (final track in activeTracks) ...[
+                Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: LearningTrackCard(
                     track: track,
@@ -152,7 +155,10 @@ class _ParentTrackManagementScreenState
                         : () => _showDeleteDialog(track),
                   ),
                 ),
-              ),
+                // DNI-495: the parent-only Sub-tracks group under each
+                // main-track card (absent on calendar-program curricula).
+                SubTrackHubSection(curriculumId: track.curriculumId.storageKey),
+              ],
             ],
           );
         },

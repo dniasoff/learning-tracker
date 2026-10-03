@@ -11,6 +11,7 @@ import 'package:learning_tracker/features/tutoring/domain/services/tutor_notific
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_access_ended_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 
 // ── Repository provider ──────────────────────────────────────────────────────
@@ -104,7 +105,12 @@ final incomingTutorGrantsProvider = FutureProvider<List<TutorGrant>>((
         .read(activeTutoredProfileSelectionProvider)
         ?.grantId;
     if (activeGrantId != null && !cfGrantIds.contains(activeGrantId)) {
-      ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+      // DNI-512: the one revoked-session outcome (notice, cleared learner
+      // state, back to the roster). This list is the fresh source, so it is
+      // not re-read again.
+      ref
+          .read(tutorAccessEndedProvider.notifier)
+          .end(activeGrantId, refreshRoster: false);
     }
     return cfGrants;
   }

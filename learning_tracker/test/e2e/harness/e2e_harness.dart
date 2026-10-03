@@ -114,6 +114,7 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show ActiveProfileDocId, activeProfileDocIdProvider;
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -122,8 +123,11 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart'
     show magicLinkInitializationProvider;
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart'
+    show PendingFailure;
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
@@ -131,6 +135,11 @@ import 'package:learning_tracker/features/profiles/domain/services/pin_service.d
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart'
+    show subTrackPendingFailuresProvider;
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -796,6 +805,37 @@ class E2EHarness {
       streakMilestoneAnalyticsObserverProvider.overrideWith(
         (ref) => const Stream<void>.empty(),
       ),
+
+      // ── Learn-tab sub-track rows (DNI-501) ────────────────────────────────
+      // No headless journey seeds sub-tracks; resolving the learner scope
+      // for an empty section only leaves the device-account stream loading
+      // at teardown. A sub-track journey overrides this with its tracks.
+      activeSubTracksProvider.overrideWith(
+        (ref) => Stream.value(const <SubTrack>[]),
+      ),
+      // ── Manage tracks sub-track hub (DNI-495) ─────────────────────────────
+      // The hub section under each track card resolves the learner's
+      // commands (and so the learner scope) for an editor session. No
+      // headless journey edits sub-tracks; that resolution only leaves the
+      // device-account stream loading at teardown. A sub-track journey
+      // overrides this with a live editor session.
+      subTrackEditorSessionProvider.overrideWith((ref) async => false),
+      // The hub's refused-write listener and queued-lifecycle panel read
+      // the same learner scope; no journey queues a sub-track write.
+      subTrackPendingFailuresProvider.overrideWith(
+        (ref) => Stream.value(const <PendingFailure>[]),
+      ),
+      subTrackLifecycleSyncProvider.overrideWith(_NoSubTrackLifecycleSync.new),
+      // ── Dashboard / Learn forecast (DNI-502) ──────────────────────────────
+      // No headless journey seeds a learner state; resolving the learner
+      // scope for these sections only leaves the device-account stream
+      // loading at teardown. A forecast journey overrides these.
+      parentForecastProvider.overrideWith(
+        (ref) => const AsyncData(<CurriculumForecast>[]),
+      ),
+      learnerTodayProvider.overrideWith(
+        (ref) => const AsyncData(<CurriculumToday>[]),
+      ),
     ];
   }
 
@@ -831,4 +871,10 @@ final class _E2ECreatingDeviceSettingsSource
   @override
   Future<CreatingDeviceSettings> read() async =>
       const CreatingDeviceSettings(timeZone: 'UTC', inIsrael: false);
+}
+
+/// No queued sub-track lifecycle writes, without resolving a learner.
+class _NoSubTrackLifecycleSync extends SubTrackLifecycleSyncNotifier {
+  @override
+  Map<String, SubTrackLifecycleSync> build() => const {};
 }

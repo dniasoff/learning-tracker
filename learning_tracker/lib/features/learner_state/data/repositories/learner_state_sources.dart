@@ -19,3 +19,7 @@ export 'package:learning_tracker/data/firestore/learner_state_repository_provide
         learningWritePortProvider,
         oversizedGovernedWritePortProvider,
         subTrackRepositoryProvider;
+
+// Story 4.2a (DNI-523): the grant-scoped tutor read seam.
+export 'package:learning_tracker/data/firestore/tutor_scope_grant_providers.dart'
+    show isLearnerScopeAccessDenied, tutorScopeGrantSourceProvider;

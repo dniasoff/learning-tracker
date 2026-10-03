@@ -5,6 +5,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart'
     as ring;
+import 'package:learning_tracker/data/firestore/tutor_scope_grant_providers.dart'
+    as grants;
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 
 void main() {
@@ -25,5 +27,11 @@ void main() {
       oversizedGovernedWritePortProvider,
       same(ring.oversizedGovernedWritePortProvider),
     );
+    // Story 4.2a (DNI-523).
+    expect(
+      tutorScopeGrantSourceProvider,
+      same(grants.tutorScopeGrantSourceProvider),
+    );
+    expect(isLearnerScopeAccessDenied, same(grants.isLearnerScopeAccessDenied));
   });
 }

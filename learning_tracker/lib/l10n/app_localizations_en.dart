@@ -388,6 +388,97 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hiddenUntilEarned => 'Hidden until earned (surprise)';
 
   @override
+  String get shortfallCardGroundFallback => 'all its ground';
+
+  @override
+  String shortfallCardMessage(
+    String name,
+    String ground,
+    String month,
+    String count,
+    String unit,
+  ) {
+    return '$name may not reach $ground before $month. About $count $unit will return to home learning.';
+  }
+
+  @override
+  String shortfallCardView(String name) {
+    return 'View $name';
+  }
+
+  @override
+  String get onTrackBehindPace => 'Behind pace';
+
+  @override
+  String onTrackDailyTarget(String count, String unit) {
+    return 'Daily target: $count $unit/day';
+  }
+
+  @override
+  String get onTrackFinishUnknown => 'not enough recent learning to project';
+
+  @override
+  String get onTrackLoading => 'Loading pace status';
+
+  @override
+  String get onTrackOnTrack => 'On track';
+
+  @override
+  String onTrackProjectedFinish(String finish) {
+    return 'Projected finish: $finish';
+  }
+
+  @override
+  String onTrackProjectedFinishWithDeadline(String finish, String deadline) {
+    return 'Projected finish: $finish · deadline $deadline';
+  }
+
+  @override
+  String get onTrackTooEarly => 'Too early to tell';
+
+  @override
+  String get todayTargetAllCovered =>
+      'All covered — any extra learning is a bonus.';
+
+  @override
+  String get todayTargetGoalDone => 'Today\'s goal is done — wonderful!';
+
+  @override
+  String todayTargetLearntToday(String count) {
+    return '$count learnt today';
+  }
+
+  @override
+  String todayTargetLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Great pace! Only $count left to finish today\'s goal.',
+      one: 'Great pace! Only one left to finish today\'s goal.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String todayTargetProgress(String done, String target) {
+    return 'Today $done of $target done';
+  }
+
+  @override
+  String get todayTargetStart => 'Every step counts — let\'s begin!';
+
+  @override
+  String todayTargetStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-day streak',
+      one: '1-day streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get onboarding => 'Onboarding';
 
   @override
@@ -557,6 +648,133 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get language => 'Language';
+
+  @override
+  String get subTrackDetailCapacityTitle => 'Capacity vs Path';
+
+  @override
+  String subTrackDetailCapacityValue(int path, int capacity) {
+    return '$path / $capacity';
+  }
+
+  @override
+  String subTrackDetailCapacityCaption(int path, int capacity) {
+    return 'Remaining path: $path · Total capacity: $capacity';
+  }
+
+  @override
+  String get subTrackDetailNoShortfall => 'No shortfall';
+
+  @override
+  String subTrackDetailShortfall(int count) {
+    return 'Shortfall: $count';
+  }
+
+  @override
+  String get subTrackDetailGroundTitle => 'Ground (in order)';
+
+  @override
+  String get subTrackDetailGroundEmpty => 'No ground yet';
+
+  @override
+  String subTrackDetailLearntOf(int learnt, int total) {
+    return '$learnt of $total learnt';
+  }
+
+  @override
+  String get subTrackDetailLearntAtHome => 'learnt at home';
+
+  @override
+  String subTrackDetailLearntAt(String source) {
+    return 'learnt at $source';
+  }
+
+  @override
+  String subTrackDetailInUse(String name) {
+    return '$name · In use';
+  }
+
+  @override
+  String get subTrackDetailTriComplete => 'complete';
+
+  @override
+  String subTrackDetailTriPartial(int learnt, int total) {
+    return 'partially learnt, $learnt of $total';
+  }
+
+  @override
+  String get subTrackDetailTriEmpty => 'not learnt';
+
+  @override
+  String get subTrackDetailOpenHistory => 'Open history';
+
+  @override
+  String subTrackDetailWindow(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String subTrackDetailWindowOpen(String start) {
+    return 'From $start';
+  }
+
+  @override
+  String get subTrackDetailUpNext => 'Up next';
+
+  @override
+  String get subTrackDetailAllTicked => 'All ground ticked';
+
+  @override
+  String subTrackDetailTicked(int count) {
+    return '$count ticked';
+  }
+
+  @override
+  String get subTrackDetailMoreOptions => 'More options';
+
+  @override
+  String get subTrackDetailEdit => 'Edit';
+
+  @override
+  String get subTrackDetailMoveUp => 'Move up';
+
+  @override
+  String get subTrackDetailMoveDown => 'Move down';
+
+  @override
+  String subTrackDetailRemoveFrom(String name) {
+    return 'Remove from $name';
+  }
+
+  @override
+  String subTrackDetailRemoveTitle(String node, String name) {
+    return 'Remove $node from $name?';
+  }
+
+  @override
+  String get subTrackDetailRemoveBody =>
+      'Learning already recorded is kept. Anything not yet learnt goes back to the main track unless another sub-track holds it.';
+
+  @override
+  String get subTrackDetailRemoveConfirm => 'Remove';
+
+  @override
+  String get subTrackDetailReorderFailed =>
+      'Couldn\'t save the new order. It\'s back as it was.';
+
+  @override
+  String get subTrackDetailRemoveFailed =>
+      'Couldn\'t remove it. The ground is back as it was.';
+
+  @override
+  String subTrackDetailDragHandle(String node) {
+    return 'Reorder $node';
+  }
+
+  @override
+  String subTrackDetailEntryActions(String node) {
+    return 'Actions for $node';
+  }
 
   @override
   String get switchProfile => 'Switch profile';
@@ -780,6 +998,126 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statActiveTracks => 'ACTIVE TRACKS';
+
+  @override
+  String subTrackLifecycleAddNextYear(String yearLabel) {
+    return 'Add next year ($yearLabel)';
+  }
+
+  @override
+  String subTrackLifecycleAddNextYearUsed(String yearLabel) {
+    return '$yearLabel already has a school-year sub-track';
+  }
+
+  @override
+  String subTrackLifecycleAddNextYearOutOfRange(String yearLabel) {
+    return '$yearLabel is past the years you can plan';
+  }
+
+  @override
+  String get subTrackLifecycleEndAction => 'End sub-track now';
+
+  @override
+  String get subTrackLifecycleDeleteAction => 'Delete track';
+
+  @override
+  String subTrackLifecycleDeleteTitle(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String get subTrackLifecycleDeleteBody =>
+      'Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.';
+
+  @override
+  String get subTrackLifecycleDeleteConfirm => 'Delete';
+
+  @override
+  String subTrackLifecycleEndTitle(String name) {
+    return 'End $name now?';
+  }
+
+  @override
+  String get subTrackLifecycleEndBody =>
+      'Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.';
+
+  @override
+  String get subTrackLifecycleEndConfirm => 'End sub-track';
+
+  @override
+  String subTrackLifecycleDeleted(String name) {
+    return '$name deleted';
+  }
+
+  @override
+  String subTrackLifecycleEnded(String name) {
+    return '$name ended';
+  }
+
+  @override
+  String get subTrackLifecycleActionFailed =>
+      'Couldn\'t save the change. Try again.';
+
+  @override
+  String subTrackLifecycleEndedGroup(int count) {
+    return 'Ended sub-tracks ($count)';
+  }
+
+  @override
+  String subTrackLifecycleEndedOn(String date) {
+    return 'Ended $date';
+  }
+
+  @override
+  String subTrackLifecycleEndedRowLabel(String name) {
+    return '$name, ended';
+  }
+
+  @override
+  String get subTrackLifecycleReadOnlyNote =>
+      'This sub-track has ended. It can\'t be changed.';
+
+  @override
+  String get subTrackLifecycleNextYearTitle => 'Next school year';
+
+  @override
+  String subTrackLifecycleNextYearSaved(String name, String yearLabel) {
+    return '$name added for $yearLabel';
+  }
+
+  @override
+  String subTrackLifecycleNextYearSourceEnded(String name) {
+    return '$name was ended or deleted, so next year wasn\'t added.';
+  }
+
+  @override
+  String get subTrackLifecycleQueued =>
+      'Saved on this device. It will sync when you\'re back online.';
+
+  @override
+  String subTrackLifecycleSyncAddNextYear(String name, String yearLabel) {
+    return 'Adding $name for $yearLabel';
+  }
+
+  @override
+  String subTrackLifecycleSyncDelete(String name) {
+    return 'Deleting $name';
+  }
+
+  @override
+  String subTrackLifecycleSyncEnd(String name) {
+    return 'Ending $name';
+  }
+
+  @override
+  String subTrackLifecycleSyncNotSaved(String action) {
+    return '$action: not saved';
+  }
+
+  @override
+  String subTrackLifecycleSyncWaiting(String action) {
+    return '$action: waiting to sync';
+  }
 
   @override
   String get progressChartsTile => 'Progress Charts';
@@ -1028,6 +1366,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get talmidChochomCaps => 'TALMID CHOCHOM';
+
+  @override
+  String get talmidimUnnamed => 'Talmid';
+
+  @override
+  String get talmidimTitle => 'My talmidim';
+
+  @override
+  String get talmidimAccessNote =>
+      'You see only learners whose parents gave you access.';
+
+  @override
+  String get talmidimEmpty =>
+      'No talmidim yet — a parent needs to give you access.';
+
+  @override
+  String talmidimTrackNext(String track, String position) {
+    return '$track: next $position';
+  }
+
+  @override
+  String talmidimTrackNoGround(String track) {
+    return '$track: no ground yet';
+  }
+
+  @override
+  String talmidimTrackAllRecorded(String track) {
+    return '$track: all ground recorded';
+  }
+
+  @override
+  String get talmidimLocked => 'Shabbos / Yom Tov';
+
+  @override
+  String get talmidimRowLoadFailed => 'Couldn\'t load this talmid\'s standing.';
+
+  @override
+  String get talmidimSelectPrompt => 'Choose a talmid to see his standing.';
+
+  @override
+  String talmidimOpen(String name) {
+    return 'Open $name';
+  }
 
   @override
   String get mainFocus => 'MAIN FOCUS';
@@ -1355,6 +1736,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorModeExit => 'Exit';
 
   @override
+  String get tutorModeSwitch => 'Switch';
+
+  @override
   String get tutoredEntryPermissionDenied =>
       'Access denied — the grant may have been revoked.';
 
@@ -1386,23 +1770,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get switchIntoChildConfirm => 'Switch in';
 
   @override
-  String get tutorCannotMarkLiveCompletion =>
-      'Tutors cannot mark live completions';
-
-  @override
-  String get tutorCaptureKeptNotCounted =>
-      'Kept, not counted — Shabbos / Yom Tov had started';
-
-  @override
-  String get tutorCaptureLearnerLocked => 'Shabbos / Yom Tov';
-
-  @override
-  String tutorCaptureNoEditAccess(String learner) {
-    return '$learner\'s parent hasn\'t given you editing access';
+  String tutorAccessEnded(String name) {
+    return 'Access to $name has ended.';
   }
 
   @override
-  String get tutorCaptureOnlineRequired => 'Online required';
+  String get tutorAccessEndedUnnamed => 'Access to this learner has ended.';
+
+  @override
+  String get tutorCannotMarkLiveCompletion =>
+      'Tutors cannot mark live completions';
 
   @override
   String get tutorWriteForbiddenTitle => 'Action not allowed';
@@ -1906,6 +2283,81 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get journeyEmptyBody =>
       'When you complete a masechta or sefer, it will be recorded here as a permanent milestone.';
+
+  @override
+  String changeHistoryUndoChangedSince(String field, String actor) {
+    return '$field — changed since by $actor';
+  }
+
+  @override
+  String changeHistoryUndoChangedSinceUnknown(String field) {
+    return '$field — changed since';
+  }
+
+  @override
+  String get changeHistoryUndoDone => 'Change undone';
+
+  @override
+  String get changeHistoryUndoFieldDeadline => 'Deadline';
+
+  @override
+  String get changeHistoryUndoFieldGoal => 'Goal';
+
+  @override
+  String get changeHistoryUndoFieldGround => 'Sub-track ground';
+
+  @override
+  String get changeHistoryUndoFieldName => 'Sub-track name';
+
+  @override
+  String get changeHistoryUndoFieldOrder => 'Learning order';
+
+  @override
+  String get changeHistoryUndoFieldProgram => 'Program';
+
+  @override
+  String get changeHistoryUndoFieldScope => 'Scope';
+
+  @override
+  String get changeHistoryUndoFieldSettings => 'Location and time zone';
+
+  @override
+  String get changeHistoryUndoFieldStages => 'Review stages';
+
+  @override
+  String get changeHistoryUndoFieldStudyDays => 'Study days';
+
+  @override
+  String get changeHistoryUndoFieldSubTrack => 'Sub-track';
+
+  @override
+  String get changeHistoryUndoFieldTrack => 'Track';
+
+  @override
+  String get changeHistoryUndoNotAllowed => 'This change can\'t be undone';
+
+  @override
+  String get changeHistoryUndoNotSaved => 'The undo couldn\'t be saved';
+
+  @override
+  String get changeHistoryUndoNothingToUndo =>
+      'Nothing to undo — changed since';
+
+  @override
+  String get changeHistoryUndoOnlineRequired => 'Online required';
+
+  @override
+  String changeHistoryUndoPartlyDone(String fields) {
+    return 'Undone, except: $fields';
+  }
+
+  @override
+  String changeHistoryUndoRevertedChange(String summary) {
+    return 'Reverted change: $summary';
+  }
+
+  @override
+  String get changeHistoryUndoUndoneTag => 'Undone';
 
   @override
   String get chartCumulativeProgress => 'Cumulative Progress';
@@ -2617,6 +3069,124 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allDoneForToday => 'All done for today!';
 
   @override
+  String groundHeldTagSemantics(String names) {
+    return 'Held by $names. Not on the home schedule.';
+  }
+
+  @override
+  String get groundPickerAddGround => 'Add ground';
+
+  @override
+  String groundPickerAlreadyIn(String name) {
+    return 'Already in $name';
+  }
+
+  @override
+  String get groundPickerAvailableOnly => 'Available only';
+
+  @override
+  String get groundPickerChazara => 'Chazara';
+
+  @override
+  String get groundPickerClose => 'Close';
+
+  @override
+  String groundPickerCollapse(String node) {
+    return 'Collapse $node';
+  }
+
+  @override
+  String groundPickerConfirm(int count, String unit, String name) {
+    return 'Add $count $unit to $name';
+  }
+
+  @override
+  String groundPickerConfirmEmpty(String name) {
+    return 'Add to $name';
+  }
+
+  @override
+  String groundPickerExpand(String node) {
+    return 'Expand $node';
+  }
+
+  @override
+  String get groundPickerFilterEmpty =>
+      'Everything here is already assigned or learnt.';
+
+  @override
+  String groundPickerInUse(String name) {
+    return '$name · In use';
+  }
+
+  @override
+  String get groundPickerLegendComplete => 'Complete';
+
+  @override
+  String get groundPickerLegendEmpty => 'Empty';
+
+  @override
+  String get groundPickerLegendPartial => 'Partial';
+
+  @override
+  String get groundPickerLoadError => 'Couldn\'t load the curriculum.';
+
+  @override
+  String groundPickerNoMatches(String query) {
+    return 'Nothing matches “$query”.';
+  }
+
+  @override
+  String get groundPickerNotSelected => 'Not selected';
+
+  @override
+  String get groundPickerOnlineRequired =>
+      'You\'re offline. Ground can be added once you\'re back online. Nothing was changed.';
+
+  @override
+  String get groundPickerPartlySelected => 'Partly selected';
+
+  @override
+  String get groundPickerProgressComplete => 'Complete';
+
+  @override
+  String get groundPickerProgressEmpty => 'Empty';
+
+  @override
+  String get groundPickerProgressPartial => 'Partial';
+
+  @override
+  String get groundPickerRejected =>
+      'Couldn\'t add the ground. Nothing was changed.';
+
+  @override
+  String get groundPickerReset => 'Reset changes';
+
+  @override
+  String groundPickerScheduleNote(String name) {
+    return 'They\'ll leave the home schedule while $name holds them.';
+  }
+
+  @override
+  String get groundPickerSearchHint => 'Search';
+
+  @override
+  String get groundPickerSelected => 'Selected';
+
+  @override
+  String groundPickerTitle(String name) {
+    return 'Add ground to $name';
+  }
+
+  @override
+  String get groundPickerUnavailable => 'Ground can\'t be added here.';
+
+  @override
+  String groundPickerUnitCount(int count, String unit) {
+    return '$count $unit';
+  }
+
+  @override
   String get mishnaHistoryActionChangeDate => 'Change date';
 
   @override
@@ -2708,6 +3278,165 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mishnaHistoryTitle => 'Mishna history';
 
   @override
+  String get reportBySource => 'By source';
+
+  @override
+  String reportCountWithUnit(String count, String unit) {
+    return '$count $unit';
+  }
+
+  @override
+  String get reportCurriculumLabel => 'Curriculum';
+
+  @override
+  String get reportDistinctLabel => 'Distinct';
+
+  @override
+  String reportDistinctSemantics(String count, String unit) {
+    return 'Distinct · $count $unit';
+  }
+
+  @override
+  String get reportEntry => 'Report';
+
+  @override
+  String get reportEntryTooltip => 'Open the lifetime report';
+
+  @override
+  String get reportGroupCollapseHint => 'Hide years';
+
+  @override
+  String get reportGroupExpandHint => 'Show years';
+
+  @override
+  String get reportGroupOngoing => 'ongoing';
+
+  @override
+  String get reportLearningEventsLabel => 'Learning events';
+
+  @override
+  String reportLearningEventsSemantics(String count) {
+    return 'Learning events · $count';
+  }
+
+  @override
+  String get reportLineEnded => 'Ended';
+
+  @override
+  String get reportLineInProgress => 'In progress';
+
+  @override
+  String reportOnTrackCalendarBehind(String count, String unit) {
+    return '$count $unit behind the calendar';
+  }
+
+  @override
+  String reportOnTrackDailyTarget(String count, String unit) {
+    return 'Daily target: $count $unit/day';
+  }
+
+  @override
+  String reportOnTrackFinish(String date) {
+    return 'Projected finish: $date';
+  }
+
+  @override
+  String get reportOnTrackFinishTooEarly =>
+      'Projected finish: too early to tell';
+
+  @override
+  String get reportOnTrackFinishUnknown =>
+      'Projected finish: not enough recent learning to project';
+
+  @override
+  String reportOnTrackShortfall(
+    String name,
+    String node,
+    String month,
+    String count,
+    String unit,
+  ) {
+    return '$name may not reach $node before $month. About $count $unit will return to home learning.';
+  }
+
+  @override
+  String reportOnTrackShortfallNoEnd(
+    String name,
+    String node,
+    String count,
+    String unit,
+  ) {
+    return '$name may not reach $node by the deadline. About $count $unit will return to home learning.';
+  }
+
+  @override
+  String get reportOnTrackStatusBehind => 'Behind pace';
+
+  @override
+  String get reportOnTrackStatusOnTrack => 'On track';
+
+  @override
+  String reportOnTrackStatusSemantics(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get reportOnTrackTitle => 'Goal status';
+
+  @override
+  String reportPaceEstimate(String rate) {
+    return '$rate / week estimate';
+  }
+
+  @override
+  String get reportPaceFootnote =>
+      'Before-tracking learning isn\'t counted in pace.';
+
+  @override
+  String reportPaceRate(String rate) {
+    return '$rate / week';
+  }
+
+  @override
+  String reportPaceSinceStart(String unit) {
+    return 'Since tracking started · $unit per week';
+  }
+
+  @override
+  String get reportPaceTitle => 'Per-source pace';
+
+  @override
+  String get reportPaceTooEarly => 'Too early to tell';
+
+  @override
+  String reportPaceTrailing(String days, String rate) {
+    return 'Last $days days: $rate / week';
+  }
+
+  @override
+  String get reportSchoolYears => 'School years';
+
+  @override
+  String get reportSourceBeforeTracking => 'Before tracking';
+
+  @override
+  String reportSourceCounts(String events, String distinct, String unit) {
+    return '$events learning events · $distinct $unit';
+  }
+
+  @override
+  String get reportSourceHome => 'Home';
+
+  @override
+  String get reportSourceUnknown => 'Ended sub-track';
+
+  @override
+  String get reportTitle => 'Lifetime report';
+
+  @override
+  String get reportUnitFallback => 'items';
+
+  @override
   String missedReview(int count) {
     return 'Missed review ($count)';
   }
@@ -2737,6 +3466,103 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get undoLabel => 'Undo';
+
+  @override
+  String subTrackHomeSectionTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sub-tracks',
+      one: '1 sub-track',
+    );
+    return 'Also learning · $_temp0';
+  }
+
+  @override
+  String subTrackHomeNext(String position) {
+    return 'Next: $position';
+  }
+
+  @override
+  String get subTrackHomeNoGround => 'No ground yet';
+
+  @override
+  String get subTrackHomeAllRecorded => 'All ground recorded';
+
+  @override
+  String get subTrackHomeUpTo => 'Up to…';
+
+  @override
+  String get subTrackHomePlusOne => '+1';
+
+  @override
+  String get subTrackHomeAddGround => 'Add ground';
+
+  @override
+  String subTrackHomeRowSemantics(String name, String position) {
+    return '$name, next $position';
+  }
+
+  @override
+  String subTrackHomeRowNoGroundSemantics(String name) {
+    return '$name, no ground yet';
+  }
+
+  @override
+  String subTrackHomeRowAllRecordedSemantics(String name) {
+    return '$name, all ground recorded';
+  }
+
+  @override
+  String subTrackHomePlusOneSemantics(String curriculum, String name) {
+    String _temp0 = intl.Intl.selectLogic(curriculum, {
+      'mishnayos': 'Record one mishna for $name',
+      'other': 'Record one for $name',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String subTrackHomeUpToSemantics(String name) {
+    return 'Record up to, $name';
+  }
+
+  @override
+  String get subTrackHomeRecorded => 'Recorded 1';
+
+  @override
+  String get subTrackHomeKeptNotCounted =>
+      'Kept, not counted — recorded during Shabbos';
+
+  @override
+  String get subTrackHomeCaptureFailed =>
+      'Couldn\'t record that. Please try again.';
+
+  @override
+  String subTrackHomeNotSaved(String name) {
+    return 'Not saved: +1 for $name';
+  }
+
+  @override
+  String get subTrackHomeUndoFailed => 'Couldn\'t undo';
+
+  @override
+  String subTrackHomeUndoNotSaved(String name) {
+    return 'Undo not saved: $name';
+  }
+
+  @override
+  String subTrackDashboardTitle(int count) {
+    return 'Sub-tracks ($count)';
+  }
+
+  @override
+  String get subTrackDashboardManage => 'Manage';
+
+  @override
+  String subTrackDashboardTicked(int count) {
+    return '$count ticked';
+  }
 
   @override
   String get searchTitle => 'Search';
@@ -2895,7 +3721,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'App is silenced and locked during $term and Yom Tov, from 10 minutes before candle-lighting until 10 minutes after tzeis at this learner\'s location.';
+    return 'App is silenced and locked during $term and Yom Tov. Times computed locally from your location with a 15-minute cushion.';
   }
 
   @override
@@ -2949,27 +3775,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not detect location. Try again, or choose a city instead.';
 
   @override
-  String get sacredTimeLocationPromptAction => 'Set location';
-
-  @override
-  String sacredTimeLocationPromptMessage(String term) {
-    return 'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
-  }
-
-  @override
-  String sacredTimeLocationPromptMessageNamed(String name, String term) {
-    return '$name has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
-  }
-
-  @override
-  String get sacredTimeSettingsNotSaved =>
-      'Couldn\'t save this learner\'s Sacred Time settings. Try again.';
-
-  @override
-  String get sacredTimeSettingsUnavailable =>
-      'Sacred Time settings can be changed only for your own learners.';
-
-  @override
   String get newPasswordLabel => 'New Password';
 
   @override
@@ -2993,6 +3798,112 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calendarOffsetToday => 'Today';
+
+  @override
+  String get catchUpAdjustLoadError => 'What you can adjust couldn\'t load.';
+
+  @override
+  String get catchUpAdjustMainGroup => 'Home · Main track';
+
+  @override
+  String catchUpAdjustMainGroupOf(String units) {
+    return 'Home · Main track ($units)';
+  }
+
+  @override
+  String catchUpAdjustNoMoreGround(String units) {
+    return 'No more $units in this track\'s ground';
+  }
+
+  @override
+  String catchUpAdjustPickerConfirm(int count, String unit) {
+    return 'Include $count $unit';
+  }
+
+  @override
+  String catchUpAdjustRecordItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return 'Record $_temp0';
+  }
+
+  @override
+  String catchUpAdjustSubTrackGroup(String name, String shabbos) {
+    return '$name (learns on $shabbos)';
+  }
+
+  @override
+  String get catchUpCardAdjust => 'Adjust…';
+
+  @override
+  String catchUpCardAvailableUntil(String day) {
+    return 'Available until the end of $day';
+  }
+
+  @override
+  String get catchUpCardContentsError => 'What was planned couldn\'t load.';
+
+  @override
+  String catchUpCardQuestion(String day, int count, String units) {
+    return '$day · $count $units planned — learnt them all?';
+  }
+
+  @override
+  String catchUpCardQuestionItems(String day, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$day · $_temp0 planned — learnt them all?';
+  }
+
+  @override
+  String catchUpCardQuestionNoCount(String day) {
+    return '$day · learnt what was planned?';
+  }
+
+  @override
+  String get catchUpCardRecording => 'Recording…';
+
+  @override
+  String get catchUpCardSaveFailed =>
+      'Couldn\'t save — try again before the card expires.';
+
+  @override
+  String catchUpCardSourceLine(String source, int count, String units) {
+    return '$source · $count $units';
+  }
+
+  @override
+  String get catchUpCardYesAll => 'Yes, all of it';
+
+  @override
+  String get catchUpEnded =>
+      'This catch-up has ended — you can still tick learning in Browse.';
+
+  @override
+  String catchUpReminderBody(String name) {
+    return '$name, record what you learnt?';
+  }
+
+  @override
+  String get catchUpReminderTitleShabbos => 'Shabbos is over';
+
+  @override
+  String get catchUpReminderTitleYomKippur => 'Yom Kippur is over';
+
+  @override
+  String get catchUpReminderTitleYomTov => 'Yom Tov is over';
+
+  @override
+  String get catchUpReminderTitleYomTovAndShabbos =>
+      'Yom Tov and Shabbos are over';
 
   @override
   String get dayNameShabbos => 'Shabbos';
@@ -3678,6 +4589,177 @@ class AppLocalizationsEn extends AppLocalizations {
   String studyDaysSetByProgram(String programName) {
     return 'Study days set by $programName';
   }
+
+  @override
+  String subTrackHubHeader(int count) {
+    return 'Sub-tracks · $count active';
+  }
+
+  @override
+  String get subTrackHubHelper =>
+      'Learning that happens outside home — school, a rebbe, a chavrusa.';
+
+  @override
+  String get subTrackHubAdd => 'Add sub-track';
+
+  @override
+  String get subTrackTypeSchoolYear => 'School year';
+
+  @override
+  String get subTrackTypeOngoing => 'Ongoing';
+
+  @override
+  String subTrackRowSchoolYearSubtitle(
+    String startMonth,
+    String endMonth,
+    String rate,
+  ) {
+    return 'School year · $startMonth–$endMonth · $rate/week';
+  }
+
+  @override
+  String subTrackRowOngoingSubtitle(String rate) {
+    return 'Ongoing · $rate/week';
+  }
+
+  @override
+  String subTrackHubDailyTarget(int count, String unit) {
+    return 'Daily target: $count $unit';
+  }
+
+  @override
+  String get subTrackSyncRejected => 'Your change couldn\'t be saved.';
+
+  @override
+  String get subTrackSaveFailed => 'Couldn\'t save the sub-track.';
+
+  @override
+  String get subTrackCalendarProgramRejected =>
+      'This track follows a calendar program, so it can\'t have sub-tracks.';
+
+  @override
+  String get subTrackFormEditSchoolYearTitle => 'Edit school year';
+
+  @override
+  String get subTrackFormNameLabel => 'Sub-track name';
+
+  @override
+  String get subTrackFormAcademicYearLabel => 'Academic year';
+
+  @override
+  String get subTrackYearUsed => 'Used';
+
+  @override
+  String get subTrackYearActive => 'Active';
+
+  @override
+  String get subTrackYearOpen => 'Open';
+
+  @override
+  String get subTrackFormStartMonthLabel => 'Start month';
+
+  @override
+  String get subTrackFormEndMonthLabel => 'End month';
+
+  @override
+  String get subTrackFormEndMonthOpen => 'No end month';
+
+  @override
+  String subTrackFormRateLabel(String unit) {
+    return '$unit per week';
+  }
+
+  @override
+  String subTrackFormPerSchoolDay(String count, String unit) {
+    return '~$count $unit / school day';
+  }
+
+  @override
+  String subTrackFormRateDecrease(String unit) {
+    return 'Decrease $unit per week';
+  }
+
+  @override
+  String subTrackFormRateIncrease(String unit) {
+    return 'Increase $unit per week';
+  }
+
+  @override
+  String get subTrackFormWeeksLabel => 'Weeks per year';
+
+  @override
+  String get subTrackFormWeeksHelper =>
+      'Prefilled — edit if the school year is shorter';
+
+  @override
+  String get subTrackFormShabbosLabel => 'Learns on shabbos / yom tov';
+
+  @override
+  String get subTrackFormShabbosHelper =>
+      'Include this source on the catch-up card after shabbos';
+
+  @override
+  String get subTrackFormGroundNote =>
+      'You can add ground later — the school\'s masechtos don\'t need to be known yet.';
+
+  @override
+  String get subTrackFormSave => 'Save sub-track';
+
+  @override
+  String get subTrackNoDeadlineNote =>
+      'Without a deadline, a sub-track can\'t lower the daily target.';
+
+  @override
+  String get subTrackNoDeadlineLink => 'Set a deadline';
+
+  @override
+  String get subTrackGoalSaveFailed => 'Couldn\'t save the goal.';
+
+  @override
+  String get subTrackErrorNameRequired => 'Enter a name';
+
+  @override
+  String get subTrackErrorYearRequired => 'Choose an academic year';
+
+  @override
+  String get subTrackErrorYearUsed =>
+      'This academic year already has a school sub-track';
+
+  @override
+  String get subTrackErrorWindowOverlap =>
+      'These months overlap another school sub-track';
+
+  @override
+  String get subTrackErrorWindowReversed =>
+      'The end month must come after the start month';
+
+  @override
+  String get subTrackErrorPositiveNumber => 'Enter a number greater than 0';
+
+  @override
+  String get subTrackSummaryTitle => 'Sub-tracks';
+
+  @override
+  String get subTrackSummaryEmpty => 'No sub-tracks yet';
+
+  @override
+  String subTrackSummaryCapacity(
+    int count,
+    String unit,
+    String rate,
+    String weeks,
+  ) {
+    return 'Capacity $count $unit ($rate/wk × $weeks weeks)';
+  }
+
+  @override
+  String subTrackSummaryPlan(String rate, String weeks) {
+    return '$rate/wk × $weeks weeks';
+  }
+
+  @override
+  String get onboardingSubTrackMention =>
+      'School and rebbe sub-tracks can be added later from Settings → Manage tracks.';
 
   @override
   String get startingPositionTitle => 'Starting Position';
@@ -5969,6 +7051,636 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t restore the backup. Please try again.';
 
   @override
+  String get tutorCaptureKeptNotCounted =>
+      'Kept, not counted — Shabbos / Yom Tov had started';
+
+  @override
+  String get tutorCaptureLearnerLocked => 'Shabbos / Yom Tov';
+
+  @override
+  String tutorCaptureNoEditAccess(String learner) {
+    return '$learner\'s parent hasn\'t given you editing access';
+  }
+
+  @override
+  String get tutorCaptureOnlineRequired => 'Online required';
+
+  @override
+  String changeHistoryAlsoChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '+$count more changes in this action',
+      one: '+1 more change in this action',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get changeHistoryBeforeTracking => 'Before tracking';
+
+  @override
+  String get changeHistoryDateCatchUp => 'catch-up';
+
+  @override
+  String get changeHistoryDayToday => 'Today';
+
+  @override
+  String get changeHistoryDayYesterday => 'Yesterday';
+
+  @override
+  String changeHistoryDeadlineSet(String date) {
+    return 'Changed the deadline to $date';
+  }
+
+  @override
+  String get changeHistoryDetailsTitle => 'Change details';
+
+  @override
+  String get changeHistoryDetailsWhat => 'What changed';
+
+  @override
+  String get changeHistoryDetailsWhen => 'When';
+
+  @override
+  String get changeHistoryDetailsWho => 'Changed by';
+
+  @override
+  String get changeHistoryEmpty => 'No changes yet.';
+
+  @override
+  String get changeHistoryFieldDates => 'dates';
+
+  @override
+  String get changeHistoryFieldGround => 'what it covers';
+
+  @override
+  String get changeHistoryFieldLocation => 'location';
+
+  @override
+  String get changeHistoryFieldName => 'name';
+
+  @override
+  String get changeHistoryFieldOther => 'settings';
+
+  @override
+  String get changeHistoryFieldPace => 'pace';
+
+  @override
+  String get changeHistoryFieldShabbos => 'Shabbos learning';
+
+  @override
+  String get changeHistoryFieldTimeZone => 'time zone';
+
+  @override
+  String get changeHistoryFilterAll => 'All';
+
+  @override
+  String get changeHistoryFilterLabel => 'Show';
+
+  @override
+  String get changeHistoryFilterLearning => 'Learning';
+
+  @override
+  String get changeHistoryFilterParent => 'Parent';
+
+  @override
+  String get changeHistoryFilterTutor => 'Tutor';
+
+  @override
+  String get changeHistoryGoalChanged => 'Changed the goal';
+
+  @override
+  String get changeHistoryGoalCreated => 'Set a goal';
+
+  @override
+  String get changeHistoryGoalEnded => 'Removed the goal';
+
+  @override
+  String changeHistoryLearned(String refs, String source) {
+    return 'Learned $refs · $source';
+  }
+
+  @override
+  String get changeHistoryLockIgnored =>
+      'kept, not counted — recorded during Shabbos/Yom Tov';
+
+  @override
+  String get changeHistoryMainTrackChanged => 'Changed the main track';
+
+  @override
+  String get changeHistoryMainTrackCreated => 'Added the main track';
+
+  @override
+  String get changeHistoryMainTrackEnded => 'Removed the main track';
+
+  @override
+  String get changeHistoryNoMatches => 'No changes match this filter.';
+
+  @override
+  String get changeHistoryNotAvailable =>
+      'Change history is open to the parent only.';
+
+  @override
+  String get changeHistoryNotified => 'Parent notified';
+
+  @override
+  String get changeHistoryOrderChanged => 'Changed the learning order';
+
+  @override
+  String get changeHistoryProgramChanged => 'Changed the program';
+
+  @override
+  String changeHistoryRefList(String first, String second) {
+    return '$first, $second';
+  }
+
+  @override
+  String changeHistoryRefRange(String first, String last, int count) {
+    return '$first – $last ($count)';
+  }
+
+  @override
+  String changeHistoryRemovedLearning(String refs, String source) {
+    return 'Removed $refs · $source';
+  }
+
+  @override
+  String get changeHistoryRemovedUnknown =>
+      'Removed an earlier learning record';
+
+  @override
+  String changeHistoryReverted(String summary) {
+    return 'Reverted change: $summary';
+  }
+
+  @override
+  String get changeHistoryRoleChild => 'Child';
+
+  @override
+  String get changeHistoryRoleParent => 'Parent';
+
+  @override
+  String get changeHistoryRoleTutor => 'Tutor';
+
+  @override
+  String get changeHistoryScopeChanged => 'Changed what the main track covers';
+
+  @override
+  String get changeHistorySelectPrompt => 'Select a change to see its details.';
+
+  @override
+  String changeHistorySettingsChanged(String fields) {
+    return 'Changed learner settings: $fields';
+  }
+
+  @override
+  String get changeHistorySettingsSubtitle =>
+      'Every change to tracks, goals and learning, by anyone';
+
+  @override
+  String get changeHistorySourceMain => 'Main track';
+
+  @override
+  String get changeHistorySourceSeveral => 'Several tracks';
+
+  @override
+  String get changeHistoryStagesChanged => 'Changed the review stages';
+
+  @override
+  String get changeHistoryStudyDaysChanged => 'Changed the study days';
+
+  @override
+  String changeHistorySubTrackChanged(String name, String fields) {
+    return 'Changed $name: $fields';
+  }
+
+  @override
+  String changeHistorySubTrackCreated(String name) {
+    return 'Added $name';
+  }
+
+  @override
+  String changeHistorySubTrackEnded(String name) {
+    return 'Ended $name';
+  }
+
+  @override
+  String changeHistorySubTrackRemoved(String name) {
+    return 'Removed $name';
+  }
+
+  @override
+  String changeHistorySubTrackRenamed(String name) {
+    return 'Renamed a sub-track to $name';
+  }
+
+  @override
+  String get changeHistorySubTrackUnnamed => 'a sub-track';
+
+  @override
+  String get changeHistoryTitle => 'Change history';
+
+  @override
+  String get changeHistoryUndo => 'Undo';
+
+  @override
+  String get changeHistoryUndone => 'Undone';
+
+  @override
+  String changeHistoryUndoneBy(String name, String time) {
+    return 'Undone by $name · $time';
+  }
+
+  @override
+  String changeHistoryUpdates(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count updates',
+      one: '1 update',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String changeHistoryVoidedBy(String name, String time) {
+    return 'Removed by $name · $time';
+  }
+
+  @override
+  String changeHistoryVoidedSome(
+    int count,
+    int total,
+    String name,
+    String time,
+  ) {
+    return '$count of $total removed by $name · $time';
+  }
+
+  @override
+  String get ongoingSubTrackFormTitle => 'Ongoing sub-track';
+
+  @override
+  String get ongoingSubTrackEditTitle => 'Edit ongoing sub-track';
+
+  @override
+  String get ongoingSubTrackNameLabel => 'Sub-track name';
+
+  @override
+  String ongoingSubTrackRateLabel(String unit) {
+    return '$unit per week';
+  }
+
+  @override
+  String ongoingSubTrackRateDecrease(String unit) {
+    return 'Fewer $unit per week';
+  }
+
+  @override
+  String ongoingSubTrackRateIncrease(String unit) {
+    return 'More $unit per week';
+  }
+
+  @override
+  String get ongoingSubTrackBeinHazmanimLabel =>
+      'Not learning during bein hazmanim';
+
+  @override
+  String get ongoingSubTrackBeinHazmanimHelper => 'Lowers weeks per year';
+
+  @override
+  String get ongoingSubTrackWeeksLabel => 'Weeks per year';
+
+  @override
+  String get ongoingSubTrackWeeksPrefillHelper =>
+      'Prefilled from bein hazmanim toggle — edit if needed';
+
+  @override
+  String get ongoingSubTrackStartLabel => 'Start date (optional)';
+
+  @override
+  String get ongoingSubTrackEndLabel => 'End date (optional)';
+
+  @override
+  String get ongoingSubTrackClearDate => 'Clear date';
+
+  @override
+  String get ongoingSubTrackShabbosLabel => 'Learns on shabbos / yom tov';
+
+  @override
+  String get ongoingSubTrackShabbosHelper =>
+      'Include this source on the catch-up card after shabbos';
+
+  @override
+  String ongoingSubTrackLimitLine(int count) {
+    return 'You can have up to 5 ongoing sub-tracks. $count in use.';
+  }
+
+  @override
+  String get ongoingSubTrackLimitReached =>
+      'You already have 5 ongoing sub-tracks.';
+
+  @override
+  String get ongoingSubTrackSave => 'Save sub-track';
+
+  @override
+  String get ongoingSubTrackNameRequired => 'Enter a name';
+
+  @override
+  String get ongoingSubTrackPositiveNumber => 'Enter a number above 0';
+
+  @override
+  String get ongoingSubTrackEndBeforeStart =>
+      'The end date can\'t be before the start date';
+
+  @override
+  String get ongoingSubTrackSaveFailed =>
+      'Couldn\'t save the sub-track. Your entries are kept.';
+
+  @override
+  String ongoingSubTrackStarts(String date) {
+    return 'Starts $date';
+  }
+
+  @override
+  String ongoingSubTrackRateSummary(String rate, String weeks) {
+    return '$rate/wk × $weeks weeks';
+  }
+
+  @override
+  String get ongoingSubTrackTabletSummaryTitle => 'This learner\'s sub-tracks';
+
+  @override
+  String get ongoingSubTrackTabletSummaryEmpty => 'No sub-tracks yet';
+
+  @override
+  String get reportExportAction => 'Export PDF';
+
+  @override
+  String get reportExportBusy => 'Preparing PDF…';
+
+  @override
+  String get reportExportError => 'Couldn\'t export the report — try again.';
+
+  @override
+  String get reportExportSemantics =>
+      'Export the lifetime report as a PDF and share it';
+
+  @override
+  String reportPdfGeneratedOn(String date) {
+    return 'Generated on $date';
+  }
+
+  @override
+  String reportPdfPageLabel(String page, String total) {
+    return 'Page $page of $total';
+  }
+
+  @override
+  String get subTrackRowAllRecorded => 'All ground recorded';
+
+  @override
+  String subTrackRowNext(String position) {
+    return 'Next: $position';
+  }
+
+  @override
+  String get subTrackRowNoGround => 'No ground yet';
+
+  @override
+  String get subTrackRowPlusOne => '+1';
+
+  @override
+  String subTrackRowPlusOneSemantics(String unit, String name) {
+    return 'Record one $unit for $name';
+  }
+
+  @override
+  String subTrackRowSemantics(String name, String position) {
+    return '$name, next $position';
+  }
+
+  @override
+  String subTrackRowsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sub-tracks',
+      one: '1 sub-track',
+    );
+    return 'Also learning · $_temp0';
+  }
+
+  @override
+  String get upToPickerAction => 'Up to…';
+
+  @override
+  String upToPickerActionSemantics(String name) {
+    return 'Record up to, $name';
+  }
+
+  @override
+  String upToPickerExhausted(String units, String name) {
+    return 'No more $units in $name\'s ground.';
+  }
+
+  @override
+  String upToPickerInstruction(String unit) {
+    return 'Tap the last $unit you learnt';
+  }
+
+  @override
+  String upToPickerRecord(int count, String unit) {
+    return 'Record $count $unit';
+  }
+
+  @override
+  String upToPickerRecorded(int count) {
+    return 'Recorded $count';
+  }
+
+  @override
+  String upToPickerRowSemantics(String label, String status) {
+    return '$label, $status';
+  }
+
+  @override
+  String upToPickerRowTargetSemantics(String label, String status) {
+    return '$label, $status, last one learnt';
+  }
+
+  @override
+  String get upToPickerSetTargetAction => 'Make this the last one learnt';
+
+  @override
+  String get upToPickerStatusAlreadyRecorded => 'already recorded';
+
+  @override
+  String get upToPickerStatusIncluded => 'included';
+
+  @override
+  String get upToPickerStatusNextUp => 'next up';
+
+  @override
+  String get upToPickerStatusNotSelected => 'not selected';
+
+  @override
+  String get upToPickerStatusSkipped => 'skipped';
+
+  @override
+  String upToPickerTitle(String name) {
+    return '$name · up to…';
+  }
+
+  @override
+  String get sacredTimeLocationPromptAction => 'Set location';
+
+  @override
+  String sacredTimeLocationPromptMessage(String term) {
+    return 'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
+  }
+
+  @override
+  String sacredTimeLocationPromptMessageNamed(String name, String term) {
+    return '$name has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
+  }
+
+  @override
+  String get sacredTimeSettingsNotSaved =>
+      'Couldn\'t save this learner\'s Sacred Time settings. Try again.';
+
+  @override
+  String get sacredTimeSettingsUnavailable =>
+      'Sacred Time settings can be changed only for your own learners.';
+
+  @override
+  String erevBannerBeginsAt(String term, String time) {
+    return '$term begins at $time — record what you can before then.';
+  }
+
+  @override
+  String get erevLockIgnoredSnackbar =>
+      'Some learning was kept, not counted — it was recorded during Shabbos.';
+
+  @override
+  String erevPlannedForDay(String day) {
+    return 'Planned for $day';
+  }
+
+  @override
+  String erevPlannedTickSemantics(String item) {
+    return 'Mark $item as learnt';
+  }
+
+  @override
+  String get parentPushTitle => 'Tutor change';
+
+  @override
+  String parentPushBody(String tutorName, String learnerName, String kind) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'deadline': 'deadline',
+      'pace': 'daily pace',
+      'mainTrack': 'main track',
+      'mainTrackOrder': 'learning order',
+      'mainTrackProgram': 'program',
+      'mainTrackStudyDays': 'study days',
+      'other': 'learning plan',
+    });
+    return '$tutorName changed $learnerName\'s $_temp0';
+  }
+
+  @override
+  String get parentPushTutorFallback => 'Your tutor';
+
+  @override
+  String get parentPushLearnerFallback => 'your child';
+
+  @override
+  String get parentPushChannelName => 'Tutor changes';
+
+  @override
+  String get parentPushChannelDescription =>
+      'When a tutor changes a deadline or a main track';
+
+  @override
   String get backupImportNotSaved =>
       'Not saved — part of the backup was not restored. Retry?';
+
+  @override
+  String get subTrackDetailNoDeadlineNote =>
+      'Without a deadline, a sub-track can\'t lower the daily target.';
+
+  @override
+  String get subTrackDetailNoDeadlineLink => 'Set a deadline';
+
+  @override
+  String get subTrackDetailSelectPrompt =>
+      'Select a sub-track to see its details';
+
+  @override
+  String get siyumimPreviouslyLearnedDate => 'Previously learned';
+
+  @override
+  String get subTrackLifecycleActiveGroup => 'Sub-tracks';
+
+  @override
+  String get subTrackLifecycleMoreOptions => 'More options';
+
+  @override
+  String get subTrackLifecycleNotFound =>
+      'This sub-track is no longer available.';
+
+  @override
+  String subTrackLifecycleWindow(String start, String end) {
+    return '$start – $end';
+  }
+
+  @override
+  String subTrackLifecycleWindowOpen(String start) {
+    return 'From $start';
+  }
+
+  @override
+  String subTrackLifecycleNextYearFor(String yearLabel) {
+    return 'School year $yearLabel';
+  }
+
+  @override
+  String get subTrackLifecycleFieldName => 'Name';
+
+  @override
+  String get subTrackLifecycleFieldRate => 'Units per week';
+
+  @override
+  String get subTrackLifecycleFieldWeeks => 'Weeks per year';
+
+  @override
+  String get subTrackLifecycleFieldShabbos => 'Learns on Shabbos';
+
+  @override
+  String get subTrackLifecycleFieldStartMonth => 'Starts';
+
+  @override
+  String get subTrackLifecycleFieldEndMonth => 'Ends';
+
+  @override
+  String get subTrackLifecycleNoEndMonth => 'No end month';
+
+  @override
+  String get subTrackLifecycleSave => 'Save sub-track';
+
+  @override
+  String get subTrackLifecycleNameRequired => 'Enter a name';
+
+  @override
+  String get subTrackLifecyclePositiveNumber => 'Enter a number above 0';
+
+  @override
+  String get subTrackLifecycleWindowReversed =>
+      'The end month is before the start month';
+
+  @override
+  String get subTrackLifecycleSaveFailed =>
+      'Couldn\'t save the sub-track. Try again.';
 }

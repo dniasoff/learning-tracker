@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_
 // direct import here is flagged `unnecessary_import` by the analyzer since
 // InviteTutorUseCase etc. from that same import already pull it in.
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_access_ended_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'tutor_grant_providers.g.dart';
@@ -104,5 +105,11 @@ TutorWriteService tutorWriteService(Ref ref) {
   return TutorWriteService(
     resolveFunctions: ref.watch(accountFunctionsProvider),
     analytics: ref.watch(learningAnalyticsProvider),
+    // DNI-512: a write rejected because the grant was revoked ends the open
+    // tutored session through the one revoked-session boundary.
+    onAccessLost: (grantId) {
+      if (grantId == null || !ref.mounted) return;
+      ref.read(tutorAccessEndedProvider.notifier).end(grantId);
+    },
   );
 }

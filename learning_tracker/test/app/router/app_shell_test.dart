@@ -77,6 +77,19 @@ class _ActiveTutoredSelection extends ActiveTutoredProfileSelection {
   );
 }
 
+/// The same tutored session, carrying the tutor's own profile id (the
+/// tutor-mode bar names the tutor, Story 4.2 / DNI-510).
+class _ActiveTutoredSelectionWithTutor extends ActiveTutoredProfileSelection {
+  @override
+  TutoredProfileSelection? build() => const TutoredProfileSelection(
+    profileId: 'talmid-remote-id',
+    ownerUid: 'owner-uid',
+    grantId: 'grant-id',
+    permissions: TutorPermissions(),
+    tutorOwnProfileId: 'ulid-1',
+  );
+}
+
 Future<AppRouter> _createAuthenticatedRouter({
   GlobalKey<NavigatorState>? navigatorKey,
 }) async {
@@ -1022,7 +1035,8 @@ void main() {
     );
 
     testWidgets(
-      'Bug 11: the amber Tutor-mode banner names the talmid being managed',
+      'Story 4.2 (DNI-510, UX-DR-38): the amber Tutor-mode banner reads '
+      '"Tutor mode · {tutor name}" (it replaced Bug 11\'s talmid name)',
       (tester) async {
         final router = await _createAuthenticatedRouter(
           navigatorKey: rp.navigatorKey,
@@ -1059,7 +1073,7 @@ void main() {
                 (ref) => Future.value(talmidMirror),
               ),
               activeTutoredProfileSelectionProvider.overrideWith(
-                _ActiveTutoredSelection.new,
+                _ActiveTutoredSelectionWithTutor.new,
               ),
               dashboardActiveCurriculaStreamProvider.overrideWith(
                 (ref) => Stream.value(<CurriculumId>[]),
@@ -1084,9 +1098,11 @@ void main() {
         );
         await _pumpDashboard(tester);
 
-        // The amber banner must NAME the talmid, not say a bare "Tutor mode".
-        expect(find.text('Tutor mode · Kid'), findsWidgets);
+        // The amber banner names the tutor (his own profile), not a bare
+        // "Tutor mode", and offers Switch.
+        expect(find.text('Tutor mode · Family Niasoff'), findsWidgets);
         expect(find.text('Tutor mode'), findsNothing);
+        expect(find.text('Switch'), findsWidgets);
 
         await _cleanUpWidgets(tester);
       },

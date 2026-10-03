@@ -28,7 +28,7 @@ import {
 //     profileId: string,
 //     actorRole?: 'parent' | 'child',          // owner role, accepted as asserted
 //     actionId?: ULID,                         // defaults to entries[0].id
-//     revertsActionId?: ULID,                  // undo actions only
+//     revertsActionId?: ULID,                  // undo actions only; parent actor only
 //     entries: [{
 //       id: ULID,                              // the change_log entry id
 //       entity: 'mainTrackOrder' | …,          // AD-38 governed entity

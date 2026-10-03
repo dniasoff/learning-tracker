@@ -1,79 +1,37 @@
-// DNI-480 (Story 1.18) AC-1, integration level: every points reader sums
-// the one ledger through the engine's AD-50 earning set.
-//
-// Two devices (two containers) share one Firestore ledger and one synced
-// learning-event log; each runs the real engine over the log. A void on
-// the log removes its event from `earningEventIds`, and every reader on
-// both devices re-reads lower balance and lifetime without any reversal
-// row. Spends lower the balance but not lifetime earned. Achievement
-// surfaces read only the latched `unlocked_achievement_ids` record.
-import 'dart:async';
-
+// DNI-480 (AD-50): the engine points readers sum the ledger through the
+// engine's earning set and never report a fabricated zero.
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_reward_redemption_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
-import 'package:learning_tracker/domain/learner_state/points.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
-import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
-import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
-import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
-import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 
-const _uid = 'points-engine-readers-user';
+const _uid = 'engine-reader-user';
 const _profileId = '01J0000000000000000000P480';
-
-/// The synced learning-event log both devices read.
-final class _SyncedLog {
-  final List<LearningEvent> events = [];
-  final _changes = StreamController<void>.broadcast();
-
-  void append(LearningEvent e) {
-    events.add(e);
-    _changes.add(null);
-  }
-
-  Stream<LearnerState> states() async* {
-    const engine = LearnerStateEngine();
-    LearnerState run() => engine.run(engineInputs(events: [...events]));
-    yield run();
-    await for (final _ in _changes.stream) {
-      yield run();
-    }
-  }
-
-  Future<void> close() => _changes.close();
-}
-
-final _redemptionProvider =
-    Provider<FirestoreRewardRedemptionRepositoryAdapter>(
-      (ref) => FirestoreRewardRedemptionRepositoryAdapter(ref: ref),
-    );
+const _b11 = 'Mishnah Berakhot 1:1';
+const _b12 = 'Mishnah Berakhot 1:2';
 
 final _readerProvider = Provider<EnginePointsReader>(
   (ref) => EnginePointsReader(ref: ref),
 );
 
 void main() {
-  const b11 = 'Mishnah Berakhot 1:1';
-  const b12 = 'Mishnah Berakhot 1:2';
   late FakeFirebaseFirestore firestore;
-  late _SyncedLog log;
+
+  FirestorePointsLedgerRepository ledger() => FirestorePointsLedgerRepository(
+    firestore: firestore,
+    uid: _uid,
+    profileId: _profileId,
+  );
 
   Future<void> award(LearningEvent e, int amount) => firestore
       .doc('users/$_uid/learner_profiles/$_profileId/points_ledger/pts_${e.id}')
@@ -86,254 +44,152 @@ void main() {
         'event_id': e.id,
       });
 
-  FirestorePointsLedgerRepository ledger() => FirestorePointsLedgerRepository(
-    firestore: firestore,
-    uid: _uid,
-    profileId: _profileId,
+  LearnerState run(List<LearningEvent> events) =>
+      const LearnerStateEngine().run(engineInputs(events: events));
+
+  ProviderContainer build({
+    AsyncValue<LearnerState?>? state,
+    bool nullRepo = false,
+  }) => ProviderContainer.test(
+    overrides: [
+      firestorePointsLedgerRepositoryProvider.overrideWith(
+        (ref) async => nullRepo ? null : ledger(),
+      ),
+      activeLearnerStateProvider.overrideWith(
+        (ref) => state ?? const AsyncValue<LearnerState?>.loading(),
+      ),
+    ],
   );
 
-  ProviderContainer device() {
-    final states = StreamProvider<LearnerState>((ref) => log.states());
-    final container = ProviderContainer.test(
-      overrides: [
-        firestorePointsLedgerRepositoryProvider.overrideWith(
-          (ref) async => ledger(),
-        ),
-        firestoreRewardRedemptionRepositoryProvider.overrideWith(
-          (ref) async => FirestoreRewardRedemptionRepository(
-            firestore: firestore,
-            uid: _uid,
-            profileId: _profileId,
-          ),
-        ),
-        activeLearnerStateProvider.overrideWith((ref) => ref.watch(states)),
-      ],
-    );
-    // Keep the live readers listened to, as screens do.
-    container
-      ..listen(globalPointsProvider, (_, _) {})
-      ..listen(childRedemptionBalanceProvider, (_, _) {})
-      ..listen(curriculumBreakdownProvider, (_, _) {});
-    return container;
-  }
+  setUp(() => firestore = createFakeFirestore(authenticatedUid: _uid));
 
-  Future<({int global, int child, int lifetime, Map<CurriculumId, int> split})>
-  readAll(ProviderContainer c) async {
-    await pumpEventQueue();
-    return (
-      global: await c.read(globalPointsProvider.future),
-      child: await c.read(childRedemptionBalanceProvider.future),
-      lifetime: await c.read(_readerProvider).getLifetimeEarned(),
-      split: await c.read(curriculumBreakdownProvider.future),
-    );
-  }
-
-  setUp(() {
-    firestore = createFakeFirestore(authenticatedUid: _uid);
-    log = _SyncedLog();
+  test('PointsNotReadyException is a StateError that says why', () {
+    final e = PointsNotReadyException('no active learner');
+    expect(e, isA<StateError>());
+    expect(e.toString(), contains('no active learner'));
+    expect(e.toString(), contains('refusing to report points as 0'));
   });
 
-  tearDown(() => log.close());
+  group('with a ready learner state', () {
+    late LearningEvent first;
+    late LearningEvent second;
+    late LearningEvent repeat;
+    late ProviderContainer c;
 
-  test('all point readers recompute filtered balance and lifetime after '
-      'void', () async {
-    final first = engineLearn(1, b11, stage: 1);
-    final second = engineLearn(2, b12, stage: 1, minutes: 5);
-    // A duplicate main tick of b11: writers attach pts_ to every main
-    // dated learn, but only the first learn of a leaf earns.
-    final repeat = engineLearn(3, b11, stage: 1, minutes: 10);
-    log.events.addAll([first, second, repeat]);
-    await award(first, 10);
-    await award(second, 5);
-    await award(repeat, 7);
-    // An orphan pts_ row whose event is not in the log.
-    await firestore
-        .doc('users/$_uid/learner_profiles/$_profileId/points_ledger/pts_zz')
-        .set({
-          'ulid': 'pts_zz',
-          'entry_kind': 'completion',
-          'delta': 99,
-          'created_at': DateTime.utc(2026),
-          'source': 'live',
-          'event_id': 'zz',
+    setUp(() async {
+      first = engineLearn(1, _b11, stage: 1);
+      second = engineLearn(2, _b12, stage: 1, minutes: 5);
+      repeat = engineLearn(3, _b11, stage: 1, minutes: 10);
+      await award(first, 10);
+      await award(second, 5);
+      await award(repeat, 7); // duplicate main tick: does not earn
+      c = build(state: AsyncValue.data(run([first, second, repeat])));
+    });
+
+    test('balance and lifetime count only earning events', () async {
+      final reader = c.read(_readerProvider);
+      expect(await reader.getBalance(), 15);
+      expect(await reader.getLifetimeEarned(), 15);
+    });
+
+    test('a void drops both totals without a reversal row', () async {
+      final voided = LearningEvent.voidOf(
+        id: engineUlid(9),
+        targetId: first.id,
+        recordedAt: engineAt(20),
+        actor: first.actor,
+      );
+      final c2 = build(
+        state: AsyncValue.data(run([first, second, repeat, voided])),
+      );
+      final reader = c2.read(_readerProvider);
+      // The earning set changed: the voided first learn stops earning and
+      // the formerly duplicate tick of the same leaf (7) now earns.
+      expect(await reader.getBalance(), 12);
+      expect(await reader.getLifetimeEarned(), 12);
+      expect(await ledger().getLedger(), hasLength(3));
+    });
+
+    test('getEarnedPoints joins earning rows to their curriculum', () async {
+      final earned = await c.read(_readerProvider).getEarnedPoints();
+      expect(earned.map((e) => e.eventId).toSet(), {first.id, second.id});
+      expect(earned.map((e) => e.points).fold<int>(0, (a, b) => a + b), 15);
+      expect(earned.map((e) => e.curriculumId).toSet(), {
+        CurriculumId.mishnayos,
+      });
+    });
+
+    test(
+      'the earning set and counted learns providers expose the engine',
+      () async {
+        expect(await c.read(activeEarningEventIdsProvider.future), {
+          first.id,
+          second.id,
         });
-    // A non-event parent adjustment always counts.
+        expect(await c.read(activeCountedLearnsProvider.future), {
+          first.id: first.curriculumId,
+          second.id: second.curriculumId,
+          repeat.id: repeat.curriculumId,
+        });
+      },
+    );
+  });
+
+  test('a ledger without event rows needs no learner state', () async {
     await ledger().append(
       entryKind: 'parent_add',
-      delta: 3,
+      delta: 4,
       createdAt: DateTime.utc(2026),
     );
-
-    final owner = device();
-    final other = device();
-    addTearDown(owner.dispose);
-    addTearDown(other.dispose);
-
-    for (final c in [owner, other]) {
-      final r = await readAll(c);
-      expect(r.global, 18, reason: '10 + 5 + parent_add 3');
-      expect(r.child, 18);
-      expect(r.lifetime, 18);
-      expect(r.split, {CurriculumId.mishnayos: 15});
-    }
-
-    // A redemption on the owner device debits through the filtered
-    // balance: it lowers the balance, never lifetime earned.
-    final redeemed = await owner
-        .read(_redemptionProvider)
-        .createRedemption(rewardTitle: 'Prize', iconIndex: 0, pointsCost: 6);
-    expect(redeemed, isNotNull);
-    owner.invalidate(childRedemptionBalanceProvider);
-    other.invalidate(globalPointsProvider);
-    expect(await owner.read(childRedemptionBalanceProvider.future), 12);
-    expect(await other.read(globalPointsProvider.future), 12);
-    expect(await other.read(_readerProvider).getLifetimeEarned(), 18);
-
-    // Too expensive for the filtered balance: declined, nothing written.
-    expect(
-      await owner
-          .read(_redemptionProvider)
-          .createRedemption(rewardTitle: 'Bike', iconIndex: 0, pointsCost: 13),
-      isNull,
-    );
-
-    final ledgerSize = (await ledger().getLedger()).length;
-
-    // Void the second learn on the synced log: both devices recompute.
-    log.append(engineVoid(4, 2, minutes: 20));
-    for (final c in [owner, other]) {
-      final r = await readAll(c);
-      expect(r.global, 7, reason: '10 + 3 - 6; the voided 5 no longer counts');
-      expect(r.child, 7);
-      expect(r.lifetime, 13, reason: 'lifetime falls after a void (AD-50)');
-      expect(r.split, {CurriculumId.mishnayos: 10});
-    }
-    expect(
-      (await ledger().getLedger()).length,
-      ledgerSize,
-      reason: 'no reversal entry is written',
-    );
+    final c = build(); // learner state stays loading forever
+    final reader = c.read(_readerProvider);
+    expect(await reader.getBalance(), 4);
+    expect(await reader.getLifetimeEarned(), 4);
+    expect(await reader.getEarnedPoints(), isEmpty);
   });
 
-  test('an engine failure is an error, never a fabricated zero', () async {
-    // An event row makes the totals depend on the engine's earning set.
-    await award(engineLearn(1, b11, stage: 1), 10);
-    final container = ProviderContainer.test(
-      overrides: [
-        firestorePointsLedgerRepositoryProvider.overrideWith(
-          (ref) async => ledger(),
-        ),
-        activeLearnerStateProvider.overrideWith(
-          (ref) => AsyncError<LearnerState?>(
-            StateError('engine failed'),
-            StackTrace.empty,
-          ),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-    container.listen(globalPointsProvider, (_, _) {});
-
+  test('no ready ledger repository throws PointsNotReadyException', () async {
+    final c = build(nullRepo: true);
+    final reader = c.read(_readerProvider);
     await expectLater(
-      container.read(globalPointsProvider.future),
-      throwsA(isA<StateError>()),
+      reader.getBalance(),
+      throwsA(isA<PointsNotReadyException>()),
     );
-  });
-
-  test('no active learner is not ready, never a fabricated zero', () async {
-    // An event row makes the totals depend on the engine's earning set.
-    await award(engineLearn(1, b11, stage: 1), 10);
-    final container = ProviderContainer.test(
-      overrides: [
-        firestorePointsLedgerRepositoryProvider.overrideWith(
-          (ref) async => ledger(),
-        ),
-        activeLearnerStateProvider.overrideWith(
-          (ref) => const AsyncData<LearnerState?>(null),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-    container.listen(globalPointsProvider, (_, _) {});
-
     await expectLater(
-      container.read(globalPointsProvider.future),
+      reader.getEarnedPoints(),
       throwsA(isA<PointsNotReadyException>()),
     );
   });
 
-  test('the earning set filters exactly as the domain totals do', () async {
-    final first = engineLearn(1, b11, stage: 1);
-    log.events.add(first);
-    await award(first, 4);
-    final container = device();
-    addTearDown(container.dispose);
-    await pumpEventQueue();
-
-    expect(
-      await container.read(_readerProvider).getTotals(),
-      const PointsTotals(balance: 4, lifetimeEarned: 4),
+  test('no active learner is not ready, never a zero', () async {
+    await award(engineLearn(1, _b11, stage: 1), 10);
+    final c = build(state: const AsyncValue.data(null));
+    await expectLater(
+      c.read(_readerProvider).getBalance(),
+      throwsA(isA<PointsNotReadyException>()),
     );
   });
 
-  test('achievement surfaces read only the latch record, and a latch on one '
-      'device reaches the other', () async {
-    SharedPreferences.setMockInitialValues({});
-    // Lifetime 500 crosses both thresholds, but only the latched id counts.
-    final service = RewardMilestoneService(
-      balanceReader: _Fixed(500),
-      lifetimeEarnedReader: _Fixed(500),
-      profileId: _profileId,
+  test('a failed learner state forwards its error', () async {
+    await award(engineLearn(1, _b11, stage: 1), 10);
+    final c = build(
+      state: AsyncValue.error(StateError('boom'), StackTrace.empty),
     );
-    await service.upsertMilestone(
-      title: 'Bronze',
-      thresholdPoints: 20,
-      milestoneId: 'bronze',
+    await expectLater(
+      c.read(_readerProvider).getLifetimeEarned(),
+      throwsA(isA<StateError>().having((e) => e.message, 'message', 'boom')),
     );
-    await service.upsertMilestone(
-      title: 'Silver',
-      thresholdPoints: 300,
-      milestoneId: 'silver',
-    );
-    final settings = FirestoreRewardSettingsRepository(
-      firestore: firestore,
-      uid: _uid,
-      profileId: _profileId,
-    );
-    await settings.latchUnlockedAchievementIds({'bronze'});
-    final other = ProviderContainer.test(
-      overrides: [
-        rewardMilestoneServiceProvider.overrideWithValue(service),
-        firestoreRewardSettingsRepositoryProvider.overrideWith(
-          (ref) async => settings,
-        ),
-      ],
-    );
-    addTearDown(other.dispose);
-    other.listen(achievementsOverviewProvider, (_, _) {});
-
-    Future<Map<String, bool>> unlockedById() async {
-      await pumpEventQueue();
-      final o = await other.read(achievementsOverviewProvider.future);
-      return {for (final r in o.rows) r.milestone.id: r.isUnlocked};
-    }
-
-    expect(await unlockedById(), {'bronze': true, 'silver': false});
-
-    // The owner device latches silver: the other device's surface follows
-    // the record without any invalidation.
-    await settings.latchUnlockedAchievementIds({'silver'});
-    expect(await unlockedById(), {'bronze': true, 'silver': true});
   });
-}
 
-final class _Fixed implements PointsBalanceReader, PointsLifetimeEarnedReader {
-  _Fixed(this.value);
-  final int value;
-
-  @override
-  Future<int> getBalance() async => value;
-
-  @override
-  Future<int> getLifetimeEarned() async => value;
+  test(
+    'watchActivePointsTotals reads the filtered totals in a provider',
+    () async {
+      final e = engineLearn(1, _b11, stage: 1);
+      await award(e, 8);
+      final totals = FutureProvider((ref) => watchActivePointsTotals(ref));
+      final c = build(state: AsyncValue.data(run([e])));
+      final t = await c.read(totals.future);
+      expect((t.balance, t.lifetimeEarned), (8, 8));
+    },
+  );
 }

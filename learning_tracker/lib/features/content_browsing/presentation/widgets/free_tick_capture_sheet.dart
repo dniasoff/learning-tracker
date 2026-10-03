@@ -33,6 +33,7 @@ final class FreeTickChoice {
     required this.source,
     required this.dateState,
     this.learnedOn,
+    this.taps = 2,
   });
 
   /// `main` or a sub-track ULID.
@@ -45,15 +46,19 @@ final class FreeTickChoice {
   /// resolves it in the learner's time zone) and for Before tracking.
   final String? learnedOn;
 
+  /// Taps from the initiating gesture through the confirmation button.
+  final int taps;
+
   @override
   bool operator ==(Object other) =>
       other is FreeTickChoice &&
       other.source == source &&
       other.dateState == dateState &&
-      other.learnedOn == learnedOn;
+      other.learnedOn == learnedOn &&
+      other.taps == taps;
 
   @override
-  int get hashCode => Object.hash(source, dateState, learnedOn);
+  int get hashCode => Object.hash(source, dateState, learnedOn, taps);
 
   @override
   String toString() => 'FreeTickChoice($source, ${dateState.name}, $learnedOn)';
@@ -117,10 +122,12 @@ class FreeTickCaptureSheet extends StatefulWidget {
 class _FreeTickCaptureSheetState extends State<FreeTickCaptureSheet> {
   String _source = LearningEvent.sourceMain;
   late DateTime _date = DateUtils.dateOnly(widget.today);
+  int _taps = 1; // the tap/long-press that opened the sheet
 
   bool get _beforeTrackingChosen => _source == _beforeTracking;
 
   Future<void> _pickDate() async {
+    _taps++;
     final today = DateUtils.dateOnly(widget.today);
     final picked = await showDatePicker(
       context: context,
@@ -128,16 +135,21 @@ class _FreeTickCaptureSheetState extends State<FreeTickCaptureSheet> {
       firstDate: DateTime(1900),
       lastDate: today,
     );
-    if (picked != null && mounted) setState(() => _date = picked);
+    if (picked != null && mounted) {
+      _taps++;
+      setState(() => _date = picked);
+    }
   }
 
   void _record() {
+    _taps++;
     final today = DateUtils.dateOnly(widget.today);
     Navigator.of(context).pop(
       _beforeTrackingChosen
-          ? const FreeTickChoice(
+          ? FreeTickChoice(
               source: LearningEvent.sourceMain,
               dateState: DateState.beforeTracking,
+              taps: _taps,
             )
           : FreeTickChoice(
               source: _source,
@@ -145,6 +157,7 @@ class _FreeTickCaptureSheetState extends State<FreeTickCaptureSheet> {
               learnedOn: DateUtils.isSameDay(_date, today)
                   ? null
                   : _civil(_date),
+              taps: _taps,
             ),
     );
   }
@@ -173,7 +186,10 @@ class _FreeTickCaptureSheetState extends State<FreeTickCaptureSheet> {
             RadioGroup<String>(
               groupValue: _source,
               onChanged: (value) {
-                if (value != null) setState(() => _source = value);
+                if (value != null) {
+                  _taps++;
+                  setState(() => _source = value);
+                }
               },
               child: Column(
                 children: [

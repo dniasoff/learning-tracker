@@ -18,6 +18,7 @@ import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -140,6 +141,10 @@ final class FakeLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) async => _record('capture', {
     'curriculumId': curriculumId,
     'refs': refs,
@@ -148,6 +153,7 @@ final class FakeLearningCommands implements LearningCommands {
     'dateState': dateState,
     'learnedOn': learnedOn,
     'stage': stage,
+    if (skipRecorded) 'skipRecorded': true,
   }, events: refs.length + nodes.length);
 
   @override
@@ -187,6 +193,34 @@ final class FakeLearningCommands implements LearningCommands {
       _record('undoAction', {'actionId': actionId}, changes: 1);
 
   @override
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+    String? nextYearOf,
+  }) async => _record('createSubTrack', {
+    'draft': draft,
+    'subTrackId': subTrackId,
+    'nextYearOf': nextYearOf,
+  }, changes: 1);
+
+  @override
+  Future<CaptureResult> editSubTrack(
+    String subTrackId,
+    SubTrackEdit edit,
+  ) async => _record('editSubTrack', {
+    'subTrackId': subTrackId,
+    'edit': edit,
+  }, changes: 1);
+
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) async =>
+      _record('endSubTrack', {'subTrackId': subTrackId}, changes: 1);
+
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) async =>
+      _record('deleteSubTrack', {'subTrackId': subTrackId}, changes: 1);
+
+  @override
   Future<CaptureResult> removeTrack(String curriculumId) async =>
       _record('removeTrack', {'curriculumId': curriculumId}, changes: 1);
 
@@ -199,14 +233,43 @@ final class FakeLearningCommands implements LearningCommands {
       BackupReplayResult(result: _record('importBackup', {'input': input}));
 
   @override
+  Future<CaptureResult> recordCatchUp(CatchUpAction action) async => _record(
+    'recordCatchUp',
+    {'action': action},
+    events: action.leaves.length,
+  );
+
+  @override
   Stream<List<PendingFailure>> watchPendingFailures() {
     calls.add(const LearningCommandCall('watchPendingFailures', {}));
     return pendingFailures.stream;
   }
 
+  /// When set, the next [retry] is recorded and then throws it (one-shot).
+  Exception? retryError;
+
   @override
-  Future<CaptureResult> retry(String pendingFailureId) async =>
-      _record('retry', {'pendingFailureId': pendingFailureId});
+  Future<CaptureResult> retry(String pendingFailureId) async {
+    final result = _record('retry', {'pendingFailureId': pendingFailureId});
+    final error = retryError;
+    if (error == null) return result;
+    retryError = null;
+    throw error;
+  }
+
+  /// Each queued sub-track change's server verdict; unlisted ids are
+  /// accepted. Complete a scripted completer to settle it.
+  final Map<String, Completer<bool>> subTrackConfirmations = {};
+
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) async {
+    calls.add(
+      LearningCommandCall('whenSubTrackChangeConfirmed', {
+        'changeId': changeId,
+      }),
+    );
+    return subTrackConfirmations[changeId]?.future ?? true;
+  }
 
   /// Closes [pendingFailures].
   Future<void> dispose() => pendingFailures.close();
@@ -241,10 +304,73 @@ typedef RecordedCapture = ({
   int count,
 });
 
+/// One recorded [LearningAnalytics.subTrackLifecycle].
+typedef RecordedSubTrackLifecycle = ({
+  String curriculumId,
+  SubTrackType type,
+  SubTrackLifecycleAction action,
+  int groundEntries,
+});
+
+/// One recorded [LearningAnalytics.catchupCompleted].
+typedef RecordedCatchupCompleted = ({
+  String curriculumId,
+  CatchUpMode mode,
+  int lockedDaysOffered,
+  int lockedDaysRecorded,
+  int eventCount,
+  bool withinWindow,
+});
+
 /// A [LearningAnalytics] that records every event.
 final class RecordingLearningAnalytics implements LearningAnalytics {
+  /// Every `catchupCompleted`, in order.
+  final List<RecordedCatchupCompleted> catchups = [];
+
+  @override
+  void catchupCompleted({
+    required String curriculumId,
+    required CatchUpMode mode,
+    required int lockedDaysOffered,
+    required int lockedDaysRecorded,
+    required int eventCount,
+    required bool withinWindow,
+  }) => catchups.add((
+    curriculumId: curriculumId,
+    mode: mode,
+    lockedDaysOffered: lockedDaysOffered,
+    lockedDaysRecorded: lockedDaysRecorded,
+    eventCount: eventCount,
+    withinWindow: withinWindow,
+  ));
+
   /// Every `capture`, in order.
   final List<RecordedCapture> captures = [];
+
+  /// Every `subTrackLifecycle`, in order.
+  final List<RecordedSubTrackLifecycle> lifecycles = [];
+
+  /// Summary captures using the DNI-503 contract.
+  final List<Map<String, Object>> captureSummaries = [];
+
+  /// Summary lifecycle events using the DNI-503 contract.
+  final List<Map<String, Object>> lifecycleSummaries = [];
+
+  /// Close-window forecast comparisons.
+  final List<Map<String, Object>> forecastComparisons = [];
+
+  @override
+  void subTrackLifecycle({
+    required String curriculumId,
+    required SubTrackType type,
+    required SubTrackLifecycleAction action,
+    required int groundEntries,
+  }) => lifecycles.add((
+    curriculumId: curriculumId,
+    type: type,
+    action: action,
+    groundEntries: groundEntries,
+  ));
 
   @override
   void capture({
@@ -258,6 +384,70 @@ final class RecordingLearningAnalytics implements LearningAnalytics {
     dateState: dateState,
     count: count,
   ));
+
+  @override
+  void captureSummary({
+    required String curriculumId,
+    required CaptureSourceType sourceType,
+    required DateState dateState,
+    required CaptureGesture gesture,
+    required int eventCount,
+    required int skippedCount,
+    required int taps,
+  }) {
+    captureSummaries.add({
+      'curriculum_id': curriculumId,
+      'source_type': sourceType.storage,
+      'gesture': gesture.storage,
+      'event_count': eventCount,
+      'skipped_count': skippedCount,
+      'taps': taps,
+    });
+    capture(
+      curriculumId: curriculumId,
+      sourceKind: sourceType == CaptureSourceType.main
+          ? CaptureSourceKind.main
+          : CaptureSourceKind.subTrack,
+      dateState: dateState,
+      count: eventCount,
+    );
+  }
+
+  @override
+  void subTrackLifecycleSummary({
+    required String curriculumId,
+    required SubTrackType type,
+    required SubTrackLifecycleAction action,
+    required int groundEntries,
+    required int leaves,
+  }) {
+    lifecycleSummaries.add({
+      'curriculum_id': curriculumId,
+      'type': type.storage,
+      'action': action.storage,
+      'ground_entries': groundEntries,
+      'leaves': leaves,
+    });
+    lifecycles.add((
+      curriculumId: curriculumId,
+      type: type,
+      action: action,
+      groundEntries: groundEntries,
+    ));
+  }
+
+  @override
+  void subTrackForecastVsActual({
+    required SubTrackType type,
+    required int forecast,
+    required int actual,
+    required int windowWeeks,
+  }) => forecastComparisons.add({
+    'type': type.storage,
+    'forecast': forecast,
+    'actual': actual,
+    'window_weeks': windowWeeks,
+  });
 }
 
 /// A [LearningCommandReads] over mutable in-memory values. Every read is

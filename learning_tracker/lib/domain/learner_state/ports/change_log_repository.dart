@@ -2,13 +2,16 @@
 /// `LearnerSettingsHistory.reconstruct` read, the undo lookups, and the
 /// AD-38 governed batch write for every non-sub-track entity.
 ///
-/// Filled by DNI-470 (1.8) in `lib/data/repositories/`. Sub-track changes
+/// Filled by DNI-470 (1.8) in `lib/data/repositories/`; DNI-513 (4.5)
+/// adds the time-ordered [ChangeLogRepository.historyPage] read of the
+/// parent Change history, so history and undo share this one contract. Sub-track changes
 /// go through `SubTrackRepository.applyGovernedChange` instead.
 library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
@@ -152,10 +155,31 @@ abstract interface class ChangeLogRepository {
   /// document-id order (loading until complete; never partial).
   Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope);
 
+  /// One page of the whole log of [scope] (every entity), newest `at`
+  /// first (ties by document id, descending), after [after]; at most
+  /// [limit] documents (1..[kChangeHistoryPageSize]).
+  ///
+  /// A document that does not decode is skipped and listed in
+  /// [HistoryPage.rejected]; the cursor and watermark still advance past
+  /// it. One single-field order: no composite index (AD-54).
+  Future<HistoryPage<ChangeLogEntry>> historyPage(
+    LearnerScope scope, {
+    HistoryCursor? after,
+    int limit = kChangeHistoryPageSize,
+  });
+
   /// Every entry of the action [actionId], in document-id order.
   Future<List<ChangeLogEntry>> entriesOfAction(
     LearnerScope scope,
     String actionId,
+  );
+
+  /// Every change-log entry for governed [entity] documents. This is used by
+  /// SM-5 to recover the immutable creation snapshot of a sub-track; callers
+  /// still filter by [entityId] locally so the read needs no composite index.
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
   );
 
   /// Whether any entry reverts [actionId] (`reverts_action_id`), live.

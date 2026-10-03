@@ -36,11 +36,10 @@ PaceGoal? livePace(CurriculumGoals? goals) {
 /// weekday is a study day in [studyDays]. A target is never negative
 /// (B13 default 5, DNI-494).
 ///
-/// [numerator] is `mainTrackRemaining − Σ expectedNewGround(s) +
-/// Σ shortfall(s)` over the curriculum's `holdsGround` sub-tracks; the
-/// engine passes the main track's remaining at the start of [today]
-/// (`mainTrackAtStartOf(today)`, the no-sub-track case; DNI-477), since the
-/// divisor counts [today] too, and DNI-494 adds the sub-track terms.
+/// Σ shortfall(s)` over the curriculum's `holdsGround` sub-tracks
+/// (`DeadlineForecast.numerator`, DNI-494). The engine uses the main
+/// track's remaining at the start of [today] (`mainTrackAtStartOf(today)`),
+/// which is the no-sub-track case, since the divisor counts [today] too.
 int deadlineDailyTarget({
   required int numerator,
   required DeadlineGoal deadline,

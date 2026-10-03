@@ -367,6 +367,11 @@ jobs:
   # absolute budget here instead of in the blocking `test` job, which
   # excludes the tag: runner speed varies too much to block merges on it.
   # The named-device run belongs to the release verification sweep.
+  # Epic 4 release gate (AD-54, DNI-511 AC-7): this job includes
+  # test/benchmark/talmidim_list_benchmark_test.dart (20 talmidim x 40,000
+  # leaf + 200 node events, warm FR-29 row + FR-19 target per learner under
+  # kRecomputeBudget; cold first load printed, not gated). Its timing line
+  # lands in the perf-timings artifact and must pass before the Epic 4 release.
   # DNI-490 (AC-5): the AD-54 cutover benchmark
   # (test/benchmark/learner_state_engine_benchmark_test.dart) runs here on
   # every push and, BLOCKING, in deploy-play-store.yml's perf-gate job before

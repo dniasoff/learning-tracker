@@ -11,6 +11,7 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/ports/backup_record_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
@@ -103,10 +104,23 @@ final class LoggingChangeLog implements ChangeLogRepository {
   }
 
   @override
+  Future<HistoryPage<ChangeLogEntry>> historyPage(
+    LearnerScope scope, {
+    HistoryCursor? after,
+    int limit = kChangeHistoryPageSize,
+  }) => inner.historyPage(scope, after: after, limit: limit);
+
+  @override
   Future<List<ChangeLogEntry>> entriesOfAction(
     LearnerScope scope,
     String actionId,
   ) => inner.entriesOfAction(scope, actionId);
+
+  @override
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
+  ) => inner.entriesForEntity(scope, entity);
 
   @override
   Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>

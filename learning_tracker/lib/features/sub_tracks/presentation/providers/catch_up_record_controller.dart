@@ -1,0 +1,205 @@
+/// *Yes, all of it* (Story 3.3, DNI-506 T6) and *Adjust…* then *Record
+/// {n}* (Story 3.4, DNI-507 T4) on a catch-up card (screen #10, UX-DR-37,
+/// UX-DR-133, UX-DR-154).
+///
+/// One tap expands the card ([buildCatchUpAllAction]), or the Adjust panel
+/// hands its adjusted action, and it is recorded through
+/// `LearningCommands.recordCatchUp`, which owns every rule (window,
+/// events, points, chunking, compensation, analytics). An adjusted action
+/// with no leaf never reaches the command (DNI-507 AC-4). This file is the
+/// card's state around that call:
+///
+/// * **Recording**: the card's actions are disabled until the command
+///   returns, so a double tap never writes twice.
+/// * **Learner switched** while the commands resolve: nothing is written
+///   and the card is idle again — the card's refs and lock belong to the
+///   learner in view at the tap, never to the next one.
+/// * **Success** (saved or queued offline, AC-5): the card disappears on
+///   its own — the events reach the live learner state at once and the
+///   card is complete (A-5). A snackbar offers Undo for exactly the
+///   action's events (AC-7); after Undo the card returns while its window
+///   is open, because completion is derived from counted events.
+/// * **Ended** (AC-3): "This catch-up has ended — you can still tick
+///   learning in Browse." and the card's windows are re-read, so it
+///   disappears. Nothing was written.
+/// * **Not saved** (AC-8): the card stays with "Couldn't save — try again
+///   before the card expires."; the command already voided any saved part.
+///
+/// No copy here mentions a streak or being behind (NFR-18, FR-18).
+library;
+
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/catch_up_cards_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/capture_feedback.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/services/catch_up_action_builder.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
+
+/// Where a card's record action stands.
+enum CatchUpRecordPhase {
+  /// The command is running; the card's actions are disabled.
+  recording,
+
+  /// The last attempt was not saved; the card offers it again.
+  failed,
+}
+
+/// The record phase of each card, by `CatchUpCardWindow.key`; a card with
+/// no entry is idle.
+final catchUpRecordStatusProvider =
+    NotifierProvider<CatchUpRecordStatus, Map<String, CatchUpRecordPhase>>(
+      CatchUpRecordStatus.new,
+    );
+
+/// See [catchUpRecordStatusProvider].
+class CatchUpRecordStatus extends Notifier<Map<String, CatchUpRecordPhase>> {
+  @override
+  Map<String, CatchUpRecordPhase> build() => const {};
+
+  /// Sets card [key] to [phase]; null makes it idle.
+  void set(String key, CatchUpRecordPhase? phase) {
+    final next = {...state};
+    if (phase == null) {
+      next.remove(key);
+    } else {
+      next[key] = phase;
+    }
+    state = next;
+  }
+}
+
+/// Records every leaf [card] lists (*Yes, all of it*) and shows the
+/// outcome. [context] is the card's; the snackbars go to the messenger
+/// above it, which outlives the card.
+Future<void> recordCatchUpAll(
+  BuildContext context,
+  Ref ref,
+  CatchUpTaskCard card,
+) => _recordCatchUp(
+  context,
+  ref,
+  card,
+  () => buildCatchUpAllAction(
+    card,
+    refOf: (task) => task.contentItemSefariaRef,
+    stageOf: (task) => task.stageOrder,
+  ),
+);
+
+/// Records the Adjust panel's [action] for [card] (*Record {n}*, Story
+/// 3.4, DNI-507 AC-3) and shows the outcome as [recordCatchUpAll] does.
+/// An action with no leaf writes nothing and leaves the card pending
+/// (AC-4); an action of another card's lock is refused the same way.
+Future<void> recordCatchUpAdjusted(
+  BuildContext context,
+  Ref ref,
+  CatchUpTaskCard card,
+  CatchUpAction action,
+) async {
+  if (action.leaves.isEmpty ||
+      action.mode != CatchUpMode.adjusted ||
+      action.lock != card.window.lock) {
+    return;
+  }
+  await _recordCatchUp(context, ref, card, () => action);
+}
+
+Future<void> _recordCatchUp(
+  BuildContext context,
+  Ref ref,
+  CatchUpTaskCard card,
+  CatchUpAction Function() actionOf,
+) async {
+  final key = card.window.key;
+  final status = ref.read(catchUpRecordStatusProvider.notifier);
+  if (ref.read(catchUpRecordStatusProvider)[key] ==
+      CatchUpRecordPhase.recording) {
+    return;
+  }
+  // The card is the learner's in view now: its refs and lock are recorded
+  // only under this scope.
+  final scope = _ownerScopeInView(ref);
+  if (scope == null) return;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  status.set(key, CatchUpRecordPhase.recording);
+  final CaptureResult result;
+  final LearningCommands? commands;
+  try {
+    commands = await ref.read(learningCommandsProvider.future);
+    if (commands == null) {
+      status.set(key, CatchUpRecordPhase.failed);
+      return;
+    }
+    // The commands are bound to whichever learner is active when they
+    // resolve. A profile switch during the wait would submit this card
+    // under another learner, so nothing is written then; the new
+    // learner's cards are their own.
+    if (_ownerScopeInView(ref) != scope) {
+      status.set(key, null);
+      return;
+    }
+    result = await commands.recordCatchUp(actionOf());
+  } on Exception {
+    status.set(key, CatchUpRecordPhase.failed);
+    return;
+  }
+  switch (result) {
+    case CaptureSuccess(:final eventIds):
+      status.set(key, null);
+      if (messenger == null || !messenger.mounted) return;
+      final l10n = AppLocalizations.of(messenger.context)!;
+      showCaptureOutcome(
+        messenger.context,
+        result: result,
+        commands: commands,
+        messenger: messenger,
+        message: l10n.captureRecordedCount(eventIds.length),
+      );
+    case CaptureRejected(reason: CaptureRejection.catchUpEnded):
+      status.set(key, null);
+      ref.invalidate(catchUpCardWindowsProvider);
+      if (messenger == null || !messenger.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(messenger.context)!.catchUpEnded),
+        ),
+      );
+    case CaptureLocked():
+      // The lock overlay covers the app; the card pauses with its window.
+      status.set(key, null);
+    case CaptureRejected() || CaptureChildLimit() || CaptureOnlineRequired():
+      status.set(key, CatchUpRecordPhase.failed);
+  }
+}
+
+/// The settled scope of the owner learner in view, or null while it is
+/// loading, failed, absent, or a tutored session is active (the card is
+/// owner-only, AC-12 of DNI-505).
+LearnerScope? _ownerScopeInView(Ref ref) {
+  if (ref.read(activeTutoredProfileSelectionProvider) != null) return null;
+  final scope = ref.read(activeLearnerScopeProvider);
+  if (scope.isLoading || !scope.hasValue) return null;
+  return scope.value;
+}
+
+/// The *Yes, all of it* handler the catch-up card plugs in
+/// (`catchUpCardActionsProvider`, DNI-505).
+void Function(BuildContext context, CatchUpTaskCard card) catchUpRecordAllOf(
+  Ref ref,
+) =>
+    (context, card) => unawaited(recordCatchUpAll(context, ref, card));
+
+/// The *Record {n}* handler of the Adjust panel the catch-up card plugs in
+/// (`catchUpCardActionsProvider`, DNI-507).
+void Function(BuildContext context, CatchUpTaskCard card, CatchUpAction action)
+catchUpRecordAdjustedOf(Ref ref) =>
+    (context, card, action) =>
+        unawaited(recordCatchUpAdjusted(context, ref, card, action));

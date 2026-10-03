@@ -20,8 +20,9 @@ abstract interface class LearningCommandReads {
   /// then fails closed and writes nothing (AD-36, FR-23).
   Future<LearnerSettingsHistory> settingsHistory(LearnerScope scope);
 
-  /// The complete `learning_events` log of [scope] (corrections only;
-  /// capture never reads it).
+  /// The complete `learning_events` log of [scope] (corrections, and a
+  /// `skipRecorded` capture with a bounded wait; any other capture never
+  /// reads it).
   Future<List<LearningEvent>> events(LearnerScope scope);
 
   /// The unscoped ContentIndex corpus of [curriculumId], or null when the

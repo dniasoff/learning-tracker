@@ -25,7 +25,12 @@ export { billingKillSwitch } from "./billing_kill_switch";
 
 export { ownerOversizedGovernedWrite } from "./owner_oversized_governed_write";
 
-export { tutorRecordLearning, tutorUnlearn, tutorVoidLearning } from "./tutor_learning";
+export {
+  tutorRecordLearning,
+  tutorUnlearn,
+  tutorUpsertSubTrack,
+  tutorVoidLearning,
+} from "./tutor_learning";
 
 export {
   inviteTutor,
@@ -54,3 +59,6 @@ export {
   tutorUpsertCurriculumScope,
   tutorEditProfile,
 } from "./tutor_writes";
+
+// Story 4.7 (DNI-515): parent push when a tutor changes the goal or main track.
+export { onChangeLogCreated } from "./notifications";

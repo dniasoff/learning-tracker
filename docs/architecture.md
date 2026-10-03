@@ -240,6 +240,7 @@ lib/features/<feature>/
 ```mermaid
 graph TD
     account["account"]
+    change_history["change_history"]
     content_browsing["content_browsing"]
     dashboard["dashboard"]
     gamification["gamification"]
@@ -252,6 +253,7 @@ graph TD
     sacred_time["sacred_time"]
     scheduler["scheduler"]
     settings["settings"]
+    sub_tracks["sub_tracks"]
     tracks["tracks"]
     tutoring["tutoring"]
 
@@ -264,8 +266,14 @@ graph TD
     onboarding --> tracks
     profiles --> tutoring
     progress --> content_browsing
+    progress --> learning
+    progress --> profiles
+    progress --> tracks
     sacred_time --> profiles
+    scheduler --> tracks
     settings --> account
+    tracks --> learning
+    sub_tracks --> learning
     tracks --> onboarding
     tracks --> scheduler
     tracks --> settings

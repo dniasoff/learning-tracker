@@ -22,12 +22,19 @@
 // and action id is a client ULID the CALLER allocates before the first
 // invocation, so a retry after a timeout re-sends the identical payload and
 // the callable's idempotent replay returns the stored result (AD-31, AD-38).
+//
+// Story 4.1 (DNI-509): the sub-track lifecycle (`createSubTrack`,
+// `editSubTrack`, `endSubTrack`, `deleteSubTrack`) calls
+// `tutorUpsertSubTrack`, and a capture may carry a sub-track `source`.
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 
 /// Result type for tutor write operations.
 sealed class TutorWriteResult {
@@ -136,7 +143,7 @@ class TutorWriteInvalidResponse extends TutorWriteFailure {
 }
 
 /// The server's AD-53 rejection reads "Grant lacks can_edit_learning"
-/// (writeWithChangeLog and verifyTutorGrant).
+/// (writeWithChangeLog, verifyTutorGrant and tutorBulkPriorCompletions).
 bool _isEditingTurnedOff(FirebaseFunctionsException e) =>
     e.code == 'permission-denied' &&
     (e.message ?? '').contains('can_edit_learning');
@@ -148,6 +155,10 @@ bool _isEditingTurnedOff(FirebaseFunctionsException e) =>
 final class TutorLearnEvent {
   /// Creates the event. [dateState] is `dated` (with [learnedOn]) or
   /// `before_tracking` (no [learnedOn]; a node ref carries [level]).
+  ///
+  /// [source] is `main` (default) or, for a capture on the tutor's sub-track
+  /// row (Story 4.1, DNI-509), the sub-track's ULID: then the event is
+  /// `dated` and carries no [stage] or [level].
   const TutorLearnEvent({
     required this.id,
     required this.curriculumId,
@@ -156,9 +167,15 @@ final class TutorLearnEvent {
     this.learnedOn,
     this.level,
     this.stage,
+    this.source = LearningEvent.sourceMain,
   }) : assert(
          dateState != DateState.catchUp,
          'a tutor capture is dated or before_tracking (catch_up is owner-only)',
+       ),
+       assert(
+         source == LearningEvent.sourceMain ||
+             (dateState == DateState.dated && stage == null && level == null),
+         'a sub-track capture is a dated leaf event with no stage',
        );
 
   /// The client ULID.
@@ -182,6 +199,9 @@ final class TutorLearnEvent {
   /// The review stage of a main-track event.
   final int? stage;
 
+  /// `main`, or the ULID of the sub-track the event is learning on.
+  final String source;
+
   /// The `{id, fields}` request object. Optional keys are omitted, never
   /// sent as null, except `learned_on` (null on `before_tracking`).
   Map<String, Object?> toWire() => {
@@ -190,7 +210,7 @@ final class TutorLearnEvent {
       'kind': 'learn',
       'curriculum_id': curriculumId,
       'ref': ref,
-      'source': 'main',
+      'source': source,
       'date_state': dateState.storage,
       'learned_on': dateState == DateState.beforeTracking ? null : learnedOn,
       if (level != null) 'level': level,
@@ -248,15 +268,22 @@ class TutorWriteService {
   ///
   /// [analytics] receives the registered `capture` event after a
   /// successful learning capture (AD-47: the callables emit nothing).
+  ///
+  /// [onAccessLost] hears every rejection that means the grant no longer
+  /// authorizes the learner (DNI-512; see [isTutorAccessLost]).
   TutorWriteService({
     TutorCallableInvoker? invoker,
     AccountFunctionsResolver? resolveFunctions,
     LearningAnalytics? analytics,
+    TutorAccessLostListener? onAccessLost,
   }) : assert(
          invoker != null || resolveFunctions != null,
          'TutorWriteService needs an invoker or a functions resolver',
        ),
-       _invoker = invoker ?? _accountInvoker(resolveFunctions!),
+       _invoker = _reportingAccessLoss(
+         invoker ?? _accountInvoker(resolveFunctions!),
+         onAccessLost,
+       ),
        _analytics = analytics;
 
   final TutorCallableInvoker _invoker;
@@ -510,16 +537,22 @@ class TutorWriteService {
   void _emitCapture(List<TutorLearnEvent> events) {
     final analytics = _analytics;
     if (analytics == null) return;
-    final counts = <(String, DateState), int>{};
+    final counts = <(String, CaptureSourceKind, DateState), int>{};
     for (final e in events) {
-      final key = (e.curriculumId, e.dateState);
+      final kind = e.source == LearningEvent.sourceMain
+          ? CaptureSourceKind.main
+          : CaptureSourceKind.subTrack;
+      final key = (e.curriculumId, kind, e.dateState);
       counts[key] = (counts[key] ?? 0) + 1;
     }
-    for (final MapEntry(key: (curriculumId, dateState), value: count)
+    for (final MapEntry(
+          key: (curriculumId, sourceKind, dateState),
+          value: count,
+        )
         in counts.entries) {
       analytics.capture(
         curriculumId: curriculumId,
-        sourceKind: CaptureSourceKind.main,
+        sourceKind: sourceKind,
         dateState: dateState,
         count: count,
       );
@@ -763,6 +796,198 @@ class TutorWriteService {
     'removedConfigIds': removedConfigIds,
   }, actionId: actionId);
 
+  // ── Sub-tracks (Story 4.1, DNI-509: tutorUpsertSubTrack) ───────────────────
+  //
+  // Each lifecycle command is ONE `tutorUpsertSubTrack` call — one governed
+  // action, one `subTrack` change_log entry — confirmed only by a validated
+  // receipt (see [_callGoverned]). The wire fields are the AD-52 intent
+  // fields of the owner path ([SubTrackCommands.intentFieldsOf]); the server
+  // (writeWithChangeLog) authorises, validates AD-52 / AD-45 and logs. Pass
+  // the SAME client ULIDs on a retry so the server replays a committed
+  // action instead of writing it twice. After a newly written action (not a
+  // replay, not a no-op) the registered `subtrack_lifecycle` event is
+  // emitted through [LearningAnalytics] — enums and counts only (AD-47).
+
+  /// Creates the sub-track [subTrackId] (a new client ULID) from [draft].
+  /// *Add next year* is a create too: a new ULID with `academic_year + 1`
+  /// ([nextYear] reports it as `add_next_year`, Story 4.2 / DNI-510).
+  /// [actionId] defaults to [subTrackId] — the create's stable replay key.
+  Future<TutorWriteResult> createSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String subTrackId,
+    required SubTrackDraft draft,
+    String? actionId,
+    bool nextYear = false,
+  }) async {
+    final action = actionId ?? subTrackId;
+    final created = SubTrack(
+      id: subTrackId,
+      curriculumId: draft.curriculumId,
+      name: draft.name,
+      type: draft.type,
+      academicYear: draft.academicYear,
+      windowStart: draft.windowStart,
+      windowEnd: draft.windowEnd,
+      ratePerWeek: draft.ratePerWeek,
+      weeksPerYear: draft.weeksPerYear,
+      learnsOnShabbos: draft.learnsOnShabbos,
+      ground: draft.ground,
+      lastChangeId: action,
+    );
+    // Absent optional fields are not sent (a create clears nothing).
+    final fields = SubTrackCommands.intentFieldsOf(created)
+      ..removeWhere((_, v) => v == null);
+    final result = await _callSubTrack(
+      grantId: grantId,
+      ownerUid: ownerUid,
+      profileId: profileId,
+      subTrackId: subTrackId,
+      op: 'create',
+      fields: fields,
+      actionId: action,
+    );
+    _emitSubTrackLifecycle(
+      result,
+      created,
+      nextYear
+          ? SubTrackLifecycleAction.addNextYear
+          : SubTrackLifecycleAction.create,
+    );
+    return result;
+  }
+
+  /// Edits [current] with [edit]: any field but `curriculum_id`; `ground`
+  /// (ground add, reorder or remove) is replaced whole. Only the changed
+  /// fields are sent (`null` clears `academic_year` / `window_end`); an
+  /// edit that changes nothing calls nothing and returns
+  /// [TutorWriteSuccess]. [actionId] is the edit's client ULID.
+  Future<TutorWriteResult> editSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required SubTrack current,
+    required SubTrackEdit edit,
+    required String actionId,
+  }) async {
+    final edited = SubTrackCommands.applyEdit(current, edit);
+    final before = SubTrackCommands.intentFieldsOf(current);
+    final after = SubTrackCommands.intentFieldsOf(edited);
+    final changed = <String, Object?>{
+      for (final MapEntry(:key, :value) in after.entries)
+        if (!storageValueEquals(before[key], value)) key: value,
+    };
+    if (changed.isEmpty) return const TutorWriteSuccess();
+    final result = await _callSubTrack(
+      grantId: grantId,
+      ownerUid: ownerUid,
+      profileId: profileId,
+      subTrackId: current.id,
+      op: 'edit',
+      fields: changed,
+      actionId: actionId,
+    );
+    _emitSubTrackLifecycle(result, edited, SubTrackLifecycleAction.edit);
+    return result;
+  }
+
+  /// Ends [subTrack]: `ended_at` + `end_reason = ended` (a tombstone).
+  Future<TutorWriteResult> endSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required SubTrack subTrack,
+    required String actionId,
+  }) => _tombstoneSubTrack(
+    grantId: grantId,
+    ownerUid: ownerUid,
+    profileId: profileId,
+    subTrack: subTrack,
+    actionId: actionId,
+    op: 'end',
+    action: SubTrackLifecycleAction.end,
+  );
+
+  /// Deletes [subTrack] as a tombstone: `ended_at` + `end_reason =
+  /// deleted`. No document is ever hard-deleted; its learning events stay.
+  Future<TutorWriteResult> deleteSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required SubTrack subTrack,
+    required String actionId,
+  }) => _tombstoneSubTrack(
+    grantId: grantId,
+    ownerUid: ownerUid,
+    profileId: profileId,
+    subTrack: subTrack,
+    actionId: actionId,
+    op: 'delete',
+    action: SubTrackLifecycleAction.delete,
+  );
+
+  Future<TutorWriteResult> _tombstoneSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required SubTrack subTrack,
+    required String actionId,
+    required String op,
+    required SubTrackLifecycleAction action,
+  }) async {
+    final result = await _callSubTrack(
+      grantId: grantId,
+      ownerUid: ownerUid,
+      profileId: profileId,
+      subTrackId: subTrack.id,
+      op: op,
+      actionId: actionId,
+    );
+    _emitSubTrackLifecycle(result, subTrack, action);
+    return result;
+  }
+
+  /// One `tutorUpsertSubTrack` call (the Story 4.1 wire shape, see
+  /// `functions/src/tutor_learning.ts`).
+  Future<TutorWriteResult> _callSubTrack({
+    required String grantId,
+    required String ownerUid,
+    required String profileId,
+    required String subTrackId,
+    required String op,
+    required String actionId,
+    Map<String, Object?>? fields,
+  }) => _callGoverned('tutorUpsertSubTrack', {
+    'grantId': grantId,
+    'ownerUid': ownerUid,
+    'profileId': profileId,
+    'subTrackId': subTrackId,
+    'op': op,
+    'fields': ?fields,
+  }, actionId: actionId);
+
+  /// Emits `subtrack_lifecycle` for a newly written action only: a failure,
+  /// a replay of an already-stored action or a server no-op (e.g. ending an
+  /// already-ended sub-track) emits nothing.
+  void _emitSubTrackLifecycle(
+    TutorWriteResult result,
+    SubTrack track,
+    SubTrackLifecycleAction action,
+  ) {
+    if (result is! TutorGovernedWritten ||
+        result.replayed ||
+        result.changeIds.isEmpty) {
+      return;
+    }
+    _analytics?.subTrackLifecycle(
+      curriculumId: track.curriculumId,
+      type: track.type,
+      action: action,
+      groundEntries: track.ground.length,
+    );
+  }
+
   // ── Gamification settings: rewards + points ──────────────────────────────────
 
   /// Merges into preferences/gamification_settings — covers reward catalogue and
@@ -843,4 +1068,40 @@ class TutorWriteService {
       if (mode != null) 'mode': mode,
     });
   }
+}
+
+// ── Story 4.4 (DNI-512): revoked-session signal ──────────────────────────────
+
+/// Hears that the grant [grantId] (the call's routing grant; null when the
+/// call carried none) no longer authorizes the tutor (DNI-512).
+typedef TutorAccessLostListener = void Function(String? grantId);
+
+/// Whether a callable rejection means the tutor's grant no longer authorizes
+/// the learner: `permission-denied` that is not the AD-53 "editing turned
+/// off" refusal nor another permission the grant lacks (`Grant lacks …`).
+/// writeWithChangeLog and the legacy grant check answer a revoked, missing
+/// or foreign grant this way, live on every call (AD-53), whatever the
+/// device still believes. The failure the caller gets is unchanged.
+bool isTutorAccessLost(FirebaseFunctionsException e) =>
+    e.code == 'permission-denied' &&
+    !(e.message ?? '').startsWith('Grant lacks ');
+
+/// [inner], telling [listener] about an access-lost rejection before the
+/// shared failure mapping sees the (rethrown) exception.
+TutorCallableInvoker _reportingAccessLoss(
+  TutorCallableInvoker inner,
+  TutorAccessLostListener? listener,
+) {
+  if (listener == null) return inner;
+  return (functionName, args) async {
+    try {
+      return await inner(functionName, args);
+    } on FirebaseFunctionsException catch (e) {
+      if (isTutorAccessLost(e)) {
+        final grantId = args['grantId'];
+        listener(grantId is String ? grantId : null);
+      }
+      rethrow;
+    }
+  };
 }

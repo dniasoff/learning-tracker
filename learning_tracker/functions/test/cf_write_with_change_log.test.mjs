@@ -929,3 +929,329 @@ describe('ownerOversizedGovernedWrite — wire contract fixture', () => {
     });
   }
 });
+
+// ── Story 2.1 / DNI-492 — sub-track create claim, replay and AD-45 ──────────
+// The callable is the only path that CLAIMS a create (ruling B6); the owner
+// offline path is an ordinary doc + entry batch (rules suite). Windows are
+// open-ended from 2020 so the cases count on any run date.
+
+describe('writeWithChangeLog — sub-track create claim, replay and AD-45 (DNI-492)', () => {
+  const SC = 'shas';
+  const track = (overrides = {}) => ({
+    curriculum_id: SC, name: 'Night seder', type: 'ongoing', window_start: '2020-01-01',
+    rate_per_week: 5, weeks_per_year: 40, learns_on_shabbos: false,
+    ground: [{ level: 'masechta', ref: 'Berakhot' }], ...overrides,
+  });
+  const subTrackAction = (entryId, docId, fields, mode) =>
+    ownerAction(entryId, 'subTrack', docId, [{ collection: 'sub_tracks', docId, fields, ...(mode ? { mode } : {}) }]);
+  const subTracks = () => profileRef().collection('sub_tracks');
+  const seedTracks = async (n, overrides = {}) => {
+    for (let i = 0; i < n; i++) {
+      await subTracks().doc(ulid(900 + i)).set({ ...track(overrides), last_change_id: ulid(0) });
+    }
+  };
+  async function expectViolation(promise, code, violations) {
+    await assert.rejects(promise, (err) => {
+      assert.equal(err.code ?? err.httpErrorCode?.canonicalName, code, err.message);
+      assert.deepEqual(err.details?.sub_track_violations, violations);
+      return true;
+    });
+  }
+
+  beforeEach(async () => {
+    await seedProfile();
+  });
+
+  test('claims an absent sub-track: before null per field, last_change_id stamped', async () => {
+    const id = ulid(500);
+    const res = await call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), id, track(), 'create'), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+    const [entry] = await changeLog();
+    assert.equal(entry.entity, 'subTrack');
+    assert.equal(entry.entity_id, id);
+    for (const v of Object.values(entry.before)) assert.equal(v, null);
+    assert.equal(entry.after[`sub_tracks/${id}.name`], 'Night seder');
+    const doc = (await subTracks().doc(id).get()).data();
+    assert.equal(doc.last_change_id, ulid(1));
+    assert.equal(doc.rate_per_week, 5);
+  });
+
+  test('an identical ULID replay returns the stored result and writes nothing new', async () => {
+    const id = ulid(500);
+    const action = subTrackAction(ulid(1), id, track(), 'create');
+    const first = await call(fns.ownerOversizedGovernedWrite, action, parentAuth);
+    const again = await call(fns.ownerOversizedGovernedWrite, action, parentAuth);
+    assert.equal(again.replayed, true);
+    assert.deepEqual(again.change_ids, first.change_ids);
+    assert.equal((await changeLog()).length, 1);
+  });
+
+  test('a non-replay create of an existing sub-track is rejected, not overwritten', async () => {
+    const id = ulid(500);
+    await call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), id, track(), 'create'), parentAuth);
+    await expectHttpsError(
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(2), id, track({ name: 'Other' }), 'create'), parentAuth),
+      'already-exists',
+    );
+    assert.equal((await subTracks().doc(id).get()).data().name, 'Night seder');
+  });
+
+  test('a sixth counting ongoing sub-track → failed-precondition ongoing_limit, nothing written', async () => {
+    await seedTracks(5);
+    await expectViolation(
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track()), parentAuth),
+      'failed-precondition', ['ongoing_limit'],
+    );
+    assert.equal((await subTracks().doc(ulid(500)).get()).exists, false);
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('ended and passed-window sub-tracks do not count toward the cap', async () => {
+    await seedTracks(4);
+    await subTracks().doc(ulid(950)).set({ ...track({ window_end: '2000-01-01' }), last_change_id: ulid(0) });
+    await subTracks().doc(ulid(951)).set({
+      ...track(), ended_at: new Date('2021-01-01T00:00:00Z'), end_reason: 'ended', last_change_id: ulid(0),
+    });
+    const res = await call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track()), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+  });
+
+  test('editing one of six reconciled ongoing sub-tracks (name only) is tolerated', async () => {
+    await seedTracks(6);
+    const res = await call(fns.ownerOversizedGovernedWrite,
+      subTrackAction(ulid(1), ulid(900), { name: 'Renamed' }, 'update'), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+  });
+
+  test('a create on a calendar-program curriculum → calendar_program_curriculum', async () => {
+    await profileRef().collection('profile_programs').doc(SC).set({
+      curriculum_id: SC, program_id: 'daf_yomi', tracking_start_date: '2026-01-01', last_change_id: ulid(0),
+    });
+    await expectViolation(
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track()), parentAuth),
+      'failed-precondition', ['calendar_program_curriculum'],
+    );
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('setting a calendar program on a curriculum with a non-ended sub-track → calendar_program_has_sub_tracks', async () => {
+    await seedTracks(1);
+    await expectViolation(
+      call(fns.ownerOversizedGovernedWrite, ownerAction(ulid(1), 'mainTrackProgram', SC, [{
+        collection: 'profile_programs', docId: SC,
+        fields: { curriculum_id: SC, program_id: 'daf_yomi', tracking_start_date: '2026-01-01' },
+      }]), parentAuth),
+      'failed-precondition', ['calendar_program_has_sub_tracks'],
+    );
+    assert.equal((await profileRef().collection('profile_programs').doc(SC).get()).exists, false);
+  });
+
+  test('a calendar program is allowed once every sub-track is ended', async () => {
+    await subTracks().doc(ulid(900)).set({
+      ...track(), ended_at: new Date('2021-01-01T00:00:00Z'), end_reason: 'deleted', last_change_id: ulid(0),
+    });
+    const res = await call(fns.ownerOversizedGovernedWrite, ownerAction(ulid(1), 'mainTrackProgram', SC, [{
+      collection: 'profile_programs', docId: SC,
+      fields: { curriculum_id: SC, program_id: 'daf_yomi', tracking_start_date: '2026-01-01' },
+    }]), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+  });
+
+  test('malformed intent → invalid-argument naming each rule (AC-5)', async () => {
+    await expectViolation(
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track({
+        ground: [{ level: 'masechta', ref: 'Berakhot' }, { level: 'masechta', ref: 'Berakhot' }],
+        rate_per_week: 0, window_end: '2019-01-01',
+      })), parentAuth),
+      'invalid-argument', ['duplicate_ground', 'non_positive_rate', 'window_reversed'],
+    );
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('ending a sub-track over the cap is always allowed (tombstones skip limits)', async () => {
+    await seedTracks(6);
+    const res = await call(fns.ownerOversizedGovernedWrite,
+      subTrackAction(ulid(1), ulid(905), { ended_at: true, end_reason: 'ended' }, 'update'), parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(1)]);
+    assert.equal((await subTracks().doc(ulid(905)).get()).data().end_reason, 'ended');
+  });
+
+  // AD-52 lifecycle pair: ended_at and end_reason are written, cleared and
+  // judged together, including on a tombstoned doc.
+  describe('ended_at / end_reason are a coupled pair', () => {
+    const ENDED_AT = new Date('2021-01-01T00:00:00Z');
+    const seedEnded = (reason = 'ended') =>
+      subTracks().doc(ulid(900)).set({ ...track(), ended_at: ENDED_AT, end_reason: reason, last_change_id: ulid(0) });
+    const update = (fields) =>
+      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(900), fields, 'update'), parentAuth);
+    async function expectRejectedUnchanged(promise, stored) {
+      await expectHttpsError(promise, 'invalid-argument');
+      const doc = (await subTracks().doc(ulid(900)).get()).data();
+      assert.equal(doc.end_reason, stored.end_reason);
+      assert.equal(doc.ended_at === undefined, stored.ended_at === undefined);
+      assert.deepEqual(await changeLog(), []);
+    }
+
+    test('ended_at without end_reason → invalid-argument', async () => {
+      await seedTracks(1);
+      await expectRejectedUnchanged(update({ ended_at: true }), {});
+    });
+
+    test('end_reason on a live sub-track → invalid-argument', async () => {
+      await seedTracks(1);
+      await expectRejectedUnchanged(update({ end_reason: 'deleted' }), {});
+    });
+
+    test('clearing ended_at but leaving end_reason → invalid-argument', async () => {
+      await seedEnded();
+      await expectRejectedUnchanged(update({ ended_at: null }), { end_reason: 'ended', ended_at: ENDED_AT });
+    });
+
+    test('clearing end_reason but leaving ended_at → invalid-argument', async () => {
+      await seedEnded();
+      await expectRejectedUnchanged(update({ end_reason: null }), { end_reason: 'ended', ended_at: ENDED_AT });
+    });
+
+    test('rewriting the end_reason of an ended sub-track → invalid-argument', async () => {
+      await seedEnded();
+      await expectRejectedUnchanged(update({ end_reason: 'deleted' }), { end_reason: 'ended', ended_at: ENDED_AT });
+    });
+
+    test('re-add clears both → accepted, live with no end_reason', async () => {
+      await seedEnded();
+      const res = await update({ ended_at: null, end_reason: null });
+      assert.deepEqual(res.change_ids, [ulid(1)]);
+      const doc = (await subTracks().doc(ulid(900)).get()).data();
+      assert.equal(doc.ended_at, undefined);
+      assert.equal(doc.end_reason, undefined);
+    });
+
+    test('a repeated tombstone of an ended sub-track is a no-op that keeps its reason', async () => {
+      await seedEnded('ended');
+      await update({ ended_at: true, end_reason: 'deleted' });
+      assert.equal((await subTracks().doc(ulid(900)).get()).data().end_reason, 'ended');
+      assert.deepEqual(await changeLog(), []);
+    });
+  });
+});
+
+// ── DNI-512 (Story 4.4) AC-2 — a parent revoke stops every tutor callable ─────
+// The grant is re-read by writeWithChangeLog on every call (AD-38 callable
+// contract, AD-53), so after the parent's real `revokeTutorGrant` commits,
+// the tutor's next call is `permission-denied` and writes nothing — even
+// though the tutor device still holds the grant as active (it sends the same
+// routing it used a moment ago, and has not seen the revocation).
+
+describe('DNI-512 AC-2 — revoked grant is rejected on every governed callable', () => {
+  const SC = 'shas';
+  const SUB = ulid(500);
+  const ONGOING = {
+    curriculum_id: SC,
+    name: 'Rebbe Gemara',
+    type: 'ongoing',
+    window_start: '2026-09-01',
+    rate_per_week: 5,
+    weeks_per_year: 40,
+    learns_on_shabbos: false,
+    ground: [{ level: 'masechta', ref: 'Berakhot' }],
+  };
+  // What the tutor device cached while the grant was active: never refreshed.
+  const staleRouting = Object.freeze({ grantId: GRANT, ownerUid: PARENT, profileId: PROFILE });
+  const learn = (id, ref) => ({
+    id,
+    fields: {
+      kind: 'learn', curriculum_id: SC, ref, source: 'main',
+      date_state: 'dated', learned_on: '2026-10-01',
+    },
+  });
+  const LEARNER_COLLECTIONS = [
+    'sub_tracks', 'learning_events', 'goals', 'change_log',
+    'points_ledger', 'governed_action_receipts',
+  ];
+
+  async function everything() {
+    const out = {};
+    for (const name of LEARNER_COLLECTIONS) {
+      const snap = await profileRef().collection(name).get();
+      for (const d of snap.docs) out[`${name}/${d.id}`] = d.data();
+    }
+    const audit = await db.collection('tutor_grants').doc(GRANT).collection('audit_log').get();
+    out.auditCount = audit.size;
+    return out;
+  }
+
+  const calls = {
+    tutorRecordLearning: () => call(fns.tutorRecordLearning, { ...staleRouting, events: [learn(ulid(510), 'Berakhot 3a')] }),
+    tutorVoidLearning: () => call(fns.tutorVoidLearning, { ...staleRouting, eventId: ulid(511), targetId: ulid(501) }),
+    tutorUnlearn: () => call(fns.tutorUnlearn, { ...staleRouting, actionId: ulid(512), curriculumId: SC, leafSet: ['Berakhot 2a'] }),
+    'tutorUpsertSubTrack (edit)': () => call(fns.tutorUpsertSubTrack, {
+      ...staleRouting, op: 'edit', subTrackId: SUB, fields: { rate_per_week: 6 }, actionId: ulid(513),
+    }),
+    'tutorUpsertSubTrack (create)': () => call(fns.tutorUpsertSubTrack, {
+      ...staleRouting, op: 'create', subTrackId: ulid(514), fields: { ...ONGOING, name: 'Second' },
+    }),
+    'tutorUpsertSubTrack (end)': () => call(fns.tutorUpsertSubTrack, {
+      ...staleRouting, op: 'end', subTrackId: SUB, actionId: ulid(515),
+    }),
+    tutorUpsertGoal: () => call(fns.tutorUpsertGoal, {
+      ...staleRouting, goalId: `${SC}_deadline`,
+      goalData: { goal_type: 'deadline', target_date: '2028-01-01', curriculum_id: SC },
+      actionId: ulid(516),
+    }),
+  };
+
+  beforeEach(async () => {
+    await seedProfile();
+    await seedLearningGrant();
+    // While active, the tutor authors a sub-track, a learn event and a goal.
+    await call(fns.tutorUpsertSubTrack, { ...staleRouting, op: 'create', subTrackId: SUB, fields: ONGOING });
+    await call(fns.tutorRecordLearning, { ...staleRouting, events: [learn(ulid(501), 'Berakhot 2a')] });
+    await call(fns.tutorUpsertGoal, {
+      ...staleRouting, goalId: `${SC}_deadline`,
+      goalData: { goal_type: 'deadline', target_date: '2027-06-01', curriculum_id: SC },
+      actionId: ulid(502),
+    });
+  });
+
+  for (const [name, invoke] of Object.entries(calls)) {
+    test(`${name} after the parent revokes → permission-denied, nothing written`, async () => {
+      await call(fns.revokeTutorGrant, { grantId: GRANT }, parentAuth);
+      const before = await everything();
+      const { error, logs } = await captureLogs(invoke);
+      await expectHttpsError(Promise.reject(error), 'permission-denied');
+      assert.ok(
+        logs.some((l) => l.entry.message === 'governed_write_rejected' && l.entry.code === 'permission-denied'),
+        'the rejection is the helper\'s own grant check',
+      );
+      assert.deepEqual(await everything(), before, 'no governed doc, event, entry or audit row is written');
+    });
+  }
+
+  test('a revoke racing an in-flight edit: committed-before is kept whole, after is denied', async () => {
+    const edit = (rate, id) => call(fns.tutorUpsertSubTrack, {
+      ...staleRouting, op: 'edit', subTrackId: SUB, fields: { rate_per_week: rate }, actionId: id,
+    });
+    const [revoke, raced] = await Promise.allSettled([
+      call(fns.revokeTutorGrant, { grantId: GRANT }, parentAuth),
+      edit(7, ulid(520)),
+    ]);
+    assert.equal(revoke.status, 'fulfilled');
+    const sub = (await profileRef().collection('sub_tracks').doc(SUB).get()).data();
+    const entryIds = (await changeLog()).map((e) => e.id);
+    if (raced.status === 'fulfilled') {
+      // Committed before the revoke: the doc and its entry are both kept.
+      assert.equal(sub.rate_per_week, 7);
+      assert.equal(sub.last_change_id, ulid(520));
+      assert.ok(entryIds.includes(ulid(520)));
+    } else {
+      // Evaluated after the revoke: denied, no partial write.
+      await expectHttpsError(Promise.reject(raced.reason), 'permission-denied');
+      assert.equal(sub.rate_per_week, ONGOING.rate_per_week);
+      assert.ok(!entryIds.includes(ulid(520)));
+    }
+    // Every sub-track doc's last_change_id has its entry (no half write).
+    assert.ok(entryIds.includes(sub.last_change_id));
+    // Whatever the race outcome, the next call is denied.
+    await expectHttpsError(edit(8, ulid(521)), 'permission-denied');
+  });
+});

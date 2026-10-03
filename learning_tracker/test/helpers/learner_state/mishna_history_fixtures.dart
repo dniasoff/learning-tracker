@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/learner_state/presentation/providers/l
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
@@ -221,6 +222,10 @@ final class GatedLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
+    bool skipRecorded = false,
+    CaptureGesture gesture = CaptureGesture.plusOne,
+    int taps = 1,
+    int skippedCount = 0,
   }) => _held(
     () => inner.capture(
       curriculumId: curriculumId,
@@ -230,6 +235,10 @@ final class GatedLearningCommands implements LearningCommands {
       dateState: dateState,
       learnedOn: learnedOn,
       stage: stage,
+      skipRecorded: skipRecorded,
+      gesture: gesture,
+      taps: taps,
+      skippedCount: skippedCount,
     ),
   );
 
@@ -260,6 +269,31 @@ final class GatedLearningCommands implements LearningCommands {
       _held(() => inner.undoAction(actionId));
 
   @override
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+    String? nextYearOf,
+  }) => _held(
+    () => inner.createSubTrack(
+      draft,
+      subTrackId: subTrackId,
+      nextYearOf: nextYearOf,
+    ),
+  );
+
+  @override
+  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>
+      _held(() => inner.editSubTrack(subTrackId, edit));
+
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) =>
+      _held(() => inner.endSubTrack(subTrackId));
+
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) =>
+      _held(() => inner.deleteSubTrack(subTrackId));
+
+  @override
   Future<CaptureResult> removeTrack(String curriculumId) =>
       _held(() => inner.removeTrack(curriculumId));
 
@@ -272,10 +306,18 @@ final class GatedLearningCommands implements LearningCommands {
       inner.importBackup(input);
 
   @override
+  Future<CaptureResult> recordCatchUp(CatchUpAction action) =>
+      _held(() => inner.recordCatchUp(action));
+
+  @override
   Stream<List<PendingFailure>> watchPendingFailures() =>
       inner.watchPendingFailures();
 
   @override
   Future<CaptureResult> retry(String pendingFailureId) =>
       _held(() => inner.retry(pendingFailureId));
+
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) =>
+      inner.whenSubTrackChangeConfirmed(changeId);
 }

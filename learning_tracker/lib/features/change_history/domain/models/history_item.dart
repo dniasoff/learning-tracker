@@ -1,0 +1,159 @@
+/// The merged items of the parent Change history (Story 4.5 / DNI-513):
+/// one per governed action (`change_log` entries sharing an `action_id`,
+/// AD-38) and one per learning batch (the `learning_events` one capture
+/// wrote together).
+library;
+
+import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+
+/// The instant [entry] took effect: `original_at ?? at` (AD-41), the
+/// change-log counterpart of [effectiveAt]. An imported entry keeps the
+/// instant of the change it records, not the day it was written. History
+/// sorts, groups, stamps and names by it, never by the raw `at`.
+///
+/// It is never later than `at` (`original_at` is the earlier, original
+/// instant of an imported change), so the `at` watermark of the
+/// `change_log` pages still bounds every unread entry.
+DateTime changeAt(ChangeLogEntry entry) => entry.originalAt ?? entry.at;
+
+/// One merged history item, ordered newest [sortAt] first.
+sealed class HistoryItem {
+  const HistoryItem();
+
+  /// Stable identity across page loads (never changes as more of the same
+  /// action is read, nor once a learning batch is visible).
+  String get key;
+
+  /// The instant the item sorts by (UTC).
+  DateTime get sortAt;
+
+  /// Who made the change or recorded the learning.
+  Actor get actor;
+
+  /// Tie order between items with the same [sortAt]: governed before
+  /// learning, then by [key] descending.
+  int get sourceRank;
+}
+
+/// Every loaded `change_log` entry of one `action_id`.
+final class GovernedActionItem extends HistoryItem {
+  /// Creates the item; [entries] are non-empty and share [actionId].
+  GovernedActionItem(this.actionId, List<ChangeLogEntry> entries)
+    : entries = List.unmodifiable(
+        <ChangeLogEntry>[...entries]..sort((a, b) => a.id.compareTo(b.id)),
+      ) {
+    if (this.entries.isEmpty) {
+      throw ArgumentError.value(actionId, 'entries', 'empty action');
+    }
+  }
+
+  /// The ULID shared by the action's entries.
+  final String actionId;
+
+  /// The loaded entries, by id (the action's first entry first).
+  final List<ChangeLogEntry> entries;
+
+  /// The entry that names the action: the one whose id is the action id,
+  /// else the smallest loaded id.
+  ChangeLogEntry get primary =>
+      entries.firstWhere((e) => e.id == actionId, orElse: () => entries.first);
+
+  @override
+  String get key => 'action:$actionId';
+
+  /// The newest effective entry instant of the action ([changeAt]).
+  @override
+  DateTime get sortAt =>
+      entries.map(changeAt).reduce((a, b) => b.isAfter(a) ? b : a);
+
+  @override
+  Actor get actor => primary.actor;
+
+  @override
+  int get sourceRank => 0;
+
+  /// The action this one undoes, when it is an undo (AD-38
+  /// `reverts_action_id`).
+  String? get revertsActionId {
+    for (final e in entries) {
+      if (e.revertsActionId != null) return e.revertsActionId;
+    }
+    return null;
+  }
+}
+
+/// The `learning_events` of one capture: written by one command
+/// ([writtenByOneCommand]: one raw `recorded_at`, one actor) with the same
+/// kind, source, curriculum, date state, civil date and effective instant.
+///
+/// The command boundary keeps apart events whose visible fields agree but
+/// that two commands wrote: a correction's replacement or an un-learn's
+/// re-issue carries `original_recorded_at = effectiveAt(target)` and would
+/// otherwise join the capture it corrects.
+final class LearningBatchItem extends HistoryItem {
+  /// Creates the item; [events] are non-empty and pairwise [sameBatch].
+  LearningBatchItem(List<LearningEvent> events)
+    : events = List.unmodifiable(
+        <LearningEvent>[...events]..sort((a, b) => a.id.compareTo(b.id)),
+      ) {
+    if (this.events.isEmpty) {
+      throw ArgumentError.value(events, 'events', 'empty batch');
+    }
+  }
+
+  /// The batch's events, by id.
+  final List<LearningEvent> events;
+
+  /// The batch's first event.
+  LearningEvent get first => events.first;
+
+  /// Whether the batch records learning (not a `void`).
+  bool get isLearn => first.isLearn;
+
+  /// The batch's smallest event id. Events belong to one batch each, so
+  /// it is unique; and it is final once the item is visible: `learning_events`
+  /// pages run by `recorded_at` descending, so a visible item (effective
+  /// instant above the merge frontier, hence `recorded_at` above the page
+  /// watermark) has every event of its command loaded.
+  @override
+  String get key => 'events:${first.id}';
+
+  /// `original_recorded_at ?? recorded_at` (AD-31).
+  @override
+  DateTime get sortAt => effectiveAt(first);
+
+  @override
+  Actor get actor => first.actor;
+
+  @override
+  int get sourceRank => 1;
+
+  /// Whether [a] and [b] belong to one batch: one command
+  /// ([writtenByOneCommand]) and equal [batchKeyOf].
+  static bool sameBatch(LearningEvent a, LearningEvent b) =>
+      writtenByOneCommand(a, b) && batchKeyOf(a) == batchKeyOf(b);
+
+  /// The visible fields a batch shares. Equal keys are necessary, not
+  /// sufficient: two commands can write equal keys ([sameBatch]).
+  static String batchKeyOf(LearningEvent event) => [
+    event.kind.storage,
+    effectiveAt(event).microsecondsSinceEpoch,
+    event.actor.uid,
+    event.actor.role.storage,
+    event.source ?? '',
+    event.curriculumId ?? '',
+    event.dateState?.storage ?? '',
+    event.learnedOn ?? '',
+  ].join('|');
+}
+
+/// Newest first; ties by [HistoryItem.sourceRank], then key descending.
+int compareHistoryItems(HistoryItem a, HistoryItem b) {
+  final byTime = b.sortAt.compareTo(a.sortAt);
+  if (byTime != 0) return byTime;
+  final byRank = a.sourceRank.compareTo(b.sourceRank);
+  if (byRank != 0) return byRank;
+  return b.key.compareTo(a.key);
+}

@@ -42,18 +42,20 @@ final class DispatchOutcome {
     required this.queued,
     required this.rejectedChunks,
     required this.totalChunks,
+    this.rejectedEventIds = const [],
   });
 
   /// Events of chunks not rejected within the window, in write order.
   final List<String> eventIds;
 
-  /// The `learn` events of the chunks the server acknowledged, in write
-  /// order, once every chunk has settled (acknowledged, rejected, or failed
-  /// otherwise). A queued chunk counts only when its acknowledgement
-  /// arrives, and a chunk the server rejects never counts: what the
-  /// achievement latch checks after the write (DNI-480, AD-50). Never
-  /// completes with an error.
+  /// The `learn` events of chunks the server acknowledged, in write order.
+  /// Queued chunks count only after acknowledgement; rejected chunks never
+  /// count. Never completes with an error.
   final Future<List<String>> acknowledgedLearnEventIds;
+
+  /// Events of chunks rejected within the window (each becomes a pending
+  /// failure), in write order; disjoint from [eventIds].
+  final List<String> rejectedEventIds;
 
   /// Whether some chunk was not yet acknowledged (queued offline).
   final bool queued;
@@ -71,11 +73,14 @@ final class DispatchOutcome {
 enum _ChunkStatus { acked, rejected }
 
 final class _Pending {
-  _Pending(this.command, this.chunk, this.reason);
+  _Pending(this.command, this.chunk, this.reason, {required this.isUndo});
 
   final LearningCommandKind command;
   final LearningWriteChunk chunk;
   final PendingFailureReason reason;
+
+  /// Whether the chunk is an undo's; kept across retries (DNI-514 AC-9).
+  final bool isUndo;
 
   /// Whether a retry of [chunk] is awaiting the server. An in-flight entry
   /// stays tracked (it is the only retry handle for an unsaved chunk) but
@@ -87,6 +92,7 @@ final class _Pending {
     eventIds: [for (final e in chunk.events) e.id],
     changeIds: const [],
     reason: reason,
+    isUndo: isUndo,
   );
 }
 
@@ -185,12 +191,15 @@ final class LearningWriteDispatcher {
           ],
         );
     final ids = <String>[];
+    final rejectedIds = <String>[];
     var rejected = 0;
     for (var i = 0; i < chunks.length; i++) {
+      final chunkIds = chunks[i].events.map((e) => e.id);
       if (settled[i] == _ChunkStatus.rejected) {
         rejected++;
+        rejectedIds.addAll(chunkIds);
       } else {
-        ids.addAll(chunks[i].events.map((e) => e.id));
+        ids.addAll(chunkIds);
       }
     }
     return DispatchOutcome(
@@ -199,6 +208,7 @@ final class LearningWriteDispatcher {
       queued: timedOut || settled.length < chunks.length,
       rejectedChunks: rejected,
       totalChunks: chunks.length,
+      rejectedEventIds: rejectedIds,
     );
   }
 
@@ -230,6 +240,22 @@ final class LearningWriteDispatcher {
     ], retrying: true);
   }
 
+  /// Drops every pending failure whose chunk holds one of [eventIds]
+  /// without re-sending it: its command has compensated the rest of its
+  /// action and offers its own retry (a catch-up card, DNI-506 AC-8), so a
+  /// later retry of one chunk must never count part of the action. Returns
+  /// how many were dropped.
+  int discard(Iterable<String> eventIds) {
+    final ids = eventIds.toSet();
+    final drop = [
+      for (final MapEntry(:key, :value) in _pending.entries)
+        if (value.chunk.events.any((e) => ids.contains(e.id))) key,
+    ];
+    drop.forEach(_pending.remove);
+    if (drop.isNotEmpty) _notify();
+    return drop.length;
+  }
+
   Future<_ChunkStatus> _commit(
     LearningCommandKind command,
     LearningWriteChunk chunk, {
@@ -242,7 +268,12 @@ final class LearningWriteDispatcher {
       return _ChunkStatus.acked;
     } on PermanentWriteRejection catch (rejection) {
       final reason = pendingFailureReasonOf(rejection.code);
-      _pending[id] = _Pending(command, chunk, reason);
+      _pending[id] = _Pending(
+        command,
+        chunk,
+        reason,
+        isUndo: _pending[id]?.isUndo ?? command == LearningCommandKind.undo,
+      );
       _notify();
       _reporter.writeRejected(
         command: command,

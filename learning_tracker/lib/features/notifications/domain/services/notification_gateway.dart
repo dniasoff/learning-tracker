@@ -54,6 +54,15 @@ const int _batchSize = 14;
 /// block (DNI-481 AC-5: 14 lock-filtered one-shots, IDs offset 30–43).
 const int _streakBatchBaseOffset = 30;
 
+/// Offset for the base of the catch-up reminder IDs within a profile's
+/// block (Story 3.5, DNI-508: one-shots at a lock's end, offsets 50–69;
+/// clear of the daily 0, streak 1, batches 10–23 and 30–43, and the
+/// per-curriculum streak alerts from 100).
+const int _catchUpBaseOffset = 50;
+
+/// Catch-up reminder slots per profile (offsets 50–69).
+const int catchUpReminderIdSlots = 20;
+
 /// IDs per profile block (must be > _streakBatchBaseOffset + _batchSize).
 const int _idsPerProfile = 1000;
 
@@ -108,6 +117,15 @@ int batchBaseIdForProfile(String profileId) =>
 int streakAlertBatchBaseIdForProfile(String profileId) =>
     _blockForProfile(profileId) * _idsPerProfile + _streakBatchBaseOffset;
 
+/// The notification ID of [profileId]'s catch-up reminder [slot]
+/// (`0 <= slot < catchUpReminderIdSlots`; offsets 50–69 of its block).
+int catchUpReminderIdForProfile(String profileId, int slot) {
+  RangeError.checkValueInInterval(slot, 0, catchUpReminderIdSlots - 1, 'slot');
+  return _blockForProfile(profileId) * _idsPerProfile +
+      _catchUpBaseOffset +
+      slot;
+}
+
 /// The next [days] daily fire-times at [hour]:[minute] from [now] — the
 /// first one today when still ahead of [now], else tomorrow — minus every
 /// one inside a Sacred Time lock ([isLockedAt], judged on the UTC instant;
@@ -154,6 +172,17 @@ const String _streakChannelId = 'streak_alerts';
 const String _streakChannelName = 'Streak Alerts';
 const String _streakChannelDescription =
     'Alerts when your learning streak is at risk';
+
+/// Payload prefix of a catch-up reminder (Story 3.5, DNI-508): the full
+/// payload is `catch_up_reminder:<profileId>` — the profile routing id
+/// only, never a lock, card or learning detail (AC-9).
+const String catchUpReminderPayload = 'catch_up_reminder';
+
+/// Notification channel for catch-up reminders.
+const String _catchUpChannelId = 'catch_up_reminders';
+const String _catchUpChannelName = 'Catch-up reminders';
+const String _catchUpChannelDescription =
+    'One reminder when a catch-up card is ready after Shabbos or Yom Tov';
 
 /// Payload used when a reward milestone notification is tapped.
 const String rewardMilestonePayload = 'reward_earned';
@@ -391,6 +420,46 @@ class NotificationGateway {
       await _plugin.cancel(id: baseId + i);
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Catch-up reminders (Story 3.5, DNI-508)
+  // ---------------------------------------------------------------------------
+
+  /// Schedules one catch-up reminder [id] (from
+  /// [catchUpReminderIdForProfile]) for [profileId] at [fireAtUtc] (a
+  /// lock's end), replacing any pending one with that id.
+  ///
+  /// A one-shot: never repeating, never snoozed. It is inexact (allowed
+  /// while idle), so it needs no exact-alarm permission and is never shown
+  /// before [fireAtUtc]. It never requests a permission (AC-8).
+  Future<void> scheduleCatchUpReminder({
+    required int id,
+    required String profileId,
+    required DateTime fireAtUtc,
+    required String title,
+    required String body,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      _catchUpChannelId,
+      _catchUpChannelName,
+      channelDescription: _catchUpChannelDescription,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const notificationDetails = NotificationDetails(android: androidDetails);
+    await _plugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tz.TZDateTime.from(fireAtUtc.toUtc(), tz.UTC),
+      notificationDetails: notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: '$catchUpReminderPayload:$profileId',
+    );
+  }
+
+  /// Cancels the catch-up reminder [id].
+  Future<void> cancelCatchUpReminder(int id) => _plugin.cancel(id: id);
 
   /// Get the next instance of the given time (today or tomorrow).
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {

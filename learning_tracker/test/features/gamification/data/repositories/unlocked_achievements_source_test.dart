@@ -1,6 +1,6 @@
-// DNI-480 (Story 1.18): achievement surfaces read the latched
-// `unlocked_achievement_ids` record live, and never a fabricated "nothing
-// unlocked" when there is no active learner.
+// DNI-480: `unlockedAchievementIdsProvider` is the single read of the
+// latched `unlocked_achievement_ids` record (AD-27 / AD-50).
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
@@ -9,51 +9,83 @@ import 'package:learning_tracker/features/gamification/data/repositories/unlocke
 
 import '../../../../helpers/firestore_fake.dart';
 
-const _uid = 'unlocked-achievements-user';
-const _profileId = '01J0000000000000000000A480';
+const _uid = 'unlocked-source-user';
+const _profileId = '01J0000000000000000000U480';
 
 void main() {
-  test('reads the latch record and follows a later latch', () async {
-    final firestore = createFakeFirestore(authenticatedUid: _uid);
-    final settings = FirestoreRewardSettingsRepository(
+  late FakeFirebaseFirestore firestore;
+  late FirestoreRewardSettingsRepository repo;
+
+  ProviderContainer container({bool nullRepo = false}) {
+    final c = ProviderContainer.test(
+      overrides: [
+        firestoreRewardSettingsRepositoryProvider.overrideWith(
+          (ref) async => nullRepo ? null : repo,
+        ),
+      ],
+    );
+    return c;
+  }
+
+  setUp(() {
+    firestore = createFakeFirestore(authenticatedUid: _uid);
+    repo = FirestoreRewardSettingsRepository(
       firestore: firestore,
       uid: _uid,
       profileId: _profileId,
     );
-    await settings.latchUnlockedAchievementIds({'bronze'});
-    final container = ProviderContainer.test(
-      overrides: [
-        firestoreRewardSettingsRepositoryProvider.overrideWith(
-          (ref) async => settings,
-        ),
-      ],
-    );
-    container.listen(unlockedAchievementIdsProvider, (_, _) {});
+  });
 
-    expect(await container.read(unlockedAchievementIdsProvider.future), {
-      'bronze',
-    });
+  test('is empty when nothing has been latched', () async {
+    final c = container();
+    expect(await c.read(unlockedAchievementIdsProvider.future), isEmpty);
+  });
 
-    await settings.latchUnlockedAchievementIds({'silver'});
-    await pumpEventQueue();
-    expect(await container.read(unlockedAchievementIdsProvider.future), {
+  test('reads the latched ids', () async {
+    await repo.latchUnlockedAchievementIds({'bronze', 'silver'});
+    final c = container();
+    expect(await c.read(unlockedAchievementIdsProvider.future), {
       'bronze',
       'silver',
     });
   });
 
-  test('no settings repository is not ready, never an empty set', () async {
-    final container = ProviderContainer.test(
-      overrides: [
-        firestoreRewardSettingsRepositoryProvider.overrideWith(
-          (ref) async => null,
-        ),
-      ],
-    );
+  test('a latch after the first read re-reads the provider', () async {
+    await repo.latchUnlockedAchievementIds({'bronze'});
+    final c = container();
+    c.listen(unlockedAchievementIdsProvider, (_, _) {});
+    expect(await c.read(unlockedAchievementIdsProvider.future), {'bronze'});
 
+    await repo.latchUnlockedAchievementIds({'gold'});
+    await pumpEventQueue();
+    expect(await c.read(unlockedAchievementIdsProvider.future), {
+      'bronze',
+      'gold',
+    });
+  });
+
+  test(
+    'without a settings repository it errors, never "nothing unlocked"',
+    () async {
+      final c = container(nullRepo: true);
+      await expectLater(
+        c.read(unlockedAchievementIdsProvider.future),
+        throwsA(isA<PointsNotReadyException>()),
+      );
+    },
+  );
+
+  test('a malformed stored field is an error', () async {
+    await firestore
+        .doc(
+          'users/$_uid/learner_profiles/$_profileId/preferences/'
+          'gamification_settings',
+        )
+        .set({'unlocked_achievement_ids': 'bronze'});
+    final c = container();
     await expectLater(
-      container.read(unlockedAchievementIdsProvider.future),
-      throwsA(isA<PointsNotReadyException>()),
+      c.read(unlockedAchievementIdsProvider.future),
+      throwsA(isA<FormatException>()),
     );
   });
 }

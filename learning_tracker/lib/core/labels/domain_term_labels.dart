@@ -139,6 +139,30 @@ class DomainTermLabels {
     return variant == TransliterationVariant.sephardi ? 'Shabbat' : 'Shabbos';
   }
 
+  /// "Shabbos Kodesh" / "Shabbat Kodesh": the erev banner label of a
+  /// Shabbos lock (DNI-504, A-2). Variant as for [shabbos].
+  String shabbosKodesh({
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
+    if (_useHebrew) return HebrewTerms.uiShabbosKodesh;
+    return '${shabbos(variant: variant)} Kodesh';
+  }
+
+  /// "Yom Tov": the erev banner label of a yom-tov lock (DNI-504).
+  String get yomTov => _useHebrew ? HebrewTerms.uiYomTov : 'Yom Tov';
+
+  /// "Yom Tov & Shabbos": one lock over yom tov and Shabbos (DNI-504).
+  /// Variant as for [shabbos].
+  String yomTovAndShabbos({
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
+    if (_useHebrew) return HebrewTerms.uiYomTovAndShabbos;
+    return 'Yom Tov & ${shabbos(variant: variant)}';
+  }
+
+  /// "Yom Kippur": the erev banner label of the Yom Kippur lock (DNI-504).
+  String get yomKippur => _useHebrew ? HebrewTerms.uiYomKippur : 'Yom Kippur';
+
   /// "Havdalah" / "Havdala" (the close-of-Shabbos ceremony).
   ///
   /// English-mode spelling is nusach-dependent: Ashkenazi "Havdalah",

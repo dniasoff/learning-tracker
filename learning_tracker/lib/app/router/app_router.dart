@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:learning_tracker/app/router/app_shell.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/own_session_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
 import 'package:learning_tracker/features/account/presentation/screens/sign_in_screen.dart';
+import 'package:learning_tracker/features/change_history/presentation/screens/change_history_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_search_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
@@ -32,6 +35,7 @@ import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/lifetime_report_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
@@ -40,6 +44,10 @@ import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/ground_picker_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/my_talmidim_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
@@ -61,6 +69,20 @@ class AppRouter extends RootStackRouter {
   final ChildModeGuard childModeGuard;
   final PinGuard pinGuard;
 
+  /// Parent-only write surfaces reachable from an adult profile too
+  /// (sub-track forms, DNI-495 AC-3). Defaults to refusing every
+  /// navigation when a router is built without session wiring.
+  final ParentSessionGuard parentSessionGuard;
+
+  /// DNI-513: refuses tutored sessions on parent-only views.
+  final OwnSessionGuard ownSessionGuard;
+
+  /// The shared sub-track write surfaces (the school-year form, the ground
+  /// picker): a parent session, or a tutor in tutor mode (Story 4.2,
+  /// DNI-510, AC-2). Defaults to [parentSessionGuard], so a router built
+  /// without it keeps them parent-only.
+  final ParentSessionGuard subTrackEditorGuard;
+
   /// Guards the city picker, which writes the active learner's lock
   /// settings: a child holder with a Parent PIN must have verified it
   /// (DNI-481 AC-3, AUD-sacred_time-08) — also on a direct deep link.
@@ -72,8 +94,16 @@ class AppRouter extends RootStackRouter {
     required this.childModeGuard,
     required this.pinGuard,
     required this.sacredTimeLocationGuard,
+    ParentSessionGuard? parentSessionGuard,
+    OwnSessionGuard? ownSessionGuard,
+    ParentSessionGuard? subTrackEditorGuard,
     super.navigatorKey,
-  });
+  }) : parentSessionGuard = parentSessionGuard ?? ParentSessionGuard.denyAll(),
+       ownSessionGuard = ownSessionGuard ?? OwnSessionGuard.denyAll(),
+       subTrackEditorGuard =
+           subTrackEditorGuard ??
+           parentSessionGuard ??
+           ParentSessionGuard.denyAll();
 
   @override
   RouteType get defaultRouteType => const RouteType.material();
@@ -153,6 +183,28 @@ class AppRouter extends RootStackRouter {
       path: '/progress/lifetime',
       page: LifetimeKnowledgeRoute.page,
       guards: [authGuard],
+    ),
+    // Lifetime report (Story 5.2, DNI-517): a parent surface. A child, a
+    // PIN-locked or a tutor session — a deep link included — lands on
+    // Lifetime instead, before any report data is read (AC-2).
+    AutoRoute(
+      path: '/progress/lifetime/report',
+      page: LifetimeReportRoute.page,
+      guards: [
+        authGuard,
+        parentSessionGuard.redirectingTo(() => const LifetimeKnowledgeRoute()),
+      ],
+    ),
+
+    // Sub-tracks. Ground picker (Story 2.7, DNI-498): a parent write
+    // surface, shared with a tutor in tutor mode (Story 4.2, DNI-510). A
+    // child or PIN-locked session — a deep link included — is refused by
+    // the sub-track editor guard; the picker also fails closed on a
+    // calendar-program curriculum (AC-7, AC-8).
+    AutoRoute(
+      path: '/sub-tracks/:subTrackId/ground',
+      page: GroundPickerRoute.page,
+      guards: [authGuard, subTrackEditorGuard],
     ),
 
     // Content browsing routes
@@ -262,6 +314,14 @@ class AppRouter extends RootStackRouter {
       page: ParentTrackManagementRoute.page,
       guards: [authGuard, childModeGuard, pinGuard],
     ),
+    // DNI-513 (Story 4.5): the parent Change history. Parent role only:
+    // a tutored session is refused before any PIN prompt, then the usual
+    // parent-mode child-profile and parent-PIN gates apply (AC-1).
+    AutoRoute(
+      path: '/parent-mode/change-history',
+      page: ChangeHistoryRoute.page,
+      guards: [authGuard, ownSessionGuard, childModeGuard, pinGuard],
+    ),
     AutoRoute(
       path: '/study-days/:curriculumId',
       page: StudyDayConfigRoute.page,
@@ -277,6 +337,28 @@ class AppRouter extends RootStackRouter {
       page: TrackDetailRoute.page,
       guards: [authGuard],
     ),
+
+    // Sub-tracks (Epic 2). One route per story; every sub-track write
+    // surface is behind the sub-track editor guard: a parent session
+    // (DNI-495 AC-3) or a tutor in tutor mode (Story 4.2, DNI-510).
+    AutoRoute(
+      path: '/settings/tracks/:curriculumId/sub-tracks/school-year',
+      page: SchoolYearSubTrackFormRoute.page,
+      guards: [authGuard, subTrackEditorGuard],
+    ),
+    // Story 2.6 (DNI-497): the sub-track detail, opened
+    // from a Manage tracks hub row. Any role may open it (the child and tutor
+    // read-only), so no parent-session guard. Registered without a
+    // SUB_TRACKS compile-time flag: orchestrator ruling B2 / AD-49 makes the
+    // cutover a ship hold (sub-track work lives on integ/sub-tracks and
+    // reaches dev only after DNI-490 ships) and rules "No feature flag is
+    // needed"; the resolver's flag proposal was not adopted.
+    AutoRoute(
+      path: '/settings/tracks/sub-tracks/:subTrackId',
+      page: SubTrackDetailRoute.page,
+      guards: [authGuard],
+    ),
+
     AutoRoute(
       path: '/settings/lifetime',
       page: LifetimeMarkingRoute.page,
@@ -303,6 +385,15 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/tutor/my-grants',
       page: ManageGrantsRoute.page,
+      guards: [authGuard],
+    ),
+    // Story 4.3 (DNI-511): My talmidim, the tutor's active roster with each
+    // learner's standing. Incoming invite and grant management above stays
+    // reachable (the design leaves replace-vs-extend open). A row opens its
+    // learner through the tutor PIN gate where one is configured.
+    AutoRoute(
+      path: '/tutor/talmidim',
+      page: MyTalmidimRoute.page,
       guards: [authGuard],
     ),
     AutoRoute(

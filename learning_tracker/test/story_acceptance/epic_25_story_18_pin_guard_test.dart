@@ -315,7 +315,7 @@ void main() {
       throw StateError('Could not locate repo root');
     }
 
-    test('AC4: exactly three distinct guard files exist under '
+    test('AC4: exactly the five distinct guard files exist under '
         'lib/core/navigation/guards/', () {
       final root = repoRoot();
       final dir = Directory(
@@ -334,6 +334,8 @@ void main() {
           'profile_guard.dart',
           'child_mode_guard.dart',
           'pin_guard.dart',
+          'parent_session_guard.dart',
+          'own_session_guard.dart',
         }),
         reason:
             'After DNI-339, parent_pin_guard.dart is folded into '
@@ -343,7 +345,10 @@ void main() {
             'lived under lib/app/router/guards/ since the W1.2 refactor, '
             'and is intentionally NOT a core/navigation-owned guard. After '
             'P3-7, restore_guard.dart is deleted with the rest of the '
-            'device-restore subsystem — signing in IS restore.',
+            'device-restore subsystem — signing in IS restore. DNI-517 adds '
+            'parent_session_guard.dart for the lifetime report route; '
+            'DNI-513 adds own_session_guard.dart for the parent-only '
+            'Change history route.',
       );
     });
 

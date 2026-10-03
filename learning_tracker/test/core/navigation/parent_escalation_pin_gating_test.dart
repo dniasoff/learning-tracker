@@ -123,6 +123,8 @@ const _pinGatedEscalationPaths = <String>{
   '/parent-mode/point-config',
   '/parent-mode/reward-config',
   '/parent-mode/tracks',
+  // DNI-513: the parent Change history (also refuses tutored sessions).
+  '/parent-mode/change-history',
   '/settings/lifetime',
   '/settings/lifetime/:curriculumId',
   // DNI-487 / ruling B11: Manage tutors carries the parent-only "Can edit
@@ -450,6 +452,17 @@ void main() {
             'the setup route itself), it never silently skips PIN '
             'protection.',
       );
+    });
+  });
+
+  group('DNI-511 — My talmidim route', () {
+    test('/tutor/talmidim is registered beside /tutor/my-grants', () {
+      final flat = _flatten(_buildRouterForInspection().routes);
+      final talmidim = flat.singleWhere((r) => r.path == '/tutor/talmidim');
+      expect(talmidim.name, MyTalmidimRoute.name);
+      expect(talmidim.guards.whereType<AuthGuard>(), hasLength(1));
+      // Grant management stays reachable (replace-vs-extend left open).
+      expect(flat.where((r) => r.path == '/tutor/my-grants'), hasLength(1));
     });
   });
 }

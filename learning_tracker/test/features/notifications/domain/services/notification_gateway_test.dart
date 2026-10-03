@@ -1057,4 +1057,71 @@ void main() {
       },
     );
   });
+
+  // -------------------------------------------------------------------------
+  // Catch-up reminders (Story 3.5, DNI-508, T3)
+  // -------------------------------------------------------------------------
+
+  group('catch-up reminders (DNI-508)', () {
+    test('ids sit at offsets 50-69 of the profile block, clear of every '
+        'other id', () {
+      final base = notificationBlockBaseForProfile(_profile1);
+      final ids = [
+        for (var s = 0; s < catchUpReminderIdSlots; s++)
+          catchUpReminderIdForProfile(_profile1, s),
+      ];
+      expect(ids.first, base + 50);
+      expect(ids.last, base + 69);
+      final others = <int>{
+        dailyReminderIdForProfile(_profile1),
+        streakAlertIdForProfile(_profile1),
+        for (var i = 0; i < 14; i++) batchBaseIdForProfile(_profile1) + i,
+        for (var i = 0; i < 14; i++)
+          streakAlertBatchBaseIdForProfile(_profile1) + i,
+      };
+      expect(ids.toSet().intersection(others), isEmpty);
+      // The per-curriculum streak alerts start at offset 100.
+      expect(ids.every((id) => id < base + 100), isTrue);
+      expect(
+        () => catchUpReminderIdForProfile(_profile1, catchUpReminderIdSlots),
+        throwsRangeError,
+      );
+    });
+
+    test('schedules a one-shot at the UTC instant with a profile-only '
+        'payload and never requests permission', () async {
+      _stubZonedSchedule(plugin);
+      final fireAt = DateTime.utc(2026, 10, 10, 23, 59);
+      final id = catchUpReminderIdForProfile(_profile1, 3);
+      await gw.scheduleCatchUpReminder(
+        id: id,
+        profileId: _profile1,
+        fireAtUtc: fireAt,
+        title: 'Shabbos is over',
+        body: 'Avi, record what you learnt?',
+      );
+      final captured = verify(
+        () => plugin.zonedSchedule(
+          id: id,
+          scheduledDate: captureAny<tz.TZDateTime>(named: 'scheduledDate'),
+          notificationDetails: any<NotificationDetails>(
+            named: 'notificationDetails',
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          title: 'Shabbos is over',
+          body: 'Avi, record what you learnt?',
+          payload: '$catchUpReminderPayload:$_profile1',
+        ),
+      ).captured;
+      expect((captured.single as tz.TZDateTime).toUtc(), fireAt);
+      verifyNoMoreInteractions(plugin); // no permission request (AC-8)
+    });
+
+    test('cancelCatchUpReminder cancels exactly that id', () async {
+      _stubCancel(plugin);
+      final id = catchUpReminderIdForProfile(_profile2, 0);
+      await gw.cancelCatchUpReminder(id);
+      verify(() => plugin.cancel(id: id)).called(1);
+    });
+  });
 }

@@ -84,6 +84,26 @@ final class LearnerZone {
   /// The first instant of civil [day] (local midnight).
   DateTime startOf(DateTime day) => at(day);
 
+  /// The wall-clock reading of [instantUtc] in this zone, as a UTC-flagged
+  /// [DateTime] whose fields are the local year..microsecond (a display
+  /// key, not an instant; DNI-504). An unknown zone reads UTC.
+  DateTime wallTimeOf(DateTime instantUtc) {
+    final location = _location;
+    final local = location == null
+        ? instantUtc.toUtc()
+        : tz.TZDateTime.from(instantUtc.toUtc(), location);
+    return DateTime.utc(
+      local.year,
+      local.month,
+      local.day,
+      local.hour,
+      local.minute,
+      local.second,
+      local.millisecond,
+      local.microsecond,
+    );
+  }
+
   @override
   String toString() => 'LearnerZone($id${isKnown ? '' : ', unknown'})';
 }

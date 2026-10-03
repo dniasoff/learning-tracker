@@ -45,6 +45,7 @@ import {
   Timestamp,
   setLogLevel,
   writeBatch,
+  where,
 } from 'firebase/firestore';
 import { retiredKeysOf } from './_retired_inventory.mjs';
 
@@ -2006,6 +2007,173 @@ describe('DNI-471 AC-5 — AD-38 access-call budget (10 governed docs per owner 
   });
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+// DNI-492 (story 2.1) — the owner sub-track lifecycle batches exactly as
+// SubTrackCommands writes them (ruling B6: an owner create is an ordinary
+// doc + entry batch admitted by the `resource == null` branch; it never
+// claims the create). No rules change in this story.
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('DNI-492 — owner sub-track lifecycle batches', () => {
+  // The create payload SubTrackCommands sends: absent optionals are omitted.
+  const createFields = () => withoutKey(withoutKey(subTrack({ type: 'ongoing' }), 'academic_year'), 'window_end');
+  const keyed = (id, fields, value) =>
+    Object.fromEntries(Object.keys(fields).map((f) => [`sub_tracks/${id}.${f}`, value(f)]));
+
+  test('create: new doc + entry with null before per field succeeds (2 writes)', async () => {
+    const id = nextUlid();
+    const fields = createFields();
+    await assertSucceeds(writeSubTrack(owner(), id, fields, {
+      entry: { before: keyed(id, fields, () => null), after: keyed(id, fields, (f) => fields[f]) },
+    }));
+    const snap = await getDoc(doc(owner(), `${SUB_TRACKS}/${id}`));
+    assert.strictEqual(snap.data().window_end, undefined);
+  });
+
+  test('create without its entry, or with another entity id, is denied', async () => {
+    const id = nextUlid();
+    await assertFails(writeSubTrack(owner(), id, createFields(), { withEntry: false }));
+    await assertFails(governedWrite(owner(), `${SUB_TRACKS}/${id}`, createFields(), 'subTrack', nextUlid()));
+  });
+
+  test('edit replacing ground whole, then end and delete tombstones succeed', async () => {
+    const id = nextUlid();
+    await writeSubTrack(owner(), id, createFields());
+    await assertSucceeds(writeSubTrack(owner(), id, {
+      ground: [{ level: 'masechta', ref: 'Shabbat' }, { level: 'masechta', ref: 'Berakhot' }],
+    }));
+    await assertSucceeds(writeSubTrack(owner(), id, { ended_at: pastTs, end_reason: 'ended' }));
+    const other = nextUlid();
+    await writeSubTrack(owner(), other, createFields());
+    await assertSucceeds(writeSubTrack(owner(), other, { ended_at: pastTs, end_reason: 'deleted' }));
+    await assertFails(deleteDoc(doc(owner(), `${SUB_TRACKS}/${other}`)));
+  });
+
+  test('an extra field on the create is denied (hasOnly whitelist)', async () => {
+    await assertFails(writeSubTrack(owner(), nextUlid(), { ...createFields(), progress: 3 }));
+  });
+});
+
+// ── DNI-523 (Story 4.2a) — tutor-device read path for N talmidim ──────────
+//
+// The tutor roster reads several learners from DIFFERENT parents at once
+// through `learnerStateForScopeProvider(LearnerScope)`: the tutor's own
+// handle, the owner's path, gated client-side on a live `tutor_grants`
+// query and server-side on hasActiveTutorAccess(). These pin both halves:
+// an active tutor can list another owner's learning_events, sub_tracks,
+// change_log, goals and curriculum_tracks for every granted scope; a
+// revoked scope is denied while the others stay readable; and the grant
+// query the client listens to is permitted for the tutor only.
+describe('DNI-523 — grant-scoped tutor reads across owners (3 scopes, 2 parents)', () => {
+  const OWNER_B = 'owner-b-uid';
+  const P1 = '01J9ZZ0000000000000000P1AA';
+  const P2 = '01J9ZZ0000000000000000P2AA';
+  const P3 = '01J9ZZ0000000000000000P3AA';
+  const SCOPES = [
+    { owner: OWNER, profile: P1, grant: 'g-p1' },
+    { owner: OWNER, profile: P2, grant: 'g-p2' },
+    { owner: OWNER_B, profile: P3, grant: 'g-p3' },
+  ];
+  const COLLECTIONS = ['learning_events', 'sub_tracks', 'change_log', 'goals', 'curriculum_tracks'];
+  const lp = ({ owner: o, profile }) => `users/${o}/learner_profiles/${profile}`;
+  const accessId = ({ owner: o, profile }) => `${TUTOR}_${o}_${profile}`;
+  const listAll = (db, scope, name) => getDocs(query(collection(db, `${lp(scope)}/${name}`), limit(500)));
+  const grantQuery = (db, scope, { tutorUid = TUTOR } = {}) => getDocs(query(
+    collection(db, 'tutor_grants'),
+    where('tutor_uid', '==', tutorUid),
+    where('parent_uid', '==', scope.owner),
+    where('child_profile_id', '==', scope.profile),
+  ));
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      for (const scope of SCOPES) {
+        await setDoc(doc(db, `tutor_active_access/${accessId(scope)}`), {
+          tutor_uid: TUTOR,
+          parent_uid: scope.owner,
+          owner_uid: scope.owner,
+          child_profile_id: scope.profile,
+        });
+        await setDoc(doc(db, `tutor_grants/${scope.grant}`), {
+          tutor_uid: TUTOR,
+          parent_uid: scope.owner,
+          child_profile_id: scope.profile,
+          state: 'active',
+          tutor_email: 'tutor@test.com',
+        });
+        await setDoc(doc(db, lp(scope)), { name: scope.profile });
+        for (const name of COLLECTIONS) {
+          await setDoc(doc(db, `${lp(scope)}/${name}/${nextUlid()}`), { seeded: true });
+        }
+      }
+    });
+  });
+
+  async function revoke(scope) {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await deleteDoc(doc(db, `tutor_active_access/${accessId(scope)}`));
+      await setDoc(doc(db, `tutor_grants/${scope.grant}`), { state: 'revoked_by_parent' }, { merge: true });
+    });
+  }
+
+  test('an active tutor lists every learner-state collection of every granted scope', async () => {
+    for (const scope of SCOPES) {
+      for (const name of COLLECTIONS) {
+        const snap = await assertSucceeds(listAll(tutor(), scope, name));
+        assert.equal(snap.size, 1, `${scope.owner}/${scope.profile}/${name}`);
+      }
+    }
+  });
+
+  test('revoking one scope denies only that scope; the other owners stay readable', async () => {
+    const [p1, p2, p3] = SCOPES;
+    await revoke(p3);
+    for (const name of COLLECTIONS) {
+      await assertFails(listAll(tutor(), p3, name));
+      await assertSucceeds(listAll(tutor(), p1, name));
+      await assertSucceeds(listAll(tutor(), p2, name));
+    }
+    await revoke(p1);
+    for (const name of COLLECTIONS) {
+      await assertFails(listAll(tutor(), p1, name));
+      await assertSucceeds(listAll(tutor(), p2, name));
+    }
+  });
+
+  test('a stranger with no grant cannot list any scope', async () => {
+    for (const scope of SCOPES) {
+      for (const name of COLLECTIONS) {
+        await assertFails(listAll(stranger(), scope, name));
+      }
+    }
+  });
+
+  test('the client grant query is readable by the tutor, before and after a revoke', async () => {
+    const p3 = SCOPES[2];
+    const before = await assertSucceeds(grantQuery(tutor(), p3));
+    assert.equal(before.size, 1);
+    assert.equal(before.docs[0].data().state, 'active');
+    await revoke(p3);
+    // The tutor must still SEE the revoked grant, so the client flips the
+    // row to denied rather than erroring.
+    const after = await assertSucceeds(grantQuery(tutor(), p3));
+    assert.equal(after.docs[0].data().state, 'revoked_by_parent');
+  });
+
+  test('the grant query is denied to anyone but the named tutor', async () => {
+    const p3 = SCOPES[2];
+    // A stranger cannot read another tutor's grants by naming that tutor.
+    await assertFails(grantQuery(stranger(), p3));
+    // The tutor cannot drop the tutor_uid pin and read the owner's grants.
+    await assertFails(getDocs(query(
+      collection(tutor(), 'tutor_grants'),
+      where('parent_uid', '==', p3.owner),
+      where('child_profile_id', '==', p3.profile),
+    )));
+  });
+});
 // ── DNI-476 (Story 1.14) — the owner governed writers' doc shapes ─────────────
 // The owner repositories now write through LearningCommands.applyGovernedChange:
 // the AD-52 `track_learning_order/{c}_{level}_{ref}` order doc, reset and
@@ -2087,6 +2255,41 @@ describe('DNI-476 — owner governed order docs, tombstones and fixed goal ids',
       governedWrite(owner(), GOAL, { description: 'x' }, 'goal', 'c1_pace'),
     );
     await assertFails(deleteDoc(doc(owner(), GOAL)));
+  });
+});
+
+describe('DNI-514 AC-1 — an undo (reverts_action_id) is a parent action', () => {
+  const GOAL = `${GOALS}/g`;
+  const GOAL_DOC = { goal_id: 'g', profile_id: PROFILE, goal_type: 'deadline', target_date: '2027-06-01' };
+  const CHILD_ACTOR = { uid: OWNER, role: 'child', display_name: 'Child' };
+
+  test('a parent undo entry and its governed restore are accepted', async () => {
+    await assertSucceeds(
+      governedWrite(owner(), GOAL, GOAL_DOC, 'goal', 'g', {
+        entry: { reverts_action_id: nextUlid() },
+      }),
+    );
+  });
+
+  test('a child entry carrying reverts_action_id is denied, alone or in a governed batch', async () => {
+    const id = nextUlid();
+    await assertFails(setDoc(doc(owner(), `${CHANGE_LOG}/${id}`), changeEntry('goal', 'g', id, {
+      reverts_action_id: nextUlid(),
+      actor: CHILD_ACTOR,
+    })));
+    await assertFails(
+      governedWrite(owner(), GOAL, GOAL_DOC, 'goal', 'g', {
+        entry: { reverts_action_id: nextUlid(), actor: CHILD_ACTOR },
+      }),
+    );
+  });
+
+  test('a child entry without reverts_action_id is still accepted', async () => {
+    await assertSucceeds(
+      governedWrite(owner(), GOAL, GOAL_DOC, 'goal', 'g', {
+        entry: { actor: CHILD_ACTOR },
+      }),
+    );
   });
 });
 
@@ -2226,5 +2429,118 @@ describe('DNI-484 — R16 retired fields are denied on governed docs', () => {
     await assertSucceeds(setDoc(doc(owner(), `${LP}/import_metadata/c1`), {
       profile_id: PROFILE, curriculum_id: 'c1', item_count: 1, imported_at: pastTs, synced_at: pastTs,
     }));
+  });
+});
+
+// ── DNI-512 (Story 4.4) AC-3 / AC-6 — revocation denies every learner read ────
+// The parent's revokeTutorGrant marks the grant revoked and deletes its
+// tutor_active_access index in ONE transaction; that is mirrored here. After
+// it, the tutor's reads of each learner collection — and of the learner
+// profile doc — are denied, one assertion per collection, while the owner and
+// another tutor with an active grant keep reading. A later re-grant (a new
+// accepted invite writes a fresh index) re-opens the same retained docs.
+describe('DNI-512 AC-3 — a revoked tutor cannot read any learner document', () => {
+  const OTHER_TUTOR = 'other-tutor-uid';
+  const P = '01J9ZZ0000000000000000P512';
+  const LP512 = `users/${OWNER}/learner_profiles/${P}`;
+  const COLLECTIONS = [
+    'learning_events',
+    'sub_tracks',
+    'change_log',
+    // Every AD-38 governed collection this feature touches.
+    'goals',
+    'curriculum_tracks',
+    'track_learning_order',
+    'profile_programs',
+    'study_day_configs',
+    'stage_definitions',
+    'curriculum_scopes',
+  ];
+  const access = (tutorUid) => `tutor_active_access/${tutorUid}_${OWNER}_${P}`;
+  const docPath = (name) => `${LP512}/${name}/d512`;
+  const listAll = (db, name) => getDocs(query(collection(db, `${LP512}/${name}`), limit(500)));
+  const otherTutor = () => env.authenticatedContext(OTHER_TUTOR).firestore();
+
+  async function grantAccess(tutorUid, grantId) {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, access(tutorUid)), {
+        tutor_uid: tutorUid, parent_uid: OWNER, owner_uid: OWNER, child_profile_id: P, grant_id: grantId,
+      });
+      await setDoc(doc(db, `tutor_grants/${grantId}`), {
+        tutor_uid: tutorUid, parent_uid: OWNER, child_profile_id: P, state: 'active',
+      });
+    });
+  }
+
+  /** The revokeTutorGrant transaction: grant revoked + access index deleted. */
+  async function revoke(tutorUid, grantId) {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      const batch = writeBatch(db);
+      batch.set(doc(db, `tutor_grants/${grantId}`), { state: 'revoked_by_parent', revoked_at: pastTs }, { merge: true });
+      batch.delete(doc(db, access(tutorUid)));
+      await batch.commit();
+    });
+  }
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, LP512), { name: 'Yossi' });
+      for (const name of COLLECTIONS) {
+        await setDoc(doc(db, docPath(name)), { seeded: true, actor: { uid: TUTOR, role: 'tutor' } });
+      }
+    });
+    await grantAccess(TUTOR, 'g-512');
+    await grantAccess(OTHER_TUTOR, 'g-512-other');
+  });
+
+  test('while active, the tutor reads the profile and every collection', async () => {
+    await assertSucceeds(getDoc(doc(tutor(), LP512)));
+    for (const name of COLLECTIONS) {
+      await assertSucceeds(getDoc(doc(tutor(), docPath(name))));
+      await assertSucceeds(listAll(tutor(), name));
+    }
+  });
+
+  test('after revoke, learner_profiles/{profileId} is denied to the tutor', async () => {
+    await revoke(TUTOR, 'g-512');
+    await assertFails(getDoc(doc(tutor(), LP512)));
+    await assertSucceeds(getDoc(doc(owner(), LP512)));
+    await assertSucceeds(getDoc(doc(otherTutor(), LP512)));
+  });
+
+  for (const name of COLLECTIONS) {
+    test(`after revoke, ${name} is denied to the tutor (get and list); owner and an active tutor still read`, async () => {
+      await revoke(TUTOR, 'g-512');
+      await assertFails(getDoc(doc(tutor(), docPath(name))));
+      await assertFails(listAll(tutor(), name));
+      await assertSucceeds(getDoc(doc(owner(), docPath(name))));
+      await assertSucceeds(listAll(owner(), name));
+      await assertSucceeds(getDoc(doc(otherTutor(), docPath(name))));
+    });
+  }
+
+  test('the revoked grant doc itself stays readable to its tutor (the client flips the row)', async () => {
+    await revoke(TUTOR, 'g-512');
+    const snap = await assertSucceeds(getDocs(query(
+      collection(tutor(), 'tutor_grants'),
+      where('tutor_uid', '==', TUTOR),
+      where('parent_uid', '==', OWNER),
+      where('child_profile_id', '==', P),
+    )));
+    assert.equal(snap.docs[0].data().state, 'revoked_by_parent');
+  });
+
+  test('AC-6: a re-granted tutor reads the same retained docs again', async () => {
+    await revoke(TUTOR, 'g-512');
+    await assertFails(listAll(tutor(), 'learning_events'));
+    await grantAccess(TUTOR, 'g-512');
+    await assertSucceeds(getDoc(doc(tutor(), LP512)));
+    for (const name of COLLECTIONS) {
+      const snap = await assertSucceeds(listAll(tutor(), name));
+      assert.deepEqual(snap.docs.map((d) => d.id), ['d512'], `${name} keeps the earlier doc`);
+    }
   });
 });

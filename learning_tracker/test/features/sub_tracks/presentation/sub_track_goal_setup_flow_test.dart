@@ -1,0 +1,202 @@
+/// Story 2.4 (DNI-495) AC-6: the no-deadline link opens the existing goal
+/// setup for the same curriculum and saves through the governed
+/// `LearningCommands.applyGovernedChange` (C0), never the legacy goal
+/// repository; a refused or impossible save is reported as failed.
+@Tags(['sub_tracks'])
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/goals.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/governed_goal_change.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../helpers/pump_app.dart';
+import '../../../helpers/sub_tracks/sub_track_harness.dart';
+
+void main() {
+  late SubTrackHarness h;
+  SubTrackGoalSetupOutcome? outcome;
+
+  setUp(() {
+    outcome = null;
+    SharedPreferences.setMockInitialValues({});
+  });
+  tearDown(() async => h.dispose());
+
+  Future<void> pumpFlow(WidgetTester tester, {bool withCommands = true}) async {
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: [
+          ...h.overrides(commands: withCommands),
+          if (!withCommands)
+            learningCommandsProvider.overrideWith((ref) async => null),
+          scopedItemCountProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => 120),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) => TextButton(
+            onPressed: () async => outcome = await openSubTrackGoalSetup(
+              context,
+              ref,
+              CurriculumId.mishnayos,
+            ),
+            child: const Text('go'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('go'));
+    // The in-memory intent store answers in the root zone.
+    await settleCommands(tester);
+    await tester.pumpAndSettle();
+  }
+
+  GoalSetupScreen screen(WidgetTester tester) => tester.widget<GoalSetupScreen>(
+    find.byType(GoalSetupScreen, skipOffstage: false),
+  );
+
+  Future<void> complete(WidgetTester tester, GoalEntity? result) async {
+    tester
+        .state<NavigatorState>(find.byType(Navigator).first)
+        .pop<GoalEntity>(result);
+    await settleCommands(tester);
+    await tester.pumpAndSettle();
+  }
+
+  GoalEntity deadline(DateTime date) => GoalEntity(
+    curriculumId: CurriculumId.mishnayos,
+    targetDate: date,
+    createdAt: DateTime.utc(2026, 10, 2),
+  );
+
+  testWidgets('opens the existing goal setup for the same curriculum', (
+    tester,
+  ) async {
+    h = SubTrackHarness();
+    await pumpFlow(tester);
+    expect(screen(tester).curriculumId, CurriculumId.mishnayos);
+    expect(screen(tester).existingGoal, isNull);
+    expect(screen(tester).totalItems, 120);
+    await complete(tester, null);
+    expect(outcome, SubTrackGoalSetupOutcome.cancelled);
+    expect(h.commands.governed, isEmpty);
+  });
+
+  testWidgets('a chosen deadline goes through applyGovernedChange', (
+    tester,
+  ) async {
+    h = SubTrackHarness();
+    await pumpFlow(tester);
+    await complete(tester, deadline(DateTime(2028, 6, 1)));
+    expect(outcome, SubTrackGoalSetupOutcome.saved);
+    expect(h.commands.governed, [
+      GovernedAction([
+        const GovernedEntityChange(
+          entity: GovernedEntity.goal,
+          entityId: 'mishnayos_deadline',
+          docs: [
+            GovernedDocPatch(
+              collection: 'goals',
+              docId: 'mishnayos_deadline',
+              fields: {
+                'goal_type': 'deadline',
+                'curriculum_id': 'mishnayos',
+                'target_date': '2028-06-01',
+              },
+            ),
+          ],
+        ),
+      ]),
+    ]);
+  });
+
+  testWidgets('a refused governed save is reported as failed', (tester) async {
+    h = SubTrackHarness();
+    h.commands.nextGovernedResult = const CaptureResult.onlineRequired();
+    await pumpFlow(tester);
+    await complete(tester, deadline(DateTime(2028, 6, 1)));
+    expect(outcome, SubTrackGoalSetupOutcome.failed);
+    expect(h.commands.governed, hasLength(1));
+  });
+
+  testWidgets('without commands the goal screen never opens', (tester) async {
+    h = SubTrackHarness();
+    await pumpFlow(tester, withCommands: false);
+    await tester.pumpAndSettle();
+    expect(find.byType(GoalSetupScreen, skipOffstage: false), findsNothing);
+    expect(outcome, SubTrackGoalSetupOutcome.failed);
+  });
+
+  test('a live pace goal prefills the goal screen', () {
+    final entity = goalEntityOf(
+      CurriculumId.mishnayos,
+      const CurriculumGoals(
+        pace: PaceGoal(
+          curriculumId: 'mishnayos',
+          paceValue: 2,
+          paceUnit: 'per_week',
+          paceGranularity: 'perek',
+        ),
+      ),
+    )!;
+    expect(entity.goalType, 'pace');
+    expect(entity.paceValue, 2);
+    expect(entity.pacePeriod, 'per_week');
+    expect(entity.paceGranularityKey, 'perek');
+  });
+
+  test('a goal-screen result maps to a governed choice', () {
+    expect(
+      goalChoiceOf(deadline(DateTime(2028, 6, 1))),
+      isA<DeadlineGoalChoice>().having(
+        (c) => c.targetDate,
+        'targetDate',
+        '2028-06-01',
+      ),
+    );
+    expect(
+      goalChoiceOf(
+        GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          goalType: 'pace',
+          paceValue: 3,
+          pacePeriod: 'per_day',
+          createdAt: DateTime.utc(2026),
+        ),
+      ),
+      isA<PaceGoalChoice>()
+          .having((c) => c.value, 'value', 3)
+          .having((c) => c.unit, 'unit', 'per_day'),
+    );
+    expect(
+      goalChoiceOf(
+        GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          goalType: 'none',
+          createdAt: DateTime.utc(2026),
+        ),
+      ),
+      isA<NoGoalChoice>(),
+    );
+    expect(
+      goalChoiceOf(
+        GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          createdAt: DateTime.utc(2026),
+        ),
+      ),
+      isNull,
+    );
+  });
+}

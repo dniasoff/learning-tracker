@@ -16,12 +16,23 @@ import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
+import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart'
+    show OnlineRequiredException;
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_latest_write.dart';
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/achievement_latch_adapter.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
@@ -33,6 +44,9 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_anal
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_forecast_recomputation.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -55,6 +69,21 @@ final learningAnalyticsProvider = Provider<LearningAnalytics>((ref) {
       case LearningAnalyticsEvent.capture:
         sent = analytics.logEvent(
           AnalyticsEvent.capture,
+          parameters: parameters,
+        );
+      case LearningAnalyticsEvent.subTrackLifecycle:
+        sent = analytics.logEvent(
+          AnalyticsEvent.subTrackLifecycle,
+          parameters: parameters,
+        );
+      case LearningAnalyticsEvent.subTrackForecastVsActual:
+        sent = analytics.logEvent(
+          AnalyticsEvent.subTrackForecastVsActual,
+          parameters: parameters,
+        );
+      case LearningAnalyticsEvent.catchupCompleted:
+        sent = analytics.logEvent(
+          AnalyticsEvent.catchupCompleted,
           parameters: parameters,
         );
     }
@@ -140,6 +169,92 @@ LearnerStateFeed learnerStateFeed(Ref ref, LearnerScope scope) {
   return LearnerStateFeed(latest: () => latest, changes: changes.stream);
 }
 
+/// The learner's civil date under the current settings, falling back to UTC
+/// until the settings history is available.
+CivilDate learnerToday(DateTime nowUtc, LearnerSettingsHistory? history) =>
+    history == null
+    ? formatCivilDay(DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day))
+    : civilDate(nowUtc, history);
+
+final class _DeferredGovernedIntentRepository
+    implements GovernedIntentRepository {
+  _DeferredGovernedIntentRepository(this._resolve);
+
+  final Future<GovernedIntentRepository?> Function() _resolve;
+
+  @override
+  Stream<LearnerIntent> watch(LearnerScope scope) async* {
+    final GovernedIntentRepository? repository;
+    try {
+      repository = await _resolve();
+    } on Object {
+      throw TimeoutException('governed intent repository unavailable');
+    }
+    // Not ready: the read fails as a timeout, so the command answers
+    // onlineRequired (a closed stream would surface as a StateError).
+    if (repository == null) {
+      throw TimeoutException('governed intent repository unavailable');
+    }
+    yield* repository.watch(scope);
+  }
+}
+
+/// A [SubTrackRepository] that resolves the real one only when a sub-track
+/// command first reads it, so ordinary captures never wait on, or fail
+/// with, the sub-track repository (DNI-497). While it is unavailable (not
+/// ready, or its provider failed) [watchAll] fails as a timeout, so the
+/// command answers onlineRequired; every other command is unaffected.
+final class _DeferredSubTrackRepository
+    implements SubTrackRepository, SubTrackLatestWrite {
+  _DeferredSubTrackRepository(this._resolve);
+
+  final Future<SubTrackRepository?> Function() _resolve;
+
+  Future<SubTrackRepository?> _repository() async {
+    try {
+      return await _resolve();
+    } on Object {
+      return null;
+    }
+  }
+
+  @override
+  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) async* {
+    final repository = await _repository();
+    if (repository == null) {
+      throw TimeoutException('sub-track repository unavailable');
+    }
+    yield* repository.watchAll(scope);
+  }
+
+  @override
+  Future<void> applyGovernedChange(
+    LearnerScope scope,
+    SubTrackChange change,
+  ) async {
+    // Reached only after watchAll delivered a complete read, so the
+    // repository has resolved; a null here is the account going away
+    // between the read and the write.
+    final repository = await _repository();
+    if (repository == null) {
+      throw StateError('sub-track repository unavailable');
+    }
+    return repository.applyGovernedChange(scope, change);
+  }
+
+  @override
+  Future<SubTrackChange?> applyGovernedChangeToLatest(
+    LearnerScope scope,
+    String subTrackId,
+    SubTrackChange? Function(SubTrack latest) build,
+  ) async {
+    if (await _repository() case final SubTrackLatestWrite writer) {
+      return writer.applyGovernedChangeToLatest(scope, subTrackId, build);
+    }
+    throw const OnlineRequiredException();
+  }
+}
+
 /// The commands bound to the active learner's scope and session actor, or
 /// null while no learner is active or the account is not ready.
 ///
@@ -162,7 +277,6 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   final points = await ref.watch(pointsAmountReaderProvider.future);
   final events = await ref.watch(learningEventRepositoryProvider.future);
   final changeLog = await ref.watch(changeLogRepositoryProvider.future);
-  final subTracks = await ref.watch(subTrackRepositoryProvider.future);
   final docReader = await ref.watch(governedDocReaderProvider.future);
   final oversized = await ref.watch(oversizedGovernedWritePortProvider.future);
   if (uid == null ||
@@ -170,7 +284,6 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       points == null ||
       events == null ||
       changeLog == null ||
-      subTracks == null ||
       docReader == null ||
       oversized == null) {
     return null;
@@ -184,8 +297,46 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     learnerLockSettingsProvider(scope).future,
     (_, _) {},
   );
+  final settingsNow = ref.listen(learnerLockSettingsProvider(scope), (_, _) {});
   final corpora = ref.listen(corporaProvider.future, (_, _) {});
+  final intent = ref.listen(governedIntentRepositoryProvider.future, (_, _) {});
+  final subTrackRepository = ref.listen(
+    subTrackRepositoryProvider.future,
+    (_, _) {},
+  );
+  final subTracks = _DeferredSubTrackRepository(subTrackRepository.read);
+  final clock = ref.watch(learningCommandClockProvider);
+  Future<Corpus?> corpusOf(String curriculumId) async =>
+      (await corpora.read())[curriculumId];
   final failureReporter = ref.watch(learningFailureReporterProvider);
+  // The sub-track commands treat an unreadable corpus as absent: their
+  // contract skips only the cross-curriculum ground check then, while the
+  // AD-45 limit rules still run. A sub-track save never fails on the
+  // corpus read (until DNI-474 fills corporaProvider, every read fails).
+  Future<Corpus?> subTrackCorpusOf(String curriculumId) async {
+    try {
+      return await corpusOf(curriculumId);
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<CaptureSourceType?> sourceTypeOf(String source) async {
+    final repository = await subTrackRepository.read();
+    if (repository == null) return null;
+    final read = await repository
+        .watchAll(scope)
+        .firstWhere((value) => value is CompleteReadReady<SubTrack>);
+    for (final track in (read as CompleteReadReady<SubTrack>).items) {
+      if (track.id == source) {
+        return track.type == SubTrackType.schoolYear
+            ? CaptureSourceType.schoolYear
+            : CaptureSourceType.ongoing;
+      }
+    }
+    return null;
+  }
+
   final governed = DefaultGovernedLearningCommands(
     scope: scope,
     actor: actor,
@@ -203,6 +354,32 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       states: learnerStateFeed(ref, scope),
     ),
   );
+  final subTrackCommands = SubTrackCommands(
+    scope: scope,
+    actor: actor,
+    subTracks: subTracks,
+    intent: _DeferredGovernedIntentRepository(intent.read),
+    today: () => learnerToday(clock(), settingsNow.read().value),
+    nowUtc: clock,
+    newId: newUlid,
+    corpusOf: subTrackCorpusOf,
+    analytics: ref.watch(learningAnalyticsProvider),
+    forecastComparison: (track) async {
+      final history = await changeLog.entriesForEntity(
+        scope,
+        GovernedEntity.subTrack,
+      );
+      final eventRead = await events
+          .watchAll(scope)
+          .firstWhere((read) => read is CompleteReadReady<LearningEvent>);
+      return recomputeSubTrackForecast(
+        track: track,
+        history: history,
+        events: (eventRead as CompleteReadReady<LearningEvent>).items,
+      );
+    },
+    ledger: ref.watch(subTrackWriteLedgerProvider(scope)),
+  );
   final commands = DefaultLearningCommands(
     scope: scope,
     actor: actor,
@@ -214,7 +391,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
             .firstWhere((r) => r is CompleteReadReady<LearningEvent>);
         return (ready as CompleteReadReady<LearningEvent>).items;
       },
-      corpus: (curriculumId) async => (await corpora.read())[curriculumId],
+      corpus: corpusOf,
       points: points,
     ),
     writePort: port,
@@ -225,6 +402,10 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     newUlid: newUlid,
     governed: governed,
     achievements: achievements,
+    // A sub-track source must be live in this learner's scope and curriculum.
+    sourceCheck: subTrackSourceCheckFrom(subTracks, scope),
+    subTrackCommands: subTrackCommands,
+    sourceTypeOf: sourceTypeOf,
   );
   // Recover any latch a failed check left absent (app start, learner
   // switch); runs in the background and retries its own failures.
@@ -232,6 +413,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   ref.onDispose(achievements.dispose);
   ref.onDispose(commands.dispose);
   ref.onDispose(governed.dispose);
+  ref.onDispose(subTrackCommands.dispose);
   return commands;
 }, retry: (retryCount, error) => null);
 
@@ -246,3 +428,12 @@ final ownerGovernedWriterProvider = Provider<OwnerGovernedWriter>(
     () => ref.read(learningCommandsProvider.future),
   ),
 );
+
+/// Keeps queued sub-track writes across command-provider rebuilds for the
+/// same learner session, so pending failures and acknowledgements survive.
+final subTrackWriteLedgerProvider =
+    Provider.family<SubTrackWriteLedger, LearnerScope>((ref, scope) {
+      final ledger = SubTrackWriteLedger();
+      ref.onDispose(ledger.dispose);
+      return ledger;
+    });

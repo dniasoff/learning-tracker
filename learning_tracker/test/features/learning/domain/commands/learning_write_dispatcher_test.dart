@@ -93,6 +93,23 @@ void main() {
     ]);
   });
 
+  test('a partly rejected command reports the saved and the rejected '
+      'events apart, each in write order (DNI-501)', () async {
+    port.failNextWith(const PermanentWriteRejection('permission-denied'));
+    final outcome = await dispatcher.dispatch(LearningCommandKind.capture, [
+      _chunk(1),
+      _chunk(10),
+    ]);
+    expect(outcome.allRejected, isFalse);
+    expect(outcome.rejectedChunks, 1);
+    expect(outcome.eventIds, [engineUlid(10), engineUlid(11)]);
+    expect(outcome.rejectedEventIds, [engineUlid(1), engineUlid(2)]);
+    expect(dispatcher.pendingFailures.single.eventIds, [
+      engineUlid(1),
+      engineUlid(2),
+    ]);
+  });
+
   test('AC-7: a queued chunk the server rejects later becomes a pending '
       'failure then; retry re-sends the identical chunk', () async {
     port.holdNext();
@@ -212,6 +229,24 @@ void main() {
     );
     expect(throwing.pendingFailures, isEmpty);
     expect(reporter.reports, isEmpty);
+  });
+
+  test('DNI-506 AC-8: discard drops the failures holding the given events '
+      'without re-sending them', () async {
+    port.failNextWith(const PermanentWriteRejection('permission-denied'));
+    await dispatcher.dispatch(LearningCommandKind.capture, [_chunk(1)]);
+    expect(dispatcher.pendingFailures, hasLength(1));
+    final seen = <List<PendingFailure>>[];
+    final sub = dispatcher.watchPendingFailures().listen(seen.add);
+    await pumpEventQueue();
+    expect(dispatcher.discard([engineUlid(99)]), 0);
+    expect(dispatcher.discard([engineUlid(2)]), 1);
+    await pumpEventQueue();
+    expect(dispatcher.pendingFailures, isEmpty);
+    expect(dispatcher.unsavedEventIds, isEmpty);
+    expect(seen.last, isEmpty);
+    expect(port.chunks, isEmpty, reason: 'nothing is re-sent');
+    await sub.cancel();
   });
 
   test('pendingFailureReasonOf maps server codes', () {

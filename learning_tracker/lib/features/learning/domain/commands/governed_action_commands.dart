@@ -64,7 +64,12 @@
 /// U created (outside `learnerSettings`: U wrote its immutable
 /// `curriculum_id` and every field U wrote was absent before) is undone by
 /// a tombstone (`ended_at`, plus `end_reason: undo` on a
-/// sub-track) only while its `last_change_id` is still U's id.
+/// sub-track) only while its `last_change_id` is still U's id, or while
+/// every later change of the doc has been undone and it is field for field
+/// as U created it (DNI-514 AC-5).
+///
+/// Only a parent session may undo (DNI-514 AC-1): any other actor is
+/// rejected with [CaptureRejection.undoNotOffered] before anything is read.
 ///
 /// An undo is final: an action whose entries carry `reverts_action_id` is
 /// rejected with [CaptureRejection.undoIsFinal] and nothing is written; an
@@ -184,6 +189,11 @@ final class DefaultGovernedLearningCommands
 
   @override
   Future<CaptureResult> undoAction(String actionId) async {
+    // DNI-514 AC-1: undo from Change history is a parent action. Any other
+    // session is turned away before anything is read or written.
+    if (_actor.role != ActorRole.parent) {
+      return const CaptureResult.rejected(CaptureRejection.undoNotOffered);
+    }
     if (!isUlid(actionId)) return _invalid;
     final now = _clock().toUtc();
     final List<ChangeLogEntry> members;
@@ -244,7 +254,7 @@ final class DefaultGovernedLearningCommands
               keys.any((k) => k.field == GovernedKeys.curriculumId) &&
               keys.every((k) => u.before[k.key] == null);
           if (created) {
-            if (current?[GovernedKeys.lastChangeId] == u.id) {
+            if (await _createStands(u, first, current)) {
               patches.add(
                 GovernedDocPatch(
                   collection: first.collection,
@@ -390,6 +400,45 @@ final class DefaultGovernedLearningCommands
         _docKey(GovernedEntity.mainTrack.collection, curriculumId): track,
       },
     );
+  }
+
+  /// Whether the doc [key] that create entry [u] wrote still stands as
+  /// [u] left it, so undoing the create may tombstone it (AD-38, AC-5).
+  ///
+  /// True while the doc's `last_change_id` is [u]'s id. Otherwise true
+  /// only when its latest change is itself an undo (`reverts_action_id`)
+  /// and the doc is field for field back to [u]'s `after`: every later
+  /// change was undone, so the tombstone erases no surviving work (DNI-514
+  /// AC-5: undoing the ground addition re-enables undoing the create).
+  Future<bool> _createStands(
+    ChangeLogEntry u,
+    ChangedFieldKey key,
+    _DocView current,
+  ) async {
+    if (current == null) return false;
+    final last = current[GovernedKeys.lastChangeId];
+    if (last == u.id) return true;
+    if (last is! String) return false;
+    final ChangeLogEntry? latest;
+    try {
+      latest = await _reader.entry(_scope, last);
+    } on Object {
+      return false; // unknown latest change: keep the doc
+    }
+    if (latest?.revertsActionId == null) return false;
+    String keyOf(String field) =>
+        ChangedFieldKey(key.collection, key.docId, field).key;
+    for (final MapEntry(key: field, :value) in current.entries) {
+      if (field == GovernedKeys.lastChangeId) continue;
+      final k = keyOf(field);
+      final created = u.after.containsKey(k) ? u.after[k] : null;
+      if (!storageValueEquals(value, created)) return false;
+    }
+    for (final k in u.changedKeys) {
+      if (k.collection != key.collection || k.docId != key.docId) continue;
+      if (!storageValueEquals(current[k.field], u.after[k.key])) return false;
+    }
+    return true;
   }
 
   /// Whether [e] is a `learnerSettings` seed entry (`before` all-null),

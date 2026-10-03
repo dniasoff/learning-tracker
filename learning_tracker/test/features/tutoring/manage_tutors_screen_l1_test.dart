@@ -43,11 +43,13 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/manage_tutors_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -811,6 +813,112 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  // ── DNI-512 (Story 4.4) AC-1 — the existing revoke flow, unchanged ────────
+  // One confirmation dialog, then the existing use case with the very grant
+  // (whose repository sends the unchanged `{grantId}` payload). A failed
+  // revoke never exits the parent's view of an active tutored session.
+
+  group('DNI-512 AC-1 — revoke flow is unchanged', () {
+    Future<void> openAndConfirm(WidgetTester tester) async {
+      await tester.tap(find.text('Revoke'));
+      await tester.pump();
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.text('Revoke').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    testWidgets('one confirmation, then the use case with the same grant; '
+        'no second confirmation', (tester) async {
+      final child = _childProfile(id: 1, displayName: 'Shmuel');
+      final grant = _activeGrant(tutorEmail: 'rebbe@example.com');
+      final mockRevoke = _MockRevoke();
+      when(
+        () => mockRevoke.call(grant: any(named: 'grant')),
+      ).thenAnswer((_) async => TutorGrantSuccess(grantId: grant.grantId));
+      final notifGw = _MockNotificationGateway();
+      when(
+        () => notifGw.notifyTutorOfRevocation(
+          tutorEmail: any(named: 'tutorEmail'),
+          parentName: any(named: 'parentName'),
+          childName: any(named: 'childName'),
+        ),
+      ).thenAnswer((_) async {});
+
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          profilesState: AsyncData([child]),
+          grantsPerChild: {
+            _childUlid: AsyncData([grant]),
+          },
+          revoke: mockRevoke,
+          notifications: notifGw,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await openAndConfirm(tester);
+
+      final captured = verify(
+        () => mockRevoke.call(grant: captureAny(named: 'grant')),
+      ).captured;
+      expect(captured, hasLength(1));
+      expect((captured.single as TutorGrant).grantId, grant.grantId);
+      expect(find.byType(AlertDialog), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('a failed revoke keeps the active tutored selection', (
+      tester,
+    ) async {
+      final child = _childProfile(id: 1, displayName: 'Shmuel');
+      final grant = _activeGrant(tutorEmail: 'rebbe@example.com');
+      final mockRevoke = _MockRevoke();
+      when(() => mockRevoke.call(grant: any(named: 'grant'))).thenAnswer(
+        (_) async =>
+            const TutorGrantFailure(message: 'x', code: 'unavailable'),
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          profilesState: AsyncData([child]),
+          grantsPerChild: {
+            _childUlid: AsyncData([grant]),
+          },
+          revoke: mockRevoke,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ManageTutorsScreen)),
+      );
+      final selection = TutoredProfileSelection(
+        profileId: _childUlid,
+        ownerUid: 'parent_uid',
+        grantId: grant.grantId,
+        permissions: const TutorPermissions(),
+      );
+      container
+          .read(activeTutoredProfileSelectionProvider.notifier)
+          .enter(selection);
+
+      await openAndConfirm(tester);
+
+      verify(() => mockRevoke.call(grant: any(named: 'grant'))).called(1);
+      expect(container.read(activeTutoredProfileSelectionProvider), selection);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+  });
 
   // ── Pending grants ──────────────────────────────────────────────────────────
 

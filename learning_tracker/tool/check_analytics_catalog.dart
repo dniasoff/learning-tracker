@@ -53,6 +53,34 @@ void main() {
 
   final violations = <String>[];
 
+  final metricsFile = File('tool/analytics_metrics.md');
+  if (!metricsFile.existsSync()) {
+    violations.add(
+      'tool/analytics_metrics.md: required metric catalog missing',
+    );
+  } else {
+    final metrics = metricsFile.readAsStringSync();
+    const requiredMetricText = [
+      'SM-1',
+      'learner-days with at least one `capture` divided by non-locked learner-days',
+      'SM-2',
+      'hashed learners with at least one `subtrack_lifecycle` create and a sub-track `capture`',
+      'SM-4',
+      'Median over `(learner-day, source)` pairs',
+      'at most 4 taps per source captured, not per full day',
+      'SM-5',
+      'absolute value of forecast capacity minus actual distinct leaves ticked',
+      'Events per day is a counter-metric only and is never a target (NFR-17)',
+    ];
+    for (final required in requiredMetricText) {
+      if (!metrics.contains(required)) {
+        violations.add(
+          'tool/analytics_metrics.md: missing aggregation requirement `$required`',
+        );
+      }
+    }
+  }
+
   final dartFiles =
       libDir
           .listSync(recursive: true)

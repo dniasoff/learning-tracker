@@ -1,0 +1,175 @@
+{
+  "description": "AD-45 / NFR-20: no sub-track on a calendar-program curriculum, and no calendar program on a curriculum with a non-ended sub-track.",
+  "base": {
+    "curriculum_id": "shas",
+    "name": "Ongoing",
+    "type": "ongoing",
+    "window_start": "2026-09-01",
+    "window_end": null,
+    "rate_per_week": 5,
+    "weeks_per_year": 40,
+    "learns_on_shabbos": false,
+    "ground": [
+      {
+        "level": "masechta",
+        "ref": "Berakhot"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "create on a calendar-program curriculum \u2192 rejected",
+      "today": "2026-10-01",
+      "curriculum_id": "shas",
+      "program_id": "daf_yomi",
+      "existing": [],
+      "op": {
+        "kind": "create",
+        "id": "01JFIXTURE0000000000000033",
+        "fields": {}
+      },
+      "expect": [
+        "calendar_program_curriculum"
+      ]
+    },
+    {
+      "name": "create without a calendar program \u2192 accepted",
+      "today": "2026-10-01",
+      "curriculum_id": "shas",
+      "program_id": null,
+      "existing": [],
+      "op": {
+        "kind": "create",
+        "id": "01JFIXTURE0000000000000033",
+        "fields": {}
+      },
+      "expect": []
+    },
+    {
+      "name": "create on another curriculum is not blocked by this one's program",
+      "today": "2026-10-01",
+      "curriculum_id": "shas",
+      "program_id": "daf_yomi",
+      "existing": [],
+      "op": {
+        "kind": "create",
+        "id": "01JFIXTURE0000000000000033",
+        "fields": {
+          "curriculum_id": "mishnayos"
+        }
+      },
+      "expect": []
+    },
+    {
+      "name": "set a program while a non-ended sub-track exists \u2192 rejected",
+      "today": "2026-10-01",
+      "curriculum_id": "shas",
+      "program_id": null,
+      "existing": [
+        {
+          "id": "01JFIXTURE0000000000000001",
+          "doc": {
+            "name": "Ongoing 1"
+          }
+        }
+      ],
+      "op": {
+        "kind": "set_program",
+        "program_id": "daf_yomi"
+      },
+      "expect": [
+        "calendar_program_has_sub_tracks"
+      ]
+    },
+    {
+      "name": "a live sub-track with a passed window still blocks a program",
+      "today": "2026-10-01",
+      "curriculum_id": "shas",
+      "program_id": null,
+      "existing": [
+        {
+          "id": "01JFIXTURE0000000000000001",
+          "doc": {
+            "name": "Ongoing 1",
+            "window_end": "2026-09-30"
+          }
+        }
+      ],
+      "op": {
+        "kind": "set_program",
+        "program_id": "daf_yomi"
+      },
+      "expect": [
+        "calendar_program_has_sub_tracks"
+      ]
+    },
+    {
+      "name": "set a program when every sub-track is ended \u2192 accepted",
+      "today": "2026-10-01",
+      "curriculum_id": "shas",
+      "program_id": null,
+      "existing": [
+        {
+          "id": "01JFIXTURE0000000000000001",
+          "doc": {
+            "name": "Ongoing 1",
+            "ended_at": "2026-09-15T08:00:00Z",
+            "end_reason": "ended"
+          }
+        },
+        {
+          "id": "01JFIXTURE0000000000000002",
+          "doc": {
+            "name": "Ongoing 2",
+            "ended_at": "2026-09-20T08:00:00Z",
+            "end_reason": "deleted"
+          }
+        }
+      ],
+      "op": {
+        "kind": "set_program",
+        "program_id": "daf_yomi"
+      },
+      "expect": []
+    },
+    {
+      "name": "another curriculum's sub-track does not block the program",
+      "today": "2026-10-01",
+      "curriculum_id": "shas",
+      "program_id": null,
+      "existing": [
+        {
+          "id": "01JFIXTURE0000000000000001",
+          "doc": {
+            "name": "Ongoing 1",
+            "curriculum_id": "mishnayos"
+          }
+        }
+      ],
+      "op": {
+        "kind": "set_program",
+        "program_id": "daf_yomi"
+      },
+      "expect": []
+    },
+    {
+      "name": "clearing the program is always allowed",
+      "today": "2026-10-01",
+      "curriculum_id": "shas",
+      "program_id": null,
+      "existing": [
+        {
+          "id": "01JFIXTURE0000000000000001",
+          "doc": {
+            "name": "Ongoing 1"
+          }
+        }
+      ],
+      "op": {
+        "kind": "set_program",
+        "program_id": null
+      },
+      "expect": []
+    }
+  ]
+}

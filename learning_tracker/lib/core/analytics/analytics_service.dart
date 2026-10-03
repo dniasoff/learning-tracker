@@ -63,6 +63,17 @@ abstract final class AnalyticsEvent {
   /// DNI-469: a successful learning capture — `curriculum_id`,
   /// `source_kind` (`main` | `sub_track`), `date_state` and `count`.
   static const capture = 'capture';
+
+  /// AD-47: a successful sub-track lifecycle command; enums and counts only.
+  static const subTrackLifecycle = 'subtrack_lifecycle';
+
+  /// AD-47: a close-window forecast comparison; enums and counts only.
+  static const subTrackForecastVsActual = 'subtrack_forecast_vs_actual';
+
+  /// DNI-506 (AD-47): a catch-up card action was accepted — `curriculum_id`,
+  /// `mode` (`all` | `adjusted`), `locked_days_offered`,
+  /// `locked_days_recorded`, `event_count` and `within_window`.
+  static const catchupCompleted = 'catchup_completed';
 }
 
 /// Milestone thresholds for [AnalyticsEvent.streakMilestoneReached].
@@ -77,6 +88,10 @@ abstract class AnalyticsService {
 
   /// Log a named event with optional parameters.
   Future<void> logEvent(String name, {Map<String, Object?>? parameters});
+
+  /// Set an analytics user property outside event parameters. Implementors
+  /// without user-property support may safely ignore it.
+  Future<void> setUserProperty(String name, String? value) async {}
 
   /// Convenience helpers for the 12 Story 27.14 events.
 
@@ -191,6 +206,7 @@ class LoggingAnalyticsService extends AnalyticsService {
 /// Use in acceptance/unit tests to assert events fire exactly once per trigger.
 class FakeAnalyticsService extends AnalyticsService {
   final List<_FiredEvent> _events = [];
+  final Map<String, String?> userProperties = {};
 
   List<_FiredEvent> get events => List.unmodifiable(_events);
 
@@ -209,6 +225,11 @@ class FakeAnalyticsService extends AnalyticsService {
   @override
   Future<void> logEvent(String name, {Map<String, Object?>? parameters}) async {
     _events.add(_FiredEvent(name: name, parameters: parameters ?? {}));
+  }
+
+  @override
+  Future<void> setUserProperty(String name, String? value) async {
+    userProperties[name] = value;
   }
 }
 

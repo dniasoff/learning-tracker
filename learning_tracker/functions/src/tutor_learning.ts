@@ -3,10 +3,12 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { CALL_OPTS } from "./shared";
 import {
+  ENTITY_COLLECTION,
   LearningEventIntent,
   PlanContext,
   GovernedPlan,
   MAX_WRITES_PER_CALL,
+  TOMBSTONE,
   ULID_RE,
   newUlid,
   runGoverned,
@@ -14,19 +16,30 @@ import {
 } from "./write_with_change_log";
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Tutor learning callables — sub-tracks Story 1.23 (DNI-485)
+// Tutor learning callables — sub-tracks Story 1.23 (DNI-485) and Story 4.1
+// (DNI-509)
 // ══════════════════════════════════════════════════════════════════════════════
 //
-// The three server-side entry points through which a tutor records, corrects
-// and removes a talmid's learning (AD-31 / AD-53):
+// The server-side entry points through which a tutor records, corrects and
+// removes a talmid's learning (AD-31 / AD-53), and maintains his sub-track
+// for the talmid (AD-38 `subTrack`, Story 4.1):
 //
 //   tutorRecordLearning — `learn` events, `source = main`, `date_state`
 //                         `dated` (leaf ref + learned_on) or `before_tracking`
 //                         (leaf, or node ref + level; learned_on null). Covers
 //                         task tick, tick-to-here and before-tracking marking.
+//                         Story 4.1: `source` may instead be the ULID of an
+//                         existing, live (not ended or deleted) sub-track of
+//                         the same curriculum (`dated` only — the Rebbe row's
+//                         +1 and Up to…); such events earn no `pts_` entry
+//                         (AD-50).
 //   tutorVoidLearning   — one `void` of a stored `source = main` learn event,
 //                         or REPLACE: the void plus a corrected learn copy on
-//                         the target's curriculum, in one transaction.
+//                         the target's curriculum, in one transaction. Story
+//                         4.2 (DNI-510): the copy's `source` may be a live
+//                         sub-track of that curriculum (`dated` only), so a
+//                         *Correct source* to a sub-track is one atomic
+//                         replace, never a void and a separate capture.
 //   tutorUnlearn        — AD-31 un-learn of a leaf set, executing the client's
 //                         unlearn plan (ruling B9): void every counted main
 //                         learn event of the curriculum whose ref is in the
@@ -34,6 +47,12 @@ import {
 //                         event, re-issuing the client-computed maximal
 //                         complement nodes as before_tracking events carrying
 //                         `original_recorded_at = effectiveAt(target)`.
+//   tutorUpsertSubTrack — the `subTrack` entity: create (also *Add next
+//                         year*: a new ULID for `academic_year + 1`), edit of
+//                         any field but `curriculum_id` (ground add, reorder
+//                         and remove replace `ground` whole), end and delete
+//                         (`ended_at` + `end_reason` tombstones, never a
+//                         hard delete).
 //
 // Each one is a thin adapter over `writeWithChangeLog`, which owns
 // authentication, the single `can_edit_learning` grant check (AD-53 — these
@@ -57,14 +76,26 @@ import {
 //
 //   tutorRecordLearning {grantId, ownerUid, profileId, actionId?,
 //                        events: [{id, fields: {kind: "learn", curriculum_id,
-//                        ref, source: "main", date_state, learned_on, level?,
-//                        stage?}}]}
+//                        ref, source: "main" | <sub-track ULID>, date_state,
+//                        learned_on, level?, stage?}}]}
 //   tutorVoidLearning   {grantId, ownerUid, profileId, actionId?, eventId,
-//                        targetId, replacement?: {id, fields: <learn fields>}}
+//                        targetId, replacement?: {id, fields: <learn fields,
+//                        source "main" | live sub-track ULID>}}
 //   tutorUnlearn        {grantId, ownerUid, profileId, actionId (required),
 //                        curriculumId, leafSet: string[], leafEventIds?:
 //                        string[], nodeReissues?: [{targetEventId, reissues:
 //                        [{eventId, ref, level}]}]}
+//   tutorUpsertSubTrack {grantId, ownerUid, profileId, actionId?, subTrackId,
+//                        op: "create" | "edit" | "end" | "delete",
+//                        fields?: <AD-52 sub_tracks fields>}
+//                        create: `fields` is the full new doc (the doc must be
+//                        absent; a null field is simply not written);
+//                        actionId defaults to subTrackId. edit:
+//                        `fields` holds only the changed fields, `null`
+//                        clears a nullable one (the doc must exist); actionId
+//                        required. end / delete: no `fields`; actionId
+//                        required. `ended_at`, `end_reason` and
+//                        `last_change_id` are never caller fields.
 //
 // `leafEventIds` (DNI-486) names the exact leaf learn events the client's
 // engine counts. The server cannot evaluate the AD-36 lock-window / count
@@ -82,7 +113,7 @@ import {
 /** Log label for these callables' `{entity, code}` failure lines. */
 const LOG_ENTITY = "learningEvent";
 
-/** The only learning source tutors may write in Epic 1 (a later epic adds sub-tracks). */
+/** The main-track learning source; any other tutor source is a sub-track ULID (Story 4.1). */
 const MAIN_SOURCE = "main";
 
 /** date_state values a tutor capture may carry (catch_up is owner/sub-track only). */
@@ -145,14 +176,19 @@ function requestObject(raw: unknown): Record<string, unknown> {
 }
 
 /**
- * Validates one tutor learn event `{id, fields}` against the Epic 1 tutor
- * contract — `kind = learn`, `source = main`, `date_state` dated or
- * before_tracking, no caller-supplied time or actor — and normalises a
+ * Validates one tutor learn event `{id, fields}` against the tutor
+ * contract — `kind = learn`, `source = main` (or, with
+ * [allowSubTrackSource], a sub-track ULID on a `dated` event — Story 4.1),
+ * `date_state` dated or before_tracking, no caller-supplied time or
+ * actor — and normalises a
  * before_tracking event's absent `learned_on` to the stored `null`. The
  * helper re-validates the full AD-52 shape (types, level only on
  * before_tracking, learned_on required on dated, stage on main only).
  */
-function parseTutorLearnEvent(raw: unknown): LearningEventIntent {
+function parseTutorLearnEvent(
+  raw: unknown,
+  { allowSubTrackSource = false }: { allowSubTrackSource?: boolean } = {},
+): LearningEventIntent {
   if (!isObject(raw)) bad("event must be an object");
   const ev = raw as Record<string, unknown>;
   for (const k of Object.keys(ev)) {
@@ -165,7 +201,14 @@ function parseTutorLearnEvent(raw: unknown): LearningEventIntent {
     if (!TUTOR_LEARN_FIELDS.has(k)) bad(`Field not allowed on a tutor learn event: ${k}`);
   }
   if (fields.kind !== "learn") bad("a tutor capture writes learn events only");
-  if (fields.source !== MAIN_SOURCE) bad("source must be main");
+  if (fields.source !== MAIN_SOURCE) {
+    // Story 4.1 (DNI-509): a capture on the tutor's sub-track row carries
+    // the sub-track's ULID; it is a dated leaf event with no stage (stage is
+    // main-track only, AD-52). A replace may also carry one (Story 4.2
+    // *Correct source*); its target stays a main-track event.
+    if (!allowSubTrackSource || !isUlid(fields.source)) bad("source must be main or a sub-track ULID");
+    if (fields.date_state !== "dated") bad("a sub-track capture is dated");
+  }
   if (!TUTOR_DATE_STATES.has(fields.date_state)) bad("date_state must be dated or before_tracking");
   if (fields.date_state === "before_tracking") {
     if (fields.learned_on === undefined) fields.learned_on = null;
@@ -188,8 +231,12 @@ export const tutorRecordLearning = onCall(CALL_OPTS, (request) => runGoverned(LO
   if (!Array.isArray(data.events) || data.events.length === 0) {
     bad("events must be a non-empty array");
   }
-  const events = (data.events as unknown[]).map(parseTutorLearnEvent);
+  const events = (data.events as unknown[])
+    .map((e) => parseTutorLearnEvent(e, { allowSubTrackSource: true }));
   assertUniqueIds(events.map((e) => e.id));
+  const subTrackSources = [...new Set(events
+    .map((e) => String(e.fields.source))
+    .filter((source) => source !== MAIN_SOURCE))].sort();
   return writeWithChangeLog(request.auth, {
     ownerUid: target.ownerUid,
     profileId: target.profileId,
@@ -197,8 +244,53 @@ export const tutorRecordLearning = onCall(CALL_OPTS, (request) => runGoverned(LO
     actionId: target.actionId ?? events[0].id,
     auditAction: "learning_recorded",
     events,
+    // Only a sub-track capture reads anything: a main-track capture keeps
+    // its plan-free request (and so its replay fingerprint).
+    ...(subTrackSources.length === 0 ? {} : {
+      plan: subTrackSourcePlan(events),
+      planKey: `tutorRecordLearning:subTrackSources:${JSON.stringify(subTrackSources)}`,
+    }),
   });
 }));
+
+/**
+ * Validates, inside the transaction, every sub-track `source` of [events]:
+ * the `sub_tracks/{source}` doc exists in this learner's profile, belongs to
+ * the event's curriculum (an event never names another curriculum's or
+ * another learner's sub-track) and is live — not ended or deleted
+ * (`ended_at` unset, AD-38 tombstone). The read is part of the write's
+ * transaction, so a capture racing an end either commits before the end or
+ * is refused (DNI-510 review). Reads only.
+ */
+async function assertLiveSubTrackSources(ctx: PlanContext, events: LearningEventIntent[]): Promise<void> {
+  const ids = [...new Set(events
+    .map((e) => String(e.fields.source))
+    .filter((source) => source !== MAIN_SOURCE))];
+  if (ids.length === 0) return;
+  const snaps = await ctx.txn.getAll(
+    ...ids.map((id) => ctx.profileRef.collection(ENTITY_COLLECTION.subTrack).doc(id)));
+  const curriculumOf = new Map<string, unknown>(snaps.map((snap, i) => {
+    if (!snap.exists) throw new HttpsError("not-found", "Sub-track source does not exist");
+    if (snap.get("ended_at") != null) {
+      throw new HttpsError("failed-precondition", "Sub-track source has ended");
+    }
+    return [ids[i], snap.get("curriculum_id")];
+  }));
+  for (const e of events) {
+    if (e.fields.source === MAIN_SOURCE) continue;
+    if (curriculumOf.get(String(e.fields.source)) !== e.fields.curriculum_id) {
+      bad("A sub-track capture must be on the sub-track's curriculum");
+    }
+  }
+}
+
+/** The plan of a sub-track capture: [assertLiveSubTrackSources], no entries. */
+function subTrackSourcePlan(events: LearningEventIntent[]): (ctx: PlanContext) => Promise<GovernedPlan> {
+  return async (ctx) => {
+    await assertLiveSubTrackSources(ctx, events);
+    return { entries: [] };
+  };
+}
 
 // ── tutorVoidLearning ─────────────────────────────────────────────────────────
 
@@ -228,7 +320,7 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
   const voidEvent: LearningEventIntent = { id: voidId, fields: { kind: "void", target_id: targetId } };
   const replacement = data.replacement === undefined || data.replacement === null
     ? null
-    : parseTutorLearnEvent(data.replacement);
+    : parseTutorLearnEvent(data.replacement, { allowSubTrackSource: true });
   if (replacement) assertUniqueIds([voidId, targetId, replacement.id]);
   else if (voidId === targetId) bad("event ids must be unique");
 
@@ -237,6 +329,8 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
   // `source = main` (Epic 1 tutors write main-track learning only, so they
   // may not void a sub-track event either). A replacement must stay on the
   // target's curriculum: a correction never moves learning to another track.
+  // It may move it to a live sub-track of that curriculum (Story 4.2
+  // *Correct source*), checked in the same transaction as the void.
   const readTarget = async (ctx: PlanContext): Promise<FirebaseFirestore.DocumentData> => {
     const snap = await ctx.txn.get(ctx.profileRef.collection("learning_events").doc(targetId));
     if (!snap.exists) throw new HttpsError("not-found", "Void target does not exist");
@@ -272,6 +366,7 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
     if (replacementEvent.fields.curriculum_id !== stored.curriculum_id) {
       bad("A replacement must keep the target's curriculum");
     }
+    await assertLiveSubTrackSources(ctx, [replacementEvent]);
     if (await isVoided(ctx, targetId)) {
       throw new HttpsError("failed-precondition", "Replace target is already voided");
     }
@@ -496,5 +591,90 @@ export const tutorUnlearn = onCall(CALL_OPTS, (request) => runGoverned(LOG_ENTIT
     planKey: `tutorUnlearn:${JSON.stringify(plan.leafEventIds === null
       ? [plan.curriculumId, plan.leafSet, plan.nodeReissues]
       : [plan.curriculumId, plan.leafSet, plan.nodeReissues, plan.leafEventIds])}`,
+  });
+}));
+
+// ── tutorUpsertSubTrack (Story 4.1, DNI-509) ─────────────────────────────────
+
+/** Log label for tutorUpsertSubTrack's `{entity, code}` failure lines. */
+const SUB_TRACK_ENTITY = "subTrack";
+
+const SUB_TRACKS = ENTITY_COLLECTION.subTrack;
+
+/** The sub-track lifecycle operations a tutor may request. */
+type SubTrackOp = "create" | "edit" | "end" | "delete";
+
+const SUB_TRACK_OPS: ReadonlySet<unknown> = new Set(["create", "edit", "end", "delete"]);
+
+/**
+ * Intent fields a tutor create or edit may carry (AD-52 `sub_tracks`). The
+ * lifecycle pair `ended_at` / `end_reason` is set only by `end` / `delete`
+ * (a tutor never re-adds through an edit) and `last_change_id` only by the
+ * helper; writeWithChangeLog validates every value's type, the final doc's
+ * shape and the AD-45 limits.
+ */
+const SUB_TRACK_INTENT_FIELDS: ReadonlySet<string> = new Set([
+  "curriculum_id", "name", "type", "academic_year", "window_start", "window_end",
+  "rate_per_week", "weeks_per_year", "learns_on_shabbos", "ground",
+]);
+
+const END_REASON: Readonly<Record<"end" | "delete", string>> = { end: "ended", delete: "deleted" };
+
+const AUDIT_ACTION: Readonly<Record<SubTrackOp, string>> = {
+  create: "sub_track_created",
+  edit: "sub_track_edited",
+  end: "sub_track_ended",
+  delete: "sub_track_deleted",
+};
+
+function parseSubTrackFields(raw: unknown, op: "create" | "edit"): Record<string, unknown> {
+  if (!isObject(raw)) bad("fields must be an object");
+  const fields = raw as Record<string, unknown>;
+  const keys = Object.keys(fields);
+  if (keys.length === 0) bad("fields must not be empty");
+  for (const k of keys) {
+    if (!SUB_TRACK_INTENT_FIELDS.has(k)) bad(`Field not allowed on a tutor sub-track ${op}: ${k}`);
+  }
+  return { ...fields };
+}
+
+export const tutorUpsertSubTrack = onCall(CALL_OPTS, (request) => runGoverned(SUB_TRACK_ENTITY, async () => {
+  const data = requestObject(request.data);
+  const target = parseTarget(data, ["subTrackId", "op", "fields"]);
+  if (!isUlid(data.subTrackId)) bad("subTrackId must be a client ULID");
+  const subTrackId = data.subTrackId as string;
+  if (!SUB_TRACK_OPS.has(data.op)) bad("op must be create, edit, end or delete");
+  const op = data.op as SubTrackOp;
+
+  let fields: Record<string, unknown>;
+  if (op === "create" || op === "edit") {
+    fields = parseSubTrackFields(data.fields, op);
+  } else {
+    if (data.fields !== undefined && data.fields !== null) bad(`${op} takes no fields`);
+    fields = { ended_at: TOMBSTONE, end_reason: END_REASON[op] };
+  }
+  // A create's stable replay key is the new doc's own client ULID; every
+  // other operation is a new user action that must name its own.
+  const actionId = target.actionId ?? (op === "create" ? subTrackId : undefined);
+  if (!actionId) bad(`actionId (client ULID) is required for ${op}`);
+
+  return writeWithChangeLog(request.auth, {
+    ownerUid: target.ownerUid,
+    profileId: target.profileId,
+    grantId: target.grantId as string | null | undefined,
+    actionId,
+    auditAction: AUDIT_ACTION[op],
+    entries: [{
+      entity: "subTrack",
+      entityId: subTrackId,
+      docs: [{
+        collection: SUB_TRACKS,
+        docId: subTrackId,
+        fields,
+        // create: the doc must be absent (never overwritten); edit, end and
+        // delete: the doc must exist, so an edit never makes a partial doc.
+        mode: op === "create" ? "create" : "update",
+      }],
+    }],
   });
 }));

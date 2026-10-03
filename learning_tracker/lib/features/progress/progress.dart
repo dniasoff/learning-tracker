@@ -25,6 +25,15 @@ export 'domain/models/journey_view_model.dart' show MilestoneLevel;
 export 'presentation/providers/journey_providers.dart'
     show availableSiyumTiersProvider;
 
+// On-track mapping — the lifetime report's status, daily target and
+// calendar shortfall view of one curriculum's engine state, reused by the
+// Dashboard on-track card so the two cannot drift (Story 5.3, DNI-518,
+// AC-11; Story 2.11, DNI-502). Consumed by:
+//   - lib/features/dashboard/presentation/providers/dashboard_forecast_providers.dart
+//   - lib/features/dashboard/presentation/widgets/parent_on_track_card.dart
+export 'presentation/providers/pace_report_view.dart'
+    show OnTrackView, PaceReportStatus;
+
 // Tier counter row — header widget shared between Progress hub and the
 // Dashboard body. Consumed by:
 //   - lib/features/dashboard/presentation/widgets/dashboard_body.dart

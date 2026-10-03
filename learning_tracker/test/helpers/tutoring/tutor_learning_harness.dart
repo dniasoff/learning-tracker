@@ -13,6 +13,7 @@ import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
@@ -167,12 +168,14 @@ final class TutorHarness {
     List<LearningEvent>? events,
     Map<String, Corpus>? corpora,
     RecordingTutorInvoker? invoker,
+    List<SubTrack>? subTracks,
   }) : selection = tutorSelection(canEditLearning: canEditLearning),
        connectivity = ScriptedConnectivity(online: online),
        gate = gate ?? FakeCaptureGate.open(),
        history = history ?? c0SettingsHistory(),
        eventLog = events ?? [],
        corpora = corpora ?? {},
+       subTrackRows = subTracks,
        invoker = invoker ?? RecordingTutorInvoker(),
        analytics = RecordingLearningAnalytics() {
     service = TutorWriteService(
@@ -194,6 +197,8 @@ final class TutorHarness {
       corpus: (id) async => this.corpora[id],
       clock: () => tutorFixtureNow,
       newUlid: _ulids.next,
+      subTracks: () async => subTrackRows,
+      ledger: ledger,
     );
     governed = TutorGovernedWrites(
       selection: selection,
@@ -221,6 +226,13 @@ final class TutorHarness {
 
   /// The corpora by curriculum.
   final Map<String, Corpus> corpora;
+
+  /// The talmid's sub-tracks the commands read (Story 4.2); null reads as
+  /// unavailable.
+  List<SubTrack>? subTrackRows;
+
+  /// The frozen sub-track action ids (Story 4.2).
+  final ledger = TutorGovernedActionLedger();
 
   /// The callable invoker.
   final RecordingTutorInvoker invoker;

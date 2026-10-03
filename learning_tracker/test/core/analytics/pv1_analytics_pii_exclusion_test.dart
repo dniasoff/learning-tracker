@@ -50,6 +50,10 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/analytics/profile_analytics_hash.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
@@ -126,6 +130,80 @@ void main() {
   setUp(() {
     analytics = FakeAnalyticsService();
   });
+
+  test('DNI-503 event summaries contain only enums and integer counts', () {
+    final emitted = <(LearningAnalyticsEvent, Map<String, Object>)>[];
+    final emitter = SinkLearningAnalytics((event, parameters) {
+      emitted.add((event, parameters));
+    });
+    emitter.captureSummary(
+      curriculumId: 'synthetic-curriculum',
+      sourceType: CaptureSourceType.schoolYear,
+      dateState: DateState.dated,
+      gesture: CaptureGesture.taskTick,
+      eventCount: 2,
+      skippedCount: 0,
+      taps: 1,
+    );
+    emitter.subTrackLifecycleSummary(
+      curriculumId: 'synthetic-curriculum',
+      type: SubTrackType.schoolYear,
+      action: SubTrackLifecycleAction.create,
+      groundEntries: 1,
+      leaves: 3,
+    );
+    emitter.subTrackForecastVsActual(
+      type: SubTrackType.schoolYear,
+      forecast: 12,
+      actual: 9,
+      windowWeeks: 40,
+    );
+
+    const expectedKeys = [
+      {
+        'curriculum_id',
+        'source_type',
+        'gesture',
+        'event_count',
+        'skipped_count',
+        'taps',
+      },
+      {'curriculum_id', 'type', 'action', 'ground_entries', 'leaves'},
+      {'type', 'forecast', 'actual', 'window_weeks'},
+    ];
+    expect(emitted.map((event) => event.$1), [
+      LearningAnalyticsEvent.capture,
+      LearningAnalyticsEvent.subTrackLifecycle,
+      LearningAnalyticsEvent.subTrackForecastVsActual,
+    ]);
+    for (var i = 0; i < emitted.length; i++) {
+      final (event, params) = emitted[i];
+      expect(params.keys.toSet(), expectedKeys[i]);
+      _assertNoBannedPii(params, event.name);
+    }
+  });
+
+  test(
+    'DNI-503 profile hash is a user property, never an event parameter',
+    () async {
+      const profileId = 'synthetic-profile-id';
+      final hasher = ProfileAnalyticsHasher(
+        saltStore: const _FixedAnalyticsSaltStore('pv1-install-salt'),
+      );
+      final hash = await hasher.hash(profileId);
+      await analytics.setUserProperty('profile_hash', hash);
+      await analytics.logEvent(
+        AnalyticsEvent.capture,
+        parameters: {'curriculum_id': 'synthetic-curriculum', 'event_count': 1},
+      );
+
+      expect(analytics.userProperties, {'profile_hash': hash});
+      final params = analytics.lastParamsOf(AnalyticsEvent.capture)!;
+      expect(params.values, isNot(contains(profileId)));
+      expect(params.values, isNot(contains(hash)));
+      _assertNoBannedPii(params, AnalyticsEvent.capture);
+    },
+  );
 
   /// Asserts the LAST fired [eventName]'s parameter map contains no
   /// [_bannedPiiKeys] substring, and records [eventName] as exercised (see
@@ -473,6 +551,18 @@ void main() {
           'review, not silently fall through every list.',
     );
   });
+}
+
+final class _FixedAnalyticsSaltStore implements AnalyticsSaltStore {
+  const _FixedAnalyticsSaltStore(this.salt);
+
+  final String salt;
+
+  @override
+  Future<String?> read() async => salt;
+
+  @override
+  Future<void> write(String salt) async {}
 }
 
 // ── Fakes for the direct call-site sweep ─────────────────────────────────
