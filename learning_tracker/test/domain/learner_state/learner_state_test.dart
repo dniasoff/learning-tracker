@@ -109,50 +109,8 @@ void main() {
         onHome: true,
       );
       expect(st.groundExhausted, isFalse);
-      expect(st.ticked, 0);
-      expect(st.remainingPath, isEmpty);
       expect(st.expectedNewGround, 0);
       expect(st.shortfall, 0);
-      expect(st.ticked, 0);
-      expect(st.remainingPath, isEmpty);
-      // DNI-500 additive C0 change: ticked and remainingPath take part in
-      // value equality.
-      expect(
-        const SubTrackState(
-          subTrackId: 's',
-          holdsGround: true,
-          inForecast: false,
-          onHome: true,
-          ticked: 2,
-          remainingPath: ['a', 'b'],
-        ),
-        const SubTrackState(
-          subTrackId: 's',
-          holdsGround: true,
-          inForecast: false,
-          onHome: true,
-          ticked: 2,
-          remainingPath: ['a', 'b'],
-        ),
-      );
-      expect(
-        const SubTrackState(
-          subTrackId: 's',
-          holdsGround: true,
-          inForecast: false,
-          onHome: true,
-          remainingPath: ['a'],
-        ),
-        isNot(
-          const SubTrackState(
-            subTrackId: 's',
-            holdsGround: true,
-            inForecast: false,
-            onHome: true,
-            remainingPath: ['b'],
-          ),
-        ),
-      );
       expect(
         st,
         const SubTrackState(
@@ -162,21 +120,6 @@ void main() {
           onHome: true,
         ),
       );
-      // DNI-493: ticked and remainingPath take part in equality.
-      SubTrackState withPath(List<String> path, {int ticked = 1}) =>
-          SubTrackState(
-            subTrackId: 's',
-            holdsGround: true,
-            inForecast: false,
-            onHome: true,
-            position: path.isEmpty ? null : path.first,
-            ticked: ticked,
-            remainingPath: path,
-          );
-      expect(withPath(['a', 'b']), withPath(['a', 'b']));
-      expect(withPath(['a', 'b']).hashCode, withPath(['a', 'b']).hashCode);
-      expect(withPath(['a', 'b']), isNot(withPath(['a', 'c'])));
-      expect(withPath(['a']), isNot(withPath(['a'], ticked: 2)));
     });
   });
 }

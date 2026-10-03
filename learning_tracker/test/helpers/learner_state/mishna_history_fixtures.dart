@@ -221,7 +221,6 @@ final class GatedLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
-    bool skipRecorded = false,
   }) => _held(
     () => inner.capture(
       curriculumId: curriculumId,
@@ -231,7 +230,6 @@ final class GatedLearningCommands implements LearningCommands {
       dateState: dateState,
       learnedOn: learnedOn,
       stage: stage,
-      skipRecorded: skipRecorded,
     ),
   );
 
@@ -272,29 +270,6 @@ final class GatedLearningCommands implements LearningCommands {
   @override
   Future<BackupReplayResult> importBackup(BackupReplayInput input) =>
       inner.importBackup(input);
-  Future<CaptureResult> createSubTrack(
-    SubTrackDraft draft, {
-    String? subTrackId,
-    String? nextYearOf,
-  }) => _held(
-    () => inner.createSubTrack(
-      draft,
-      subTrackId: subTrackId,
-      nextYearOf: nextYearOf,
-    ),
-  );
-
-  @override
-  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>
-      _held(() => inner.editSubTrack(subTrackId, edit));
-
-  @override
-  Future<CaptureResult> endSubTrack(String subTrackId) =>
-      _held(() => inner.endSubTrack(subTrackId));
-
-  @override
-  Future<CaptureResult> deleteSubTrack(String subTrackId) =>
-      _held(() => inner.deleteSubTrack(subTrackId));
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>
@@ -303,8 +278,4 @@ final class GatedLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> retry(String pendingFailureId) =>
       _held(() => inner.retry(pendingFailureId));
-
-  @override
-  Future<bool> whenSubTrackChangeConfirmed(String changeId) =>
-      inner.whenSubTrackChangeConfirmed(changeId);
 }

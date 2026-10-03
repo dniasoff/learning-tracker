@@ -5,7 +5,6 @@ import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/expand_ground.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 
-import '../../helpers/learner_state/chumash_fixtures.dart';
 import '../../helpers/learner_state/engine_fixtures.dart';
 
 void main() {
@@ -77,58 +76,5 @@ void main() {
       () => expandGround(const [berakhot], corpus).add('x'),
       throwsUnsupportedError,
     );
-  });
-
-  group('DNI-493 AC-1/AC-7: sub-track ground at every ContentIndex level', () {
-    test('masechta, perek and leaf entries mixed keep list order and drop '
-        'later duplicates', () {
-      expect(
-        expandGround(const [
-          NodeEntry(level: 'mishnah', ref: 'Mishnah Peah 1:2'),
-          berakhot2,
-          berakhot,
-          NodeEntry(level: 'chapter', ref: 'Mishnah Peah 1'),
-          NodeEntry(level: 'mishnah', ref: 'Mishnah Berakhot 2:1'),
-        ], corpus),
-        [
-          'Mishnah Peah 1:2',
-          'Mishnah Berakhot 2:1',
-          'Mishnah Berakhot 2:2',
-          'Mishnah Berakhot 1:1',
-          'Mishnah Berakhot 1:2',
-          'Mishnah Berakhot 1:3',
-          'Mishnah Peah 1:1',
-        ],
-      );
-    });
-
-    test('a non-Mishnayos curriculum expands its own levels the same way '
-        '(prd-deviations #12)', () {
-      final chumash = chumashCorpus();
-      expect(
-        expandGround([
-          exodus,
-          verse('Genesis 2:2'),
-          genesis2,
-          genesis,
-        ], chumash),
-        [
-          'Exodus 1:1',
-          'Exodus 1:2',
-          'Genesis 2:2',
-          'Genesis 2:1',
-          'Genesis 1:1',
-          'Genesis 1:2',
-          'Genesis 1:3',
-        ],
-      );
-      expect(expandGround(const [genesis1], chumash), [
-        'Genesis 1:1',
-        'Genesis 1:2',
-        'Genesis 1:3',
-      ]);
-      // A Mishnayos entry means nothing in the Chumash corpus.
-      expect(expandGround(const [berakhot], chumash), isEmpty);
-    });
   });
 }

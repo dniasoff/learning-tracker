@@ -30,7 +30,6 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
-import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The history of one leaf ([leafRef]) of one curriculum ([curriculumId],
@@ -114,9 +113,6 @@ class MishnaHistoryScreen extends ConsumerWidget {
         viewer == MishnaHistoryViewer.tutor &&
         ref.watch(tutorWriteAvailabilityProvider).blocksTutor;
     final history = ref.watch(mishnaHistoryViewProvider(_args));
-    // Story 2.10 (AC-10): the sub-track sources Change source offers, kept
-    // ready for the picker (empty on a tutor device, AC-11).
-    ref.watch(subTrackSourceChoicesProvider(curriculumId));
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -655,7 +651,6 @@ Future<void> openMishnaCorrections(
     item,
     history,
     ref.read(localDayClockProvider).today(),
-    subTracks: ref.read(subTrackSourceChoicesProvider(args.curriculumId)),
   );
   if (request == null || !context.mounted) return;
   final messenger = ScaffoldMessenger.of(context);
@@ -695,19 +690,15 @@ String _actionLabel(MishnaCorrection action, AppLocalizations l10n) =>
     };
 
 /// Asks for the details of [action] and builds its request; null when the
-/// user cancels or the choice changes nothing. Source choices are Home,
-/// each `onHome` sub-track of the curriculum ([subTracks]) and Before
-/// tracking — the Browse list (Story 2.10 AC-10) — and the replacement
-/// follows the Story 1.7 `replace` rules (a sub-track source carries no
-/// stage and no points entry).
+/// user cancels or the choice changes nothing. Source choices are Home and
+/// Before tracking only in this story (sub-track sources: Story 2.10).
 Future<MishnaCorrectionRequest?> _requestFor(
   BuildContext context,
   MishnaCorrection action,
   MishnaHistoryItem item,
   MishnaHistory history,
-  DateTime today, {
-  List<SubTrackSourceChoice> subTracks = const [],
-}) async {
+  DateTime today,
+) async {
   switch (action) {
     case MishnaCorrection.remove:
       return const RemoveEventRequest();
@@ -725,9 +716,9 @@ Future<MishnaCorrectionRequest?> _requestFor(
       if (ref == null) return null;
       return ReplaceEventRequest(EventReplacement(ref: ref));
     case MishnaCorrection.changeSource:
-      final picked = await _pickSource(context, item, subTracks);
-      if (picked == null) return null;
-      if (picked == _beforeTrackingChoice) {
+      final toBeforeTracking = await _pickSource(context, item);
+      if (toBeforeTracking == null) return null;
+      if (toBeforeTracking) {
         if (item.isBeforeTracking) return null;
         return const ReplaceEventRequest(
           EventReplacement(
@@ -736,23 +727,23 @@ Future<MishnaCorrectionRequest?> _requestFor(
           ),
         );
       }
-      // Home (`main`) or a sub-track ULID.
-      final source = picked;
       if (item.isBeforeTracking) {
-        // A dated source needs the day it was learnt.
+        // Home needs the day it was learnt.
         if (!context.mounted) return null;
         final date = await _pickDate(context, item, today);
         if (date == null) return null;
         return ReplaceEventRequest(
           EventReplacement(
-            source: source,
+            source: LearningEvent.sourceMain,
             dateState: DateState.dated,
             learnedOn: date,
           ),
         );
       }
-      if (item.event.source == source) return null;
-      return ReplaceEventRequest(EventReplacement(source: source));
+      if (item.sourceKind == MishnaHistorySourceKind.home) return null;
+      return const ReplaceEventRequest(
+        EventReplacement(source: LearningEvent.sourceMain),
+      );
   }
 }
 
@@ -799,68 +790,39 @@ Future<String?> _pickPlace(BuildContext context, List<String> choices) {
   );
 }
 
-/// The [_pickSource] value of Before tracking (never a source id).
-const _beforeTrackingChoice = '__before_tracking__';
-
-/// The chosen source: `main` (Home), a sub-track ULID from [subTracks], or
-/// [_beforeTrackingChoice]; null when cancelled. The options are Home,
-/// each sub-track by name, then Before tracking (Story 2.10 AC-10).
-Future<String?> _pickSource(
-  BuildContext context,
-  MishnaHistoryItem item,
-  List<SubTrackSourceChoice> subTracks,
-) {
+/// True for Before tracking, false for Home, null when cancelled.
+Future<bool?> _pickSource(BuildContext context, MishnaHistoryItem item) {
   final l10n = AppLocalizations.of(context)!;
-  Widget option(
-    BuildContext dialogContext, {
-    required String value,
-    required String key,
-    required String label,
-    required bool selected,
-  }) => SimpleDialogOption(
-    key: Key('mishnaHistorySource-$key'),
-    onPressed: () => Navigator.of(dialogContext).pop(value),
-    child: Row(
-      children: [
-        Icon(
-          selected ? Icons.radio_button_checked : Icons.radio_button_off,
-          size: 20,
-        ),
-        const SizedBox(width: 12),
-        Flexible(child: Text(label)),
-      ],
-    ),
-  );
+  Widget option(BuildContext dialogContext, bool beforeTracking) {
+    final selected = beforeTracking
+        ? item.isBeforeTracking
+        : !item.isBeforeTracking &&
+              item.sourceKind == MishnaHistorySourceKind.home;
+    return SimpleDialogOption(
+      key: Key('mishnaHistorySource-${beforeTracking ? 'before' : 'home'}'),
+      onPressed: () => Navigator.of(dialogContext).pop(beforeTracking),
+      child: Row(
+        children: [
+          Icon(
+            selected ? Icons.radio_button_checked : Icons.radio_button_off,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            beforeTracking
+                ? l10n.mishnaHistoryBeforeTracking
+                : l10n.mishnaHistorySourceHome,
+          ),
+        ],
+      ),
+    );
+  }
 
-  final dated = !item.isBeforeTracking;
-  return showDialog<String>(
+  return showDialog<bool>(
     context: context,
     builder: (dialogContext) => SimpleDialog(
       title: Text(l10n.mishnaHistoryChooseSource),
-      children: [
-        option(
-          dialogContext,
-          value: LearningEvent.sourceMain,
-          key: 'home',
-          label: l10n.mishnaHistorySourceHome,
-          selected: dated && item.sourceKind == MishnaHistorySourceKind.home,
-        ),
-        for (final s in subTracks)
-          option(
-            dialogContext,
-            value: s.id,
-            key: s.id,
-            label: s.name,
-            selected: dated && item.event.source == s.id,
-          ),
-        option(
-          dialogContext,
-          value: _beforeTrackingChoice,
-          key: 'before',
-          label: l10n.mishnaHistoryBeforeTracking,
-          selected: item.isBeforeTracking,
-        ),
-      ],
+      children: [option(dialogContext, false), option(dialogContext, true)],
     ),
   );
 }

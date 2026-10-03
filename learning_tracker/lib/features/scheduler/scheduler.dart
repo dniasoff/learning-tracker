@@ -45,4 +45,3 @@ export 'presentation/screens/study_day_config_screen.dart';
 
 // ── Presentation widgets ───────────────────────────────────────────────
 export 'presentation/widgets/hebrew_date_picker.dart';
-export 'presentation/widgets/main_track_up_to_action.dart';

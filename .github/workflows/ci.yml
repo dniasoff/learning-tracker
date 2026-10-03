@@ -356,47 +356,6 @@ jobs:
         working-directory: learning_tracker
         run: make test-serial-tools
 
-  # ── 6c. perf (NON-BLOCKING) ──────────────────────────────────────────────
-  # Ruling B12: wall-clock benchmarks (tests tagged `perf`, budgets in
-  # learning_tracker/test/benchmark/perf_budget.dart) gate on the PROVISIONAL
-  # absolute budget here instead of in the blocking `test` job, which
-  # excludes the tag: runner speed varies too much to block merges on it.
-  # The named-device run belongs to the release verification sweep.
-  perf:
-    name: perf (non-blocking)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    continue-on-error: true
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Flutter bootstrap (codegen + asset + secrets)
-        uses: ./.github/actions/flutter-bootstrap
-        with:
-          run-codegen: 'true'
-          prepare-asset: 'true'
-          decode-secrets: 'true'
-          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
-
-      - name: Run perf-tagged benchmarks
-        working-directory: learning_tracker
-        run: |
-          mkdir -p build/perf
-          set -o pipefail
-          make test-perf 2>&1 | tee build/perf/perf-timings.log
-
-      - name: Upload benchmark timings
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: perf-timings
-          path: learning_tracker/build/perf/perf-timings.log
-          if-no-files-found: ignore
-          retention-days: 30
-
   # ── 7. firestore-rules ──────────────────────────────────────────────────────
   firestore-rules:
     name: firestore-rules

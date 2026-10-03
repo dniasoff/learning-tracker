@@ -6,17 +6,11 @@
 // backfill without a streak day (deviation #8), lock and permanent
 // rejection (AC-5), retry with the same ids and undo of exactly one batch
 // (AC-4, AC-7).
-import 'dart:async';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
-import 'package:learning_tracker/domain/learner_state/corpus.dart';
-import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
@@ -40,11 +34,8 @@ final _tuesday = engineAt(600);
 final _shabbos = DateTime.utc(2026, 9, 5, 10);
 
 final class _Harness {
-  _Harness({
-    DateTime? now,
-    List<LearningEvent>? events,
-    LearningCommandReads Function(FakeLearningCommandReads)? wrapReads,
-  }) : now = now ?? _tuesday {
+  _Harness({DateTime? now, List<LearningEvent>? events})
+    : now = now ?? _tuesday {
     reads = FakeLearningCommandReads(
       history: c0SettingsHistory(),
       log: events,
@@ -57,7 +48,7 @@ final class _Harness {
         role: ActorRole.parent,
         displayName: '',
       ),
-      reads: wrapReads?.call(reads) ?? reads,
+      reads: reads,
       writePort: port,
       gate: const LockWindowCaptureGate(),
       analytics: analytics,
@@ -66,7 +57,6 @@ final class _Harness {
       newUlid: (_) => engineUlid(_seq++),
       ackWait: const Duration(milliseconds: 40),
       pointsWait: const Duration(milliseconds: 40),
-      recordedWait: const Duration(milliseconds: 40),
     );
     addTearDown(commands.dispose);
   }
@@ -96,7 +86,6 @@ final class _Harness {
     DateState dateState = DateState.dated,
     String? learnedOn,
     int? stage,
-    bool skipRecorded = false,
   }) => commands.capture(
     curriculumId: engineCurriculum,
     refs: refs,
@@ -105,73 +94,7 @@ final class _Harness {
     dateState: dateState,
     learnedOn: learnedOn,
     stage: stage,
-    skipRecorded: skipRecorded,
   );
-}
-
-/// Reads whose event log never arrives (offline, uncached).
-final class _StalledEventReads implements LearningCommandReads {
-  _StalledEventReads(this.inner);
-
-  final FakeLearningCommandReads inner;
-
-  @override
-  Future<LearnerSettingsHistory> settingsHistory(LearnerScope scope) =>
-      inner.settingsHistory(scope);
-
-  @override
-  Future<List<LearningEvent>> events(LearnerScope scope) =>
-      Completer<List<LearningEvent>>().future;
-
-  @override
-  Future<Corpus?> corpus(String curriculumId) => inner.corpus(curriculumId);
-
-  @override
-  Future<int> pointsAmount(
-    LearnerScope scope,
-    String curriculumId,
-    int? stage,
-  ) => inner.pointsAmount(scope, curriculumId, stage);
-}
-
-/// Reads backed by the device's local cache: every write this device has
-/// issued (saved or still queued) is visible, as in the Firestore SDK; the
-/// snapshot is taken when the read starts and answers only after [delay],
-/// so two captures started together both pass the read before either
-/// writes unless they are serialized.
-final class _LocalCacheReads implements LearningCommandReads {
-  _LocalCacheReads(this.inner, this.port);
-
-  final FakeLearningCommandReads inner;
-  final InMemoryLearningWritePort Function() port;
-  static const delay = Duration(milliseconds: 5);
-  int eventReads = 0;
-
-  @override
-  Future<LearnerSettingsHistory> settingsHistory(LearnerScope scope) =>
-      inner.settingsHistory(scope);
-
-  @override
-  Future<List<LearningEvent>> events(LearnerScope scope) async {
-    eventReads++;
-    // The snapshot is taken when the read starts and answers later.
-    final snapshot = [
-      ...inner.eventLog,
-      for (final c in port().attempts) ...c.events,
-    ];
-    await Future<void>.delayed(delay);
-    return snapshot;
-  }
-
-  @override
-  Future<Corpus?> corpus(String curriculumId) => inner.corpus(curriculumId);
-
-  @override
-  Future<int> pointsAmount(
-    LearnerScope scope,
-    String curriculumId,
-    int? stage,
-  ) => inner.pointsAmount(scope, curriculumId, stage);
 }
 
 String? _streakDayOf(LearningEvent e) => streakDay(
@@ -379,140 +302,6 @@ void main() {
       );
       await rejected.capture(refs: [_b11]);
       expect(rejected.analytics.captures, isEmpty);
-    });
-  });
-
-  group('DNI-501 AC-2: a stale Up to… picker never writes a leaf twice', () {
-    final school = engineUlid(7);
-
-    test('a leaf another device recorded in this sub-track while the '
-        'picker was open is dropped; the rest are written', () async {
-      // The picker froze [b11, b12, b13]; meanwhile another device
-      // recorded b12 in School.
-      final h = _Harness(events: [engineLearn(1, _b12, source: school)]);
-      final result =
-          await h.capture(
-                refs: [_b11, _b12, _b13],
-                source: school,
-                skipRecorded: true,
-              )
-              as CaptureSuccess;
-
-      expect(h.written.map((e) => e.ref), [_b11, _b13]);
-      expect(result.eventIds, h.written.map((e) => e.id));
-      expect(result.alreadyRecordedRefs, [_b12]);
-    });
-
-    test('a leaf learnt from another source still advances nothing in '
-        'this sub-track, so it is written (AD-33 position)', () async {
-      final h = _Harness(events: [engineLearn(1, _b12)]);
-      final result =
-          await h.capture(
-                refs: [_b11, _b12],
-                source: school,
-                skipRecorded: true,
-              )
-              as CaptureSuccess;
-
-      expect(h.written.map((e) => e.ref), [_b11, _b12]);
-      expect(result.alreadyRecordedRefs, isEmpty);
-    });
-
-    test('main: a leaf learnt from any source is no longer schedulable '
-        'and is dropped, with no pts_ entry for it', () async {
-      final h = _Harness(events: [engineLearn(1, _b11, source: school)]);
-      final result =
-          await h.capture(refs: [_b11, _b12], stage: 1, skipRecorded: true)
-              as CaptureSuccess;
-
-      expect(h.written.map((e) => e.ref), [_b12]);
-      expect(h.awards.map((a) => a.eventId), result.eventIds);
-      expect(result.alreadyRecordedRefs, [_b11]);
-    });
-
-    test('a voided event does not count: its leaf is written', () async {
-      final h = _Harness(
-        events: [
-          engineLearn(1, _b11, source: school),
-          engineVoid(2, 1, minutes: 1),
-        ],
-      );
-      await h.capture(refs: [_b11], source: school, skipRecorded: true);
-      expect(h.written.map((e) => e.ref), [_b11]);
-    });
-
-    test('a second confirm of the same run writes nothing more', () async {
-      final h = _Harness();
-      await h.capture(refs: [_b11, _b12], source: school, skipRecorded: true);
-      h.sync();
-      final before = h.written.length;
-
-      final again =
-          await h.capture(
-                refs: [_b11, _b12],
-                source: school,
-                skipRecorded: true,
-              )
-              as CaptureSuccess;
-
-      expect(h.written, hasLength(before));
-      expect(again.eventIds, isEmpty);
-      expect(again.alreadyRecordedRefs, [_b11, _b12]);
-      expect(h.analytics.captures, hasLength(1));
-    });
-
-    test('an unreadable log (offline) writes the refs as given', () async {
-      final h = _Harness(
-        events: [engineLearn(1, _b12, source: school)],
-        wrapReads: _StalledEventReads.new,
-      );
-      final result =
-          await h.capture(
-                refs: [_b11, _b12],
-                source: school,
-                skipRecorded: true,
-              )
-              as CaptureSuccess;
-
-      expect(h.written.map((e) => e.ref), [_b11, _b12]);
-      expect(result.alreadyRecordedRefs, isEmpty);
-    });
-
-    test('two captures of the same leaf started together on this device '
-        'write it once: the second re-reads after the first wrote, even '
-        'while that write is still queued offline', () async {
-      late _LocalCacheReads cache;
-      late _Harness h;
-      h = _Harness(
-        wrapReads: (inner) => cache = _LocalCacheReads(inner, () => h.port),
-      );
-      h.port.holdNext(); // the first write stays queued (offline)
-
-      final results = await Future.wait([
-        h.capture(refs: [_b11, _b12], source: school, skipRecorded: true),
-        h.capture(refs: [_b12, _b13], source: school, skipRecorded: true),
-      ]);
-      final first = results[0] as CaptureSuccess;
-      final second = results[1] as CaptureSuccess;
-
-      expect(
-        [
-          for (final c in h.port.attempts)
-            for (final e in c.events) e.ref,
-        ],
-        [_b11, _b12, _b13],
-      );
-      expect(first.alreadyRecordedRefs, isEmpty);
-      expect(second.alreadyRecordedRefs, [_b12]);
-      expect(cache.eventReads, 2);
-      h.port.release();
-    });
-
-    test('without skipRecorded the log is not read', () async {
-      final h = _Harness(events: [engineLearn(1, _b12, source: school)]);
-      await h.capture(refs: [_b12], source: school);
-      expect(h.written.map((e) => e.ref), [_b12]);
-      expect(h.reads.reads, isNot(contains('events')));
     });
   });
 }

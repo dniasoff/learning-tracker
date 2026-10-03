@@ -41,9 +41,6 @@ PaceGoal? livePace(CurriculumGoals? goals) {
 /// engine passes the main track's remaining at the start of [today]
 /// (`mainTrackAtStartOf(today)`, the no-sub-track case; DNI-477), since the
 /// divisor counts [today] too, and DNI-494 adds the sub-track terms.
-/// Σ shortfall(s)` over the curriculum's `holdsGround` sub-tracks
-/// (`DeadlineForecast.numerator`, DNI-494); with no sub-track it is
-/// `mainTrackRemaining`.
 int deadlineDailyTarget({
   required int numerator,
   required DeadlineGoal deadline,

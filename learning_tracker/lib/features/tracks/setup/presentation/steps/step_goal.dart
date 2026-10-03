@@ -11,7 +11,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
-import 'package:learning_tracker/core/widgets/info_note.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/core/widgets/scrollable_step_body.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -32,7 +31,6 @@ class SelfPacedGoalStep extends ConsumerStatefulWidget {
     // TS-10 fix: accept a previously-set goal so Back+Forward navigation
     // restores the deadline/pace choice the user already made.
     this.initialGoal,
-    this.showSubTrackMention = false,
     super.key,
   });
 
@@ -53,12 +51,6 @@ class SelfPacedGoalStep extends ConsumerStatefulWidget {
   /// value so backing-and-forwarding through the wizard does not discard the
   /// user's deadline choice.
   final GoalEntity? initialGoal;
-
-  /// Whether to show the one passive sub-track mention (DNI-495 AC-9): set
-  /// only when this step is reached during new-family onboarding. It is a
-  /// static info note — no button, link, field or extra step (FR-4a,
-  /// UX-DR-33, UX-DR-64, UX-DR-152).
-  final bool showSubTrackMention;
 
   @override
   ConsumerState<SelfPacedGoalStep> createState() => _SelfPacedGoalStepState();
@@ -456,10 +448,6 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
               color: context.colors.brandInkMuted,
             ),
           ),
-          if (widget.showSubTrackMention) ...[
-            const SizedBox(height: 12),
-            InfoNote(text: l10n.onboardingSubTrackMention),
-          ],
           const SizedBox(height: 18),
           _mode == 'pace'
               ? paceCard

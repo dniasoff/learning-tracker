@@ -10,7 +10,6 @@ import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/ports/change_log_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
-import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart';
 import 'package:learning_tracker/features/learning/domain/commands/governed_action_commands.dart';
@@ -71,13 +70,6 @@ final class ScriptedChangeLog implements ChangeLogRepository {
       await c.future;
     }
   }
-
-  @override
-  Future<HistoryPage<ChangeLogEntry>> historyPage(
-    LearnerScope scope, {
-    HistoryCursor? after,
-    int limit = kChangeHistoryPageSize,
-  }) => inner.historyPage(scope, after: after, limit: limit);
 
   @override
   Future<List<ChangeLogEntry>> entriesOfAction(

@@ -44,7 +44,6 @@ void main() {
     expect(s.actionId, isNull);
     expect(s.queued, isFalse);
     expect(s.changedSince, isEmpty);
-    expect(s.rejectedEventIds, isEmpty);
   });
 
   test('results compare by value', () {
@@ -69,14 +68,6 @@ void main() {
     expect(
       const CaptureResult.success(eventIds: [ulidA]),
       isNot(const CaptureResult.success(eventIds: [ulidB])),
-    );
-    expect(
-      const CaptureResult.success(eventIds: [ulidA], rejectedEventIds: [ulidB]),
-      const CaptureSuccess(eventIds: [ulidA], rejectedEventIds: [ulidB]),
-    );
-    expect(
-      const CaptureResult.success(eventIds: [ulidA], rejectedEventIds: [ulidB]),
-      isNot(const CaptureResult.success(eventIds: [ulidA])),
     );
     expect(CaptureResult.locked(lock), CaptureLocked(LockWindow(t0, t1)));
     expect(

@@ -6,7 +6,6 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
-import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 
 /// Reads and appends a learner's learning events.
@@ -20,25 +19,6 @@ abstract interface class LearningEventRepository {
   /// list; a partial list is never emitted. Stream-level listener failures
   /// are forwarded as error events and the listener recovers (AD-9).
   Stream<CompleteRead<LearningEvent>> watchAll(LearnerScope scope);
-
-  /// One page of the events of [scope], newest `recorded_at` first (ties
-  /// by document id, descending), after [after]; at most [limit] documents
-  /// (1..[kChangeHistoryPageSize]). The parent Change history (DNI-513)
-  /// merges it by effective instant using [HistoryPage.watermark].
-  ///
-  /// A document that does not decode is skipped and listed in
-  /// [HistoryPage.rejected]; the cursor and watermark still advance past
-  /// it. One single-field order: no composite index (AD-54).
-  Future<HistoryPage<LearningEvent>> historyPage(
-    LearnerScope scope, {
-    HistoryCursor? after,
-    int limit = kChangeHistoryPageSize,
-  });
-
-  /// The events with [ids] that exist and decode, in no set order (e.g.
-  /// the targets of `void` events not on a loaded history page). Missing
-  /// or undecodable documents are left out.
-  Future<List<LearningEvent>> eventsById(LearnerScope scope, Set<String> ids);
 
   /// Writes the prebuilt [event] at `learning_events/{event.id}`.
   ///

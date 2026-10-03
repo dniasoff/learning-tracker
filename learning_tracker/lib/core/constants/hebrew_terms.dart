@@ -172,18 +172,6 @@ class HebrewTerms {
   /// "Havdalah" / "Havdala" (the close-of-Shabbos ceremony) → Hebrew script.
   static const String uiHavdalah = 'הבדלה';
 
-  /// "Shabbos Kodesh" (the erev banner label, DNI-504) → Hebrew script.
-  static const String uiShabbosKodesh = 'שבת קודש';
-
-  /// "Yom Tov" → Hebrew script.
-  static const String uiYomTov = 'יום טוב';
-
-  /// "Yom Tov & Shabbos" (one lock over both) → Hebrew script.
-  static const String uiYomTovAndShabbos = 'יום טוב ושבת';
-
-  /// "Yom Kippur" → Hebrew script.
-  static const String uiYomKippur = 'יום כיפור';
-
   // ── Scholar tier / honorific terms ──────────────────────────────────────
 
   /// "Talmid Chochom" (highest scholar tier) → Hebrew script.

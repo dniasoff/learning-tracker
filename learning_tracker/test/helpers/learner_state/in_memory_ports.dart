@@ -17,7 +17,6 @@ import 'package:learning_tracker/domain/learner_state/ports/change_log_repositor
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_doc_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
-import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
@@ -25,8 +24,6 @@ import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_w
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
-
-import 'in_memory_history_page.dart';
 
 /// Per-scope change notifications shared by the fakes below.
 final class _ScopeChanges {
@@ -106,28 +103,6 @@ final class InMemoryLearningEventRepository implements LearningEventRepository {
       );
 
   @override
-  Future<HistoryPage<LearningEvent>> historyPage(
-    LearnerScope scope, {
-    HistoryCursor? after,
-    int limit = kChangeHistoryPageSize,
-  }) async => inMemoryHistoryPage(
-    _events[scope]?.values ?? const <LearningEvent>[],
-    instantOf: rawRecordedAtForSkewRule,
-    idOf: (e) => e.id,
-    after: after,
-    limit: limit,
-  );
-
-  @override
-  Future<List<LearningEvent>> eventsById(
-    LearnerScope scope,
-    Set<String> ids,
-  ) async => [
-    for (final id in ids)
-      if (_events[scope]?[id] case final event?) event,
-  ];
-
-  @override
   Future<void> create(LearnerScope scope, LearningEvent event) async {
     event.toStorage(); // StorageFormatException before any "I/O".
     final log = _events.putIfAbsent(scope, () => {});
@@ -157,52 +132,6 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
 
   /// Every change-log entry actually written (replays excluded), in order.
   final List<(LearnerScope, ChangeLogEntry)> entries = [];
-
-  /// Every call, in order (replays and refused changes included).
-  final List<(LearnerScope, SubTrackChange)> calls = [];
-
-  /// Offline mode (Story 2.1 AC-6): a change is applied locally at once —
-  /// visible to [watchAll], like Firestore's latency compensation — but its
-  /// future completes only when [settleHeld] runs (the server ack).
-  bool offline = false;
-
-  final List<_HeldSubTrackWrite> _held = [];
-
-  PermanentWriteRejection? _nextFailure;
-
-  /// The next applied change is refused by the "server" with [rejection]
-  /// (one-shot): online it throws at once; offline it fails at
-  /// [settleHeld], reverting the local change like Firestore does.
-  void failNextWith(PermanentWriteRejection rejection) =>
-      _nextFailure = rejection;
-
-  /// How many offline writes await their server acknowledgement.
-  int get heldCount => _held.length;
-
-  /// Acknowledges every held offline write (reconnect). A held write that
-  /// was scripted to fail is reverted and its future throws.
-  void settleHeld() {
-    final held = [..._held];
-    _held.clear();
-    for (final h in held) {
-      final failure = h.failure;
-      if (failure == null) {
-        h.done.complete();
-        continue;
-      }
-      final rows = _tracks[h.scope]!;
-      final before = h.before;
-      if (before == null) {
-        rows.remove(h.change.subTrackId);
-      } else {
-        rows[h.change.subTrackId] = before;
-      }
-      _log[h.scope]!.remove(h.change.entry.id);
-      entries.removeWhere((e) => e.$2.id == h.change.entry.id);
-      _changes.notify(h.scope);
-      h.done.completeError(failure);
-    }
-  }
 
   /// Stores [tracks] for [scope].
   void seed(LearnerScope scope, Iterable<SubTrack> tracks) {
@@ -240,16 +169,12 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
     LearnerScope scope,
     SubTrackChange change,
   ) async {
-    calls.add((scope, change));
     final log = _log.putIfAbsent(scope, () => {});
     final existing = log[change.entry.id];
     if (existing != null) {
       if (existing == change.entry) return;
       throw ChangeLogConflictException(change.entry.id);
     }
-    final failure = _nextFailure;
-    _nextFailure = null;
-    if (failure != null && !offline) throw failure;
     final rows = _tracks.putIfAbsent(scope, () => {});
     final current = rows[change.subTrackId];
     if (current == null && !change.isCreate) {
@@ -269,26 +194,10 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
     log[change.entry.id] = change.entry;
     entries.add((scope, change.entry));
     _changes.notify(scope);
-    if (offline) {
-      final held = _HeldSubTrackWrite(scope, change, current, failure);
-      _held.add(held);
-      return held.done.future;
-    }
   }
 
   /// Closes the change notifier.
   Future<void> dispose() => _changes.close();
-}
-
-/// One offline sub-track write awaiting its server acknowledgement.
-final class _HeldSubTrackWrite {
-  _HeldSubTrackWrite(this.scope, this.change, this.before, this.failure);
-
-  final LearnerScope scope;
-  final SubTrackChange change;
-  final SubTrack? before;
-  final PermanentWriteRejection? failure;
-  final Completer<void> done = Completer<void>();
 }
 
 /// In-memory [ChangeLogRepository]. [commitGoverned] merges each
@@ -365,19 +274,6 @@ final class InMemoryChangeLogRepository
         ],
         () => CompleteReadReady(_history(scope)),
       );
-
-  @override
-  Future<HistoryPage<ChangeLogEntry>> historyPage(
-    LearnerScope scope, {
-    HistoryCursor? after,
-    int limit = kChangeHistoryPageSize,
-  }) async => inMemoryHistoryPage(
-    entriesOf(scope),
-    instantOf: (e) => e.at,
-    idOf: (e) => e.id,
-    after: after,
-    limit: limit,
-  );
 
   @override
   Future<List<ChangeLogEntry>> entriesOfAction(

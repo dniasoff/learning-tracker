@@ -19,21 +19,6 @@
 ///    (`goal_target.dart`) and projection (`projection.dart`);
 /// 7. points (`earning_events.dart`, DNI-468): the profile-wide
 ///    `earningEventIds`, from every curriculum with a corpus.
-///    Sub-track states (`sub_track_positions.dart`, DNI-493): each
-///    sub-track's own position, ticked count and remaining path;
-///    (`goal_target.dart`) and projection (`projection.dart`; held at
-///    the lock's start while a lock is active, DNI-494);
-///    sub-track states (`sub_track_positions.dart`, DNI-493): each
-///    sub-track's own position, ticked count and remaining path; and the
-///    AD-44 deadline forecast (`sub_track_forecast.dart` over
-///    `sub_track_capacity.dart`, DNI-494): per-sub-track capacity,
-///    expected new ground and shortfall feeding the FR-19 `dailyTarget`;
-/// 7. points (DNI-468).
-/// 7. points (`earning_events.dart`, DNI-468): the profile-wide
-///    `earningEventIds`, from every curriculum with a corpus.
-/// 8. report projection (`report_projection.dart`, DNI-516): lifetime and
-///    per-source totals of every curriculum with a corpus, from the
-///    counted events and learnt set above (AD-48).
 ///
 /// No I/O, clock read or global state: every input is in
 /// [LearnerStateInputs], and identical inputs give equal outputs.
@@ -63,13 +48,10 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ordered_leaves.dart';
 import 'package:learning_tracker/domain/learner_state/predicates.dart';
 import 'package:learning_tracker/domain/learner_state/projection.dart';
-import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track_forecast.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track_positions.dart';
 
 /// One calendar program assignment: [node] is assigned on [date].
 final class CalendarAssignment {
@@ -135,13 +117,6 @@ final class LearnerStateInputs {
   /// The instant to evaluate at (UTC).
   final DateTime nowUtc;
 }
-
-/// The AD-35 velocity inputs of one evaluated curriculum.
-typedef _VelocityInputs = ({
-  Map<LeafRef, CivilDate> newlyLearnt,
-  CivilDate? historyStart,
-  CivilDate today,
-});
 
 /// How far before `nowUtc` locks are computed: enough for every catch-up
 /// window that can still be open (AD-40 streak pending days).
@@ -234,19 +209,6 @@ final class LearnerStateEngine {
       scopedLeaves: scoped,
       learntLeaves: learntLeaves(learns, corpus, scopedSet.contains),
     );
-    // The AD-35 velocity inputs, shared by the projection (stage 6) and
-    // the report velocities (stage 8) so both read one rule.
-    final velocity = evaluated
-        ? _velocityInputs(
-            inputs,
-            intent,
-            corpus,
-            learnt,
-            learns,
-            firstStage,
-            locks,
-          )
-        : null;
     final mainTrack = evaluated
         ? _mainTrack(
             curriculumId,
@@ -287,21 +249,6 @@ final class LearnerStateEngine {
           ? null
           : (t) => configHistory.at(t).firstStageOrder ?? firstStage,
     );
-    final plan = evaluated
-        ? _plan(
-            curriculumId,
-            inputs,
-            intent,
-            corpus,
-            learnt,
-            learns,
-            firstStage,
-            mainTrack,
-            configHistory!,
-            reviews!,
-            velocity!,
-          )
-        : const PlanRecord.none();
     final state = DerivedCurriculumState(
       curriculumId: curriculumId,
       evaluated: evaluated,
@@ -313,7 +260,20 @@ final class LearnerStateEngine {
         countedLearns: learns,
         firstStage: firstStage,
       ),
-      plan: plan,
+      plan: evaluated
+          ? _plan(
+              curriculumId,
+              inputs,
+              intent,
+              corpus,
+              learnt,
+              learns,
+              firstStage,
+              mainTrack,
+              configHistory!,
+              reviews!,
+            )
+          : const PlanRecord.none(),
       streak: evaluated
           ? curriculumStreak(
               learns,
@@ -322,62 +282,8 @@ final class LearnerStateEngine {
               nowUtc: inputs.nowUtc,
             )
           : null,
-      report: deriveReportProjection(
-        curriculumId: curriculumId,
-        countedLearns: learns,
-        corpus: corpus,
-        inScope: learnt.inScope,
-        learntLeaves: learnt.learntLeaves,
-        subTracks: [
-          for (final s in inputs.subTracks)
-            if (s.curriculumId == curriculumId) s,
-        ],
-        civilDayOf: (instant) => civilDate(instant, inputs.settingsHistory),
-        velocity: velocity == null
-            ? null
-            : ReportVelocityBasis(
-                newlyLearnt: velocity.newlyLearnt,
-                trackingStart: velocity.historyStart,
-                today: velocity.today,
-                firstStage: firstStage,
-                projection: plan.projection,
-                calendarProgram: plan.calendar != null,
-              ),
-      ),
     );
     return (state, earners);
-  }
-
-  /// The AD-35 velocity inputs of an evaluated curriculum: the day each
-  /// leaf was newly learnt, the start of tracked history and the
-  /// projection day (held at a lock's start during a lock; NFR-9, FR-23).
-  _VelocityInputs _velocityInputs(
-    LearnerStateInputs inputs,
-    MainTrackIntent intent,
-    Corpus corpus,
-    LearntRecord learnt,
-    List<LearningEvent> learns,
-    int? firstStage,
-    List<LockWindow> locks,
-  ) {
-    final program = intent.program;
-    return (
-      newlyLearnt: newlyLearntOn(
-        countedLearns: learns,
-        corpus: corpus,
-        inScope: learnt.inScope,
-        firstStage: firstStage,
-      ),
-      historyStart: trackedHistoryStart(
-        program?.endedAt == null ? program?.trackingStartDate : null,
-        learns,
-      ),
-      today: projectionDay(
-        locks: locks,
-        nowUtc: inputs.nowUtc,
-        settingsHistory: inputs.settingsHistory,
-      ),
-    );
   }
 
   /// The AD-33 main-track stage of an evaluated curriculum.
@@ -442,7 +348,6 @@ final class LearnerStateEngine {
     MainTrackRecord mainTrack,
     MainTrackConfigHistory configHistory,
     ReviewSchedule reviews,
-    _VelocityInputs velocity,
   ) {
     final today = civilDate(inputs.nowUtc, inputs.settingsHistory);
     final errors = <CurriculumValidationError>{};
@@ -459,26 +364,24 @@ final class LearnerStateEngine {
     );
     final goals = inputs.goals[curriculumId];
     final deadline = calendar == null ? liveDeadline(goals) : null;
-    // DNI-493: each sub-track's own position, ticked count and remaining
-    // path; evaluated curricula only (AD-35).
-    final subTracks = subTrackStates(
-      subTracks: inputs.subTracks,
-      corpus: corpus,
-      countedLearns: learns,
-      today: today,
-      deadline: deadline?.targetDate,
-    );
+    final program = intent.program;
     final projection = deriveProjection(
-      newlyLearnt: velocity.newlyLearnt,
-      historyStart: velocity.historyStart,
-      // NFR-9/FR-23: during a lock, as evaluated at the lock's start.
-      today: velocity.today,
+      newlyLearnt: newlyLearntOn(
+        countedLearns: learns,
+        corpus: corpus,
+        inScope: learnt.inScope,
+        firstStage: firstStage,
+      ),
+      historyStart: trackedHistoryStart(
+        program?.endedAt == null ? program?.trackingStartDate : null,
+        learns,
+      ),
+      today: today,
       remaining: learnt.scopedLeaves.length - learnt.learntLeaves.length,
       deadline: deadline,
     );
     if (calendar != null) {
       return PlanRecord(
-        subTracks: subTracks,
         calendar: calendar,
         reviews: reviews,
         projection: projection,
@@ -495,43 +398,18 @@ final class LearnerStateEngine {
     // terms), taken at the start of today: `studyDaysToDeadline` counts
     // today, so the leaves learnt today still count against today's
     // target and it does not shrink as they are learnt (DNI-477).
-    // AD-43/AD-44: a deadline gives `dailyTarget` from the FR-19
-    // numerator over the `holdsGround` sub-tracks (DNI-494), a pace gives
-    // `paceRate` (it also feeds FR-20 with a deadline); neither gives
-    // nulls. With no deadline no capacity or shortfall is computed and no
-    // sub-track rate affects any value.
     final pace = livePace(goals);
     final studyDays = configHistory.current.studyDays;
-    DeadlineForecast? forecast;
-    int? dailyTarget;
-    if (deadline != null) {
-      forecast = deriveDeadlineForecast(
-        subTracks: [
-          for (final s in inputs.subTracks)
-            if (s.curriculumId == curriculumId) s,
-        ],
-        states: subTracks,
-        corpus: corpus,
-        isLearnt: learnt.learntLeaves.contains,
-        inScope: learnt.inScope,
-        mainTrackRemaining: mainTrack.atStartOf(today).schedulableRefs.length,
-        today: today,
-        targetDate: deadline.targetDate,
-      );
-      dailyTarget = deadlineDailyTarget(
-        numerator: forecast.numerator,
-        deadline: deadline,
-        studyDays: studyDays,
-        today: today,
-      );
-    }
     return PlanRecord(
-      subTracks: forecast == null
-          ? subTracks
-          : withForecast(subTracks, forecast),
       reviews: reviews,
-      dailyTarget: dailyTarget,
-      shortfall: forecast?.shortfall,
+      dailyTarget: deadline == null
+          ? null
+          : deadlineDailyTarget(
+              numerator: mainTrack.atStartOf(today).schedulableRefs.length,
+              deadline: deadline,
+              studyDays: studyDays,
+              today: today,
+            ),
       paceRate: pace == null
           ? null
           : paceRateOf(

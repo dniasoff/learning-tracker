@@ -276,12 +276,7 @@ class _PendingCaptureFailureListenerState
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          // An undo's failure says so (DNI-514 AC-9, UX-DR-139).
-          content: Text(
-            failure.isUndo
-                ? l10n.changeHistoryUndoNotSaved
-                : l10n.captureNotSaved,
-          ),
+          content: Text(l10n.captureNotSaved),
           backgroundColor: context.colors.warningSnackbarFill,
           duration: const Duration(seconds: 8),
           action: SnackBarAction(

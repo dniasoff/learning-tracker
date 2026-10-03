@@ -404,32 +404,4 @@ void main() {
       },
     );
   });
-
-  // Story 2.11 (DNI-502) AC-9, UX-DR-6/7: the forecast status and warning
-  // tokens keep >= 4.5:1 text contrast in light and dark (DESIGN.md: warning
-  // deep on soft 5.6:1 / 9.84:1, success text on bg 4.55:1 / 7.67:1).
-  group('DNI-502 forecast tokens', () {
-    for (final (name, palette) in [
-      ('light', AppPalette.light),
-      ('dark', AppPalette.dark),
-    ]) {
-      test('$name: status and warning text clears WCAG 4.5:1', () {
-        expect(
-          _contrast(palette.statusSuccessSoftText, palette.statusSuccessSoftBg),
-          greaterThanOrEqualTo(4.5),
-          reason: 'On track',
-        );
-        expect(
-          _contrast(palette.brandWarningDeep, palette.brandWarningSoft),
-          greaterThanOrEqualTo(4.5),
-          reason: 'Behind pace and the shortfall card',
-        );
-        expect(
-          _contrast(palette.brandInkMuted, palette.brandCreamSoft),
-          greaterThanOrEqualTo(4.5),
-          reason: 'Too early to tell',
-        );
-      });
-    }
-  });
 }

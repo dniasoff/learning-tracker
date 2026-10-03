@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
@@ -61,16 +60,12 @@ class TrackManagementBody extends ConsumerStatefulWidget {
 class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
   late bool _addingTrack = widget.startAdding;
 
-  /// Story 2.6 (DNI-497, AC-8): from 840dp a selected sub-track's detail
-  /// sits beside the hub, which keeps its selection.
   @override
-  Widget build(BuildContext context) =>
-      SubTrackListDetailLayout(list: _buildHub(context));
-
-  Widget _buildHub(BuildContext context) {
+  Widget build(BuildContext context) {
     // DNI-486: adding, archiving and deleting a track have no governed tutor
     // path (they would be client writes into the talmid's tree), so a tutor
-    // gets none of them here — not even through `startAdding`.
+    // gets none of them here — not even through `startAdding`
+    // (learning-tracker-fyh.212 / fyh.227).
     final tutored = ref.watch(activeTutoredProfileSelectionProvider) != null;
     if (_addingTrack && !tutored) {
       return Scaffold(
@@ -154,14 +149,9 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
               bottom: 96,
             ),
             children: [
-              // DNI-495: reports a sub-track change refused at sync.
-              const SubTrackSyncRejectionListener(),
-              // DNI-499 (AD-54): End, Delete and Add next year still waiting
-              // for the server, or refused with a retry.
-              const SubTrackLifecycleSyncPanel(),
               _buildActiveHeader(context, activeTracks.length),
-              for (final track in activeTracks) ...[
-                Padding(
+              ...activeTracks.map(
+                (track) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: LearningTrackCard(
                     track: track,
@@ -173,9 +163,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
                         : () => _showDeleteDialog(track),
                   ),
                 ),
-                // DNI-495: the parent-only group provides its count and Add action.
-                SubTrackHubSection(curriculumId: track.curriculumId.storageKey),
-              ],
+              ),
             ],
           );
         },

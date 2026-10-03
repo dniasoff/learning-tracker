@@ -7,11 +7,6 @@
 ///
 /// - **Reads** go through [watchCompletePaged]: document-id pages of ≤ 500,
 ///   one loading emission, one complete emission, AD-9 recovery.
-/// - **History pages** ([historyPage], [eventsById], DNI-513 parent Change
-///   history): one `orderBy('recorded_at', descending: true)` page of
-///   ≤ 100 through [readHistoryPage] (automatic single-field index, no
-///   composite index, AD-54), and doc gets by id; an undecodable document
-///   is skipped, never shown.
 /// - **Writes** are create-only `set()` at the event's own client ULID.
 ///   The payload is the event's validated AD-52 map with timestamps
 ///   converted to Firestore `Timestamp`s — never a `FieldValue`, so a
@@ -46,12 +41,10 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:learning_tracker/data/repositories/create_only_guard.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
-import 'package:learning_tracker/data/repositories/history_page_query.dart';
 import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
 import 'package:learning_tracker/data/repositories/paged_complete_query.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
-import 'package:learning_tracker/domain/learner_state/ports/history_page.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
@@ -115,41 +108,6 @@ final class FirestoreLearningEventRepository
         onError: onListenerError,
         probe: pageProbe,
       );
-
-  @override
-  Future<HistoryPage<LearningEvent>> historyPage(
-    LearnerScope scope, {
-    HistoryCursor? after,
-    int limit = kChangeHistoryPageSize,
-  }) => readHistoryPage(
-    collectionFor(scope),
-    orderField: LearningEvent.kRecordedAt,
-    after: after,
-    limit: limit,
-    decode: LearningEvent.fromStorage,
-  );
-
-  @override
-  Future<List<LearningEvent>> eventsById(
-    LearnerScope scope,
-    Set<String> ids,
-  ) async {
-    final events = collectionFor(scope);
-    final snapshots = await Future.wait([
-      for (final id in ids) events.doc(id).get(),
-    ]);
-    final found = <LearningEvent>[];
-    for (final snap in snapshots) {
-      final data = snap.data();
-      if (data == null) continue;
-      try {
-        found.add(LearningEvent.fromStorage(snap.id, fromFirestoreMap(data)));
-      } on Object {
-        // Undecodable: left out (see the port).
-      }
-    }
-    return found;
-  }
 
   @override
   Future<void> create(LearnerScope scope, LearningEvent event) async {

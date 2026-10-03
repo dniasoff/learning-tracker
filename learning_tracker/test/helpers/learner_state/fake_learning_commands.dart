@@ -19,8 +19,6 @@ import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
-
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
@@ -142,7 +140,6 @@ final class FakeLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
-    bool skipRecorded = false,
   }) async => _record('capture', {
     'curriculumId': curriculumId,
     'refs': refs,
@@ -151,7 +148,6 @@ final class FakeLearningCommands implements LearningCommands {
     'dateState': dateState,
     'learnedOn': learnedOn,
     'stage': stage,
-    if (skipRecorded) 'skipRecorded': true,
   }, events: refs.length + nodes.length);
 
   @override
@@ -203,32 +199,6 @@ final class FakeLearningCommands implements LearningCommands {
       BackupReplayResult(
         result: _record('importBackup', {'input': input}),
       );
-  Future<CaptureResult> createSubTrack(
-    SubTrackDraft draft, {
-    String? subTrackId,
-    String? nextYearOf,
-  }) async => _record('createSubTrack', {
-    'draft': draft,
-    'subTrackId': subTrackId,
-    'nextYearOf': nextYearOf,
-  }, changes: 1);
-
-  @override
-  Future<CaptureResult> editSubTrack(
-    String subTrackId,
-    SubTrackEdit edit,
-  ) async => _record('editSubTrack', {
-    'subTrackId': subTrackId,
-    'edit': edit,
-  }, changes: 1);
-
-  @override
-  Future<CaptureResult> endSubTrack(String subTrackId) async =>
-      _record('endSubTrack', {'subTrackId': subTrackId}, changes: 1);
-
-  @override
-  Future<CaptureResult> deleteSubTrack(String subTrackId) async =>
-      _record('deleteSubTrack', {'subTrackId': subTrackId}, changes: 1);
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {
@@ -239,20 +209,6 @@ final class FakeLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> retry(String pendingFailureId) async =>
       _record('retry', {'pendingFailureId': pendingFailureId});
-
-  /// Each queued sub-track change's server verdict; unlisted ids are
-  /// accepted. Complete a scripted completer to settle it.
-  final Map<String, Completer<bool>> subTrackConfirmations = {};
-
-  @override
-  Future<bool> whenSubTrackChangeConfirmed(String changeId) async {
-    calls.add(
-      LearningCommandCall('whenSubTrackChangeConfirmed', {
-        'changeId': changeId,
-      }),
-    );
-    return subTrackConfirmations[changeId]?.future ?? true;
-  }
 
   /// Closes [pendingFailures].
   Future<void> dispose() => pendingFailures.close();
@@ -287,34 +243,10 @@ typedef RecordedCapture = ({
   int count,
 });
 
-/// One recorded [LearningAnalytics.subTrackLifecycle].
-typedef RecordedSubTrackLifecycle = ({
-  String curriculumId,
-  SubTrackType type,
-  SubTrackLifecycleAction action,
-  int groundEntries,
-});
-
 /// A [LearningAnalytics] that records every event.
 final class RecordingLearningAnalytics implements LearningAnalytics {
   /// Every `capture`, in order.
   final List<RecordedCapture> captures = [];
-
-  /// Every `subTrackLifecycle`, in order.
-  final List<RecordedSubTrackLifecycle> lifecycles = [];
-
-  @override
-  void subTrackLifecycle({
-    required String curriculumId,
-    required SubTrackType type,
-    required SubTrackLifecycleAction action,
-    required int groundEntries,
-  }) => lifecycles.add((
-    curriculumId: curriculumId,
-    type: type,
-    action: action,
-    groundEntries: groundEntries,
-  ));
 
   @override
   void capture({

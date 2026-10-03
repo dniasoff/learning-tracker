@@ -14,13 +14,6 @@
 ///   admits a target the client cannot find, with the empty row as its
 ///   baseline; it is the same queueable doc + entry batch (ruling B6),
 ///   never a create claim.
-/// - **Create** (Story 2.1): a [SubTrackChange.create] admits a target the
-///   client cannot find, with the empty row as its baseline; it is the
-///   same queueable doc + entry batch (ruling B6), never a create claim.
-/// - **Permanent rejection**: a commit refused with `permission-denied`,
-///   `invalid-argument` or `failed-precondition` throws
-///   [PermanentWriteRejection] so the command layer can surface the AD-54
-///   per-item retry entry.
 /// - **Existing, valid target** (review R3). Before the batch, the target
 ///   `sub_tracks/{id}` row is read (cache, then server). A row the client
 ///   cannot find throws [SubTrackNotFoundException] — a merge on an unknown
@@ -54,15 +47,6 @@
 ///   row nor the sub-track. A read failure is rethrown, never treated as
 ///   "absent"; only an offline client queues without the remote check
 ///   (the AD-46 rules reject a non-identical write at sync time).
-/// - **Latest-row writes** (Story 2.7 / DNI-498, [SubTrackLatestWrite]).
-///   [applyGovernedChangeToLatest] reads the row on the server inside a
-///   transaction, derives the change from it and writes the doc patch and
-///   its entry in that transaction, so a whole-list `ground` append can
-///   never overwrite a concurrent one: a write that lands in between makes
-///   Firestore re-run the derivation on the new row. It needs the server;
-///   `unavailable` / `deadline-exceeded` become [OnlineRequiredException]
-///   and the caller refuses the append as online-required (it is never
-///   queued as a stale whole-list batch).
 library;
 
 import 'dart:math' as math;
@@ -74,10 +58,6 @@ import 'package:learning_tracker/data/repositories/paged_complete_query.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
-import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart'
-    show OnlineRequiredException;
-import 'package:learning_tracker/domain/learner_state/ports/sub_track_latest_write.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -89,8 +69,7 @@ const kSubTracksCollection = 'sub_tracks';
 const kChangeLogCollection = 'change_log';
 
 /// Profile-scoped `sub_tracks` repository.
-final class FirestoreSubTrackRepository
-    implements SubTrackRepository, SubTrackLatestWrite {
+final class FirestoreSubTrackRepository implements SubTrackRepository {
   /// Creates the repository over an account-scoped [firestore] handle.
   FirestoreSubTrackRepository({
     required FirebaseFirestore firestore,
@@ -101,7 +80,6 @@ final class FirestoreSubTrackRepository
     this.pageProbe,
     CreateGuardRead? guardRead,
     CreateGuardRead? targetRead,
-    this.transactionTimeout = const Duration(seconds: 10),
   }) : _firestore = firestore,
        _guardRead = guardRead ?? readExistingForCreate,
        _targetRead = targetRead ?? readExistingForCreate;
@@ -115,10 +93,6 @@ final class FirestoreSubTrackRepository
   /// The target sub-track pre-read (cache, then server; null = not found).
   /// Tests inject server-only or failing outcomes.
   final CreateGuardRead _targetRead;
-
-  /// How long a [applyGovernedChangeToLatest] transaction may run before
-  /// it counts as offline.
-  final Duration transactionTimeout;
 
   /// AD-9 resubscribe backoff base.
   final Duration backoffBase;
@@ -194,73 +168,8 @@ final class FirestoreSubTrackRepository
     final batch = _firestore.batch()
       ..set(trackDoc, patch, SetOptions(merge: true))
       ..set(entryDoc, entryPayload);
-    try {
-      await batch.commit();
-    } on FirebaseException catch (e) {
-      if (_permanentCodes.contains(e.code))
-        throw PermanentWriteRejection(e.code);
-      rethrow;
-    }
+    await batch.commit();
   }
-
-  @override
-  Future<SubTrackChange?> applyGovernedChangeToLatest(
-    LearnerScope scope,
-    String subTrackId,
-    SubTrackChange? Function(SubTrack latest) build,
-  ) async {
-    final trackDoc = collectionFor(scope).doc(subTrackId);
-    final logs = _profile(scope).collection(kChangeLogCollection);
-    try {
-      return await _firestore.runTransaction<SubTrackChange?>((tx) async {
-        final snapshot = await tx.get(trackDoc);
-        final data = snapshot.data();
-        if (!snapshot.exists || data == null) {
-          throw SubTrackNotFoundException(subTrackId);
-        }
-        final stored = fromFirestoreMap(data);
-        final change = build(SubTrack.fromStorage(subTrackId, stored));
-        if (change == null) return null;
-        if (change.isCreate || change.subTrackId != subTrackId) {
-          throw StorageFormatException(
-            'SubTrackChange',
-            '<id>',
-            'a latest-row write edits sub_tracks/$subTrackId only',
-          );
-        }
-        _requireTruthfulBaseline(change, stored);
-        SubTrack.fromStorage(subTrackId, {...stored, ...change.toMergePatch()});
-        tx
-          ..set(
-            trackDoc,
-            toFirestoreMap(change.toMergePatch()),
-            SetOptions(merge: true),
-          )
-          ..set(
-            logs.doc(change.entry.id),
-            toFirestoreMap(change.entry.toStorage()),
-          );
-        return change;
-      }, timeout: transactionTimeout);
-    } on FirebaseException catch (e) {
-      if (_offlineCodes.contains(e.code)) throw const OnlineRequiredException();
-      if (_permanentCodes.contains(e.code)) {
-        throw PermanentWriteRejection(e.code);
-      }
-      rethrow;
-    }
-  }
-
-  /// Transaction failures that mean the server was not reached.
-  static const _offlineCodes = {'unavailable', 'deadline-exceeded'};
-
-  /// Server codes that a retry of the same batch can never pass (AD-54
-  /// "not saved — retry" entry).
-  static const _permanentCodes = {
-    'permission-denied',
-    'invalid-argument',
-    'failed-precondition',
-  };
 
   /// Every `entry.before` field must equal the stored value (absent ⇒
   /// `null`). [SubTrackChange] already guarantees `before` covers exactly

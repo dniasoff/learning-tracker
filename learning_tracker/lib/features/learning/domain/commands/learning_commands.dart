@@ -17,7 +17,6 @@ import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
-import 'package:learning_tracker/domain/learner_state/learnt_set.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
@@ -33,22 +32,12 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_even
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_chunker.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_write_dispatcher.dart';
-import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
-import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
 import 'package:learning_tracker/features/learning/domain/commands/unlearn_plan.dart';
-
-export 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart'
-    show SubTrackDraft, SubTrackEdit;
 
 /// How long a command waits for the AD-50 points amount before it falls
 /// back to the default stage ladder, so an uncached or unreachable
 /// `point_configs` read never blocks an offline capture (AC-9).
 const Duration defaultPointsReadWait = Duration(seconds: 2);
-
-/// How long a `skipRecorded` capture waits for the event log before it
-/// writes the caller's refs as given, so an uncached or unreachable log
-/// never blocks an offline capture (AC-9).
-const Duration defaultRecordedReadWait = Duration(seconds: 2);
 
 /// The replacement fields of `LearningCommands.replace`; null keeps the
 /// target's value.
@@ -154,26 +143,6 @@ abstract interface class LearningCommands {
   ///
   /// [nodes] is allowed only with [DateState.beforeTracking]; [source] is
   /// `'main'` or a sub-track ULID.
-  ///
-  /// One event is planned per ref, then per node, in the given order and
-  /// with ascending ids, so the sorted union of a success's `eventIds` and
-  /// `rejectedEventIds` lines up with [refs] followed by [nodes].
-  ///
-  /// With [skipRecorded] (Up to… and +1, DNI-501 AC-2) the command first
-  /// re-reads the persisted event log and drops every ref already learnt
-  /// in this track: for a sub-track [source], a counted `learn` event of
-  /// that source covers it (AD-33 position); for `main`, any counted
-  /// `learn` event of [curriculumId] covers it (AD-33 `schedulableRefs`).
-  /// The dropped refs are returned in the success's `alreadyRecordedRefs`
-  /// and the plan then lines up with the remaining refs. A log that cannot
-  /// be read in time (offline, uncached) leaves [refs] as given: the
-  /// caller's snapshot already excluded what it knew was recorded.
-  /// [skipRecorded] captures of one learner run one at a time on this
-  /// device, so each re-read sees the previous one's write and two quick
-  /// captures of the same leaf never both pass the read. Across devices
-  /// the log is append-only and offline-first (AD-31, AD-54): a leaf both
-  /// record before either syncs is counted once by the engine and earns
-  /// once (AD-50 `earningEventIds`).
   Future<CaptureResult> capture({
     required String curriculumId,
     List<LeafRef> refs = const [],
@@ -182,7 +151,6 @@ abstract interface class LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
-    bool skipRecorded = false,
   });
 
   /// Voids the `learn` event [targetId].
@@ -227,48 +195,11 @@ abstract interface class LearningCommands {
   /// [BackupReplayResult.notSaved] and in [watchPendingFailures].
   Future<BackupReplayResult> importBackup(BackupReplayInput input);
 
-  /// Creates a sub-track (Story 2.1, AD-33/AD-38/AD-45): one queueable
-  /// batch of the new `sub_tracks/{ulid}` doc and its change-log entry,
-  /// every `before` null. [subTrackId] is the new doc ULID (minted when
-  /// omitted). Rejected with the violated AD-45 rules before any write.
-  /// [nextYearOf] names the school-year sub-track a detail's *Add next
-  /// year* rolls over (Story 2.8): the create is refused
-  /// (`rejected(targetNotFound)`) when that source is missing or tombstoned
-  /// in the latest complete read, and is otherwise the same write, reported
-  /// as that `subtrack_lifecycle` action instead of `create`.
-  /// Implemented by `SubTrackCommands.createSubTrack`.
-  Future<CaptureResult> createSubTrack(
-    SubTrackDraft draft, {
-    String? subTrackId,
-    String? nextYearOf,
-  });
-
-  /// Edits any field of sub-track [subTrackId] except `curriculum_id`;
-  /// `ground` is replaced whole, or picked nodes are appended to the latest
-  /// stored ground (`SubTrackEdit.appendGround`, Story 2.7). Writes and logs
-  /// only changed fields.
-  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit);
-
-  /// Ends sub-track [subTrackId]: `ended_at` + `end_reason = ended`.
-  Future<CaptureResult> endSubTrack(String subTrackId);
-
-  /// Deletes sub-track [subTrackId] as a tombstone: `ended_at` +
-  /// `end_reason = deleted`. No client `delete` is ever issued.
-  Future<CaptureResult> deleteSubTrack(String subTrackId);
-
   /// Queued writes the server rejected, live.
   Stream<List<PendingFailure>> watchPendingFailures();
 
   /// Retries the pending failure [pendingFailureId].
   Future<CaptureResult> retry(String pendingFailureId);
-
-  /// Whether the sub-track write of change-log entry [changeId] — returned
-  /// by a sub-track command as `success(queued: true)` — was accepted by
-  /// the server: true at its acknowledgement (at once when none is
-  /// awaited), false when the server refused it for good, so it is in
-  /// [watchPendingFailures] with a [retry] (AD-54 Recovery; DNI-499).
-  /// Implemented by `SubTrackCommands.whenConfirmed`.
-  Future<bool> whenSubTrackChangeConfirmed(String changeId);
 }
 
 /// The AD-38 governed half of [LearningCommands], filled by DNI-470 (1.8).
@@ -321,18 +252,13 @@ final class DefaultLearningCommands implements LearningCommands {
     required UlidSource newUlid,
     Duration ackWait = defaultLearningAckWait,
     Duration pointsWait = defaultPointsReadWait,
-    Duration recordedWait = defaultRecordedReadWait,
     GovernedLearningCommands? governed,
     AchievementLatch? achievements,
     BackupImportReplay? backupReplay,
-    SubTrackCommands? subTrackCommands,
-    SubTrackSourceCheck? sourceCheck,
   }) : _scope = scope,
        _achievements = achievements,
        _backupReplay = backupReplay,
-       _sourceCheck = sourceCheck,
        _pointsWait = pointsWait,
-       _recordedWait = recordedWait,
        _actor = actor,
        _reads = reads,
        _gate = gate,
@@ -340,7 +266,6 @@ final class DefaultLearningCommands implements LearningCommands {
        _clock = clock,
        _newUlid = newUlid,
        _governed = governed,
-       _subTrackCommands = subTrackCommands,
        _dispatcher = LearningWriteDispatcher(
          scope: scope,
          port: writePort,
@@ -356,13 +281,10 @@ final class DefaultLearningCommands implements LearningCommands {
   final UtcClock _clock;
   final UlidSource _newUlid;
   final GovernedLearningCommands? _governed;
-  final SubTrackSourceCheck? _sourceCheck;
-  final SubTrackCommands? _subTrackCommands;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
   final AchievementLatch? _achievements;
   final BackupImportReplay? _backupReplay;
-  final Duration _recordedWait;
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -402,7 +324,6 @@ final class DefaultLearningCommands implements LearningCommands {
     return CaptureResult.success(
       eventIds: outcome.eventIds,
       queued: outcome.queued,
-      rejectedEventIds: outcome.rejectedEventIds,
     );
   }
 
@@ -428,50 +349,8 @@ final class DefaultLearningCommands implements LearningCommands {
           .events(_scope)
           .then((events) => LearningLogView.of(events, h, stamp.nowUtc));
 
-  /// The leaves of [curriculumId] already learnt in the track [source]
-  /// per the persisted log judged at [stamp] (see `capture`'s
-  /// `skipRecorded`), or null when the log or corpus cannot be read
-  /// within the recorded wait.
-  Future<Set<LeafRef>?> _recordedIn(
-    String curriculumId,
-    String source,
-    CommandStamp stamp,
-    LearnerSettingsHistory history,
-  ) async {
-    try {
-      final (log, corpus) = await (
-        _log(stamp, history),
-        _reads.corpus(curriculumId),
-      ).wait.timeout(_recordedWait);
-      return {
-        for (final e in log.counted.learns)
-          if (e.curriculumId == curriculumId &&
-              (source == LearningEvent.sourceMain || e.source == source))
-            ...?(corpus == null
-                ? (e.level == null && e.ref != null ? [e.ref!] : null)
-                : coveredLeaves(e, corpus)),
-      };
-    } on Object {
-      return null;
-    }
-  }
-
   static bool _validSource(String source) =>
       source == LearningEvent.sourceMain || isUlid(source);
-
-  /// Whether [source] may name a learn event of [curriculumId]: `main`, or
-  /// a live sub-track of that curriculum in this scope when a
-  /// [SubTrackSourceCheck] is bound (AD-33). A check that throws or times
-  /// out fails closed.
-  Future<bool> _sourceAllowed(String curriculumId, String source) async {
-    final check = _sourceCheck;
-    if (source == LearningEvent.sourceMain || check == null) return true;
-    try {
-      return await check(curriculumId, source);
-    } on Object {
-      return false;
-    }
-  }
 
   @override
   Future<CaptureResult> capture({
@@ -482,119 +361,59 @@ final class DefaultLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
-    bool skipRecorded = false,
-  }) {
-    Future<CaptureResult> run() => _gated((stamp, history) async {
-      if (curriculumId.isEmpty || !_validSource(source)) return _invalid;
-      if (!await _sourceAllowed(curriculumId, source)) return _invalid;
-      if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
-        return _invalid;
-      }
-      if (stage != null && (source != LearningEvent.sourceMain || stage < 0)) {
-        return _invalid;
-      }
-      var leaves = refs.where((r) => r.isNotEmpty).toSet().toList();
-      final nodeList = nodes.toSet().toList();
-      if (leaves.length != refs.toSet().length) return _invalid;
-      var alreadyRecorded = const <LeafRef>[];
-      if (skipRecorded && leaves.isNotEmpty) {
-        // AC-2: a leaf another device (or an earlier capture) recorded while
-        // the caller's picker was open is never written twice.
-        final recorded = await _recordedIn(
-          curriculumId,
-          source,
-          stamp,
-          history,
-        );
-        if (recorded != null && recorded.isNotEmpty) {
-          alreadyRecorded = [
-            for (final r in leaves)
-              if (recorded.contains(r)) r,
-          ];
-          leaves = [
-            for (final r in leaves)
-              if (!recorded.contains(r)) r,
-          ];
-        }
-      }
-      if (leaves.isEmpty && nodeList.isEmpty) {
-        // Nothing to write.
-        return CaptureResult.success(alreadyRecordedRefs: alreadyRecorded);
-      }
-      CivilDate? day;
-      if (dateState != DateState.beforeTracking) {
-        day = learnedOn ?? civilDate(stamp.nowUtc, history);
-        if (!isCivilDate(day)) return _invalid;
-      }
-      final earns =
-          source == LearningEvent.sourceMain &&
-          dateState != DateState.beforeTracking;
-      final amount = earns ? await _pointsAmount(curriculumId, stage) : null;
-      final List<WriteUnit> units;
-      try {
-        units = planCapture(
-          stamp: stamp,
-          curriculumId: curriculumId,
-          leaves: leaves,
-          nodes: nodeList,
-          source: source,
-          dateState: dateState,
-          learnedOn: day,
-          stage: stage,
-          amount: amount,
-        );
-        _validate(units);
-      } on StorageFormatException {
-        return _invalid;
-      }
-      var result = await _write(LearningCommandKind.capture, units);
-      if (result is CaptureSuccess && alreadyRecorded.isNotEmpty) {
-        result = CaptureResult.success(
-          eventIds: result.eventIds,
-          queued: result.queued,
-          rejectedEventIds: result.rejectedEventIds,
-          alreadyRecordedRefs: alreadyRecorded,
-        );
-      }
-      if (result is CaptureSuccess) {
-        _analytics.capture(
-          curriculumId: curriculumId,
-          sourceKind: source == LearningEvent.sourceMain
-              ? CaptureSourceKind.main
-              : CaptureSourceKind.subTrack,
-          dateState: dateState,
-          count: result.eventIds.length,
-        );
-      }
-      return result;
-    });
-    return skipRecorded ? _oneRecordedCaptureAtATime(run) : run();
-  }
-
-  /// The last `skipRecorded` capture in flight per learner on this device.
-  /// Static because `learningCommandsProvider` rebuilds the commands on
-  /// unrelated changes while a capture may still be running.
-  static final Map<LearnerScope, Completer<void>> _recordedCaptureTails = {};
-
-  /// Runs [body] after every earlier `skipRecorded` capture of this
-  /// learner has written (or failed), so its log re-read sees their events
-  /// (AC-2: a leaf is never written twice by this device).
-  Future<CaptureResult> _oneRecordedCaptureAtATime(
-    Future<CaptureResult> Function() body,
-  ) async {
-    final previous = _recordedCaptureTails[_scope];
-    final done = Completer<void>();
-    _recordedCaptureTails[_scope] = done;
-    try {
-      if (previous != null) await previous.future;
-      return await body();
-    } finally {
-      done.complete();
-      if (identical(_recordedCaptureTails[_scope], done)) {
-        _recordedCaptureTails.remove(_scope);
-      }
+  }) => _gated((stamp, history) async {
+    if (curriculumId.isEmpty || !_validSource(source)) return _invalid;
+    if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
+      return _invalid;
     }
-  }
+    if (stage != null && (source != LearningEvent.sourceMain || stage < 0)) {
+      return _invalid;
+    }
+    final leaves = refs.where((r) => r.isNotEmpty).toSet().toList();
+    final nodeList = nodes.toSet().toList();
+    if (leaves.length != refs.toSet().length) return _invalid;
+    if (leaves.isEmpty && nodeList.isEmpty) {
+      return const CaptureResult.success(); // nothing to write
+    }
+    CivilDate? day;
+    if (dateState != DateState.beforeTracking) {
+      day = learnedOn ?? civilDate(stamp.nowUtc, history);
+      if (!isCivilDate(day)) return _invalid;
+    }
+    final earns =
+        source == LearningEvent.sourceMain &&
+        dateState != DateState.beforeTracking;
+    final amount = earns ? await _pointsAmount(curriculumId, stage) : null;
+    final List<WriteUnit> units;
+    try {
+      units = planCapture(
+        stamp: stamp,
+        curriculumId: curriculumId,
+        leaves: leaves,
+        nodes: nodeList,
+        source: source,
+        dateState: dateState,
+        learnedOn: day,
+        stage: stage,
+        amount: amount,
+      );
+      _validate(units);
+    } on StorageFormatException {
+      return _invalid;
+    }
+    final result = await _write(LearningCommandKind.capture, units);
+    if (result is CaptureSuccess) {
+      _analytics.capture(
+        curriculumId: curriculumId,
+        sourceKind: source == LearningEvent.sourceMain
+            ? CaptureSourceKind.main
+            : CaptureSourceKind.subTrack,
+        dateState: dateState,
+        count: result.eventIds.length,
+      );
+    }
+    return result;
+  });
 
   @override
   Future<CaptureResult> voidEvent(String targetId) => _gated((
@@ -644,12 +463,6 @@ final class DefaultLearningCommands implements LearningCommands {
     final fields = _resolve(target, replacement, stamp, history);
     if (fields == null) return _invalid;
     if (fields.sameAs(target)) return const CaptureResult.success();
-    final newSource = replacement.source;
-    if (newSource != null &&
-        newSource != target.source &&
-        !await _sourceAllowed(target.curriculumId!, newSource)) {
-      return _invalid;
-    }
     if (fields.redate &&
         _actor.role == ActorRole.child &&
         !childMayRedate(
@@ -708,24 +521,6 @@ final class DefaultLearningCommands implements LearningCommands {
         );
       });
 
-  /// Undo of a capture, a void or an un-learn (AD-31, AD-38; DNI-514
-  /// AC-6, AC-7).
-  ///
-  /// Every target is validated before anything is written. The targets
-  /// must all come from one command ([writtenByOneCommand]), else the call
-  /// is [CaptureRejection.invalid]. A non-parent session may only undo
-  /// learn events it recorded itself (the capture snackbar), else
-  /// [CaptureRejection.undoNotOffered]. A learn still
-  /// counted is voided, each void carrying `reverts_action_id` = the
-  /// capture's first (lowest) event id, so the capture reads *Undone*
-  /// everywhere and is never undone twice ([CaptureRejection.undoNotOffered]).
-  /// A target already voided needs nothing. A lock-ignored member is
-  /// skipped (never voided nor re-copied, so no undo launders it back into
-  /// the count); a capture of only lock-ignored members offers no undo
-  /// ([CaptureRejection.lockIgnoredTarget]). A void is undone by a learn
-  /// copy of its target with `original_recorded_at = effectiveAt(target)`,
-  /// unless such a copy is already counted. A void written by an undo is
-  /// final ([CaptureRejection.undoIsFinal]).
   @override
   Future<CaptureResult> undoEvents(List<String> eventIds) => _gated((
     stamp,
@@ -735,66 +530,29 @@ final class DefaultLearningCommands implements LearningCommands {
     if (targets.isEmpty) return const CaptureResult.success();
     if (!targets.every(isUlid)) return _invalid;
     final log = await _log(stamp, history);
-    final undoId = targets.reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
     // Validate every target before writing anything.
-    final members = <LearningEvent>[];
+    final voids = <LearningEvent>[];
+    final copies = <LearningEvent>[];
     for (final id in targets) {
       final e = log.byId[id];
       if (e == null) {
         return const CaptureResult.rejected(CaptureRejection.targetNotFound);
       }
-      members.add(e);
-    }
-    // DNI-514 AC-1: undo from history is a parent action. Another session
-    // may only take back learn events it recorded itself (the capture
-    // snackbar's Undo, UX-DR-154).
-    if (_actor.role != ActorRole.parent &&
-        !members.every(
-          (e) =>
-              e.isLearn &&
-              e.actor.uid == _actor.uid &&
-              e.actor.role == _actor.role,
-        )) {
-      return const CaptureResult.rejected(CaptureRejection.undoNotOffered);
-    }
-    // One undo takes back exactly one capture (DNI-514 AC-6): events of
-    // two commands would void both under one `reverts_action_id` and leave
-    // the other capture's row offering Undo over voided events.
-    if (!members.every((e) => writtenByOneCommand(e, members.first))) {
-      return _invalid;
-    }
-    final voids = <LearningEvent>[];
-    final copies = <LearningEvent>[];
-    var lockIgnored = 0;
-    for (final e in members) {
-      final id = e.id;
-      if (e.isVoid && e.revertsActionId != null) {
-        return const CaptureResult.rejected(CaptureRejection.undoIsFinal);
-      }
       if (log.isLockIgnored(id)) {
-        lockIgnored++;
-        continue;
+        return const CaptureResult.rejected(CaptureRejection.lockIgnoredTarget);
       }
       if (e.isLearn) {
         if (!log.isVoided(id)) voids.add(e);
         continue;
       }
+      if (e.revertsActionId != null) {
+        return const CaptureResult.rejected(CaptureRejection.undoIsFinal);
+      }
       final t = log.byId[e.targetId];
       if (t == null || !t.isLearn) {
         return const CaptureResult.rejected(CaptureRejection.targetNotFound);
       }
-      if (log.isVoided(t.id) &&
-          !log.isLockIgnored(t.id) &&
-          !copies.contains(t) &&
-          !_hasCountedCopy(log, t)) {
-        copies.add(t);
-      }
-    }
-    if (lockIgnored == targets.length) {
-      return const CaptureResult.rejected(CaptureRejection.lockIgnoredTarget);
-    }
-    if (log.byId.values.any((e) => e.isVoid && e.revertsActionId == undoId)) {
-      return const CaptureResult.rejected(CaptureRejection.undoNotOffered);
+      if (log.isVoided(t.id) && !copies.contains(t)) copies.add(t);
     }
     final ids = stamp.ids(voids.length + copies.length);
     var i = 0;
@@ -803,7 +561,7 @@ final class DefaultLearningCommands implements LearningCommands {
       for (final e in voids) {
         units.add(
           WriteUnit([
-            voidEventOf(stamp, ids[i++], e.id, revertsActionId: undoId),
+            voidEventOf(stamp, ids[i++], e.id, revertsActionId: targets.first),
           ]),
         );
       }
@@ -881,96 +639,45 @@ final class DefaultLearningCommands implements LearningCommands {
     return replayed ?? BackupReplayResult(result: result);
   }
 
-  Future<CaptureResult> createSubTrack(
-    SubTrackDraft draft, {
-    String? subTrackId,
-    String? nextYearOf,
-  }) => _gated((_, _) async {
-    final commands = _subTrackCommands;
-    if (commands == null) return const CaptureResult.onlineRequired();
-    return commands.createSubTrack(
-      draft,
-      subTrackId: subTrackId,
-      nextYearOf: nextYearOf,
-    );
-  });
-
-  @override
-  Future<CaptureResult> editSubTrack(String subTrackId, SubTrackEdit edit) =>
-      _gated((_, _) async {
-        final commands = _subTrackCommands;
-        if (commands == null) return const CaptureResult.onlineRequired();
-        return commands.editSubTrack(subTrackId, edit);
-      });
-
-  @override
-  Future<CaptureResult> endSubTrack(String subTrackId) => _gated((_, _) async {
-    final commands = _subTrackCommands;
-    if (commands == null) return const CaptureResult.onlineRequired();
-    return commands.endSubTrack(subTrackId);
-  });
-
-  @override
-  Future<CaptureResult> deleteSubTrack(String subTrackId) =>
-      _gated((_, _) async {
-        final commands = _subTrackCommands;
-        if (commands == null) return const CaptureResult.onlineRequired();
-        return commands.deleteSubTrack(subTrackId);
-      });
-
-  /// The event failures, then the governed ones, then the sub-track ones.
-  @override
-  Future<bool> whenSubTrackChangeConfirmed(String changeId) =>
-      _subTrackCommands?.whenConfirmed(changeId) ?? Future.value(true);
-
-  /// The event, governed, backup and sub-track failures (AD-54 Recovery).
+  /// The event failures, then the governed ones, then the backup import's
+  /// (AD-54 Recovery).
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {
-    var failures = _dispatcher.watchPendingFailures();
+    var all = _dispatcher.watchPendingFailures();
     final governed = _governed;
     if (governed != null) {
-      failures = _concatLatest(failures, governed.watchPendingFailures());
+      all = _concatLatest(all, governed.watchPendingFailures());
     }
     final backup = _backupReplay;
     if (backup != null) {
-      failures = _concatLatest(failures, backup.watchPendingFailures());
+      all = _concatLatest(all, backup.watchPendingFailures());
     }
-    final subTracks = _subTrackCommands;
-    if (subTracks != null) {
-      failures = _concatLatest(failures, subTracks.watchPendingFailures());
-    }
-    return failures;
+    return all;
   }
 
   @override
-  Future<CaptureResult> retry(String pendingFailureId) => _gated((
-    stamp,
-    history,
-  ) async {
-    final subTracks = _subTrackCommands;
-    if (subTracks != null && subTracks.hasPendingFailure(pendingFailureId)) {
-      return subTracks.retry(pendingFailureId);
-    }
-    final outcome = await _dispatcher.retry(pendingFailureId);
-    if (outcome == null) {
-      final governed =
-          await _governed?.retry(pendingFailureId) ??
-          await _backupReplay?.retry(
-            pendingFailureId,
-            afterEvents: _afterWrite,
-          );
-      if (governed != null) return governed;
-      return const CaptureResult.rejected(CaptureRejection.targetNotFound);
-    }
-    if (outcome.allRejected) {
-      return const CaptureResult.rejected(CaptureRejection.notSaved);
-    }
-    _afterWrite(outcome);
-    return CaptureResult.success(
-      eventIds: outcome.eventIds,
-      queued: outcome.queued,
-    );
-  });
+  Future<CaptureResult> retry(String pendingFailureId) =>
+      _gated((stamp, history) async {
+        final outcome = await _dispatcher.retry(pendingFailureId);
+        if (outcome == null) {
+          final governed =
+              await _governed?.retry(pendingFailureId) ??
+              await _backupReplay?.retry(
+                pendingFailureId,
+                afterEvents: _afterWrite,
+              );
+          return governed ??
+              const CaptureResult.rejected(CaptureRejection.targetNotFound);
+        }
+        if (outcome.allRejected) {
+          return const CaptureResult.rejected(CaptureRejection.notSaved);
+        }
+        _afterWrite(outcome);
+        return CaptureResult.success(
+          eventIds: outcome.eventIds,
+          queued: outcome.queued,
+        );
+      });
 
   /// The post-write step of every command that saved (or queued) events,
   /// a first write or a retry: the AD-50 achievement latch over the learn
@@ -1034,67 +741,6 @@ final class DefaultLearningCommands implements LearningCommands {
         await subA?.cancel();
         await subB?.cancel();
         await out.close();
-      },
-    );
-    return out.stream;
-  }
-
-  /// Whether a counted learn other than [target] is its undo copy: the same
-  /// learn fields at `effectiveAt(target)` (`copyOf`), so undoing the void
-  /// again would only duplicate it.
-  static bool _hasCountedCopy(LearningLogView log, LearningEvent target) =>
-      log.byId.values.any(
-        (e) =>
-            e.isLearn &&
-            e.id != target.id &&
-            log.isCounted(e.id) &&
-            effectiveAt(e) == effectiveAt(target) &&
-            e.curriculumId == target.curriculumId &&
-            e.ref == target.ref &&
-            e.level == target.level &&
-            e.source == target.source &&
-            e.dateState == target.dateState &&
-            e.learnedOn == target.learnedOn &&
-            e.stage == target.stage,
-      );
-
-  /// The latest list of [first] followed by the latest of [second], once
-  /// both have delivered one.
-  static Stream<List<PendingFailure>> _latestOfBoth(
-    Stream<List<PendingFailure>> first,
-    Stream<List<PendingFailure>> second,
-  ) {
-    late final StreamController<List<PendingFailure>> out;
-    final subs = <StreamSubscription<List<PendingFailure>>>[];
-    List<PendingFailure>? a;
-    List<PendingFailure>? b;
-    void emit() {
-      final x = a;
-      final y = b;
-      if (x != null && y != null) out.add(List.unmodifiable([...x, ...y]));
-    }
-
-    out = StreamController<List<PendingFailure>>(
-      onListen: () {
-        subs
-          ..add(
-            first.listen((v) {
-              a = v;
-              emit();
-            }, onError: out.addError),
-          )
-          ..add(
-            second.listen((v) {
-              b = v;
-              emit();
-            }, onError: out.addError),
-          );
-      },
-      onCancel: () async {
-        for (final s in subs) {
-          await s.cancel();
-        }
-        unawaited(out.close());
       },
     );
     return out.stream;

@@ -236,16 +236,11 @@ final class TutorLearningCommands implements LearningCommands {
     required DateState dateState,
     CivilDate? learnedOn,
     int? stage,
-    bool skipRecorded = false,
   }) => _preflight((now, history) async {
     // Epic 1: tutors record main-track learning, dated or before tracking.
-    // A skip-recorded (Up to…) capture needs the talmid's counted log,
-    // which the tutor callable does not check yet: refused, never
-    // written twice (integ post-merge; follow-up bead).
     if (curriculumId.isEmpty ||
         source != LearningEvent.sourceMain ||
-        dateState == DateState.catchUp ||
-        skipRecorded) {
+        dateState == DateState.catchUp) {
       return _invalid;
     }
     if (nodes.isNotEmpty && dateState != DateState.beforeTracking) {
@@ -555,10 +550,6 @@ final class TutorLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> undoAction(String actionId) async => _invalid;
 
-  /// Tutor sub-track writes are unavailable through the tutor command surface.
-  @override
-  Future<bool> whenSubTrackChangeConfirmed(String changeId) async => true;
-
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>
       Stream<List<PendingFailure>>.multi((controller) {
@@ -596,28 +587,9 @@ final class TutorLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> reAddTrack(String curriculumId) async => _invalid;
 
-  // Backup import and sub-track writes are owner-only operations. A tutor
-  // session cannot replay a backup or write into the learner's account.
+  // Backup import is an owner-only operation; a tutor session cannot replay
+  // a backup into the learner's account.
   @override
   Future<BackupReplayResult> importBackup(BackupReplayInput input) async =>
       const BackupReplayResult(result: _invalid);
-
-  @override
-  Future<CaptureResult> createSubTrack(
-    SubTrackDraft draft, {
-    String? subTrackId,
-    String? nextYearOf,
-  }) async => _invalid;
-
-  @override
-  Future<CaptureResult> editSubTrack(
-    String subTrackId,
-    SubTrackEdit edit,
-  ) async => _invalid;
-
-  @override
-  Future<CaptureResult> endSubTrack(String subTrackId) async => _invalid;
-
-  @override
-  Future<CaptureResult> deleteSubTrack(String subTrackId) async => _invalid;
 }

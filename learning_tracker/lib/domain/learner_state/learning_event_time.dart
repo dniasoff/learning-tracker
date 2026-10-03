@@ -15,14 +15,3 @@ DateTime effectiveAt(LearningEvent e) => e._originalRecordedAt ?? e._recordedAt;
 /// import carries `original_recorded_at`, and every other rule must see
 /// that instant through [effectiveAt] instead.
 DateTime rawRecordedAtForSkewRule(LearningEvent e) => e._recordedAt;
-
-/// Whether [a] and [b] were written by one command (one capture, void,
-/// un-learn or undo): a command stamps all its events with one
-/// `recorded_at` and one actor.
-///
-/// For telling a command's events apart ONLY (DNI-514: an undo takes back
-/// exactly one capture). Every time rule reads [effectiveAt] instead.
-bool writtenByOneCommand(LearningEvent a, LearningEvent b) =>
-    a._recordedAt.isAtSameMomentAs(b._recordedAt) &&
-    a.actor.uid == b.actor.uid &&
-    a.actor.role == b.actor.role;

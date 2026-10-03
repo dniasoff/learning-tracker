@@ -5,9 +5,7 @@ library;
 
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
-import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 
 /// What a command did.
 sealed class CaptureResult {
@@ -21,8 +19,6 @@ sealed class CaptureResult {
     bool queued,
     List<ChangedSinceField> changedSince,
     List<String> keptNotCounted,
-    List<String> rejectedEventIds,
-    List<LeafRef> alreadyRecordedRefs,
   }) = CaptureSuccess;
 
   /// Refused: the learner is inside lock [window] (AD-36).
@@ -34,12 +30,9 @@ sealed class CaptureResult {
   /// Refused: the command needs a connection.
   const factory CaptureResult.onlineRequired() = CaptureOnlineRequired;
 
-  /// Refused for [reason]; a sub-track command names its AD-45
-  /// [violations].
-  const factory CaptureResult.rejected(
-    CaptureRejection reason, {
-    List<SubTrackViolation> violations,
-  }) = CaptureRejected;
+  /// Refused for [reason].
+  const factory CaptureResult.rejected(CaptureRejection reason) =
+      CaptureRejected;
 }
 
 /// The command was applied.
@@ -52,26 +45,10 @@ final class CaptureSuccess extends CaptureResult {
     this.queued = false,
     this.changedSince = const [],
     this.keptNotCounted = const [],
-    this.rejectedEventIds = const [],
-    this.alreadyRecordedRefs = const [],
   });
-
-  /// The refs of a `skipRecorded` capture that the persisted log already
-  /// recorded in this track, so no event was planned for them (DNI-501
-  /// AC-2); in the caller's order. Empty for every other command.
-  final List<LeafRef> alreadyRecordedRefs;
 
   /// The learning events written.
   final List<String> eventIds;
-
-  /// The learning events of a partly rejected command that the server
-  /// rejected for good (each chunk is now in
-  /// `LearningCommands.watchPendingFailures` with a retry; AD-54
-  /// Recovery); disjoint from [eventIds]. Empty unless some, but not
-  /// every, chunk was rejected within the ack window — a command whose
-  /// every chunk is rejected is [CaptureRejection.notSaved]. Added by
-  /// DNI-501 so a caller can tell which of its leaves were not saved.
-  final List<String> rejectedEventIds;
 
   /// The change-log entries written.
   final List<String> changeIds;
@@ -108,9 +85,7 @@ final class CaptureSuccess extends CaptureResult {
       other.actionId == actionId &&
       other.queued == queued &&
       _listEquals(other.changedSince, changedSince) &&
-      _listEquals(other.keptNotCounted, keptNotCounted) &&
-      _listEquals(other.rejectedEventIds, rejectedEventIds) &&
-      _listEquals(other.alreadyRecordedRefs, alreadyRecordedRefs);
+      _listEquals(other.keptNotCounted, keptNotCounted);
 
   @override
   int get hashCode => Object.hash(
@@ -120,8 +95,6 @@ final class CaptureSuccess extends CaptureResult {
     queued,
     Object.hashAll(changedSince),
     Object.hashAll(keptNotCounted),
-    Object.hashAll(rejectedEventIds),
-    Object.hashAll(alreadyRecordedRefs),
   );
 
   @override
@@ -182,30 +155,21 @@ final class CaptureOnlineRequired extends CaptureResult {
 
 /// Refused for [reason].
 final class CaptureRejected extends CaptureResult {
-  /// Creates the refusal. [violations] names each AD-45 rule a sub-track
-  /// command broke (Story 2.1); it is empty for every other refusal.
-  const CaptureRejected(this.reason, {this.violations = const []});
+  /// Creates the refusal.
+  const CaptureRejected(this.reason);
 
   /// Why.
   final CaptureRejection reason;
 
-  /// The typed sub-track validation failures, each naming the violated
-  /// limit (with [reason] [CaptureRejection.invalid]).
-  final List<SubTrackViolation> violations;
-
   @override
   bool operator ==(Object other) =>
-      other is CaptureRejected &&
-      other.reason == reason &&
-      _listEquals(other.violations, violations);
+      other is CaptureRejected && other.reason == reason;
 
   @override
-  int get hashCode => Object.hash(reason, Object.hashAll(violations));
+  int get hashCode => reason.hashCode;
 
   @override
-  String toString() => violations.isEmpty
-      ? 'CaptureResult.rejected(${reason.name})'
-      : 'CaptureResult.rejected(${reason.name}, $violations)';
+  String toString() => 'CaptureResult.rejected(${reason.name})';
 }
 
 /// Why a command was rejected.
@@ -287,7 +251,6 @@ final class PendingFailure {
     required this.eventIds,
     required this.changeIds,
     required this.reason,
-    this.isUndo = false,
   });
 
   /// The failure id (passed to `LearningCommands.retry`).
@@ -302,18 +265,13 @@ final class PendingFailure {
   /// Why it failed.
   final PendingFailureReason reason;
 
-  /// Whether the failed write is an undo (`undoEvents` / `undoAction`), so
-  /// the notice says the undo couldn't be saved (DNI-514 AC-9, UX-DR-139).
-  final bool isUndo;
-
   @override
   bool operator ==(Object other) =>
       other is PendingFailure &&
       other.id == id &&
       _listEquals(other.eventIds, eventIds) &&
       _listEquals(other.changeIds, changeIds) &&
-      other.reason == reason &&
-      other.isUndo == isUndo;
+      other.reason == reason;
 
   @override
   int get hashCode => Object.hash(
@@ -321,7 +279,6 @@ final class PendingFailure {
     Object.hashAll(eventIds),
     Object.hashAll(changeIds),
     reason,
-    isUndo,
   );
 
   @override

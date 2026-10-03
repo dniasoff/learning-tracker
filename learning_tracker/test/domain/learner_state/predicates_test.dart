@@ -7,26 +7,22 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
 
-SubTrack _track({
-  required String start,
-  String? end,
-  bool ended = false,
-  SubTrackEndReason reason = SubTrackEndReason.ended,
-}) => SubTrack(
-  id: engineUlid(500),
-  curriculumId: engineCurriculum,
-  name: 'Shiur',
-  type: SubTrackType.ongoing,
-  windowStart: start,
-  windowEnd: end,
-  ratePerWeek: 2,
-  weeksPerYear: 40,
-  learnsOnShabbos: false,
-  ground: const [NodeEntry(level: 'masechta', ref: 'Mishnah Peah')],
-  lastChangeId: engineUlid(501),
-  endedAt: ended ? engineAt(1) : null,
-  endReason: ended ? reason : null,
-);
+SubTrack _track({required String start, String? end, bool ended = false}) =>
+    SubTrack(
+      id: engineUlid(500),
+      curriculumId: engineCurriculum,
+      name: 'Shiur',
+      type: SubTrackType.ongoing,
+      windowStart: start,
+      windowEnd: end,
+      ratePerWeek: 2,
+      weeksPerYear: 40,
+      learnsOnShabbos: false,
+      ground: const [NodeEntry(level: 'masechta', ref: 'Mishnah Peah')],
+      lastChangeId: engineUlid(501),
+      endedAt: ended ? engineAt(1) : null,
+      endReason: ended ? SubTrackEndReason.ended : null,
+    );
 
 void main() {
   const today = '2026-10-01';
@@ -120,32 +116,5 @@ void main() {
     final track = _track(start: '2026-09-01');
     expect(holdsGround(track, '2099-12-31'), isTrue);
     expect(onHome(track, '2099-12-31'), isTrue);
-  });
-
-  test('DNI-493 AC-1/AC-5: every tombstone (ended, deleted, undo, '
-      'track_deleted) holds no ground and shows nowhere', () {
-    for (final reason in SubTrackEndReason.values) {
-      final track = _track(
-        start: '2026-09-01',
-        end: '2027-06-30',
-        ended: true,
-        reason: reason,
-      );
-      expect(holdsGround(track, today), isFalse, reason: reason.storage);
-      expect(onHome(track, today), isFalse, reason: reason.storage);
-      expect(
-        inForecast(track, today, deadline: '2026-12-31'),
-        isFalse,
-        reason: reason.storage,
-      );
-    }
-  });
-
-  test('DNI-493 AC-1: the day before window_start holds ground but is not '
-      'on home', () {
-    final track = _track(start: '2026-10-02', end: '2026-10-31');
-    expect(holdsGround(track, today), isTrue);
-    expect(onHome(track, today), isFalse);
-    expect(onHome(track, '2026-10-02'), isTrue);
   });
 }

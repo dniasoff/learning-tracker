@@ -724,22 +724,6 @@ class _ParentalControlsSectionState
               },
             ),
           ),
-          // DNI-513 (Story 4.5): the parent Change history of this learner
-          // — every change by the parent, the child and every tutor. Shown
-          // only in parent mode (this section is never built in a tutored
-          // session); the route re-checks both.
-          const SizedBox(height: 12),
-          _SurfaceCard(
-            child: PreferenceListTile.withIcon(
-              key: const ValueKey('settingsChangeHistoryTile'),
-              icon: Icons.history_rounded,
-              iconColor: context.colors.brandBlueBright,
-              iconBackground: context.colors.brandBlueSoft,
-              title: l10n.changeHistoryTitle,
-              subtitle: l10n.changeHistorySettingsSubtitle,
-              onTap: () => context.pushRoute(const ChangeHistoryRoute()),
-            ),
-          ),
         ],
         const SizedBox(height: 24),
       ],

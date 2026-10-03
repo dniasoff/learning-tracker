@@ -15,17 +15,8 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/catch_up_cards_provider.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/erev_planned_tasks_provider.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/erev_banner.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/also_learning_slot.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/catch_up_cards_slot.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/erev_planned_slot.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/learner_today_card.dart';
-import 'package:learning_tracker/features/learning/presentation/widgets/lock_ignored_notice.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
-import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -108,48 +99,23 @@ class LearningScreen extends ConsumerWidget {
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(allDailyTasksProvider);
-                  ref.invalidate(erevWindowProvider);
-                  ref.invalidate(catchUpCardWindowsProvider);
                   ref.invalidate(dashboardActiveCurriculaStreamProvider);
                   ref.invalidate(dashboardStreakProvider);
                 },
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(25, 10, 25, 32),
                   children: [
-                    // Up to… / +1 rollback and retry, with or without
-                    // sub-track rows (keeps itself alive in the list).
-                    const PendingCaptureRollback(),
-                    // Lock-stamped learning kept, not counted (DNI-504
-                    // AC-9): announced once, whatever else is showing.
-                    const LockIgnoredNotice(),
                     const SizedBox(height: 18),
-                    // Erev (DNI-504): the banner is the tab's first
-                    // focusable element (AC-11); zero size otherwise.
-                    const ErevBannerSlot(),
-                    // Catch-up cards sit at the top of the tab, before the
-                    // streak and today's tasks (DNI-505 AC-2, UX-DR-57).
-                    const CatchUpCardsSlot(),
                     _StreakHeroCard(
                       streakAsync: streakAsync,
                       onRetry: () => ref.invalidate(dashboardStreakProvider),
                     ),
                     const SizedBox(height: 36),
-// Named Learn sections (DNI-500; catch-up is above):
-                    // each slot is its own widget file and takes no space
-                    // while empty, so the stories that fill them never edit
-                    // this body.
-                    // DNI-502: today against the daily target, with
-                    // encouragement only (every role; no parent status).
-                    const LearnerTodaySection(),
                     _DailyTasksSection(
                       dailyTasksAsync: dailyTasksAsync,
                       onViewAll: () =>
                           context.router.push(const SchedulerRoute()),
                     ),
-                    const ErevPlannedSlot(),
-                    const AlsoLearningSlot(),
-                    const MainTrackUpToActions(),
-                    const SubTrackCaptureSection(),
                     const SizedBox(height: 36),
                     const _BrowseSection(),
                   ],

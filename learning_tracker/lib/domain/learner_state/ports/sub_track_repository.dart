@@ -3,17 +3,14 @@
 /// `entity = subTrack` (AD-38). Implemented in
 /// `lib/data/repositories/firestore_sub_track_repository.dart`.
 ///
-/// The lifecycle commands (create / edit / end / delete) live in
-/// `LearningCommands` (Story 2.1, `sub_track_commands.dart`) and write only
-/// through [SubTrackRepository.applyGovernedChange]. There is no delete
-/// here: removal is a tombstone (`ended_at` + `end_reason`); client
-/// `delete` is denied by rules and never issued.
+/// There is no create/edit command and no delete here: Story 1.2 ships the
+/// substrate only. Removal is a tombstone (`ended_at` + `end_reason`);
+/// client `delete` is denied by rules and never issued.
 library;
 
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
@@ -42,19 +39,6 @@ abstract interface class SubTrackRepository {
   /// queueable offline. It does NOT claim the create (ruling B6). A create
   /// whose target already exists fails the truthful-baseline check below
   /// (its `before` is all null).
-  /// A create ([SubTrackChange.create], Story 2.1) is the owner path's
-  /// ordinary first write of a fresh client-ULID doc: the same one batch
-  /// (doc + entry), admitted by the AD-38 owner rule's `resource == null`
-  /// branch, queueable offline. It does NOT claim the create — only
-  /// `writeWithChangeLog` asserts "did not exist" in a transaction (ruling
-  /// B6). A create whose target already exists fails the truthful-baseline
-  /// check below (its `before` is all null).
-  ///
-  /// A write the server permanently refuses (`permission-denied`,
-  /// `invalid-argument`, `failed-precondition`) throws
-  /// [PermanentWriteRejection] with that code. Offline, the returned future
-  /// completes only on the server acknowledgement; callers that must not
-  /// block bound the wait themselves (AD-54 queued write).
   ///
   /// The entry's `before` must be the truthful baseline (AD-38: the
   /// writer's cached value per field, `null` when absent): any field whose
@@ -66,50 +50,6 @@ abstract interface class SubTrackRepository {
   /// not re-patched), and a NON-identical entry at an existing id throws
   /// [ChangeLogConflictException] without writing either document.
   Future<void> applyGovernedChange(LearnerScope scope, SubTrackChange change);
-}
-
-/// UI-facing curriculum views over [SubTrackRepository.watchAll] (Story 2.1
-/// / DNI-492 T1).
-///
-/// Each view filters the complete read client-side, so no Firestore query
-/// shape and no index is added (AD-54 "Indexes: none added"), and each
-/// keeps the complete-read contract: loading until the whole collection is
-/// read, never partial; rows the codec rejected stay in
-/// [CompleteReadReady.rejected] so a reader never silently loses them.
-///
-/// "Active" and "ended" split on the tombstone only: a sub-track is ended
-/// iff `ended_at` is set ([SubTrack.isEnded]). A live sub-track whose window
-/// has passed is still active here; the engine predicates (`holdsGround`,
-/// `onHome`, AD-34) decide what a passed window means.
-extension SubTrackCurriculumViews on SubTrackRepository {
-  /// Every sub-track of [curriculumId] in [scope], live and ended.
-  Stream<CompleteRead<SubTrack>> watchByCurriculum(
-    LearnerScope scope,
-    String curriculumId,
-  ) => _filtered(scope, (t) => t.curriculumId == curriculumId);
-
-  /// The live (non-tombstoned) sub-tracks of [curriculumId] in [scope].
-  Stream<CompleteRead<SubTrack>> watchActiveByCurriculum(
-    LearnerScope scope,
-    String curriculumId,
-  ) => _filtered(scope, (t) => t.curriculumId == curriculumId && !t.isEnded);
-
-  /// The ended (tombstoned) sub-tracks of [curriculumId] in [scope].
-  Stream<CompleteRead<SubTrack>> watchEndedByCurriculum(
-    LearnerScope scope,
-    String curriculumId,
-  ) => _filtered(scope, (t) => t.curriculumId == curriculumId && t.isEnded);
-
-  Stream<CompleteRead<SubTrack>> _filtered(
-    LearnerScope scope,
-    bool Function(SubTrack track) keep,
-  ) => watchAll(scope).map(
-    (read) => switch (read) {
-      CompleteReadLoading<SubTrack>() => read,
-      CompleteReadReady<SubTrack>(:final items, :final rejected) =>
-        CompleteReadReady(items.where(keep).toList(), rejected: rejected),
-    },
-  );
 }
 
 /// A governed change whose `change_log/{entryId}` already holds a DIFFERENT
@@ -183,10 +123,6 @@ final class SubTrackChange {
   /// The first write of a new sub-track: every `entry.before` is `null`
   /// (AD-38 Create) and the change may not be a tombstone. The repository
   /// admits it when `sub_tracks/{subTrackId}` does not exist yet.
-  /// The first write of a new sub-track (Story 2.1 `createSubTrack`): every
-  /// `entry.before` is `null` (AD-38 Create) and the change may not be a
-  /// tombstone. The repository admits it when `sub_tracks/{subTrackId}`
-  /// does not exist yet.
   SubTrackChange.create({
     required this.subTrackId,
     required Map<String, Object?> changedFields,

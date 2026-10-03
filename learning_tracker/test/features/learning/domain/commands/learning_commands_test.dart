@@ -14,18 +14,15 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/streak.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
-import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
@@ -171,7 +168,6 @@ final class _Harness {
     List<LearningEvent>? events,
     LearnerSettingsHistory? history,
     bool governed = false,
-    SubTrackCommands? subTrackCommands,
   }) : now = now ?? _tuesday {
     fakeReads = FakeLearningCommandReads(
       history: history ?? c0SettingsHistory(),
@@ -196,7 +192,6 @@ final class _Harness {
       ackWait: const Duration(milliseconds: 40),
       pointsWait: const Duration(milliseconds: 40),
       governed: governed ? governedFake = _LoggedGoverned(log) : null,
-      subTrackCommands: subTrackCommands,
     );
     addTearDown(commands.dispose);
   }
@@ -886,83 +881,6 @@ void main() {
       expect(await h.commands.watchPendingFailures().first, isEmpty);
       expect(h.reporter.reports, isEmpty);
       expect(h.port.attempts, hasLength(1));
-    });
-
-    test('a queued sub-track edit the server later refuses is listed after '
-        'the event failures and retried through the sub-track commands '
-        '(DNI-497)', () async {
-      final repo = InMemorySubTrackRepository();
-      final intent = InMemoryGovernedIntentRepository()
-        ..emit(
-          c0Scope(),
-          LearnerIntent(
-            settings: c0Settings,
-            mainTracks: {engineCurriculum: engineIntent()},
-            goals: const {},
-          ),
-        );
-      var ids = 0;
-      final subTracks = SubTrackCommands(
-        scope: c0Scope(),
-        actor: parentActor,
-        subTracks: repo,
-        intent: intent,
-        today: () => '2026-09-01',
-        nowUtc: () => _tuesday,
-        newId: () => engineUlid(7000 + ++ids),
-        ackTimeout: const Duration(milliseconds: 20),
-      );
-      addTearDown(() async {
-        await subTracks.dispose();
-        await repo.dispose();
-        await intent.dispose();
-      });
-      final track = SubTrack(
-        id: ulidD,
-        curriculumId: engineCurriculum,
-        name: 'School',
-        type: SubTrackType.ongoing,
-        windowStart: '2026-09-01',
-        ratePerWeek: 3,
-        weeksPerYear: 40,
-        learnsOnShabbos: false,
-        ground: const [berakhot1, peah],
-        lastChangeId: ulidE,
-      );
-      repo
-        ..seed(c0Scope(), [track])
-        ..offline = true
-        ..failNextWith(const PermanentWriteRejection('permission-denied'));
-      final h = _Harness(subTrackCommands: subTracks);
-      final seen = <List<PendingFailure>>[];
-      final sub = h.commands.watchPendingFailures().listen(seen.add);
-      addTearDown(sub.cancel);
-
-      final result = await h.commands.editSubTrack(
-        ulidD,
-        const SubTrackEdit(ground: [peah, berakhot1]),
-      );
-      expect((result as CaptureSuccess).queued, isTrue);
-      final changeId = result.changeIds.single;
-      repo.settleHeld();
-      await pumpEventQueue();
-
-      expect(seen.last, [
-        PendingFailure(
-          id: changeId,
-          eventIds: const [],
-          changeIds: [changeId],
-          reason: PendingFailureReason.permissionDenied,
-        ),
-      ]);
-      repo.offline = false;
-      expect(
-        await h.commands.retry(changeId),
-        CaptureResult.success(changeIds: [changeId], actionId: changeId),
-      );
-      await pumpEventQueue();
-      expect(seen.last, isEmpty);
-      expect(repo.tracksOf(c0Scope()).single.ground, const [peah, berakhot1]);
     });
 
     test('retry of an unknown pending failure is targetNotFound', () async {

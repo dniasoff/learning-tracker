@@ -7,9 +7,8 @@
 /// | learnt set, scope, tri-state | [LearntRecord] | DNI-465 |
 /// | main-track position | [MainTrackRecord] | DNI-465 (DNI-467 adds order and held ground) |
 /// | completed units | [completedUnits] | DNI-465 |
-/// | plan: calendar, reviews, goal target, pace, projection, sub-track states | [PlanRecord] | DNI-467 (sub-track positions: DNI-493; capacity: DNI-494) |
+/// | plan: calendar, reviews, goal target, pace, projection | [PlanRecord] | DNI-467 (sub-track states: DNI-493/494) |
 /// | streak | [streak] | DNI-466 |
-/// | report projection | [report] | DNI-516 |
 library;
 
 import 'package:learning_tracker/domain/learner_state/calendar_plan.dart';
@@ -17,7 +16,6 @@ import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/domain/learner_state/report_projection.dart';
 import 'package:learning_tracker/domain/learner_state/review_schedule.dart';
 import 'package:learning_tracker/domain/learner_state/tri_state.dart';
 
@@ -236,9 +234,7 @@ final class DerivedCurriculumState implements CurriculumState {
     List<CompletedUnit> completedUnits = const [],
     this.plan = const PlanRecord.none(),
     this.streak,
-    ReportProjection? report,
-  }) : completedUnits = List.unmodifiable(completedUnits),
-       report = report ?? ReportProjection.empty(curriculumId);
+  }) : completedUnits = List.unmodifiable(completedUnits);
 
   @override
   final String curriculumId;
@@ -260,9 +256,6 @@ final class DerivedCurriculumState implements CurriculumState {
 
   @override
   final CurriculumStreak? streak;
-
-  @override
-  final ReportProjection report;
 
   @override
   Set<LeafRef> get learntLeaves => learnt.learntLeaves;
@@ -344,8 +337,7 @@ final class DerivedCurriculumState implements CurriculumState {
       other.mainTrack == mainTrack &&
       _listEquals(other.completedUnits, completedUnits) &&
       other.plan == plan &&
-      other.streak == streak &&
-      other.report == report;
+      other.streak == streak;
 
   @override
   int get hashCode => Object.hash(
@@ -356,7 +348,6 @@ final class DerivedCurriculumState implements CurriculumState {
     Object.hashAll(completedUnits),
     plan,
     streak,
-    report,
   );
 
   @override

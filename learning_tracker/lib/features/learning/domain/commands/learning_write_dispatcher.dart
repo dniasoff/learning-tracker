@@ -42,20 +42,18 @@ final class DispatchOutcome {
     required this.queued,
     required this.rejectedChunks,
     required this.totalChunks,
-    this.rejectedEventIds = const [],
   });
 
   /// Events of chunks not rejected within the window, in write order.
   final List<String> eventIds;
 
-  /// The `learn` events of chunks the server acknowledged, in write order.
-  /// Queued chunks count only after acknowledgement; rejected chunks never
-  /// count. Never completes with an error.
+  /// The `learn` events of the chunks the server acknowledged, in write
+  /// order, once every chunk has settled (acknowledged, rejected, or failed
+  /// otherwise). A queued chunk counts only when its acknowledgement
+  /// arrives, and a chunk the server rejects never counts: what the
+  /// achievement latch checks after the write (DNI-480, AD-50). Never
+  /// completes with an error.
   final Future<List<String>> acknowledgedLearnEventIds;
-
-  /// Events of chunks rejected within the window (each becomes a pending
-  /// failure), in write order; disjoint from [eventIds].
-  final List<String> rejectedEventIds;
 
   /// Whether some chunk was not yet acknowledged (queued offline).
   final bool queued;
@@ -73,14 +71,11 @@ final class DispatchOutcome {
 enum _ChunkStatus { acked, rejected }
 
 final class _Pending {
-  _Pending(this.command, this.chunk, this.reason, {required this.isUndo});
+  _Pending(this.command, this.chunk, this.reason);
 
   final LearningCommandKind command;
   final LearningWriteChunk chunk;
   final PendingFailureReason reason;
-
-  /// Whether the chunk is an undo's; kept across retries (DNI-514 AC-9).
-  final bool isUndo;
 
   /// Whether a retry of [chunk] is awaiting the server. An in-flight entry
   /// stays tracked (it is the only retry handle for an unsaved chunk) but
@@ -92,7 +87,6 @@ final class _Pending {
     eventIds: [for (final e in chunk.events) e.id],
     changeIds: const [],
     reason: reason,
-    isUndo: isUndo,
   );
 }
 
@@ -191,15 +185,12 @@ final class LearningWriteDispatcher {
           ],
         );
     final ids = <String>[];
-    final rejectedIds = <String>[];
     var rejected = 0;
     for (var i = 0; i < chunks.length; i++) {
-      final chunkIds = chunks[i].events.map((e) => e.id);
       if (settled[i] == _ChunkStatus.rejected) {
         rejected++;
-        rejectedIds.addAll(chunkIds);
       } else {
-        ids.addAll(chunkIds);
+        ids.addAll(chunks[i].events.map((e) => e.id));
       }
     }
     return DispatchOutcome(
@@ -208,7 +199,6 @@ final class LearningWriteDispatcher {
       queued: timedOut || settled.length < chunks.length,
       rejectedChunks: rejected,
       totalChunks: chunks.length,
-      rejectedEventIds: rejectedIds,
     );
   }
 
@@ -252,12 +242,7 @@ final class LearningWriteDispatcher {
       return _ChunkStatus.acked;
     } on PermanentWriteRejection catch (rejection) {
       final reason = pendingFailureReasonOf(rejection.code);
-      _pending[id] = _Pending(
-        command,
-        chunk,
-        reason,
-        isUndo: _pending[id]?.isUndo ?? command == LearningCommandKind.undo,
-      );
+      _pending[id] = _Pending(command, chunk, reason);
       _notify();
       _reporter.writeRejected(
         command: command,

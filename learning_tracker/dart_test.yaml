@@ -170,7 +170,6 @@ tags:
   parent_settings:
   parent_track_management:
   parity:
-  perf:
   permission_gating:
   permission_prompt:
   pin:
@@ -316,7 +315,6 @@ tags:
   story_3_2:
   story_3_3:
   story_5_2:
-  story_5_3:
   story_6_1:
   story_6_2:
   story_6_3:
@@ -340,7 +338,6 @@ tags:
   studyday_chazara_gate_12:
   studyday_companion_10:
   studyday_toggle_write_09:
-  sub_tracks:
   sync:
   t3:
   text_display:

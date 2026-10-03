@@ -17,12 +17,9 @@ import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
-import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
-import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_settings_reader.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
@@ -164,33 +161,11 @@ void main() {
     });
   });
 
-  group('learnerToday', () {
-    test('is the civil date in the learner zone once the settings history '
-        'is known, else the UTC date (never the device offset)', () {
-      final lateUtc = DateTime.utc(2026, 9, 1, 23, 30);
-      final history = LearnerSettingsHistory.constant(
-        const LearnerSettings(
-          profileId: profileUlid,
-          timeZone: 'Asia/Jerusalem',
-        ),
-      );
-      expect(learnerToday(lateUtc, history), '2026-09-02');
-      expect(learnerToday(lateUtc, null), '2026-09-01');
-    });
-  });
-
   group('learningCommandsProvider', () {
     late InMemoryLearningWritePort port;
     late InMemoryChangeLogRepository changeLog;
-    late InMemorySubTrackRepository subTracks;
-    late InMemoryGovernedIntentRepository intent;
-    late FakeAnalyticsService analytics;
 
-    List<Override> ready({
-      bool lockSettings = true,
-      DateTime? now,
-      Override? subTrackRepo,
-    }) => [
+    List<Override> ready({bool lockSettings = true, DateTime? now}) => [
       learningCommandClockProvider.overrideWithValue(
         () => now ?? engineAt(600),
       ),
@@ -199,9 +174,9 @@ void main() {
       learningWritePortProvider.overrideWith((ref) async => port),
       changeLogRepositoryProvider.overrideWith((ref) async => changeLog),
       governedDocReaderProvider.overrideWith((ref) async => changeLog),
-      subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
-      governedIntentRepositoryProvider.overrideWith((ref) async => intent),
-      analyticsServiceProvider.overrideWithValue(analytics),
+      subTrackRepositoryProvider.overrideWith(
+        (ref) async => InMemorySubTrackRepository(),
+      ),
       oversizedGovernedWritePortProvider.overrideWith(
         (ref) async => FakeOversizedGovernedWritePort(),
       ),
@@ -224,30 +199,6 @@ void main() {
     setUp(() {
       port = InMemoryLearningWritePort();
       changeLog = InMemoryChangeLogRepository();
-      analytics = FakeAnalyticsService();
-      subTracks = InMemorySubTrackRepository();
-      intent = InMemoryGovernedIntentRepository()
-        ..emit(
-          c0Scope(),
-          LearnerIntent(
-            settings: c0Settings,
-            mainTracks: {
-              engineCurriculum: engineIntent(),
-              'shas': MainTrackIntent(
-                curriculumId: 'shas',
-                track: MainTrack(
-                  curriculumId: 'shas',
-                  state: MainTrackState.active,
-                ),
-              ),
-            },
-            goals: const {},
-          ),
-        );
-      addTearDown(() async {
-        await subTracks.dispose();
-        await intent.dispose();
-      });
     });
 
     test('null while no learner is active', () async {
@@ -426,195 +377,6 @@ void main() {
       );
       expect(port.attempts, isEmpty);
     });
-
-    group('wires the governed sub-track commands (DNI-492, DNI-499): the '
-        'lifecycle actions are saved, never answered onlineRequired', () {
-      // The 2026-27 school year; the clock is 2026-09-01 10:00 UTC.
-      final school = SubTrack(
-        id: ulidD,
-        curriculumId: 'shas',
-        name: 'School',
-        type: SubTrackType.schoolYear,
-        academicYear: 2026,
-        windowStart: '2026-09-01',
-        windowEnd: '2027-07-31',
-        ratePerWeek: 8,
-        weeksPerYear: 36,
-        learnsOnShabbos: true,
-        ground: const [],
-        lastChangeId: ulidE,
-      );
-
-      Future<LearningCommands> commandsOf() async {
-        subTracks.seed(c0Scope(), [school]);
-        final container = ProviderContainer.test(overrides: ready());
-        return (await settledAsync(container, learningCommandsProvider)).value!;
-      }
-
-      test('Add next year creates the 2027-28 school year and reports '
-          'subtrack_lifecycle add_next_year', () async {
-        final commands = await commandsOf();
-        final result = await commands.createSubTrack(
-          const SubTrackDraft(
-            curriculumId: 'shas',
-            name: 'School',
-            type: SubTrackType.schoolYear,
-            academicYear: 2027,
-            windowStart: '2027-09-01',
-            windowEnd: '2028-07-31',
-            ratePerWeek: 8,
-            weeksPerYear: 36,
-            learnsOnShabbos: true,
-            ground: [],
-          ),
-          subTrackId: ulidC,
-          nextYearOf: ulidD,
-        );
-        expect(result, isA<CaptureSuccess>());
-        expect((result as CaptureSuccess).queued, isFalse);
-        final created = subTracks
-            .tracksOf(c0Scope())
-            .singleWhere((t) => t.id == ulidC);
-        expect(created.academicYear, 2027);
-        final (scope, entry) = subTracks.entries.single;
-        expect(scope, c0Scope());
-        expect(entry.actor.uid, 'auth-uid');
-        expect(entry.actor.role, ActorRole.parent);
-        await pumpEventQueue();
-        expect(
-          analytics.lastParamsOf(AnalyticsEvent.subTrackLifecycle)?['action'],
-          'add_next_year',
-        );
-      });
-
-      test('End writes the ended tombstone', () async {
-        final commands = await commandsOf();
-        final result = await commands.endSubTrack(ulidD);
-        expect(result, isA<CaptureSuccess>());
-        final ended = subTracks.tracksOf(c0Scope()).single;
-        expect(ended.endedAt, isNotNull);
-        expect(ended.endReason, SubTrackEndReason.ended);
-      });
-
-      test('Delete writes the deleted tombstone', () async {
-        final commands = await commandsOf();
-        final result = await commands.deleteSubTrack(ulidD);
-        expect(result, isA<CaptureSuccess>());
-        final deleted = subTracks.tracksOf(c0Scope()).single;
-        expect(deleted.endedAt, isNotNull);
-        expect(deleted.endReason, SubTrackEndReason.deleted);
-      });
-    });
-    test(
-      'createSubTrack through the provider graph reads the governed '
-      'intent and saves the new sub-track (DNI-497 follow-up fyh.169)',
-      () async {
-        final container = ProviderContainer.test(overrides: ready());
-        final commands = (await settledAsync(
-          container,
-          learningCommandsProvider,
-        )).value!;
-        final result = await commands.createSubTrack(
-          const SubTrackDraft(
-            curriculumId: engineCurriculum,
-            name: 'School',
-            type: SubTrackType.ongoing,
-            windowStart: '2026-09-01',
-            ratePerWeek: 3,
-            weeksPerYear: 40,
-            learnsOnShabbos: false,
-            ground: [peah],
-          ),
-          subTrackId: ulidD,
-        );
-        expect(result, isA<CaptureSuccess>());
-        final created = subTracks.tracksOf(c0Scope()).single;
-        expect(created.id, ulidD);
-        expect(created.ground, const [peah]);
-        expect(subTracks.entries.single.$2.actor.role, ActorRole.parent);
-      },
-    );
-
-    for (final (label, unavailable) in <(String, Override)>[
-      (
-        'not ready',
-        subTrackRepositoryProvider.overrideWith((ref) async => null),
-      ),
-      (
-        'failed',
-        subTrackRepositoryProvider.overrideWith(
-          (ref) async => throw StateError('sub-track repository down'),
-        ),
-      ),
-    ]) {
-      test('a sub-track repository that is $label leaves ordinary captures '
-          'working; only the sub-track commands answer onlineRequired '
-          '(DNI-497)', () async {
-        final container = ProviderContainer.test(
-          overrides: ready(subTrackRepo: unavailable),
-        );
-        final commands = (await settledAsync(
-          container,
-          learningCommandsProvider,
-        )).value;
-        expect(commands, isA<DefaultLearningCommands>());
-        expect(
-          await commands!.capture(
-            curriculumId: engineCurriculum,
-            refs: const ['Mishnah Berakhot 1:1'],
-            source: LearningEvent.sourceMain,
-            dateState: DateState.dated,
-          ),
-          isA<CaptureSuccess>(),
-        );
-        expect(port.commits, hasLength(1));
-        expect(
-          await commands.editSubTrack(
-            ulidD,
-            const SubTrackEdit(ground: [peah, berakhot1]),
-          ),
-          const CaptureResult.onlineRequired(),
-        );
-      });
-    }
-
-    test('wires the governed sub-track commands: a parent ground reorder '
-        'through editSubTrack is saved, not answered onlineRequired '
-        '(DNI-497)', () async {
-      subTracks.seed(c0Scope(), [
-        SubTrack(
-          id: ulidD,
-          curriculumId: engineCurriculum,
-          name: 'School',
-          type: SubTrackType.ongoing,
-          windowStart: '2026-09-01',
-          ratePerWeek: 3,
-          weeksPerYear: 40,
-          learnsOnShabbos: false,
-          ground: const [berakhot1, peah],
-          lastChangeId: ulidE,
-        ),
-      ]);
-      final container = ProviderContainer.test(overrides: ready());
-      final commands = (await settledAsync(
-        container,
-        learningCommandsProvider,
-      )).value!;
-      final result = await commands.editSubTrack(
-        ulidD,
-        const SubTrackEdit(ground: [peah, berakhot1]),
-      );
-      expect(result, isA<CaptureSuccess>());
-      expect((result as CaptureSuccess).queued, isFalse);
-      expect(subTracks.tracksOf(c0Scope()).single.ground, const [
-        peah,
-        berakhot1,
-      ]);
-      final (scope, entry) = subTracks.entries.single;
-      expect(scope, c0Scope());
-      expect(entry.actor.uid, 'auth-uid');
-      expect(entry.actor.role, ActorRole.parent);
-    });
   });
   group('ownerGovernedWriterProvider (DNI-476)', () {
     test('writes through the current LearningCommands', () async {
@@ -682,6 +444,7 @@ void main() {
 
 /// A learner whose settings doc cannot be read.
 
+/// A learner whose settings doc cannot be read.
 final class _UnreadableSettings implements LearnerSettingsReader {
   @override
   Stream<LearnerSettings> watch(LearnerScope scope) =>

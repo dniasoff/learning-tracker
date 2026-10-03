@@ -12,7 +12,6 @@
 library;
 
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
 /// Where a capture came from.
 enum CaptureSourceKind {
@@ -28,32 +27,6 @@ enum CaptureSourceKind {
   final String storage;
 }
 
-/// The `action` of a `subtrack_lifecycle` event (AD-47). Story 2.1 emits
-/// the four lifecycle commands; Story 2.8 (DNI-499) adds *Add next year*;
-/// later stories add ground add, reorder and remove.
-enum SubTrackLifecycleAction {
-  /// A sub-track was created.
-  create('create'),
-
-  /// A sub-track was edited.
-  edit('edit'),
-
-  /// A sub-track was ended.
-  end('end'),
-
-  /// A sub-track was deleted (tombstoned).
-  delete('delete'),
-
-  /// A school-year sub-track was rolled into the next academic year: a
-  /// create from the detail's *Add next year* (Story 2.8 / DNI-499).
-  addNextYear('add_next_year');
-
-  const SubTrackLifecycleAction(this.storage);
-
-  /// The analytics parameter value.
-  final String storage;
-}
-
 /// Reports learning analytics.
 abstract interface class LearningAnalytics {
   /// [count] leaves were captured for [curriculumId].
@@ -63,25 +36,12 @@ abstract interface class LearningAnalytics {
     required DateState dateState,
     required int count,
   });
-
-  /// A sub-track lifecycle command succeeded (AD-47 `subtrack_lifecycle`):
-  /// enums and counts only — no name, ref, date or profile id.
-  /// [groundEntries] is the number of ground entries after the change.
-  void subTrackLifecycle({
-    required String curriculumId,
-    required SubTrackType type,
-    required SubTrackLifecycleAction action,
-    required int groundEntries,
-  });
 }
 
 /// The learning analytics events, each registered in `AnalyticsEvent`.
 enum LearningAnalyticsEvent {
   /// `AnalyticsEvent.capture`.
   capture,
-
-  /// `AnalyticsEvent.subTrackLifecycle`.
-  subTrackLifecycle,
 }
 
 /// Receives one event with its enum/count-only [parameters].
@@ -109,18 +69,5 @@ final class SinkLearningAnalytics implements LearningAnalytics {
     'source_kind': sourceKind.storage,
     'date_state': dateState.storage,
     'count': count,
-  });
-
-  @override
-  void subTrackLifecycle({
-    required String curriculumId,
-    required SubTrackType type,
-    required SubTrackLifecycleAction action,
-    required int groundEntries,
-  }) => sink(LearningAnalyticsEvent.subTrackLifecycle, {
-    'curriculum_id': curriculumId,
-    'track_type': type.storage,
-    'action': action.storage,
-    'ground_entries': groundEntries,
   });
 }

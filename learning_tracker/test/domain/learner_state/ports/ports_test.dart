@@ -52,7 +52,6 @@ void main() {
       LearningWritePort,
       OversizedGovernedWritePort,
       SubTrackRepository,
-      TutorScopeGrantSource,
-    ], hasLength(9));
+    ], hasLength(8));
   });
 }

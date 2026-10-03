@@ -13,7 +13,6 @@ export 'package:learning_tracker/data/firestore/learner_state_repository_provide
         activeLearnerScopeProvider,
         changeLogRepositoryProvider,
         governedDocReaderProvider,
-        governedIntentRepositoryProvider,
         learningEventRepositoryProvider,
         learningWritePortProvider,
         oversizedGovernedWritePortProvider,

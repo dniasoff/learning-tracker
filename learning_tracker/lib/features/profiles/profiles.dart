@@ -32,7 +32,6 @@ export 'domain/services/pin_service.dart';
 export 'presentation/providers/active_profile_provider.dart';
 export 'presentation/providers/profile_providers.dart';
 export 'presentation/providers/parent_pin_session_provider.dart';
-export 'presentation/providers/parent_session_provider.dart';
 
 // ── Presentation widgets ───────────────────────────────────────────────
 export 'presentation/widgets/profile_switcher_sheet.dart';

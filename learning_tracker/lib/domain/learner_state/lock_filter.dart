@@ -47,13 +47,7 @@ List<LockWindow> engineLockWindows(
 
 /// Whether [t] lies inside one of [locks] (ascending and disjoint, as
 /// [lockWindows] returns them). Bounds are inside (closed intervals).
-bool insideLock(List<LockWindow> locks, DateTime t) => lockAt(locks, t) != null;
-
-/// The lock of [locks] (ascending and disjoint, as [lockWindows] returns
-/// them) that contains [t], or null. Bounds are inside (closed intervals).
-/// A lookup over the windows [lockWindows] computed, not a second window
-/// function (AD-36).
-LockWindow? lockAt(List<LockWindow> locks, DateTime t) {
+bool insideLock(List<LockWindow> locks, DateTime t) {
   var lo = 0;
   var hi = locks.length - 1;
   while (lo <= hi) {
@@ -64,10 +58,10 @@ LockWindow? lockAt(List<LockWindow> locks, DateTime t) {
     } else if (t.isAfter(lock.endUtc)) {
       lo = mid + 1;
     } else {
-      return lock;
+      return true;
     }
   }
-  return null;
+  return false;
 }
 
 /// The [LockIgnoreHook] for [locks]: an event is ignored iff its
