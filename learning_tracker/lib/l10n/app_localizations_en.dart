@@ -717,9 +717,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subTrackDetailEdit => 'Edit';
 
   @override
-  String get subTrackDetailHubTitle => 'Sub-tracks';
-
-  @override
   String get subTrackDetailMoveUp => 'Move up';
 
   @override
