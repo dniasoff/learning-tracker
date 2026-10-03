@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/unlocked_achievements_source.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -72,6 +73,7 @@ class AchievementTrackFilterVm {
 final achievementsOverviewProvider =
     FutureProvider.autoDispose<AchievementsOverview>((ref) async {
       ref.watch<int>(completionCommittedProvider);
+      final unlockedIds = ref.watch(unlockedAchievementIdsProvider.future);
       final service = ref.watch(rewardMilestoneServiceProvider);
       final repository = await ref.read(
         firestoreRewardSettingsRepositoryProvider.future,
@@ -83,11 +85,12 @@ final achievementsOverviewProvider =
       // entirely — every reward is a single global priced spend-item now, so
       // there is no per-track loop left to run (see
       // reward_config_controller.dart's doc comment for the fuller product
-      // history). An achievement is unlocked when lifetime-earned points have
-      // reached or crossed its threshold. Spendable balance remains separate
-      // for affordability and redemption checks. Classification is derived
-      // purely from threshold <= lifetime-earned points — no historical
-      // unlock records are consulted.
+      // history). DNI-480 (AD-27/AD-50): an achievement is unlocked only when
+      // its id is in the latched `unlocked_achievement_ids` record, which
+      // LearningCommands array-unions the first time its threshold is
+      // crossed on any device. Nothing here compares points to thresholds:
+      // a latched achievement stays unlocked when a void later lowers
+      // lifetime earned. Lifetime earned is shown as progress only.
       final rows = <AchievementRowVm>[];
       final filterOptions = <AchievementTrackFilterVm>[];
 
@@ -105,18 +108,19 @@ final achievementsOverviewProvider =
           ),
         );
 
+        final latched = await unlockedIds;
         final lifetimeEarnedPoints = await service
             .getGlobalLifetimeEarnedForRewards();
         RewardMilestone? firstLockedGlobal;
         for (final m in enabledGlobal) {
-          if (lifetimeEarnedPoints < m.thresholdPoints) {
+          if (!latched.contains(m.id)) {
             firstLockedGlobal = m;
             break;
           }
         }
 
         for (final m in enabledGlobal) {
-          final unlocked = lifetimeEarnedPoints >= m.thresholdPoints;
+          final unlocked = latched.contains(m.id);
           final isNext = !unlocked && firstLockedGlobal?.id == m.id;
           rows.add(
             AchievementRowVm(

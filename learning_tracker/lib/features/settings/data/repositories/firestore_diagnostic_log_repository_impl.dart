@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 
 /// Thrown by [FirestoreDiagnosticLogRepositoryAdapter.pushLog] when
-/// `firestoreDiagnosticLogRepositoryProvider` resolves to `null` — see
-/// `FirestorePointsBalanceReaderAdapter`'s doc comment for the
-/// resolve/throw pattern this mirrors.
+/// `firestoreDiagnosticLogRepositoryProvider` resolves to `null` — the
+/// resolve/throw pattern of the points readers (`EnginePointsReader`):
+/// a backend that is not ready throws rather than silently doing nothing.
 class DiagnosticLogRepositoryNotReadyException implements Exception {
   const DiagnosticLogRepositoryNotReadyException();
 

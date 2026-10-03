@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -128,4 +129,56 @@ void main() {
       expect(rewards.single.thresholdPoints, 240);
     },
   );
+
+  group('achievement latch record (DNI-480, AD-50)', () {
+    DocumentReference<Map<String, dynamic>> settingsDoc() => firestore.doc(
+      'users/$_uid/learner_profiles/$_profileId/preferences/'
+      'gamification_settings',
+    );
+
+    test('reads empty when absent; array union is monotonic and keeps '
+        'sibling keys', () async {
+      expect(await repository.readUnlockedAchievementIds(), isEmpty);
+      await repository.writeRewardSettings({'milestones': <Object>[]});
+
+      await repository.latchUnlockedAchievementIds({'bronze'});
+      await Future.wait([
+        repository.latchUnlockedAchievementIds({'silver'}),
+        repository.latchUnlockedAchievementIds({'silver', 'bronze'}),
+      ]);
+      await repository.latchUnlockedAchievementIds(const {});
+
+      expect(await repository.readUnlockedAchievementIds(), {
+        'bronze',
+        'silver',
+      });
+      final data = (await settingsDoc().get()).data()!;
+      expect(data['unlocked_achievement_ids'], hasLength(2));
+      expect(data['reward_settings'], isNotNull);
+    });
+
+    test('watch emits the stored list', () async {
+      final seen = repository.watchUnlockedAchievementIds().firstWhere(
+        (ids) => ids.contains('gold'),
+      );
+      await repository.latchUnlockedAchievementIds({'gold'});
+      expect(await seen, {'gold'});
+    });
+
+    test('a malformed list throws instead of reading as nothing '
+        'unlocked', () async {
+      await settingsDoc().set({'unlocked_achievement_ids': 'bronze'});
+      await expectLater(
+        repository.readUnlockedAchievementIds(),
+        throwsFormatException,
+      );
+      await settingsDoc().set({
+        'unlocked_achievement_ids': ['bronze', 3],
+      });
+      await expectLater(
+        repository.readUnlockedAchievementIds(),
+        throwsFormatException,
+      );
+    });
+  });
 }

@@ -20,7 +20,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart'
@@ -183,8 +183,7 @@ Override pendingRedemptionsOneShotOverride() {
 /// Retained for compatibility; the Drift-specific cleanup-timer bug no longer
 /// applies because [childRedemptionBalanceProvider] is Firestore-backed.
 Override childRedemptionBalanceOneShotOverride() {
-  return childRedemptionBalanceProvider.overrideWith((ref) {
-    final adapter = FirestorePointsBalanceReaderAdapter(ref: ref);
-    return adapter.getBalance();
-  });
+  return childRedemptionBalanceProvider.overrideWith(
+    (ref) => EnginePointsReader(ref: ref).getBalance(),
+  );
 }

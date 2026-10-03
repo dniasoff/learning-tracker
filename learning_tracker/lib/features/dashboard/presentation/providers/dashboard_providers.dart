@@ -175,8 +175,9 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Reads from [FirestorePointsBalanceReaderAdapter] — the spend-economy
-/// source of truth (DEC-32). Returns 0 for adult profiles (Rule 3: adults
+/// Reads the AD-50 filtered ledger balance ([watchActivePointsTotals],
+/// DNI-480) — the spend-economy source of truth (DEC-32); it re-reads when
+/// the engine's earning set changes. Returns 0 for adult profiles (Rule 3: adults
 /// have no points).
 ///
 /// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
@@ -205,8 +206,7 @@ Future<int> dashboardGlobalPoints(Ref ref) async {
   if (userMode != ProfileMode.child) {
     return 0; // adults have no points (product rule)
   }
-  final reader = FirestorePointsBalanceReaderAdapter(ref: ref);
-  return reader.getBalance();
+  return (await watchActivePointsTotals(ref)).balance;
 }
 
 /// Write-path effect: strips legacy stock-template milestones for the current
@@ -275,12 +275,15 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   final globalPoints = await milestoneService
       .getGlobalLifetimeEarnedForRewards();
   final globalMilestones = await milestoneService.getMilestones();
+  if (!ref.mounted) return null;
+  final unlockedIds = await ref.watch(unlockedAchievementIdsProvider.future);
 
   const selector = NextRewardSelector();
   final result = selector.select(
     trackEntries: const [],
     globalPoints: globalPoints,
     globalMilestones: globalMilestones,
+    unlockedIds: unlockedIds,
   );
   if (result == null) return null;
 

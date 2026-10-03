@@ -20,19 +20,14 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:mocktail/mocktail.dart';
 
-class _MockCompletionRepository extends Mock implements CompletionRepository {}
-
-class _AlwaysEligible implements CurriculumRewardEligibility {
+class _NoAwards implements EarnedPointsReader {
   @override
-  Future<bool> isEligible(CurriculumId curriculumId) async => true;
+  Future<List<EarnedPoints>> getEarnedPoints() async => const [];
 }
 
 class _ZeroBalance implements PointsBalanceReader {
@@ -45,18 +40,13 @@ void main() {
       '(DG-BRKD-01)', () {
     test('curriculumBreakdownProvider is invalidated (re-evaluated) after '
         'completionCommittedProvider increments', () async {
-      final repository = _MockCompletionRepository();
-      when(
-        () => repository.getCompletionsByCurriculum(any()),
-      ).thenAnswer((_) async => const []);
-
       final container = ProviderContainer(
         overrides: [
-          completionRepositoryProvider.overrideWithValue(repository),
+          activeEarningEventIdsProvider.overrideWith((ref) async => const {}),
           pointsServiceProvider.overrideWithValue(
             PointsService(
-              eligibility: _AlwaysEligible(),
               balanceReader: _ZeroBalance(),
+              earnedReader: _NoAwards(),
             ),
           ),
         ],

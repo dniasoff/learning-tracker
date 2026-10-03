@@ -583,8 +583,9 @@ String _$dashboardStreakHash() => r'4a1e8fa5e4063ae523d79ab165930d5bf2ab1ea5';
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Reads from [FirestorePointsBalanceReaderAdapter] — the spend-economy
-/// source of truth (DEC-32). Returns 0 for adult profiles (Rule 3: adults
+/// Reads the AD-50 filtered ledger balance ([watchActivePointsTotals],
+/// DNI-480) — the spend-economy source of truth (DEC-32); it re-reads when
+/// the engine's earning set changes. Returns 0 for adult profiles (Rule 3: adults
 /// have no points).
 ///
 /// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
@@ -609,8 +610,9 @@ final dashboardGlobalPointsProvider = DashboardGlobalPointsProvider._();
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
-/// Reads from [FirestorePointsBalanceReaderAdapter] — the spend-economy
-/// source of truth (DEC-32). Returns 0 for adult profiles (Rule 3: adults
+/// Reads the AD-50 filtered ledger balance ([watchActivePointsTotals],
+/// DNI-480) — the spend-economy source of truth (DEC-32); it re-reads when
+/// the engine's earning set changes. Returns 0 for adult profiles (Rule 3: adults
 /// have no points).
 ///
 /// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
@@ -635,8 +637,9 @@ final class DashboardGlobalPointsProvider
     with $FutureModifier<int>, $FutureProvider<int> {
   /// Stored debitable points balance, scoped to active child profile (WS7.balance).
   ///
-  /// Reads from [FirestorePointsBalanceReaderAdapter] — the spend-economy
-  /// source of truth (DEC-32). Returns 0 for adult profiles (Rule 3: adults
+  /// Reads the AD-50 filtered ledger balance ([watchActivePointsTotals],
+  /// DNI-480) — the spend-economy source of truth (DEC-32); it re-reads when
+  /// the engine's earning set changes. Returns 0 for adult profiles (Rule 3: adults
   /// have no points).
   ///
   /// **Not a live stream, unlike the Drift-era `watchBalance`.** No Firestore
@@ -681,7 +684,7 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'5cbf4b311b616ffa2c79341e561c43794824d032';
+    r'4ec10b9088ae7b75eed200b49db5370de2e72dcb';
 
 /// Write-path effect: strips legacy stock-template milestones for the current
 /// profile and pushes updated gamification settings to Firestore if any rows
@@ -816,7 +819,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'e975de7cbf536ab6f39d7777574e64da506d82a8';
+    r'491c0d5c208a3958d96738f600d7b25c76f7ccb7';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 

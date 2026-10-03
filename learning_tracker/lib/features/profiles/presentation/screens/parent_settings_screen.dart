@@ -9,7 +9,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_ledger_write_adapter.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
@@ -53,10 +53,9 @@ final _pointsLedgerWriteAdapterProvider =
 /// points adjustment below.
 final activeProfilePointsBalanceProvider = FutureProvider.autoDispose<int>((
   ref,
-) {
+) async {
   ref.watch(pendingRedemptionsCountProvider);
-  final reader = FirestorePointsBalanceReaderAdapter(ref: ref);
-  return reader.getBalance();
+  return (await watchActivePointsTotals(ref)).balance;
 });
 
 /// Configuration hub shown to a parent when their child profile is active.

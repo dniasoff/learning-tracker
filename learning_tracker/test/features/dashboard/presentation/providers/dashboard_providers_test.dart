@@ -27,6 +27,7 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart'
     show rewardMilestoneServiceProvider, streakStateProvider;
 import 'package:learning_tracker/features/gamification/streak/streak_event_entry.dart';
@@ -93,6 +94,8 @@ ProviderContainer _container(
       activeAccountFirebaseProvider.overrideWith(
         (ref) async => _handles(firestore),
       ),
+      // No learning events: the AD-50 earning set is empty (DNI-480).
+      activeEarningEventIdsProvider.overrideWith((ref) async => const {}),
       for (final curriculum in CurriculumId.values)
         scopedItemCountProvider(
           curriculum,

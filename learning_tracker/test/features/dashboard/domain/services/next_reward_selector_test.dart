@@ -42,6 +42,7 @@ void main() {
         ],
         globalPoints: 200,
         globalMilestones: [_milestone(threshold: 100, title: 'G')],
+        unlockedIds: const {'m_G'},
       );
       expect(result, isNull);
     });
@@ -137,6 +138,31 @@ void main() {
         globalMilestones: [],
       );
       expect(result!.title, 'Next');
+    });
+
+    // DNI-480 (AD-50): a global milestone's unlock status is the latched
+    // record, never a points comparison.
+    test('a latched global milestone is skipped even below its '
+        'threshold', () {
+      final result = selector.select(
+        trackEntries: const [],
+        globalPoints: 10,
+        globalMilestones: [
+          _milestone(threshold: 100, title: 'Latched'),
+          _milestone(threshold: 200, title: 'Open'),
+        ],
+        unlockedIds: const {'m_Latched'},
+      );
+      expect(result!.title, 'Open');
+    });
+
+    test('an unlatched global milestone is still next at full progress', () {
+      final result = selector.select(
+        trackEntries: const [],
+        globalPoints: 150,
+        globalMilestones: [_milestone(threshold: 100, title: 'Unlatched')],
+      );
+      expect(result!.title, 'Unlatched');
     });
   });
 }

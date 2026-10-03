@@ -5,8 +5,9 @@ import 'package:learning_tracker/data/firestore/repository_providers.dart';
 /// Firestore-backed write seam for manual parent points adjustments
 /// (`ParentSettingsScreen`'s "Adjust Points" dialog).
 ///
-/// Mirrors [FirestorePointsBalanceReaderAdapter]'s resolve/throw pattern —
-/// see that class's doc comment. A parent adjustment is an explicit,
+/// Resolves the active ledger repository and throws when it is not ready,
+/// like the points readers (`engine_points_reader.dart`). The entry is a
+/// non-event row, so the AD-50 filter always counts it. A parent adjustment is an explicit,
 /// deliberate user action with no natural "did nothing" outcome, so a
 /// not-ready backend throws rather than silently dropping the write.
 class FirestorePointsLedgerWriteAdapter {

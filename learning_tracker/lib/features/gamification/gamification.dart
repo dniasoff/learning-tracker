@@ -12,7 +12,8 @@
 library gamification;
 
 // ── Data adapters ────────────────────────────────────────────────────────
-export 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
+export 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
+export 'package:learning_tracker/features/gamification/data/repositories/unlocked_achievements_source.dart';
 // ── Domain models ──────────────────────────────────────────────────────
 export 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 export 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';

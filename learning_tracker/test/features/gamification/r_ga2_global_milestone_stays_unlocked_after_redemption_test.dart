@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/unlocked_achievements_source.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -36,7 +37,13 @@ void main() {
       milestoneId: 'gold',
     );
     final container = ProviderContainer(
-      overrides: [rewardMilestoneServiceProvider.overrideWithValue(service)],
+      overrides: [
+        rewardMilestoneServiceProvider.overrideWithValue(service),
+        // DNI-480: unlock status is the latch record, not a points check.
+        unlockedAchievementIdsProvider.overrideWith(
+          (ref) async => const {'gold'},
+        ),
+      ],
     );
     addTearDown(container.dispose);
 

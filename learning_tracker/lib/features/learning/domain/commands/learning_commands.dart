@@ -22,6 +22,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_command_reads.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/features/learning/domain/commands/achievement_latch.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/child_redate_limit.dart';
@@ -231,7 +232,9 @@ final class DefaultLearningCommands implements LearningCommands {
     Duration pointsWait = defaultPointsReadWait,
     GovernedLearningCommands? governed,
     SubTrackCommands? subTrackCommands,
+    AchievementLatch? achievements,
   }) : _scope = scope,
+       _achievements = achievements,
        _pointsWait = pointsWait,
        _actor = actor,
        _reads = reads,
@@ -259,6 +262,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final SubTrackCommands? _subTrackCommands;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
+  final AchievementLatch? _achievements;
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -294,6 +298,7 @@ final class DefaultLearningCommands implements LearningCommands {
     if (outcome.allRejected) {
       return const CaptureResult.rejected(CaptureRejection.notSaved);
     }
+    _afterWrite(outcome);
     return CaptureResult.success(
       eventIds: outcome.eventIds,
       queued: outcome.queued,
@@ -728,11 +733,36 @@ final class DefaultLearningCommands implements LearningCommands {
         if (outcome.allRejected) {
           return const CaptureResult.rejected(CaptureRejection.notSaved);
         }
+        _afterWrite(outcome);
         return CaptureResult.success(
           eventIds: outcome.eventIds,
           queued: outcome.queued,
         );
       });
+
+  /// The post-write step of every command that saved (or queued) events,
+  /// a first write or a retry: the AD-50 achievement latch over the learn
+  /// events the write recorded (DNI-480). It runs in the background and
+  /// never delays or fails the command; the latch retries its own
+  /// failures.
+  ///
+  /// The latch is monotonic, so it checks only what the server accepted:
+  /// it waits for the write's acknowledgement (a queued write is checked
+  /// when it reaches the server, a rejected one never), and the totals it
+  /// reads leave out every event the server rejected.
+  void _afterWrite(DispatchOutcome outcome) {
+    final achievements = _achievements;
+    if (achievements == null) return;
+    unawaited(
+      outcome.acknowledgedLearnEventIds.then(
+        (ids) => achievements.afterWrite(
+          _scope,
+          ids.toSet(),
+          unsaved: () => _dispatcher.unsavedEventIds,
+        ),
+      ),
+    );
+  }
 
   /// Closes the pending-failure stream.
   Future<void> dispose() => _dispatcher.dispose();

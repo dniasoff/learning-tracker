@@ -13,7 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/features/gamification/data/repositories/firestore_points_balance_reader_adapter.dart';
+import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/reward_redemption_repository_impl.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
@@ -53,8 +53,7 @@ final _redemptionRepositoryProvider =
 @riverpod
 Future<int> childRedemptionBalance(Ref ref) async {
   ref.watch<int>(completionCommittedProvider);
-  final reader = FirestorePointsBalanceReaderAdapter(ref: ref);
-  return reader.getBalance();
+  return (await watchActivePointsTotals(ref)).balance;
 }
 
 @riverpod
