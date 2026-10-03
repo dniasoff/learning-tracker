@@ -307,7 +307,7 @@ final class GatedLearningCommands implements LearningCommands {
 
   @override
   Future<CaptureResult> recordCatchUp(CatchUpAction action) =>
-       _held(() => inner.recordCatchUp(action));
+      _held(() => inner.recordCatchUp(action));
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>

@@ -8,6 +8,7 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -20,6 +21,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
@@ -115,6 +117,12 @@ List<Override> _screenOverrides({List<Override> subTracks = const []}) => [
   renderedDisplayForRefProvider(
     _taskRefs[1],
   ).overrideWith((ref) async => 'Shabbos 3:2'),
+  // DNI-502's today section reads the same learner state; it is not under
+  // test here, so a learner-state failure is asserted on the sub-track
+  // section alone.
+  learnerTodayProvider.overrideWith(
+    (ref) => const AsyncData(<CurriculumToday>[]),
+  ),
   ...subTracks,
 ];
 

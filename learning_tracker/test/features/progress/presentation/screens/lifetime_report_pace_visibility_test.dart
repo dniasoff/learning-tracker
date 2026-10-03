@@ -34,7 +34,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_provider.dart';
-import 'package:learning_tracker/features/progress/presentation/providers/lifetime_report_view.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_knowledge_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/lifetime_report_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_report_sections.dart';
@@ -195,6 +194,9 @@ const _profileId = 'profile-1';
 class _ChildHarness {
   _ChildHarness({bool unlocked = false}) {
     container = ProviderContainer(
+      // Counts every lifetime report the session builds (reads of the
+      // real provider), without replacing it.
+      observers: [_ReportReads(() => reportReads++)],
       overrides: [
         activeProfileProvider.overrideWith(
           (ref) async => LearnerProfileEntity(
@@ -210,10 +212,6 @@ class _ChildHarness {
         activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
         learnerStateProvider.overrideWith((ref, _) {
           return Stream.value(paceState([paceCurriculumState(paceReport())]));
-        }),
-        lifetimeReportProvider.overrideWith((ref, _) {
-          reportReads++;
-          return const AsyncLoading<LifetimeReportView>();
         }),
         lifetimeViewSummariesProvider.overrideWith((ref) async => const []),
         itemsLearnedSummariesProvider.overrideWith((ref) async => const []),
@@ -357,4 +355,16 @@ void main() {
       _expectNoParentData(tester);
     });
   });
+}
+
+/// Calls [onRead] whenever a [lifetimeReportProvider] is built.
+final class _ReportReads extends ProviderObserver {
+  _ReportReads(this.onRead);
+
+  final void Function() onRead;
+
+  @override
+  void didAddProvider(ProviderObserverContext context, Object? value) {
+    if (context.provider.from == lifetimeReportProvider) onRead();
+  }
 }

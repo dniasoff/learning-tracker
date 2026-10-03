@@ -54,6 +54,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/ongoing_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/ongoing_sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -207,6 +208,16 @@ List<Override> _productionCommandSources({
   ),
   learningWritePortProvider.overrideWith(
     (ref) async => InMemoryLearningWritePort(),
+  ),
+  // The governed half every LearningCommands is built with (DNI-470).
+  changeLogRepositoryProvider.overrideWith(
+    (ref) async => InMemoryChangeLogRepository(),
+  ),
+  governedDocReaderProvider.overrideWith(
+    (ref) async => InMemoryChangeLogRepository(),
+  ),
+  oversizedGovernedWritePortProvider.overrideWith(
+    (ref) async => FakeOversizedGovernedWritePort(),
   ),
   pointsAmountReaderProvider.overrideWith((ref) async => _FixedPoints()),
   learningEventRepositoryProvider.overrideWith(
@@ -445,9 +456,18 @@ void main() {
         ],
         child: Scaffold(
           body: ListView(
-            children: const [
-              SubTrackSyncRejectionListener(),
-              SubTrackHubSection(curriculumId: engineCurriculum),
+            children: [
+              const SubTrackSyncRejectionListener(),
+              const SubTrackHubSection(curriculumId: engineCurriculum),
+              // A hub row opens the sub-track detail (DNI-497); its ⋮ Edit
+              // opens the ongoing form through openSubTrackForm.
+              Builder(
+                builder: (context) => TextButton(
+                  key: const ValueKey('editGemara'),
+                  onPressed: () => openSubTrackForm(context, gemara),
+                  child: const Text('edit'),
+                ),
+              ),
             ],
           ),
         ),
@@ -468,15 +488,21 @@ void main() {
       await tester.pump();
       // A create reads the intent through the provider's deferred
       // repository; let that read's stream events run outside FakeAsync.
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
-      );
+      // The production commands defer the intent repository behind its
+      // provider future, so the read takes a second turn: pump, then let
+      // its stream events run outside FakeAsync again.
+      for (var turn = 0; turn < 3; turn++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump();
+      }
       await tester.pumpAndSettle();
       expect(key('ongoingSubTrackSave'), findsNothing, reason: 'form closed');
     }
 
-    // An unrelated edit, queued offline, from the hub's ongoing row.
-    await tester.tap(find.text('Gemara'));
+    // An unrelated edit, queued offline, from the ongoing row's Edit.
+    await tester.tap(key('editGemara'));
     await tester.pumpAndSettle();
     await tester.enterText(key('ongoingSubTrackName'), "Gemara b'iyun");
     await save();

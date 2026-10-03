@@ -180,10 +180,17 @@ void main() {
       expect(launched, [school.id]);
     });
 
-    testWidgets('the menu is hidden while no action is bound', (tester) async {
+    // DNI-499 binds End and Delete for a parent on a sub-track that has
+    // not ended, so the ⋮ is never empty for the parent.
+    testWidgets('an ongoing sub-track has Edit (its form is DNI-496) beside '
+        'DNI-499 End and Delete', (tester) async {
       h.seed(subTracks: [school]);
       await pump(tester);
-      expect(find.byKey(const ValueKey('subTrackDetailMenu')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('subTrackDetailMenu')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('subTrackMenu:edit')), findsOneWidget);
+      expect(find.byKey(const ValueKey('subTrackMenu:end')), findsOneWidget);
+      expect(find.byKey(const ValueKey('subTrackMenu:delete')), findsOneWidget);
     });
   });
 
