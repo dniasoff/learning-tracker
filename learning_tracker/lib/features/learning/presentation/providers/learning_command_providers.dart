@@ -320,6 +320,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       return null;
     }
   }
+
   Future<CaptureSourceType?> sourceTypeOf(String source) async {
     final repository = await subTrackRepository.read();
     if (repository == null) return null;
@@ -335,6 +336,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     }
     return null;
   }
+
   final governed = DefaultGovernedLearningCommands(
     scope: scope,
     actor: actor,
@@ -367,9 +369,9 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
         scope,
         GovernedEntity.subTrack,
       );
-      final eventRead = await events.watchAll(scope).firstWhere(
-        (read) => read is CompleteReadReady<LearningEvent>,
-      );
+      final eventRead = await events
+          .watchAll(scope)
+          .firstWhere((read) => read is CompleteReadReady<LearningEvent>);
       return recomputeSubTrackForecast(
         track: track,
         history: history,

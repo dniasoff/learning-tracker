@@ -261,6 +261,7 @@ abstract interface class LearningCommands {
   /// does not save is a "not saved — retry" [PendingFailure], listed in
   /// [BackupReplayResult.notSaved] and in [watchPendingFailures].
   Future<BackupReplayResult> importBackup(BackupReplayInput input);
+
   /// Records a catch-up card [action] (Story 3.3, DNI-506; AD-40): one
   /// `learn` event per leaf with `date_state = catch_up`, `learned_on` =
   /// its locked day and `recorded_at` = now, each `source = main` event
@@ -635,14 +636,9 @@ final class DefaultLearningCommands implements LearningCommands {
         );
       }
       if (result is CaptureSuccess) {
-        _analytics.capture(
-          curriculumId: curriculumId,
-          sourceKind: source == LearningEvent.sourceMain
-              ? CaptureSourceKind.main
-              : CaptureSourceKind.subTrack,
-          dateState: dateState,
-          count: result.eventIds.length,
-        );
+        // AD-47: exactly one `capture` event per successful command — the
+        // DNI-503 summary when the source type is known, else the plain
+        // capture.
         if (analyticsSourceType != null) {
           _analytics.captureSummary(
             curriculumId: curriculumId,
@@ -652,6 +648,15 @@ final class DefaultLearningCommands implements LearningCommands {
             eventCount: result.eventIds.length,
             skippedCount: skippedCount,
             taps: taps,
+          );
+        } else {
+          _analytics.capture(
+            curriculumId: curriculumId,
+            sourceKind: source == LearningEvent.sourceMain
+                ? CaptureSourceKind.main
+                : CaptureSourceKind.subTrack,
+            dateState: dateState,
+            count: result.eventIds.length,
           );
         }
       }

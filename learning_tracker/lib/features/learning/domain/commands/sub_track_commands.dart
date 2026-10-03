@@ -679,9 +679,10 @@ final class SubTrackCommands {
     SubTrack track,
     SubTrackLifecycleAction action, {
     SubTrack? forecastTrack,
-  }) => () => unawaited(
-    _emitLifecycleSummary(track, action, forecastTrack ?? track),
-  );
+  }) =>
+      () => unawaited(
+        _emitLifecycleSummary(track, action, forecastTrack ?? track),
+      );
 
   Future<void> _emitLifecycleSummary(
     SubTrack track,
