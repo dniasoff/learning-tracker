@@ -30,6 +30,7 @@ class PinGuard extends AutoRouteGuard {
     required this.pinSetupRoute,
     this.onSessionAuthenticated,
     this.onSessionLocked,
+    this.onParentSessionChanged,
   });
 
   final PinService pinService;
@@ -57,6 +58,14 @@ class PinGuard extends AutoRouteGuard {
   /// Called when the PIN session is cleared.
   final void Function()? onSessionLocked;
 
+  /// Parent-push lifecycle (sub-tracks Story 4.7 / DNI-515, AD-39): called
+  /// with the profile id every time a PARENT scope is authenticated, and with
+  /// `null` when the parent session ends — on every [lock] (sign-out, account
+  /// or profile switch, leaving parent mode) and when a tutor scope replaces
+  /// an authenticated parent scope. A tutor scope on its own never fires it,
+  /// so tutor PIN sessions never register this device for parent pushes.
+  final void Function(String? parentProfileId)? onParentSessionChanged;
+
   /// `(scopeKind, profileId)` that successfully entered its PIN in the
   /// current session. Parent and tutor scopes are tracked independently so
   /// authenticating one does not grant the other.
@@ -67,20 +76,33 @@ class PinGuard extends AutoRouteGuard {
   void lock() {
     _authenticatedScope = null;
     onSessionLocked?.call();
+    onParentSessionChanged?.call(null);
   }
 
   /// Marks the parent-mode PIN as authenticated for [profileId] in the
   /// current session. Convenience wrapper for flows that verify the parent
   /// PIN outside the guard (e.g. PIN entry route).
   void markAuthenticated(String profileId) {
-    _authenticatedScope = PinScope.parent(profileId);
-    onSessionAuthenticated?.call(_authenticatedScope!);
+    _authenticate(PinScope.parent(profileId));
   }
 
   /// Marks an arbitrary [scope] as authenticated for the current session.
   void markScopeAuthenticated(PinScope scope) {
+    _authenticate(scope);
+  }
+
+  /// Records [scope] as the authenticated session and fires the session
+  /// callbacks, including [onParentSessionChanged] (see its doc comment).
+  void _authenticate(PinScope scope) {
+    final previous = _authenticatedScope;
     _authenticatedScope = scope;
     onSessionAuthenticated?.call(scope);
+    switch (scope) {
+      case PinScopeParent(:final profileId):
+        onParentSessionChanged?.call(profileId);
+      case PinScopeTutor():
+        if (previous is PinScopeParent) onParentSessionChanged?.call(null);
+    }
   }
 
   @override
@@ -111,19 +133,13 @@ class PinGuard extends AutoRouteGuard {
       if (!hasPinSet) {
         final result = await router.push<bool>(pinSetupRoute());
         final ok = result ?? false;
-        if (ok) {
-          _authenticatedScope = scope;
-          onSessionAuthenticated?.call(scope);
-        }
+        if (ok) _authenticate(scope);
         resolver.next(ok);
         return;
       }
 
       final verified = await promptForPin();
-      if (verified) {
-        _authenticatedScope = scope;
-        onSessionAuthenticated?.call(scope);
-      }
+      if (verified) _authenticate(scope);
       resolver.next(verified);
     } catch (error, stack) {
       _log.error(

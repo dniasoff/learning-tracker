@@ -7,6 +7,7 @@ import 'package:learning_tracker/app/bootstrap/analytics_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/crashlytics_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/firebase_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/notifications_bootstrap.dart';
+import 'package:learning_tracker/app/bootstrap/parent_push_bootstrap.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
 import 'package:learning_tracker/core/auth/auth_providers.dart';
@@ -174,6 +175,7 @@ Future<BootstrapResult> bootstrap() async {
     crashlytics.setUserIdentifier(id);
   }, fireImmediately: true);
 
+  await bootstrapParentPush(container: container, log: log);
   await bootstrapNotifications(container: container, log: log);
 
   return (container: container, crashlytics: crashlytics);

@@ -708,4 +708,81 @@ void main() {
       verifyNever(() => resolver.next(true));
     });
   });
+
+  // ── P: parent-push lifecycle (Story 4.7 / DNI-515, AC-4) ────────────────────
+
+  group('P — onParentSessionChanged (parent push registration)', () {
+    late List<String?> events;
+
+    PinGuard guardFor({
+      required PinScope? Function() getScope,
+      bool verified = true,
+    }) {
+      events = [];
+      return PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
+        pinService: pinService,
+        promptForPin: () async => verified,
+        getScope: getScope,
+        onParentSessionChanged: events.add,
+      );
+    }
+
+    test('parent unlock via markAuthenticated reports the profile', () {
+      final guard = guardFor(getScope: () => _parentScope);
+      guard.markAuthenticated('p1');
+      guard.markAuthenticated('p1');
+      expect(events, ['p1', 'p1']);
+    });
+
+    test('a verified parent navigation reports the profile', () async {
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
+      final guard = guardFor(getScope: () => _parentScope);
+      await guard.onNavigation(resolver, router);
+      expect(events, ['1']);
+    });
+
+    test(
+      'a parent PIN set up through the setup route reports the profile',
+      () async {
+        when(
+          () => pinService.hasProfilePin('1'),
+        ).thenAnswer((_) async => false);
+        _stubRouterPush(router, true);
+        final guard = guardFor(getScope: () => _parentScope);
+        await guard.onNavigation(resolver, router);
+        expect(events, ['1']);
+      },
+    );
+
+    test('a failed parent verification reports nothing', () async {
+      when(() => pinService.hasProfilePin('1')).thenAnswer((_) async => true);
+      final guard = guardFor(getScope: () => _parentScope, verified: false);
+      await guard.onNavigation(resolver, router);
+      expect(events, isEmpty);
+    });
+
+    test('a tutor PIN session never registers', () async {
+      when(() => pinService.hasTutorPin('1')).thenAnswer((_) async => true);
+      final guard = guardFor(getScope: () => _tutorScope);
+      await guard.onNavigation(resolver, router);
+      guard.markScopeAuthenticated(_tutorScope);
+      expect(events, isEmpty);
+    });
+
+    test('a tutor scope replacing a parent scope ends the parent session', () {
+      final guard = guardFor(getScope: () => _tutorScope);
+      guard.markAuthenticated('p1');
+      guard.markScopeAuthenticated(_tutorScope);
+      expect(events, ['p1', null]);
+    });
+
+    test('every lock ends the parent session, even when none was open', () {
+      final guard = guardFor(getScope: () => _parentScope);
+      guard.lock();
+      guard.markAuthenticated('p1');
+      guard.lock();
+      expect(events, [null, 'p1', null]);
+    });
+  });
 }
