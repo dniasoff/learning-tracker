@@ -19,7 +19,6 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -29,8 +28,8 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
-import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_home_projection.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 
 /// Whether the current session may see and use sub-track write entry
@@ -65,11 +64,14 @@ Future<bool> readSubTrackParentSession(WidgetRef ref) async {
 }
 
 /// The learner's civil "today" (AD-41) for the academic-year picker and the
-/// AD-45 checks. Overridden in tests.
-final subTrackTodayProvider = Provider.autoDispose<CivilDate>((ref) {
-  final now = DateTimeFactory.nowLocal();
-  return civilDateOf(now.year, now.month, now.day);
-});
+/// AD-45 checks: the current instant in the learner's `time_zone` per the
+/// settings history ([subTrackLifecycleTodayProvider]), never the device's
+/// local date, so the form's year options and validation agree with the
+/// commands' AD-45 check and the hub's active/ended split. Overridden in
+/// tests.
+final subTrackTodayProvider = Provider.autoDispose<CivilDate>(
+  (ref) => ref.watch(subTrackLifecycleTodayProvider),
+);
 
 /// A complete `sub_tracks` read that holds rows the codec rejected
 /// ([CompleteReadReady.rejected]).
