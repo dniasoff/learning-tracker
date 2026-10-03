@@ -3888,28 +3888,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get erevPlannedUpTo => 'Up to…';
-
-  @override
-  String get erevUpToHint => 'Tap the last one you learnt';
-
-  @override
-  String erevUpToRecord(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Record $count',
-      one: 'Record 1',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String erevUpToTitle(String day) {
-    return '$day · up to…';
-  }
-
-  @override
   String get statusPendingTapToAccept => 'Pending — tap to accept';
 
   @override

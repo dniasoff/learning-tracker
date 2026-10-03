@@ -3840,28 +3840,6 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String get erevPlannedUpTo => 'עד…';
-
-  @override
-  String get erevUpToHint => 'הקישו על האחרון שלמדתם';
-
-  @override
-  String erevUpToRecord(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'רשמו $count',
-      one: 'רשמו 1',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String erevUpToTitle(String day) {
-    return '$day · עד…';
-  }
-
-  @override
   String get statusPendingTapToAccept => 'ממתין — הקישו לאישור';
 
   @override

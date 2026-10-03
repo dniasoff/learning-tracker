@@ -2091,24 +2091,6 @@
       }
     }
   },
-  "erevPlannedUpTo": "עד…",
-  "erevUpToHint": "הקישו על האחרון שלמדתם",
-  "erevUpToRecord": "{count, plural, =1{רשמו 1} other{רשמו {count}}}",
-  "@erevUpToRecord": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "erevUpToTitle": "{day} · עד…",
-  "@erevUpToTitle": {
-    "placeholders": {
-      "day": {
-        "type": "String"
-      }
-    }
-  },
   "statusPendingTapToAccept": "ממתין — הקישו לאישור",
   "calendarOffsetDay": "יום {offset}",
   "@calendarOffsetDay": {

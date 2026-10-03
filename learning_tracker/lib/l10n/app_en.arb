@@ -2946,32 +2946,6 @@
       }
     }
   },
-  "erevPlannedUpTo": "Up to…",
-  "@erevPlannedUpTo": {
-    "description": "Button on an erev planned section that opens the Up to… picker for its rows (DNI-504 AC-3). DRAFT copy, pending zc4."
-  },
-  "erevUpToHint": "Tap the last one you learnt",
-  "@erevUpToHint": {
-    "description": "Subtitle of the erev Up to… picker (DNI-504). DRAFT copy, pending zc4."
-  },
-  "erevUpToRecord": "{count, plural, =1{Record 1} other{Record {count}}}",
-  "@erevUpToRecord": {
-    "description": "Record button of the erev Up to… picker; {count} is the number of included rows (DNI-504). DRAFT copy, pending zc4.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "erevUpToTitle": "{day} · up to…",
-  "@erevUpToTitle": {
-    "description": "Title of the erev Up to… picker; {day} is the planned section's day name (DNI-504). DRAFT copy, pending zc4.",
-    "placeholders": {
-      "day": {
-        "type": "String"
-      }
-    }
-  },
   "statusPendingTapToAccept": "Pending — tap to accept",
   "calendarOffsetDay": "Day {offset}",
   "@calendarOffsetDay": {
