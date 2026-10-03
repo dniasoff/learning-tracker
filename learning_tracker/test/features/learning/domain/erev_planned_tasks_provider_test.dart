@@ -55,7 +55,6 @@ final _tracks = [
   CurriculumTrackEntity(
     curriculumId: _c,
     state: 'active',
-    stateChangedAt: DateTime.utc(2026),
     activatedAt: DateTime.utc(2026),
   ),
 ];
