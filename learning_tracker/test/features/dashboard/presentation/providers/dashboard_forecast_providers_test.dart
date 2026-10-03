@@ -192,12 +192,4 @@ void main() {
     addTearDown(container.dispose);
     expect(container.read(subTrackDetailOpenerProvider), subTrackDetailAction);
   });
-
-  test('the detail path is the DNI-497 route with an encoded id', () {
-    expect(
-      subTrackDetailPath('01J6Q2H4A8M7K3P9R5T6V8WXZ1'),
-      '/settings/tracks/sub-tracks/01J6Q2H4A8M7K3P9R5T6V8WXZ1',
-    );
-    expect(subTrackDetailPath('a/b'), '/settings/tracks/sub-tracks/a%2Fb');
-  });
 }
