@@ -20,6 +20,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/erev_ban
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/also_learning_slot.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/catch_up_cards_slot.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/erev_planned_slot.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/lock_ignored_notice.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
@@ -117,6 +118,9 @@ class LearningScreen extends ConsumerWidget {
                     // Up to… / +1 rollback and retry, with or without
                     // sub-track rows (keeps itself alive in the list).
                     const PendingCaptureRollback(),
+                    // Lock-stamped learning kept, not counted (DNI-504
+                    // AC-9): announced once, whatever else is showing.
+                    const LockIgnoredNotice(),
                     const SizedBox(height: 18),
                     // Erev (DNI-504): the banner is the tab's first
                     // focusable element (AC-11); zero size otherwise.
