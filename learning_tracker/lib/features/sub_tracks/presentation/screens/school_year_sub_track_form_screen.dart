@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/info_note.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
@@ -17,6 +18,8 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/academic_year_picker.dart';
@@ -47,11 +50,18 @@ const kSubTrackFormMaxWidth = 600.0;
 /// and a save re-checks the session first. It also renders nothing until
 /// the Story 2.1 commands are live, and no form until the sub-track and
 /// governed-intent reads have loaded (fail closed).
+///
+/// With [nextYearOf] it is Story 2.8's *Add next year* form (DNI-499,
+/// AC-1): prefilled from that school-year sub-track for `academic_year + 1`
+/// with empty ground ([nextYearSubTrackDraft]), every field editable, and
+/// *Save sub-track* creates a NEW sub-track (`createSubTrack(addNextYear:
+/// true)`); the source is never edited.
 @RoutePage()
 class SchoolYearSubTrackFormScreen extends ConsumerWidget {
   const SchoolYearSubTrackFormScreen({
     @PathParam('curriculumId') required this.curriculumId,
     @QueryParam('subTrackId') this.subTrackId,
+    @QueryParam('nextYearOf') this.nextYearOf,
     super.key,
   });
 
@@ -61,10 +71,15 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
   /// The edited sub-track, or null to create one.
   final String? subTrackId;
 
+  /// The school-year sub-track *Add next year* rolls over (Story 2.8), or
+  /// null. Ignored while [subTrackId] is set.
+  final String? nextYearOf;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final editing = subTrackId != null;
+    final nextYear = !editing && nextYearOf != null;
     return Scaffold(
       backgroundColor: context.colors.surfaceF5,
       appBar: AppBar(
@@ -74,6 +89,8 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
         title: Text(
           editing
               ? l10n.subTrackFormEditSchoolYearTitle
+              : nextYear
+              ? l10n.subTrackLifecycleNextYearTitle
               : l10n.subTrackTypeSchoolYear,
         ),
       ),
@@ -89,6 +106,9 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
   }
 
   Widget _formFor(WidgetRef ref, List<SubTrack> tracks) {
+    if (subTrackId == null && nextYearOf != null) {
+      return _nextYearFormFor(ref, tracks, nextYearOf!);
+    }
     SubTrack? existing;
     if (subTrackId case final id?) {
       // The id must name a school-year row of this route's curriculum: a
@@ -113,6 +133,39 @@ class SchoolYearSubTrackFormScreen extends ConsumerWidget {
       key: ValueKey(subTrackId ?? 'new'),
       curriculumId: curriculumId,
       existing: existing,
+      subTracks: tracks,
+    );
+  }
+
+  /// The *Add next year* form of [sourceId]: it must name a school-year row
+  /// of this route's curriculum that is not tombstoned (a stale or crafted
+  /// link must not roll over another curriculum's row or an ended one).
+  Widget _nextYearFormFor(
+    WidgetRef ref,
+    List<SubTrack> tracks,
+    String sourceId,
+  ) {
+    final source = tracks
+        .where(
+          (t) =>
+              t.id == sourceId &&
+              t.curriculumId == curriculumId &&
+              t.type == SubTrackType.schoolYear &&
+              t.academicYear != null &&
+              !t.isEnded,
+        )
+        .firstOrNull;
+    if (source == null) {
+      return AppErrorView(
+        error: SubTrackNotFoundForFormException(sourceId),
+        onRetry: () => ref.invalidate(learnerSubTracksProvider),
+      );
+    }
+    return SchoolYearSubTrackForm(
+      key: ValueKey('nextYearOf:$sourceId'),
+      curriculumId: curriculumId,
+      existing: null,
+      nextYearOf: source,
       subTracks: tracks,
     );
   }
@@ -193,6 +246,7 @@ class SchoolYearSubTrackForm extends ConsumerStatefulWidget {
     required this.curriculumId,
     required this.existing,
     required this.subTracks,
+    this.nextYearOf,
     super.key,
   });
 
@@ -204,6 +258,11 @@ class SchoolYearSubTrackForm extends ConsumerStatefulWidget {
 
   /// Every sub-track of the learner.
   final List<SubTrack> subTracks;
+
+  /// The school-year sub-track *Add next year* rolls over (Story 2.8 /
+  /// DNI-499), with [existing] null: the form starts from
+  /// [nextYearSubTrackDraft] and saves a new sub-track.
+  final SubTrack? nextYearOf;
 
   @override
   ConsumerState<SchoolYearSubTrackForm> createState() =>
@@ -241,7 +300,10 @@ class _SchoolYearSubTrackFormState
   void initState() {
     super.initState();
     final existing = widget.existing;
-    final initial = existing == null
+    final source = widget.nextYearOf;
+    final initial = source != null && existing == null
+        ? _nextYearValues(source)
+        : existing == null
         ? const SchoolYearFormValues(
             name: '',
             academicYear: null,
@@ -258,11 +320,31 @@ class _SchoolYearSubTrackFormState
     _academicYear = initial.academicYear;
     _startMonth = initial.startMonth;
     _endMonth = initial.endMonth;
-    _openEndAllowed = existing != null && existing.windowEnd == null;
+    // An open-ended row (or the open-ended school year rolled over) keeps
+    // its open end.
+    final base = existing ?? source;
+    _openEndAllowed = base != null && base.windowEnd == null;
     _learnsOnShabbos = initial.learnsOnShabbos;
     _blurValidates(_nameFocus, SchoolYearFormField.name);
     _blurValidates(_rateFocus, SchoolYearFormField.rate);
     _blurValidates(_weeksFocus, SchoolYearFormField.weeks);
+  }
+
+  /// Add next year (AC-1): the source's name, rate, weeks per year,
+  /// Shabbos flag and start/end months, for `academic_year + 1`.
+  static SchoolYearFormValues _nextYearValues(SubTrack source) {
+    final draft = nextYearSubTrackDraft(source);
+    int month(CivilDate date) => int.parse(date.substring(5, 7));
+    final end = draft.windowEnd;
+    return SchoolYearFormValues(
+      name: draft.name,
+      academicYear: draft.academicYear,
+      startMonth: month(draft.windowStart),
+      endMonth: end == null ? null : month(end),
+      rateText: formatFormNumber(draft.ratePerWeek),
+      weeksText: formatFormNumber(draft.weeksPerYear),
+      learnsOnShabbos: draft.learnsOnShabbos,
+    );
   }
 
   void _blurValidates(FocusNode node, SchoolYearFormField field) {
@@ -351,7 +433,15 @@ class _SchoolYearSubTrackFormState
         throw StateError('No parent session for the sub-track save');
       }
       final existing = widget.existing;
-      if (existing == null) {
+      if (existing == null && widget.nextYearOf != null) {
+        // Story 2.8: a new sub-track through the lifecycle save, which
+        // keeps a queued result visibly pending (AD-54).
+        result = await saveNextYearSubTrack(
+          ref.read,
+          schoolYearDraft(values, curriculumId: widget.curriculumId),
+          yearLabel: academicYearLabel(values.academicYear!),
+        );
+      } else if (existing == null) {
         result = await commands.createSubTrack(
           schoolYearDraft(values, curriculumId: widget.curriculumId),
         );
@@ -378,8 +468,26 @@ class _SchoolYearSubTrackFormState
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     switch (result) {
-      case CaptureSuccess():
+      case CaptureSuccess(:final queued):
         unawaited(Navigator.of(context).maybePop(true));
+        final year = _values.academicYear;
+        if (widget.existing == null && widget.nextYearOf != null) {
+          // Add next year (AC-1): confirmed only once the server accepted
+          // it; a queued save is "saved on this device" and stays pending
+          // in the lifecycle sync panel until it is.
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                queued
+                    ? l10n.subTrackLifecycleQueued
+                    : l10n.subTrackLifecycleNextYearSaved(
+                        _name.text.trim(),
+                        year == null ? '' : academicYearLabel(year),
+                      ),
+              ),
+            ),
+          );
+        }
         return;
       case CaptureRejected(:final violations)
           when violations.any(
@@ -429,7 +537,14 @@ class _SchoolYearSubTrackFormState
     final years = academicYearOptions(
       today: today,
       deadline: intent?.deadline,
-      include: widget.existing?.academicYear,
+      // Add next year: the pill only opens the form while Y+1 is within the
+      // picker on the learner's today, so its chip is always offered.
+      include:
+          widget.existing?.academicYear ??
+          switch (widget.nextYearOf?.academicYear) {
+            final year? => year + 1,
+            null => null,
+          },
     );
     final used = usedAcademicYears(
       widget.subTracks,

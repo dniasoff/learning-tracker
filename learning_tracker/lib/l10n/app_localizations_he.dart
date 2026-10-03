@@ -910,9 +910,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get statActiveTracks => 'מסלולים פעילים';
 
   @override
-  String get subTrackLifecycleActiveGroup => 'מסלולי משנה';
-
-  @override
   String subTrackLifecycleAddNextYear(String yearLabel) {
     return 'הוספת השנה הבאה ($yearLabel)';
   }
@@ -926,9 +923,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String subTrackLifecycleAddNextYearOutOfRange(String yearLabel) {
     return 'שנת $yearLabel מעבר לשנים שאפשר לתכנן';
   }
-
-  @override
-  String get subTrackLifecycleMoreOptions => 'אפשרויות נוספות';
 
   @override
   String get subTrackLifecycleEndAction => 'סיום מסלול המשנה עכשיו';
@@ -994,74 +988,12 @@ class AppLocalizationsHe extends AppLocalizations {
       'מסלול המשנה הזה הסתיים. אי אפשר לשנות אותו.';
 
   @override
-  String get subTrackLifecycleNotFound => 'מסלול המשנה הזה כבר לא זמין.';
-
-  @override
-  String subTrackLifecycleWindow(String start, String end) {
-    return '$start – $end';
-  }
-
-  @override
-  String subTrackLifecycleWindowOpen(String start) {
-    return 'החל מ$start';
-  }
-
-  @override
   String get subTrackLifecycleNextYearTitle => 'שנת הלימודים הבאה';
-
-  @override
-  String subTrackLifecycleNextYearFor(String yearLabel) {
-    return 'שנת הלימודים $yearLabel';
-  }
-
-  @override
-  String get subTrackLifecycleFieldName => 'שם';
-
-  @override
-  String get subTrackLifecycleFieldRate => 'יחידות בשבוע';
-
-  @override
-  String get subTrackLifecycleFieldWeeks => 'שבועות בשנה';
-
-  @override
-  String get subTrackLifecycleFieldShabbos => 'לומד בשבת';
-
-  @override
-  String get subTrackLifecycleFieldStartMonth => 'מתחיל';
-
-  @override
-  String get subTrackLifecycleFieldEndMonth => 'מסתיים';
-
-  @override
-  String get subTrackLifecycleNoEndMonth => 'ללא חודש סיום';
-
-  @override
-  String get subTrackLifecycleSave => 'שמירת מסלול המשנה';
-
-  @override
-  String get subTrackLifecycleNameRequired => 'יש להזין שם';
-
-  @override
-  String get subTrackLifecyclePositiveNumber => 'יש להזין מספר גדול מ-0';
-
-  @override
-  String get subTrackLifecycleWindowReversed => 'חודש הסיום לפני חודש ההתחלה';
 
   @override
   String subTrackLifecycleNextYearSaved(String name, String yearLabel) {
     return '$name נוסף לשנת $yearLabel';
   }
-
-  @override
-  String get subTrackLifecycleSaveFailed =>
-      'לא ניתן היה לשמור את מסלול המשנה. נסו שוב.';
-
-  @override
-  String get subTrackLifecycleLoadFailed =>
-      'לא ניתן היה לטעון את מסלולי המשנה.';
-
-  @override
-  String get subTrackLifecycleLoading => 'טוען מסלולי משנה';
 
   @override
   String get subTrackLifecycleQueued => 'נשמר במכשיר. יסונכרן כשתחזרו לרשת.';

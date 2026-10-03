@@ -99,6 +99,10 @@ final class DetailHarness {
   /// so the real engine (DNI-494) computes capacity and shortfall.
   CivilDate? deadline;
 
+  /// The engine's clock (default: the fixture's `engineAt(10000)`), so a
+  /// test can put the learner's today past a sub-track window (DNI-499).
+  DateTime? nowUtc;
+
   /// Forced capacity/shortfall per sub-track id, over the engine's values
   /// (for audience cases the fixture's numbers do not reach).
   final Map<String, CapacityValues> capacities = {};
@@ -129,7 +133,12 @@ final class DetailHarness {
       final e = latestEvents;
       if (t == null || e == null) return;
       final state = const LearnerStateEngine().run(
-        engineInputs(events: e, subTracks: t, goals: _goals(deadline)),
+        engineInputs(
+          events: e,
+          subTracks: t,
+          goals: _goals(deadline),
+          nowUtc: nowUtc,
+        ),
       );
       lastState = _withCapacities(state);
       out.add(lastState!);

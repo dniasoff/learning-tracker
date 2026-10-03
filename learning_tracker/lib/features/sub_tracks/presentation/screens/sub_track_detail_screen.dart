@@ -19,6 +19,8 @@ import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/add_ground_entry.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_capacity_bar.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_ground_tree.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_footer.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_sync_panel.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The routed detail of sub-track [subTrackId]: opened from a hub row on a
@@ -133,6 +135,10 @@ class _DetailBody extends ConsumerWidget {
               SubTrackDetailMenu(detail: detail),
             ],
           ),
+        // Story 2.8 (DNI-499): queued lifecycle writes stay visibly pending
+        // (AD-54), and an ended sub-track says it is read-only (AC-5).
+        const SubTrackLifecycleSyncPanel(),
+        if (detail.isEnded) const SubTrackEndedNote(),
         _SummaryCard(detail: detail),
         const SizedBox(height: 12),
         _UpNextCard(detail: detail),
@@ -161,7 +167,7 @@ class _DetailBody extends ConsumerWidget {
             MishnaHistoryRoute(curriculumId: track.curriculumId, leafRef: leaf),
           ),
         ),
-        // *+ Add ground* (Story 2.7 / DNI-498 AC-1, UX-DR-54, UX-DR-122):
+// *+ Add ground* (Story 2.7 / DNI-498 AC-1, UX-DR-54, UX-DR-122):
         // under the ground list, groundless included, for a parent on a
         // sub-track that has not ended. The button also hides itself for a
         // non-parent session and on a calendar-program curriculum (AD-45).
@@ -175,6 +181,12 @@ class _DetailBody extends ConsumerWidget {
               curriculumId: track.curriculumId,
             ),
           ),
+        ],
+        // Story 2.8 (DNI-499, AC-1, AC-2): the parent's Add next year.
+        if (detail.role == SubTrackDetailRole.parent) ...[
+          const SizedBox(height: 20),
+          SubTrackLifecycleFooter(track: track),
+        ],
         ],
       ],
     );

@@ -38,6 +38,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 
 import '../learner_state/c0_fixtures.dart';
@@ -262,6 +263,23 @@ int standInDailyTarget(Iterable<SubTrack> tracks) {
   return target < 1 ? 1 : target;
 }
 
+/// The sub-track screens' environment: the learner's [today] (the form's
+/// academic-year picker and the hub's Story 2.8 active/ended split, DNI-499),
+/// the curriculum's study days, English terms and locale.
+List<Override> subTrackFormEnvironmentOverrides({
+  CivilDate today = subTrackTestToday,
+  int studyDaysPerWeek = 5,
+}) => [
+  subTrackTodayProvider.overrideWithValue(today),
+  subTrackLifecycleTodayProvider.overrideWithValue(today),
+  studyDaysPerWeekProvider(
+    CurriculumId.mishnayos,
+  ).overrideWith((ref) async => studyDaysPerWeek),
+  useHebrewTermsProvider.overrideWith(_EnglishTerms.new),
+  currentTransliterationVariantProvider.overrideWith(_AshkenaziVariant.new),
+  currentAppLocaleProvider.overrideWithValue(const Locale('en')),
+];
+
 /// One rig per test.
 final class SubTrackHarness {
   SubTrackHarness({
@@ -394,13 +412,10 @@ final class SubTrackHarness {
     ),
     if (parentSession case final session?)
       subTrackParentSessionProvider.overrideWith((ref) async => session),
-    subTrackTodayProvider.overrideWithValue(today),
-    studyDaysPerWeekProvider(
-      CurriculumId.mishnayos,
-    ).overrideWith((ref) async => studyDaysPerWeek),
-    useHebrewTermsProvider.overrideWith(_EnglishTerms.new),
-    currentTransliterationVariantProvider.overrideWith(_AshkenaziVariant.new),
-    currentAppLocaleProvider.overrideWithValue(const Locale('en')),
+    ...subTrackFormEnvironmentOverrides(
+      today: today,
+      studyDaysPerWeek: studyDaysPerWeek,
+    ),
   ];
 
   /// Closes the stores.

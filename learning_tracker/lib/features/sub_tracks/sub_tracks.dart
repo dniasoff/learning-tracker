@@ -2,6 +2,7 @@
 // Import this barrel from outside the feature; avoid deep paths.
 library sub_tracks;
 
+
 export 'domain/sub_track_home_projection.dart';
 export 'domain/services/on_home_sub_tracks.dart';
 export 'presentation/controllers/sub_track_capture_controller.dart';
@@ -27,7 +28,7 @@ export 'presentation/widgets/pending_capture_rollback.dart';
 export 'presentation/widgets/sub_track_capture_section.dart';
 export 'presentation/widgets/sub_track_home_row.dart';
 export 'presentation/widgets/sub_track_hub_section.dart';
-export 'presentation/widgets/sub_track_list_detail_layout.dart';
+export 'presentation/widgets/sub_track_lifecycle_sync_panel.dart';
 export 'presentation/widgets/sub_track_read_only.dart';
 export 'presentation/widgets/up_to_picker.dart'
     show UpToActionButton, openUpToAndRecord, showUpToPicker;

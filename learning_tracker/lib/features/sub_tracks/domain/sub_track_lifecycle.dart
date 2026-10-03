@@ -12,6 +12,7 @@ import 'package:learning_tracker/domain/learner_state/predicates.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
 
 /// Whether [track] is listed as ended on the learner's civil [today]
 /// (AC-5, AC-6): it is tombstoned (`ended_at` set, by end, delete, undo or
@@ -20,36 +21,6 @@ import 'package:learning_tracker/features/learning/domain/commands/sub_track_com
 /// null `window_end` stays open, and `window_end` itself is still active.
 bool isEndedSubTrack(SubTrack track, CivilDate today) =>
     !holdsGround(track, today);
-
-/// The complete sub-track read held rows that failed strict decode
-/// (`CompleteReadReady.rejected`). The lifecycle surfaces show it as a
-/// read failure with retry instead of silently dropping the rows (AD-35):
-/// a missing row could hide a used academic year or a live sub-track.
-final class SubTrackReadRejectedException implements Exception {
-  /// Creates the failure for [count] undecodable rows.
-  const SubTrackReadRejectedException(this.count);
-
-  /// How many rows failed decode.
-  final int count;
-
-  @override
-  String toString() => 'SubTrackReadRejectedException($count rows)';
-}
-
-/// The sub-track read cannot start: no learner scope is resolved yet, or
-/// the sub-track repository is not ready (no active or authenticated
-/// account, ruling B1). The lifecycle surfaces show it as a read failure
-/// with retry, never as an empty list: nothing has been read, so "no
-/// sub-tracks" would be a false empty state that hides live and ended
-/// sub-tracks (and would offer an academic year another sub-track holds).
-/// The read restarts by itself once the scope and repository resolve.
-final class SubTrackReadNotReadyException implements Exception {
-  /// Creates the failure.
-  const SubTrackReadNotReadyException();
-
-  @override
-  String toString() => 'SubTrackReadNotReadyException';
-}
 
 /// A learner's sub-tracks split into the hub's active and ended groups.
 final class SubTrackLifecycleGroups {
@@ -88,59 +59,15 @@ SubTrackLifecycleGroups groupSubTracksByLifecycle(
 
 // ── Add next year (AC-1, AC-2) ──────────────────────────────────────────
 
-/// The month an academic year starts in (September): September to
-/// December fall in civil year `academic_year`, January to August in
-/// `academic_year + 1`. The same convention as the school-year form
-/// (Story 2.4 / DNI-495).
-const kSubTrackAcademicYearFirstMonth = DateTime.september;
+// The academic-year convention (September start), the picker range and
+// the month-bounded window dates are Story 2.4's (DNI-495,
+// `school_year_sub_track_form_validation.dart`); *Add next year* reuses
+// them so the pill, the prefill and the form agree.
 
-/// Without a deadline the academic-year picker offers the current year
-/// plus this many following years (Story 2.4 AC-5).
-const kSubTrackNoDeadlineExtraYears = 2;
-
-/// "2027–28" for academic year 2027.
-String subTrackAcademicYearLabel(int academicYear) =>
-    '$academicYear–${((academicYear + 1) % 100).toString().padLeft(2, '0')}';
-
-/// The academic year containing civil [date].
-int subTrackAcademicYearOf(CivilDate date) {
-  final year = int.parse(date.substring(0, 4));
-  final month = int.parse(date.substring(5, 7));
-  return month >= kSubTrackAcademicYearFirstMonth ? year : year - 1;
-}
-
-/// The last academic year the picker offers on [today]: the year holding
-/// [deadline], never before the current one, or the current year plus
-/// [kSubTrackNoDeadlineExtraYears] without a deadline.
-int lastPickableAcademicYear(CivilDate today, {CivilDate? deadline}) {
-  final current = subTrackAcademicYearOf(today);
-  if (deadline == null) return current + kSubTrackNoDeadlineExtraYears;
-  final deadlineYear = subTrackAcademicYearOf(deadline);
-  return deadlineYear < current ? current : deadlineYear;
-}
-
-/// The month (1–12) of civil [date].
-int subTrackMonthOf(CivilDate date) => int.parse(date.substring(5, 7));
-
-/// `window_start`: the 1st of [startMonth] within [academicYear].
-CivilDate schoolYearWindowStartOf(int academicYear, int startMonth) =>
-    _civil(_civilYearOf(academicYear, startMonth), startMonth, 1);
-
-/// `window_end`: the last day of [endMonth] within [academicYear], leap
-/// February included.
-CivilDate schoolYearWindowEndOf(int academicYear, int endMonth) {
-  final year = _civilYearOf(academicYear, endMonth);
-  // Day 0 of the next month is the last day of this one.
-  return _civil(year, endMonth, DateTime.utc(year, endMonth + 1, 0).day);
-}
-
-int _civilYearOf(int academicYear, int month) =>
-    month >= kSubTrackAcademicYearFirstMonth ? academicYear : academicYear + 1;
-
-CivilDate _civil(int year, int month, int day) =>
-    '${year.toString().padLeft(4, '0')}-'
-    '${month.toString().padLeft(2, '0')}-'
-    '${day.toString().padLeft(2, '0')}';
+/// The last academic year the school-year picker offers on [today]
+/// ([academicYearOptions] without an edited row's own year).
+int lastPickableAcademicYear(CivilDate today, {CivilDate? deadline}) =>
+    academicYearOptions(today: today, deadline: deadline).last;
 
 /// Whether *Add next year* can open for a source school-year sub-track.
 enum NextYearAvailability {
@@ -211,16 +138,13 @@ SubTrackDraft nextYearSubTrackDraft(SubTrack source) {
     name: source.name,
     type: SubTrackType.schoolYear,
     academicYear: next,
-    windowStart: schoolYearWindowStartOf(
-      next,
-      subTrackMonthOf(source.windowStart),
-    ),
-    windowEnd: end == null
-        ? null
-        : schoolYearWindowEndOf(next, subTrackMonthOf(end)),
+    windowStart: schoolYearWindowStart(next, _monthOf(source.windowStart)),
+    windowEnd: end == null ? null : schoolYearWindowEnd(next, _monthOf(end)),
     ratePerWeek: source.ratePerWeek,
     weeksPerYear: source.weeksPerYear,
     learnsOnShabbos: source.learnsOnShabbos,
     ground: const [],
   );
 }
+
+int _monthOf(CivilDate date) => int.parse(date.substring(5, 7));

@@ -1,38 +1,46 @@
-/// Shared rig for the Story 2.8 (DNI-499) lifecycle widget tests: the real
-/// governed `SubTrackCommands` over an in-memory sub-track repository,
-/// exposed through `learningCommandsProvider`, and the lifecycle reads
-/// pinned to a learner today, viewer and deadline.
+/// Shared rig for the Story 2.8 (DNI-499) lifecycle widget tests on the
+/// real DNI-497 sub-track detail and DNI-495 school-year form: the real
+/// governed `SubTrackCommands` over the detail harness's in-memory
+/// sub-track store, exposed through `learningCommandsProvider`, and the
+/// real learner-state engine run on the learner's today.
 library;
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
-import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
-import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_lifecycle_sources.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_footer.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_sync_panel.dart';
 
 import '../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../helpers/learner_state/in_memory_ports.dart';
 import '../../../helpers/learner_state_fixtures.dart';
+import '../../../helpers/sub_tracks/sub_track_harness.dart';
+import '../sub_track_detail_harness.dart';
 
 /// The learner's civil today in every lifecycle widget test.
 const lifecycleToday = '2026-10-01';
 
+/// The engine's clock on [lifecycleToday].
+final lifecycleNow = DateTime.utc(2026, 10, 1, 9);
+
 /// Ground of the seeded tracks.
-const lifecycleGround = [NodeEntry(level: 'masechta', ref: 'Berakhot')];
+const lifecycleGround = [peah];
 
 /// A ULID for fixture [n].
 String lifecycleId(int n) =>
@@ -49,7 +57,7 @@ SubTrack schoolYear({
   SubTrackEndReason? endReason,
 }) => SubTrack(
   id: lifecycleId(n),
-  curriculumId: 'shas',
+  curriculumId: engineCurriculum,
   name: name,
   type: SubTrackType.schoolYear,
   academicYear: academicYear,
@@ -72,7 +80,7 @@ SubTrack ongoing({
   SubTrackEndReason? endReason,
 }) => SubTrack(
   id: lifecycleId(n),
-  curriculumId: 'shas',
+  curriculumId: engineCurriculum,
   name: name,
   type: SubTrackType.ongoing,
   windowStart: '2026-01-01',
@@ -159,31 +167,10 @@ final class SubTrackLifecycleCommands implements LearningCommands {
   );
 }
 
-/// [InMemorySubTrackRepository] and [InMemoryGovernedIntentRepository]
-/// close their per-listener controllers in an async `onCancel`, which the
-/// widget tests' fake clock never completes, so a `.first` read (the
-/// commands' complete-read wait) would time out. These views cancel without
-/// awaiting the inner subscription; writes go straight through.
-final class _FakeAsyncSubTracks implements SubTrackRepository {
-  _FakeAsyncSubTracks(this.inner, {this.readOverride});
-
-  final InMemorySubTrackRepository inner;
-
-  /// When it returns a stream, the reads use it instead of [inner].
-  final Stream<CompleteRead<SubTrack>>? Function()? readOverride;
-
-  @override
-  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) =>
-      readOverride?.call() ??
-      inner
-          .watchAll(scope)
-          .asBroadcastStream(onCancel: (s) => unawaited(s.cancel()));
-
-  @override
-  Future<void> applyGovernedChange(LearnerScope scope, SubTrackChange change) =>
-      inner.applyGovernedChange(scope, change);
-}
-
+/// [InMemoryGovernedIntentRepository] closes its per-listener controllers
+/// in an async `onCancel`, which the widget tests' fake clock never
+/// completes, so a `.first` read (the commands' intent wait) would time
+/// out. This view cancels without awaiting the inner subscription.
 final class _FakeAsyncIntent implements GovernedIntentRepository {
   _FakeAsyncIntent(this.inner);
 
@@ -195,39 +182,45 @@ final class _FakeAsyncIntent implements GovernedIntentRepository {
       .asBroadcastStream(onCancel: (s) => unawaited(s.cancel()));
 }
 
-/// One learner's sub-tracks, commands and lifecycle reads.
+/// One learner's sub-tracks, commands, engine and lifecycle reads.
 final class LifecycleWorld {
-  /// Seeds [tracks] for the owner scope.
+  /// Seeds [tracks] for the owner scope, viewed as [role].
   LifecycleWorld(
     List<SubTrack> tracks, {
-    this.viewer = SubTrackLifecycleViewer.parent,
+    this.role = SubTrackDetailRole.parent,
     this.deadline,
     this.today = lifecycleToday,
   }) {
-    repo.seed(scope, tracks);
+    detail
+      ..nowUtc = lifecycleNow
+      ..deadline = deadline
+      ..seed(subTracks: tracks);
     intent.emit(
       scope,
       LearnerIntent(
         settings: c0Settings,
-        mainTracks: {
-          'shas': MainTrackIntent(
-            curriculumId: 'shas',
-            track: MainTrack(
-              curriculumId: 'shas',
-              state: MainTrackState.active,
+        mainTracks: {engineCurriculum: engineIntent()},
+        goals: {
+          if (deadline case final target?)
+            engineCurriculum: CurriculumGoals(
+              deadline: DeadlineGoal(
+                curriculumId: engineCurriculum,
+                targetDate: target,
+              ),
             ),
-          ),
         },
-        goals: const {},
       ),
     );
   }
 
-  /// The owner scope.
-  final scope = c0Scope();
+  /// The detail rig: the sub-track store, events and the real engine.
+  final detail = DetailHarness();
 
-  /// The sub-track store.
-  final repo = InMemorySubTrackRepository();
+  /// The owner scope.
+  LearnerScope get scope => detail.scope;
+
+  /// The sub-track store (offline, refusals, written entries).
+  InMemorySubTrackRepository get repo => detail.tracks;
 
   /// The governed intent (no calendar program).
   final intent = InMemoryGovernedIntentRepository();
@@ -236,17 +229,13 @@ final class LifecycleWorld {
   final analytics = RecordingLearningAnalytics();
 
   /// The viewer.
-  final SubTrackLifecycleViewer viewer;
+  final SubTrackDetailRole role;
 
   /// The curriculum's live deadline.
-  final String? deadline;
+  final CivilDate? deadline;
 
   /// The learner's civil today.
-  final String today;
-
-  /// When set, the lifecycle READS (not the commands) see this stream
-  /// instead of the store: a failing or never-completing read.
-  Stream<CompleteRead<SubTrack>> Function()? readOverride;
+  final CivilDate today;
 
   var _n = 0;
 
@@ -255,10 +244,10 @@ final class LifecycleWorld {
     SubTrackCommands(
       scope: scope,
       actor: parentActor,
-      subTracks: _FakeAsyncSubTracks(repo),
+      subTracks: detail.repository,
       intent: _FakeAsyncIntent(intent),
       today: () => today,
-      nowUtc: () => DateTime.utc(2026, 10, 1, 9),
+      nowUtc: () => lifecycleNow,
       newId: () =>
           '01JNEW00000000000000000${(++_n).toString().padLeft(3, '0')}',
       analytics: analytics,
@@ -270,41 +259,49 @@ final class LifecycleWorld {
   /// The stored sub-tracks.
   List<SubTrack> get stored => repo.tracksOf(scope);
 
-  /// The provider overrides of this world.
+  /// The provider overrides of this world. *Add next year* opens the real
+  /// school-year form in its next-year mode, pushed on the navigator (the
+  /// production opener pushes the same screen through the app router).
   List<Override> get overrides => [
-    activeLearnerScopeProvider.overrideWith((ref) async => scope),
-    subTrackRepositoryProvider.overrideWith(
-      (ref) async =>
-          _FakeAsyncSubTracks(repo, readOverride: () => readOverride?.call()),
+    ...detail.overrides(role: role, commands: commands),
+    governedIntentRepositoryProvider.overrideWith(
+      (ref) async => _FakeAsyncIntent(intent),
     ),
-    subTrackLifecycleTodayProvider.overrideWith((ref) => today),
-    subTrackLifecycleViewerProvider.overrideWith((ref) => viewer),
-    subTrackCurriculumDeadlineProvider.overrideWith(
-      (ref, _) => Stream.value(deadline),
+    subTrackParentSessionProvider.overrideWith(
+      (ref) async => role == SubTrackDetailRole.parent,
     ),
-    learningCommandsProvider.overrideWith((ref) async => commands),
+    ...subTrackFormEnvironmentOverrides(today: today),
+    subTrackNextYearFormProvider.overrideWithValue(
+      (context, source) async =>
+          await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (_) => SchoolYearSubTrackFormScreen(
+                curriculumId: source.curriculumId,
+                nextYearOf: source.id,
+              ),
+            ),
+          ) ??
+          false,
+    ),
   ];
 
   /// Releases the ports.
   Future<void> dispose() async {
     await commands.inner.dispose();
-    await repo.dispose();
+    await detail.dispose();
     await intent.dispose();
   }
 }
 
 /// A stand-in hub page: the queued-write panel, then one button per [ids]
-/// opening its detail through [open], so a test can assert the return to
+/// pushing the real sub-track detail, so a test can assert the return to
 /// the hub.
 class LifecycleHubHost extends StatelessWidget {
   /// Creates the host.
-  const LifecycleHubHost({super.key, required this.ids, required this.open});
+  const LifecycleHubHost({super.key, required this.ids});
 
   /// The sub-tracks to offer.
   final List<String> ids;
-
-  /// Opens a detail.
-  final Future<void> Function(BuildContext context, String id) open;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -315,7 +312,11 @@ class LifecycleHubHost extends StatelessWidget {
         for (final id in ids)
           TextButton(
             key: ValueKey('open:$id'),
-            onPressed: () => open(context, id),
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => SubTrackDetailScreen(subTrackId: id),
+              ),
+            ),
             child: Text('open $id'),
           ),
       ],

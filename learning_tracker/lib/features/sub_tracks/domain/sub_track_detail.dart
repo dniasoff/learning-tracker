@@ -57,9 +57,17 @@ final class SubTrackDetail {
   /// no-deadline note.
   final bool noDeadline;
 
+  /// Whether the sub-track is ended on the learner's civil today (Story 2.8
+  /// / DNI-499, AC-5): tombstoned (`ended_at` set) or its window has passed
+  /// with no write (AD-33). Exactly the engine's `!holdsGround` (AD-34): a
+  /// stored `ended_at` wins over a future window, a null `window_end` stays
+  /// open and `window_end` itself is still active. The detail is then
+  /// wholly read-only for every role.
+  bool get isEnded => track.isEnded || !state.holdsGround;
+
   /// Whether the viewer may reorder or remove ground: the parent, on a
-  /// sub-track that is not ended.
-  bool get canEdit => role == SubTrackDetailRole.parent && !track.isEnded;
+  /// sub-track that is not ended ([isEnded]).
+  bool get canEdit => role == SubTrackDetailRole.parent && !isEnded;
 
   /// Whether the shortfall tag may show (never for the child, NFR-9).
   bool get showsShortfall => role != SubTrackDetailRole.child;

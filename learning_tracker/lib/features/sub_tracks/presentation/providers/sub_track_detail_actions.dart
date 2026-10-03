@@ -19,6 +19,7 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_actions.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 final _log = AppLogger.instance;
@@ -166,7 +167,8 @@ final subTrackDetailMenuActionsProvider =
                 detail.canEdit && formTypes.contains(detail.track.type),
             onSelected: (context, detail) => edit(context, detail.track),
           ),
-        // DNI-499 (Story 2.8) adds End and Delete here.
+        // Story 2.8 (DNI-499): End sub-track now and Delete track.
+        ...subTrackLifecycleDetailMenuActions,
       ];
     });
 

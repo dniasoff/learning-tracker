@@ -7,8 +7,6 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_list_detail_layout.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_lifecycle_hub_section.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
@@ -158,6 +156,9 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
             children: [
               // DNI-495: reports a sub-track change refused at sync.
               const SubTrackSyncRejectionListener(),
+              // DNI-499 (AD-54): End, Delete and Add next year still waiting
+              // for the server, or refused with a retry.
+              const SubTrackLifecycleSyncPanel(),
               _buildActiveHeader(context, activeTracks.length),
               for (final track in activeTracks) ...[
                 Padding(
@@ -174,7 +175,6 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
                 ),
                 // DNI-495: the parent-only group provides its count and Add action.
                 SubTrackHubSection(curriculumId: track.curriculumId.storageKey),
-                const SubTrackLifecycleHubSection(),
               ],
             ],
           );

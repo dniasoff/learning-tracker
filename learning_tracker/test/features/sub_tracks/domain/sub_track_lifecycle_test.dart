@@ -5,6 +5,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/sub_tracks/domain/school_year_sub_track_form_validation.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
 
 import '../../../helpers/learner_state_fixtures.dart';
@@ -226,12 +227,13 @@ void main() {
     });
   });
 
-  test('academic-year label and year-of helpers', () {
-    expect(subTrackAcademicYearLabel(2027), '2027–28');
-    expect(subTrackAcademicYearLabel(2099), '2099–00');
-    expect(subTrackAcademicYearOf('2026-09-01'), 2026);
-    expect(subTrackAcademicYearOf('2026-08-31'), 2025);
+  test('the picker range is the school-year form\'s (DNI-495): the last '
+      'pickable year agrees with academicYearOptions', () {
     expect(lastPickableAcademicYear(_today), 2028);
     expect(lastPickableAcademicYear(_today, deadline: '2025-01-01'), 2026);
+    expect(
+      lastPickableAcademicYear(_today, deadline: '2030-03-01'),
+      academicYearOptions(today: _today, deadline: '2030-03-01').last,
+    );
   });
 }

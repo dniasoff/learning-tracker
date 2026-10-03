@@ -31,7 +31,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_lifecycle_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 
 /// The explicit lifecycle write that was queued.
 enum SubTrackLifecycleWrite {
@@ -362,4 +362,43 @@ class SubTrackLifecycleSyncNotifier
     if (scope == null || !ref.mounted) return;
     ref.read(subTrackLifecycleSyncStoreProvider(scope)).remove(write.changeId);
   }
+}
+
+/// Saves the *Add next year* [draft] (AC-1) as a new sub-track through
+/// `createSubTrack(addNextYear: true)` of the active learner's commands,
+/// captured before the save ([resolveSubTrackLifecycleOrigin]) so a queued
+/// result tracks under this learner even if the parent switches learners
+/// while it awaits the server. A queued result (AD-54) is handed to
+/// [subTrackLifecycleSyncProvider] as [yearLabel]'s pending *Add next
+/// year*. Null when no learner or commands are available; nothing is then
+/// written.
+///
+/// AD-45 limits are re-checked by the shared command against the latest
+/// complete sub-track read at save time, not the render-time snapshot, so
+/// a year another device took after render is refused. Two creates made at
+/// once while both devices are offline can both sync; AD-45 has the engine
+/// tolerate that excess. Server-side enforcement for owner batches is
+/// DNI-492's follow-up (learning-tracker-fyh.136; accepted risk fyh.127).
+Future<CaptureResult?> saveNextYearSubTrack(
+  SubTrackLifecycleReader read,
+  SubTrackDraft draft, {
+  required String yearLabel,
+}) async {
+  final origin = await resolveSubTrackLifecycleOrigin(read);
+  if (origin == null) return null;
+  final result = await origin.commands.createSubTrack(draft, addNextYear: true);
+  if (result is CaptureSuccess &&
+      result.queued &&
+      result.changeIds.isNotEmpty) {
+    read(subTrackLifecycleSyncProvider.notifier).track(
+      SubTrackLifecycleSync(
+        changeId: result.changeIds.first,
+        write: SubTrackLifecycleWrite.addNextYear,
+        name: draft.name,
+        yearLabel: yearLabel,
+      ),
+      origin,
+    );
+  }
+  return result;
 }

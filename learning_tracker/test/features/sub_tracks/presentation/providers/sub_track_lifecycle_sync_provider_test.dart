@@ -13,11 +13,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_lifecycle_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_lifecycle_sync_provider.dart';
 
-import '../../../helpers/learner_state/c0_fixtures.dart';
-import '../../../helpers/learner_state/fake_learning_commands.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learning_commands.dart';
 
 /// Bumped to rebuild `learningCommandsProvider` with fresh commands.
 class _Generation extends Notifier<int> {
