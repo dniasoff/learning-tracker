@@ -204,7 +204,6 @@ void main() {
       ),
       subTrackRepo ??
           subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
-      governedIntentRepositoryProvider.overrideWith((ref) async => intent),
       activeProfileProvider.overrideWith(
         (ref) async => _profile(ProfileMode.adult),
       ),
