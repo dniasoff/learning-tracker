@@ -129,6 +129,9 @@ void main() {
       expect(event.source, LearningEvent.sourceMain);
       expect(event.dateState, DateState.dated);
       expect(event.learnedOn, '2026-09-04');
+      // At the row's planner stage (the first stage order), as today's
+      // list records it: the leaf opens its AD-32 review cycle.
+      expect(event.stage, 1);
       expect(event.toStorage()[LearningEvent.kRecordedAt], _erev);
       expect(effectiveAt(event), _erev);
       expect(erev.rig.awards.single.eventId, event.id);
