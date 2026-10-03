@@ -3,10 +3,12 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { CALL_OPTS } from "./shared";
 import {
+  ENTITY_COLLECTION,
   LearningEventIntent,
   PlanContext,
   GovernedPlan,
   MAX_WRITES_PER_CALL,
+  TOMBSTONE,
   ULID_RE,
   newUlid,
   runGoverned,
@@ -14,18 +16,21 @@ import {
 } from "./write_with_change_log";
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Tutor learning callables — sub-tracks Story 1.23 (DNI-485)
+// Tutor learning callables — sub-tracks Story 1.23 (DNI-485) and Story 4.1
+// (DNI-509)
 // ══════════════════════════════════════════════════════════════════════════════
 //
-// The three server-side entry points through which a tutor records, corrects
-// and removes a talmid's learning (AD-31 / AD-53):
+// The server-side entry points through which a tutor records, corrects and
+// removes a talmid's learning (AD-31 / AD-53), and maintains his sub-track
+// for the talmid (AD-38 `subTrack`, Story 4.1):
 //
 //   tutorRecordLearning — `learn` events, `source = main`, `date_state`
 //                         `dated` (leaf ref + learned_on) or `before_tracking`
 //                         (leaf, or node ref + level; learned_on null). Covers
 //                         task tick, tick-to-here and before-tracking marking.
-//   tutorVoidLearning   — one `void` of a learn event, or REPLACE: the void
-//                         plus a corrected learn copy, in one transaction.
+//   tutorVoidLearning   — one `void` of a stored `source = main` learn event,
+//                         or REPLACE: the void plus a corrected learn copy on
+//                         the target's curriculum, in one transaction.
 //   tutorUnlearn        — AD-31 un-learn of a leaf set, executing the client's
 //                         unlearn plan (ruling B9): void every counted main
 //                         learn event of the curriculum whose ref is in the
@@ -33,6 +38,12 @@ import {
 //                         event, re-issuing the client-computed maximal
 //                         complement nodes as before_tracking events carrying
 //                         `original_recorded_at = effectiveAt(target)`.
+//   tutorUpsertSubTrack — the `subTrack` entity: create (also *Add next
+//                         year*: a new ULID for `academic_year + 1`), edit of
+//                         any field but `curriculum_id` (ground add, reorder
+//                         and remove replace `ground` whole), end and delete
+//                         (`ended_at` + `end_reason` tombstones, never a
+//                         hard delete).
 //
 // Each one is a thin adapter over `writeWithChangeLog`, which owns
 // authentication, the single `can_edit_learning` grant check (AD-53 — these
@@ -61,8 +72,26 @@ import {
 //   tutorVoidLearning   {grantId, ownerUid, profileId, actionId?, eventId,
 //                        targetId, replacement?: {id, fields: <learn fields>}}
 //   tutorUnlearn        {grantId, ownerUid, profileId, actionId (required),
-//                        curriculumId, leafSet: string[], nodeReissues?:
-//                        [{targetEventId, reissues: [{eventId, ref, level}]}]}
+//                        curriculumId, leafSet: string[], leafEventIds?:
+//                        string[], nodeReissues?: [{targetEventId, reissues:
+//                        [{eventId, ref, level}]}]}
+//   tutorUpsertSubTrack {grantId, ownerUid, profileId, actionId?, subTrackId,
+//                        op: "create" | "edit" | "end" | "delete",
+//                        fields?: <AD-52 sub_tracks fields>}
+//                        create: `fields` is the full new doc (the doc must be
+//                        absent); actionId defaults to subTrackId. edit:
+//                        `fields` holds only the changed fields, `null`
+//                        clears a nullable one (the doc must exist); actionId
+//                        required. end / delete: no `fields`; actionId
+//                        required. `ended_at`, `end_reason` and
+//                        `last_change_id` are never caller fields.
+//
+// `leafEventIds` (DNI-486) names the exact leaf learn events the client's
+// engine counts. The server cannot evaluate the AD-36 lock-window / count
+// predicate (it needs the learner's calendar and settings history), so when
+// the client sends the ids the server voids exactly those and never a stored
+// but uncounted (lock-ignored) event that happens to share a ref. Without
+// the field the legacy ref match over `leafSet` applies.
 //
 // Chunking (AD-54): one call is one transaction of at most
 // MAX_WRITES_PER_CALL writes (events + their pts_ entries + the receipt);
@@ -223,16 +252,33 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
   if (replacement) assertUniqueIds([voidId, targetId, replacement.id]);
   else if (voidId === targetId) bad("event ids must be unique");
 
+  // Both shapes read the stored target in the transaction and require a
+  // counted-source learn event a tutor may void: `kind = learn` (AD-31) and
+  // `source = main` (Epic 1 tutors write main-track learning only, so they
+  // may not void a sub-track event either). A replacement must stay on the
+  // target's curriculum: a correction never moves learning to another track.
+  const readTarget = async (ctx: PlanContext): Promise<FirebaseFirestore.DocumentData> => {
+    const snap = await ctx.txn.get(ctx.profileRef.collection("learning_events").doc(targetId));
+    if (!snap.exists) throw new HttpsError("not-found", "Void target does not exist");
+    const stored = snap.data()!;
+    if (stored.kind !== "learn") bad("A void must target a learn event");
+    if (stored.source !== MAIN_SOURCE) bad("A tutor may void only a main-track learn event");
+    return stored;
+  };
+
   if (!replacement) {
-    // A plain void: the helper rejects a target that is not a learn event
-    // (AD-31); an absent target is not an error.
+    const plan = async (ctx: PlanContext): Promise<GovernedPlan> => {
+      await readTarget(ctx);
+      return { entries: [], events: [voidEvent] };
+    };
     return writeWithChangeLog(request.auth, {
       ownerUid: target.ownerUid,
       profileId: target.profileId,
       grantId: target.grantId as string | null | undefined,
       actionId: target.actionId ?? voidId,
       auditAction: "learning_voided",
-      events: [voidEvent],
+      plan,
+      planKey: `tutorVoidLearning:${JSON.stringify([voidId, targetId])}`,
     });
   }
 
@@ -242,10 +288,10 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
   // move the learning to "now" for lock, streak or earning order.
   const replacementEvent = replacement;
   const plan = async (ctx: PlanContext): Promise<GovernedPlan> => {
-    const snap = await ctx.txn.get(ctx.profileRef.collection("learning_events").doc(targetId));
-    if (!snap.exists) throw new HttpsError("not-found", "Replace target does not exist");
-    const stored = snap.data()!;
-    if (stored.kind !== "learn") bad("A void must target a learn event");
+    const stored = await readTarget(ctx);
+    if (replacementEvent.fields.curriculum_id !== stored.curriculum_id) {
+      bad("A replacement must keep the target's curriculum");
+    }
     if (await isVoided(ctx, targetId)) {
       throw new HttpsError("failed-precondition", "Replace target is already voided");
     }
@@ -286,7 +332,7 @@ function chunks<T>(xs: T[], size: number): T[][] {
 }
 
 function parseUnlearn(data: Record<string, unknown>): {
-  curriculumId: string; leafSet: string[]; nodeReissues: NodeReissuePlan[];
+  curriculumId: string; leafSet: string[]; leafEventIds: string[] | null; nodeReissues: NodeReissuePlan[];
 } {
   if (!nonEmptyString(data.curriculumId, 200)) bad("curriculumId must be a non-empty string");
   if (!Array.isArray(data.leafSet) || data.leafSet.length === 0) bad("leafSet must be a non-empty array");
@@ -295,6 +341,16 @@ function parseUnlearn(data: Record<string, unknown>): {
   if (!leafSet.every((r) => nonEmptyString(r))) bad("leafSet entries must be refs");
   if (new Set(leafSet).size !== leafSet.length) bad("leafSet entries must be unique");
   const leaves = new Set(leafSet as string[]);
+
+  let leafEventIds: string[] | null = null;
+  if (data.leafEventIds !== undefined && data.leafEventIds !== null) {
+    if (!Array.isArray(data.leafEventIds)) bad("leafEventIds must be an array");
+    const ids = data.leafEventIds as unknown[];
+    if (ids.length > MAX_WRITES_PER_CALL) bad("leafEventIds is too large for one call");
+    if (!ids.every(isUlid)) bad("leafEventIds entries must be ULIDs");
+    if (new Set(ids).size !== ids.length) bad("leafEventIds entries must be unique");
+    leafEventIds = ids as string[];
+  }
 
   const rawReissues = data.nodeReissues ?? [];
   if (!Array.isArray(rawReissues)) bad("nodeReissues must be an array");
@@ -330,7 +386,10 @@ function parseUnlearn(data: Record<string, unknown>): {
     });
     return { targetEventId: n.targetEventId as string, reissues };
   });
-  return { curriculumId: data.curriculumId as string, leafSet: leafSet as string[], nodeReissues };
+  for (const n of nodeReissues) {
+    if (leafEventIds?.includes(n.targetEventId)) bad("a node target may not be in leafEventIds");
+  }
+  return { curriculumId: data.curriculumId as string, leafSet: leafSet as string[], leafEventIds, nodeReissues };
 }
 
 /**
@@ -346,14 +405,33 @@ function parseUnlearn(data: Record<string, unknown>): {
 function unlearnPlan(
   curriculumId: string,
   leafSet: string[],
+  leafEventIds: string[] | null,
   nodeReissues: NodeReissuePlan[],
 ): (ctx: PlanContext) => Promise<GovernedPlan> {
   return async (ctx) => {
     const events = ctx.profileRef.collection("learning_events");
 
-    // (a) counted leaf learn events with ref ∈ leafSet.
+    // (a) counted leaf learn events with ref ∈ leafSet. When the client names
+    // them (leafEventIds — the engine's counted set), exactly those, each
+    // checked against the store; a stored but uncounted (lock-ignored) event
+    // with the same ref is never voided.
     const candidates = new Set<string>();
-    for (const refs of chunks(leafSet, IN_CHUNK)) {
+    if (leafEventIds !== null) {
+      const leaves = new Set(leafSet);
+      const snaps = leafEventIds.length
+        ? await ctx.txn.getAll(...leafEventIds.map((id) => events.doc(id)))
+        : [];
+      for (const snap of snaps) {
+        if (!snap.exists) throw new HttpsError("not-found", "Un-learn leaf event does not exist");
+        const e = snap.data()!;
+        if (e.kind !== "learn") bad("A void must target a learn event");
+        if (e.curriculum_id !== curriculumId || e.source !== MAIN_SOURCE || !leaves.has(e.ref)) {
+          bad("Un-learn leaf event must be a main learn event of this curriculum with a ref in leafSet");
+        }
+        candidates.add(snap.id);
+      }
+    }
+    for (const refs of leafEventIds === null ? chunks(leafSet, IN_CHUNK) : []) {
       const snap = await ctx.txn.get(events.where("ref", "in", refs));
       for (const d of snap.docs) {
         const e = d.data();
@@ -423,7 +501,7 @@ function unlearnPlan(
 
 export const tutorUnlearn = onCall(CALL_OPTS, (request) => runGoverned(LOG_ENTITY, async () => {
   const data = requestObject(request.data);
-  const target = parseTarget(data, ["curriculumId", "leafSet", "nodeReissues"]);
+  const target = parseTarget(data, ["curriculumId", "leafSet", "leafEventIds", "nodeReissues"]);
   // Void ids are minted on the server, so cross-call replay safety needs the
   // client's action id: a retry returns the stored receipt, never re-plans.
   if (!target.actionId) bad("actionId (client ULID) is required for tutorUnlearn");
@@ -434,7 +512,96 @@ export const tutorUnlearn = onCall(CALL_OPTS, (request) => runGoverned(LOG_ENTIT
     grantId: target.grantId as string | null | undefined,
     actionId: target.actionId,
     auditAction: "learning_unlearned",
-    plan: unlearnPlan(plan.curriculumId, plan.leafSet, plan.nodeReissues),
-    planKey: `tutorUnlearn:${JSON.stringify([plan.curriculumId, plan.leafSet, plan.nodeReissues])}`,
+    plan: unlearnPlan(plan.curriculumId, plan.leafSet, plan.leafEventIds, plan.nodeReissues),
+    planKey: `tutorUnlearn:${JSON.stringify(plan.leafEventIds === null
+      ? [plan.curriculumId, plan.leafSet, plan.nodeReissues]
+      : [plan.curriculumId, plan.leafSet, plan.nodeReissues, plan.leafEventIds])}`,
+  });
+}));
+
+// ── tutorUpsertSubTrack (Story 4.1, DNI-509) ─────────────────────────────────
+
+/** Log label for tutorUpsertSubTrack's `{entity, code}` failure lines. */
+const SUB_TRACK_ENTITY = "subTrack";
+
+const SUB_TRACKS = ENTITY_COLLECTION.subTrack;
+
+/** The sub-track lifecycle operations a tutor may request. */
+type SubTrackOp = "create" | "edit" | "end" | "delete";
+
+const SUB_TRACK_OPS: ReadonlySet<unknown> = new Set(["create", "edit", "end", "delete"]);
+
+/**
+ * Intent fields a tutor create or edit may carry (AD-52 `sub_tracks`). The
+ * lifecycle pair `ended_at` / `end_reason` is set only by `end` / `delete`
+ * (a tutor never re-adds through an edit) and `last_change_id` only by the
+ * helper; writeWithChangeLog validates every value's type, the final doc's
+ * shape and the AD-45 limits.
+ */
+const SUB_TRACK_INTENT_FIELDS: ReadonlySet<string> = new Set([
+  "curriculum_id", "name", "type", "academic_year", "window_start", "window_end",
+  "rate_per_week", "weeks_per_year", "learns_on_shabbos", "ground",
+]);
+
+const END_REASON: Readonly<Record<"end" | "delete", string>> = { end: "ended", delete: "deleted" };
+
+const AUDIT_ACTION: Readonly<Record<SubTrackOp, string>> = {
+  create: "sub_track_created",
+  edit: "sub_track_edited",
+  end: "sub_track_ended",
+  delete: "sub_track_deleted",
+};
+
+function parseSubTrackFields(raw: unknown, op: "create" | "edit"): Record<string, unknown> {
+  if (!isObject(raw)) bad("fields must be an object");
+  const fields = raw as Record<string, unknown>;
+  const keys = Object.keys(fields);
+  if (keys.length === 0) bad("fields must not be empty");
+  for (const k of keys) {
+    if (!SUB_TRACK_INTENT_FIELDS.has(k)) bad(`Field not allowed on a tutor sub-track ${op}: ${k}`);
+    // A create writes the whole new doc: there is nothing to clear.
+    if (op === "create" && fields[k] === null) bad(`A create cannot clear ${k}`);
+  }
+  return { ...fields };
+}
+
+export const tutorUpsertSubTrack = onCall(CALL_OPTS, (request) => runGoverned(SUB_TRACK_ENTITY, async () => {
+  const data = requestObject(request.data);
+  const target = parseTarget(data, ["subTrackId", "op", "fields"]);
+  if (!isUlid(data.subTrackId)) bad("subTrackId must be a client ULID");
+  const subTrackId = data.subTrackId as string;
+  if (!SUB_TRACK_OPS.has(data.op)) bad("op must be create, edit, end or delete");
+  const op = data.op as SubTrackOp;
+
+  let fields: Record<string, unknown>;
+  if (op === "create" || op === "edit") {
+    fields = parseSubTrackFields(data.fields, op);
+  } else {
+    if (data.fields !== undefined && data.fields !== null) bad(`${op} takes no fields`);
+    fields = { ended_at: TOMBSTONE, end_reason: END_REASON[op] };
+  }
+  // A create's stable replay key is the new doc's own client ULID; every
+  // other operation is a new user action that must name its own.
+  const actionId = target.actionId ?? (op === "create" ? subTrackId : undefined);
+  if (!actionId) bad(`actionId (client ULID) is required for ${op}`);
+
+  return writeWithChangeLog(request.auth, {
+    ownerUid: target.ownerUid,
+    profileId: target.profileId,
+    grantId: target.grantId as string | null | undefined,
+    actionId,
+    auditAction: AUDIT_ACTION[op],
+    entries: [{
+      entity: "subTrack",
+      entityId: subTrackId,
+      docs: [{
+        collection: SUB_TRACKS,
+        docId: subTrackId,
+        fields,
+        // create: the doc must be absent (never overwritten); edit, end and
+        // delete: the doc must exist, so an edit never makes a partial doc.
+        mode: op === "create" ? "create" : "update",
+      }],
+    }],
   });
 }));
