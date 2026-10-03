@@ -147,10 +147,16 @@ final class SubTrackGroundEditState {
     this.pending,
     this.rollback,
     this.lateRejections = 0,
+    this.saving = false,
   });
 
   /// The optimistic order of the edit in flight, or null.
   final List<NodeEntry>? pending;
+
+  /// A tutor's edit is in flight (Story 4.2 / DNI-510, AC-2, AC-4): a tutor
+  /// write shows no optimistic order (AD-53), so the stored order stays on
+  /// screen, with the controls held, until the callable has answered.
+  final bool saving;
 
   /// The rollback of the queued edits the server refused after they were
   /// accepted locally, or null.
@@ -161,7 +167,7 @@ final class SubTrackGroundEditState {
   final int lateRejections;
 
   /// Whether an edit is in flight.
-  bool get busy => pending != null;
+  bool get busy => pending != null || saving;
 
   /// The order to render over the [stored] ground: the pending order;
   /// else, while the store still shows a refused edit's order (a cache
@@ -272,8 +278,12 @@ class SubTrackGroundEditor extends Notifier<SubTrackGroundEditState> {
   }) async {
     if (busy) return false;
     final sent = List<NodeEntry>.unmodifiable(next);
+    // A tutor's write is shown only once its callable has succeeded
+    // (AD-53, Story 4.2 AC-2): no optimistic order on a tutor device.
+    final tutored = ref.read(activeTutoredProfileSelectionProvider) != null;
     state = SubTrackGroundEditState(
-      pending: sent,
+      pending: tutored ? null : sent,
+      saving: tutored,
       rollback: state.rollback,
       lateRejections: state.lateRejections,
     );

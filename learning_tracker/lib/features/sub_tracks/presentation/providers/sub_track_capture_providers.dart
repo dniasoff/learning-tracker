@@ -371,8 +371,8 @@ Future<CaptureResult?> captureLeaves(
   // never reads as recorded on another profile (cross-profile isolation).
   final container = ProviderScope.containerOf(context, listen: false);
   final scope = ref.read(activeLearnerScopeProvider).asData?.value;
-  final optimistic =
-      scope != null && ref.read(activeTutoredProfileSelectionProvider) == null;
+  final tutored = ref.read(activeTutoredProfileSelectionProvider) != null;
+  final optimistic = scope != null && !tutored;
   final pending = ref.read(pendingCapturesProvider.notifier);
   final token = optimistic
       ? pending.add(scope, curriculumId, source, refs)
@@ -444,6 +444,9 @@ Future<CaptureResult?> captureLeaves(
       result is CaptureSuccess ? result.eventIds.length : refs.length,
     ),
     messenger: messenger,
+    // A tutor's sub-track capture offers no Undo (Story 4.1 keeps a tutor's
+    // voids to main-track events; Story 4.2 / DNI-510).
+    undoable: !tutored || source == LearningEvent.sourceMain,
     onUndone: () {
       if (result case CaptureSuccess(:final eventIds) when optimistic) {
         pending.dropEvents(eventIds);

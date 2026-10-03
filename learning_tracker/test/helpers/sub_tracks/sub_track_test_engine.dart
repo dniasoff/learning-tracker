@@ -24,6 +24,8 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_session.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_write_availability.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 
 import '../learner_state/c0_fixtures.dart';
 import '../learner_state/fake_learning_commands.dart';
@@ -246,6 +248,7 @@ List<Override> subTrackEngineOverrides({
   LearnerScope? scope,
   Stream<LearnerState> Function()? states,
   Map<String, List<NodeEntry>> groundOf = const {},
+  TutorWriteAvailability? availability,
 }) {
   final activeScope = scope ?? c0Scope();
   final repo = InMemorySubTrackRepository()
@@ -270,6 +273,12 @@ List<Override> subTrackEngineOverrides({
     ),
     learningCommandsProvider.overrideWith((ref) async => commands),
     subTrackViewerRoleProvider.overrideWithValue(role),
+    // Story 4.2 (DNI-510): a tutor's write controls follow his live
+    // availability (editing access, connectivity, the talmid's lock).
+    if (availability != null) ...[
+      tutorWriteAvailabilityProvider.overrideWithValue(availability),
+      tutorLearnerNameProvider.overrideWithValue('Yossi'),
+    ],
     ...positionLabelOverrides(),
   ];
 }

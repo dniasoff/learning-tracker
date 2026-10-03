@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_home_projection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/controllers/sub_track_capture_controller.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_session.dart';
 
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
@@ -32,11 +33,13 @@ ProviderContainer _container({
   LearningCommands? commands,
   bool noCommands = false,
   SubTrackViewerRole role = SubTrackViewerRole.child,
+  bool writesAllowed = true,
   Future<LearningCommands?> Function()? commandsFactory,
 }) {
   final container = ProviderContainer(
     overrides: [
       subTrackViewerRoleProvider.overrideWithValue(role),
+      subTrackWritesAllowedProvider.overrideWithValue(writesAllowed),
       learningCommandsProvider.overrideWith(
         (ref) =>
             commandsFactory?.call() ??
@@ -68,8 +71,8 @@ void main() {
     expect(c.read(subTrackCaptureControllerProvider).inFlight, isEmpty);
   });
 
-  test('ignores a row that cannot capture, a tutor, and a second tap in '
-      'flight', () async {
+  test('ignores a row that cannot capture, a tutor who may not write now '
+      '(Story 4.2 AC-5/AC-6), and a second tap in flight', () async {
     final commands = FakeLearningCommands();
     expect(
       await _controller(_container(commands: commands)).plusOne(
@@ -84,7 +87,11 @@ void main() {
     );
     expect(
       await _controller(
-        _container(commands: commands, role: SubTrackViewerRole.tutor),
+        _container(
+          commands: commands,
+          role: SubTrackViewerRole.tutor,
+          writesAllowed: false,
+        ),
       ).plusOne(_item),
       isA<PlusOneIgnored>(),
     );
@@ -98,6 +105,16 @@ void main() {
     slow.complete(commands);
     expect(await first, isA<PlusOneRecorded>());
     expect(commands.calls, hasLength(1));
+  });
+
+  test('a permitted, online tutor records through the session commands '
+      '(Story 4.2 AC-1)', () async {
+    final commands = FakeLearningCommands();
+    final outcome = await _controller(
+      _container(commands: commands, role: SubTrackViewerRole.tutor),
+    ).plusOne(_item);
+    expect(outcome, isA<PlusOneRecorded>());
+    expect(commands.calls.single.args['source'], schoolId);
   });
 
   test(

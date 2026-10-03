@@ -9,10 +9,12 @@ import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_home_projection.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/controllers/sub_track_capture_controller.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_session.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_home_row.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_read_only.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorWriteNote;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The Learn tab's sub-track section.
@@ -115,6 +117,7 @@ class AlsoLearningSection extends ConsumerWidget {
       subTrackCaptureControllerProvider.select((s) => s.inFlight),
     );
     final navigator = ref.watch(subTrackNavigatorProvider);
+    final writesBlocked = ref.watch(subTrackWritesBlockedProvider);
 
     return Padding(
       key: const Key('alsoLearningSection'),
@@ -133,10 +136,10 @@ class AlsoLearningSection extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          if (role == SubTrackViewerRole.tutor) ...[
-            const SubTrackTutorReadOnlyNote(),
-            const SizedBox(height: 12),
-          ],
+          // Story 4.2 (AC-5, AC-6): one note when a tutor may not write now
+          // (no editing access, or offline); nothing otherwise.
+          if (role == SubTrackViewerRole.tutor)
+            const TutorWriteNote(padding: EdgeInsets.only(bottom: 12)),
           if (notSaved.isNotEmpty) ...[
             _NotSavedList(entries: notSaved, onRetry: _retryNotSaved),
             const SizedBox(height: 12),
@@ -147,6 +150,7 @@ class AlsoLearningSection extends ConsumerWidget {
               item: item,
               role: role,
               capturing: inFlight.contains(item.subTrackId),
+              writesBlocked: writesBlocked,
               onOpen: navigator.canOpen(SubTrackDestination.detail)
                   ? () => navigator.openDetail(context, item)
                   : null,
@@ -173,6 +177,8 @@ class AlsoLearningSection extends ConsumerWidget {
     final controller = ref.read(subTrackCaptureControllerProvider.notifier);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final tutor =
+        ref.read(subTrackViewerRoleProvider) == SubTrackViewerRole.tutor;
     final outcome = await controller.plusOne(item);
     switch (outcome) {
       case PlusOneRecorded(:final eventIds):
@@ -195,11 +201,16 @@ class AlsoLearningSection extends ConsumerWidget {
           ..showSnackBar(
             SnackBar(
               content: Text(l10n.subTrackHomeRecorded),
-              action: SnackBarAction(
-                label: l10n.undoLabel,
-                onPressed: () =>
-                    _undo(messenger, l10n, controller, item, eventIds),
-              ),
+              // Story 4.1 keeps a tutor's voids to main-track events, so a
+              // tutor's sub-track capture offers no Undo (the parent can
+              // undo it from the change history).
+              action: tutor
+                  ? null
+                  : SnackBarAction(
+                      label: l10n.undoLabel,
+                      onPressed: () =>
+                          _undo(messenger, l10n, controller, item, eventIds),
+                    ),
             ),
           );
       case PlusOneFailed():

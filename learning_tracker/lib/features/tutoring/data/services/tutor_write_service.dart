@@ -817,7 +817,8 @@ class TutorWriteService {
   // emitted through [LearningAnalytics] — enums and counts only (AD-47).
 
   /// Creates the sub-track [subTrackId] (a new client ULID) from [draft].
-  /// *Add next year* is a create too: a new ULID with `academic_year + 1`.
+  /// *Add next year* is a create too: a new ULID with `academic_year + 1`
+  /// ([nextYear] reports it as `add_next_year`, Story 4.2 / DNI-510).
   /// [actionId] defaults to [subTrackId] — the create's stable replay key.
   Future<TutorWriteResult> createSubTrack({
     required String grantId,
@@ -826,6 +827,7 @@ class TutorWriteService {
     required String subTrackId,
     required SubTrackDraft draft,
     String? actionId,
+    bool nextYear = false,
   }) async {
     final action = actionId ?? subTrackId;
     final created = SubTrack(
@@ -854,7 +856,13 @@ class TutorWriteService {
       fields: fields,
       actionId: action,
     );
-    _emitSubTrackLifecycle(result, created, SubTrackLifecycleAction.create);
+    _emitSubTrackLifecycle(
+      result,
+      created,
+      nextYear
+          ? SubTrackLifecycleAction.addNextYear
+          : SubTrackLifecycleAction.create,
+    );
     return result;
   }
 

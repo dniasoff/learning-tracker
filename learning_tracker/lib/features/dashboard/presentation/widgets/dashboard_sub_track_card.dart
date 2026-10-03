@@ -70,7 +70,9 @@ class DashboardSubTracksSection extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (role == SubTrackViewerRole.parent)
+              // Story 4.2 (DNI-510): the tutor manages the talmid's tracks
+              // from the same hub.
+              if (role != SubTrackViewerRole.child)
                 TextButton(
                   key: const Key('dashboardSubTracksManage'),
                   onPressed: () => navigator.openHub(context),
@@ -83,10 +85,6 @@ class DashboardSubTracksSection extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-          if (role == SubTrackViewerRole.tutor) ...[
-            const SubTrackTutorReadOnlyNote(),
-            const SizedBox(height: 12),
-          ],
           for (final item in items) ...[
             DashboardSubTrackCard(
               key: ValueKey('dashboardSubTrack-${item.subTrackId}'),

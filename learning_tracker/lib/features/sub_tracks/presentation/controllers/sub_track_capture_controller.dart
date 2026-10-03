@@ -48,7 +48,8 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_anal
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_home_projection.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_session.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart'
+    show subTrackWritesAllowedProvider;
 
 /// What a *+1* tap did.
 sealed class PlusOneOutcome {
@@ -344,7 +345,9 @@ class SubTrackCaptureController extends Notifier<SubTrackCaptureState> {
     if (!item.canCapture ||
         position == null ||
         state.inFlight.contains(item.subTrackId) ||
-        ref.read(subTrackViewerRoleProvider) == SubTrackViewerRole.tutor) {
+        // Story 4.2 (AC-1, AC-5, AC-6): a tutor records through his tutor
+        // commands only while he may write now.
+        !ref.read(subTrackWritesAllowedProvider)) {
       return const PlusOneIgnored();
     }
     final binding = _binding;

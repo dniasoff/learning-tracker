@@ -29,11 +29,11 @@ String subTrackPositionLabel(WidgetRef ref, String leafRef) {
 /// badge (UX-DR-16). The body opens the detail (AC-7); each action keeps its
 /// own handler.
 ///
-/// Role gating (AC-3, AC-4, AC-9):
+/// Role gating (AC-3, AC-4, AC-9; Story 4.2 / DNI-510 AC-1, AC-5, AC-6):
 /// * child — groundless / all recorded: *Up to…* and *+1* disabled;
-/// * parent — groundless / all recorded: *Add ground* only;
-/// * tutor — every write control visible and disabled; groundless shows a
-///   disabled *Add ground*, all recorded a disabled *Up to…* / *+1*.
+/// * parent and tutor — groundless / all recorded: *Add ground* only;
+/// * [writesBlocked] (a tutor without editing access, offline, or with the
+///   talmid locked) — every write control stays visible but disabled.
 class SubTrackHomeRow extends ConsumerWidget {
   /// Creates the row for [item] as seen by [role].
   const SubTrackHomeRow({
@@ -45,6 +45,7 @@ class SubTrackHomeRow extends ConsumerWidget {
     this.onUpTo,
     this.onAddGround,
     this.capturing = false,
+    this.writesBlocked = false,
   });
 
   /// The engine projection of the track.
@@ -71,6 +72,11 @@ class SubTrackHomeRow extends ConsumerWidget {
   /// A *+1* for this row is in flight: *+1* is held disabled so a rapid
   /// second tap cannot record the same leaf twice.
   final bool capturing;
+
+  /// The session may not write sub-track learning right now (a tutor
+  /// without editing access, offline, or with the talmid locked): every
+  /// write control is visible but disabled (UX-DR-36, UX-DR-158).
+  final bool writesBlocked;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -180,22 +186,21 @@ class SubTrackHomeRow extends ConsumerWidget {
   }
 
   List<Widget> _actions(BuildContext context, AppLocalizations l10n) {
-    final isTutor = role == SubTrackViewerRole.tutor;
     final showAddGround = switch (item.kind) {
       SubTrackRowKind.active => false,
-      SubTrackRowKind.groundless => role != SubTrackViewerRole.child,
-      SubTrackRowKind.allRecorded => role == SubTrackViewerRole.parent,
+      SubTrackRowKind.groundless ||
+      SubTrackRowKind.allRecorded => role != SubTrackViewerRole.child,
     };
     if (showAddGround) {
       return [
         _AddGroundButton(
           key: Key('subTrackHomeAddGround-${item.subTrackId}'),
           label: l10n.subTrackHomeAddGround,
-          onPressed: isTutor ? null : onAddGround,
+          onPressed: writesBlocked ? null : onAddGround,
         ),
       ];
     }
-    final canCapture = item.canCapture && !isTutor;
+    final canCapture = item.canCapture && !writesBlocked;
     return [
       _UpToButton(
         key: Key('subTrackHomeUpTo-${item.subTrackId}'),

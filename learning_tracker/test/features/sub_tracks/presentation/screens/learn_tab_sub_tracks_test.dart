@@ -131,6 +131,9 @@ List<Override> _withSubTracks({
       commands: EngineBackedCommands(engine),
       role: role,
       states: states,
+      availability: role == SubTrackViewerRole.tutor
+          ? TutorWriteAvailability.noEditAccess
+          : null,
     ),
     if (navigator != null)
       subTrackNavigatorProvider.overrideWithValue(navigator),
@@ -332,8 +335,9 @@ void main() {
     expect(pushed.single, isA<TextDisplayRoute>());
   });
 
-  testWidgets('AC-9: on a tutor device the sub-track rows are read-only while '
-      'today\'s main-track tasks still open for capture', (tester) async {
+  testWidgets('AC-9 / Story 4.2 AC-5: for a tutor without editing access the '
+      'sub-track rows are read-only while today\'s main-track tasks still '
+      'open for capture', (tester) async {
     await tester.binding.setSurfaceSize(const Size(400, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final router = _MockStackRouter();
@@ -351,7 +355,7 @@ void main() {
     );
     await _settle(tester);
     expect(
-      find.text('Editing sub-tracks from a tutor device is coming soon'),
+      find.text("Yossi's parent hasn't given you editing access"),
       findsOneWidget,
     );
     await tester.tap(find.text('Shabbos 3:2'));
