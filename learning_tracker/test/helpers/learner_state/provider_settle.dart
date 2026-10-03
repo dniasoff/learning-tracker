@@ -20,16 +20,3 @@ Future<AsyncValue<T>> settledAsync<T>(
   }
   return sub.read();
 }
-
-/// Matches an [AsyncError] whose error is the `c0Stub(owner, what)`
-/// [UnimplementedError].
-Matcher isAsyncC0Stub(String owner, String what) =>
-    isA<AsyncError<Object?>>().having(
-      (e) => e.error,
-      'error',
-      isA<UnimplementedError>().having(
-        (e) => e.message,
-        'message',
-        'C0 stub: $what (filled by $owner)',
-      ),
-    );

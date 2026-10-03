@@ -25,9 +25,11 @@ import { db, CALL_OPTS, encodeEmailForDocId, buildAccessId } from "./shared";
 // One permission, `can_edit_learning`, authorises every learning and
 // governed-entity tutor write (checked per call by writeWithChangeLog). It is
 // set only by parent action: the pre-checked invite checkbox (inviteTutor) or
-// updateTutorGrantPermissions below. The five legacy per-operation edit keys
-// are never written to a grant again and are stripped from existing grants on
-// the next parent update. A grant without `can_edit_learning` reads as false.
+// updateTutorGrantPermissions below. The pre-AD-53 per-operation edit keys
+// are never written to a grant again; the next parent update strips every key
+// outside GRANT_PERMISSION_KEYS from an existing grant, so the retired names
+// (R16, AD-49) never need to appear here. A grant without
+// `can_edit_learning` reads as false.
 
 /** The permission keys a grant may carry (AD-53). */
 export const GRANT_PERMISSION_KEYS = [
@@ -36,15 +38,6 @@ export const GRANT_PERMISSION_KEYS = [
   "can_edit_learning",
   "can_edit_rewards",
   "can_edit_points",
-] as const;
-
-/** The five retired per-operation edit keys (AD-53). */
-export const LEGACY_EDIT_PERMISSION_KEYS = [
-  "can_edit_goals",
-  "can_edit_stages",
-  "can_edit_study_days",
-  "can_reset_completion",
-  "can_bulk_prior_completion",
 ] as const;
 
 const DEFAULT_INVITE_PERMISSIONS: Readonly<Record<string, boolean>> = {
@@ -671,8 +664,9 @@ export const revokeTutorGrant = onCall(CALL_OPTS, async (request) => {
 //     and its state is active. A tutor, a non-owner, and a missing (stale),
 //     revoked, pending or expired grant are all rejected the same way, and
 //     nothing is written.
-// On success it sets permissions.can_edit_learning and deletes the five
-// legacy edit keys in the same update; view/rewards/points are untouched.
+// On success it sets permissions.can_edit_learning and deletes every key
+// outside GRANT_PERMISSION_KEYS (the pre-AD-53 edit keys) in the same update;
+// view/rewards/points are untouched.
 // Repeating a call is idempotent; concurrent calls serialise on the grant
 // doc, so the last committed value wins and no legacy key can come back.
 //
@@ -714,8 +708,15 @@ export const updateTutorGrantPermissions = onCall(CALL_OPTS, async (request) => 
       "permissions.can_edit_learning": canEditLearning,
       updated_at: admin.firestore.Timestamp.now(),
     };
-    for (const legacy of LEGACY_EDIT_PERMISSION_KEYS) {
-      update[`permissions.${legacy}`] = admin.firestore.FieldValue.delete();
+    // Strip every key outside the AD-53 set: the retired per-operation edit
+    // keys of a pre-AD-53 grant (R16) and anything else unknown.
+    const current = grant.permissions;
+    if (current && typeof current === "object" && !Array.isArray(current)) {
+      for (const key of Object.keys(current)) {
+        if (!(GRANT_PERMISSION_KEYS as readonly string[]).includes(key)) {
+          update[`permissions.${key}`] = admin.firestore.FieldValue.delete();
+        }
+      }
     }
     txn.update(grantRef, update);
   });

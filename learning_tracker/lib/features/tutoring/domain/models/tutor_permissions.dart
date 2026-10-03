@@ -22,7 +22,8 @@
 // `can_edit_points` are unchanged.
 //
 // Legacy keys still present on old grant documents are tolerated on read (and
-// ignored) until the retired callables are deleted (DNI-488).
+// ignored). The retired names are not listed in code (R16, AD-49 cutover):
+// tests assert that the codec emits exactly the AD-53 key set.
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -30,16 +31,6 @@ part 'tutor_permissions.freezed.dart';
 
 /// Firestore key of the AD-53 single learning-edit permission.
 const String kCanEditLearningKey = 'can_edit_learning';
-
-/// The five retired per-operation edit keys (AD-53). Never written by the
-/// client; listed so tests and codecs can assert their absence.
-const List<String> kLegacyTutorEditPermissionKeys = <String>[
-  'can_edit_goals',
-  'can_edit_stages',
-  'can_edit_study_days',
-  'can_reset_completion',
-  'can_bulk_prior_completion',
-];
 
 /// Immutable value object encapsulating tutor permissions for a single grant.
 ///
@@ -90,7 +81,7 @@ abstract class TutorPermissions with _$TutorPermissions {
 
   /// Serialise to the nested Firestore map stored in tutor_grants/{grantId}.
   ///
-  /// Never emits any of [kLegacyTutorEditPermissionKeys].
+  /// Emits exactly the five AD-53 permission keys.
   Map<String, dynamic> toFirestore() => {
     // canMarkLiveCompletion is intentionally omitted — it is always false
     // and the Cloud Function enforces it independently. Storing it would
