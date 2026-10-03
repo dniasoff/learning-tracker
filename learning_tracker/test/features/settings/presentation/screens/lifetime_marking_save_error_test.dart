@@ -32,7 +32,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -46,8 +45,6 @@ import '../../../../helpers/pump_app.dart';
 // ── mocks / fakes ────────────────────────────────────────────────────────────
 
 class _MockContentRepository extends Mock implements ContentRepository {}
-
-class _NoBookmarks extends Fake implements BookmarkRepository {}
 
 class _FakeActiveProfileId extends ActiveProfileId {
   @override
@@ -143,7 +140,6 @@ Widget _buildScreen({Locale locale = const Locale('en')}) {
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
           contentRepository: content,
-          bookmarkRepository: _NoBookmarks(),
           commands: () async =>
               throw Exception('test-forced capture write failure'),
           events: () async => const [],

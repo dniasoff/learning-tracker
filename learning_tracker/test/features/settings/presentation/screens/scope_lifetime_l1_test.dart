@@ -67,7 +67,6 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -390,8 +389,6 @@ Widget _buildLifetimeApp({
 
 // ── Widget factory — LifetimeCurriculumMarkingScreen ─────────────────────────
 
-class _NoBookmarks extends Fake implements BookmarkRepository {}
-
 Widget _buildCurriculumMarkingApp({
   ContentRepository? contentRepo,
   LearningCommands? commands,
@@ -414,7 +411,6 @@ Widget _buildCurriculumMarkingApp({
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
           contentRepository: repo,
-          bookmarkRepository: _NoBookmarks(),
           commands: () async => commands ?? FakeLearningCommands(),
           events: () async => const [],
         ),
@@ -1485,7 +1481,6 @@ void main() {
         1,
       );
       expect(nodes.every((n) => n.level == seder), isTrue);
-
       await _tearDown(tester);
     });
   });
