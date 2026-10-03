@@ -90,31 +90,39 @@ abstract interface class SubTrackNavigator {
   void openHub(BuildContext context);
 }
 
-/// The production navigator until the sibling destinations land: only the
-/// hub exists, so every other destination reports `canOpen == false` and
-/// its entry point stays disabled (no tap is mis-routed to the hub).
+/// The production navigator: the hub, the sub-track detail (DNI-497,
+/// Story 2.6) and the ground picker (DNI-498, Story 2.7) are built; the
+/// *Up to…* destination still reports `canOpen == false`, so its entry
+/// point stays disabled (no tap is mis-routed to the hub).
 ///
 /// Scope boundary (DNI-500 unblock, 2026-10-02): DNI-500 owns the entry
 /// points and this seam; DNI-497, DNI-498 and DNI-501 own the screens and
-/// replace [subTrackNavigatorProvider] when they land (bead
-/// learning-tracker-fyh.128). AC-7 and the *Add ground* half of AC-3/AC-4
-/// are met at that point. Nothing here reaches a user before then: the
-/// sub-track UI ships only from `integ/sub-tracks`, after the DNI-490
-/// cutover (AD-49 ship hold), and fyh.128 gates that merge.
-final class HubOnlySubTrackNavigator implements SubTrackNavigator {
+/// each reports its destination here when it lands (bead
+/// learning-tracker-fyh.128). DNI-497 wired the detail (AC-7) and DNI-498
+/// the ground picker (the *Add ground* half of AC-3/AC-4); *Up to…* waits
+/// for DNI-501. Nothing here reaches a user before the cutover: the
+/// sub-track UI ships only from `integ/sub-tracks`, after DNI-490 (AD-49
+/// ship hold).
+final class RoutedSubTrackNavigator implements SubTrackNavigator {
   /// Creates the navigator.
   const HubOnlySubTrackNavigator();
 
   @override
-  bool canOpen(SubTrackDestination destination) => false;
+  bool canOpen(SubTrackDestination destination) => switch (destination) {
+    SubTrackDestination.detail || SubTrackDestination.groundPicker => true,
+    SubTrackDestination.upTo => false,
+  };
 
   @override
   void openDetail(BuildContext context, SubTrackHomeItem item) =>
       throw UnsupportedError('Sub-track detail is not wired (DNI-497)');
 
+  /// The phone ground-picker route (DNI-498 AC-2). Its parent-session
+  /// guard and the picker's own access check refuse any other session;
+  /// the rows offer *Add ground* to the parent only.
   @override
   void openGroundPicker(BuildContext context, SubTrackHomeItem item) =>
-      throw UnsupportedError('Ground picker is not wired (DNI-498)');
+      context.router.push(GroundPickerRoute(subTrackId: item.subTrackId));
 
   @override
   void openUpTo(BuildContext context, SubTrackHomeItem item) =>
