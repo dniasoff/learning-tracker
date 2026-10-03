@@ -33,8 +33,10 @@
 /// `ownerOversizedGovernedWrite` callable's field specs still accept
 /// (`description`, `date_type`, and `created_at` when a goal doc is created
 /// or revived), so a goal in an oversized (online-only) action is accepted
-/// exactly as one under the budget. `updated_at` / `synced_at` are retired from governed docs
-/// and `target_percent` is retired by AD-43, so none of them is written.
+/// exactly as one under the budget. R16 (DNI-484): `updated_at` /
+/// `synced_at` are retired from governed docs and `target_percent` is
+/// retired by AD-43 (a deadline always covers the whole corpus); none is
+/// part of the API, the entity or the write.
 ///
 /// ## Calendar programs
 ///
@@ -182,7 +184,6 @@ class FirestoreGoalRepository {
   /// the app models it.
   Future<GoalEntity> createGoal({
     required CurriculumId curriculumId,
-    required double targetPercent,
     PaceTarget? paceTarget,
     String description = '',
     String dateType = 'gregorian',
@@ -195,7 +196,6 @@ class FirestoreGoalRepository {
     );
     final entity = GoalEntity(
       curriculumId: curriculumId,
-      targetPercent: targetPercent,
       targetDate: targetDate,
       description: description,
       dateType: dateType,
@@ -205,7 +205,6 @@ class FirestoreGoalRepository {
       paceGranularity: paceGranularity,
       rawLearningUnit: paceGranularity == null ? rawLearningUnit : null,
       createdAt: now,
-      updatedAt: now,
     );
     await _apply(await planSetGoal(entity));
     return entity;
@@ -221,7 +220,6 @@ class FirestoreGoalRepository {
   /// written.
   Future<GoalEntity> updateGoal({
     required GoalEntity goal,
-    double? targetPercent,
     PaceTarget? paceTarget,
     bool clearPaceTarget = false,
     String? description,
@@ -268,7 +266,6 @@ class FirestoreGoalRepository {
     }
 
     final updated = goal.copyWith(
-      targetPercent: targetPercent ?? goal.targetPercent,
       targetDate: resolvedTargetDate,
       description: description ?? goal.description,
       goalType: resolvedGoalType,
@@ -276,7 +273,6 @@ class FirestoreGoalRepository {
       pacePeriod: resolvedPacePeriod,
       paceGranularity: resolvedGranularity,
       rawLearningUnit: resolvedRawUnit,
-      updatedAt: _clock(),
     );
     await _apply(await planSetGoal(updated));
     return updated;

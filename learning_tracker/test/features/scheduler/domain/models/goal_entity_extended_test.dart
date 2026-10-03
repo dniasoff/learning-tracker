@@ -116,51 +116,9 @@ void main() {
     test('firestoreId contains curriculumId storageKey', () {
       final entity = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 100.0,
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       expect(entity.firestoreId, contains(CurriculumId.mishnayos.storageKey));
-    });
-
-    // AUD-scheduler-16: firestoreId previously included targetPercent, a
-    // field `updateGoal` can change — this made an ordinary goal-percent
-    // edit compute a different id and orphan the original Firestore
-    // document. Replaced with the inverse invariant: firestoreId must be
-    // STABLE across a targetPercent change (see the two tests below).
-    test('firestoreId does NOT change when only targetPercent differs '
-        '(AUD-scheduler-16)', () {
-      final created = DateTime.utc(2026, 1, 1);
-      final a = GoalEntity(
-        curriculumId: CurriculumId.bavli,
-        targetPercent: 50.0,
-        createdAt: created,
-        updatedAt: created,
-      );
-      final b = GoalEntity(
-        curriculumId: CurriculumId.bavli,
-        targetPercent: 75.5,
-        createdAt: created,
-        updatedAt: created,
-      );
-      expect(
-        a.firestoreId,
-        equals(b.firestoreId),
-        reason:
-            'targetPercent is routinely edited via updateGoal — keying '
-            'firestoreId on it orphans the original Firestore document '
-            'on every percent edit.',
-      );
-    });
-
-    test('firestoreId does not contain a formatted targetPercent', () {
-      final entity = GoalEntity(
-        curriculumId: CurriculumId.bavli,
-        targetPercent: 75.5,
-        createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
-      );
-      expect(entity.firestoreId, isNot(contains('75.5')));
     });
 
     test('firestoreId contains createdAt millisecondsSinceEpoch', () {
@@ -168,7 +126,6 @@ void main() {
       final entity = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
         createdAt: created,
-        updatedAt: created,
       );
       expect(
         entity.firestoreId,
@@ -180,25 +137,20 @@ void main() {
       final a = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       final b = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
         createdAt: DateTime.utc(2026, 2, 1),
-        updatedAt: DateTime.utc(2026, 2, 1),
       );
       expect(a.firestoreId, isNot(b.firestoreId));
     });
 
-    // AUD-scheduler-16: format is curriculum_epoch — targetPercent dropped
-    // since updateGoal can change it (see the stability tests above).
+    // AUD-scheduler-16: format is curriculum_epoch.
     test('firestoreId format is curriculum_epoch', () {
       final created = DateTime.utc(2026, 1, 1);
       final entity = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 100.0,
         createdAt: created,
-        updatedAt: created,
       );
       final id = entity.firestoreId;
       expect(
@@ -266,7 +218,6 @@ void main() {
         pacePeriod: 'per_day',
         paceGranularity: PaceGranularity.daf,
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       final map = original.toFirestore();
       final restored = GoalEntity.fromFirestore(map);
@@ -274,13 +225,17 @@ void main() {
       expect(restored.paceGranularityKey, 'daf');
     });
 
-    test('defaults targetPercent to 100.0 when missing', () {
-      final entity = GoalEntity.fromFirestore({
-        'curriculumId': 'mishnayos',
-        'createdAt': '2026-01-01T00:00:00.000Z',
-        'updatedAt': '2026-01-01T00:00:00.000Z',
-      });
-      expect(entity.targetPercent, 100.0);
+    test('R16: ignores a legacy target_percent / targetPercent alias and '
+        'never re-encodes it', () {
+      for (final key in ['target_percent', 'targetPercent']) {
+        final entity = GoalEntity.fromFirestore({
+          'curriculumId': 'mishnayos',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          key: 50,
+        });
+        expect(entity.toFirestore(), isNot(contains('target_percent')));
+        expect(entity.toFirestore(), isNot(contains('targetPercent')));
+      }
     });
 
     test('parses targetDate when present', () {
@@ -314,7 +269,6 @@ void main() {
         goalType: 'deadline',
         // targetDate intentionally absent
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       expect(entity.paceTarget, isNull);
     });
@@ -326,7 +280,6 @@ void main() {
         pacePeriod: 'per_day',
         // paceValue intentionally absent
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       expect(entity.paceTarget, isNull);
     });
@@ -338,7 +291,6 @@ void main() {
         paceValue: 5,
         // pacePeriod intentionally absent
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       expect(entity.paceTarget, isNull);
     });

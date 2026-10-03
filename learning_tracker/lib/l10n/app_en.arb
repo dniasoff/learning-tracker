@@ -2763,28 +2763,6 @@
       }
     }
   },
-  "goalTargetPercentOnly": "Complete {percent}% of the material",
-  "@goalTargetPercentOnly": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "goalTargetPercentWithCount": "Complete {percent}% of the material ({done} of {total} items)",
-  "@goalTargetPercentWithCount": {
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      },
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "goalLearningUnitLabel": "Learning unit",
   "goalNoPressureLabel": "Learn at your own pace with no time pressure.",
   "trackSetGoalLabel": "Set Goal",

@@ -135,6 +135,22 @@ service cloud.firestore {
       return !(key in d) || d[key] == null;
     }
 
+    // R16 (DNI-484) governed-doc key whitelist. A write passes when the whole
+    // post-write doc holds only `live` keys, or, on an update of an existing
+    // doc, when every key the write ADDS or CHANGES is live. A retired key
+    // already stored on a pre-R16 doc may therefore stay untouched or be
+    // removed, but can never be written. Without the second branch, a
+    // field-level merge (AD-38) of such a doc would be denied on every later
+    // update or `ended_at` tombstone, and AD-13 rules out a data migration.
+    // No document-access call (`resource` is free): AD-54's budget holds.
+    function writesOnlyLiveKeys(live) {
+      return request.resource.data.keys().hasOnly(live)
+          || (resource != null
+              && request.resource.data.diff(resource.data).addedKeys()
+                   .union(request.resource.data.diff(resource.data).changedKeys())
+                   .hasOnly(live));
+    }
+
     // AD-54 clock-skew rule: every client timestamp in a learning or
     // governed batch (`recorded_at`, `at`, `ended_at`,
     // `points_ledger.created_at`) must be a real Firestore Timestamp no later
@@ -706,11 +722,12 @@ service cloud.firestore {
         // client delete denied (removal is a tombstone).
         match /stage_definitions/{stageId} {
           function hasStageDefinitionFields() {
-            return request.resource.data.keys().hasOnly([
+            // R16 (DNI-484): the governed updated_at / synced_at are retired.
+            return writesOnlyLiveKeys([
               'profile_id', 'curriculum_id', 'track_id', 'stage_order',
               'stage_name', 'schedule', 'delay_days', 'schedule_type',
               'is_default', 'days_of_week', 'rolling_window_size',
-              'updated_at', 'synced_at', 'last_change_id', 'ended_at'
+              'last_change_id', 'ended_at'
             ]);
           }
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
@@ -764,26 +781,14 @@ service cloud.firestore {
         // curriculum_id; client delete denied (removal sets `ended_at`).
         match /curriculum_tracks/{trackId} {
           function hasCurriculumTrackFields() {
-            return request.resource.data.keys().hasOnly([
+            // R16 (DNI-484): state_changed_at, purged, purged_at,
+            // pace_reset_date, last_reorder_at, the progress_* passthroughs
+            // and the governed updated_at / synced_at are retired.
+            // activated_at stays for the "Started" display only (never an
+            // engine anchor, AD-35).
+            return writesOnlyLiveKeys([
               'profile_id', 'track_id', 'curriculum_id', 'state',
-              'state_changed_at', 'activated_at',
-              'pace_reset_date', 'progress_schema_version',
-              'progress_computed_at', 'progress_model', 'program_progress',
-              'self_paced_progress', 'synced_at',
-              // Reorder-amnesty baseline (TrackDao.stampReorderAt) — was
-              // absent from this whitelist entirely, which made the
-              // reorder-amnesty feature non-functional: hasOnly() is
-              // all-or-nothing, so writing this field would have
-              // permission-denied the WHOLE track write, not merely
-              // dropped the field (docs/firestore-rewrite-map.md's "OPEN"
-              // section).
-              'last_reorder_at',
-              // Track tombstone fields — a hard purge stamps `purged: true` +
-              // `purged_at` so the deletion propagates to other devices
-              // (track_dao.dart `track_purge:<id>` payload). Omitting these
-              // from the allowlist denied every purge push with
-              // permission-denied even for the legitimate owner.
-              'purged', 'purged_at',
+              'activated_at',
               // AD-38 governed-doc fields.
               'last_change_id', 'ended_at'
             ]);
@@ -848,9 +853,9 @@ service cloud.firestore {
         // `level` / `ref` are the AD-52 doc fields; client delete denied.
         match /track_learning_order/{orderId} {
           function hasTrackLearningOrderFields() {
-            return request.resource.data.keys().hasOnly([
+            // R16 (DNI-484): the governed updated_at / synced_at are retired.
+            return writesOnlyLiveKeys([
               'curriculum_id', 'sefaria_ref', 'user_sort_order',
-              'updated_at', 'synced_at',
               'level', 'ref', 'last_change_id', 'ended_at'
             ]);
           }
@@ -892,14 +897,15 @@ service cloud.firestore {
         // writeWithChangeLog (Admin SDK, story 1.10).
         match /goals/{goalId} {
           function hasGoalFields() {
-            return request.resource.data.keys().hasOnly([
+            // R16 (DNI-484): target_percent / targetPercent (AD-43: a
+            // deadline covers the whole corpus) and the governed
+            // updated_at / updatedAt / synced_at are retired.
+            return writesOnlyLiveKeys([
               'id', 'goal_id', 'profile_id', 'track_id', 'curriculum_id',
-              'curriculumId', 'description', 'target_percent',
-              'targetPercent', 'target_date', 'targetDate', 'date_type',
-              'dateType', 'goal_type', 'goalType', 'pace_value', 'paceValue',
-              'pace_unit', 'pacePeriod', 'paceGranularity', 'pace_granularity',
-              'created_at',
-              'createdAt', 'updated_at', 'updatedAt', 'synced_at',
+              'curriculumId', 'description', 'target_date', 'targetDate',
+              'date_type', 'dateType', 'goal_type', 'goalType', 'pace_value',
+              'paceValue', 'pace_unit', 'pacePeriod', 'paceGranularity',
+              'pace_granularity', 'created_at', 'createdAt',
               'last_change_id', 'ended_at'
             ]);
           }
@@ -933,15 +939,11 @@ service cloud.firestore {
         // an `ended_at` tombstone co-written with its change_log entry.
         match /profile_programs/{curriculumId} {
           function hasProfileProgramFields() {
-            return request.resource.data.keys().hasOnly([
+            // R16 (DNI-484): the governed updated_at / synced_at are retired
+            // (AD-38: last_change_id replaces the old LWW stamp).
+            return writesOnlyLiveKeys([
               'profile_id', 'curriculum_id', 'program_id',
-              'tracking_start_date', 'tracking_start_ref', 'synced_at',
-              // `updated_at` is the LWW ordering field: the realtime listener
-              // orders profile_programs by it (firestore_listener_source.dart)
-              // and the merger uses it for last-write-wins. The client always
-              // writes it, so omitting it from the allowlist denied every
-              // enrolment push with permission-denied even for the owner.
-              'updated_at',
+              'tracking_start_date', 'tracking_start_ref',
               // AD-38 governed-doc fields.
               'last_change_id', 'ended_at'
             ]);
@@ -963,16 +965,16 @@ service cloud.firestore {
 
         // study_day_configs — per-curriculum, per-track day-of-week schedule
         // (Plan §F Phase 1 — closes the study-day sync gap). One doc per
-        // (curriculum_id, day_of_week, track_id) triple; client-side LWW
-        // arbitrated by `updated_at`.
+        // (curriculum_id, day_of_week) pair.
         //
         // Governed entity `mainTrackStudyDays` (AD-38): entity_id =
         // curriculum_id; client delete denied (removal is a tombstone).
         match /study_day_configs/{configId} {
           function hasStudyDayConfigFields() {
-            return request.resource.data.keys().hasOnly([
+            // R16 (DNI-484): the governed updated_at / synced_at are retired.
+            return writesOnlyLiveKeys([
               'profile_id', 'curriculum_id', 'track_id',
-              'day_of_week', 'day_type', 'updated_at', 'synced_at',
+              'day_of_week', 'day_type',
               'last_change_id', 'ended_at'
             ]);
           }

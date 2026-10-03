@@ -58,7 +58,6 @@ void main() {
           goalType: 'deadline',
           targetDate: date,
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         expect(entity.paceTarget, isA<DeadlineTarget>());
         expect((entity.paceTarget! as DeadlineTarget).dueDate, date);
@@ -71,7 +70,6 @@ void main() {
           paceValue: 2,
           pacePeriod: 'per_week',
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         expect(entity.paceTarget, isA<PacePeriodTarget>());
         final pt = entity.paceTarget! as PacePeriodTarget;
@@ -84,7 +82,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           goalType: 'none',
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         expect(entity.paceTarget, isNull);
       });
@@ -96,7 +93,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           paceGranularity: PaceGranularity.perek,
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         expect(entity.paceGranularityKey, 'perek');
       });
@@ -106,7 +102,6 @@ void main() {
           curriculumId: CurriculumId.bavli,
           rawLearningUnit: 'amud',
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         expect(entity.paceGranularityKey, 'amud');
       });
@@ -115,7 +110,6 @@ void main() {
         final entity = GoalEntity(
           curriculumId: CurriculumId.mishnayos,
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         expect(entity.paceGranularityKey, isNull);
       });
@@ -131,7 +125,6 @@ void main() {
           paceValue: 1,
           pacePeriod: 'per_day',
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = entity.toFirestore();
         expect(map['goal_type'], 'pace');
@@ -145,7 +138,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           targetDate: DateTime.utc(2026, 6, 1),
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = entity.toFirestore();
         expect(map['goal_type'], 'deadline');
@@ -161,7 +153,6 @@ void main() {
           paceValue: 5,
           pacePeriod: 'per_week',
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = entity.toFirestore();
         expect(map['pace_unit'], 'per_week');
@@ -201,19 +192,80 @@ void main() {
           goalType: 'pace',
           paceValue: 3,
           pacePeriod: 'per_week',
-          targetPercent: 80.0,
           description: 'test goal',
           createdAt: DateTime.utc(2026, 1, 1),
-          updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = original.toFirestore();
         final restored = GoalEntity.fromFirestore(map);
         expect(restored.goalType, original.goalType);
         expect(restored.paceValue, original.paceValue);
         expect(restored.pacePeriod, original.pacePeriod);
-        expect(restored.targetPercent, original.targetPercent);
         expect(restored.description, original.description);
       });
+    });
+  });
+
+  group('R16 retired goal fields (DNI-484)', () {
+    final createdAt = DateTime.utc(2026, 1, 1);
+
+    test('encode omits target_percent and the governed updated_at / '
+        'synced_at; deadline and pace fields remain', () {
+      final deadline = GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        targetDate: DateTime.utc(2027, 6, 1),
+        createdAt: createdAt,
+      ).toFirestore();
+      final pace = GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        goalType: 'pace',
+        paceValue: 2,
+        pacePeriod: 'per_day',
+        rawLearningUnit: 'item',
+        createdAt: createdAt,
+      ).toFirestore();
+      for (final payload in [deadline, pace]) {
+        for (final key in const [
+          'target_percent',
+          'targetPercent',
+          'updated_at',
+          'updatedAt',
+          'synced_at',
+        ]) {
+          expect(payload, isNot(contains(key)), reason: key);
+        }
+      }
+      expect(deadline['target_date'], isNotNull);
+      expect(deadline['goal_type'], 'deadline');
+      expect(pace['goal_type'], 'pace');
+      expect(pace['pace_value'], 2);
+      expect(pace['pace_unit'], 'per_day');
+      expect(pace['pace_granularity'], 'item');
+    });
+
+    test('decode ignores target_percent, its targetPercent alias and the '
+        'governed timestamps, keeping the live deadline / pace fields', () {
+      final decoded = GoalEntity.fromFirestore({
+        'curriculum_id': 'mishnayos',
+        'goal_type': 'pace',
+        'pace_value': 3,
+        'pace_unit': 'per_week',
+        'pace_granularity': 'perek',
+        'created_at': '2026-01-01T00:00:00.000Z',
+        'target_percent': 40,
+        'targetPercent': 40,
+        'updated_at': '2026-02-01T00:00:00.000Z',
+        'updatedAt': '2026-02-01T00:00:00.000Z',
+        'synced_at': '2026-02-01T00:00:00.000Z',
+      });
+      expect(
+        decoded.paceTarget,
+        const PacePeriodTarget(rate: 3, period: 'per_week'),
+      );
+      expect(decoded.paceGranularity, PaceGranularity.perek);
+      expect(decoded.createdAt, createdAt);
+      final reEncoded = decoded.toFirestore();
+      expect(reEncoded, isNot(contains('target_percent')));
+      expect(reEncoded, isNot(contains('updated_at')));
     });
   });
 }

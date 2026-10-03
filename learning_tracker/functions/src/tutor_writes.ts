@@ -325,6 +325,17 @@ const LEGACY_BOOKKEEPING_KEYS = new Set([
   "id", "goal_id", "profile_id", "track_id", "created_at", "updated_at", "synced_at",
 ]);
 
+/**
+ * R16 (DNI-484): the governed timestamps a goal / main-track callable
+ * REJECTS instead of dropping. No client sends them to tutorUpsertGoal or
+ * tutorUpsertTrack, so the retired fields fail loudly there; the other
+ * governed callables keep dropping them for the published payloads (e.g.
+ * the edit-track program re-anchor) until the cutover release is out.
+ * Every other retired goal / track key (and every camelCase alias) is
+ * rejected by writeWithChangeLog's AD-52 field specs.
+ */
+const RETIRED_GOVERNED_TIMESTAMPS: readonly string[] = ["updated_at", "synced_at"];
+
 /** Legacy clients send ISO datetimes for AD-52 `YYYY-MM-DD` date fields. */
 const LEGACY_DATE_FIELDS = new Set(["target_date", "tracking_start_date"]);
 
@@ -371,10 +382,18 @@ function parseLegacyGovernedArgs(raw: unknown, idParam: string): LegacyGovernedA
   return { grantId, ownerUid, profileId, targetId, actionId: actionId ?? undefined };
 }
 
-function parseLegacyData(raw: unknown, dataParam: string): Record<string, unknown> {
+function parseLegacyData(
+  raw: unknown,
+  dataParam: string,
+  rejectedKeys: readonly string[] = [],
+): Record<string, unknown> {
   const value = ((raw ?? {}) as Record<string, unknown>)[dataParam];
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new HttpsError("invalid-argument", `${dataParam} must be an object`);
+  for (const key of rejectedKeys) {
+    if (Object.prototype.hasOwnProperty.call(value, key))
+      throw new HttpsError("invalid-argument", `${dataParam} contains a retired field: ${key}`);
+  }
   return normalizeLegacyFields(value as Record<string, unknown>);
 }
 
@@ -382,6 +401,8 @@ interface LegacyGovernedSpec {
   entity: GovernedEntity;
   idParam: string;
   auditAction: string;
+  /** Retired keys this callable rejects instead of dropping (R16). */
+  rejectedKeys?: readonly string[];
 }
 
 /** Field-level upsert of one governed doc through writeWithChangeLog. */
@@ -389,7 +410,7 @@ function governedUpsert(spec: LegacyGovernedSpec & { dataParam: string }) {
   const collection = ENTITY_COLLECTION[spec.entity];
   return onCall(CALL_OPTS, (request) => runGoverned(spec.entity, async () => {
     const args = parseLegacyGovernedArgs(request.data, spec.idParam);
-    const fields = parseLegacyData(request.data, spec.dataParam);
+    const fields = parseLegacyData(request.data, spec.dataParam, spec.rejectedKeys);
     // goal / mainTrack / mainTrackProgram: entity_id is the doc id. Other
     // mainTrack* entities key on curriculum_id, derived in the transaction
     // from the payload or the stored doc when the payload omits it.
@@ -432,6 +453,7 @@ function governedTombstone(spec: LegacyGovernedSpec) {
 // Rejected on a calendar-program curriculum (AD-43 / AD-45).
 export const tutorUpsertGoal = governedUpsert({
   entity: "goal", idParam: "goalId", dataParam: "goalData", auditAction: "goal_upserted",
+  rejectedKeys: RETIRED_GOVERNED_TIMESTAMPS,
 });
 
 // tutorDeleteGoal — { goalId } → `ended_at` tombstone.
@@ -442,6 +464,7 @@ export const tutorDeleteGoal = governedTombstone({
 // tutorUpsertTrack — { trackId: curriculumId, trackData } (mainTrack).
 export const tutorUpsertTrack = governedUpsert({
   entity: "mainTrack", idParam: "trackId", dataParam: "trackData", auditAction: "track_upserted",
+  rejectedKeys: RETIRED_GOVERNED_TIMESTAMPS,
 });
 
 // tutorDeleteTrack — { trackId: curriculumId } → the AD-38 remove-track

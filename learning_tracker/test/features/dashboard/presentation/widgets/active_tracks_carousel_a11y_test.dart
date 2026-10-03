@@ -47,7 +47,6 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
 CurriculumTrackEntity _track() => CurriculumTrackEntity(
   curriculumId: CurriculumId.mishnayos,
   state: 'active',
-  stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
 );
 

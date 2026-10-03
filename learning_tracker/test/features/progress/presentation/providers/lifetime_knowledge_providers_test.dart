@@ -127,7 +127,6 @@ void main() {
     final track = CurriculumTrackEntity(
       curriculumId: CurriculumId.mishnayos,
       state: CurriculumTrackState.active.storageKey,
-      stateChangedAt: DateTime.utc(2026),
       activatedAt: DateTime.utc(2026),
     );
     final container = _container(

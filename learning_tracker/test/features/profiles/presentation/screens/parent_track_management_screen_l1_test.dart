@@ -61,7 +61,6 @@ CurriculumTrackEntity _track({required CurriculumId curriculumId}) =>
     CurriculumTrackEntity(
       curriculumId: curriculumId,
       state: 'active',
-      stateChangedAt: DateTime.utc(2026, 1, 1),
       activatedAt: DateTime.utc(2026, 1, 1),
     );
 

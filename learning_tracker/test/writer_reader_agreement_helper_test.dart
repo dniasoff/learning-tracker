@@ -75,7 +75,6 @@ void main() {
       );
       await repoA!.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 50,
         paceTarget: DeadlineTarget(DateTime.utc(2030)),
       );
 
@@ -121,7 +120,6 @@ void main() {
           );
           await repo!.createGoal(
             curriculumId: CurriculumId.mishnayos,
-            targetPercent: 75,
             paceTarget: DeadlineTarget(DateTime.utc(2030)),
           );
         },
@@ -185,7 +183,6 @@ void main() {
             );
             await repo!.createGoal(
               curriculumId: CurriculumId.mishnayos,
-              targetPercent: 75,
               paceTarget: DeadlineTarget(DateTime.utc(2030)),
             );
           },

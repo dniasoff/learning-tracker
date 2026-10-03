@@ -104,7 +104,6 @@ void main() {
     expect(track.data(), {
       'curriculum_id': 'bavli',
       'state': 'active',
-      'state_changed_at': _time.toIso8601String(),
       'activated_at': _time.toIso8601String(),
     });
 
@@ -132,10 +131,8 @@ void main() {
       uid: _uid,
       profileId: _profileId,
       curriculumId: CurriculumId.mishnayos,
-      targetPercent: 80,
       description: 'Finish the tractate',
       createdAt: _time,
-      updatedAt: _time,
     );
     await seedBookmark(
       firestore,
@@ -153,7 +150,8 @@ void main() {
         .doc(_profileId);
     final goal = await profilePath.collection('goals').doc(goalId).get();
     expect(goal.data(), containsPair('curriculum_id', 'mishnayos'));
-    expect(goal.data(), containsPair('target_percent', 80));
+    expect(goal.data(), isNot(contains('target_percent')));
+    expect(goal.data(), isNot(contains('updated_at')));
     expect(goal.data(), containsPair('description', 'Finish the tractate'));
 
     final bookmark = await profilePath
@@ -173,7 +171,6 @@ void main() {
       uid: _uid,
       profileId: _profileId,
       curriculumId: CurriculumId.mishnayos,
-      updatedAt: _time,
     );
 
     final stages = await firestore
@@ -198,7 +195,7 @@ void main() {
     expect(byOrder[2], containsPair('stage_name', 'חזרה א׳'));
     expect(byOrder[3], containsPair('stage_name', 'חזרה ב׳'));
     expect(byOrder[1], containsPair('curriculum_id', 'mishnayos'));
-    expect(byOrder[1]!['updated_at'], _time.toIso8601String());
+    expect(byOrder[1], isNot(contains('updated_at')));
     expect(byOrder[1], isNot(contains('track_id')));
   });
 }

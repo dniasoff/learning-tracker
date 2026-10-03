@@ -139,7 +139,6 @@ Future<ProviderContainer> _container({
             isDefault: true,
           ),
       ],
-      updatedAt: today,
     );
     if (reviewDays.isNotEmpty) {
       final studyDays = FirestoreStudyDayConfigRepository(

@@ -125,7 +125,9 @@ void main() {
               final block = _extractRuleBlock(rules, c);
               expect(
                 block,
-                contains('.hasOnly('),
+                c.startsWith('stage_definitions/')
+                    ? contains('writesOnlyLiveKeys([')
+                    : contains('.hasOnly('),
                 reason: '$c must restrict writes to a fixed field list',
               );
               expect(
@@ -142,7 +144,7 @@ void main() {
             );
             expect(
               ppBlock,
-              contains('.hasOnly('),
+              contains('writesOnlyLiveKeys(['),
               reason:
                   'profile_programs must restrict writes to a fixed field list',
             );

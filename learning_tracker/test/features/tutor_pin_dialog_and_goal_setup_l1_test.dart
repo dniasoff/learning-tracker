@@ -35,7 +35,7 @@
 //
 //  E. GoalSetupForm — deadline mode
 //     E1. "Tap to choose a date" placeholder shown when no date selected
-//     E2. Target-percent slider starts at 100%
+//     E2. (removed: target-percent slider retired, R16 / DNI-484)
 //     E3. Occasion text-field is visible in deadline mode
 //     E4. Deadline passed: shows "Deadline has passed" when date is in past
 //
@@ -51,7 +51,7 @@
 //     G2. Submit in pace mode → GoalEntity.goalType == 'pace' and paceValue set
 //     G3. Submit in none mode → GoalEntity.goalType == 'none'; no date/pace
 //     G4. Description field value is preserved in deadline GoalEntity
-//     G5. GoalEntity.targetPercent reflects slider value
+//     G5. no target-percent slider (R16, DNI-484)
 //
 //  H. GoalSetupScreen — screen wrapper
 //     H1. New-goal mode: AppBar title is "New Goal" and submit = "Create Goal"
@@ -870,32 +870,6 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('E2. target-percent slider starts at 100%', (tester) async {
-      setViewSize(tester);
-      final submitted = <GoalEntity>[];
-
-      await tester.pumpWidget(
-        _buildGoalFormHarness(
-          curriculumId: CurriculumId.mishnayos,
-          submitted: submitted,
-        ),
-      );
-      await tester.pump();
-
-      expect(
-        find.textContaining('100%'),
-        findsAtLeastNWidgets(1),
-        reason: 'E2: slider must start at 100%',
-      );
-      final slider = tester.widget<Slider>(find.byType(Slider));
-      expect(
-        slider.value,
-        100.0,
-        reason: 'E2: Slider.value must be 100 initially',
-      );
-      await _teardown(tester);
-    });
-
     testWidgets('E3. Occasion text-field is visible in deadline mode', (
       tester,
     ) async {
@@ -927,11 +901,9 @@ void main() {
         // Existing goal with a past target date (before _kNow = 2026-06-01)
         final pastGoal = GoalEntity(
           curriculumId: CurriculumId.mishnayos,
-          targetPercent: 100.0,
           targetDate: DateTime.utc(2025, 1, 1), // past
           goalType: 'deadline',
           createdAt: _kNow,
-          updatedAt: _kNow,
         );
 
         await tester.pumpWidget(
@@ -1109,11 +1081,9 @@ void main() {
 
       final existingWithDate = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 100.0,
         goalType: 'deadline',
         targetDate: DateTime.utc(2027, 12, 31),
         createdAt: _kNow,
-        updatedAt: _kNow,
       );
 
       await tester.pumpWidget(
@@ -1226,11 +1196,9 @@ void main() {
       // Description starts empty so we can assert our typed value.
       final goalWithDate = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 100.0,
         goalType: 'deadline',
         targetDate: DateTime.utc(2027, 12, 31),
         createdAt: _kNow,
-        updatedAt: _kNow,
       );
 
       await tester.pumpWidget(
@@ -1265,9 +1233,8 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('G5. GoalEntity.targetPercent reflects slider drag', (
-      tester,
-    ) async {
+    testWidgets('G5. R16: no target-percent slider; a deadline covers the '
+        'whole corpus (AD-43)', (tester) async {
       setViewSize(tester);
       final submitted = <GoalEntity>[];
 
@@ -1279,27 +1246,7 @@ void main() {
       );
       await tester.pump();
 
-      // Drag slider to around 50% (slider starts at 100, dragging left reduces it).
-      final slider = find.byType(Slider);
-      final sliderCenter = tester.getCenter(slider);
-      await tester.dragFrom(sliderCenter, const Offset(-100, 0));
-      await tester.pump();
-
-      // Switch to "No deadline" so the submit button is enabled without
-      // requiring a date selection. The _targetPercent value persists across
-      // mode changes because it is a separate state field.
-      await tester.tap(find.text('No deadline'));
-      await tester.pump();
-
-      await tester.tap(find.text('Create Goal'));
-      await tester.pump();
-
-      expect(submitted, hasLength(1));
-      expect(
-        submitted.first.targetPercent,
-        lessThan(100.0),
-        reason: 'G5: dragging slider left must reduce targetPercent',
-      );
+      expect(find.byType(Slider), findsNothing);
       await _teardown(tester);
     });
   });
@@ -1340,11 +1287,9 @@ void main() {
 
         final existingGoal = GoalEntity(
           curriculumId: CurriculumId.mishnayos,
-          targetPercent: 80.0,
           goalType: 'deadline',
           targetDate: DateTime.utc(2027, 1, 1),
           createdAt: _kNow,
-          updatedAt: _kNow,
         );
 
         await tester.pumpWidget(

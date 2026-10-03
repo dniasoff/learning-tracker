@@ -20,16 +20,7 @@ class CurriculumTrackEntity {
   const CurriculumTrackEntity({
     required this.curriculumId,
     required this.state,
-    required this.stateChangedAt,
-    required this.activatedAt,
-    this.paceResetDate,
-    this.lastReorderAt,
-    this.progressSchemaVersion,
-    this.progressComputedAt,
-    this.progressModel,
-    this.programProgress,
-    this.selfPacedProgress,
-    this.syncedAt,
+    this.activatedAt,
   });
 
   final CurriculumId curriculumId;
@@ -51,55 +42,12 @@ class CurriculumTrackEntity {
   /// returns `null`).
   final String state;
 
-  /// LWW timestamp for [state] in the old sync engine (`TrackCodec`'s
-  /// `FB-2` comment). Kept as an ordinary client timestamp here, NOT
-  /// force-overwritten with `FieldValue.serverTimestamp()` the way the old
-  /// `FirestoreGatewayImpl.pushTrack` did it — that override existed only to
-  /// protect a *cross-device merge* comparison, and the merge engine doing
-  /// that comparison is a deleted concept (`docs/firestore-rewrite-map.md`,
-  /// "Deleted concepts" — "one writer per account"). Every other repository
-  /// in this rewrite (`FirestoreGoalRepository`, `FirestoreStageDefinition
-  /// Repository`, etc.) already writes its own LWW-shaped timestamp as a
-  /// plain client `DateTime`; this one is not a special case.
-  final DateTime stateChangedAt;
-
-  final DateTime activatedAt;
-
-  /// Date the pace baseline was last reset (the retired Reset Pace action,
-  /// prd-deviations #14). Decode-only: no client writes it any more
-  /// (DNI-476).
-  final DateTime? paceResetDate;
-  final DateTime? lastReorderAt;
-
-  // ── Decode-only passthrough fields ───────────────────────────────────
-  //
-  // `progress_schema_version` / `progress_computed_at` / `progress_model` /
-  // `program_progress` / `self_paced_progress` are in `firestore.rules`'
-  // `curriculum_tracks` `.hasOnly()` whitelist and in `tutor_writes.ts`'
-  // `CURRICULUM_TRACK_ALLOWED_FIELDS`, but grepping the whole repo (`lib/`,
-  // `functions/src/`) for them finds no producer or consumer anywhere
-  // outside those two whitelists — no Drift table, no DAO, no other
-  // repository computes or reads a "track progress" shape today. Rather
-  // than invent a schema for a feature that does not exist yet, this
-  // repository treats them as OPAQUE round-trip fields: decoded so a future
-  // progress-writer's data survives a read-modify-write through this
-  // repository, but never constructed or written by any method below (a
-  // `SetOptions(merge: true)` write that never mentions these keys leaves
-  // whatever a future writer already stamped untouched — see
-  // `FirestoreProfileProgramRepository`'s class doc comment for the general
-  // "merge doesn't clear omitted keys" mechanics this relies on). Whoever
-  // builds the real progress-computation feature should replace this
-  // passthrough with a typed shape, not extend it in place.
-  final int? progressSchemaVersion;
-  final DateTime? progressComputedAt;
-  final String? progressModel;
-  final Map<String, dynamic>? programProgress;
-  final Map<String, dynamic>? selfPacedProgress;
-
-  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` /
-  /// the tutor-proxy CF at push time. Decode-only, like
-  /// `ProfileProgramEntity.syncedAt`.
-  final DateTime? syncedAt;
+  /// When the track was first activated — **display only** (the "Started"
+  /// row of the track info card, DNI-484 / R16). AD-35: it is never an
+  /// engine, planner or projection anchor (the tracking start is
+  /// `profile_programs.tracking_start_date`). Optional: a document without
+  /// it decodes, and the display omits the row.
+  final DateTime? activatedAt;
 
   /// True when [state] is the known `'active'` value.
   bool get isActive => state == CurriculumTrackState.active.storageKey;
@@ -122,17 +70,15 @@ class CurriculumTrackEntity {
   /// (`tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart`) as a
   /// brand-new site.
   ///
-  /// Progress passthrough fields are never written — see their field docs
-  /// above.
+  /// The R16 retired fields (`state_changed_at`, `purged`, `purged_at`,
+  /// `pace_reset_date`, `last_reorder_at`, the `progress_*` /
+  /// `*_progress` passthroughs, `synced_at`) are neither encoded nor
+  /// decoded (DNI-484).
   Map<String, dynamic> toFirestore() => {
     'curriculum_id': curriculumId.storageKey,
     'state': state,
-    'state_changed_at': FirestoreCodec.encodeDateTime(stateChangedAt),
-    'activated_at': FirestoreCodec.encodeDateTime(activatedAt),
-    if (paceResetDate != null)
-      'pace_reset_date': FirestoreCodec.encodeDateTime(paceResetDate),
-    if (lastReorderAt != null)
-      'last_reorder_at': FirestoreCodec.encodeDateTime(lastReorderAt),
+    if (activatedAt != null)
+      'activated_at': FirestoreCodec.encodeDateTime(activatedAt),
   };
 }
 
@@ -164,13 +110,14 @@ enum CurriculumTrackState {
 /// [CurriculumTrackEntity].
 ///
 /// Throws [ArgumentError] for an unrecognised `curriculum_id` and
-/// [FormatException] for a missing `state`/`state_changed_at`/
-/// `activated_at` — both are caller-visible decode failures by design
-/// (mirrors `stageDefinitionFromFirestore`/`curriculumScopeFromFirestore`),
-/// surfaced via `resilientQueryStream`'s per-document error handling (skips
-/// just that document) rather than silently defaulted. `state`'s VALUE is
-/// not validated against [CurriculumTrackState] — see that field's doc
-/// comment.
+/// [FormatException] for a missing `state` — both are caller-visible decode
+/// failures by design (mirrors `stageDefinitionFromFirestore`/
+/// `curriculumScopeFromFirestore`), surfaced via `resilientQueryStream`'s
+/// per-document error handling (skips just that document) rather than
+/// silently defaulted. `state`'s VALUE is not validated against
+/// [CurriculumTrackState] — see that field's doc comment. `activated_at` is
+/// optional (display only), and the R16 retired keys are ignored if an old
+/// document still carries them.
 CurriculumTrackEntity curriculumTrackFromFirestore(Map<String, dynamic> data) {
   final curriculumId = CurriculumId.fromStorageKey(
     data['curriculum_id'] as String? ?? '',
@@ -180,36 +127,13 @@ CurriculumTrackEntity curriculumTrackFromFirestore(Map<String, dynamic> data) {
   }
 
   final state = data['state'] as String?;
-  final stateChangedAt = FirestoreCodec.parseDateTime(data['state_changed_at']);
-  final activatedAt = FirestoreCodec.parseDateTime(data['activated_at']);
-  if (state == null ||
-      state.isEmpty ||
-      stateChangedAt == null ||
-      activatedAt == null) {
-    throw FormatException(
-      'curriculum_tracks document missing state/state_changed_at/'
-      'activated_at: $data',
-    );
+  if (state == null || state.isEmpty) {
+    throw FormatException('curriculum_tracks document missing state: $data');
   }
 
   return CurriculumTrackEntity(
     curriculumId: curriculumId,
     state: state,
-    stateChangedAt: stateChangedAt,
-    activatedAt: activatedAt,
-    paceResetDate: FirestoreCodec.parseDateTime(data['pace_reset_date']),
-    lastReorderAt: FirestoreCodec.parseDateTime(data['last_reorder_at']),
-    progressSchemaVersion: FirestoreCodec.parseInt(
-      data['progress_schema_version'],
-    ),
-    progressComputedAt: FirestoreCodec.parseDateTime(
-      data['progress_computed_at'],
-    ),
-    progressModel: data['progress_model'] as String?,
-    programProgress: (data['program_progress'] as Map?)
-        ?.cast<String, dynamic>(),
-    selfPacedProgress: (data['self_paced_progress'] as Map?)
-        ?.cast<String, dynamic>(),
-    syncedAt: FirestoreCodec.parseDateTime(data['synced_at']),
+    activatedAt: FirestoreCodec.parseDateTime(data['activated_at']),
   );
 }

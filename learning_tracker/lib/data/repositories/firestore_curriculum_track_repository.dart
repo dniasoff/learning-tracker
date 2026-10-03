@@ -28,12 +28,14 @@
 ///
 /// ## Retired fields
 ///
-/// `updated_at` / `synced_at` are retired from governed docs, and so are
-/// `pace_reset_date` (Reset pace is retired, prd-deviations #14) and
+/// R16 (DNI-484): `updated_at` / `synced_at` are retired from governed
+/// docs, and so are `state_changed_at`, `purged` / `purged_at`,
+/// `pace_reset_date` (Reset pace is retired, prd-deviations #14),
 /// `last_reorder_at` (the AD-35 amnesty instant is the latest
-/// `mainTrackOrder` / `mainTrackProgram` change-log entry): none is
-/// written. The legacy lifecycle stamps `state_changed_at` and
-/// `activated_at` the decoder requires are still written.
+/// `mainTrackOrder` / `mainTrackProgram` change-log entry) and the
+/// `progress_*` passthroughs: none is written or read. `activated_at` is
+/// still stamped on activation for the "Started" display only; it is never
+/// an engine anchor (AD-35).
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -276,14 +278,13 @@ class FirestoreCurriculumTrackRepository {
   /// and whether it re-adds a removed track. Used by the one-action Add
   /// track flow (DNI-476 T5).
   ///
-  /// * No doc, or a live one: `state = active` with fresh
-  ///   `state_changed_at` / `activated_at` stamps.
+  /// * No doc, or a live one: `state = active` with a fresh
+  ///   `activated_at` (the display-only "Started" date).
   /// * A removed doc (`ended_at` set) is a **re-add** (AD-38, ruling B13):
   ///   the change only clears `ended_at` ([OwnerGovernedIntents.reAddTrack])
-  ///   so the prior config and lifecycle stamps are kept. Only when the
-  ///   track was removed from a retired or archived state does it also
-  ///   set `state = active` (stamping `state_changed_at`); `activated_at`
-  ///   is never rewritten on a re-add.
+  ///   so the prior config is kept. Only when the track was removed from a
+  ///   retired or archived state does it also set `state = active`;
+  ///   `activated_at` is never rewritten on a re-add.
   Future<
     ({GovernedEntityChange change, CurriculumTrackEntity entity, bool reAdded})
   >
@@ -303,21 +304,12 @@ class FirestoreCurriculumTrackRepository {
       return (
         change: _change(curriculumId, {
           'state': CurriculumTrackState.active.storageKey,
-          'state_changed_at': FirestoreCodec.encodeDateTime(now),
           GovernedKeys.endedAt: null,
         }),
         entity: CurriculumTrackEntity(
           curriculumId: curriculumId,
           state: CurriculumTrackState.active.storageKey,
-          stateChangedAt: now,
           activatedAt: prior.activatedAt,
-          paceResetDate: prior.paceResetDate,
-          lastReorderAt: prior.lastReorderAt,
-          progressSchemaVersion: prior.progressSchemaVersion,
-          progressComputedAt: prior.progressComputedAt,
-          progressModel: prior.progressModel,
-          programProgress: prior.programProgress,
-          selfPacedProgress: prior.selfPacedProgress,
         ),
         reAdded: true,
       );
@@ -325,15 +317,10 @@ class FirestoreCurriculumTrackRepository {
     final entity = CurriculumTrackEntity(
       curriculumId: curriculumId,
       state: CurriculumTrackState.active.storageKey,
-      stateChangedAt: now,
       activatedAt: now,
-      paceResetDate: data == null
-          ? null
-          : FirestoreCodec.parseDateTime(data['pace_reset_date']),
     );
     final change = _change(curriculumId, {
       'state': CurriculumTrackState.active.storageKey,
-      'state_changed_at': FirestoreCodec.encodeDateTime(now),
       'activated_at': FirestoreCodec.encodeDateTime(now),
       GovernedKeys.endedAt: null,
     });
@@ -363,10 +350,7 @@ class FirestoreCurriculumTrackRepository {
     CurriculumId curriculumId,
     CurriculumTrackState state,
   ) => _apply([
-    _change(curriculumId, {
-      'state': state.storageKey,
-      'state_changed_at': FirestoreCodec.encodeDateTime(_clock()),
-    }),
+    _change(curriculumId, {'state': state.storageKey}),
   ]);
 
   /// See [retireTrack]/[archiveTrack]'s doc comments.

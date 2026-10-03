@@ -72,8 +72,9 @@ extension StageDefinitionScheduleSpec on StageDefinition {
 /// ratchet (`tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart`) as
 /// a brand-new site outside `lib/core/sync/merge/`.
 extension StageDefinitionFirestoreCodec on StageDefinition {
-  /// Encodes this stage for a Firestore write.
-  Map<String, dynamic> toFirestore({required DateTime updatedAt}) {
+  /// Encodes this stage for a Firestore write. R16 (DNI-484): the governed
+  /// `updated_at` / `synced_at` are retired and never written.
+  Map<String, dynamic> toFirestore() {
     final spec = schedule;
     return {
       'curriculum_id': curriculumId.storageKey,
@@ -85,7 +86,6 @@ extension StageDefinitionFirestoreCodec on StageDefinition {
       if (spec.rollingWindowSize != null)
         'rolling_window_size': spec.rollingWindowSize,
       'is_default': isDefault,
-      'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
     };
   }
 }

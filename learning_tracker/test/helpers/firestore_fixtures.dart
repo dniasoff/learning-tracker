@@ -94,15 +94,11 @@ Future<void> seedTrack(
   required CurriculumId curriculumId,
   String state = 'active',
   DateTime? activatedAt,
-  DateTime? stateChangedAt,
-  DateTime? paceResetDate,
 }) async {
   final track = CurriculumTrackEntity(
     curriculumId: curriculumId,
     state: state,
-    stateChangedAt: _fixtureTime(stateChangedAt ?? activatedAt),
     activatedAt: _fixtureTime(activatedAt),
-    paceResetDate: paceResetDate,
   );
   await firestore
       .collection('users')
@@ -238,7 +234,6 @@ Future<String> seedGoal(
   required String uid,
   required String profileId,
   required CurriculumId curriculumId,
-  double targetPercent = 100,
   DateTime? targetDate,
   String description = 'Test goal',
   String dateType = 'gregorian',
@@ -248,11 +243,9 @@ Future<String> seedGoal(
   PaceGranularity? paceGranularity,
   String? rawLearningUnit,
   DateTime? createdAt,
-  DateTime? updatedAt,
 }) async {
   final goal = GoalEntity(
     curriculumId: curriculumId,
-    targetPercent: targetPercent,
     targetDate: targetDate,
     description: description,
     dateType: dateType,
@@ -262,9 +255,8 @@ Future<String> seedGoal(
     paceGranularity: paceGranularity,
     rawLearningUnit: rawLearningUnit,
     createdAt: _fixtureTime(createdAt),
-    updatedAt: _fixtureTime(updatedAt ?? createdAt),
   );
-  final docId = DocIds.goalDocId({'id': goal.firestoreId});
+  final docId = goal.firestoreId;
   await firestore
       .collection('users')
       .doc(uid)
@@ -316,7 +308,6 @@ Future<void> seedStageDefinitions(
   required String profileId,
   required CurriculumId curriculumId,
   List<StageDefinition>? stages,
-  DateTime? updatedAt,
 }) async {
   final definitions =
       stages ??
@@ -335,7 +326,6 @@ Future<void> seedStageDefinitions(
             scheduleType: ScheduleType.delay,
           ),
       ];
-  final timestamp = _fixtureTime(updatedAt);
   final batch = firestore.batch();
   for (final definition in definitions) {
     if (definition.curriculumId != curriculumId) {
@@ -356,7 +346,7 @@ Future<void> seedStageDefinitions(
               'stage_order': definition.stageOrder,
             }),
           ),
-      definition.toFirestore(updatedAt: timestamp),
+      definition.toFirestore(),
     );
   }
   await batch.commit();

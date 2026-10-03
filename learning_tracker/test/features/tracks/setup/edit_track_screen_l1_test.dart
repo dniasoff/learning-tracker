@@ -79,7 +79,6 @@ CurriculumTrackEntity _track({String curriculumId = 'mishnayos'}) =>
     CurriculumTrackEntity(
       curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
       state: 'active',
-      stateChangedAt: DateTime.utc(2026, 1, 1),
       activatedAt: DateTime.utc(2026, 1, 1),
     );
 
@@ -318,7 +317,6 @@ void main() {
       GoalEntity(
         curriculumId: CurriculumId.mishnayos,
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       ),
     );
   });

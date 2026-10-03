@@ -24,7 +24,6 @@ class CurriculumScopeEntity {
     required this.scopeLevel,
     required this.scopeValue,
     required this.createdAt,
-    this.updatedAt,
   });
 
   final CurriculumId curriculumId;
@@ -38,26 +37,19 @@ class CurriculumScopeEntity {
 
   final DateTime createdAt;
 
-  /// `null` for a scope that has never been touched since creation — this
-  /// collection has no tutor-proxy `.hasOnly()` field whitelist
-  /// (`firestore.rules`: "No `.hasOnly()` counterpart for curriculum_scopes
-  /// — it's intentionally open-ended"), so unlike `profile_programs` there
-  /// is no rules-enforced requirement to always stamp this.
-  final DateTime? updatedAt;
-
   /// Encodes this scope for a Firestore write.
   ///
   /// `profile_id` is deliberately NOT included — same reasoning as
   /// `BookmarkEntity.toFirestore`/`StageDefinitionFirestoreCodec.toFirestore`:
   /// the document already lives at `.../learner_profiles/{profileId}/
   /// curriculum_scopes/{scopeId}`, so profile identity is carried by the
-  /// path, not duplicated into the body.
-  Map<String, dynamic> toFirestore({required DateTime updatedAt}) => {
+  /// path, not duplicated into the body. R16 (DNI-484): the governed
+  /// `updated_at` / `synced_at` are retired and never written.
+  Map<String, dynamic> toFirestore() => {
     'curriculum_id': curriculumId.storageKey,
     'scope_level': scopeLevel,
     'scope_value': scopeValue,
     'created_at': FirestoreCodec.encodeDateTime(createdAt),
-    'updated_at': FirestoreCodec.encodeDateTime(updatedAt),
   };
 }
 
@@ -94,6 +86,5 @@ CurriculumScopeEntity curriculumScopeFromFirestore(Map<String, dynamic> data) {
     // `created_at` is absent on docs written since.
     createdAt:
         FirestoreCodec.parseDateTime(data['created_at']) ?? DateTime.utc(1970),
-    updatedAt: FirestoreCodec.parseDateTime(data['updated_at']),
   );
 }

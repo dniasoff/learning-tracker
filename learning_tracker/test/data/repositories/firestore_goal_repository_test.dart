@@ -58,7 +58,6 @@ void main() {
       final repo = buildRepo();
       await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
         paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
         description: 'Siyum',
       );
@@ -85,7 +84,6 @@ void main() {
       final repo = buildRepo();
       await repo.createGoal(
         curriculumId: CurriculumId.bavli,
-        targetPercent: 100,
         paceTarget: const PacePeriodTarget(rate: 2, period: 'per_day'),
         paceGranularity: PaceGranularity.daf,
       );
@@ -101,12 +99,10 @@ void main() {
       final repo = buildRepo();
       await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
         paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
       );
       await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
         paceTarget: DeadlineTarget(DateTime.utc(2027, 9, 1)),
       );
 
@@ -124,7 +120,6 @@ void main() {
       final repo = buildRepo();
       final created = await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
         paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
       );
       await repo.updateGoal(
@@ -154,7 +149,6 @@ void main() {
       final repo = buildRepo();
       final created = await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
         paceTarget: const PacePeriodTarget(rate: 1, period: 'per_day'),
       );
       await repo.updateGoal(goal: created, clearPaceTarget: true);
@@ -167,7 +161,6 @@ void main() {
       final repo = buildRepo();
       final created = await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
         paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
       );
       await goals().doc('mishnayos_deadline').set({
@@ -189,7 +182,6 @@ void main() {
         final repo = buildRepo();
         final created = await repo.createGoal(
           curriculumId: CurriculumId.mishnayos,
-          targetPercent: 80,
           paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
         );
         await repo.deleteGoal(created);
@@ -207,13 +199,11 @@ void main() {
       final repo = buildRepo();
       final created = await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
         paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
       );
       await repo.deleteGoal(created);
       await repo.createGoal(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 80,
         paceTarget: DeadlineTarget(DateTime.utc(2027, 7, 1)),
       );
       final live = await repo.getGoals(CurriculumId.mishnayos);
@@ -228,7 +218,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           goalType: 'none',
           createdAt: governedTestNow,
-          updatedAt: governedTestNow,
         ),
       );
       expect(writer.actions, isEmpty);
@@ -251,7 +240,6 @@ void main() {
       await expectLater(
         repo.createGoal(
           curriculumId: CurriculumId.bavli,
-          targetPercent: 100,
           paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
         ),
         throwsA(
@@ -275,7 +263,6 @@ void main() {
       await expectLater(
         repo.createGoal(
           curriculumId: CurriculumId.mishnayos,
-          targetPercent: 80,
           paceTarget: DeadlineTarget(DateTime.utc(2027, 6, 1)),
         ),
         throwsA(isA<GovernedWriterNotReadyException>()),
@@ -351,7 +338,8 @@ void main() {
       final goal = (await buildRepo().getGoals(CurriculumId.mishnayos)).single;
       expect(goal.targetDate, DateTime.utc(2027, 6, 1));
       expect(goal.createdAt, DateTime.utc(2026));
-      expect(goal.updatedAt, DateTime.utc(2026, 1, 2));
+      // R16: a legacy updated_at is ignored on decode.
+      expect(goal.toFirestore(), isNot(contains('updated_at')));
     });
   });
 }

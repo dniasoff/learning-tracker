@@ -98,7 +98,6 @@ abstract class GoalEntity with _$GoalEntity {
   const factory GoalEntity({
     int? id,
     required CurriculumId curriculumId,
-    @Default(100.0) double targetPercent,
     DateTime? targetDate,
     @Default('') String description,
     int? trackId,
@@ -127,7 +126,6 @@ abstract class GoalEntity with _$GoalEntity {
     String? rawLearningUnit,
 
     required DateTime createdAt,
-    required DateTime updatedAt,
   }) = _GoalEntity;
 
   /// Typed [PaceTarget] derived from the entity's mode fields.
@@ -162,8 +160,8 @@ abstract class GoalEntity with _$GoalEntity {
   /// AUD-scheduler-16: must only be built from fields [updateGoal] can never
   /// change (curriculumId, createdAt) — `id`/`trackId` are per-device
   /// autoincrement values that can legitimately differ across devices for
-  /// the "same" goal (see [GoalMerger]'s track-id resolution), and
-  /// `targetPercent` is a routinely-edited field. Keying on any of those
+  /// the "same" goal (see [GoalMerger]'s track-id resolution). Keying on
+  /// either of those
   /// would make an ordinary edit (or a cross-device sync) compute a
   /// different id, so `_syncGoal` would push a brand-new Firestore document
   /// instead of updating the original — orphaning the old one forever,
@@ -179,11 +177,13 @@ abstract class GoalEntity with _$GoalEntity {
   /// Convert to Firestore document map.
   ///
   /// Uses snake_case keys to match what [GoalMerger] reads on the parent side.
+  /// R16 (DNI-484): `target_percent` (AD-43: a deadline covers the whole
+  /// corpus) and the governed `updated_at` / `synced_at` are retired and
+  /// never written.
   Map<String, dynamic> toFirestore() {
     return {
       'curriculum_id': curriculumId.storageKey,
       if (trackId != null) 'track_id': trackId,
-      'target_percent': targetPercent,
       'target_date': targetDate?.toIso8601String(),
       'description': description,
       'date_type': dateType,
@@ -192,14 +192,14 @@ abstract class GoalEntity with _$GoalEntity {
       'pace_unit': pacePeriod,
       'pace_granularity': paceGranularityKey,
       'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
   /// Create from Firestore document.
   ///
   /// Accepts both snake_case keys (canonical) and camelCase (back-compat for
-  /// any docs written before the snake_case migration).
+  /// any docs written before the snake_case migration). The R16 retired
+  /// keys are ignored if an old document still carries them.
   static GoalEntity fromFirestore(Map<String, dynamic> data) {
     final rawCurriculumId =
         (data['curriculum_id'] ?? data['curriculumId']) as String;
@@ -216,10 +216,6 @@ abstract class GoalEntity with _$GoalEntity {
         orElse: () =>
             throw ArgumentError('Unknown curriculumId: $rawCurriculumId'),
       ),
-      targetPercent:
-          ((data['target_percent'] ?? data['targetPercent']) as num?)
-              ?.toDouble() ??
-          100.0,
       // An AD-43 civil date (`YYYY-MM-DD`), or a legacy ISO instant.
       targetDate: FirestoreCodec.parseCivilDate(
         data['target_date'] ?? data['targetDate'],
@@ -236,8 +232,6 @@ abstract class GoalEntity with _$GoalEntity {
           ? rawUnit
           : null,
       createdAt: createdAt,
-      updatedAt:
-          _parseInstant(data['updated_at'] ?? data['updatedAt']) ?? createdAt,
     );
   }
 

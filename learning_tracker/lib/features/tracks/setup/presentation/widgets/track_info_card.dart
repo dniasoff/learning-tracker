@@ -114,9 +114,13 @@ class TrackInfoCard extends ConsumerWidget {
     final locale = Localizations.localeOf(context).toString();
 
     final today = ref.watch(localDayClockProvider).today();
-    final startedLocal = track.activatedAt.toLocal();
-
-    final elapsedDays = today.difference(startedLocal).inDays;
+    // `activated_at` is display-only (R16 / AD-35): it labels the Started
+    // and Elapsed rows and feeds nothing else. A track without it omits
+    // both rows.
+    final activatedAt = track.activatedAt;
+    final elapsedDays = activatedAt == null
+        ? null
+        : today.difference(activatedAt.toLocal()).inDays;
 
     final targetDate = goal?.targetDate?.toLocal();
     final remainingDays = targetDate?.difference(today).inDays;
@@ -174,12 +178,13 @@ class TrackInfoCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Started ─────────────────────────────────────────────────────
-          _infoRow(
-            context,
-            theme,
-            label: l10n.trackInfoStarted,
-            value: _formatDate(track.activatedAt, locale),
-          ),
+          if (activatedAt != null)
+            _infoRow(
+              context,
+              theme,
+              label: l10n.trackInfoStarted,
+              value: _formatDate(activatedAt, locale),
+            ),
 
           // ── Goal date (deadline goals only) ──────────────────────────────
           if (goal != null && goal!.targetDate != null)
@@ -222,12 +227,13 @@ class TrackInfoCard extends ConsumerWidget {
           ),
 
           // ── Elapsed / Remaining ───────────────────────────────────────────
-          _infoRow(
-            context,
-            theme,
-            label: l10n.trackInfoElapsed,
-            value: _elapsedRemainingLabel(l10n, elapsedDays, remainingDays),
-          ),
+          if (elapsedDays != null)
+            _infoRow(
+              context,
+              theme,
+              label: l10n.trackInfoElapsed,
+              value: _elapsedRemainingLabel(l10n, elapsedDays, remainingDays),
+            ),
         ],
       ),
     );

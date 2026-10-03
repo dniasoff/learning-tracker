@@ -400,7 +400,6 @@ void main() {
           uid: identity.accountId,
           profileId: profileId,
           curriculumId: CurriculumId.mishnayos,
-          stateChangedAt: now,
           activatedAt: now,
         );
         await seedStageDefinitions(

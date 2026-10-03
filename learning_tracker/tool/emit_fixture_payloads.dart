@@ -78,7 +78,6 @@ void main() {
     'track_id': '1',
     'curriculum_id': 'c1',
     'state': 'active',
-    'state_changed_at': past.toIso8601String(),
     'activated_at': past.toIso8601String(),
   };
 
@@ -90,13 +89,13 @@ void main() {
     delayDays: 7,
     isDefault: true,
     scheduleType: ScheduleType.delay,
-  ).toFirestore(updatedAt: past);
+  ).toFirestore();
 
   // study_day_configs — codec encode() shape.
   final studyDayConfigsOut = const StudyDayConfigEntry(
     dayOfWeek: 1,
     dayType: DayType.study,
-  ).toFirestore(curriculumId: CurriculumId.mishnayos, updatedAt: past);
+  ).toFirestore(curriculumId: CurriculumId.mishnayos);
 
   // point_configs — codec encode() shape.
   final pointConfigs = const PointConfigEntity(
@@ -110,13 +109,11 @@ void main() {
   // the string form to match the path segment.
   final goal = GoalEntity(
     curriculumId: CurriculumId.mishnayos,
-    updatedAt: past,
     createdAt: past,
     paceValue: 2,
     pacePeriod: 'daily',
     targetDate: DateTime.utc(2025, 12, 31),
     description: 'Finish Berakhot',
-    targetPercent: 80,
     dateType: 'fixed',
     goalType: 'completion',
   );
@@ -139,7 +136,6 @@ void main() {
     programId: 1,
     trackingStartDate: past,
     trackingStartRef: 'Berakhot.2a',
-    updatedAt: past,
   ).toFirestore(profileId: '5');
 
   // learning_ledger — LocalDataUploadService enqueueLedgerEntry map literal.

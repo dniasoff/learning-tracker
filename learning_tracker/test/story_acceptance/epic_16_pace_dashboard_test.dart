@@ -18,14 +18,12 @@ void main() {
     test('goal Firestore shape carries pace fields', () {
       final goal = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
-        targetPercent: 100,
         description: 'Finish',
         dateType: 'gregorian',
         goalType: 'pace',
         paceValue: 5,
         pacePeriod: 'per_day',
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       expect(goal.toFirestore(), containsPair('goal_type', 'pace'));
       expect(goal.toFirestore(), containsPair('pace_value', 5));

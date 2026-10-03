@@ -252,11 +252,16 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       useHebrewCalendar: useHebrewCalendar,
     );
     // TS-8 fix: use formatTrackDate so Hebrew calendar preference is respected.
-    final activatedDate = formatTrackDate(
-      date: track.activatedAt,
-      locale: locale,
-      useHebrewCalendar: useHebrewCalendar,
-    );
+    // `activated_at` is display-only (R16 / AD-35); a track without it
+    // omits the "Since" line.
+    final activatedAt = track.activatedAt;
+    final activatedDate = activatedAt == null
+        ? null
+        : formatTrackDate(
+            date: activatedAt,
+            locale: locale,
+            useHebrewCalendar: useHebrewCalendar,
+          );
     final learnerState = ref
         .watch(_trackLearnerStateProvider(track))
         .asData
@@ -337,7 +342,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     CurriculumTrackEntity track,
     Color accent,
     IconData icon,
-    String activatedDate,
+    String? activatedDate,
     bool hasProgramEnrollment,
     double? cycleFraction,
     String? cyclePercentDisplay,
@@ -391,12 +396,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      AppLocalizations.of(context)!.trackSince(activatedDate),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: context.colors.brandInkMuted,
+                    if (activatedDate != null)
+                      Text(
+                        AppLocalizations.of(context)!.trackSince(activatedDate),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: context.colors.brandInkMuted,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -864,7 +870,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     if (existingEntity == null) {
       await repo.createGoal(
         curriculumId: curriculum,
-        targetPercent: result.targetPercent,
         paceTarget: paceTarget,
         description: result.description,
         dateType: result.dateType,
@@ -873,7 +878,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     } else {
       await repo.updateGoal(
         goal: existingEntity,
-        targetPercent: result.targetPercent,
         paceTarget: paceTarget,
         // 'none' goals clear the pace target entirely.
         clearPaceTarget: paceTarget == null,

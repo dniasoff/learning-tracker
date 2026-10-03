@@ -39,7 +39,6 @@ CurriculumTrackEntity _track({required String curriculumId}) {
   return CurriculumTrackEntity(
     curriculumId: CurriculumId.fromStorageKey(curriculumId)!,
     state: 'active',
-    stateChangedAt: now,
     activatedAt: now,
   );
 }

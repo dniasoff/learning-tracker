@@ -40,7 +40,7 @@ void main() {
         ownerUid: _ownerUid,
         profileId: _profileId,
         goalId: 'goal_xyz',
-        goalData: {'id': 'goal_xyz', 'targetPercent': 80.0},
+        goalData: {'id': 'goal_xyz', 'goal_type': 'deadline'},
       );
 
       expect(result, isA<TutorWriteSuccess>());

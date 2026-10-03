@@ -103,7 +103,6 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
   @override
   Future<GoalEntity> createGoal({
     required CurriculumId curriculumId,
-    required double targetPercent,
     PaceTarget? paceTarget,
     String description = '',
     String dateType = 'gregorian',
@@ -113,7 +112,6 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
     final granularity = PaceGranularity.fromStorageKey(paceGranularity);
     return repo.createGoal(
       curriculumId: curriculumId,
-      targetPercent: targetPercent,
       paceTarget: paceTarget,
       description: description,
       dateType: dateType,
@@ -128,7 +126,6 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
   @override
   Future<GoalEntity> updateGoal({
     required GoalEntity goal,
-    double? targetPercent,
     PaceTarget? paceTarget,
     bool clearPaceTarget = false,
     String? description,
@@ -139,7 +136,6 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
     final repo = await _resolve();
     return repo.updateGoal(
       goal: goal,
-      targetPercent: targetPercent,
       paceTarget: paceTarget,
       clearPaceTarget: clearPaceTarget,
       description: description,

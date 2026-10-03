@@ -15,11 +15,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 GoalEntity _makeGoal() => GoalEntity(
   curriculumId: CurriculumId.mishnayos,
-  targetPercent: 80.0,
   targetDate: DateTime.utc(2027, 1, 1),
   description: 'Test goal',
   createdAt: DateTime.utc(2026, 1, 1),
-  updatedAt: DateTime.utc(2026, 1, 1),
 );
 
 Widget _makeApp({required Widget home, List<Override> overrides = const []}) =>
@@ -116,9 +114,8 @@ void main() {
       expect(find.text('Deadline has passed'), findsOneWidget);
     });
 
-    testWidgets('renders form with target percentage slider and date picker', (
-      tester,
-    ) async {
+    testWidgets('renders the form without a target-percent slider (R16: '
+        'target_percent is retired, AD-43)', (tester) async {
       await tester.pumpWidget(
         _makeApp(
           home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
@@ -126,8 +123,8 @@ void main() {
       );
 
       expect(find.text('New Goal'), findsOneWidget);
-      expect(find.textContaining('100%'), findsOneWidget);
-      expect(find.byType(Slider), findsOneWidget);
+      expect(find.textContaining('%'), findsNothing);
+      expect(find.byType(Slider), findsNothing);
       expect(find.text('Create Goal'), findsOneWidget);
     });
 
@@ -143,23 +140,6 @@ void main() {
       expect(find.text('Deadline'), findsOneWidget);
       expect(find.text('Pace'), findsOneWidget);
       expect(find.text('No deadline'), findsOneWidget);
-    });
-
-    testWidgets('slider changes target percentage', (tester) async {
-      await tester.pumpWidget(
-        _makeApp(
-          home: const GoalSetupScreen(curriculumId: CurriculumId.mishnayos),
-        ),
-      );
-
-      expect(find.textContaining('100%'), findsOneWidget);
-
-      final slider = find.byType(Slider);
-      final sliderCenter = tester.getCenter(slider);
-      await tester.dragFrom(sliderCenter, const Offset(-100, 0));
-      await tester.pump();
-
-      expect(find.textContaining('100%'), findsNothing);
     });
 
     testWidgets('shows mode toggle with deadline and pace options', (
@@ -354,7 +334,6 @@ void main() {
         pacePeriod: 'per_week',
         paceGranularity: PaceGranularity.daf,
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       await tester.pumpWidget(
         _makeApp(
@@ -397,7 +376,6 @@ void main() {
         pacePeriod: 'per_week',
         paceGranularity: PaceGranularity.daf,
         createdAt: DateTime.utc(2026, 1, 1),
-        updatedAt: DateTime.utc(2026, 1, 1),
       );
       await tester.pumpWidget(
         _makeApp(
