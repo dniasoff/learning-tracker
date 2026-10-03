@@ -63,8 +63,7 @@ void main() {
         final payload = await exportedMap(backupService(firestore));
         final profile = profileFrom(payload, testProfileId);
         final collections = profile['collections'] as Map<String, dynamic>;
-        // The AD-49 learning record plus the raw profile collections; the
-        // retired completion stores are gone (DNI-482).
+        // The AD-49 learning record plus the current raw profile collections.
         const expected = [
           'learning_events',
           'sub_tracks',
@@ -75,7 +74,6 @@ void main() {
           'stage_definitions',
           'point_configs',
           'curriculum_tracks',
-          'bookmarks',
           'track_learning_order',
           'preferences',
           'goals',
@@ -87,10 +85,6 @@ void main() {
         for (final collection in expected) {
           expect(collections, contains(collection));
         }
-        // The retired `learning_order` (AD-49 R13) is merged into
-        // `track_learning_order` (DNI-476).
-        expect(collections, isNot(contains('learning_order')));
-        expect(collections, isNot(contains('completions')));
         expect(payload, isNot(contains('syncQueue')));
         expect(payload, isNot(contains('outbox')));
       },
@@ -173,12 +167,6 @@ void main() {
           profileId: testProfileId,
           curriculumId: CurriculumId.mishnayos,
         );
-        await seedBookmark(
-          source,
-          uid: testUid,
-          profileId: secondTestProfileId,
-          curriculumId: CurriculumId.bavli,
-        );
         await seedStageDefinitions(
           source,
           uid: testUid,
@@ -208,7 +196,6 @@ void main() {
             'curriculum_tracks',
             'goals',
             'stage_definitions',
-            'bookmarks',
           ]) {
             expect(
               collectionDocuments(now, name).map((d) => d['id']),

@@ -1,6 +1,6 @@
-// Story 1.11 (DNI-473) R15 port: the capture behaviour the retired R2
-// writers (`CompletionOrchestrator`, its points/streak co-writers, the bulk
-// and manual use cases and `BulkPriorCompletionService`) used to own, now
+// Story 1.11 (DNI-473) R15 port: the capture behaviour retired writer
+// services, their points/streak co-writers, and the bulk/manual use cases
+// used to own, now
 // pinned on `DefaultLearningCommands` — ordering, one capture per batch,
 // pts_ attach (AD-50), Before tracking without a date (R10), dated
 // backfill without a streak day (deviation #8), lock and permanent
@@ -163,7 +163,7 @@ void main() {
     });
 
     test('a Before-tracking batch writes no learned_on, no pts_ entry and '
-        'no streak day (R10: the retired 2000-01-01 sentinel)', () async {
+        'no streak day for a before-tracking event', () async {
       final h = _Harness();
       await h.capture(refs: [_b11, _b12], dateState: DateState.beforeTracking);
       expect(h.written, hasLength(2));
