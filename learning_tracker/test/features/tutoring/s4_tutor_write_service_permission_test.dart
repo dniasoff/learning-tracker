@@ -4,7 +4,7 @@
 //   AC1 — TutorWriteService maps FirebaseFunctionsException(permission-denied)
 //          → TutorWriteFailure(code: 'permission-denied'). This is the exact
 //          error a CF throws when the grant's flag is false (e.g.
-//          can_reset_completion=false → tutorResetCompletion rejects).
+//          can_edit_learning=false → governed learning callable rejects).
 //   AC2 — TutorWriteFailure is returned (not thrown) so the caller can inspect
 //          the code and surface an appropriate UI error.
 //   AC3 — A successful call returns TutorWriteSuccess (baseline correctness).
@@ -109,21 +109,6 @@ void main() {
       group(
         'AC1+AC2: permission-denied → TutorWriteFailure(code=permission-denied)',
         () {
-          test(
-            'resetCompletion (can_reset_completion=false on grant)',
-            () async {
-              final result = await _svc(_permissionDeniedInvoker)
-                  .resetCompletion(
-                    grantId: _grantId,
-                    ownerUid: _ownerUid,
-                    profileId: _profileId,
-                    completionId: 'comp_xyz',
-                  );
-              expect(result, isA<TutorWriteFailure>());
-              expect((result as TutorWriteFailure).code, 'permission-denied');
-            },
-          );
-
           test('upsertGoal (can_edit_goals=false on grant)', () async {
             final result = await _svc(_permissionDeniedInvoker).upsertGoal(
               grantId: _grantId,
@@ -230,19 +215,6 @@ void main() {
 
       // AC3: successful calls return TutorWriteSuccess.
       group('AC3: success → TutorWriteSuccess', () {
-        test(
-          'resetCompletion succeeds when can_reset_completion=true',
-          () async {
-            final result = await _svc(_successInvoker).resetCompletion(
-              grantId: _grantId,
-              ownerUid: _ownerUid,
-              profileId: _profileId,
-              completionId: 'comp_xyz',
-            );
-            expect(result, isA<TutorWriteSuccess>());
-          },
-        );
-
         test('upsertGoal succeeds when can_edit_goals=true', () async {
           final result = await _svc(_governedSuccessInvoker).upsertGoal(
             grantId: _grantId,

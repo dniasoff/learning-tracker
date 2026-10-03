@@ -433,52 +433,6 @@ void main() {
     });
   });
 
-  group('S4-C — completion reset', () {
-    test('tutored: completion id forwarded to CF', () async {
-      final record = _FakeInvokerRecord();
-      final result = await _service(record).resetCompletion(
-        grantId: _grantId,
-        ownerUid: _ownerUid,
-        profileId: _profileId,
-        completionId: 'completion_xyz_123',
-      );
-
-      expect(result, isA<TutorWriteSuccess>());
-      expect(record.lastCall!.fn, 'tutorResetCompletion');
-      expect(record.lastCall!.args['completionId'], 'completion_xyz_123');
-      expect(record.lastCall!.args['grantId'], _grantId);
-    });
-
-    test('non-tutored: passes through to delegate (no-op in outbox)', () {
-      markTestSkipped(
-        'RETIRED: verified the deleted router/facade were the only current '
-        'pass-through implementation; TutorWriteService has no non-tutored mode.',
-      );
-    });
-
-    test('CF failure → TutorWriteFailure', () async {
-      final service = TutorWriteService(
-        invoker: (_, __) async => throw Exception('CF timeout'),
-      );
-
-      final result = await service.resetCompletion(
-        grantId: _grantId,
-        ownerUid: _ownerUid,
-        profileId: _profileId,
-        completionId: 'comp_fail',
-      );
-
-      expect(result, isA<TutorWriteFailure>());
-    });
-
-    test('AC3 extended: deleteCompletion in tutored mode: 0 outbox depth', () {
-      markTestSkipped(
-        'RETIRED: verified the deleted SyncWriteFacade outbox was the only '
-        'depth being measured; TutorWriteService has no outbox integration.',
-      );
-    });
-  });
-
   group('AUD-t-tutoring-02 — always-pass-through methods', () {
     test('tutored: pushSettings always reaches delegate, CF never invoked', () {
       markTestSkipped(

@@ -618,21 +618,6 @@ class TutorWriteService {
     );
   }
 
-  // ── Completion reset (canEditLearning, AD-53) ────────────────────────────────────
-
-  /// Deletes a completion document from the child's profile as a correction.
-  Future<TutorWriteResult> resetCompletion({
-    required String grantId,
-    required String ownerUid,
-    required String profileId,
-    required String completionId,
-  }) => _call('tutorResetCompletion', {
-    'grantId': grantId,
-    'ownerUid': ownerUid,
-    'profileId': profileId,
-    'completionId': completionId,
-  });
-
   // ── Main-track governed (Story 1.10 callables via writeWithChangeLog) ──────
   //
   // Each governed method takes an optional client [actionId] ULID: pass the
