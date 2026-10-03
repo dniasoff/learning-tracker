@@ -555,6 +555,10 @@ final class TutorLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> undoAction(String actionId) async => _invalid;
 
+  /// Tutor sub-track writes are unavailable through the tutor command surface.
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) async => true;
+
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>
       Stream<List<PendingFailure>>.multi((controller) {
