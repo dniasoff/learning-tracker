@@ -714,6 +714,47 @@ describe('DNI-509 AC-2 — tutorRecordLearning with a sub-track source', () => {
     await assertNothingWritten();
   });
 
+  // DNI-510 review: the source must be live — an ended or deleted sub-track
+  // (an `ended_at` tombstone, the doc kept) takes no new learning.
+  for (const reason of ['ended', 'deleted']) {
+    test(`a ${reason} sub-track source → failed-precondition, nothing written`, async () => {
+      await profileRef().collection('sub_tracks').doc(SUB).set(
+        { ended_at: admin.firestore.Timestamp.now(), end_reason: reason }, { merge: true });
+      const { error, logs } = await captureLogs(() =>
+        record([dated(ulid(1), 'Beitzah 3:1', { source: SUB })]));
+      await expectHttpsError(Promise.reject(error), 'failed-precondition');
+      assertPrivacySafeRejectionLog(logs, { entity: LOG_ENTITY, code: 'failed-precondition' });
+      await assertNothingWritten();
+    });
+  }
+
+  // The sub-track read is part of the capture's transaction, so in
+  // production (server SDK transactions take read locks) a capture racing an
+  // end serializes before the end or sees the tombstone and is refused. The
+  // emulator does not enforce read locks, so this asserts what holds in both:
+  // the end commits, and the capture is either stored whole or refused with
+  // nothing written — never a half-written or silently dropped capture. The
+  // sequential cases above pin the refusal itself.
+  test('a capture racing an end of its sub-track is stored whole or refused', async () => {
+    const [captured, ended] = await Promise.allSettled([
+      record([dated(ulid(1), 'Beitzah 3:1', { source: SUB }), dated(ulid(3), 'Beitzah 3:2', { source: SUB })]),
+      call(fns.tutorUpsertSubTrack, routing({ op: 'end', subTrackId: SUB, actionId: ulid(2) })),
+    ]);
+    assert.equal(ended.status, 'fulfilled', 'the end always commits');
+    const track = (await profileRef().collection('sub_tracks').doc(SUB).get()).data();
+    assert.ok(track.ended_at instanceof admin.firestore.Timestamp);
+    const stored = [...(await allEvents()).keys()].sort();
+    if (captured.status === 'fulfilled') {
+      assert.deepEqual(stored, [ulid(1), ulid(3)], 'the committed capture is stored whole');
+    } else {
+      await expectHttpsError(Promise.reject(captured.reason), 'failed-precondition');
+      assert.deepEqual(stored, [], 'the refused capture wrote nothing');
+    }
+    // Once the end has committed, the same capture is refused.
+    await expectHttpsError(record([dated(ulid(4), 'Beitzah 3:4', { source: SUB })]), 'failed-precondition');
+    assert.equal((await eventsCol().doc(ulid(4)).get()).exists, false);
+  });
+
   test('a grant without can_edit_learning cannot record on a sub-track', async () => {
     await seedActiveGrant({ can_edit_learning: false });
     await expectHttpsError(record([dated(ulid(1), 'Beitzah 3:1', { source: SUB })]), 'permission-denied');

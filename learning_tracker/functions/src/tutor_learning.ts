@@ -29,9 +29,10 @@ import {
 //                         (leaf, or node ref + level; learned_on null). Covers
 //                         task tick, tick-to-here and before-tracking marking.
 //                         Story 4.1: `source` may instead be the ULID of an
-//                         existing sub-track of the same curriculum (`dated`
-//                         only — the Rebbe row's +1 and Up to…); such events
-//                         earn no `pts_` entry (AD-50).
+//                         existing, live (not ended or deleted) sub-track of
+//                         the same curriculum (`dated` only — the Rebbe row's
+//                         +1 and Up to…); such events earn no `pts_` entry
+//                         (AD-50).
 //   tutorVoidLearning   — one `void` of a stored `source = main` learn event,
 //                         or REPLACE: the void plus a corrected learn copy on
 //                         the target's curriculum, in one transaction.
@@ -248,28 +249,39 @@ export const tutorRecordLearning = onCall(CALL_OPTS, (request) => runGoverned(LO
 
 /**
  * Validates, inside the transaction, every sub-track `source` of [events]:
- * the `sub_tracks/{source}` doc exists in this learner's profile and belongs
- * to the event's curriculum (an event never names another curriculum's or
- * another learner's sub-track). Reads only; the events themselves are the
- * request's static events.
+ * the `sub_tracks/{source}` doc exists in this learner's profile, belongs to
+ * the event's curriculum (an event never names another curriculum's or
+ * another learner's sub-track) and is live — not ended or deleted
+ * (`ended_at` unset, AD-38 tombstone). The read is part of the write's
+ * transaction, so a capture racing an end either commits before the end or
+ * is refused (DNI-510 review). Reads only.
  */
+async function assertLiveSubTrackSources(ctx: PlanContext, events: LearningEventIntent[]): Promise<void> {
+  const ids = [...new Set(events
+    .map((e) => String(e.fields.source))
+    .filter((source) => source !== MAIN_SOURCE))];
+  if (ids.length === 0) return;
+  const snaps = await ctx.txn.getAll(
+    ...ids.map((id) => ctx.profileRef.collection(ENTITY_COLLECTION.subTrack).doc(id)));
+  const curriculumOf = new Map<string, unknown>(snaps.map((snap, i) => {
+    if (!snap.exists) throw new HttpsError("not-found", "Sub-track source does not exist");
+    if (snap.get("ended_at") != null) {
+      throw new HttpsError("failed-precondition", "Sub-track source has ended");
+    }
+    return [ids[i], snap.get("curriculum_id")];
+  }));
+  for (const e of events) {
+    if (e.fields.source === MAIN_SOURCE) continue;
+    if (curriculumOf.get(String(e.fields.source)) !== e.fields.curriculum_id) {
+      bad("A sub-track capture must be on the sub-track's curriculum");
+    }
+  }
+}
+
+/** The plan of a sub-track capture: [assertLiveSubTrackSources], no entries. */
 function subTrackSourcePlan(events: LearningEventIntent[]): (ctx: PlanContext) => Promise<GovernedPlan> {
   return async (ctx) => {
-    const ids = [...new Set(events
-      .map((e) => String(e.fields.source))
-      .filter((source) => source !== MAIN_SOURCE))];
-    const snaps = await ctx.txn.getAll(
-      ...ids.map((id) => ctx.profileRef.collection(ENTITY_COLLECTION.subTrack).doc(id)));
-    const curriculumOf = new Map<string, unknown>(snaps.map((snap, i) => {
-      if (!snap.exists) throw new HttpsError("not-found", "Sub-track source does not exist");
-      return [ids[i], snap.get("curriculum_id")];
-    }));
-    for (const e of events) {
-      if (e.fields.source === MAIN_SOURCE) continue;
-      if (curriculumOf.get(String(e.fields.source)) !== e.fields.curriculum_id) {
-        bad("A sub-track capture must be on the sub-track's curriculum");
-      }
-    }
+    await assertLiveSubTrackSources(ctx, events);
     return { entries: [] };
   };
 }
