@@ -292,6 +292,17 @@ void main() {
       ]);
     });
 
+    test('a curriculum with no main track rejects a create', () async {
+      // The intent has only `shas`: no orphan sub-track for another one.
+      final result = await commands.createSubTrack(
+        _draft(curriculumId: 'mishnayos'),
+      );
+      expect(result, isA<CaptureRejected>());
+      expect((result as CaptureRejected).reason, CaptureRejection.invalid);
+      expect(repo.calls, isEmpty, reason: 'nothing is written');
+      expect(repo.tracksOf(scope), isEmpty);
+    });
+
     test('malformed intent is typed (AC-5)', () async {
       await expectRejected(
         commands.createSubTrack(
@@ -344,6 +355,30 @@ void main() {
         commands.editSubTrack(ulidB, const SubTrackEdit(academicYear: 2026)),
         [SubTrackLimit.schoolYearDuplicate],
       );
+    });
+  });
+
+  group('a read with undecodable rows fails closed', () {
+    setUp(() {
+      repo
+        ..seed(scope, [_stored(ulidA)])
+        ..seedRejected(scope, const [
+          RejectedRow('01JBADROW00000000000000000', 'bad window_end'),
+        ]);
+    });
+
+    const refused = CaptureResult.rejected(CaptureRejection.invalid);
+
+    test('create, edit, end and delete write nothing', () async {
+      expect(await commands.createSubTrack(_draft()), refused);
+      expect(
+        await commands.editSubTrack(ulidA, const SubTrackEdit(ratePerWeek: 7)),
+        refused,
+      );
+      expect(await commands.endSubTrack(ulidA), refused);
+      expect(await commands.deleteSubTrack(ulidA), refused);
+      expect(repo.calls, isEmpty);
+      expect(repo.entries, isEmpty);
     });
   });
 
