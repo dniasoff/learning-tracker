@@ -103,6 +103,13 @@ final class TutorLearningCommands implements LearningCommands {
     CaptureRejection.editingTurnedOff,
   );
 
+  /// Tutored sessions cannot import an owner backup into the learner's tree.
+  @override
+  Future<BackupReplayResult> importBackup(BackupReplayInput input) async =>
+      const BackupReplayResult(
+        result: CaptureResult.rejected(CaptureRejection.invalid),
+      );
+
   final Map<String, (PendingFailure, List<_PlannedCall>)> _pending = {};
   final StreamController<List<PendingFailure>> _changes =
       StreamController<List<PendingFailure>>.broadcast();

@@ -33,9 +33,6 @@ abstract class StageDefinitionRepository {
   /// Removes all stages and restores the 3 defaults.
   Future<void> resetToDefaults(CurriculumId curriculumId);
 
-  /// Returns true if any completions reference the given stage ID.
-  Future<bool> hasCompletionsForStage(int stageId);
-
   /// Returns all stage definitions for a curriculum, ordered by stageOrder.
   ///
   /// `CurriculumId` is the sole track identity (AD-25); no Drift-local

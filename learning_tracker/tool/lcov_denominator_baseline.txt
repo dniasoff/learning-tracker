@@ -49,7 +49,6 @@ lib/features/notifications/presentation/widgets/timezone_lifecycle_observer.dart
 lib/features/onboarding/onboarding.dart
 lib/features/profiles/domain/services/pin_flow_machine.dart
 lib/features/profiles/profiles.dart
-lib/features/progress/domain/repositories/progress_repository.dart
 lib/features/progress/domain/services/overlapping_curricula_deduplicator.dart
 lib/features/progress/progress.dart
 lib/features/sacred_time/domain/models/city.dart
@@ -60,7 +59,6 @@ lib/features/sacred_time/sacred_time.dart
 lib/features/scheduler/domain/models/daily_task.dart
 lib/features/scheduler/domain/models/pace_status.dart
 lib/features/scheduler/domain/repositories/goal_repository.dart
-lib/features/scheduler/domain/repositories/scheduler_completion_repository.dart
 lib/features/scheduler/scheduler.dart
 lib/features/settings/settings.dart
 lib/features/tracks/setup/domain/entities/add_track_result.dart

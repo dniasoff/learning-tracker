@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -61,23 +60,13 @@ void main() {
     });
   });
 
-  test('seeds track and completion documents', () async {
+  test('seeds track documents', () async {
     await seedTrack(
       firestore,
       uid: _uid,
       profileId: _profileId,
       curriculumId: CurriculumId.bavli,
       activatedAt: _time,
-    );
-    final completionId = await seedCompletion(
-      firestore,
-      uid: _uid,
-      profileId: _profileId,
-      curriculumId: CurriculumId.bavli,
-      sefariaRef: 'Daf 2a',
-      stageId: 2,
-      completedAt: _time,
-      points: 7,
     );
     final profilePath = firestore
         .collection('users')
@@ -93,14 +82,6 @@ void main() {
       'state': 'active',
       'activated_at': _time.toIso8601String(),
     });
-
-    final completion = await profilePath
-        .collection('completions')
-        .doc(completionId)
-        .get();
-    expect(completion.data(), containsPair('curriculum_id', 'bavli'));
-    expect(completion.data(), containsPair('sefaria_ref', 'Daf 2a'));
-    expect(completion.data()!['completed_at'], isA<Timestamp>());
   });
 
   test('seeds goal documents', () async {
@@ -123,7 +104,6 @@ void main() {
     expect(goal.data(), isNot(contains('target_percent')));
     expect(goal.data(), isNot(contains('updated_at')));
     expect(goal.data(), containsPair('description', 'Finish the tractate'));
-
   });
 
   test('seeds the three default stage definitions as one batch', () async {

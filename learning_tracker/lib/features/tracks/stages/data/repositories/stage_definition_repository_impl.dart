@@ -54,9 +54,7 @@ class FirestoreStageDefinitionRepositoryAdapter
 
   /// Like [_resolveOrNull], but throws
   /// [StageDefinitionRepositoryNotReadyException] instead of returning
-  /// `null` — for the write methods and [hasCompletionsForStage], which
-  /// (once ready) delegates to an always-throwing method of its own; see
-  /// the class doc comment.
+  /// `null` — for the write methods; see the class doc comment.
   Future<FirestoreStageDefinitionRepository> _resolve() async {
     final repo = await _resolveOrNull();
     if (repo == null) {
@@ -107,12 +105,6 @@ class FirestoreStageDefinitionRepositoryAdapter
     // collection. See FirestoreStageDefinitionRepository.resetToDefaults'
     // doc comment for the exact (rare) case this diverges from Drift.
     await repo.resetToDefaults(curriculumId);
-  }
-
-  @override
-  Future<bool> hasCompletionsForStage(int stageId) async {
-    final repo = await _resolve();
-    return repo.hasCompletionsForStage(stageId);
   }
 
   @override

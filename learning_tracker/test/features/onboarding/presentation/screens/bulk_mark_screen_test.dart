@@ -5,9 +5,6 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -15,8 +12,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
-
-class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -31,14 +26,7 @@ void main() {
   });
 
   group('BulkMarkScreen', () {
-    late _MockCompletionRepository completionRepo;
-
-    setUp(() {
-      completionRepo = _MockCompletionRepository();
-      when(
-        () => completionRepo.getCompletionsByCurriculum(any()),
-      ).thenAnswer((_) async => <CompletionEntity>[]);
-    });
+    setUp(() {});
 
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(
@@ -48,7 +36,6 @@ void main() {
               (ref, curriculumId) => Future.value([]),
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-            completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(_profileId),
           ],
           child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
@@ -69,7 +56,6 @@ void main() {
               (ref, curriculumId) => Future.value([]),
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-            completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(_profileId),
           ],
           child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
@@ -102,7 +88,6 @@ void main() {
               (ref, curriculumId) => Future.value([]),
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-            completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(_profileId),
           ],
           child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
@@ -193,7 +178,6 @@ void main() {
               contentSearchProvider.overrideWith(
                 (ref, args) => Future.value([]),
               ),
-              completionRepositoryProvider.overrideWithValue(completionRepo),
               beforeTrackingRecorderProvider.overrideWithValue(service),
               activeProfileIdProvider.overrideWithValue(_profileId),
             ],
@@ -236,7 +220,6 @@ void main() {
               (ref, curriculumId) => Future.value([]),
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-            completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(_profileId),
           ],
           child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),

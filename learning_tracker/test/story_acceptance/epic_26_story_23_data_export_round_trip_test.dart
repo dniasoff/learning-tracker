@@ -173,14 +173,12 @@ void main() {
           profileId: testProfileId,
           curriculumId: CurriculumId.mishnayos,
         );
-        await source
-            .collection('users')
-            .doc(testUid)
-            .collection('learner_profiles')
-            .doc(secondTestProfileId)
-            .collection('bookmarks')
-            .doc('bavli')
-            .set({'curriculum_id': 'bavli'});
+        await seedBookmark(
+          source,
+          uid: testUid,
+          profileId: secondTestProfileId,
+          curriculumId: CurriculumId.bavli,
+        );
         await seedStageDefinitions(
           source,
           uid: testUid,

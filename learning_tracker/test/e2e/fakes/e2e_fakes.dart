@@ -2,7 +2,7 @@
 ///
 /// Extracted per AUD-t-cross-10 (TQ-4 + Fowler duplication lens): every
 /// journey file that needed a no-op tutored-selection notifier or a fake
-/// [ContentRepository]/[CompletionRepository] used to hand-roll its own
+/// [ContentRepository] used to hand-roll its own
 /// private copy instead of sharing one. The copies had already diverged —
 /// see [FakeContentRepository.filterByLevel]'s doc comment for the bug this
 /// caused, and `test/e2e/fakes/e2e_fakes_test.dart` for the regression
@@ -19,14 +19,7 @@ import 'package:flutter_test/flutter_test.dart' show Fake;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
     show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -126,67 +119,5 @@ class FakeContentRepository extends Fake implements ContentRepository {
     } catch (_) {
       return null;
     }
-  }
-}
-
-/// Fake [CompletionRepository] that records mark calls and returns a
-/// configurable [MarkCompletionResult].
-///
-/// Formerly hand-rolled independently in `learning_p0_test.dart` and
-/// `learning_p1_test.dart`.
-class FakeCompletionRepository extends Fake implements CompletionRepository {
-  FakeCompletionRepository({List<RewardUnlockRecord>? unlocks})
-    : _unlocks = unlocks ?? const [];
-
-  final List<RewardUnlockRecord> _unlocks;
-  final List<CompletionRequest> markedRequests = [];
-
-  @override
-  Future<MarkCompletionResult> markComplete(
-    CompletionRequest request, {
-    bool awardGamificationPoints = true,
-    bool creditsAchievement = true,
-  }) async {
-    markedRequests.add(request);
-    return MarkCompletionResult(
-      completion: _stubCompletion(request),
-      newMilestoneUnlocks: _unlocks,
-    );
-  }
-
-  @override
-  Future<bool> isStageCompleted({
-    required String sefariaRef,
-    required int stageId,
-    required String trackType,
-  }) async => false;
-
-  @override
-  Future<List<CompletionEntity>> getCompletionsByCurriculum(
-    String curriculumId, {
-    int? profileId,
-  }) async => const <CompletionEntity>[];
-
-  @override
-  Future<List<CompletionEntity>> getCompletionsForContentItem(
-    String sefariaRef,
-  ) async => const <CompletionEntity>[];
-
-  @override
-  Future<List<CompletionEntity>> bulkMarkComplete(
-    BulkCompletionRequest request,
-  ) async => const <CompletionEntity>[];
-
-  CompletionEntity _stubCompletion(CompletionRequest req) {
-    final now = DateTimeFactory.nowUtc();
-    return CompletionEntity(
-      curriculumId: CurriculumId.fromStorageKey(req.curriculumId)!,
-      sefariaRef: req.sefariaRef,
-      stageId: req.stageId,
-      trackType: req.trackType,
-      source: CompletionSource.live,
-      completedAt: now,
-      points: 10,
-    );
   }
 }
