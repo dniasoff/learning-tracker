@@ -2431,3 +2431,116 @@ describe('DNI-484 — R16 retired fields are denied on governed docs', () => {
     }));
   });
 });
+
+// ── DNI-512 (Story 4.4) AC-3 / AC-6 — revocation denies every learner read ────
+// The parent's revokeTutorGrant marks the grant revoked and deletes its
+// tutor_active_access index in ONE transaction; that is mirrored here. After
+// it, the tutor's reads of each learner collection — and of the learner
+// profile doc — are denied, one assertion per collection, while the owner and
+// another tutor with an active grant keep reading. A later re-grant (a new
+// accepted invite writes a fresh index) re-opens the same retained docs.
+describe('DNI-512 AC-3 — a revoked tutor cannot read any learner document', () => {
+  const OTHER_TUTOR = 'other-tutor-uid';
+  const P = '01J9ZZ0000000000000000P512';
+  const LP512 = `users/${OWNER}/learner_profiles/${P}`;
+  const COLLECTIONS = [
+    'learning_events',
+    'sub_tracks',
+    'change_log',
+    // Every AD-38 governed collection this feature touches.
+    'goals',
+    'curriculum_tracks',
+    'track_learning_order',
+    'profile_programs',
+    'study_day_configs',
+    'stage_definitions',
+    'curriculum_scopes',
+  ];
+  const access = (tutorUid) => `tutor_active_access/${tutorUid}_${OWNER}_${P}`;
+  const docPath = (name) => `${LP512}/${name}/d512`;
+  const listAll = (db, name) => getDocs(query(collection(db, `${LP512}/${name}`), limit(500)));
+  const otherTutor = () => env.authenticatedContext(OTHER_TUTOR).firestore();
+
+  async function grantAccess(tutorUid, grantId) {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, access(tutorUid)), {
+        tutor_uid: tutorUid, parent_uid: OWNER, owner_uid: OWNER, child_profile_id: P, grant_id: grantId,
+      });
+      await setDoc(doc(db, `tutor_grants/${grantId}`), {
+        tutor_uid: tutorUid, parent_uid: OWNER, child_profile_id: P, state: 'active',
+      });
+    });
+  }
+
+  /** The revokeTutorGrant transaction: grant revoked + access index deleted. */
+  async function revoke(tutorUid, grantId) {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      const batch = writeBatch(db);
+      batch.set(doc(db, `tutor_grants/${grantId}`), { state: 'revoked_by_parent', revoked_at: pastTs }, { merge: true });
+      batch.delete(doc(db, access(tutorUid)));
+      await batch.commit();
+    });
+  }
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, LP512), { name: 'Yossi' });
+      for (const name of COLLECTIONS) {
+        await setDoc(doc(db, docPath(name)), { seeded: true, actor: { uid: TUTOR, role: 'tutor' } });
+      }
+    });
+    await grantAccess(TUTOR, 'g-512');
+    await grantAccess(OTHER_TUTOR, 'g-512-other');
+  });
+
+  test('while active, the tutor reads the profile and every collection', async () => {
+    await assertSucceeds(getDoc(doc(tutor(), LP512)));
+    for (const name of COLLECTIONS) {
+      await assertSucceeds(getDoc(doc(tutor(), docPath(name))));
+      await assertSucceeds(listAll(tutor(), name));
+    }
+  });
+
+  test('after revoke, learner_profiles/{profileId} is denied to the tutor', async () => {
+    await revoke(TUTOR, 'g-512');
+    await assertFails(getDoc(doc(tutor(), LP512)));
+    await assertSucceeds(getDoc(doc(owner(), LP512)));
+    await assertSucceeds(getDoc(doc(otherTutor(), LP512)));
+  });
+
+  for (const name of COLLECTIONS) {
+    test(`after revoke, ${name} is denied to the tutor (get and list); owner and an active tutor still read`, async () => {
+      await revoke(TUTOR, 'g-512');
+      await assertFails(getDoc(doc(tutor(), docPath(name))));
+      await assertFails(listAll(tutor(), name));
+      await assertSucceeds(getDoc(doc(owner(), docPath(name))));
+      await assertSucceeds(listAll(owner(), name));
+      await assertSucceeds(getDoc(doc(otherTutor(), docPath(name))));
+    });
+  }
+
+  test('the revoked grant doc itself stays readable to its tutor (the client flips the row)', async () => {
+    await revoke(TUTOR, 'g-512');
+    const snap = await assertSucceeds(getDocs(query(
+      collection(tutor(), 'tutor_grants'),
+      where('tutor_uid', '==', TUTOR),
+      where('parent_uid', '==', OWNER),
+      where('child_profile_id', '==', P),
+    )));
+    assert.equal(snap.docs[0].data().state, 'revoked_by_parent');
+  });
+
+  test('AC-6: a re-granted tutor reads the same retained docs again', async () => {
+    await revoke(TUTOR, 'g-512');
+    await assertFails(listAll(tutor(), 'learning_events'));
+    await grantAccess(TUTOR, 'g-512');
+    await assertSucceeds(getDoc(doc(tutor(), LP512)));
+    for (const name of COLLECTIONS) {
+      const snap = await assertSucceeds(listAll(tutor(), name));
+      assert.deepEqual(snap.docs.map((d) => d.id), ['d512'], `${name} keeps the earlier doc`);
+    }
+  });
+});

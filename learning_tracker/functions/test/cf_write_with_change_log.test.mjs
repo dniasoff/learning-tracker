@@ -1134,3 +1134,124 @@ describe('writeWithChangeLog — sub-track create claim, replay and AD-45 (DNI-4
     });
   });
 });
+
+// ── DNI-512 (Story 4.4) AC-2 — a parent revoke stops every tutor callable ─────
+// The grant is re-read by writeWithChangeLog on every call (AD-38 callable
+// contract, AD-53), so after the parent's real `revokeTutorGrant` commits,
+// the tutor's next call is `permission-denied` and writes nothing — even
+// though the tutor device still holds the grant as active (it sends the same
+// routing it used a moment ago, and has not seen the revocation).
+
+describe('DNI-512 AC-2 — revoked grant is rejected on every governed callable', () => {
+  const SC = 'shas';
+  const SUB = ulid(500);
+  const ONGOING = {
+    curriculum_id: SC,
+    name: 'Rebbe Gemara',
+    type: 'ongoing',
+    window_start: '2026-09-01',
+    rate_per_week: 5,
+    weeks_per_year: 40,
+    learns_on_shabbos: false,
+    ground: [{ level: 'masechta', ref: 'Berakhot' }],
+  };
+  // What the tutor device cached while the grant was active: never refreshed.
+  const staleRouting = Object.freeze({ grantId: GRANT, ownerUid: PARENT, profileId: PROFILE });
+  const learn = (id, ref) => ({
+    id,
+    fields: {
+      kind: 'learn', curriculum_id: SC, ref, source: 'main',
+      date_state: 'dated', learned_on: '2026-10-01',
+    },
+  });
+  const LEARNER_COLLECTIONS = [
+    'sub_tracks', 'learning_events', 'goals', 'change_log',
+    'points_ledger', 'governed_action_receipts',
+  ];
+
+  async function everything() {
+    const out = {};
+    for (const name of LEARNER_COLLECTIONS) {
+      const snap = await profileRef().collection(name).get();
+      for (const d of snap.docs) out[`${name}/${d.id}`] = d.data();
+    }
+    const audit = await db.collection('tutor_grants').doc(GRANT).collection('audit_log').get();
+    out.auditCount = audit.size;
+    return out;
+  }
+
+  const calls = {
+    tutorRecordLearning: () => call(fns.tutorRecordLearning, { ...staleRouting, events: [learn(ulid(510), 'Berakhot 3a')] }),
+    tutorVoidLearning: () => call(fns.tutorVoidLearning, { ...staleRouting, eventId: ulid(511), targetId: ulid(501) }),
+    tutorUnlearn: () => call(fns.tutorUnlearn, { ...staleRouting, actionId: ulid(512), curriculumId: SC, leafSet: ['Berakhot 2a'] }),
+    'tutorUpsertSubTrack (edit)': () => call(fns.tutorUpsertSubTrack, {
+      ...staleRouting, op: 'edit', subTrackId: SUB, fields: { rate_per_week: 6 }, actionId: ulid(513),
+    }),
+    'tutorUpsertSubTrack (create)': () => call(fns.tutorUpsertSubTrack, {
+      ...staleRouting, op: 'create', subTrackId: ulid(514), fields: { ...ONGOING, name: 'Second' },
+    }),
+    'tutorUpsertSubTrack (end)': () => call(fns.tutorUpsertSubTrack, {
+      ...staleRouting, op: 'end', subTrackId: SUB, actionId: ulid(515),
+    }),
+    tutorUpsertGoal: () => call(fns.tutorUpsertGoal, {
+      ...staleRouting, goalId: `${SC}_deadline`,
+      goalData: { goal_type: 'deadline', target_date: '2028-01-01', curriculum_id: SC },
+      actionId: ulid(516),
+    }),
+  };
+
+  beforeEach(async () => {
+    await seedProfile();
+    await seedLearningGrant();
+    // While active, the tutor authors a sub-track, a learn event and a goal.
+    await call(fns.tutorUpsertSubTrack, { ...staleRouting, op: 'create', subTrackId: SUB, fields: ONGOING });
+    await call(fns.tutorRecordLearning, { ...staleRouting, events: [learn(ulid(501), 'Berakhot 2a')] });
+    await call(fns.tutorUpsertGoal, {
+      ...staleRouting, goalId: `${SC}_deadline`,
+      goalData: { goal_type: 'deadline', target_date: '2027-06-01', curriculum_id: SC },
+      actionId: ulid(502),
+    });
+  });
+
+  for (const [name, invoke] of Object.entries(calls)) {
+    test(`${name} after the parent revokes → permission-denied, nothing written`, async () => {
+      await call(fns.revokeTutorGrant, { grantId: GRANT }, parentAuth);
+      const before = await everything();
+      const { error, logs } = await captureLogs(invoke);
+      await expectHttpsError(Promise.reject(error), 'permission-denied');
+      assert.ok(
+        logs.some((l) => l.entry.message === 'governed_write_rejected' && l.entry.code === 'permission-denied'),
+        'the rejection is the helper\'s own grant check',
+      );
+      assert.deepEqual(await everything(), before, 'no governed doc, event, entry or audit row is written');
+    });
+  }
+
+  test('a revoke racing an in-flight edit: committed-before is kept whole, after is denied', async () => {
+    const edit = (rate, id) => call(fns.tutorUpsertSubTrack, {
+      ...staleRouting, op: 'edit', subTrackId: SUB, fields: { rate_per_week: rate }, actionId: id,
+    });
+    const [revoke, raced] = await Promise.allSettled([
+      call(fns.revokeTutorGrant, { grantId: GRANT }, parentAuth),
+      edit(7, ulid(520)),
+    ]);
+    assert.equal(revoke.status, 'fulfilled');
+    const sub = (await profileRef().collection('sub_tracks').doc(SUB).get()).data();
+    const entryIds = (await changeLog()).map((e) => e.id);
+    if (raced.status === 'fulfilled') {
+      // Committed before the revoke: the doc and its entry are both kept.
+      assert.equal(sub.rate_per_week, 7);
+      assert.equal(sub.last_change_id, ulid(520));
+      assert.ok(entryIds.includes(ulid(520)));
+    } else {
+      // Evaluated after the revoke: denied, no partial write.
+      await expectHttpsError(Promise.reject(raced.reason), 'permission-denied');
+      assert.equal(sub.rate_per_week, ONGOING.rate_per_week);
+      assert.ok(!entryIds.includes(ulid(520)));
+    }
+    // Every sub-track doc's last_change_id has its entry (no half write).
+    assert.ok(entryIds.includes(sub.last_change_id));
+    // Whatever the race outcome, the next call is denied.
+    await expectHttpsError(edit(8, ulid(521)), 'permission-denied');
+  });
+});
