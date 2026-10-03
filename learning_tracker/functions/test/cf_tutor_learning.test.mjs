@@ -420,6 +420,45 @@ describe('AC-1 / AC-2 — before-tracking and replacement shapes', () => {
   });
 });
 
+// ── DNI-486: a tutor void stays on main-track learning of one curriculum ─────
+
+describe('DNI-486 — tutorVoidLearning targets main-track learning only', () => {
+  const seedOwnerEvent = (id, fields) => eventsCol().doc(id).set({
+    kind: 'learn', curriculum_id: C, ref: 'Berakhot 2:1', date_state: 'dated', learned_on: '2026-10-01',
+    recorded_at: admin.firestore.Timestamp.now(),
+    actor: { uid: PARENT, role: 'parent', display_name: 'Parent' },
+    ...fields,
+  });
+
+  test('a void or replace of a sub-track learn event is rejected, writing nothing', async () => {
+    await seedOwnerEvent(ulid(1), { source: ulid(50) });
+    await expectHttpsError(call(fns.tutorVoidLearning, routing({ eventId: ulid(2), targetId: ulid(1) })),
+      'invalid-argument');
+    await expectHttpsError(call(fns.tutorVoidLearning, routing({
+      eventId: ulid(3), targetId: ulid(1), replacement: dated(ulid(4), 'Berakhot 2:1'),
+    })), 'invalid-argument');
+    assert.equal((await eventsCol().get()).size, 1, 'only the seeded sub-track event');
+    assert.deepEqual(await changeLog(), []);
+  });
+
+  test('a plain void of an absent target is rejected', async () => {
+    await expectHttpsError(call(fns.tutorVoidLearning, routing({ eventId: ulid(2), targetId: ulid(1) })),
+      'not-found');
+    await assertNothingWritten();
+  });
+
+  test('a replacement on another curriculum is rejected, writing nothing', async () => {
+    await record([dated(ulid(1), 'Berakhot 2:1')]);
+    const before = (await eventsCol().get()).size;
+    await expectHttpsError(call(fns.tutorVoidLearning, routing({
+      eventId: ulid(2), targetId: ulid(1),
+      replacement: dated(ulid(3), 'Berakhot 2:1', { curriculum_id: 'bavli' }),
+    })), 'invalid-argument');
+    assert.equal((await eventsCol().get()).size, before);
+    assert.equal((await eventsCol().doc(ulid(3)).get()).exists, false);
+  });
+});
+
 // ── AC-1 / AC-4: unlearn with partial node coverage ───────────────────────────
 
 describe('AC-1 / AC-4 — tutorUnlearn(curriculum, leafSet)', () => {
