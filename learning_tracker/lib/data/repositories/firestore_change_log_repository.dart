@@ -187,6 +187,28 @@ final class FirestoreChangeLogRepository
   }
 
   @override
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
+  ) async {
+    final stream = watchCompletePaged<ChangeLogEntry>(
+      collection: collectionFor(
+        scope,
+      ).where(ChangeLogEntry.kEntity, isEqualTo: entity.storage),
+      decode: ChangeLogEntry.fromStorage,
+      backoffBase: backoffBase,
+      backoffCap: backoffCap,
+      random: random,
+      onError: onListenerError,
+      probe: pageProbe,
+    );
+    final read = await stream.firstWhere(
+      (read) => read is CompleteReadReady<ChangeLogEntry>,
+    );
+    return (read as CompleteReadReady<ChangeLogEntry>).items;
+  }
+
+  @override
   Stream<bool> watchIsReverted(LearnerScope scope, String actionId) =>
       resilientQueryStream<String>(
         openStream: () => collectionFor(scope)

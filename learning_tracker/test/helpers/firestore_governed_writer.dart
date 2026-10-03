@@ -165,6 +165,12 @@ final class FailOnceChangeLog implements ChangeLogRepository {
   ) => inner.entriesOfAction(scope, actionId);
 
   @override
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
+  ) => inner.entriesForEntity(scope, entity);
+
+  @override
   Stream<CompleteRead<ChangeLogEntry>> watchIntentHistory(LearnerScope scope) =>
       inner.watchIntentHistory(scope);
 

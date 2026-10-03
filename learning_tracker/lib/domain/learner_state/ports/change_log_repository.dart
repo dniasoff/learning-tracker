@@ -174,6 +174,14 @@ abstract interface class ChangeLogRepository {
     String actionId,
   );
 
+  /// Every change-log entry for governed [entity] documents. This is used by
+  /// SM-5 to recover the immutable creation snapshot of a sub-track; callers
+  /// still filter by [entityId] locally so the read needs no composite index.
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
+  );
+
   /// Whether any entry reverts [actionId] (`reverts_action_id`), live.
   Stream<bool> watchIsReverted(LearnerScope scope, String actionId);
 

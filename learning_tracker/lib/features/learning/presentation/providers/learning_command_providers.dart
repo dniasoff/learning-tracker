@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
@@ -45,6 +46,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_fail
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_source_check.dart';
+import 'package:learning_tracker/features/learning/domain/commands/sub_track_forecast_recomputation.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -313,7 +315,6 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       return null;
     }
   }
-
   final governed = DefaultGovernedLearningCommands(
     scope: scope,
     actor: actor,
@@ -341,6 +342,20 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     newId: newUlid,
     corpusOf: subTrackCorpusOf,
     analytics: ref.watch(learningAnalyticsProvider),
+    forecastComparison: (track) async {
+      final history = await changeLog.entriesForEntity(
+        scope,
+        GovernedEntity.subTrack,
+      );
+      final eventRead = await events.watchAll(scope).firstWhere(
+        (read) => read is CompleteReadReady<LearningEvent>,
+      );
+      return recomputeSubTrackForecast(
+        track: track,
+        history: history,
+        events: (eventRead as CompleteReadReady<LearningEvent>).items,
+      );
+    },
     ledger: ref.watch(subTrackWriteLedgerProvider(scope)),
   );
   final commands = DefaultLearningCommands(

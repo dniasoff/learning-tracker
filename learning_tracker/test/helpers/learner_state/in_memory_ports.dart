@@ -386,6 +386,12 @@ final class InMemoryChangeLogRepository
   ) async => entriesOf(scope).where((e) => e.actionId == actionId).toList();
 
   @override
+  Future<List<ChangeLogEntry>> entriesForEntity(
+    LearnerScope scope,
+    GovernedEntity entity,
+  ) async => entriesOf(scope).where((e) => e.entity == entity).toList();
+
+  @override
   Stream<bool> watchIsReverted(LearnerScope scope, String actionId) => _changes
       .watch<bool>(
         scope,
