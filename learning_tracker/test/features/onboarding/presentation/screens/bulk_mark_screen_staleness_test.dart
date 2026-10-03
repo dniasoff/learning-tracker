@@ -198,6 +198,7 @@ void main() {
         contentSearchProvider.overrideWith((ref, args) => Future.value([])),
         beforeTrackingRecorderProvider.overrideWith(
           (ref) => BeforeTrackingRecorder(
+            ownsBookmark: () => true,
             contentRepository: contentRepo,
             commands: () async => commands,
             events: () async => const [],
