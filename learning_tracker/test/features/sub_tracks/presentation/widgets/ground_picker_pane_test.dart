@@ -3,13 +3,17 @@
 // (Story 2.7 / DNI-498 AC-2, AC-4 rollback, AC-7/AC-8 fail-closed body):
 // the picker composition over a Mishnayos and a non-Mishnayos ContentIndex,
 // the live count, confirm, rejection rollback and load-failure retry.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/ground_picker_pane.dart';
 
 import '../../../../helpers/learner_state/chumash_fixtures.dart';
@@ -171,6 +175,40 @@ void main() {
       expect(closed, 0);
       expect(find.text('Add 1 Seder to School'), findsOneWidget);
       expect(world.subTracks.calls, isEmpty);
+    });
+
+    testWidgets('the parent session ending mid-confirm (PIN lock while the '
+        'commands load) writes nothing', (tester) async {
+      final gate = Completer<void>();
+      final slow = GroundPickerWorld(
+        corpus: mishnayosCorpus(),
+        commands: commands,
+        commandsGate: gate.future,
+        tracks: [
+          fixtureTrack(schoolId, 'School', curriculumId: engineCurriculum),
+        ],
+      );
+      addTearDown(slow.dispose);
+      var closed = 0;
+      await _pump(tester, slow, onClose: () => closed++);
+      await tester.tap(_rowCheckbox('Seder Moed'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add 1 Seder to School'));
+      await tester.pump();
+      // The PIN locks while the confirm waits for its commands.
+      slow.parent = false;
+      ProviderScope.containerOf(
+        tester.element(find.byType(GroundPickerPane)),
+      ).invalidate(parentSessionProvider);
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(commands.calls, isEmpty);
+      expect(slow.subTracks.calls, isEmpty);
+      expect(closed, 0);
+      expect(
+        find.text("Couldn't add the ground. Nothing was changed."),
+        findsOneWidget,
+      );
     });
 
     testWidgets('no commands (not ready) is a rejection, not a crash', (
