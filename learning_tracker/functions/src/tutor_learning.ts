@@ -28,6 +28,10 @@ import {
 //                         `dated` (leaf ref + learned_on) or `before_tracking`
 //                         (leaf, or node ref + level; learned_on null). Covers
 //                         task tick, tick-to-here and before-tracking marking.
+//                         Story 4.1: `source` may instead be the ULID of an
+//                         existing sub-track of the same curriculum (`dated`
+//                         only — the Rebbe row's +1 and Up to…); such events
+//                         earn no `pts_` entry (AD-50).
 //   tutorVoidLearning   — one `void` of a stored `source = main` learn event,
 //                         or REPLACE: the void plus a corrected learn copy on
 //                         the target's curriculum, in one transaction.
@@ -67,8 +71,8 @@ import {
 //
 //   tutorRecordLearning {grantId, ownerUid, profileId, actionId?,
 //                        events: [{id, fields: {kind: "learn", curriculum_id,
-//                        ref, source: "main", date_state, learned_on, level?,
-//                        stage?}}]}
+//                        ref, source: "main" | <sub-track ULID>, date_state,
+//                        learned_on, level?, stage?}}]}
 //   tutorVoidLearning   {grantId, ownerUid, profileId, actionId?, eventId,
 //                        targetId, replacement?: {id, fields: <learn fields>}}
 //   tutorUnlearn        {grantId, ownerUid, profileId, actionId (required),
@@ -102,7 +106,7 @@ import {
 /** Log label for these callables' `{entity, code}` failure lines. */
 const LOG_ENTITY = "learningEvent";
 
-/** The only learning source tutors may write in Epic 1 (a later epic adds sub-tracks). */
+/** The main-track learning source; any other tutor source is a sub-track ULID (Story 4.1). */
 const MAIN_SOURCE = "main";
 
 /** date_state values a tutor capture may carry (catch_up is owner/sub-track only). */
@@ -172,7 +176,10 @@ function requestObject(raw: unknown): Record<string, unknown> {
  * helper re-validates the full AD-52 shape (types, level only on
  * before_tracking, learned_on required on dated, stage on main only).
  */
-function parseTutorLearnEvent(raw: unknown): LearningEventIntent {
+function parseTutorLearnEvent(
+  raw: unknown,
+  { allowSubTrackSource = false }: { allowSubTrackSource?: boolean } = {},
+): LearningEventIntent {
   if (!isObject(raw)) bad("event must be an object");
   const ev = raw as Record<string, unknown>;
   for (const k of Object.keys(ev)) {
@@ -185,7 +192,13 @@ function parseTutorLearnEvent(raw: unknown): LearningEventIntent {
     if (!TUTOR_LEARN_FIELDS.has(k)) bad(`Field not allowed on a tutor learn event: ${k}`);
   }
   if (fields.kind !== "learn") bad("a tutor capture writes learn events only");
-  if (fields.source !== MAIN_SOURCE) bad("source must be main");
+  if (fields.source !== MAIN_SOURCE) {
+    // Story 4.1 (DNI-509): a capture on the tutor's sub-track row carries
+    // the sub-track's ULID; it is a dated leaf event with no stage (stage is
+    // main-track only, AD-52). Corrections stay main-only.
+    if (!allowSubTrackSource || !isUlid(fields.source)) bad("source must be main or a sub-track ULID");
+    if (fields.date_state !== "dated") bad("a sub-track capture is dated");
+  }
   if (!TUTOR_DATE_STATES.has(fields.date_state)) bad("date_state must be dated or before_tracking");
   if (fields.date_state === "before_tracking") {
     if (fields.learned_on === undefined) fields.learned_on = null;
@@ -208,8 +221,12 @@ export const tutorRecordLearning = onCall(CALL_OPTS, (request) => runGoverned(LO
   if (!Array.isArray(data.events) || data.events.length === 0) {
     bad("events must be a non-empty array");
   }
-  const events = (data.events as unknown[]).map(parseTutorLearnEvent);
+  const events = (data.events as unknown[])
+    .map((e) => parseTutorLearnEvent(e, { allowSubTrackSource: true }));
   assertUniqueIds(events.map((e) => e.id));
+  const subTrackSources = [...new Set(events
+    .map((e) => String(e.fields.source))
+    .filter((source) => source !== MAIN_SOURCE))].sort();
   return writeWithChangeLog(request.auth, {
     ownerUid: target.ownerUid,
     profileId: target.profileId,
@@ -217,8 +234,43 @@ export const tutorRecordLearning = onCall(CALL_OPTS, (request) => runGoverned(LO
     actionId: target.actionId ?? events[0].id,
     auditAction: "learning_recorded",
     events,
+    // Only a sub-track capture reads anything: a main-track capture keeps
+    // its plan-free request (and so its replay fingerprint).
+    ...(subTrackSources.length === 0 ? {} : {
+      plan: subTrackSourcePlan(events),
+      planKey: `tutorRecordLearning:subTrackSources:${JSON.stringify(subTrackSources)}`,
+    }),
   });
 }));
+
+/**
+ * Validates, inside the transaction, every sub-track `source` of [events]:
+ * the `sub_tracks/{source}` doc exists in this learner's profile and belongs
+ * to the event's curriculum (an event never names another curriculum's or
+ * another learner's sub-track). Reads only; the events themselves are the
+ * request's static events.
+ */
+function subTrackSourcePlan(events: LearningEventIntent[]): (ctx: PlanContext) => Promise<GovernedPlan> {
+  return async (ctx) => {
+    const ids = [...new Set(events
+      .map((e) => String(e.fields.source))
+      .filter((source) => source !== MAIN_SOURCE))];
+    const snaps = await ctx.txn.getAll(
+      ...ids.map((id) => ctx.profileRef.collection(ENTITY_COLLECTION.subTrack).doc(id)));
+    const curriculumOf = new Map<string, unknown>();
+    snaps.forEach((snap, i) => {
+      if (!snap.exists) throw new HttpsError("not-found", "Sub-track source does not exist");
+      curriculumOf.set(ids[i], snap.get("curriculum_id"));
+    });
+    for (const e of events) {
+      if (e.fields.source === MAIN_SOURCE) continue;
+      if (curriculumOf.get(String(e.fields.source)) !== e.fields.curriculum_id) {
+        bad("A sub-track capture must be on the sub-track's curriculum");
+      }
+    }
+    return { entries: [] };
+  };
+}
 
 // ── tutorVoidLearning ─────────────────────────────────────────────────────────
 
