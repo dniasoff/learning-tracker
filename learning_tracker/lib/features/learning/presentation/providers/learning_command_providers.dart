@@ -86,8 +86,6 @@ final learningAnalyticsProvider = Provider<LearningAnalytics>((ref) {
           AnalyticsEvent.catchupCompleted,
           parameters: parameters,
         );
-          parameters: parameters,
-        );
     }
     // Analytics never fails a command.
     unawaited(sent.catchError((Object _) {}));
