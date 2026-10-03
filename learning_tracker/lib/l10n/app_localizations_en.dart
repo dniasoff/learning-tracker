@@ -4139,6 +4139,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarOffsetToday => 'Today';
 
   @override
+  String get catchUpCardAdjust => 'Adjust…';
+
+  @override
+  String catchUpCardAvailableUntil(String day) {
+    return 'Available until the end of $day';
+  }
+
+  @override
+  String get catchUpCardContentsError => 'What was planned couldn\'t load.';
+
+  @override
+  String catchUpCardQuestion(String day, int count, String units) {
+    return '$day · $count $units planned — learnt them all?';
+  }
+
+  @override
+  String catchUpCardQuestionItems(String day, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$day · $_temp0 planned — learnt them all?';
+  }
+
+  @override
+  String catchUpCardQuestionNoCount(String day) {
+    return '$day · learnt what was planned?';
+  }
+
+  @override
+  String catchUpCardSourceLine(String source, int count, String units) {
+    return '$source · $count $units';
+  }
+
+  @override
+  String get catchUpCardYesAll => 'Yes, all of it';
+
+  @override
   String get dayNameShabbos => 'Shabbos';
 
   @override

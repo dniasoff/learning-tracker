@@ -6963,6 +6963,54 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get calendarOffsetToday;
 
+  /// DRAFT copy, pending zc4. Outlined pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): opens the per-day adjust list (Story 3.4).
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust…'**
+  String get catchUpCardAdjust;
+
+  /// DRAFT copy, pending zc4. Catch-up card caption (DNI-505 AC-2): {day} is the weekday name of the last day of the card's catch-up window (learner-local). Never mentions the streak (NFR-18).
+  ///
+  /// In en, this message translates to:
+  /// **'Available until the end of {day}'**
+  String catchUpCardAvailableUntil(String day);
+
+  /// DRAFT copy, pending zc4. Inline error on a catch-up card whose planned contents failed to load; a Retry action follows and the card stays available (DNI-505 AC-11, UX-DR-132).
+  ///
+  /// In en, this message translates to:
+  /// **'What was planned couldn\'t load.'**
+  String get catchUpCardContentsError;
+
+  /// DRAFT copy, pending zc4. Catch-up card question (DNI-505 AC-2, A-2): {day} is the lock's day label (Shabbos, Yom Tov, Yom Tov & Shabbos, Yom Kippur), {count} the main-track tasks planned for its locked days, {units} the curriculum's leaf unit for that count (e.g. mishnayos).
+  ///
+  /// In en, this message translates to:
+  /// **'{day} · {count} {units} planned — learnt them all?'**
+  String catchUpCardQuestion(String day, int count, String units);
+
+  /// DRAFT copy, pending zc4. Catch-up card question when main-track tasks of more than one curriculum are planned (DNI-505 AC-2); {day} as in catchUpCardQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} · {count, plural, =1{1 item} other{{count} items}} planned — learnt them all?'**
+  String catchUpCardQuestionItems(String day, int count);
+
+  /// DRAFT copy, pending zc4. Catch-up card question when only sub-tracks planned something for the locked days (DNI-505 AC-7); {day} as in catchUpCardQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} · learnt what was planned?'**
+  String catchUpCardQuestionNoCount(String day);
+
+  /// DRAFT copy, pending zc4. One source's planned amount on a catch-up card (DNI-505 AC-7): {source} is Home (main track) or a sub-track's name, {units} the leaf unit for {count}.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} · {count} {units}'**
+  String catchUpCardSourceLine(String source, int count, String units);
+
+  /// DRAFT copy, pending zc4. Primary pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): records everything the card lists (Story 3.3).
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, all of it'**
+  String get catchUpCardYesAll;
+
   /// No description provided for @dayNameShabbos.
   ///
   /// In en, this message translates to:

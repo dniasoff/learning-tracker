@@ -3406,6 +3406,78 @@
   "currentPasswordLabel": "Current Password",
   "invalidPasswordError": "Invalid password. Please try again.",
   "calendarOffsetToday": "Today",
+  "catchUpCardAdjust": "Adjust…",
+  "@catchUpCardAdjust": {
+    "description": "DRAFT copy, pending zc4. Outlined pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): opens the per-day adjust list (Story 3.4)."
+  },
+  "catchUpCardAvailableUntil": "Available until the end of {day}",
+  "@catchUpCardAvailableUntil": {
+    "description": "DRAFT copy, pending zc4. Catch-up card caption (DNI-505 AC-2): {day} is the weekday name of the last day of the card's catch-up window (learner-local). Never mentions the streak (NFR-18).",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardContentsError": "What was planned couldn't load.",
+  "@catchUpCardContentsError": {
+    "description": "DRAFT copy, pending zc4. Inline error on a catch-up card whose planned contents failed to load; a Retry action follows and the card stays available (DNI-505 AC-11, UX-DR-132)."
+  },
+  "catchUpCardQuestion": "{day} · {count} {units} planned — learnt them all?",
+  "@catchUpCardQuestion": {
+    "description": "DRAFT copy, pending zc4. Catch-up card question (DNI-505 AC-2, A-2): {day} is the lock's day label (Shabbos, Yom Tov, Yom Tov & Shabbos, Yom Kippur), {count} the main-track tasks planned for its locked days, {units} the curriculum's leaf unit for that count (e.g. mishnayos).",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardQuestionItems": "{day} · {count, plural, =1{1 item} other{{count} items}} planned — learnt them all?",
+  "@catchUpCardQuestionItems": {
+    "description": "DRAFT copy, pending zc4. Catch-up card question when main-track tasks of more than one curriculum are planned (DNI-505 AC-2); {day} as in catchUpCardQuestion.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "catchUpCardQuestionNoCount": "{day} · learnt what was planned?",
+  "@catchUpCardQuestionNoCount": {
+    "description": "DRAFT copy, pending zc4. Catch-up card question when only sub-tracks planned something for the locked days (DNI-505 AC-7); {day} as in catchUpCardQuestion.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardSourceLine": "{source} · {count} {units}",
+  "@catchUpCardSourceLine": {
+    "description": "DRAFT copy, pending zc4. One source's planned amount on a catch-up card (DNI-505 AC-7): {source} is Home (main track) or a sub-track's name, {units} the leaf unit for {count}.",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "catchUpCardYesAll": "Yes, all of it",
+  "@catchUpCardYesAll": {
+    "description": "DRAFT copy, pending zc4. Primary pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): records everything the card lists (Story 3.3)."
+  },
   "dayNameShabbos": "Shabbos",
   "erevBannerBeginsAt": "{term} begins at {time} — record what you can before then.",
   "@erevBannerBeginsAt": {
