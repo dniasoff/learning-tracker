@@ -6,47 +6,37 @@ import '../../../../helpers/data_export_firestore_test_support.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 
 void main() {
-  test(
-    'export contains canonical track, stage, completion, ledger, and bookmark docs',
-    () async {
-      final firestore = FakeFirebaseFirestore();
-      await seedProfile(firestore, uid: testUid, profileId: testProfileId);
-      await seedTrack(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        curriculumId: CurriculumId.bavli,
-      );
-      await seedStageDefinitions(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        curriculumId: CurriculumId.bavli,
-      );
-      await seedCompletion(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        curriculumId: CurriculumId.bavli,
-      );
-      await seedLedgerEntry(
-        firestore,
-        uid: testUid,
-        profileId: testProfileId,
-        ulid: '01ARZ3NDEKTSV4RRFFQ69G5FBB',
-        curriculumId: CurriculumId.bavli,
-      );
-      final profile = profileFrom(
-        await exportedMap(backupService(firestore)),
-        testProfileId,
-      );
-      final collections = profile['collections'] as Map<String, dynamic>;
-      expect(collections['curriculum_tracks'], hasLength(1));
-      expect(collections['stage_definitions'], hasLength(3));
-      expect(collections['completions'], hasLength(1));
-      expect(collections['learning_ledger'], hasLength(1));
-    },
-  );
+  test('export contains canonical track, stage, and completion docs', () async {
+    final firestore = FakeFirebaseFirestore();
+    await seedProfile(firestore, uid: testUid, profileId: testProfileId);
+    await seedTrack(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    await seedStageDefinitions(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    await seedCompletion(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+    final profile = profileFrom(
+      await exportedMap(backupService(firestore)),
+      testProfileId,
+    );
+    final collections = profile['collections'] as Map<String, dynamic>;
+    expect(collections['curriculum_tracks'], hasLength(1));
+    expect(collections['stage_definitions'], hasLength(3));
+    expect(collections['completions'], hasLength(1));
+    expect(collections, isNot(contains('learning_ledger')));
+  });
 
   test('import writes the same nested document ids and values', () async {
     final source = FakeFirebaseFirestore();
@@ -139,7 +129,7 @@ void main() {
     expect(documentData(rows.single)['day_of_week'], 1);
   });
 
-  test('exports streak event rows', () async {
+  test('does not export retired streak event rows', () async {
     final firestore = FakeFirebaseFirestore();
     await seedProfile(firestore, uid: testUid, profileId: testProfileId);
     await firestore
@@ -154,9 +144,7 @@ void main() {
       await exportedMap(backupService(firestore)),
       testProfileId,
     );
-    final rows = collectionDocuments(profile, 'streak_events');
-    expect(rows, hasLength(1));
-    expect(documentData(rows.single)['event_type'], 'completion');
+    expect(profile['collections'], isNot(contains('streak_events')));
   });
 
   test('imports curriculum scopes', () async {
@@ -211,7 +199,7 @@ void main() {
     expect(doc.data()!['day_of_week'], 1);
   });
 
-  test('imports streak events', () async {
+  test('does not restore retired streak events', () async {
     final source = FakeFirebaseFirestore();
     await seedProfile(source, uid: testUid, profileId: testProfileId);
     await source
@@ -234,18 +222,20 @@ void main() {
         .collection('streak_events')
         .doc('event-1')
         .get();
-    expect(doc.data()!['event_type'], 'completion');
+    expect(doc.exists, isFalse);
   });
 
-  test('imports learning ledger entries', () async {
+  test('does not restore retired learning ledger entries', () async {
     final source = FakeFirebaseFirestore();
     await seedProfile(source, uid: testUid, profileId: testProfileId);
-    await seedLedgerEntry(
-      source,
-      uid: testUid,
-      profileId: testProfileId,
-      ulid: '01ARZ3NDEKTSV4RRFFQ69G5FBB',
-    );
+    await source
+        .collection('users')
+        .doc(testUid)
+        .collection('learner_profiles')
+        .doc(testProfileId)
+        .collection('learning_ledger')
+        .doc('01ARZ3NDEKTSV4RRFFQ69G5FBB')
+        .set({'unit_identifier': 'unit-1'});
     final target = FakeFirebaseFirestore();
     await backupService(
       target,
@@ -257,7 +247,6 @@ void main() {
         .doc(testProfileId)
         .collection('learning_ledger')
         .get();
-    expect(docs.docs, hasLength(1));
-    expect(docs.docs.single.data()['unit_identifier'], 'unit-1');
+    expect(docs.docs, isEmpty);
   });
 }

@@ -24,10 +24,8 @@ import 'dart:convert';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/gamification/domain/models/point_config.dart';
-import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/study_day_config.dart';
@@ -57,11 +55,11 @@ void main() {
   // bookmarks — minimal codec encode() shape (curriculum_id, sefaria_ref,
   // updated_at). The rules hasOnly also allows profile_id, content_item_id,
   // stage_id — kept out of the fixture to reflect the actual write path.
-  final bookmarks = BookmarkEntity(
-    curriculumId: CurriculumId.mishnayos,
-    sefariaRef: 'Berakhot.2a',
-    updatedAt: past,
-  ).toFirestore();
+  final bookmarks = <String, dynamic>{
+    'curriculum_id': CurriculumId.mishnayos.storageKey,
+    'sefaria_ref': 'Berakhot.2a',
+    'updated_at': past.toIso8601String(),
+  };
 
   // settings — open bag; minimal codec encode() shape.
   final settings = <String, dynamic>{
@@ -143,22 +141,19 @@ void main() {
   // points) and differs from the PUSH shape. No hasOnly rule exists for this
   // collection so either is valid, but we use the push shape as it is more
   // representative.
-  final learningLedgerOut = {
-    ...LearningLedgerEntry(
-      ulid: 'ULID0001',
-      curriculumId: CurriculumId.mishnayos,
-      entryScope: 'unit',
-      unitIdentifier: 'Berakhot.2a',
-      unitDisplayNameHe: 'ברכות ב',
-      unitDisplayNameEn: 'Berakhot 2',
-      trackType: 'personal',
-      completedAt: past,
-      completionNumber: 1,
-      markedBy: '5',
-      isManual: false,
-      source: CompletionSource.live,
-    ).toFirestore(),
+  final learningLedgerOut = <String, dynamic>{
+    'ulid': 'ULID0001',
+    'curriculum_id': CurriculumId.mishnayos.storageKey,
+    'entry_scope': 'unit',
+    'unit_identifier': 'Berakhot.2a',
+    'unit_display_name_he': 'ברכות ב',
+    'unit_display_name_en': 'Berakhot 2',
+    'track_type': 'personal',
     'completed_at': past.toIso8601String(),
+    'completion_number': 1,
+    'marked_by': '5',
+    'is_manual': false,
+    'source': 'live',
   };
 
   // import_metadata — direct map (no codec; written by FirestoreGatewayImpl).

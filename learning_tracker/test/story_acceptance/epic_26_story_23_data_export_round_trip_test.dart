@@ -63,8 +63,6 @@ void main() {
         final collections = profile['collections'] as Map<String, dynamic>;
         const expected = [
           'completions',
-          'streak_events',
-          'learning_ledger',
           'points_ledger',
           'reward_redemptions',
           'settings',
@@ -173,12 +171,6 @@ void main() {
           profileId: secondTestProfileId,
           curriculumId: CurriculumId.bavli,
           sefariaRef: 'Berakhot.2a',
-        );
-        await seedLedgerEntry(
-          source,
-          uid: testUid,
-          profileId: testProfileId,
-          ulid: '01ARZ3NDEKTSV4RRFFQ69G5BB0',
         );
         await seedStageDefinitions(
           source,

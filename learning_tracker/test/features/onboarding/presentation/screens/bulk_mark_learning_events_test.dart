@@ -19,8 +19,6 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -294,9 +292,6 @@ void main() {
         overrides: [
           activeProfileIdProvider.overrideWith(_ActiveProfile.new),
           contentRepositoryProvider.overrideWithValue(flow.content),
-          curriculumLedgerProvider.overrideWith(
-            (ref, id) async => const <LearningLedgerEntry>[],
-          ),
           useHebrewTermsProvider.overrideWith(_UseHebrewTermsOff.new),
           beforeTrackingRecorderProvider.overrideWithValue(flow.recorder),
         ],

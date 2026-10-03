@@ -67,9 +67,6 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -89,9 +86,6 @@ import '../../../../helpers/pump_app.dart';
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 class _MockContentRepository extends Mock implements ContentRepository {}
-
-class _MockLearningLedgerRepository extends Mock
-    implements LearningLedgerRepository {}
 
 // ── Provider stubs ─────────────────────────────────────────────────────────────
 
@@ -375,7 +369,6 @@ Widget _buildScopeApp({
 
 Widget _buildLifetimeApp({
   ContentRepository? contentRepo,
-  LearningLedgerRepository? ledgerRepo,
   bool useHebrew = false,
   Locale locale = const Locale('en'),
 }) {
@@ -385,8 +378,6 @@ Widget _buildLifetimeApp({
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
       contentRepositoryProvider.overrideWithValue(repo),
-      if (ledgerRepo != null)
-        learningLedgerRepositoryProvider.overrideWithValue(ledgerRepo),
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
       else
@@ -400,17 +391,12 @@ Widget _buildLifetimeApp({
 
 Widget _buildCurriculumMarkingApp({
   ContentRepository? contentRepo,
-  LearningLedgerRepository? ledgerRepo,
   LearningCommands? commands,
   bool useHebrew = false,
   Locale locale = const Locale('en'),
   String curriculumId = 'mishnayos',
 }) {
   final repo = contentRepo ?? _makeDefaultRepo();
-  final ledger = ledgerRepo ?? _MockLearningLedgerRepository();
-  when(
-    () => ledger.getLedgerByCurriculum(any<CurriculumId>()),
-  ).thenAnswer((_) async => []);
   return pumpApp(
     locale: locale,
     overrides: [
@@ -421,7 +407,6 @@ Widget _buildCurriculumMarkingApp({
         scope: c0Scope(),
         state: LearnerState.empty(DateTime.utc(2026)),
       ),
-      learningLedgerRepositoryProvider.overrideWithValue(ledger),
       // Story 1.11 (DNI-473): Save records one before_tracking capture.
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
@@ -492,7 +477,6 @@ void main() {
   setUpAll(() {
     // CurriculumId is an enum — register a real value as fallback.
     registerFallbackValue(CurriculumId.mishnayos);
-    registerFallbackValue(<LedgerEntryDraft>[]);
     registerFallbackValue(CompletionSource.lifetimeOnly);
     // Named parameter fallbacks for content repository mocks.
     registerFallbackValue(0); // scopeLevel
@@ -1475,11 +1459,7 @@ void main() {
         'and no learned_on', (tester) async {
       final commands = FakeLearningCommands();
       addTearDown(commands.dispose);
-      final ledger = _MockLearningLedgerRepository();
-      await _pump(
-        tester,
-        _buildCurriculumMarkingApp(ledgerRepo: ledger, commands: commands),
-      );
+      await _pump(tester, _buildCurriculumMarkingApp(commands: commands));
 
       await tester.tap(find.text('Select all in this list'));
       await tester.pump();
@@ -1501,13 +1481,6 @@ void main() {
         1,
       );
       expect(nodes.every((n) => n.level == seder), isTrue);
-      verifyNever(
-        () => ledger.recordCompletionsBatch(
-          any<List<LedgerEntryDraft>>(),
-          source: any<CompletionSource>(named: 'source'),
-        ),
-      );
-
       await _tearDown(tester);
     });
   });
