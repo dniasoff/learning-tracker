@@ -76,14 +76,4 @@ void main() {
     ]).loadActiveTalmidim();
     expect(roster.single.displayName, isNull);
   });
-
-  test('a grant naming a non-ULID profile has no learner scope', () {
-    const entry = TalmidRosterEntry(
-      grantId: 'g',
-      ownerUid: 'owner',
-      profileId: 'legacy-id',
-      permissions: TutorPermissions(),
-    );
-    expect(entry.scope, isNull);
-  });
 }

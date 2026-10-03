@@ -191,10 +191,11 @@ List<Override> talmidimOverrides({
   bool online = true,
   TalmidRowDiagnostics? diagnostics,
   bool realLock = false,
+  bool fakeState = true,
 }) => [
   tutorRosterRepositoryProvider.overrideWithValue(repo),
   talmidRosterAccountKeyProvider.overrideWithValue('tutor-uid'),
-  inputs.stateOverride,
+  if (fakeState) inputs.stateOverride,
   if (!realLock) inputs.lockOverride,
   connectivityStreamProvider.overrideWith((ref) => Stream.value(online)),
   renderedDisplayForRefProvider.overrideWith(
@@ -222,6 +223,8 @@ Future<void> pumpTalmidim(
   List<Override> extra = const [],
   bool realLock = false,
   Widget Function(Widget screen)? wrap,
+  bool debugBanner = true,
+  bool fakeState = true,
 }) async {
   tester.view
     ..physicalSize = size
@@ -234,6 +237,7 @@ Future<void> pumpTalmidim(
           : wrap(const MyTalmidimScreen()),
       theme: theme,
       locale: locale,
+      debugShowCheckedModeBanner: debugBanner,
       overrides: [
         ...talmidimOverrides(
           repo: repo,
@@ -241,6 +245,7 @@ Future<void> pumpTalmidim(
           opener: opener,
           online: online,
           realLock: realLock,
+          fakeState: fakeState,
         ),
         ...extra,
       ],
