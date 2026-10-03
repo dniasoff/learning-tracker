@@ -177,8 +177,10 @@ final class InMemorySubTrackRepository implements SubTrackRepository {
     }
     final rows = _tracks.putIfAbsent(scope, () => {});
     final current = rows[change.subTrackId];
-    if (current == null) throw SubTrackNotFoundException(change.subTrackId);
-    final stored = current.toStorage();
+    if (current == null && !change.isCreate) {
+      throw SubTrackNotFoundException(change.subTrackId);
+    }
+    final stored = current?.toStorage() ?? const <String, Object?>{};
     for (final MapEntry(:key, :value) in change.entry.before.entries) {
       final field = ChangedFieldKey.tryParse(key)!.field;
       if (!storageValueEquals(stored[field], value)) {

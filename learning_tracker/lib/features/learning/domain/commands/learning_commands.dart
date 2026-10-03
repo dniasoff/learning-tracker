@@ -23,6 +23,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learning_command_rea
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/features/learning/domain/commands/achievement_latch.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/child_redate_limit.dart';
@@ -186,6 +187,14 @@ abstract interface class LearningCommands {
   /// writes nothing.
   Future<CaptureResult> reAddTrack(String curriculumId);
 
+  /// AD-49 backup import (DNI-482): replays [input] onto this learner in
+  /// order — settings, governed docs, sub-tracks, learn events with
+  /// re-derived `pts_` entries, voids, then non-event records — under
+  /// fresh ids (`backup_import_replay.dart`). A batch or chunk the server
+  /// does not save is a "not saved — retry" [PendingFailure], listed in
+  /// [BackupReplayResult.notSaved] and in [watchPendingFailures].
+  Future<BackupReplayResult> importBackup(BackupReplayInput input);
+
   /// Queued writes the server rejected, live.
   Stream<List<PendingFailure>> watchPendingFailures();
 
@@ -245,8 +254,10 @@ final class DefaultLearningCommands implements LearningCommands {
     Duration pointsWait = defaultPointsReadWait,
     GovernedLearningCommands? governed,
     AchievementLatch? achievements,
+    BackupImportReplay? backupReplay,
   }) : _scope = scope,
        _achievements = achievements,
+       _backupReplay = backupReplay,
        _pointsWait = pointsWait,
        _actor = actor,
        _reads = reads,
@@ -273,6 +284,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
   final AchievementLatch? _achievements;
+  final BackupImportReplay? _backupReplay;
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
 
@@ -606,13 +618,41 @@ final class DefaultLearningCommands implements LearningCommands {
     return _gated((_, _) => governed.reAddTrack(curriculumId));
   }
 
-  /// The event failures, then the governed ones (AD-54 Recovery).
+  /// Backup imports pass the [CaptureGate] like every other write (AD-36);
+  /// a locked or unreadable gate writes nothing.
+  @override
+  Future<BackupReplayResult> importBackup(BackupReplayInput input) async {
+    final replay = _backupReplay;
+    if (replay == null) {
+      throw UnimplementedError('importBackup (wired by DNI-482)');
+    }
+    BackupReplayResult? replayed;
+    final result = await _gated((stamp, _) async {
+      final out = replayed = await replay.replay(
+        input,
+        stamp: stamp,
+        amount: _pointsAmount,
+        afterEvents: _afterWrite,
+      );
+      return out.result;
+    });
+    return replayed ?? BackupReplayResult(result: result);
+  }
+
+  /// The event failures, then the governed ones, then the backup import's
+  /// (AD-54 Recovery).
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {
-    final events = _dispatcher.watchPendingFailures();
+    var all = _dispatcher.watchPendingFailures();
     final governed = _governed;
-    if (governed == null) return events;
-    return _concatLatest(events, governed.watchPendingFailures());
+    if (governed != null) {
+      all = _concatLatest(all, governed.watchPendingFailures());
+    }
+    final backup = _backupReplay;
+    if (backup != null) {
+      all = _concatLatest(all, backup.watchPendingFailures());
+    }
+    return all;
   }
 
   @override
@@ -620,7 +660,12 @@ final class DefaultLearningCommands implements LearningCommands {
       _gated((stamp, history) async {
         final outcome = await _dispatcher.retry(pendingFailureId);
         if (outcome == null) {
-          final governed = await _governed?.retry(pendingFailureId);
+          final governed =
+              await _governed?.retry(pendingFailureId) ??
+              await _backupReplay?.retry(
+                pendingFailureId,
+                afterEvents: _afterWrite,
+              );
           return governed ??
               const CaptureResult.rejected(CaptureRejection.targetNotFound);
         }
@@ -658,8 +703,11 @@ final class DefaultLearningCommands implements LearningCommands {
     );
   }
 
-  /// Closes the pending-failure stream.
-  Future<void> dispose() => _dispatcher.dispose();
+  /// Closes the pending-failure streams.
+  Future<void> dispose() async {
+    await _dispatcher.dispose();
+    await _backupReplay?.dispose();
+  }
 
   /// The latest list of [a] followed by the latest of [b], once both have
   /// delivered.

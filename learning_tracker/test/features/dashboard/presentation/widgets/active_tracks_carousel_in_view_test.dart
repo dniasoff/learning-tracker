@@ -26,6 +26,7 @@ class _ProfileIdOverride extends ActiveProfileId {
 CurriculumTrackEntity _track(CurriculumId c) => CurriculumTrackEntity(
   curriculumId: c,
   state: 'active',
+  stateChangedAt: DateTime.utc(2026, 1, 1),
   activatedAt: DateTime.utc(2026, 1, 1),
 );
 

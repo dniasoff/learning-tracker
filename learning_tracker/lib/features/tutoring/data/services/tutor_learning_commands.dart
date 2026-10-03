@@ -37,6 +37,7 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event_stamp.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -101,6 +102,13 @@ final class TutorLearningCommands implements LearningCommands {
   static const _editingTurnedOff = CaptureResult.rejected(
     CaptureRejection.editingTurnedOff,
   );
+
+  /// Tutored sessions cannot import an owner backup into the learner's tree.
+  @override
+  Future<BackupReplayResult> importBackup(BackupReplayInput input) async =>
+      const BackupReplayResult(
+        result: CaptureResult.rejected(CaptureRejection.invalid),
+      );
 
   final Map<String, (PendingFailure, List<_PlannedCall>)> _pending = {};
   final StreamController<List<PendingFailure>> _changes =

@@ -168,6 +168,31 @@ Future<String> seedCompletion(
   return docId;
 }
 
+/// Seeds the profile's current bookmark for [curriculumId].
+Future<void> seedBookmark(
+  FakeFirebaseFirestore firestore, {
+  required String uid,
+  required String profileId,
+  required CurriculumId curriculumId,
+  String? sefariaRef,
+  DateTime? updatedAt,
+}) async {
+  final data = <String, dynamic>{
+    'profile_id': profileId,
+    'curriculum_id': curriculumId.storageKey,
+    'updated_at': _fixtureTime(updatedAt).toIso8601String(),
+    if (sefariaRef != null) 'sefaria_ref': sefariaRef,
+  };
+  await firestore
+      .collection('users')
+      .doc(uid)
+      .collection('learner_profiles')
+      .doc(profileId)
+      .collection('bookmarks')
+      .doc(DocIds.bookmarkDocId(data))
+      .set(data);
+}
+
 /// Seeds one goal and returns its deterministic Firestore document id.
 ///
 /// Goal documents use the entity's `(curriculumId, createdAt)`-based natural

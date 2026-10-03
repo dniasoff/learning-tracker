@@ -6,7 +6,8 @@ import '../../../../helpers/data_export_firestore_test_support.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 
 void main() {
-  test('export contains canonical track, stage, and completion docs', () async {
+  test('export contains canonical track, stage and bookmark docs and no '
+      'retired completions (DNI-482, AD-49)', () async {
     final firestore = FakeFirebaseFirestore();
     await seedProfile(firestore, uid: testUid, profileId: testProfileId);
     await seedTrack(
@@ -27,6 +28,13 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.bavli,
     );
+    await seedBookmark(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
       testProfileId,
@@ -34,8 +42,8 @@ void main() {
     final collections = profile['collections'] as Map<String, dynamic>;
     expect(collections['curriculum_tracks'], hasLength(1));
     expect(collections['stage_definitions'], hasLength(3));
-    expect(collections['completions'], hasLength(1));
-    expect(collections, isNot(contains('learning_ledger')));
+    expect(collections.containsKey('completions'), isFalse);
+    expect(collections['bookmarks'], hasLength(1));
   });
 
   test('import writes the same nested document ids and values', () async {
@@ -129,24 +137,6 @@ void main() {
     expect(documentData(rows.single)['day_of_week'], 1);
   });
 
-  test('does not export retired streak event rows', () async {
-    final firestore = FakeFirebaseFirestore();
-    await seedProfile(firestore, uid: testUid, profileId: testProfileId);
-    await firestore
-        .collection('users')
-        .doc(testUid)
-        .collection('learner_profiles')
-        .doc(testProfileId)
-        .collection('streak_events')
-        .doc('event-1')
-        .set({'event_type': 'completion'});
-    final profile = profileFrom(
-      await exportedMap(backupService(firestore)),
-      testProfileId,
-    );
-    expect(profile['collections'], isNot(contains('streak_events')));
-  });
-
   test('imports curriculum scopes', () async {
     final source = FakeFirebaseFirestore();
     await seedProfile(source, uid: testUid, profileId: testProfileId);
@@ -197,56 +187,5 @@ void main() {
         .doc('monday')
         .get();
     expect(doc.data()!['day_of_week'], 1);
-  });
-
-  test('does not restore retired streak events', () async {
-    final source = FakeFirebaseFirestore();
-    await seedProfile(source, uid: testUid, profileId: testProfileId);
-    await source
-        .collection('users')
-        .doc(testUid)
-        .collection('learner_profiles')
-        .doc(testProfileId)
-        .collection('streak_events')
-        .doc('event-1')
-        .set({'event_type': 'completion'});
-    final target = FakeFirebaseFirestore();
-    await backupService(
-      target,
-    ).importData(await backupService(source).exportData());
-    final doc = await target
-        .collection('users')
-        .doc(testUid)
-        .collection('learner_profiles')
-        .doc(testProfileId)
-        .collection('streak_events')
-        .doc('event-1')
-        .get();
-    expect(doc.exists, isFalse);
-  });
-
-  test('does not restore retired learning ledger entries', () async {
-    final source = FakeFirebaseFirestore();
-    await seedProfile(source, uid: testUid, profileId: testProfileId);
-    await source
-        .collection('users')
-        .doc(testUid)
-        .collection('learner_profiles')
-        .doc(testProfileId)
-        .collection('learning_ledger')
-        .doc('01ARZ3NDEKTSV4RRFFQ69G5FBB')
-        .set({'unit_identifier': 'unit-1'});
-    final target = FakeFirebaseFirestore();
-    await backupService(
-      target,
-    ).importData(await backupService(source).exportData());
-    final docs = await target
-        .collection('users')
-        .doc(testUid)
-        .collection('learner_profiles')
-        .doc(testProfileId)
-        .collection('learning_ledger')
-        .get();
-    expect(docs.docs, isEmpty);
   });
 }

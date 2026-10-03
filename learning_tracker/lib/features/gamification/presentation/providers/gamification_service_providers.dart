@@ -3,8 +3,8 @@ import 'package:learning_tracker/features/gamification/data/repositories/engine_
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
-/// AUD-gamification-11 (SM-7): DI seams for [RewardMilestoneService],
-/// [StreakStateService] and [StreakService] — mirroring the existing,
+/// AUD-gamification-11 (SM-7): the DI seam for [RewardMilestoneService] —
+/// mirroring the existing,
 /// correct `pointsServiceProvider` pattern in `points_providers.dart`.
 ///
 /// Before this file existed, every call site independently constructed
@@ -16,8 +16,12 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 /// wanting to fake one of these services all had to touch every call site
 /// individually, and a test could only fake the service by injecting a fake
 /// `UserDatabase` all the way through — never by a single `ProviderScope`
-/// override. Construction now lives in exactly these three providers; every
-/// other call site reads them via `ref.watch`/`ref.read`.
+/// override. Construction now lives in this provider; every other call site
+/// reads it via `ref.watch`/`ref.read`.
+///
+/// DNI-479 (R6): the profile-wide `StreakStateService`/`StreakService` seams
+/// are retired with `streak_events`; the streak is the per-curriculum
+/// `LearnerState` streak (AD-40).
 
 /// Provider for [RewardMilestoneService], scoped to the active profile.
 final rewardMilestoneServiceProvider = Provider<RewardMilestoneService>((ref) {
