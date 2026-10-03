@@ -448,7 +448,7 @@ void main() {
       expect(find.bySemanticsLabel('Yes, all of it'), findsOneWidget);
       expect(find.bySemanticsLabel('Adjust…'), findsOneWidget);
       final question = find.textContaining('learnt them all?');
-      expect(tester.getSemantics(question), containsSemantics(isHeader: true));
+      expect(tester.getSemantics(question), isSemantics(isHeader: true));
       semantics.dispose();
       await _unmount(tester);
     });
