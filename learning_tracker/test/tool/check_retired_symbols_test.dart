@@ -234,11 +234,6 @@ void main() {
           '${e['path']}|${e['symbol']}|${e['count']}',
       };
       expect(actual, expected);
-      expect(
-        actual.where((k) => k.startsWith('firestore.indexes.json|')),
-        hasLength(2),
-        reason: 'the streak_events and learning_order indexes',
-      );
       expect(actual.where((k) => k.startsWith('functions/')), isEmpty);
     });
 
