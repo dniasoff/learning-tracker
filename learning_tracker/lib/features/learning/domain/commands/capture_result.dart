@@ -238,6 +238,13 @@ enum CaptureRejection {
   /// written and nothing is pending; the surface says "{learner}'s parent
   /// has turned off editing". Added by DNI-486 for DNI-487 AC-6.
   editingTurnedOff,
+
+  /// A catch-up action whose tap instant is outside its card's
+  /// `catchUpWindow` (or whose lock the settings no longer produce): the
+  /// card has ended and nothing was written as `catch_up` (AD-40). The
+  /// surface says "This catch-up has ended — you can still tick learning
+  /// in Browse." Added by DNI-506 AC-3.
+  catchUpEnded,
 }
 
 /// A field someone else changed since the caller read it.
