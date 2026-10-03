@@ -114,23 +114,29 @@ final subTrackGroundOverrideProvider = Provider.autoDispose
       (ref, id) => ref.watch(subTrackGroundEditorProvider(id)).pending,
     );
 
-/// A queued (offline) ground edit the server later refused for good
-/// (UX-DR-124): the order it sent and the last confirmed order before it.
+/// The rollback of queued (offline) ground edits the server later refused
+/// for good (UX-DR-124).
 final class SubTrackGroundRollback {
-  /// Creates the rollback of [rejected] to [prior].
+  /// Creates the rollback of [rejectedOrders] to [prior].
   const SubTrackGroundRollback({
-    required this.rejected,
+    required this.rejectedOrders,
     required this.prior,
     required this.removal,
   });
 
-  /// The order the refused edit wrote.
-  final List<NodeEntry> rejected;
+  /// The orders the refused edits wrote that the local store may still
+  /// show until it reverts them: the trailing refused edits of the queue
+  /// (the newest edit and every refused edit directly before it). Empty
+  /// when a later edit that is not refused superseded them: the store then
+  /// shows that edit's order, the best expectation of the server state.
+  final List<List<NodeEntry>> rejectedOrders;
 
-  /// The last confirmed order before it.
+  /// The order to show instead: the order of the newest queued edit that
+  /// is not refused, else the last confirmed order before the queue.
   final List<NodeEntry> prior;
 
-  /// Whether the refused edit was a removal (else a reorder).
+  /// Whether the latest refused edit was a removal (else a reorder); names
+  /// the rollback snackbar.
   final bool removal;
 }
 
@@ -146,8 +152,8 @@ final class SubTrackGroundEditState {
   /// The optimistic order of the edit in flight, or null.
   final List<NodeEntry>? pending;
 
-  /// The latest queued edit the server refused after it was accepted
-  /// locally, or null.
+  /// The rollback of the queued edits the server refused after they were
+  /// accepted locally, or null.
   final SubTrackGroundRollback? rollback;
 
   /// How many queued edits the server refused after they were accepted
@@ -159,13 +165,15 @@ final class SubTrackGroundEditState {
 
   /// The order to render over the [stored] ground: the pending order;
   /// else, while the store still shows a refused edit's order (a cache
-  /// that has not reverted it yet), the last confirmed order before it;
-  /// else [stored].
+  /// that has not reverted it yet), the rollback's prior order; else
+  /// [stored].
   List<NodeEntry> groundOver(List<NodeEntry> stored) {
     final p = pending;
     if (p != null) return p;
     final r = rollback;
-    if (r != null && _sameOrder(stored, r.rejected)) return r.prior;
+    if (r != null && r.rejectedOrders.any((o) => _sameOrder(stored, o))) {
+      return r.prior;
+    }
     return stored;
   }
 
@@ -178,6 +186,27 @@ final class SubTrackGroundEditState {
   }
 }
 
+/// One ground edit accepted locally and queued for the server.
+final class _QueuedGroundEdit {
+  _QueuedGroundEdit({
+    required this.sent,
+    required this.prior,
+    required this.removal,
+  });
+
+  /// The order it wrote.
+  final List<NodeEntry> sent;
+
+  /// The order shown before it.
+  final List<NodeEntry> prior;
+
+  /// Whether it was a removal.
+  final bool removal;
+
+  /// Whether the server refused it for good.
+  bool refused = false;
+}
+
 /// Commits whole-`ground` edits of one sub-track (AC-5, AC-6).
 ///
 /// [SubTrackGroundEditor.commit] shows the new order at once (the pending
@@ -186,11 +215,21 @@ final class SubTrackGroundEditState {
 /// events untouched), then clears the pending order: on success the
 /// stored ground (already applied to the local cache) takes over and the
 /// engine recomputes position, held ground, forecast and today's tasks; on
-/// rejection the last confirmed order is back. An edit queued offline is
-/// tracked by its change id: when `LearningCommands.watchPendingFailures`
-/// later reports it refused for good, the last confirmed order is shown
-/// again and [SubTrackGroundEditState.lateRejections] grows (the detail's
-/// rollback snackbar). No widget writes Firestore.
+/// rejection the last confirmed order is back.
+///
+/// Edits queued offline are kept in an ordered journal (oldest first) by
+/// change id, because a second edit can be queued before the first one's
+/// outcome is known. When `LearningCommands.watchPendingFailures` later
+/// reports any of them refused for good, every refusal is counted
+/// ([SubTrackGroundEditState.lateRejections], the detail's rollback
+/// snackbar) and the rollback is recomputed over the WHOLE journal: while
+/// the store still shows an order of the trailing refused edits, the order
+/// of the newest edit that is not refused (else the last confirmed order
+/// before the queue) is shown. A refused edit that a later, not refused
+/// edit superseded changes nothing on screen: the store already shows that
+/// later order. A confirmed (acknowledged) save ends the journal: Firestore
+/// acknowledges writes in order, so every earlier queued edit has settled.
+/// No widget writes Firestore.
 final subTrackGroundEditorProvider = NotifierProvider.autoDispose
     .family<SubTrackGroundEditor, SubTrackGroundEditState, String>(
       SubTrackGroundEditor.new,
@@ -204,8 +243,12 @@ class SubTrackGroundEditor extends Notifier<SubTrackGroundEditState> {
   /// The sub-track ULID.
   final String subTrackId;
 
-  /// Queued edits awaiting the server, by change-log entry id.
-  final Map<String, SubTrackGroundRollback> _queued = {};
+  /// Queued edits since the last confirmed save, oldest first.
+  final List<_QueuedGroundEdit> _journal = [];
+
+  /// Queued edits awaiting the server, by change-log entry id (kept after
+  /// the journal ends, so a late refusal is still counted).
+  final Map<String, _QueuedGroundEdit> _queued = {};
 
   StreamSubscription<List<PendingFailure>>? _failures;
 
@@ -218,10 +261,10 @@ class SubTrackGroundEditor extends Notifier<SubTrackGroundEditState> {
   /// Whether an edit is in flight.
   bool get busy => state.busy;
 
-  /// Replaces the ground [prior] (the order shown, the last confirmed one)
-  /// with [next]; [removal] names the edit for the late-rejection
-  /// snackbar. Returns whether it was accepted (saved, or queued offline);
-  /// false means it was rejected and rolled back.
+  /// Replaces the ground [prior] (the order shown) with [next]; [removal]
+  /// names the edit for the late-rejection snackbar. Returns whether it
+  /// was accepted (saved, or queued offline); false means it was rejected
+  /// and rolled back.
   Future<bool> commit(
     List<NodeEntry> next, {
     required List<NodeEntry> prior,
@@ -249,19 +292,24 @@ class SubTrackGroundEditor extends Notifier<SubTrackGroundEditState> {
     }
     if (!ref.mounted) return result is CaptureSuccess;
     final accepted = result is CaptureSuccess;
-    if (result is CaptureSuccess && result.queued && commands != null) {
-      final rollback = SubTrackGroundRollback(
-        rejected: sent,
-        prior: List.unmodifiable(prior),
-        removal: removal,
-      );
-      for (final id in result.changeIds) {
-        _queued[id] = rollback;
+    if (result is CaptureSuccess) {
+      if (result.queued && commands != null) {
+        final edit = _QueuedGroundEdit(
+          sent: sent,
+          prior: List.unmodifiable(prior),
+          removal: removal,
+        );
+        _journal.add(edit);
+        for (final id in result.changeIds) {
+          _queued[id] = edit;
+        }
+        _watchFailures(commands);
+      } else if (!result.queued) {
+        _journal.clear();
       }
-      _watchFailures(commands);
     }
     state = SubTrackGroundEditState(
-      // A newer accepted edit supersedes an earlier rollback.
+      // A newer accepted edit is the newest order: nothing to roll back.
       rollback: accepted ? null : state.rollback,
       lateRejections: state.lateRejections,
     );
@@ -283,21 +331,39 @@ class SubTrackGroundEditor extends Notifier<SubTrackGroundEditState> {
 
   void _onPendingFailures(List<PendingFailure> failures) {
     if (!ref.mounted || _queued.isEmpty) return;
-    SubTrackGroundRollback? latest;
+    _QueuedGroundEdit? latest;
     var count = 0;
     for (final failure in failures) {
       for (final id in failure.changeIds) {
-        final rollback = _queued.remove(id);
-        if (rollback == null) continue;
-        latest = rollback;
+        final edit = _queued.remove(id);
+        if (edit == null || edit.refused) continue;
+        edit.refused = true;
+        latest = edit;
         count++;
       }
     }
     if (latest == null) return;
     state = SubTrackGroundEditState(
       pending: state.pending,
-      rollback: latest,
+      rollback: _rollbackOf(latest),
       lateRejections: state.lateRejections + count,
+    );
+  }
+
+  /// The rollback over the whole journal after [refused] was refused.
+  SubTrackGroundRollback _rollbackOf(_QueuedGroundEdit refused) {
+    final orders = <List<NodeEntry>>[];
+    var i = _journal.length - 1;
+    while (i >= 0 && _journal[i].refused) {
+      orders.add(_journal[i].sent);
+      i--;
+    }
+    return SubTrackGroundRollback(
+      rejectedOrders: List.unmodifiable(orders),
+      prior: i >= 0
+          ? _journal[i].sent
+          : (_journal.isEmpty ? refused.prior : _journal.first.prior),
+      removal: refused.removal,
     );
   }
 }
