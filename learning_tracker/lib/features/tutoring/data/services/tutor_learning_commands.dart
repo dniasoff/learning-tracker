@@ -237,6 +237,7 @@ final class TutorLearningCommands implements LearningCommands {
     CivilDate? learnedOn,
     bool skipRecorded = false,
     int? stage,
+    bool skipRecorded = false,
   }) => _preflight((now, history) async {
     // Epic 1: tutors record main-track learning, dated or before tracking.
     // A skip-recorded (Up to…) capture needs the talmid's counted log,
@@ -615,4 +616,23 @@ final class TutorLearningCommands implements LearningCommands {
   @override
   Future<BackupReplayResult> importBackup(BackupReplayInput input) async =>
       const BackupReplayResult(result: _invalid);
+  // Sub-track writes by a tutor go through the DNI-509 callable
+  // (tutorUpsertSubTrack, post-cutover); until then they are refused here.
+  @override
+  Future<CaptureResult> createSubTrack(
+    SubTrackDraft draft, {
+    String? subTrackId,
+  }) async => _invalid;
+
+  @override
+  Future<CaptureResult> editSubTrack(
+    String subTrackId,
+    SubTrackEdit edit,
+  ) async => _invalid;
+
+  @override
+  Future<CaptureResult> endSubTrack(String subTrackId) async => _invalid;
+
+  @override
+  Future<CaptureResult> deleteSubTrack(String subTrackId) async => _invalid;
 }
