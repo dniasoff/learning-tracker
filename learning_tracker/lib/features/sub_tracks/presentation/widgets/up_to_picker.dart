@@ -10,6 +10,11 @@
 /// picker in the sheet: the source is the track itself.
 ///
 /// Presentation only: the caller issues the capture.
+///
+/// A caller that already holds the rows (the catch-up card's Adjust panel,
+/// Story 3.4) passes them as a prepared [UpToSelection] — its rows, target
+/// and skips — and its own confirm label; the picker then reads no slice
+/// and confirming only returns the selection (DNI-507 AC-2).
 library;
 
 import 'package:flutter/material.dart';
@@ -75,12 +80,20 @@ String upToUnitFor(UpToUnitLabels units, int count) =>
 /// Opens the picker for [request]: a sheet on a phone, a dialog of at most
 /// [upToDialogMaxWidth] on a tablet. Completes with the confirmed
 /// selection, or null when it was dismissed (nothing to record).
+///
+/// [selection] and [confirmLabel] are as in [UpToPicker].
 Future<UpToSelection?> showUpToPicker(
   BuildContext context, {
   required UpToRequest request,
+  UpToSelection? selection,
+  UpToConfirmLabel? confirmLabel,
 }) {
   final size = MediaQuery.sizeOf(context);
-  final picker = UpToPicker(request: request);
+  final picker = UpToPicker(
+    request: request,
+    selection: selection,
+    confirmLabel: confirmLabel,
+  );
   if (size.shortestSide >= upToTabletBreakpoint) {
     return showDialog<UpToSelection>(
       context: context,
@@ -135,13 +148,30 @@ Future<void> openUpToAndRecord(
   );
 }
 
+/// The confirm button's label for [count] included leaves of [unit] (the
+/// count-aware leaf unit).
+typedef UpToConfirmLabel = String Function(int count, String unit);
+
 /// The picker body; pops an [UpToSelection] on Record.
 class UpToPicker extends ConsumerStatefulWidget {
   /// Creates the picker.
-  const UpToPicker({super.key, required this.request});
+  const UpToPicker({
+    super.key,
+    required this.request,
+    this.selection,
+    this.confirmLabel,
+  });
 
   /// What the picker records.
   final UpToRequest request;
+
+  /// Prepared rows and their starting target and skips; null reads the
+  /// rows of [request] from the engine ([upToSliceProvider]) with no
+  /// target.
+  final UpToSelection? selection;
+
+  /// The confirm label; null is "Record {n} {unit}".
+  final UpToConfirmLabel? confirmLabel;
 
   @override
   ConsumerState<UpToPicker> createState() => _UpToPickerState();
@@ -180,12 +210,24 @@ class _UpToPickerState extends ConsumerState<UpToPicker> {
     final theme = Theme.of(context);
     final request = widget.request;
     final units = ref.watch(upToUnitLabelsProvider(request.curriculumId));
-    final async = ref.watch(upToSliceProvider(request));
+    final prepared = widget.selection;
+    final async = prepared == null
+        ? ref.watch(upToSliceProvider(request))
+        : AsyncData(
+            UpToSlice(
+              curriculumId: request.curriculumId,
+              source: request.source,
+              rows: prepared.rows,
+            ),
+          );
     final slice = _slice ??= async.asData?.value;
-    final selection = _selection ??= slice?.select();
+    final selection = _selection ??= prepared ?? slice?.select();
     final ready = slice != null && slice.availability == UpToAvailability.ready;
     final count = ready ? selection!.count : 0;
-    final recordLabel = l10n.upToPickerRecord(count, upToUnitFor(units, count));
+    final unit = upToUnitFor(units, count);
+    final recordLabel =
+        widget.confirmLabel?.call(count, unit) ??
+        l10n.upToPickerRecord(count, unit);
 
     final Widget body;
     if (slice == null) {

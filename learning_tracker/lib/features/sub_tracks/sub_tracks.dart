@@ -51,6 +51,7 @@ export 'presentation/widgets/sub_track_read_only.dart';
 export 'presentation/widgets/up_to_picker.dart'
     show
         UpToActionButton,
+        UpToConfirmLabel,
         UpToUnitLabels,
         openUpToAndRecord,
         showUpToPicker,

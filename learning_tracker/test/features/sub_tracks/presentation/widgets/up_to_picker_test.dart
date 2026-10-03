@@ -402,4 +402,45 @@ void main() {
       expect(opacity.opacity, 0.4);
     });
   });
+
+  group('DNI-507: a prepared selection and confirm label', () {
+    testWidgets('opens on the given rows, target and skips, reads no slice, '
+        'and confirming pops the edited selection', (tester) async {
+      useSurface(tester, phoneSize);
+      final prepared = UpToSelection([
+        for (final r in _path) UpToRow(r),
+      ]).selectTarget(2).toggle(1);
+      UpToSelection? result;
+      await tester.pumpWidget(
+        pumpApp(
+          // No learner state: the picker must not need one.
+          overrides: upToLabelOverrides(),
+          child: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                key: const Key('trigger'),
+                onPressed: () async => result = await showUpToPicker(
+                  context,
+                  request: _request,
+                  selection: prepared,
+                  confirmLabel: (n, unit) => 'Include $n $unit',
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('trigger')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('upToPickerError')), findsNothing);
+      expect(_recordLabel(tester), 'Include 2 mishnayos');
+      await tester.tap(find.byKey(const Key('upToRowTick-1')));
+      await tester.pump();
+      expect(_recordLabel(tester), 'Include 3 mishnayos');
+      await tester.tap(find.byKey(const Key('upToRecord')));
+      await tester.pumpAndSettle();
+      expect(result!.includedRefs, _path.take(3));
+    });
+  });
 }

@@ -90,7 +90,8 @@ class _CatchUpAdjustPanelState extends ConsumerState<CatchUpAdjustPanel> {
     }
   }
 
-  /// The Up to… request whose engine slice gives [key]'s track order.
+  /// The Up to… request whose engine slice gives [group]'s track order;
+  /// [name] titles the picker.
   UpToRequest _requestOf(CatchUpGroupSelection group, String name) =>
       group.key.isMain
       ? MainTrackUpToRequest(
@@ -101,8 +102,31 @@ class _CatchUpAdjustPanelState extends ConsumerState<CatchUpAdjustPanel> {
       : SubTrackUpToRequest(
           subTrackId: group.key.source,
           curriculumId: group.key.curriculumId,
-          name: name,
+          name: group.subTrackName ?? name,
         );
+
+  /// Opens the shared Up to… picker on [group] (AC-2): its rows from the
+  /// group's first planned leaf through the end of the track's order,
+  /// opening with the group's current ticks. Confirming merges the
+  /// selection into [group] only; nothing is written. Dismissal (Cancel,
+  /// swipe, platform back) changes nothing.
+  Future<void> _openUpTo(
+    CatchUpGroupSelection group,
+    String name,
+    CatchUpPickerRows rows,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showUpToPicker(
+      context,
+      request: _requestOf(group, name),
+      selection: catchUpUpToSelectionOf(rows),
+      confirmLabel: l10n.catchUpAdjustPickerConfirm,
+    );
+    if (confirmed == null || !mounted) return;
+    setState(() {
+      _selection = applyCatchUpPicker(_selection, rows, confirmed.includedRefs);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -195,6 +219,7 @@ class _CatchUpAdjustPanelState extends ConsumerState<CatchUpAdjustPanel> {
                 day: day,
                 nameOf: nameOf,
                 pickerRowsOf: pickerRowsOf,
+                onUpTo: (group, rows) => _openUpTo(group, nameOf(group), rows),
                 enabled: !widget.recording,
                 onToggle: (key, leaf) =>
                     setState(() => _selection = _selection.toggle(key, leaf)),
@@ -247,6 +272,30 @@ class _CatchUpAdjustPanelState extends ConsumerState<CatchUpAdjustPanel> {
   }
 }
 
+/// The shared picker's starting selection over [rows] (AC-2): the rows
+/// from the group's first planned leaf, targeted at its last ticked leaf
+/// with every unticked leaf before it skipped; no target when none is
+/// ticked.
+UpToSelection catchUpUpToSelectionOf(CatchUpPickerRows rows) {
+  var selection = UpToSelection([
+    for (final r in rows.rows)
+      UpToRow(r.ref, recorded: rows.recorded.contains(r.ref)),
+  ]);
+  final included = rows.included.toSet();
+  var target = -1;
+  for (var i = 0; i < rows.rows.length; i++) {
+    if (included.contains(rows.rows[i].ref)) target = i;
+  }
+  if (target < 0) return selection;
+  selection = selection.selectTarget(target);
+  for (var i = 0; i < target; i++) {
+    if (selection.isSelectable(i) && !included.contains(rows.rows[i].ref)) {
+      selection = selection.toggle(i);
+    }
+  }
+  return selection;
+}
+
 /// The heading of [group]: "Home · Main track" (with the curriculum's
 /// unit when the card spans several), or "{name} (learns on shabbos)".
 String catchUpAdjustGroupLabel(
@@ -279,6 +328,7 @@ class _DaySection extends ConsumerWidget {
     required this.day,
     required this.nameOf,
     required this.pickerRowsOf,
+    required this.onUpTo,
     required this.enabled,
     required this.onToggle,
   });
@@ -286,6 +336,11 @@ class _DaySection extends ConsumerWidget {
   final CatchUpDayView day;
   final String Function(CatchUpGroupSelection group) nameOf;
   final CatchUpPickerRows? Function(CatchUpGroupKey key) pickerRowsOf;
+  final Future<void> Function(
+    CatchUpGroupSelection group,
+    CatchUpPickerRows rows,
+  )
+  onUpTo;
   final bool enabled;
   final void Function(CatchUpGroupKey key, LeafRef leaf) onToggle;
 
@@ -320,6 +375,7 @@ class _DaySection extends ConsumerWidget {
               group: g,
               name: nameOf(g.group),
               pickerRows: pickerRowsOf(g.key),
+              onUpTo: (rows) => onUpTo(g.group, rows),
               enabled: enabled,
               onToggle: (leaf) => onToggle(g.key, leaf),
             ),
@@ -336,6 +392,7 @@ class _GroupSection extends ConsumerWidget {
     required this.group,
     required this.name,
     required this.pickerRows,
+    required this.onUpTo,
     required this.enabled,
     required this.onToggle,
   });
@@ -345,6 +402,9 @@ class _GroupSection extends ConsumerWidget {
 
   /// The group's Up to… rows once its track order loaded; null before.
   final CatchUpPickerRows? pickerRows;
+
+  /// Opens the picker over the group's rows.
+  final Future<void> Function(CatchUpPickerRows rows) onUpTo;
   final bool enabled;
   final ValueChanged<LeafRef> onToggle;
 
@@ -354,9 +414,9 @@ class _GroupSection extends ConsumerWidget {
     final theme = Theme.of(context);
     final colors = context.colors;
     final key = group.key;
+    final rows = pickerRows;
     // AC-6: a sub-track with no leaf after the planned ones.
-    final exhausted =
-        !key.isMain && pickerRows != null && !pickerRows!.hasFurther;
+    final exhausted = !key.isMain && rows != null && !rows.hasFurther;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
@@ -378,7 +438,10 @@ class _GroupSection extends ConsumerWidget {
                   'catchUpAdjustUpTo-${key.learnedOn}-${key.source}',
                 ),
                 semanticsLabel: l10n.upToPickerActionSemantics(name),
-                onOpen: null,
+                onOpen:
+                    !enabled || rows == null || exhausted || !rows.selectable
+                    ? null
+                    : () => onUpTo(rows),
               ),
             ],
           ),

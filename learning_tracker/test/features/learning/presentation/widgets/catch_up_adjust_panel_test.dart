@@ -1,6 +1,7 @@
 // DNI-507 (Story 3.4) T2 / T6: the catch-up card's in-place Adjust panel —
 // day sections with per-source groups, every planned row ticked, a live
-// Record count, collapse discarding edits (AC-1), the zero state (AC-4),
+// Record count, collapse discarding edits (AC-1), Up to… through the
+// shared picker (AC-2, AC-5), the zero state (AC-4),
 // an exhausted sub-track ground (AC-6) and the inline load retry (AC-7).
 @Tags(['learning'])
 library;
@@ -161,6 +162,167 @@ void main() {
         rig.overrides(actions: const CatchUpCardActions()),
       );
       expect(tester.widget<ButtonStyleButton>(adjustButton).onPressed, isNull);
+      await unmountAdjust(tester);
+    });
+  });
+
+  group('AC-2: Up to… opens the shared picker for the group and day', () {
+    final sheet = find.byKey(const Key('upToPickerSheet'));
+    final confirm = find.byKey(const Key('upToRecord'));
+    Finder pickerRow(int i) => find.byKey(Key('upToRow-$i'));
+
+    Future<void> openUpTo(WidgetTester tester, String source) async {
+      final button = find.descendant(
+        of: adjustUpTo(source),
+        matching: find.byType(TextButton),
+      );
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+    }
+
+    String confirmText(WidgetTester tester) => tester
+        .widget<Text>(find.descendant(of: confirm, matching: find.byType(Text)))
+        .data!;
+
+    testWidgets('starts at the first planned leaf with the plan ticked; a '
+        'later leaf and an untick return to the panel without a write', (
+      tester,
+    ) async {
+      final rig = AdjustRig();
+      await pumpAdjustCard(tester, rig.overrides());
+      await openAdjust(tester);
+      await openUpTo(tester, rigRebbe);
+      expect(sheet, findsOneWidget);
+      expect(find.text('Rebbe · up to…'), findsOneWidget);
+      expect(
+        find.descendant(of: pickerRow(0), matching: find.text('Beitzah 3:1')),
+        findsOneWidget,
+      );
+      expect(confirmText(tester), 'Include 10 mishnayos');
+      // Include through 3:12, then skip 3:3.
+      await tester.scrollUntilVisible(
+        pickerRow(11),
+        100,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('upToPickerList')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.tap(
+        find.descendant(of: pickerRow(11), matching: find.byType(InkWell)),
+      );
+      await tester.pump();
+      expect(confirmText(tester), 'Include 12 mishnayos');
+      await tester.scrollUntilVisible(
+        pickerRow(2),
+        -100,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('upToPickerList')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('upToRowTick-2')));
+      await tester.pump();
+      expect(confirmText(tester), 'Include 11 mishnayos');
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(rig.recorded, isEmpty);
+      expect(adjustRow(rigRebbe, rigLeaf(3, 12)), findsOneWidget);
+      expect(
+        tester
+            .widget<Checkbox>(
+              find.descendant(
+                of: adjustRow(rigRebbe, rigLeaf(3, 3)),
+                matching: find.byType(Checkbox),
+              ),
+            )
+            .value,
+        isFalse,
+      );
+      expect(_recordText(tester), 'Record 15 mishnayos');
+      // Reopening starts from the planned start with the current ticks.
+      await openUpTo(tester, rigRebbe);
+      expect(
+        find.descendant(of: pickerRow(0), matching: find.text('Beitzah 3:1')),
+        findsOneWidget,
+      );
+      expect(confirmText(tester), 'Include 11 mishnayos');
+      await tester.tap(find.byKey(const Key('upToCancel')));
+      await tester.pumpAndSettle();
+      await unmountAdjust(tester);
+    });
+
+    testWidgets('an earlier target drops the added leaves; Record writes '
+        'each leaf once, added main leaves at the planner stage', (
+      tester,
+    ) async {
+      final rig = AdjustRig();
+      await pumpAdjustCard(tester, rig.overrides());
+      await openAdjust(tester);
+      await openUpTo(tester, _main);
+      // Main: 2:7–2:10 planned, then 2:11 and 2:12.
+      await tester.tap(
+        find.descendant(of: pickerRow(5), matching: find.byType(InkWell)),
+      );
+      await tester.pump();
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(_recordText(tester), 'Record 16 mishnayos');
+      // Narrow back to 2:8: 2:9 and 2:10 stay as skipped planned rows,
+      // 2:11 and 2:12 leave the panel.
+      await openUpTo(tester, _main);
+      await tester.tap(
+        find.descendant(of: pickerRow(1), matching: find.byType(InkWell)),
+      );
+      await tester.pump();
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(adjustRow(_main, rigLeaf(2, 11)), findsNothing);
+      expect(adjustRow(_main, rigLeaf(2, 10)), findsOneWidget);
+      expect(_recordText(tester), 'Record 12 mishnayos');
+      // Wide again, then Record.
+      await openUpTo(tester, _main);
+      await tester.tap(
+        find.descendant(of: pickerRow(4), matching: find.byType(InkWell)),
+      );
+      await tester.pump();
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(adjustRecord);
+      await tester.tap(adjustRecord);
+      await settleAdjust(tester);
+      final leaves = rig.recorded.single.leaves;
+      expect(leaves, hasLength(15));
+      expect({for (final l in leaves) (l.source, l.ref)}, hasLength(15));
+      final added = leaves.singleWhere((l) => l.ref == rigLeaf(2, 11));
+      expect(added.source, _main);
+      expect(added.stage, 1);
+      await unmountAdjust(tester);
+    });
+
+    testWidgets('Cancel or platform back closes the picker and changes '
+        'nothing', (tester) async {
+      final rig = AdjustRig();
+      await pumpAdjustCard(tester, rig.overrides());
+      await openAdjust(tester);
+      await openUpTo(tester, rigRebbe);
+      await tester.tap(find.byKey(const Key('upToRowTick-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('upToCancel')));
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(_recordText(tester), 'Record 14 mishnayos');
+      await openUpTo(tester, rigRebbe);
+      await tester.tap(find.byKey(const Key('upToRowTick-0')));
+      await tester.pump();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(adjustPanel, findsOneWidget);
+      expect(_recordText(tester), 'Record 14 mishnayos');
+      expect(rig.recorded, isEmpty);
       await unmountAdjust(tester);
     });
   });

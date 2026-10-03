@@ -123,6 +123,9 @@ final class CatchUpPickerRows {
   /// with them included.
   final List<LeafRef> included;
 
+  /// Whether any row can be ticked in the picker.
+  bool get selectable => rows.any((r) => !recorded.contains(r.ref));
+
   /// Whether the track has a leaf after the planned ones that could still
   /// be included (AC-6: false shows "No more … in this track's ground"
   /// and disables *Up to…*).
