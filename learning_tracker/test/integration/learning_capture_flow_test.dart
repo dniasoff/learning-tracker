@@ -40,6 +40,7 @@ import 'package:learning_tracker/features/scheduler/domain/repositories/goal_rep
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,6 +50,7 @@ import '../helpers/learner_state/engine_fixtures.dart';
 import '../helpers/learner_state/fake_learning_commands.dart';
 import '../helpers/learner_state/in_memory_ports.dart';
 import '../helpers/pump_app.dart';
+import '../helpers/tutoring/tutor_learning_harness.dart';
 
 const _ref1 = 'Mishnah Berakhot 1:1';
 const _ref2 = 'Mishnah Berakhot 1:2';
@@ -164,7 +166,9 @@ final class _Flow {
 
   List<PointsAward> get awards => [for (final c in port.chunks) ...c.awards];
 
-  Widget app() {
+  /// [tutor] runs the reader in that harness's tutored session: its
+  /// commands are the talmid's tutor callables (DNI-486).
+  Widget app({TutorHarness? tutor}) {
     final index = ContentIndex.fromCurricula({
       CurriculumId.mishnayos: [
         for (final (i, ref) in [_ref1, _ref2].indexed)
@@ -195,7 +199,14 @@ final class _Flow {
       renderedDisplayForRefProvider(_ref1).overrideWith((ref) async => _ref1),
       contentIndexProvider.overrideWith((ref) async => index),
       useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
-      activeTutoredProfileSelectionProvider.overrideWith(_NoTutor.new),
+      if (tutor == null)
+        activeTutoredProfileSelectionProvider.overrideWith(_NoTutor.new)
+      else ...[
+        ...tutoredOverrides(selection: tutor.selection),
+        tutorLearningCommandsProvider.overrideWith(
+          (ref) async => tutor.commands,
+        ),
+      ],
       allDailyTasksProvider.overrideWith(
         (ref) => Future.value([_task(_ref1), _task(_ref2)]),
       ),
@@ -258,6 +269,31 @@ void main() {
         verify(() => flow.router.replace(captureAny())).captured.single
             as TextDisplayRoute;
     expect(route.args?.sefariaRef, _ref2, reason: 'same order: next task');
+  });
+
+  testWidgets('DNI-486: a tutor live capture is the callable alone — no '
+      'bookmark write — and the reader still moves on', (tester) async {
+    final flow = _Flow();
+    final tutor = TutorHarness();
+    addTearDown(flow.commands.dispose);
+    addTearDown(tutor.dispose);
+    await tester.pumpWidget(flow.app(tutor: tutor));
+    await _settle(tester);
+
+    await tester.tap(find.text('Mark complete'));
+    await _settle(tester);
+
+    expect(tutor.invoker.calls.single.fn, 'tutorRecordLearning');
+    expect(flow.port.attempts, isEmpty, reason: 'no owner-path write');
+    expect(
+      flow.bookmarks.advanced,
+      isEmpty,
+      reason: 'the bookmark is owner-only: a tutor never writes it',
+    );
+    final route =
+        verify(() => flow.router.replace(captureAny())).captured.single
+            as TextDisplayRoute;
+    expect(route.args?.sefariaRef, _ref2);
   });
 
   testWidgets('AC-4: Undo after a main-task completion voids exactly that '

@@ -410,6 +410,7 @@ Widget _buildCurriculumMarkingApp({
       // Story 1.11 (DNI-473): Save records one before_tracking capture.
       beforeTrackingRecorderProvider.overrideWithValue(
         BeforeTrackingRecorder(
+          ownsBookmark: () => true,
           contentRepository: repo,
           commands: () async => commands ?? FakeLearningCommands(),
           events: () async => const [],

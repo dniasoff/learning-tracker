@@ -118,10 +118,14 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
         paceGranularity: granularity,
         rawLearningUnit: granularity == null ? paceGranularity : null,
       );
+      // AD-43: the goal lives at its kind's fixed id; a 'none' goal has no
+      // doc to write.
+      final goalId = FirestoreGoalRepository.goalDocIdOf(created);
+      if (goalId == null) return created;
       final writes = await requireTutorGovernedWrites(_ref);
       await writes.upsertGoal(
-        goalId: created.firestoreId,
-        data: created.toFirestore(),
+        goalId: goalId,
+        data: FirestoreGoalRepository.tutorUpsertFields(created, create: true),
       );
       return created;
     }
@@ -161,10 +165,12 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
         rawLearningUnit: rawLearningUnit,
         clearLearningUnit: clearLearningUnit,
       );
+      final goalId = FirestoreGoalRepository.goalDocIdOf(updated);
+      if (goalId == null) return updated;
       final writes = await requireTutorGovernedWrites(_ref);
       await writes.upsertGoal(
-        goalId: updated.firestoreId,
-        data: updated.toFirestore(),
+        goalId: goalId,
+        data: FirestoreGoalRepository.tutorUpsertFields(updated),
       );
       return updated;
     }
@@ -187,8 +193,10 @@ class FirestoreGoalRepositoryAdapter implements GoalRepository {
     // Story 1.24 (DNI-486): a tutor ends a goal through the governed
     // `tutorDeleteGoal` callable (an `ended_at` tombstone).
     if (_ref.read(activeTutoredProfileSelectionProvider) != null) {
+      final goalId = FirestoreGoalRepository.goalDocIdOf(goal);
+      if (goalId == null) return;
       final writes = await requireTutorGovernedWrites(_ref);
-      return writes.endGoal(goal.firestoreId);
+      return writes.endGoal(goalId);
     }
     final repo = await _resolve();
     await repo.deleteGoal(goal);

@@ -32,11 +32,15 @@ final goalRepositoryProvider = Provider<GoalRepository>((ref) {
 /// Records "learnt before tracking" for the active learner (Story 1.11,
 /// DNI-473): onboarding / Add-track bulk mark captures `before_tracking`
 /// learning events through [learningCommandsProvider] (R10: the retired
-/// `2000-01-01` sentinel completions).
+/// `2000-01-01` sentinel completions). In a tutored session those are the
+/// tutor callables and the bookmark co-write is skipped (DNI-486).
 final beforeTrackingRecorderProvider = Provider<BeforeTrackingRecorder>((ref) {
   return BeforeTrackingRecorder(
     contentRepository: ref.watch(contentRepositoryProvider),
     commands: () => ref.read(learningCommandsProvider.future),
+    // A tutor never writes the talmid's bookmark: it is owner-only by the
+    // Firestore rules (DNI-486). The capture alone is the tutor's write.
+    ownsBookmark: () => ref.read(activeTutoredProfileSelectionProvider) == null,
     events: () async {
       final scope = await ref.read(activeLearnerScopeProvider.future);
       final repository = await ref.read(learningEventRepositoryProvider.future);

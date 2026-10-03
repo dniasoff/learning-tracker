@@ -550,6 +550,15 @@ final class TutorLearningCommands implements LearningCommands {
   @override
   Future<CaptureResult> undoAction(String actionId) async => _invalid;
 
+  /// A tutor's track remove / re-add has no governed tutor path through
+  /// [LearningCommands] (the track surfaces disable it, DNI-486).
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) async => _invalid;
+
+  /// See [removeTrack].
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async => _invalid;
+
   @override
   Stream<List<PendingFailure>> watchPendingFailures() =>
       Stream<List<PendingFailure>>.multi((controller) {
