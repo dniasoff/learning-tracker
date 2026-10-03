@@ -7,13 +7,21 @@
 /// seam below) without editing the screen.
 library;
 
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_goal_setup_flow.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+final _log = AppLogger.instance;
 
 /// Opens a sub-track's metadata form (Story 2.4 school-year / Story 2.5
 /// ongoing form).
@@ -22,7 +30,11 @@ typedef SubTrackFormLauncher =
 
 /// Opens the goal setup of [curriculumId] from the no-deadline note.
 typedef SubTrackDeadlineSetup =
-    Future<void> Function(BuildContext context, String curriculumId);
+    Future<void> Function(
+      BuildContext context,
+      WidgetRef ref,
+      String curriculumId,
+    );
 
 /// The form launcher behind ⋮ → *Edit*. Null until the form stories
 /// (DNI-495 / DNI-496) bind their routes; *Edit* is hidden while null.
@@ -30,12 +42,60 @@ final subTrackFormLauncherProvider = Provider<SubTrackFormLauncher?>(
   (ref) => null,
 );
 
-/// The goal-setup launcher behind the no-deadline note's link. Null until
-/// DNI-495's `subTrackGoalSetupLauncherProvider` is bound here; the note
-/// then shows without its link.
+/// The goal-setup launcher behind the no-deadline note's link:
+/// [openSubTrackDeadlineSetup] over DNI-495's goal setup. Null leaves the
+/// note without its link.
 final subTrackDeadlineSetupProvider = Provider<SubTrackDeadlineSetup?>(
-  (ref) => null,
+  (ref) => openSubTrackDeadlineSetup,
 );
+
+/// The detail's no-deadline link (AC-2): opens the Story 2.4 goal setup of
+/// [curriculumId] through `subTrackGoalSetupLauncherProvider` (the same
+/// flow as the sub-track form's link) and reports its outcome as the form
+/// does. A saved deadline reaches the detail through the live learner
+/// state, which then shows the capacity bar.
+Future<void> openSubTrackDeadlineSetup(
+  BuildContext context,
+  WidgetRef ref,
+  String curriculumId,
+) async {
+  final curriculum = CurriculumId.fromStorageKey(curriculumId);
+  if (curriculum == null) return;
+  final l10n = AppLocalizations.of(context)!;
+  final messenger = ScaffoldMessenger.of(context);
+  final launch = ref.read(subTrackGoalSetupLauncherProvider);
+  SubTrackGoalSetupOutcome outcome;
+  try {
+    outcome = await launch(context, ref, curriculum);
+  } on Object catch (error, stack) {
+    _log.error(
+      event: 'sub_track_detail_goal_setup_failed',
+      fields: {'curriculum_id': curriculumId},
+      exception: error,
+      stackTrace: stack,
+    );
+    outcome = SubTrackGoalSetupOutcome.failed;
+  }
+  if (!context.mounted) return;
+  switch (outcome) {
+    case SubTrackGoalSetupOutcome.saved:
+      messenger.showSnackBar(SnackBar(content: Text(l10n.goalSavedSnack)));
+    case SubTrackGoalSetupOutcome.failed:
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.subTrackGoalSaveFailed),
+          action: SnackBarAction(
+            label: l10n.actionRetry,
+            onPressed: () => unawaited(
+              openSubTrackDeadlineSetup(context, ref, curriculumId),
+            ),
+          ),
+        ),
+      );
+    case SubTrackGoalSetupOutcome.cancelled:
+      break;
+  }
+}
 
 /// One ⋮ action of the detail.
 final class SubTrackDetailMenuAction {

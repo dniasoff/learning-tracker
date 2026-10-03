@@ -4,7 +4,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/widgets/info_note.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/no_deadline_note.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The `progress-bar-height` token: the capacity bar is 6dp tall.
@@ -44,7 +46,16 @@ class SubTrackCapacityBar extends StatelessWidget {
     final capacity = detail.capacity;
     if (capacity == null) {
       if (detail.noDeadline && detail.role == SubTrackDetailRole.parent) {
-        return _NoDeadlineNote(onSetDeadline: onSetDeadline);
+        final onTap = onSetDeadline;
+        // The Story 2.4 note and link (DNI-495), shared with its forms.
+        return KeyedSubtree(
+          key: const ValueKey('subTrackNoDeadlineNote'),
+          child: onTap == null
+              ? InfoNote(
+                  text: AppLocalizations.of(context)!.subTrackNoDeadlineNote,
+                )
+              : NoDeadlineNote(onOpenGoalSetup: onTap),
+        );
       }
       return const SizedBox.shrink();
     }
@@ -175,61 +186,6 @@ class _StatusTag extends StatelessWidget {
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: foreground,
               fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The Story 2.4 no-deadline note, drawn as the DESIGN.md `info-note`
-/// (info icon and one sentence on `brand-blue-soft`, 12dp radius). The
-/// shared `InfoNote` widget arrives with DNI-495; this stays local until
-/// then (follow-up bead).
-class _NoDeadlineNote extends StatelessWidget {
-  const _NoDeadlineNote({required this.onSetDeadline});
-
-  final VoidCallback? onSetDeadline;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final colors = context.colors;
-    final onTap = onSetDeadline;
-    return Container(
-      key: const ValueKey('subTrackNoDeadlineNote'),
-      padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 12, 12),
-      decoration: BoxDecoration(
-        color: colors.brandBlueSoft,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, size: 20, color: colors.brandBlueDeep),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.subTrackDetailNoDeadlineNote,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: colors.brandInk),
-                ),
-                if (onTap != null)
-                  TextButton(
-                    key: const ValueKey('subTrackNoDeadlineLink'),
-                    onPressed: onTap,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                      padding: EdgeInsetsDirectional.zero,
-                    ),
-                    child: Text(l10n.subTrackDetailNoDeadlineLink),
-                  ),
-              ],
             ),
           ),
         ],

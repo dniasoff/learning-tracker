@@ -577,13 +577,6 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String get subTrackDetailNoDeadlineNote =>
-      'ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.';
-
-  @override
-  String get subTrackDetailNoDeadlineLink => 'הגדרת תאריך יעד';
-
-  @override
   String get subTrackDetailGroundTitle => 'חומר (לפי הסדר)';
 
   @override

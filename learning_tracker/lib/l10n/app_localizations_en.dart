@@ -580,13 +580,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get subTrackDetailNoDeadlineNote =>
-      'Without a deadline, a sub-track can\'t lower the daily target.';
-
-  @override
-  String get subTrackDetailNoDeadlineLink => 'Set a deadline';
-
-  @override
   String get subTrackDetailGroundTitle => 'Ground (in order)';
 
   @override

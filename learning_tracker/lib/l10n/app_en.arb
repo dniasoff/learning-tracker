@@ -428,14 +428,6 @@
       }
     }
   },
-  "subTrackDetailNoDeadlineNote": "Without a deadline, a sub-track can't lower the daily target.",
-  "@subTrackDetailNoDeadlineNote": {
-    "description": "Sub-track detail: parent note when the curriculum has no deadline; Story 2.4 (DNI-495) wording, reused verbatim (DNI-497 AC-2). DRAFT copy, pending zc4."
-  },
-  "subTrackDetailNoDeadlineLink": "Set a deadline",
-  "@subTrackDetailNoDeadlineLink": {
-    "description": "Sub-track detail: link from the no-deadline note to the curriculum's goal setup; Story 2.4 (DNI-495) wording (DNI-497 AC-2). DRAFT copy, pending zc4."
-  },
   "subTrackDetailGroundTitle": "Ground (in order)",
   "@subTrackDetailGroundTitle": {
     "description": "Sub-track detail: section header over the ordered ground list (DNI-497 AC-1)."
