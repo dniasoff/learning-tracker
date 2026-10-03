@@ -135,6 +135,19 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
   @override
   Future<void> cancelStreakAlertForProfile(String profileId) async {}
+
+  // DNI-508: the catch-up reminder API (unused here).
+  @override
+  Future<void> scheduleCatchUpReminder({
+    required int id,
+    required String profileId,
+    required DateTime fireAtUtc,
+    required String title,
+    required String body,
+  }) async {}
+
+  @override
+  Future<void> cancelCatchUpReminder(int id) async {}
 }
 
 /// Fixes the selected profile to 0 — the profile-0 block the doc comment
