@@ -35,7 +35,6 @@ import 'package:learning_tracker/features/learning/presentation/providers/learni
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../../helpers/firestore_fixtures.dart';
 import '../../../../../helpers/firestore_governed_writer.dart';
 
 class MockFirebaseApp extends Mock implements FirebaseApp {}
@@ -129,20 +128,6 @@ void main() {
         },
       );
 
-      test(
-        'hasCompletionsForStage throws StageDefinitionRepositoryNotReadyException',
-        () async {
-          final container = ProviderContainer();
-          addTearDown(container.dispose);
-          final adapter = buildAdapter(container);
-
-          expect(
-            () => adapter.hasCompletionsForStage(1),
-            throwsA(isA<StageDefinitionRepositoryNotReadyException>()),
-          );
-        },
-      );
-
       // Verified against StageDefinitionRepository and
       // FirestoreStageDefinitionRepositoryAdapter: pushStagesForTrack was a
       // retired sync-pipeline operation and no longer exists; its no-op test
@@ -220,18 +205,6 @@ void main() {
           expect(stages, hasLength(3));
         },
       );
-
-      test('hasCompletionsForStage delegates to completion data', () async {
-        await seedCompletion(
-          firestore,
-          uid: uid,
-          profileId: profileDocId,
-          stageId: 1,
-        );
-
-        expect(await adapter.hasCompletionsForStage(1), isTrue);
-        expect(await adapter.hasCompletionsForStage(2), isFalse);
-      });
 
       test(
         'getStagesByTrack uses CurriculumId and returns only its stages',

@@ -80,7 +80,7 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget(item: item, onTap: () {}));
-      await tester.pump(); // resolve async completionCountProvider
+      await tester.pump(); // resolve async providers
 
       // Renderer strips the structural prefix from named-level labels —
       // "סדר זרעים" renders as "זרעים" (the seder is shown bare; the

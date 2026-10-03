@@ -194,19 +194,17 @@ void main() {
     });
 
     test(
-      'deactivation retires the track and preserves completions (DNI-317)',
+      'deactivation retires the track and preserves learning (DNI-317)',
       () async {
         await service.activate(CurriculumId.bavli);
         await service.activate(CurriculumId.mishnayos);
-        final completionId = await seedCompletion(
+        // DNI-483: learning lives in learning_events (AD-31); deactivating
+        // a curriculum never deletes it.
+        const eventId = '01ARZ3NDEKTSV4RRFFQ69G5FAA';
+        await _profileCollection(
           firestore,
-          uid: _uid,
-          profileId: _profileId,
-          curriculumId: CurriculumId.bavli,
-          sefariaRef: 'Berakhot.2a',
-          stageId: 1,
-          points: 10,
-        );
+          'learning_events',
+        ).doc(eventId).set({'curriculum_id': 'bavli', 'ref': 'Berakhot.2a'});
 
         await service.deactivate(CurriculumId.bavli);
 
@@ -215,12 +213,12 @@ void main() {
         );
         expect(bavliTrack.state, CurriculumTrackState.retired.storageKey);
 
-        final completion = await _profileCollection(
+        final event = await _profileCollection(
           firestore,
-          'completions',
-        ).doc(completionId).get();
-        expect(completion.exists, isTrue);
-        expect(completion.data()!['sefaria_ref'], 'Berakhot.2a');
+          'learning_events',
+        ).doc(eventId).get();
+        expect(event.exists, isTrue);
+        expect(event.data()!['ref'], 'Berakhot.2a');
       },
     );
 

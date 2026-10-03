@@ -60,9 +60,6 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -81,8 +78,6 @@ class _MockStackRouter extends Mock implements StackRouter {}
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
-
-class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -165,24 +160,11 @@ Widget _onboardingRig({
 // ── BulkMarkScreen rig ────────────────────────────────────────────────────────
 
 Widget _bulkMarkRig({
-  _MockCompletionRepository? completionRepo,
   _MockContentRepository? contentRepo,
   _MockBeforeTrackingRecorder? service,
   List<ContentItem> allItems = const [],
-
-  /// Only applied when completionRepo is null (auto-created).
-  List<CompletionEntity> existingCompletions = const [],
   Locale locale = const Locale('en'),
 }) {
-  final cRepo = completionRepo ?? _MockCompletionRepository();
-  if (completionRepo == null) {
-    // Auto-created repo: apply the default stub.
-    when(
-      () => cRepo.getCompletionsByCurriculum(any()),
-    ).thenAnswer((_) async => existingCompletions);
-  }
-  // When completionRepo is provided, the caller is responsible for stubbing it.
-
   final contentRepository = contentRepo ?? _MockContentRepository();
   if (contentRepo == null) {
     when(
@@ -209,7 +191,6 @@ Widget _bulkMarkRig({
             contentRepository.getContentForCurriculum(curriculumId),
       ),
       contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-      completionRepositoryProvider.overrideWithValue(cRepo),
       beforeTrackingRecorderProvider.overrideWithValue(svc),
       activeProfileIdProvider.overrideWithValue('profile-1'),
     ],
@@ -682,7 +663,6 @@ void main() {
     testWidgets('a leaf recorded before tracking pre-ticks the item', (
       tester,
     ) async {
-      final completionRepo = _MockCompletionRepository();
       final contentRepo = _MockContentRepository();
       final service = _MockBeforeTrackingRecorder();
 
@@ -703,7 +683,6 @@ void main() {
 
       await tester.pumpWidget(
         _bulkMarkRig(
-          completionRepo: completionRepo,
           contentRepo: contentRepo,
           service: service,
           allItems: _twoLeaves,
@@ -727,12 +706,10 @@ void main() {
   });
 
   group('BulkMarkScreen — confirmation phase', () {
-    late _MockCompletionRepository completionRepo;
     late _MockContentRepository contentRepo;
     late _MockBeforeTrackingRecorder service;
 
     setUp(() {
-      completionRepo = _MockCompletionRepository();
       contentRepo = _MockContentRepository();
       service = _MockBeforeTrackingRecorder();
 
@@ -764,7 +741,6 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _bulkMarkRig(
-          completionRepo: completionRepo,
           contentRepo: contentRepo,
           service: service,
           allItems: _twoLeaves,
@@ -794,7 +770,6 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _bulkMarkRig(
-          completionRepo: completionRepo,
           contentRepo: contentRepo,
           service: service,
           allItems: _twoLeaves,
@@ -821,12 +796,10 @@ void main() {
   });
 
   group('BulkMarkScreen — execute bulk-mark', () {
-    late _MockCompletionRepository completionRepo;
     late _MockContentRepository contentRepo;
     late _MockBeforeTrackingRecorder service;
 
     setUp(() {
-      completionRepo = _MockCompletionRepository();
       contentRepo = _MockContentRepository();
       service = _MockBeforeTrackingRecorder();
 
@@ -862,7 +835,6 @@ void main() {
     testWidgets('shows processing indicator then done phase', (tester) async {
       await tester.pumpWidget(
         _bulkMarkRig(
-          completionRepo: completionRepo,
           contentRepo: contentRepo,
           service: service,
           allItems: _twoLeaves,
@@ -896,7 +868,6 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _bulkMarkRig(
-          completionRepo: completionRepo,
           contentRepo: contentRepo,
           service: service,
           allItems: _twoLeaves,
@@ -937,7 +908,6 @@ void main() {
               (ref, curriculumId) => Future.value(_twoLeaves),
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-            completionRepositoryProvider.overrideWithValue(completionRepo),
             beforeTrackingRecorderProvider.overrideWithValue(service),
             activeProfileIdProvider.overrideWithValue('profile-1'),
           ],
@@ -1018,7 +988,6 @@ void main() {
 
           await tester.pumpWidget(
             _bulkMarkRig(
-              completionRepo: completionRepo,
               contentRepo: contentRepo,
               service: service,
               allItems: _twoLeaves,
@@ -1057,7 +1026,6 @@ void main() {
 
   group('BulkMarkScreen — "mark everything" guard', () {
     testWidgets('shows snackbar when all items selected', (tester) async {
-      final completionRepo = _MockCompletionRepository();
       final contentRepo = _MockContentRepository();
       final service = _MockBeforeTrackingRecorder();
 
@@ -1100,7 +1068,6 @@ void main() {
 
       await tester.pumpWidget(
         _bulkMarkRig(
-          completionRepo: completionRepo,
           contentRepo: contentRepo,
           service: service,
           allItems: [singleLeaf],
@@ -1127,7 +1094,6 @@ void main() {
 
   group('BulkMarkScreen — expunge on untick (B8)', () {
     testWidgets('unticking a pre-ticked item un-learns it', (tester) async {
-      final completionRepo = _MockCompletionRepository();
       final contentRepo = _MockContentRepository();
       final service = _MockBeforeTrackingRecorder();
 
@@ -1154,7 +1120,6 @@ void main() {
 
       await tester.pumpWidget(
         _bulkMarkRig(
-          completionRepo: completionRepo,
           contentRepo: contentRepo,
           service: service,
           allItems: _twoLeaves,

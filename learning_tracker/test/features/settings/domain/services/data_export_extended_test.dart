@@ -22,20 +22,23 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.bavli,
     );
-    await seedCompletion(
-      firestore,
-      uid: testUid,
-      profileId: testProfileId,
-      curriculumId: CurriculumId.bavli,
-    );
+    // A leftover document in the retired `completions` collection (R1) must
+    // never be exported.
     await firestore
         .collection('users')
         .doc(testUid)
         .collection('learner_profiles')
         .doc(testProfileId)
-        .collection('bookmarks')
-        .doc('bavli')
-        .set({'curriculum_id': 'bavli'});
+        .collection('completions')
+        .doc('retired-completion')
+        .set({'curriculum_id': CurriculumId.bavli.storageKey});
+    await seedBookmark(
+      firestore,
+      uid: testUid,
+      profileId: testProfileId,
+      curriculumId: CurriculumId.bavli,
+    );
+
 
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
@@ -45,7 +48,9 @@ void main() {
     expect(collections['curriculum_tracks'], hasLength(1));
     expect(collections['stage_definitions'], hasLength(3));
     expect(collections.containsKey('completions'), isFalse);
-    expect(collections['bookmarks'], hasLength(1));
+    // Bookmarks are retired (R8, DNI-478): a stray legacy doc is not
+    // part of the learning record.
+    expect(collections.containsKey('bookmarks'), isFalse);
   });
 
   test('import writes the same nested document ids and values', () async {

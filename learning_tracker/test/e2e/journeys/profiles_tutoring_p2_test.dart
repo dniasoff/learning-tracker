@@ -33,8 +33,6 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'dart:async' show unawaited;
-
 import 'package:flutter/material.dart' show Key, ListTile, TextField, ValueKey;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -435,10 +433,7 @@ void main() {
         );
 
         // Navigate to ProfilePickerScreen (which shows the rename flow).
-        unawaited(h.router.push(const ProfilePickerRoute()));
-        await h.pump();
-        await h.pump(const Duration(milliseconds: 600));
-        await h.pump();
+        await navigateTo(h, const ProfilePickerRoute());
 
         h.expectOnScreen('Who is learning?', routeName: 'ProfilePickerScreen');
         // Both profiles are visible (profileListProvider reads from live DB).

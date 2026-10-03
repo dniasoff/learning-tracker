@@ -61,18 +61,11 @@ abstract class FirestoreCodec {
   /// `firestore.rules`); a field guarded that way must be written as a real
   /// `Timestamp` by the repository itself, not via this helper.
   ///
-  /// Reference the three collections whose rules actually enforce
-  /// `is timestamp` today for how to do this correctly: `completions`'/
-  /// `learning_ledger`'s `completed_at` (`firestore_completion_repository.dart`,
-  /// `firestore_learning_ledger_repository.dart`) and `points_ledger`'s
-  /// `created_at` (`firestore_points_ledger_repository.dart`) all pass the
-  /// raw [DateTime] straight into the document map — the SDK auto-converts a
-  /// [DateTime] (never a [String]) into a real `Timestamp` on write.
-  /// `streak_events`' `created_at` guard (`firestore_streak_event_repository
-  /// .dart`) is satisfied a different way: that repository never writes a
-  /// `created_at` key at all, so the rule's "field absent" branch always
-  /// applies (see that file's "No `Timestamp`-vs-`String` trap here"
-  /// section).
+  /// Reference `points_ledger`'s `created_at`
+  /// (`firestore_points_ledger_repository.dart`) for how to do this
+  /// correctly: it passes the raw [DateTime] straight into the document map
+  /// — the SDK auto-converts a [DateTime] (never a [String]) into a real
+  /// `Timestamp` on write.
   ///
   /// On the read side, note that `Timestamp.toDate()` returns a [DateTime]
   /// flagged local, so callers decoding a real `Timestamp` back into UTC

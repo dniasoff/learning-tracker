@@ -96,9 +96,7 @@ CurriculumTrackEntity stubTrack({
 /// async guard chain can complete.
 Future<void> navigateTo(E2EHarness h, PageRouteInfo route) async {
   unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
+  await h.settle();
 }
 
 // ── Dashboard active-tracks override ────────────────────────────────────────

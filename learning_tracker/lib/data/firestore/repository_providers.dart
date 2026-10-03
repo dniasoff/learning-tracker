@@ -64,7 +64,7 @@
 /// exemption is a pure path-segment match, not scoped to a specific
 /// feature — and every feature already has exactly that directory
 /// (`lib/features/<feature>/data/repositories/`, e.g.
-/// `lib/features/learning/data/repositories/completion_repository_impl.dart`),
+/// `lib/features/learning/data/repositories/learning_command_sources.dart`),
 /// holding today's Drift-backed implementation of that feature's own
 /// domain repository interface. Those files are the sanctioned seam: when
 /// Epic C rewires a feature onto Firestore, its own
@@ -83,7 +83,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_completion_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_diagnostic_log_repository.dart';
@@ -322,19 +321,6 @@ final firestoreLearnerProfileRepositoryProvider =
         authUid: handles.authUid,
       );
     }, retry: (retryCount, error) => null);
-
-/// `.../completions/{completionId}`.
-final firestoreCompletionRepositoryProvider =
-    FutureProvider<FirestoreCompletionRepository?>((ref) async {
-      final resolved = await _watchActiveAccountAndProfile(ref);
-      if (resolved == null) return null;
-      final (handles, ownerUid, profileId) = resolved;
-      return FirestoreCompletionRepository(
-        firestore: handles.firestore,
-        uid: ownerUid,
-        profileId: profileId,
-      );
-    });
 
 /// `.../curriculum_scopes/{scopeId}`.
 final firestoreCurriculumScopeRepositoryProvider =

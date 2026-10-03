@@ -58,8 +58,6 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -198,9 +196,6 @@ void main() {
               contentRepo.getContentForCurriculum(curriculumId),
         ),
         contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-        completionRepositoryProvider.overrideWith(
-          (ref) => FirestoreCompletionRepositoryAdapter(ref: ref),
-        ),
         beforeTrackingRecorderProvider.overrideWith(
           (ref) => BeforeTrackingRecorder(
             contentRepository: contentRepo,

@@ -46,8 +46,6 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'dart:async' show unawaited;
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart' show Key, PopupMenuButton, TextField;
@@ -820,10 +818,7 @@ void main() {
         );
 
         // Navigate to the ProfilePickerScreen.
-        unawaited(h.router.push(const ProfilePickerRoute()));
-        await h.pump();
-        await h.pump(const Duration(milliseconds: 600));
-        await h.pump();
+        await navigateTo(h, const ProfilePickerRoute());
 
         // Picker is shown.
         h.expectOnScreen('Who is learning?', routeName: 'ProfilePickerScreen');

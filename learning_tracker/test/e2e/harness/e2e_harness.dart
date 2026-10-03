@@ -132,6 +132,7 @@ import 'package:learning_tracker/features/profiles/domain/services/pin_service.d
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/up_to_picker_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -400,6 +401,12 @@ class E2EHarness {
     final hasDashboardCurriculaOverride = extraOverrides.any(
       (override) => override.origin == dashboardActiveCurriculaProvider,
     );
+    final hasSacredWindowOverride = extraOverrides.any(
+      (override) => override.origin == currentSacredWindowProvider,
+    );
+    final hasTutoredSacredWindowOverride = extraOverrides.any(
+      (override) => override.origin == currentTutoredSacredWindowProvider,
+    );
 
     await _tester.pumpWidget(
       ProviderScope(
@@ -407,6 +414,8 @@ class E2EHarness {
           ..._buildOverrides(
             identity,
             includeDashboardCurriculaOverride: !hasDashboardCurriculaOverride,
+            includeSacredWindowOverride: !hasSacredWindowOverride,
+            includeTutoredSacredWindowOverride: !hasTutoredSacredWindowOverride,
           ),
           ...extraOverrides,
         ],
@@ -441,6 +450,25 @@ class E2EHarness {
 
   /// Pumps [duration] frames.
   Future<void> pump([Duration? duration]) => _tester.pump(duration);
+
+  /// Pumps [frames] short frames (plus an initial zero-duration frame) so a
+  /// chain of async hops settles without `pumpAndSettle` (which never
+  /// returns while a progress indicator animates).
+  ///
+  /// Every hop — a route guard resolving, the pushed screen's first build, a
+  /// one-shot provider load, a post-frame refresh — lands on its own frame.
+  /// A couple of long pumps advance fake time but render only a couple of
+  /// frames, so a screen whose data takes one hop more than the pump count
+  /// is still showing its loading state when the journey asserts.
+  Future<void> settle({
+    int frames = 6,
+    Duration step = const Duration(milliseconds: 100),
+  }) async {
+    await _tester.pump();
+    for (var i = 0; i < frames; i++) {
+      await _tester.pump(step);
+    }
+  }
 
   /// Taps the widget found by [finder] and pumps a settle delay.
   Future<void> tapWidget(
@@ -641,6 +669,8 @@ class E2EHarness {
   List<Override> _buildOverrides(
     E2EIdentity? identity, {
     bool includeDashboardCurriculaOverride = true,
+    bool includeSacredWindowOverride = true,
+    bool includeTutoredSacredWindowOverride = true,
   }) {
     final profileId = identity?._resolvedProfileId ?? identity?._seedProfileId;
     final accountId = identity?._resolvedAccountId ?? identity?._seedAccountId;
@@ -685,6 +715,18 @@ class E2EHarness {
         dashboardActiveCurriculaProvider.overrideWith(
           (ref) async => <CurriculumId>[],
         ),
+
+      // ── Sacred Time lock (wall-clock independent) ────────────────────────
+      // DNI-481 judges the lock from the account learners' `lockWindows`
+      // against the REAL clock, and new profiles lock Shabbos / Yom Tov by
+      // default. Unpinned, every journey run during Shabbos or Yom Tov lands
+      // behind the full-screen lock instead of the screen under test. Keep
+      // the app open by default; a journey that exercises the lock supplies
+      // its own override for either provider.
+      if (includeSacredWindowOverride)
+        currentSacredWindowProvider.overrideWithValue(null),
+      if (includeTutoredSacredWindowOverride)
+        currentTutoredSacredWindowProvider.overrideWithValue(null),
 
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),

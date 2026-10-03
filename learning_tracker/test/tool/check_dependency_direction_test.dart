@@ -3,17 +3,23 @@
 // dependency-direction gate: no lib/features/**|lib/domain/** file imports
 // the data-access ring past a repository interface).
 //
-// Mirrors the fixture-based approach used by the other Story 2.6/2.4
-// checker tests: write a disposable fixture file directly into the
-// checker's scanned directory (lib/features/, outside any
-// data/repositories/ implementation dir — the AC's exact "red-demo"
-// requirement (c)), run the script as a subprocess, assert it flags the
-// planted violation, then delete the fixture and assert a clean pass
-// again. Checker-INVOKING test (Process.run + exit code/output
+// Fixture-based like the other Story 2.6/2.4 checker tests: write a
+// disposable fixture file into the checker's scanned directory
+// (lib/features/, outside any data/repositories/ implementation dir — the
+// AC's exact "red-demo" requirement (c)), run the script as a subprocess,
+// assert it flags the planted violation, then delete the fixture and
+// assert a clean pass again.
+//
+// The scanned tree is a SANDBOX: setUpAll copies lib/features/, lib/domain/
+// and the checker into a temp package root and every fixture case runs
+// the checker there (it scans `lib/...` relative to its working
+// directory). Nothing is ever written into the real lib/ tree, so a killed
+// or timed-out run cannot leave debris that fails the real-tree gate for
+// everyone (bead learning-tracker-fyh.118). Only the "real tree" cases run
+// the checker against the package itself, read-only. Checker-INVOKING test (Process.run + exit code/output
 // assertions) — never reads a lib/ file's source text into a Dart string
 // itself, so it does not consume R7 ratchet headroom.
 //
-// setUp also guards against a prior killed run leaving the fixture behind.
 //
 // Sub-tracks story 1.1 (DNI-463, AD-35) extends this file with the
 // pure-domain guard: one allowed and one forbidden fixture per forbidden
@@ -21,12 +27,10 @@
 // files, relative/export/conditional spellings, no data/repositories/
 // exemption inside lib/domain/), and the AC-4 wiring checks (make ci /
 // GitHub Actions run the checker and propagate its nonzero exit). Domain
-// fixtures live in a test-owned directory that tearDown deletes
-// recursively, so a failing subprocess or assertion never leaves one
-// behind.
+// fixtures live in a test-owned directory inside the sandbox.
 
 @Tags(['serial-tools'])
-// serial-tools: this test writes/deletes fixture files under lib/features/
+// serial-tools: this test used to write/delete fixture files under lib/
 // while other checkers in the suite (e.g. the pre-existing Story 2.4
 // tool/check_mcf11_autoincrement_id_in_payload_ratchet.dart, out of this
 // story's scope to modify) recursively list + read the WHOLE lib/ tree
@@ -40,44 +44,81 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+const _checkerPath = 'tool/check_dependency_direction.dart';
+
 void main() {
   final packageDir = Directory.current.path;
-  final scriptPath = '$packageDir/tool/check_dependency_direction.dart';
-  final fixtureFile = File(
-    '$packageDir/lib/features/scheduler/domain/models/'
+
+  // Temp package root holding copies of the scanned trees and the checker.
+  // Every fixture is planted here, never under the real lib/.
+  late Directory sandbox;
+
+  setUpAll(() {
+    sandbox = Directory.systemTemp.createTempSync('dependency_direction_');
+    for (final dir in const ['lib/features', 'lib/domain']) {
+      Directory('${sandbox.path}/$dir').parent.createSync(recursive: true);
+      final copy = Process.runSync('cp', [
+        '-R',
+        '$packageDir/$dir',
+        '${sandbox.path}/$dir',
+      ]);
+      if (copy.exitCode != 0) {
+        throw StateError(
+          'copying $dir into the sandbox failed: ${copy.stderr}',
+        );
+      }
+    }
+    File('${sandbox.path}/$_checkerPath')
+      ..createSync(recursive: true)
+      ..writeAsBytesSync(File('$packageDir/$_checkerPath').readAsBytesSync());
+  });
+
+  tearDownAll(() {
+    if (sandbox.existsSync()) sandbox.deleteSync(recursive: true);
+  });
+
+  File fixtureFile() => File(
+    '${sandbox.path}/lib/features/scheduler/domain/models/'
     '_story_2_6_dependency_direction_fixture.dart',
   );
-  final repositoryFixtureFile = File(
-    '$packageDir/lib/features/scheduler/data/repositories/'
+  File repositoryFixtureFile() => File(
+    '${sandbox.path}/lib/features/scheduler/data/repositories/'
     '_story_2_6_repository_layer_fixture.dart',
   );
 
-  Future<ProcessResult> runCheck() =>
-      Process.run('dart', ['run', scriptPath], workingDirectory: packageDir);
+  /// Runs the checker over the sandbox (where the fixtures are planted).
+  Future<ProcessResult> runCheck() => Process.run('dart', [
+    'run',
+    _checkerPath,
+  ], workingDirectory: sandbox.path);
 
   Future<ProcessResult> runReport() => Process.run('dart', [
     'run',
-    scriptPath,
+    _checkerPath,
     '--report',
-  ], workingDirectory: packageDir);
+  ], workingDirectory: sandbox.path);
+
+  /// Runs the checker over the real package tree, read-only.
+  Future<ProcessResult> runRealCheck() =>
+      Process.run('dart', ['run', _checkerPath], workingDirectory: packageDir);
 
   // Test-owned fixture root for the AD-35 domain-purity cases. Nested two
   // levels below an existing lib/domain/** directory so every case also
   // exercises the recursive scan. Deleted wholesale in setUp/tearDown.
-  final domainFixtureRoot = Directory(
-    '$packageDir/lib/domain/learner_state/_dni_463_purity_fixture',
+  Directory domainFixtureRoot() => Directory(
+    '${sandbox.path}/lib/domain/learner_state/_dni_463_purity_fixture',
   );
 
   void cleanDomainFixtures() {
-    if (domainFixtureRoot.existsSync()) {
-      domainFixtureRoot.deleteSync(recursive: true);
+    if (domainFixtureRoot().existsSync()) {
+      domainFixtureRoot().deleteSync(recursive: true);
     }
   }
 
   /// Writes a domain fixture at [relPath] (relative to
   /// [domainFixtureRoot]) whose only directive is [directive].
   File plantDomainFixture(String relPath, String directive) {
-    final file = File('${domainFixtureRoot.path}/$relPath')
+    final file = File('${domainFixtureRoot().path}/$relPath')
       ..createSync(recursive: true)
       ..writeAsStringSync('''
 /// DNI-463 domain-purity fixture. Deleted by the test's tearDown; must
@@ -93,21 +134,21 @@ class Dni463PurityFixture {}
 
   group('tool/check_dependency_direction.dart (Story 2.6, AD-23/AD-28)', () {
     setUp(() {
-      if (fixtureFile.existsSync()) fixtureFile.deleteSync();
-      if (repositoryFixtureFile.existsSync()) {
-        repositoryFixtureFile.deleteSync();
+      if (fixtureFile().existsSync()) fixtureFile().deleteSync();
+      if (repositoryFixtureFile().existsSync()) {
+        repositoryFixtureFile().deleteSync();
       }
     });
 
     tearDown(() {
-      if (fixtureFile.existsSync()) fixtureFile.deleteSync();
-      if (repositoryFixtureFile.existsSync()) {
-        repositoryFixtureFile.deleteSync();
+      if (fixtureFile().existsSync()) fixtureFile().deleteSync();
+      if (repositoryFixtureFile().existsSync()) {
+        repositoryFixtureFile().deleteSync();
       }
     });
 
     test('exits 0 on the real (fixed) tree — zero violations today', () async {
-      final result = await runCheck();
+      final result = await runRealCheck();
       expect(
         result.exitCode,
         0,
@@ -122,8 +163,8 @@ class Dni463PurityFixture {}
     test('a repository-implementation file (under data/repositories/) IS '
         'permitted to import the data-access ring directly (AD-23: R --> A '
         'is an allowed edge) — never flagged', () async {
-      repositoryFixtureFile.createSync(recursive: true);
-      repositoryFixtureFile.writeAsStringSync('''
+      repositoryFixtureFile().createSync(recursive: true);
+      repositoryFixtureFile().writeAsStringSync('''
 /// Story 2.6 fixture — a repository-implementation file, permitted by
 /// AD-23 to depend on the data-access ring directly. Deleted by the test's
 /// tearDown; must never be committed.
@@ -150,7 +191,7 @@ class StoryTwoSixRepositoryLayerFixture {
         'lib/features/** import of the data-access ring, reaching past a '
         'repository interface, flips the checker from clean to FAILED; '
         'deleting the fixture restores a clean pass', () async {
-      fixtureFile.writeAsStringSync('''
+      fixtureFile().writeAsStringSync('''
 /// Story 2.6 red-demo fixture — deliberately reintroduces the AD-23
 /// dependency-direction landmine: a lib/features/** file importing the
 /// data-access ring directly, bypassing the repository interface.
@@ -181,7 +222,7 @@ class StoryTwoSixDependencyDirectionFixture {
         ),
       );
 
-      fixtureFile.deleteSync();
+      fixtureFile().deleteSync();
 
       final clean = await runCheck();
       expect(
@@ -256,7 +297,7 @@ class StoryTwoSixDependencyDirectionFixture {
         ).existsSync(),
         isTrue,
       );
-      final result = await runCheck();
+      final result = await runRealCheck();
       expect(
         result.exitCode,
         0,
@@ -450,9 +491,12 @@ class StoryTwoSixDependencyDirectionFixture {
         'make_gate.dart',
         "import 'package:flutter/foundation.dart';",
       );
+      // The real Makefile's target, run over the sandbox tree.
       final failing = await Process.run('make', [
+        '-f',
+        '$packageDir/Makefile',
         'check-dependency-direction',
-      ], workingDirectory: packageDir);
+      ], workingDirectory: sandbox.path);
       expect(
         failing.exitCode,
         isNot(0),
@@ -463,8 +507,10 @@ class StoryTwoSixDependencyDirectionFixture {
 
       cleanDomainFixtures();
       final passing = await Process.run('make', [
+        '-f',
+        '$packageDir/Makefile',
         'check-dependency-direction',
-      ], workingDirectory: packageDir);
+      ], workingDirectory: sandbox.path);
       expect(
         passing.exitCode,
         0,

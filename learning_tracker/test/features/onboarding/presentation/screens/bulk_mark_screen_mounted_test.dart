@@ -19,16 +19,12 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
-
-class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -69,7 +65,6 @@ const _twoLeaves = [_leafA, _leafB];
 Widget _toggleableHost({
   required ValueNotifier<bool> show,
   required _MockContentRepository contentRepo,
-  required _MockCompletionRepository completionRepo,
   required _MockBeforeTrackingRecorder service,
 }) {
   return ProviderScope(
@@ -80,7 +75,6 @@ Widget _toggleableHost({
             contentRepo.getContentForCurriculum(curriculumId),
       ),
       contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-      completionRepositoryProvider.overrideWithValue(completionRepo),
       beforeTrackingRecorderProvider.overrideWithValue(service),
       activeProfileIdProvider.overrideWithValue(_profileId),
     ],
@@ -104,13 +98,11 @@ void main() {
   });
 
   late _MockContentRepository contentRepo;
-  late _MockCompletionRepository completionRepo;
   late _MockBeforeTrackingRecorder service;
   late ValueNotifier<bool> show;
 
   setUp(() {
     contentRepo = _MockContentRepository();
-    completionRepo = _MockCompletionRepository();
     service = _MockBeforeTrackingRecorder();
 
     when(
@@ -149,12 +141,7 @@ void main() {
     ).thenAnswer((_) => resolveGate.future);
 
     await tester.pumpWidget(
-      _toggleableHost(
-        show: show,
-        contentRepo: contentRepo,
-        completionRepo: completionRepo,
-        service: service,
-      ),
+      _toggleableHost(show: show, contentRepo: contentRepo, service: service),
     );
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -197,12 +184,7 @@ void main() {
       ).thenAnswer((_) => executeGate.future);
 
       await tester.pumpWidget(
-        _toggleableHost(
-          show: show,
-          contentRepo: contentRepo,
-          completionRepo: completionRepo,
-          service: service,
-        ),
+        _toggleableHost(show: show, contentRepo: contentRepo, service: service),
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
@@ -250,12 +232,7 @@ void main() {
       ).thenAnswer((_) => executeGate.future);
 
       await tester.pumpWidget(
-        _toggleableHost(
-          show: show,
-          contentRepo: contentRepo,
-          completionRepo: completionRepo,
-          service: service,
-        ),
+        _toggleableHost(show: show, contentRepo: contentRepo, service: service),
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));

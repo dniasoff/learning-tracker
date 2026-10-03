@@ -24,7 +24,6 @@ import 'dart:convert';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/gamification/domain/models/point_config.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -36,20 +35,17 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
 void main() {
   final past = DateTime.utc(2020, 1, 1);
 
-  // completions — codec encode() shape (what the outbox processor writes).
-  final completions = {
-    ...CompletionEntity(
-      curriculumId: CurriculumId.mishnayos,
-      sefariaRef: 'Berakhot.2a',
-      stageId: 1,
-      trackType: 'personal',
-      source: CompletionSource.live,
-      completedAt: past,
-      points: 10,
-    ).toFirestore(),
-    // CompletionEntity.toFirestore() uses a DateTime for the Firestore SDK;
-    // this CLI serializes the same payload as JSON for the emulator fixture.
+  // completions — the retired (R1, DNI-483) completion document shape, kept
+  // as a literal while the AD-49 deny-all rule for `completions` stays
+  // under emulator test (it is removed by the cutover follow-up release).
+  final completions = <String, dynamic>{
+    'curriculum_id': CurriculumId.mishnayos.storageKey,
+    'sefaria_ref': 'Berakhot.2a',
+    'stage_id': 1,
+    'track_type': 'personal',
+    'source': CompletionSource.live.name,
     'completed_at': past.toIso8601String(),
+    'points': 10,
   };
 
   // bookmarks — minimal codec encode() shape (curriculum_id, sefaria_ref,
