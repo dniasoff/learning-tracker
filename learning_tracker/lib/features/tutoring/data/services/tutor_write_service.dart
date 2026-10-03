@@ -136,7 +136,7 @@ class TutorWriteInvalidResponse extends TutorWriteFailure {
 }
 
 /// The server's AD-53 rejection reads "Grant lacks can_edit_learning"
-/// (writeWithChangeLog, verifyTutorGrant and tutorBulkPriorCompletions).
+/// (writeWithChangeLog and verifyTutorGrant).
 bool _isEditingTurnedOff(FirebaseFunctionsException e) =>
     e.code == 'permission-denied' &&
     (e.message ?? '').contains('can_edit_learning');

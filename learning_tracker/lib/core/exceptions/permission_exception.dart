@@ -16,9 +16,8 @@ export 'package:learning_tracker/core/exceptions/app_exception.dart'
 ///   - The client domain layer throws this exception before the write reaches
 ///     Firestore, so the UI can surface a meaningful error message.
 ///
-/// Bulk-prior completions are NOT forbidden — they go through the Cloud
-/// Function proxy (W3.43, tutorBulkPriorCompletions), which validates that
-/// completedAt is strictly in the past.
+/// Historical tutor learning writes now go through the governed learning
+/// callables; no completion-store proxy is available.
 ///
 /// See also: [TutorPermissions.canMarkLiveCompletion] (always false).
 class TutorWriteForbiddenException extends PermissionException {
