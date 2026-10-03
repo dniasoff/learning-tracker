@@ -14,8 +14,10 @@ import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
 
@@ -32,12 +34,14 @@ final _now = DateTime.utc(2026, 10, 1, 9);
 /// The 2026–27 school year the parent set up: Sep–Jul, 8 a week.
 SubTrack _school({
   String id = ulidA,
+  String curriculumId = 'shas',
   int academicYear = 2026,
   String windowStart = '2026-09-01',
   String? windowEnd = '2027-07-31',
+  SubTrackEndReason? endReason,
 }) => SubTrack(
   id: id,
-  curriculumId: 'shas',
+  curriculumId: curriculumId,
   name: 'School',
   type: SubTrackType.schoolYear,
   academicYear: academicYear,
@@ -48,6 +52,8 @@ SubTrack _school({
   learnsOnShabbos: true,
   ground: const [_berakhot],
   lastChangeId: ulidE,
+  endedAt: endReason == null ? null : _now,
+  endReason: endReason,
 );
 
 /// The 2027–28 draft *Add next year* saves (prefill, unedited).
@@ -114,7 +120,7 @@ void main() {
 
   group('T6 subtrack_lifecycle for the explicit lifecycle actions (AD-47)', () {
     test('Add next year reports add_next_year, not create', () async {
-      await commands.createSubTrack(_nextYear, addNextYear: true);
+      await commands.createSubTrack(_nextYear, nextYearOf: ulidA);
       expect(analytics.lifecycles, [
         (
           curriculumId: 'shas',
@@ -151,7 +157,7 @@ void main() {
           learnsOnShabbos: true,
           ground: [],
         ),
-        addNextYear: true,
+        nextYearOf: ulidA,
       );
       expect(analytics.lifecycles, isEmpty);
     });
@@ -181,7 +187,7 @@ void main() {
       final source = repo.tracksOf(scope).single;
       final result = await commands.createSubTrack(
         nextYearSubTrackDraft(source),
-        addNextYear: true,
+        nextYearOf: ulidA,
       );
       expect(result, isA<CaptureSuccess>());
       final entry = repo.entries.single.$2;
@@ -227,7 +233,7 @@ void main() {
       );
       expect(leap.windowEnd, '2028-02-29');
       expect(
-        await commands.createSubTrack(draft, addNextYear: true),
+        await commands.createSubTrack(draft, nextYearOf: ulidB),
         isA<CaptureSuccess>(),
       );
     });
@@ -244,9 +250,57 @@ void main() {
       ]);
       final result = await commands.createSubTrack(
         nextYearSubTrackDraft(_school()),
-        addNextYear: true,
+        nextYearOf: ulidA,
       );
       expect(result, isA<CaptureRejected>());
+      expect(repo.calls, isEmpty);
+      expect(repo.entries, isEmpty);
+    });
+
+    for (final (label, reason) in [
+      ('ended', SubTrackEndReason.ended),
+      ('deleted', SubTrackEndReason.deleted),
+    ]) {
+      test('a source $label on another device after the form opened refuses '
+          'Add next year before any write; the tombstone stays', () async {
+        final draft = nextYearSubTrackDraft(_school());
+        // The other device's tombstone reaches the read between render
+        // and save.
+        final tombstoned = _school(endReason: reason);
+        repo.seed(scope, [tombstoned]);
+        final result = await commands.createSubTrack(draft, nextYearOf: ulidA);
+        expect(
+          result,
+          isA<CaptureRejected>().having(
+            (r) => r.reason,
+            'reason',
+            CaptureRejection.targetNotFound,
+          ),
+        );
+        expect(repo.calls, isEmpty);
+        expect(repo.entries, isEmpty);
+        expect(repo.tracksOf(scope).single, tombstoned);
+        expect(analytics.lifecycles, isEmpty);
+      });
+    }
+
+    test('a missing source, or one of another curriculum or type, refuses '
+        'Add next year before any write', () async {
+      final draft = nextYearSubTrackDraft(_school());
+      expect(
+        await commands.createSubTrack(draft, nextYearOf: ulidB),
+        isA<CaptureRejected>().having(
+          (r) => r.reason,
+          'reason',
+          CaptureRejection.targetNotFound,
+        ),
+      );
+      final otherCurriculum = _school(id: ulidC, curriculumId: 'other');
+      repo.seed(scope, [otherCurriculum]);
+      expect(
+        await commands.createSubTrack(draft, nextYearOf: ulidC),
+        isA<CaptureRejected>(),
+      );
       expect(repo.calls, isEmpty);
       expect(repo.entries, isEmpty);
     });
@@ -260,13 +314,22 @@ void main() {
       final results = [
         await commands.createSubTrack(
           nextYearSubTrackDraft(_school()),
-          addNextYear: true,
+          nextYearOf: ulidA,
         ),
         await commands.endSubTrack(ulidA),
         await commands.deleteSubTrack(ulidA),
         await commands.editSubTrack(ulidA, const SubTrackEdit(name: 'Shiur')),
       ];
-      expect(results, everyElement(isA<CaptureOnlineRequired>()));
+      // DNI-497's fail-closed refusal: rejected(invalid) with no violation,
+      // which the lifecycle UI reports as its generic "not saved".
+      expect(
+        results,
+        everyElement(
+          isA<CaptureRejected>()
+              .having((r) => r.reason, 'reason', CaptureRejection.invalid)
+              .having((r) => r.violations, 'violations', isEmpty),
+        ),
+      );
       expect(repo.calls, isEmpty);
       expect(repo.entries, isEmpty);
       expect(analytics.lifecycles, isEmpty);
@@ -276,7 +339,7 @@ void main() {
       expect(
         await commands.createSubTrack(
           nextYearSubTrackDraft(_school()),
-          addNextYear: true,
+          nextYearOf: ulidA,
         ),
         isA<CaptureSuccess>(),
       );
@@ -297,7 +360,7 @@ void main() {
       expect(
         await commands.createSubTrack(
           nextYearSubTrackDraft(_school()),
-          addNextYear: true,
+          nextYearOf: ulidA,
         ),
         isA<CaptureRejected>(),
       );
@@ -364,6 +427,116 @@ void main() {
       expect(repo.entries, hasLength(1));
     });
 
+    test('offline: a queued end reports no analytics until the server '
+        'accepts it, and whenConfirmed completes true', () async {
+      repo.offline = true;
+      final result = await commands.endSubTrack(ulidA) as CaptureSuccess;
+      expect(result.queued, isTrue);
+      expect(analytics.lifecycles, isEmpty, reason: 'queued is not accepted');
+      final confirmed = commands.whenConfirmed(result.changeIds.single);
+      repo.settleHeld();
+      expect(await confirmed, isTrue);
+      expect(analytics.lifecycles, hasLength(1));
+      expect(analytics.lifecycles.single.action, SubTrackLifecycleAction.end);
+      // Settled: a later ask answers at once.
+      expect(await commands.whenConfirmed(result.changeIds.single), isTrue);
+    });
+
+    test(
+      'offline: a queued delete the server refuses completes false, '
+      'reports nothing, and its retry is accepted and reported once',
+      () async {
+        repo
+          ..offline = true
+          ..failNextWith(const PermanentWriteRejection('permission-denied'));
+        final result = await commands.deleteSubTrack(ulidA) as CaptureSuccess;
+        final changeId = result.changeIds.single;
+        final confirmed = commands.whenConfirmed(changeId);
+        repo.settleHeld();
+        expect(await confirmed, isFalse);
+        expect(repo.tracksOf(scope).single.endedAt, isNull, reason: 'reverted');
+        expect(analytics.lifecycles, isEmpty);
+        expect(commands.hasPendingFailure(changeId), isTrue);
+        expect(await commands.whenConfirmed(changeId), isFalse);
+
+        repo.offline = false;
+        expect(await commands.retry(changeId), isA<CaptureSuccess>());
+        expect(commands.hasPendingFailure(changeId), isFalse);
+        expect(await commands.whenConfirmed(changeId), isTrue);
+        expect(
+          repo.tracksOf(scope).single.endReason,
+          SubTrackEndReason.deleted,
+        );
+        expect(analytics.lifecycles, hasLength(1));
+        expect(
+          analytics.lifecycles.single.action,
+          SubTrackLifecycleAction.delete,
+        );
+      },
+    );
+
+    test('a rebuild of the commands for the same learner keeps a queued write: '
+        'it still settles, its refusal is a pending failure of the new '
+        'commands, and the new commands retry it', () async {
+      final ledger = SubTrackWriteLedger();
+      SubTrackCommands build() => SubTrackCommands(
+        scope: scope,
+        actor: parentActor,
+        subTracks: repo,
+        intent: intent,
+        today: () => _today,
+        nowUtc: () => _now,
+        newId: _ids(),
+        analytics: analytics,
+        ledger: ledger,
+        ackTimeout: const Duration(milliseconds: 50),
+        readTimeout: const Duration(seconds: 2),
+      );
+      final before = build();
+      repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('permission-denied'));
+      final result = await before.deleteSubTrack(ulidA) as CaptureSuccess;
+      final changeId = result.changeIds.single;
+      final confirmed = before.whenConfirmed(changeId);
+      await before.dispose();
+
+      final after = build();
+      final failures = after.watchPendingFailures();
+      repo.settleHeld();
+      expect(await confirmed, isFalse);
+      expect(after.hasPendingFailure(changeId), isTrue);
+      expect(
+        (await failures.firstWhere((f) => f.isNotEmpty)).single.id,
+        changeId,
+      );
+      expect(await after.whenConfirmed(changeId), isFalse);
+
+      repo.offline = false;
+      expect(await after.retry(changeId), isA<CaptureSuccess>());
+      expect(after.hasPendingFailure(changeId), isFalse);
+      expect(repo.tracksOf(scope).single.endReason, SubTrackEndReason.deleted);
+      expect(analytics.lifecycles, hasLength(1));
+      await after.dispose();
+      await ledger.dispose();
+    });
+
+    test('offline: a queued Add next year reports add_next_year only once '
+        'acknowledged', () async {
+      repo.offline = true;
+      final result =
+          await commands.createSubTrack(_nextYear, nextYearOf: ulidA)
+              as CaptureSuccess;
+      expect(result.queued, isTrue);
+      expect(analytics.lifecycles, isEmpty);
+      repo.settleHeld();
+      expect(await commands.whenConfirmed(result.changeIds.single), isTrue);
+      expect(
+        analytics.lifecycles.single.action,
+        SubTrackLifecycleAction.addNextYear,
+      );
+    });
+
     test(
       'an already-ended source: a later delete writes nothing new',
       () async {
@@ -381,6 +554,54 @@ void main() {
         expect(repo.calls, isEmpty);
       },
     );
+  });
+
+  group('LearningCommands surfaces a late sub-track rejection (AD-54)', () {
+    late DefaultLearningCommands facade;
+
+    setUp(() {
+      facade = DefaultLearningCommands(
+        scope: scope,
+        actor: parentActor,
+        reads: FakeLearningCommandReads(history: c0SettingsHistory()),
+        writePort: InMemoryLearningWritePort(),
+        gate: const LockWindowCaptureGate(),
+        analytics: analytics,
+        failureReporter: RecordingLearningFailureReporter(),
+        clock: () => _now,
+        newUlid: (_) => ulidD,
+        subTrackCommands: commands,
+      );
+    });
+
+    tearDown(() => facade.dispose());
+
+    test('the refused queued end is a pending failure of the facade, its '
+        'retry routes to the sub-track commands, and whenConfirmed tracks '
+        'it', () async {
+      final failures = <List<PendingFailure>>[];
+      final sub = facade.watchPendingFailures().listen(failures.add);
+      repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('failed-precondition'));
+      final result = await facade.endSubTrack(ulidA) as CaptureSuccess;
+      expect(result.queued, isTrue);
+      final changeId = result.changeIds.single;
+      final confirmed = facade.whenSubTrackChangeConfirmed(changeId);
+      repo.settleHeld();
+      expect(await confirmed, isFalse);
+      await Future<void>.delayed(Duration.zero);
+      expect([for (final f in failures.last) f.id], [changeId]);
+
+      repo.offline = false;
+      expect(await facade.retry(changeId), isA<CaptureSuccess>());
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last, isEmpty);
+      expect(await facade.whenSubTrackChangeConfirmed(changeId), isTrue);
+      expect(repo.tracksOf(scope).single.endReason, SubTrackEndReason.ended);
+      expect(analytics.lifecycles, hasLength(1));
+      await sub.cancel();
+    });
   });
 
   group('engine: an explicit end returns ground and keeps every event', () {

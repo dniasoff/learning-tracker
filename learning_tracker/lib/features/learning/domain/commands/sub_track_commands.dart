@@ -33,6 +33,15 @@
 ///   the command returns `success(queued: true)`. A queued batch the server
 ///   later refuses for good becomes a [PendingFailure] ("not saved —
 ///   retry"); [SubTrackCommands.retry] re-sends the identical batch.
+///   [SubTrackCommands.whenConfirmed] tells a caller holding a queued
+///   result whether the server finally accepted it (DNI-499). Both live in
+///   a [SubTrackWriteLedger] that outlives one commands instance, so a
+///   rebuild of the commands for the same learner keeps them.
+/// - **Analytics** (AD-47): `subtrack_lifecycle` is emitted once the server
+///   has accepted the write — at once when it acknowledges within
+///   [SubTrackCommands.ackTimeout], else when the queued write (or its
+///   retry) is acknowledged. A queued write the server refuses emits
+///   nothing.
 ///
 /// Imports only `lib/domain/learner_state/**`, sibling command files and
 /// `dart:` (C0 AC-1).
@@ -41,7 +50,6 @@ library;
 import 'dart:async';
 
 import 'package:learning_tracker/domain/learner_state/actor.dart';
-import 'package:learning_tracker/domain/learner_state/append_ground.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
@@ -50,9 +58,6 @@ import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
-import 'package:learning_tracker/domain/learner_state/ports/oversized_governed_write_port.dart'
-    show OnlineRequiredException;
-import 'package:learning_tracker/domain/learner_state/ports/sub_track_latest_write.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -110,8 +115,7 @@ final class SubTrackDraft {
 
 /// The fields an edit changes; a null field keeps its value. Nullable
 /// stored fields are cleared with [clearAcademicYear] / [clearWindowEnd].
-/// `ground`, when given, replaces the whole ordered list; [appendGround]
-/// instead appends picked nodes to the latest stored ground (Story 2.7).
+/// `ground`, when given, replaces the whole ordered list.
 final class SubTrackEdit {
   /// Creates an edit.
   const SubTrackEdit({
@@ -126,7 +130,6 @@ final class SubTrackEdit {
     this.weeksPerYear,
     this.learnsOnShabbos,
     this.ground,
-    this.appendGround,
   });
 
   /// New name.
@@ -161,26 +164,6 @@ final class SubTrackEdit {
 
   /// The whole new ordered ground.
   final List<NodeEntry>? ground;
-
-  /// Ground-picker nodes to append (Story 2.7 / DNI-498, FR-10/FR-11).
-  ///
-  /// The command re-reads the sub-track's latest `ground`, drops every
-  /// picked leaf an existing entry already covers, and appends the rest in
-  /// ContentIndex order (`groundToAppend`); the stored entries are kept as
-  /// entered and the result is written as the whole new `ground` list with
-  /// one change-log entry. Every node must belong to the sub-track's own
-  /// curriculum. Exclusive with [ground]; a replay appends nothing.
-  ///
-  /// An append needs the server: the new list is derived from the row the
-  /// server holds at commit time inside one transaction
-  /// ([SubTrackLatestWrite]), so two devices appending at once both keep
-  /// their nodes. It is never queued: a whole list derived from a cached
-  /// row and replayed after reconnecting would, under AD-38 per-field LWW,
-  /// overwrite nodes another device appended meanwhile, and the rules do
-  /// not compare `ground` with the server row. Offline, or when the
-  /// repository has no latest-row write, the command returns
-  /// `CaptureResult.onlineRequired()` and writes nothing.
-  final List<NodeEntry>? appendGround;
 }
 
 /// The sub-track lifecycle commands for one learner and actor.
@@ -202,9 +185,12 @@ final class SubTrackCommands {
     required String Function() newId,
     Future<Corpus?> Function(String curriculumId)? corpusOf,
     LearningAnalytics? analytics,
+    SubTrackWriteLedger? ledger,
     this.ackTimeout = const Duration(seconds: 3),
     this.readTimeout = const Duration(seconds: 10),
-  }) : _subTracks = subTracks,
+  }) : _ledger = ledger ?? SubTrackWriteLedger(),
+       _ownsLedger = ledger == null,
+       _subTracks = subTracks,
        _intent = intent,
        _today = today,
        _nowUtc = nowUtc,
@@ -234,22 +220,35 @@ final class SubTrackCommands {
   final Future<Corpus?> Function(String curriculumId)? _corpusOf;
   final LearningAnalytics? _analytics;
 
-  final Map<String, (PendingFailure, SubTrackChange)> _pending = {};
+  final SubTrackWriteLedger _ledger;
+  final bool _ownsLedger;
+
+  Map<String, (PendingFailure, SubTrackChange, void Function()?)>
+  get _pending => _ledger._pending;
+
+  Map<String, Completer<bool>> get _unconfirmed => _ledger._unconfirmed;
+
+  StreamController<List<PendingFailure>> get _pendingController =>
+      _ledger._controller;
 
   /// Pending-failure ids whose retry is in flight.
-  final Set<String> _retrying = {};
-  final _pendingController = StreamController<List<PendingFailure>>.broadcast(
-    sync: true,
-  );
+  Set<String> get _retrying => _ledger._retrying;
 
   /// Creates a sub-track from [draft]. [subTrackId] is the new doc ULID
-  /// (minted when omitted); it is the entry's `entity_id`. [addNextYear]
-  /// reports the create as *Add next year* (Story 2.8) in
-  /// `subtrack_lifecycle`; the write is identical.
+  /// (minted when omitted); it is the entry's `entity_id`.
+  ///
+  /// [nextYearOf] makes the create the *Add next year* rollover of that
+  /// school-year sub-track (Story 2.8): the source is re-read in the same
+  /// complete read as the AD-45 check, and the create is refused
+  /// (`rejected(targetNotFound)`, nothing written) when the source is gone,
+  /// tombstoned (ended or deleted, e.g. on another device after the form
+  /// opened), not a school year, or of another curriculum. The write is
+  /// otherwise identical and is reported as `add_next_year` in
+  /// `subtrack_lifecycle`. The source is never written.
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
-    bool addNextYear = false,
+    String? nextYearOf,
   }) async {
     if (actor.role == ActorRole.child) return const CaptureResult.childLimit();
     final id = subTrackId ?? _newId();
@@ -268,10 +267,20 @@ final class SubTrackCommands {
       ground: draft.ground,
       lastChangeId: entryId,
     );
-    final siblings = await _readSubTracks();
-    if (siblings == null) return const CaptureResult.onlineRequired();
+    final read = await _readSubTracks();
+    if (read.refusal case final refusal?) return refusal;
+    final siblings = read.items;
     if (siblings.any((s) => s.id == id)) {
       return const CaptureResult.rejected(CaptureRejection.invalid);
+    }
+    if (nextYearOf != null) {
+      final source = _find(siblings, nextYearOf);
+      if (source == null ||
+          source.isEnded ||
+          source.type != SubTrackType.schoolYear ||
+          source.curriculumId != draft.curriculumId) {
+        return const CaptureResult.rejected(CaptureRejection.targetNotFound);
+      }
     }
     final refused = await _validate(candidate, prior: null, siblings: siblings);
     if (refused != null) return refused;
@@ -281,18 +290,18 @@ final class SubTrackCommands {
     // Absent optional fields are not written (nor logged as null → null).
     final fields = _fieldsOf(candidate)..removeWhere((_, v) => v == null);
     final entry = _entry(id, entryId, before: const {}, after: fields);
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.create(
-          subTrackId: id,
-          changedFields: fields,
-          entry: entry,
-        ),
+    return _commit(
+      SubTrackChange.create(
+        subTrackId: id,
+        changedFields: fields,
+        entry: entry,
       ),
-      candidate,
-      addNextYear
-          ? SubTrackLifecycleAction.addNextYear
-          : SubTrackLifecycleAction.create,
+      onConfirmed: _emitter(
+        candidate,
+        nextYearOf != null
+            ? SubTrackLifecycleAction.addNextYear
+            : SubTrackLifecycleAction.create,
+      ),
     );
   }
 
@@ -303,18 +312,14 @@ final class SubTrackCommands {
     SubTrackEdit edit,
   ) async {
     if (actor.role == ActorRole.child) return const CaptureResult.childLimit();
-    final siblings = await _readSubTracks();
-    if (siblings == null) return const CaptureResult.onlineRequired();
+    final read = await _readSubTracks();
+    if (read.refusal case final refusal?) return refusal;
+    final siblings = read.items;
     final current = _find(siblings, subTrackId);
     if (current == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
-    final (appended, corpus, refusedAppend) = await _appendedGround(
-      current,
-      edit,
-    );
-    if (refusedAppend != null) return refusedAppend;
-    final candidate = _applyEdit(current, edit, ground: appended);
+    final candidate = _applyEdit(current, edit);
     final old = _fieldsOf(current);
     final now = _fieldsOf(candidate);
     final changed = [
@@ -333,177 +338,15 @@ final class SubTrackCommands {
     if (!_encodes(candidate)) {
       return const CaptureResult.rejected(CaptureRejection.invalid);
     }
-    if (appended != null) {
-      // Never queue a whole-list `ground` built from the cached row (see
-      // SubTrackEdit.appendGround): an append commits on the server or not
-      // at all.
-      if (_subTracks case final SubTrackLatestWrite writer
-          when corpus != null) {
-        return await _appendToLatest(
-              writer,
-              subTrackId,
-              edit,
-              corpus: corpus,
-              siblings: siblings,
-            ) ??
-            const CaptureResult.onlineRequired();
-      }
-      return const CaptureResult.onlineRequired();
-    }
     final entryId = _newId();
     final entry = _entry(subTrackId, entryId, before: before, after: after);
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.fields(
-          subTrackId: subTrackId,
-          changedFields: after,
-          entry: entry,
-        ),
-      ),
-      candidate,
-      SubTrackLifecycleAction.edit,
-    );
-  }
-
-  /// The whole new `ground` of an [SubTrackEdit.appendGround] edit of
-  /// [current] (its latest stored value, read by this command) and the
-  /// corpus it was derived with — nulls when [edit] does not append — or
-  /// the result refusing it: a picked node outside the sub-track's
-  /// curriculum (`crossCurriculumGround`), an ended sub-track, a missing
-  /// corpus, or `ground` given as well.
-  Future<(List<NodeEntry>?, Corpus?, CaptureResult?)> _appendedGround(
-    SubTrack current,
-    SubTrackEdit edit,
-  ) async {
-    const invalid = CaptureResult.rejected(CaptureRejection.invalid);
-    final picked = edit.appendGround;
-    if (picked == null) return (null, null, null);
-    if (edit.ground != null || current.isEnded) return (null, null, invalid);
-    final corpus = await _corpusOf?.call(current.curriculumId);
-    if (corpus == null) return (null, null, invalid);
-    final foreign = [
-      for (final node in picked)
-        if (corpus.curriculumId != current.curriculumId ||
-            !corpusHoldsNode(corpus, node))
-          SubTrackViolation(
-            SubTrackLimit.crossCurriculumGround,
-            subject: node.ref,
-          ),
-    ];
-    if (foreign.isNotEmpty) {
-      return (
-        null,
-        null,
-        CaptureResult.rejected(CaptureRejection.invalid, violations: foreign),
-      );
-    }
-    return (_appendTo(current.ground, picked, corpus), corpus, null);
-  }
-
-  static List<NodeEntry> _appendTo(
-    List<NodeEntry> ground,
-    List<NodeEntry> picked,
-    Corpus corpus,
-  ) => [
-    ...ground,
-    ...groundToAppend(current: ground, selected: picked, corpus: corpus),
-  ];
-
-  /// Commits an append [edit] of [subTrackId] through [writer]: the new
-  /// whole `ground` is re-derived from the row the server holds at commit
-  /// time (re-run by the transaction if another write lands first) and
-  /// written with one change-log entry whose `before` is that row. The
-  /// picks were already checked against [corpus] on the cached row.
-  ///
-  /// Returns null when the server cannot be reached (nothing written or
-  /// queued; the caller answers `onlineRequired`), else the command
-  /// result. A latest row that already covers every pick writes nothing
-  /// (success).
-  Future<CaptureResult?> _appendToLatest(
-    SubTrackLatestWrite writer,
-    String subTrackId,
-    SubTrackEdit edit, {
-    required Corpus corpus,
-    required List<SubTrack> siblings,
-  }) async {
-    final entryId = _newId();
-    final today = _today();
-    SubTrack? written;
-    SubTrackChange? build(SubTrack latest) {
-      written = null;
-      if (latest.isEnded) {
-        throw const _Refused(CaptureResult.rejected(CaptureRejection.invalid));
-      }
-      final candidate = _applyEdit(
-        latest,
-        edit,
-        ground: _appendTo(latest.ground, edit.appendGround!, corpus),
-      );
-      final old = _fieldsOf(latest);
-      final now = _fieldsOf(candidate);
-      final changed = [
-        for (final key in now.keys)
-          if (!storageValueEquals(old[key], now[key])) key,
-      ];
-      if (changed.isEmpty) return null;
-      final violations = [
-        ...subTrackIntentViolations(candidate, corpus: corpus),
-        ...subTrackLimitViolations(
-          candidate: candidate,
-          prior: latest,
-          siblings: [for (final s in siblings) s.id == latest.id ? latest : s],
-          today: today,
-          calendarProgramId: null,
-        ),
-      ];
-      if (violations.isNotEmpty) {
-        throw _Refused(
-          CaptureResult.rejected(
-            CaptureRejection.invalid,
-            violations: violations,
-          ),
-        );
-      }
-      if (!_encodes(candidate)) {
-        throw const _Refused(CaptureResult.rejected(CaptureRejection.invalid));
-      }
-      final after = {for (final k in changed) k: now[k]};
-      written = candidate;
-      return SubTrackChange.fields(
+    return _commit(
+      SubTrackChange.fields(
         subTrackId: subTrackId,
         changedFields: after,
-        entry: _entry(
-          subTrackId,
-          entryId,
-          before: {for (final k in changed) k: old[k]},
-          after: after,
-        ),
-      );
-    }
-
-    final SubTrackChange? change;
-    try {
-      change = await writer.applyGovernedChangeToLatest(
-        scope,
-        subTrackId,
-        build,
-      );
-    } on _Refused catch (refused) {
-      return refused.result;
-    } on OnlineRequiredException {
-      return null;
-    } on Object catch (error, stack) {
-      return _refusalOf(error, stack);
-    }
-    final track = written;
-    if (change == null || track == null) return const CaptureResult.success();
-    return _emitOnSuccess(
-      CaptureResult.success(
-        changeIds: [change.entry.id],
-        actionId: change.entry.actionId,
+        entry: entry,
       ),
-      track,
-      SubTrackLifecycleAction.edit,
+      onConfirmed: _emitter(candidate, SubTrackLifecycleAction.edit),
     );
   }
 
@@ -519,6 +362,21 @@ final class SubTrackCommands {
   Stream<List<PendingFailure>> watchPendingFailures() async* {
     yield _pendingList();
     yield* _pendingController.stream;
+  }
+
+  /// Whether [pendingFailureId] is one of these commands' pending failures
+  /// (so `LearningCommands.retry` routes it here).
+  bool hasPendingFailure(String pendingFailureId) =>
+      _pending.containsKey(pendingFailureId);
+
+  /// Whether the write of change-log entry [changeId] was accepted by the
+  /// server. Completes true at its acknowledgement (at once when it is not
+  /// waiting for one: acknowledged already, or never queued here) and
+  /// false when the server refused it for good — it is then a pending
+  /// failure, and a [retry] that queues again can be awaited anew.
+  Future<bool> whenConfirmed(String changeId) {
+    if (_pending.containsKey(changeId)) return Future.value(false);
+    return _unconfirmed[changeId]?.future ?? Future.value(true);
   }
 
   /// Re-sends the identical batch of pending failure [pendingFailureId]
@@ -537,7 +395,7 @@ final class SubTrackCommands {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
     try {
-      final result = await _commit(pending.$2);
+      final result = await _commit(pending.$2, onConfirmed: pending.$3);
       if (result is CaptureSuccess &&
           // Records have no identity; compare the failure object.
           identical(_pending[pendingFailureId]?.$1, pending.$1)) {
@@ -550,8 +408,9 @@ final class SubTrackCommands {
     }
   }
 
-  /// Closes the pending-failure feed.
-  Future<void> dispose() => _pendingController.close();
+  /// Closes the pending-failure feed, unless the ledger was handed in (its
+  /// owner closes it).
+  Future<void> dispose() => _ownsLedger ? _ledger.dispose() : Future.value();
 
   // ── internals ─────────────────────────────────────────────────────────
 
@@ -560,8 +419,9 @@ final class SubTrackCommands {
     SubTrackEndReason reason,
   ) async {
     if (actor.role == ActorRole.child) return const CaptureResult.childLimit();
-    final siblings = await _readSubTracks();
-    if (siblings == null) return const CaptureResult.onlineRequired();
+    final read = await _readSubTracks();
+    if (read.refusal case final refusal?) return refusal;
+    final siblings = read.items;
     final current = _find(siblings, subTrackId);
     if (current == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
@@ -577,59 +437,59 @@ final class SubTrackCommands {
       after: {SubTrack.kEndedAt: endedAt, SubTrack.kEndReason: reason.storage},
       at: endedAt,
     );
-    return _emitOnSuccess(
-      await _commit(
-        SubTrackChange.tombstone(
-          subTrackId: subTrackId,
-          endedAt: endedAt,
-          reason: reason,
-          entry: entry,
-        ),
+    return _commit(
+      SubTrackChange.tombstone(
+        subTrackId: subTrackId,
+        endedAt: endedAt,
+        reason: reason,
+        entry: entry,
       ),
-      current,
-      reason == SubTrackEndReason.ended
-          ? SubTrackLifecycleAction.end
-          : SubTrackLifecycleAction.delete,
+      onConfirmed: _emitter(
+        current,
+        reason == SubTrackEndReason.ended
+            ? SubTrackLifecycleAction.end
+            : SubTrackLifecycleAction.delete,
+      ),
     );
   }
 
-  /// Emits one AD-47 `subtrack_lifecycle` event for a written (or queued)
-  /// command — enums and counts only — and passes [result] through.
-  CaptureResult _emitOnSuccess(
-    CaptureResult result,
-    SubTrack track,
-    SubTrackLifecycleAction action,
-  ) {
-    if (result is CaptureSuccess && result.changeIds.isNotEmpty) {
-      _analytics?.subTrackLifecycle(
+  /// The AD-47 `subtrack_lifecycle` emission — enums and counts only —
+  /// that [_commit] runs once the server has accepted the write.
+  void Function() _emitter(SubTrack track, SubTrackLifecycleAction action) =>
+      () => _analytics?.subTrackLifecycle(
         curriculumId: track.curriculumId,
         type: track.type,
         action: action,
         groundEntries: track.ground.length,
       );
-    }
-    return result;
-  }
 
-  /// The complete, clean sub-track read of [scope] (live and ended), or
-  /// null when there is none to validate against: it is not available
-  /// within [readTimeout] (offline with no cache), or the complete read has
-  /// rows that failed strict decode (AD-35). A rejected row may be a live
-  /// sibling, so validating against the decoded rows alone could let a
-  /// write past the AD-45 academic-year and overlap limits; the caller
-  /// refuses before any write and the user can try again
-  /// (`CaptureResult.onlineRequired`, the existing read-failure result).
-  Future<List<SubTrack>?> _readSubTracks() async {
+  /// The complete sub-track read of [scope] (live and ended), or a refusal:
+  /// - `onlineRequired` when it is not available within [readTimeout]
+  ///   (offline with no cache);
+  /// - `rejected(invalid)` when the read holds rows that failed strict
+  ///   decode. Their limits cannot be checked, so every write fails closed
+  ///   rather than validating against a partial sibling set (AD-35 complete
+  ///   inputs, AD-45).
+  Future<({List<SubTrack> items, CaptureResult? refusal})>
+  _readSubTracks() async {
     try {
-      final ready =
-          await _subTracks
-                  .watchAll(scope)
-                  .firstWhere((r) => r is CompleteReadReady<SubTrack>)
-                  .timeout(readTimeout)
-              as CompleteReadReady<SubTrack>;
-      return ready.isClean ? ready.items : null;
+      final ready = await _subTracks
+          .watchAll(scope)
+          .firstWhere((r) => r is CompleteReadReady<SubTrack>)
+          .timeout(readTimeout);
+      final complete = ready as CompleteReadReady<SubTrack>;
+      if (!complete.isClean) {
+        return (
+          items: const <SubTrack>[],
+          refusal: const CaptureResult.rejected(CaptureRejection.invalid),
+        );
+      }
+      return (items: complete.items, refusal: null);
     } on TimeoutException {
-      return null;
+      return (
+        items: const <SubTrack>[],
+        refusal: const CaptureResult.onlineRequired(),
+      );
     }
   }
 
@@ -714,9 +574,14 @@ final class SubTrackCommands {
   }
 
   /// Writes [change] and waits up to [ackTimeout] for the server.
-  Future<CaptureResult> _commit(SubTrackChange change) async {
+  /// [onConfirmed] runs once the server accepts the write, however late.
+  Future<CaptureResult> _commit(
+    SubTrackChange change, {
+    void Function()? onConfirmed,
+  }) async {
+    final id = change.entry.id;
     final success = CaptureResult.success(
-      changeIds: [change.entry.id],
+      changeIds: [id],
       actionId: change.entry.actionId,
     );
     final outcome = Completer<Object?>();
@@ -726,18 +591,24 @@ final class SubTrackCommands {
           .then(
             (_) {
               if (!outcome.isCompleted) outcome.complete(null);
+              _unconfirmed.remove(id)?.complete(true);
+              onConfirmed?.call();
             },
             onError: (Object error, StackTrace stack) {
               if (!outcome.isCompleted) {
                 outcome.complete(_Failed(error, stack));
               } else {
-                _recordPending(change, error);
+                _recordPending(change, error, onConfirmed);
+                _unconfirmed.remove(id)?.complete(false);
               }
             },
           ),
     );
     final timer = Timer(ackTimeout, () {
-      if (!outcome.isCompleted) outcome.complete(_queued);
+      if (outcome.isCompleted) return;
+      // Registered with the outcome, before any late ack can run.
+      _unconfirmed[id] = Completer<bool>();
+      outcome.complete(_queued);
     });
     final result = await outcome.future;
     timer.cancel();
@@ -749,28 +620,27 @@ final class SubTrackCommands {
       );
     }
     if (result is! _Failed) return success;
-    return _refusalOf(result.error, result.stack);
+    return switch (result.error) {
+      SubTrackNotFoundException() => const CaptureResult.rejected(
+        CaptureRejection.targetNotFound,
+      ),
+      // Refused before it was queued: the caller sees it at once, so no
+      // pending "not saved — retry" entry is recorded.
+      PermanentWriteRejection() ||
+      ChangeLogConflictException() ||
+      ChangeBaselineMismatchException() ||
+      StorageFormatException() => const CaptureResult.rejected(
+        CaptureRejection.invalid,
+      ),
+      _ => Error.throwWithStackTrace(result.error, result.stack),
+    };
   }
 
-  /// The result of a write that failed before it counted as queued; an
-  /// unexpected error is rethrown.
-  static CaptureResult _refusalOf(Object error, StackTrace stack) =>
-      switch (error) {
-        SubTrackNotFoundException() => const CaptureResult.rejected(
-          CaptureRejection.targetNotFound,
-        ),
-        // Refused before it was queued: the caller sees it at once, so no
-        // pending "not saved — retry" entry is recorded.
-        PermanentWriteRejection() ||
-        ChangeLogConflictException() ||
-        ChangeBaselineMismatchException() ||
-        StorageFormatException() => const CaptureResult.rejected(
-          CaptureRejection.invalid,
-        ),
-        _ => Error.throwWithStackTrace(error, stack),
-      };
-
-  void _recordPending(SubTrackChange change, Object error) {
+  void _recordPending(
+    SubTrackChange change,
+    Object error,
+    void Function()? onConfirmed,
+  ) {
     final code = error is PermanentWriteRejection ? error.code : '';
     final failure = PendingFailure(
       id: change.entry.id,
@@ -783,12 +653,12 @@ final class SubTrackCommands {
         _ => PendingFailureReason.other,
       },
     );
-    _pending[failure.id] = (failure, change);
+    _pending[failure.id] = (failure, change, onConfirmed);
     _publishPending();
   }
 
   List<PendingFailure> _pendingList() => [
-    for (final (failure, _) in _pending.values) failure,
+    for (final (failure, _, _) in _pending.values) failure,
   ];
 
   void _publishPending() {
@@ -833,11 +703,7 @@ final class SubTrackCommands {
     }
   }
 
-  static SubTrack _applyEdit(
-    SubTrack t,
-    SubTrackEdit e, {
-    List<NodeEntry>? ground,
-  }) => SubTrack(
+  static SubTrack _applyEdit(SubTrack t, SubTrackEdit e) => SubTrack(
     id: t.id,
     curriculumId: t.curriculumId,
     name: e.name ?? t.name,
@@ -850,11 +716,41 @@ final class SubTrackCommands {
     ratePerWeek: e.ratePerWeek ?? t.ratePerWeek,
     weeksPerYear: e.weeksPerYear ?? t.weeksPerYear,
     learnsOnShabbos: e.learnsOnShabbos ?? t.learnsOnShabbos,
-    ground: ground ?? e.ground ?? t.ground,
+    ground: e.ground ?? t.ground,
     endedAt: t.endedAt,
     endReason: t.endReason,
     lastChangeId: t.lastChangeId,
   );
+}
+
+/// One learner's queued sub-track writes for the session (AD-54 Recovery):
+/// the writes still waiting for the server's acknowledgement and the ones
+/// it refused for good (pending failures with a retry).
+///
+/// [SubTrackCommands] keeps them here rather than in itself so that a
+/// rebuild of the commands for the same learner (a parent-PIN, profile or
+/// clock change) neither drops a refused write's retry nor loses the
+/// acknowledgement a caller is waiting on: a write queued by the previous
+/// instance still settles here, and the new instance retries it. Like the
+/// event and governed pending failures, it lives in memory for the session
+/// — there is no outbox; the Firestore SDK's offline queue carries the
+/// write itself across restarts.
+final class SubTrackWriteLedger {
+  final Map<String, (PendingFailure, SubTrackChange, void Function()?)>
+  _pending = {};
+
+  /// Queued writes not yet acknowledged, by change-log entry id: completes
+  /// true on the server ack, false when the server refuses it for good.
+  final Map<String, Completer<bool>> _unconfirmed = {};
+
+  /// Pending-failure ids whose retry is in flight.
+  final Set<String> _retrying = {};
+  final _controller = StreamController<List<PendingFailure>>.broadcast(
+    sync: true,
+  );
+
+  /// Closes the pending-failure feed.
+  Future<void> dispose() => _controller.close();
 }
 
 /// The "no server ack yet" outcome of [SubTrackCommands._commit].
@@ -871,11 +767,3 @@ final class _Failed {
 }
 
 const _queued = _Queued();
-
-/// A latest-row append the validation refused inside the transaction;
-/// thrown out of the build so nothing is written.
-final class _Refused implements Exception {
-  const _Refused(this.result);
-
-  final CaptureResult result;
-}
