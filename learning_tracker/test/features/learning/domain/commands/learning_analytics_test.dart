@@ -177,6 +177,7 @@ void main() {
       });
     });
 
+    test('mode storage values and catalog registration', () {
       expect(CatchUpMode.all.storage, 'all');
       expect(CatchUpMode.adjusted.storage, 'adjusted');
       expect(AnalyticsEvent.catchupCompleted, 'catchup_completed');
