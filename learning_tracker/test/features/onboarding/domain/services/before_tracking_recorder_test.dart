@@ -1,7 +1,7 @@
 // Mirror test for
 // `lib/features/onboarding/domain/services/before_tracking_recorder.dart`
-// (Story 1.11, DNI-473; R10 retired the 2000-01-01 sentinel): bulk mark and
-// lifetime marking are ONE `before_tracking` capture — whole nodes as node
+// (Story 1.11, DNI-473): bulk mark and lifetime marking are ONE
+// `before_tracking` capture — whole nodes as node
 // events with their `level`, single leaves as leaf events — and un-ticking
 // is `unlearn`.
 import 'package:flutter_test/flutter_test.dart';
@@ -284,19 +284,19 @@ void main() {
     test(
       'bulk-prior unselect routes exactly the selected leaves to unlearn',
       () async {
-      final result = await recorder().unrecord(
-        curriculumId: _m,
-        sefariaRefs: const ['Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:2'],
-      );
-      expect(result, isA<CaptureSuccess>());
-      expect(commands.calls, hasLength(1));
-      final call = commands.calls.single;
-      expect(call.name, 'unlearn');
-      expect(call.args['curriculumId'], 'mishnayos');
-      expect(call.args['leafSet'], {
-        'Mishnah Berakhot 1:1',
-        'Mishnah Berakhot 1:2',
-      });
+        final result = await recorder().unrecord(
+          curriculumId: _m,
+          sefariaRefs: const ['Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:2'],
+        );
+        expect(result, isA<CaptureSuccess>());
+        expect(commands.calls, hasLength(1));
+        final call = commands.calls.single;
+        expect(call.name, 'unlearn');
+        expect(call.args['curriculumId'], 'mishnayos');
+        expect(call.args['leafSet'], {
+          'Mishnah Berakhot 1:1',
+          'Mishnah Berakhot 1:2',
+        });
       },
     );
 

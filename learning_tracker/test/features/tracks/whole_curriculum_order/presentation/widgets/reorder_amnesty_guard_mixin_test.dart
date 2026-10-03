@@ -3,7 +3,7 @@
 // ReorderConfirmDialog.showIfNeeded, bail if declined/unmounted) used to be
 // copy-pasted ~10 lines at a time across 3 call sites in 2 screens
 // (TrackLearningOrderScreen._onReorderSedarim/_onReorderMasechtos and
-// LearningOrderScreen._onReorder). This file directly exercises the
+// the whole-curriculum order screen's _onReorder). This file directly exercises the
 // extracted ReorderAmnestyGuardMixin.confirmReorderAmnesty in isolation, via
 // a minimal host widget, covering every branch the old duplicated block had:
 //   - overdueCount == 0: dialog skipped, guard resolves true immediately.

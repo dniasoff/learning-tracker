@@ -56,7 +56,7 @@ void main() {
         .doc(testProfileId)
         .collection('goals')
         .doc('goal-1')
-        .set({'target_percent': 50});
+        .set({'description': 'Finish the tract'});
 
     final service = backupService(firestore);
     final preview = service.validateAndPreview(await service.exportData());

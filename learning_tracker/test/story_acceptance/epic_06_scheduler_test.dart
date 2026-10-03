@@ -9,7 +9,8 @@ void main() {
     'Story 6 — scheduler',
     tags: ['story_6_1', 'story_6_2', 'story_6_3', 'story_6_4'],
     skip:
-        'Blocked: SchedulerEngine and its completion/stage/order repository '
+        'Blocked: the retired scheduler engine and its completion/stage/order '
+        'repository '
         'implementations still require Drift DAOs. The Firestore scheduler '
         'adapters are not wired into an acceptance-test construction seam.',
     () {

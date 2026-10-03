@@ -8,13 +8,19 @@
 /// already covered by
 /// `test/data/repositories/firestore_curriculum_scope_repository_test.dart`.
 ///
-/// R16 (DNI-484): the governed `updated_at` / `synced_at` are retired —
-/// `toFirestore` never writes them and the decoder ignores them.
+/// R16 (DNI-484): the governed timestamps are retired — `toFirestore` never
+/// writes them and the decoder ignores them (keys read from the AD-49
+/// inventory, DNI-489).
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_scope.dart';
+
+import '../../../../../helpers/retired_inventory.dart';
+
+const _scopeEntity =
+    'lib/features/tracks/setup/domain/entities/curriculum_scope.dart';
 
 void main() {
   final base = CurriculumScopeEntity(
@@ -35,20 +41,20 @@ void main() {
       expect(decoded.createdAt, base.createdAt);
     });
 
-    test('R16: a legacy document carrying the governed updated_at / '
-        'synced_at decodes, and re-encoding drops both', () {
+    test('R16: a legacy document carrying the retired keys decodes, and '
+        're-encoding drops them all', () {
       final decoded = curriculumScopeFromFirestore({
         'curriculum_id': 'mishnayos',
         'scope_level': 1,
         'scope_value': 'Seder Zeraim',
         'created_at': '2026-01-01T00:00:00.000Z',
-        'updated_at': '2026-01-05T00:00:00.000Z',
-        'synced_at': '2026-01-05T00:00:00.000Z',
+        ...legacyKeys(retiredKeysOf(_scopeEntity)),
       });
 
       final payload = decoded.toFirestore();
-      expect(payload, isNot(contains('updated_at')));
-      expect(payload, isNot(contains('synced_at')));
+      for (final key in retiredKeysOf(_scopeEntity)) {
+        expect(payload, isNot(contains(key)), reason: key);
+      }
     });
   });
 
@@ -91,7 +97,6 @@ void main() {
       'scope_level': 1,
       'scope_value': 'Seder Zeraim',
       'created_at': '2026-01-01T00:00:00.000Z',
-      'updated_at': '2026-01-05T00:00:00.000Z',
     };
 
     test('throws ArgumentError for an unrecognised curriculum_id', () {

@@ -9,7 +9,7 @@
 /// what the planner does with a given engine output.
 ///
 /// R15 disposition of the retired planner tests: the self-paced accrual
-/// ("Behind pace" overdue from `selfPacedSchedule`), the reorder amnesty
+/// ("Behind pace" overdue from the self-paced schedule), the reorder amnesty
 /// and the program anchor clamp are deleted with their code (AD-49 retires
 /// planner quantities and planner amnesty); calendar overdue/today routing
 /// is the "calendar program" group below; the golden parity of the

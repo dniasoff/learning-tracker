@@ -4,9 +4,8 @@
 /// [FirestoreCurriculumTrackRepository]. Unlike every other adapter in this
 /// rewire wave, this one implements no domain interface (none exists for
 /// the curriculum-track lifecycle — see the class doc comment), so this
-/// file exercises its own method surface directly. Mirrors
-/// `bookmark_repository_impl_test.dart`'s `FirestoreBookmarkRepositoryAdapter`
-/// group structure (the reference pattern): a "not ready" group (no active
+/// file exercises its own method surface directly. Mirrors the group
+/// structure of the retired bookmark adapter's test (the reference pattern): a "not ready" group (no active
 /// account/profile) and a "ready" group (active account/profile, backed by
 /// `fake_cloud_firestore`).
 ///
@@ -69,9 +68,8 @@ void main() {
     // Constructing the adapter requires a Ref (Riverpod's Ref is sealed —
     // it can only come from inside a provider callback), so tests obtain
     // one the same way production does: read a throwaway Provider that
-    // builds the adapter from the container's ref. Mirrors
-    // FirestoreBookmarkRepositoryAdapter's test helper
-    // (bookmark_repository_impl_test.dart).
+    // builds the adapter from the container's ref. Mirrors the retired
+    // bookmark adapter's test helper.
     FirestoreCurriculumTrackRepositoryAdapter buildAdapter(
       ProviderContainer container,
     ) {

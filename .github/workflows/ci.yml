@@ -300,6 +300,10 @@ jobs:
         working-directory: learning_tracker
         run: dart run tool/check_retired_symbols.dart
 
+      - name: Assert retired symbols are absent from test roots
+        working-directory: learning_tracker
+        run: dart run tool/check_retired_test_references.dart
+
       - name: Upload golden test failures (diffs)
         if: failure()
         uses: actions/upload-artifact@v7

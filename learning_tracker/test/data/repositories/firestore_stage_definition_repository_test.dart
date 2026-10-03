@@ -38,9 +38,12 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
 
 import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_governed_writer.dart';
+import '../../helpers/retired_inventory.dart';
 
 const _uid = 'uid-1';
 const _profileId = governedTestProfileId;
+const _stageRepository =
+    'lib/data/repositories/firestore_stage_definition_repository.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -375,15 +378,16 @@ void main() {
       expect(entry.entityId, 'mishnayos');
     });
 
-    test('a write never carries the retired updated_at / synced_at', () async {
+    test('a write never carries a retired governed key', () async {
       final repo = buildRepo();
       await repo.initializeDefaults(CurriculumId.bavli);
       final raw = (await rawDoc(
         curriculumId: CurriculumId.bavli,
         stageOrder: 1,
       ).get()).data()!;
-      expect(raw.keys, isNot(contains('updated_at')));
-      expect(raw.keys, isNot(contains('synced_at')));
+      for (final key in retiredKeysOf(_stageRepository)) {
+        expect(raw.keys, isNot(contains(key)), reason: key);
+      }
       expect(raw['last_change_id'], isA<String>());
       expect(raw['curriculum_id'], 'bavli');
     });

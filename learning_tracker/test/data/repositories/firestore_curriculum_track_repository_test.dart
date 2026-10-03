@@ -41,9 +41,12 @@ import '../../helpers/firestore_fake.dart';
 import '../../helpers/firestore_governed_writer.dart';
 import '../../helpers/learner_state/c0_fixtures.dart';
 import '../../helpers/learner_state/engine_fixtures.dart';
+import '../../helpers/retired_inventory.dart';
 
 const _uid = 'uid-1';
 const _profileId = governedTestProfileId;
+const _trackRepository =
+    'lib/data/repositories/firestore_curriculum_track_repository.dart';
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -113,9 +116,9 @@ void main() {
       expect(track.activatedAt, isNotNull);
     });
 
-    test('R16 (DNI-484): the activation write carries only live keys — no '
-        'state_changed_at, pace_reset_date, last_reorder_at, progress '
-        'passthrough or governed updated_at / synced_at', () async {
+    test('R16 (DNI-484): the activation write carries only live keys — none '
+        'of the retired track keys (lifecycle stamps, pace reset, reorder '
+        'baseline, progress passthrough, governed timestamps)', () async {
       final repo = buildRepo();
       await repo.activateTrack(CurriculumId.mishnayos);
       await repo.activateTrack(CurriculumId.bavli);
@@ -123,20 +126,7 @@ void main() {
       await repo.activateTrack(CurriculumId.mishnayos);
 
       final data = (await rawDoc(CurriculumId.mishnayos).get()).data()!;
-      for (final key in const [
-        'state_changed_at',
-        'purged',
-        'purged_at',
-        'pace_reset_date',
-        'last_reorder_at',
-        'progress_schema_version',
-        'progress_computed_at',
-        'progress_model',
-        'program_progress',
-        'self_paced_progress',
-        'updated_at',
-        'synced_at',
-      ]) {
+      for (final key in retiredKeysOf(_trackRepository)) {
         expect(data, isNot(contains(key)), reason: key);
       }
       expect(data['state'], CurriculumTrackState.active.storageKey);
@@ -167,19 +157,24 @@ void main() {
       expect(reactivated.state, CurriculumTrackState.active.storageKey);
     });
 
-    test('R16 (DNI-484): a legacy pace_reset_date stamp is never read back '
-        'or rewritten — pace intent is the goals/{c}_pace doc only', () async {
+    test('R16 (DNI-484): legacy retired stamps (the pace reset among them) are '
+        'never read back or rewritten — pace intent is the goals/{c}_pace doc '
+        'only', () async {
       final repo = buildRepo();
       await repo.activateTrack(CurriculumId.mishnayos);
       await repo.activateTrack(CurriculumId.bavli);
-      await rawDoc(CurriculumId.mishnayos).set({
-        'pace_reset_date': '2026-01-01T00:00:00.000Z',
-      }, SetOptions(merge: true));
+      final retired = retiredKeysOf(_trackRepository);
+      await rawDoc(
+        CurriculumId.mishnayos,
+      ).set(legacyKeys(retired), SetOptions(merge: true));
       await repo.retireTrack(CurriculumId.mishnayos);
 
       final reactivated = await repo.activateTrack(CurriculumId.mishnayos);
 
-      expect(reactivated.toFirestore(), isNot(contains('pace_reset_date')));
+      final encoded = reactivated.toFirestore();
+      for (final key in retired) {
+        expect(encoded, isNot(contains(key)), reason: key);
+      }
     });
   });
 
@@ -413,8 +408,9 @@ void main() {
         final doc = (await rawDoc(CurriculumId.mishnayos).get()).data()!;
         expect(doc['last_change_id'], entry.id);
         expect(doc['curriculum_id'], 'mishnayos');
-        expect(doc.keys, isNot(contains('updated_at')));
-        expect(doc.keys, isNot(contains('synced_at')));
+        for (final key in retiredKeysOf(_trackRepository)) {
+          expect(doc.keys, isNot(contains(key)), reason: key);
+        }
       },
     );
 
@@ -444,7 +440,7 @@ void main() {
       await repo.activateTrack(CurriculumId.mishnayos);
       await rawDoc(CurriculumId.mishnayos).set({
         'ended_at': Timestamp.fromDate(governedTestNow),
-        'progress_model': 'kept',
+        'legacy_note': 'kept',
       }, SetOptions(merge: true));
 
       final track = await repo.activateTrack(CurriculumId.mishnayos);
@@ -452,7 +448,7 @@ void main() {
       expect(track.isActive, isTrue);
       final doc = (await rawDoc(CurriculumId.mishnayos).get()).data()!;
       expect(doc['ended_at'], isNull);
-      expect(doc['progress_model'], 'kept');
+      expect(doc['legacy_note'], 'kept');
       final entry = (await writer.lastEntries()).single;
       expect(entry.after['curriculum_tracks/mishnayos.ended_at'], isNull);
       expect(

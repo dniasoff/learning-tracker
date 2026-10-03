@@ -72,7 +72,7 @@
 ///   41 StudyDayConfigScreen
 ///   42 CurriculumProgressScreen
 ///   43 CurriculumSettingsScreen
-///   44 LearningOrderScreen
+///   44 the whole-curriculum learning-order screen (retired with R13)
 ///   45 ParentTrackManagementScreen
 ///
 /// REMOVED (AUD-profiles-06): PinFlowVerifyRoute (was #37) and
@@ -741,7 +741,7 @@ void main() {
       label: 'CurriculumListScreen',
       path: '/browse',
       extraOverrides: [
-        // Silence the 15-min periodic timer in StreakStateService so the
+        // Silence the dashboard streak chain's 15-min periodic timer so the
         // timer-pending invariant doesn't fire at teardown.
         dashboardStreakProvider.overrideWith(
           (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -827,7 +827,7 @@ void main() {
         activeTracksProvider.overrideWith(
           (ref) => Stream.value(<CurriculumTrackEntity>[]),
         ),
-        // Silence the 15-min periodic timer in StreakStateService.
+        // Silence the dashboard streak chain's 15-min periodic timer.
         dashboardStreakProvider.overrideWith(
           (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
         ),

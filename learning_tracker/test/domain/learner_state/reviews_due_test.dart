@@ -326,7 +326,7 @@ void main() {
 
   // DNI-477: the planner reads each review's due date and done-today
   // marker from reviewsDue(date) instead of scheduling reviews itself
-  // (AD-49; ported from the retired SchedulerEngine due-review tests:
+  // (AD-49; ported from the retired scheduler engine's due-review tests:
   // "overdue by N day(s)", "due today", and the completion filter).
   group('due date and done marker (DNI-477)', () {
     test('a delay review carries the date it first fell due', () {

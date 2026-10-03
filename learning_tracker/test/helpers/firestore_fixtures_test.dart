@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 import 'firestore_fake.dart';
 import 'firestore_fixtures.dart';
+import 'retired_inventory.dart';
 
 const _uid = 'fixture-uid';
 const _profileId = 'fixture-profile-ulid';
@@ -101,8 +102,11 @@ void main() {
         .doc(_profileId);
     final goal = await profilePath.collection('goals').doc(goalId).get();
     expect(goal.data(), containsPair('curriculum_id', 'mishnayos'));
-    expect(goal.data(), isNot(contains('target_percent')));
-    expect(goal.data(), isNot(contains('updated_at')));
+    for (final key in retiredKeysOf(
+      'lib/data/repositories/firestore_goal_repository.dart',
+    )) {
+      expect(goal.data(), isNot(contains(key)), reason: key);
+    }
     expect(goal.data(), containsPair('description', 'Finish the tractate'));
   });
 

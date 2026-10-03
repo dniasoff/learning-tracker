@@ -38,8 +38,6 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.bavli,
     );
-
-
     final profile = profileFrom(
       await exportedMap(backupService(firestore)),
       testProfileId,

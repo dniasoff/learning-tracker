@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/settings/domain/exceptions/import_vali
 
 import '../../../../helpers/data_export_firestore_test_support.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/retired_inventory.dart';
 
 Future<FakeFirebaseFirestore> profileStore() async {
   final firestore = FakeFirebaseFirestore();
@@ -73,7 +74,11 @@ void main() {
     );
     final goals = collectionDocuments(profile, 'goals');
     expect(goals, hasLength(1));
-    expect(documentData(goals.single), isNot(contains('target_percent')));
+    for (final key in retiredKeysOf(
+      'lib/data/repositories/firestore_goal_repository.dart',
+    )) {
+      expect(documentData(goals.single), isNot(contains(key)), reason: key);
+    }
     expect(documentData(goals.single)['description'], 'Finish the tract');
   });
 

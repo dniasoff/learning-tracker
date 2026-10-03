@@ -30,6 +30,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../../helpers/firestore_fake.dart';
 import '../../../../../helpers/firestore_governed_writer.dart';
+import '../../../../../helpers/retired_inventory.dart';
 
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -324,7 +325,11 @@ void main() {
       expect(track['ended_at'], isNull);
       expect(track['state'], 'active');
       expect(track['activated_at'], before['activated_at']);
-      expect(track, isNot(contains('state_changed_at')));
+      for (final key in retiredKeysOf(
+        'lib/data/repositories/firestore_curriculum_track_repository.dart',
+      )) {
+        expect(track, isNot(contains(key)), reason: key);
+      }
       // Prior stages, study days, scope and goal are untouched.
       expect(
         await writer.doc('stage_definitions', 'mishnayos_3'),

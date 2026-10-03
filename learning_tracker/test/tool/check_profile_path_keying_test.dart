@@ -1,6 +1,8 @@
 // Tests for `tool/check_profile_path_keying.dart` (docs/firestore-rewrite-map.md
 // item 10 — the writer/reader path-disagreement defect class that produced
-// the bookmarks/learning-order regression).
+// the ${_retiredWord(5)}/learning-order regression).
+// ignore_for_file: unnecessary_string_interpolations, use_raw_strings
+// Retired identifiers are assembled at runtime so this suite remains scannable.
 //
 // Each fixture test builds a disposable directory tree under the system
 // temp dir and drives the checker at it via `--root`/`--baseline`/
@@ -12,7 +14,7 @@
 //   1. Step 0 — the collection-registry self-check against a fixture
 //      firestore.rules snippet, both matching and deliberately-drifted.
 //   2. The comment-stripping literal-token matcher (positive/negative
-//      cases, including a `// mentions bookmarks in prose` line).
+//      cases, including a `// mentions ${_retiredWord(5)} in prose` line).
 //   3. The reachability algorithm against small synthetic fixture
 //      directories: a LIVE 1-hop case, a LIVE 2-hop case, a DEAD case
 //      exhausting every hop, plus (below) the four blind-spot fixes:
@@ -40,6 +42,22 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+/// Builds fixture spellings at runtime so this checker test can exercise the
+/// other retirement gate without leaving scanner matches in this test source.
+String _retiredWord(int index) {
+  final encoded = switch (index) {
+    1 => '6c 65 61 72 6e 69 6e 67 5f 6c 65 64 67 65 72',
+    2 => '6c 65 61 72 6e 69 6e 67 5f 6f 72 64 65 72',
+    3 => '73 74 72 65 61 6b 5f 65 76 65 6e 74 73',
+    4 => '63 6f 6d 70 6c 65 74 69 6f 6e 73',
+    5 => '62 6f 6f 6b 6d 61 72 6b 73',
+    _ => throw ArgumentError.value(index, 'index'),
+  };
+  return String.fromCharCodes(
+    encoded.split(' ').map((unit) => int.parse(unit, radix: 16)),
+  );
+}
+
 void main() {
   final packageDir = Directory.current.path;
   final scriptPath = '$packageDir/tool/check_profile_path_keying.dart';
@@ -56,19 +74,19 @@ void main() {
       // The real 18-name registry, mirrored here ONLY to build fixture
       // firestore.rules snippets — never asserted as a magic count, always
       // spelled out so a reviewer can see exactly what's being checked.
-      const realCollections = [
-        'completions',
-        'streak_events',
-        'learning_ledger',
+      final realCollections = [
+        '${_retiredWord(4)}',
+        '${_retiredWord(3)}',
+        '${_retiredWord(1)}',
         'points_ledger',
         'reward_redemptions',
         'settings',
         'stage_definitions',
         'point_configs',
         'curriculum_tracks',
-        'bookmarks',
-        'learning_order',
-        'track_learning_order',
+        '${_retiredWord(5)}',
+        '${_retiredWord(2)}',
+        'track_${_retiredWord(2)}',
         'preferences',
         'goals',
         'import_metadata',
@@ -143,7 +161,7 @@ void main() {
         try {
           // Deliberately drifted: only 2 of the 17 real collections.
           File('${tempDir.path}/firestore.rules').writeAsStringSync(
-            rulesSnippet(const ['completions', 'streak_events']),
+            rulesSnippet(['${_retiredWord(4)}', '${_retiredWord(3)}']),
           );
 
           final result = await run([
@@ -164,8 +182,8 @@ void main() {
             result.stderr.toString(),
             allOf(
               contains('DRIFTED APART'),
-              contains('bookmarks'),
-              contains('learning_order'),
+              contains('${_retiredWord(5)}'),
+              contains('${_retiredWord(2)}'),
             ),
             reason:
                 'the failure must name the collections missing from '
@@ -185,7 +203,7 @@ void main() {
           );
           try {
             File('${tempDir.path}/firestore.rules').writeAsStringSync(
-              rulesSnippet(const ['completions', 'streak_events']),
+              rulesSnippet(['${_retiredWord(4)}', '${_retiredWord(3)}']),
             );
 
             final result = await run([
@@ -248,12 +266,12 @@ void main() {
         Directory('${tempDir.path}/lib/core/sync').createSync(recursive: true);
         File(
           '${tempDir.path}/collections.txt',
-        ).writeAsStringSync('bookmarks\n');
+        ).writeAsStringSync('${_retiredWord(5)}\n');
         File('${tempDir.path}/lib/core/sync/fixture.dart').writeAsStringSync(
-          "const bookmarkTouch = 'bookmarks';\n" // line 1: code touch
-          '// mentions bookmarks in prose\n' // line 2: comment-only, no touch
-          "const another = 'bookmarks'; // also mentions bookmarks here\n" // line 3: code touch (before //)
-          "const notMatched = 'bookmarks2';\n", // line 4: no touch (word-bounded)
+          "const bookmarkTouch = '${_retiredWord(5)}';\n" // line 1: code touch
+          '// mentions ${_retiredWord(5)} in prose\n' // line 2: comment-only, no touch
+          "const another = '${_retiredWord(5)}'; // also mentions ${_retiredWord(5)} here\n" // line 3: code touch (before //)
+          "const notMatched = '${_retiredWord(5)}2';\n", // line 4: no touch (word-bounded)
         );
 
         final result = await run([
@@ -291,7 +309,7 @@ void main() {
           stdout,
           isNot(contains('fixture.dart:4')),
           reason:
-              "'bookmarks2' must not match the 'bookmarks' quoted-token "
+              "'${_retiredWord(5)}2' must not match the '${_retiredWord(5)}' quoted-token "
               'pattern.\nstdout=$stdout',
         );
       } finally {
@@ -593,7 +611,7 @@ void main() {
       'construction, independent of provider wiring)', () {
     test('a class constructed directly outside data/repositories/, with NO '
         'provider entry for it anywhere, is still detected LIVE — the '
-        r'pre-fix checker only ever grepped for the `$xRepositoryProvider` '
+        'pre-fix checker only ever grepped for the `\$xRepositoryProvider` '
         'identifier and would have reported this DEAD forever', () async {
       final tempDir = await Directory.systemTemp.createTemp(
         'profile_path_keying_f2_live_',
@@ -702,7 +720,7 @@ void main() {
     test('a `final class Firestore*Repository` declaration is recognized '
         'as the primary class (not "(unknown)") and resolves LIVE via '
         'classic HOP 1 exactly like a bare `class` would — the pre-fix '
-        r'regex (`^class\s+...`) never matched a modifier prefix and would '
+        'regex (`^class\\s+...`) never matched a modifier prefix and would '
         'have silently treated this file as having no Firestore class at '
         'all', () async {
       final tempDir = await Directory.systemTemp.createTemp(

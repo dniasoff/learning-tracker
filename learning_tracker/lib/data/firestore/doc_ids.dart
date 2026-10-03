@@ -284,6 +284,12 @@ final class DocIds {
   static String bookmarkDocId(Map<String, dynamic> data) =>
       data['curriculum_id']?.toString() ?? '';
 
+  // ── learning_ledger ──────────────────────────────────────────────────
+
+  /// Mirrors the gateway's id formula for legacy ledger writes.
+  static String? learningLedgerDocId(Map<String, dynamic> data) =>
+      data['ulid'] as String?;
+
   // ── profile_programs ─────────────────────────────────────────────────
 
   /// `profile_programs/{curriculum_id}` doc-id formula.

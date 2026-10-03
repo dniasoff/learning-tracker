@@ -44,6 +44,12 @@ import {
   setLogLevel,
   writeBatch,
 } from 'firebase/firestore';
+import { retiredKeysOf } from './_retired_inventory.mjs';
+
+// The retired R16 keys of the goal and curriculum-track codecs, read from the
+// AD-49 inventory (DNI-489) so no test spells a retired name.
+const GOAL_REPOSITORY = 'lib/data/repositories/firestore_goal_repository.dart';
+const TRACK_REPOSITORY = 'lib/data/repositories/firestore_curriculum_track_repository.dart';
 
 setLogLevel('error'); // silence the verbose Firestore SDK chatter
 
@@ -668,7 +674,7 @@ describe('curriculum_tracks — owner write with key whitelist, tutor read, dele
   test('tutor cannot write curriculum_tracks', async () => {
     await assertFails(setDoc(doc(tutor(), `${LP}/curriculum_tracks/t1`), validTrack));
   });
-  // R16 (DNI-484): last_reorder_at (the old reorder-amnesty baseline) is
+  // R16 (DNI-484): the old reorder-amnesty baseline is
   // retired with the other legacy track fields — see the DNI-484 block.
 });
 
@@ -2208,15 +2214,11 @@ describe('DNI-476 — owner governed order docs, tombstones and fixed goal ids',
 // their existing rules.
 // ════════════════════════════════════════════════════════════════════════════
 describe('DNI-484 — R16 retired fields are denied on governed docs', () => {
-  const TRACK_RETIRED = [
-    'state_changed_at', 'purged', 'purged_at', 'pace_reset_date',
-    'last_reorder_at', 'progress_schema_version', 'progress_computed_at',
-    'progress_model', 'program_progress', 'self_paced_progress',
-    'updated_at', 'synced_at',
-  ];
-  const GOAL_RETIRED = [
-    'target_percent', 'targetPercent', 'updated_at', 'updatedAt', 'synced_at',
-  ];
+  // The retired keys come from the AD-49 inventory (DNI-489), scoped to the
+  // goal and curriculum-track codecs, so a key retired later is covered too.
+  const TRACK_RETIRED = retiredKeysOf(TRACK_REPOSITORY);
+  const GOAL_RETIRED = [...retiredKeysOf(GOAL_REPOSITORY, { aliases: true }), 'updatedAt'];
+  const goalValue = (key) => (/percent/i.test(key) ? 80 : pastTs);
   const liveTrack = { curriculum_id: 'c1', state: 'active', activated_at: pastTs };
   const liveDeadline = {
     curriculum_id: 'c1', goal_type: 'deadline', target_date: '2027-06-01',
@@ -2239,7 +2241,7 @@ describe('DNI-484 — R16 retired fields are denied on governed docs', () => {
     test(`curriculum_tracks: retired ${key} is denied`, async () => {
       await assertFails(
         governedWrite(owner(), `${LP}/curriculum_tracks/c1`, {
-          ...liveTrack, [key]: key === 'purged' ? true : pastTs,
+          ...liveTrack, [key]: pastTs,
         }, 'mainTrack', 'c1'),
       );
     });
@@ -2258,7 +2260,7 @@ describe('DNI-484 — R16 retired fields are denied on governed docs', () => {
     test(`goals: retired ${key} is denied`, async () => {
       await assertFails(
         governedWrite(owner(), `${GOALS}/c1_deadline`, {
-          ...liveDeadline, [key]: key.toLowerCase().includes('percent') ? 80 : pastTs,
+          ...liveDeadline, [key]: goalValue(key),
         }, 'goal', 'c1_deadline'),
       );
     });
@@ -2288,16 +2290,13 @@ describe('DNI-484 — R16 retired fields are denied on governed docs', () => {
   // those keys in the post-write doc, so the whitelist only constrains the
   // keys a write adds or changes: the owner can still update and tombstone
   // the doc, may drop a retired key, but can never (re)write one.
-  const LEGACY_TRACK = Object.fromEntries(TRACK_RETIRED.map(
-    (k) => [k, k === 'purged' ? false : pastTs],
-  ));
+  const LEGACY_TRACK = Object.fromEntries(TRACK_RETIRED.map((k) => [k, pastTs]));
   const LEGACY_DOCS = [
     ['curriculum_tracks', 'c1', { profile_id: PROFILE, track_id: 1, ...liveTrack, ...LEGACY_TRACK },
-      'mainTrack', 'c1', { state: 'paused' }, 'pace_reset_date'],
+      'mainTrack', 'c1', { state: 'paused' }, TRACK_RETIRED[0]],
     ['goals', 'c1_deadline', {
-      ...liveDeadline, target_percent: 80, targetPercent: 80,
-      updated_at: pastTs, updatedAt: pastTs, synced_at: pastTs,
-    }, 'goal', 'c1_deadline', { target_date: '2027-09-01' }, 'target_percent'],
+      ...liveDeadline, ...Object.fromEntries(GOAL_RETIRED.map((k) => [k, goalValue(k)])),
+    }, 'goal', 'c1_deadline', { target_date: '2027-09-01' }, GOAL_RETIRED[0]],
     ...OTHER_GOVERNED.map(([col, id, live, entity]) => [
       col, id, { ...live, updated_at: pastTs, synced_at: pastTs }, entity, 'c1',
       col === 'track_learning_order' ? { user_sort_order: 1 } : { profile_id: PROFILE },
