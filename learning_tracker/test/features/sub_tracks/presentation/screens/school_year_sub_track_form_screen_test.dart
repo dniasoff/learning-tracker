@@ -84,6 +84,21 @@ void main() {
     expect(find.byType(SchoolYearSubTrackForm), findsNothing);
   });
 
+  testWidgets('a curriculum with no main track shows the error view, '
+      'never the form', (tester) async {
+    // A deep link naming an arbitrary curriculum id.
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: h.overrides(),
+        retry: (_, _) => null,
+        child: const SchoolYearSubTrackFormScreen(curriculumId: 'not_a_track'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AppErrorView), findsOneWidget);
+    expect(find.byType(SchoolYearSubTrackForm), findsNothing);
+  });
+
   testWidgets('undecodable sub-track rows block the form (fail closed)', (
     tester,
   ) async {

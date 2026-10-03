@@ -563,6 +563,21 @@ final class SubTrackReadUnavailableException implements Exception {
   String toString() => 'SubTrackReadUnavailableException($port)';
 }
 
+/// The complete governed-intent read has no main track for the curriculum
+/// a sub-track surface was opened for (e.g. a deep link naming an arbitrary
+/// curriculum id). Fails closed: no sub-track group and no form, so no
+/// sub-track is ever written for a curriculum the learner does not follow.
+final class SubTrackMainTrackNotFoundException implements Exception {
+  /// Creates the exception for [curriculumId].
+  const SubTrackMainTrackNotFoundException(this.curriculumId);
+
+  /// The curriculum (storage key) with no main track.
+  final String curriculumId;
+
+  @override
+  String toString() => 'SubTrackMainTrackNotFoundException($curriculumId)';
+}
+
 /// Every sub-track of the active learner (all curricula, live and ended),
 /// from the complete Story 2.1 read. Emits nothing while the read is
 /// loading. No active learner or no repository is an error
@@ -626,7 +641,9 @@ final class SubTrackCurriculumIntent {
 /// learner or no repository is an error
 /// ([SubTrackReadUnavailableException]): an unknown intent is never taken
 /// for a self-paced curriculum (that would show *Add sub-track* on a
-/// calendar program).
+/// calendar program). A complete read with no main track for
+/// `curriculumId` is an error too ([SubTrackMainTrackNotFoundException]),
+/// never a self-paced curriculum.
 final subTrackCurriculumIntentProvider = StreamProvider.autoDispose
     .family<SubTrackCurriculumIntent, String>((ref, curriculumId) async* {
       final scope = await ref.watch(activeLearnerScopeProvider.future);
@@ -639,10 +656,16 @@ final subTrackCurriculumIntentProvider = StreamProvider.autoDispose
       if (repository == null) {
         throw const SubTrackReadUnavailableException('governed_intent');
       }
-      await for (final intent in repository.watch(scope)) {
-        final program = intent.mainTracks[curriculumId]?.program;
+      // An error event per emission, not a throw out of the loop: the read
+      // keeps listening, so a later intent with the main track recovers.
+      yield* repository.watch(scope).map((intent) {
+        final mainTrack = intent.mainTracks[curriculumId];
+        if (mainTrack == null) {
+          throw SubTrackMainTrackNotFoundException(curriculumId);
+        }
+        final program = mainTrack.program;
         final deadline = intent.goals[curriculumId]?.deadline;
-        yield SubTrackCurriculumIntent(
+        return SubTrackCurriculumIntent(
           calendarProgramId: program == null || program.endedAt != null
               ? null
               : program.programId,
@@ -650,7 +673,7 @@ final subTrackCurriculumIntentProvider = StreamProvider.autoDispose
               ? null
               : deadline.targetDate,
         );
-      }
+      });
     }, retry: (retryCount, error) => null);
 
 /// Sub-track changes a queued batch the server later refused for good

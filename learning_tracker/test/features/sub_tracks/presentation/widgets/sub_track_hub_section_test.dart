@@ -58,6 +58,74 @@ void main() {
     expect(find.byType(OutlinedButton), findsNothing);
   });
 
+  testWidgets(
+    'an unknown intent fails closed: an error with retry, never Add',
+    (tester) async {
+      // A calendar curriculum whose governed intent cannot be read must not
+      // be taken for a self-paced one.
+      final h = SubTrackHarness(calendarProgramId: 'daf_yomi');
+      addTearDown(h.dispose);
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [
+            ...h.overrides(governedIntentRepository: false),
+            governedIntentRepositoryProvider.overrideWith((ref) async => null),
+          ],
+          retry: (_, _) => null,
+          child: const Scaffold(
+            body: SubTrackHubSection(curriculumId: subTrackTestCurriculum),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(AppErrorView), findsOneWidget);
+      expect(find.text('Add sub-track'), findsNothing);
+    },
+  );
+
+  testWidgets('a curriculum with no main track has no group, never Add', (
+    tester,
+  ) async {
+    final h = SubTrackHarness();
+    addTearDown(h.dispose);
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: h.overrides(),
+        retry: (_, _) => null,
+        child: const Scaffold(
+          body: SubTrackHubSection(curriculumId: 'not_a_track'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Add sub-track'), findsNothing);
+    expect(find.byType(AppErrorView), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+  });
+
+  testWidgets('an unavailable sub-track read shows an error, never zero rows', (
+    tester,
+  ) async {
+    final h = SubTrackHarness();
+    addTearDown(h.dispose);
+    await tester.pumpWidget(
+      pumpApp(
+        overrides: [
+          ...h.overrides(subTrackRepository: false),
+          subTrackRepositoryProvider.overrideWith((ref) async => null),
+        ],
+        retry: (_, _) => null,
+        child: const Scaffold(
+          body: SubTrackHubSection(curriculumId: subTrackTestCurriculum),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AppErrorView), findsOneWidget);
+    expect(find.text('Add sub-track'), findsNothing);
+    expect(find.textContaining('0 active'), findsNothing);
+  });
+
   testWidgets('the section stays inert until the commands are live', (
     tester,
   ) async {
