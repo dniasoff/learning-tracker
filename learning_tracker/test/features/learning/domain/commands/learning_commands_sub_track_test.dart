@@ -12,7 +12,9 @@ import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
+import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -560,6 +562,79 @@ void main() {
       await sub.cancel();
     });
 
+    Future<String> refusedQueuedCreate(
+      SubTrackCommands target,
+      List<List<PendingFailure>> failures,
+    ) async {
+      repo
+        ..offline = true
+        ..failNextWith(const PermanentWriteRejection('permission-denied'));
+      final result = await target.createSubTrack(_draft(), subTrackId: ulidD);
+      final entryId = (result as CaptureSuccess).changeIds.single;
+      repo.settleHeld();
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last.map((f) => f.id), [entryId]);
+      repo.offline = false;
+      return entryId;
+    }
+
+    test('a retry refused at once keeps the identical retry entry', () async {
+      final failures = <List<PendingFailure>>[];
+      final sub = commands.watchPendingFailures().listen(failures.add);
+      final entryId = await refusedQueuedCreate(commands, failures);
+      final before = failures.last.single;
+      final mark = failures.length;
+
+      repo.failNextWith(const PermanentWriteRejection('permission-denied'));
+      expect(
+        await commands.retry(entryId),
+        const CaptureResult.rejected(CaptureRejection.invalid),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last, [before], reason: 'never published without it');
+      expect(failures.skip(mark).every((l) => l.isNotEmpty), isTrue);
+      expect(await commands.watchPendingFailures().first, [before]);
+
+      // The same entry still re-sends the identical batch and then clears.
+      expect(await commands.retry(entryId), isA<CaptureSuccess>());
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last, isEmpty);
+      expect(repo.calls.first.$2.entry, repo.calls.last.$2.entry);
+      await sub.cancel();
+    });
+
+    test('a retry that throws keeps the identical retry entry', () async {
+      final throwing = _ThrowOnceSubTrackRepository(repo);
+      final target = SubTrackCommands(
+        scope: scope,
+        actor: parentActor,
+        subTracks: throwing,
+        intent: intent,
+        today: () => _today,
+        nowUtc: () => _now,
+        newId: _ids(),
+        ackTimeout: const Duration(milliseconds: 50),
+      );
+      addTearDown(target.dispose);
+      final failures = <List<PendingFailure>>[];
+      final sub = target.watchPendingFailures().listen(failures.add);
+      final entryId = await refusedQueuedCreate(target, failures);
+      final before = failures.last.single;
+      final mark = failures.length;
+
+      throwing.throwNext = StateError('transport');
+      await expectLater(target.retry(entryId), throwsStateError);
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last, [before]);
+      expect(failures.skip(mark).every((l) => l.isNotEmpty), isTrue);
+
+      expect(await target.retry(entryId), isA<CaptureSuccess>());
+      await Future<void>.delayed(Duration.zero);
+      expect(failures.last, isEmpty);
+      expect(repo.tracksOf(scope).single.id, ulidD);
+      await sub.cancel();
+    });
+
     test(
       'an online refusal is returned at once, without a retry entry',
       () async {
@@ -678,4 +753,30 @@ void main() {
     ]);
     unawaited(fake.dispose());
   });
+}
+
+/// [inner] whose next [applyGovernedChange] throws [throwNext] at once
+/// (a transport or programming error, not a typed refusal).
+final class _ThrowOnceSubTrackRepository implements SubTrackRepository {
+  _ThrowOnceSubTrackRepository(this.inner);
+
+  final InMemorySubTrackRepository inner;
+
+  Error? throwNext;
+
+  @override
+  Stream<CompleteRead<SubTrack>> watchAll(LearnerScope scope) =>
+      inner.watchAll(scope);
+
+  @override
+  Future<void> applyGovernedChange(
+    LearnerScope scope,
+    SubTrackChange change,
+  ) async {
+    if (throwNext case final error?) {
+      throwNext = null;
+      throw error;
+    }
+    return inner.applyGovernedChange(scope, change);
+  }
 }
