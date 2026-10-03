@@ -9,6 +9,7 @@
 ///   E2E-1013  Tutor exits talmid session
 ///   E2E-1014  Parent revocation detected mid-session — online
 ///   E2E-1015  Offline tutor returning to talmid — cached mirror
+///   E2E-1016  Revocation ends access at once, in the real shell (DNI-512)
 ///
 /// Catalog: docs/planning/e2e-test-suite-plan.md §2 Area 10 / §7 R-TU*
 @Tags(['e2e', 'journey'])
@@ -30,6 +31,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider;
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_for_scope_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
     show currentSacredWindowProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
@@ -57,6 +59,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
         tutorGrantRepositoryProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart'
     show tutorPinIsSetProvider, tutorPinServiceProvider;
+import 'package:learning_tracker/features/tutoring/presentation/screens/manage_grants_screen.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -134,6 +137,19 @@ class _FakeTutorGrantRepository extends Fake implements TutorGrantRepository {
 }
 
 /// Fake [DeclineTutorInviteUseCase] that records calls.
+/// DNI-512: the incoming-grants callable answering the CURRENT server set,
+/// which the test changes as the parent revokes and re-invites.
+class _LiveIncomingTutorGrantRepository extends _FakeTutorGrantRepository {
+  _LiveIncomingTutorGrantRepository(this.grants);
+
+  List<TutorGrant> grants;
+
+  @override
+  Future<({List<TutorGrant> grants, bool ok})>
+  listIncomingGrantsWithStatus() async =>
+      (grants: List<TutorGrant>.of(grants), ok: true);
+}
+
 class _FakeDeclineTutorInviteUseCase extends Fake
     implements DeclineTutorInviteUseCase {
   final List<TutorGrant> declinedGrants = [];
@@ -1318,6 +1334,107 @@ void main() {
           extraOverrides: [..._baseSilences(h)],
         );
         h.expectOnScreen('Dashboard');
+      },
+    );
+  });
+
+  // ── E2E-1016 (DNI-512) ───────────────────────────────────────────────────────
+
+  group('E2E-1016 — Revocation ends access at once, in the real shell', () {
+    const yossiProfile = '01J8XKQ2M3N4P5R6S7T8V9W0XY';
+    const doviProfile = '01J8XKQ2M3N4P5R6S7T8V9W0XZ';
+
+    TutorGrant grant(String id, String profileId, String name) =>
+        _activeGrant(grantId: id, childProfileId: profileId, childName: name);
+
+    testWidgets(
+      'AC-5 + AC-4: revoked while offline — on reconnect the open session ends '
+      'with "Access to {name} has ended." and the roster keeps only the others; '
+      'AC-6: an accepted re-invite shows the learner again',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(
+          email: 'tutor1016@example.com',
+          displayName: 'Tutor1016',
+          profileMode: 'adult',
+        );
+        final yossi = grant('grant-yossi-1016', yossiProfile, 'Yossi');
+        final dovi = grant('grant-dovi-1016', doviProfile, 'Dovi');
+        final repo = _LiveIncomingTutorGrantRepository([dovi, yossi]);
+        final online = StreamController<bool>.broadcast();
+        addTearDown(online.close);
+
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
+
+        await h.pumpApp(
+          path: '/dashboard',
+          extraOverrides: [
+            ...h.dashboardSilenceOverrides,
+            currentSacredWindowProvider.overrideWithValue(null),
+            pendingTutorInvitesProvider.overrideWith((ref) => Future.value([])),
+            connectivityStreamProvider.overrideWith((ref) => online.stream),
+            tutorGrantRepositoryProvider.overrideWithValue(repo),
+            // The open learner's grant-gated read stays loading: the
+            // reconnect re-read is the signal under test here.
+            learnerStateForScopeProvider.overrideWith(
+              (ref, scope) => const AsyncLoading(),
+            ),
+          ],
+        );
+        online.add(true);
+        await navigateTo(h, const ManageGrantsRoute());
+        await tester.pump(const Duration(milliseconds: 300));
+        h.expectOnScreen('Yossi');
+        h.expectOnScreen('Dovi');
+
+        // The tutor is inside Yossi's context.
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ManageGrantsScreen)),
+        );
+        container
+            .read(activeTutoredProfileSelectionProvider.notifier)
+            .enter(
+              TutoredProfileSelection(
+                profileId: yossiProfile,
+                ownerUid: 'parent-uid-1',
+                grantId: yossi.grantId,
+                permissions: TutorPermissions.defaults(),
+              ),
+            );
+        await tester.pump();
+
+        // Offline; the parent revokes Yossi's grant meanwhile.
+        online.add(false);
+        await tester.pump();
+        repo.grants = [dovi];
+
+        // Reconnect: the active set is re-read before anything is trusted.
+        online.add(true);
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 200));
+        }
+
+        h.expectOnScreen('Access to Yossi has ended.');
+        expect(container.read(activeTutoredProfileSelectionProvider), isNull);
+        h.expectOnScreen('My Tutoring Grants');
+        h.expectOnScreen('Dovi');
+        expect(find.text('Yossi'), findsNothing, reason: 'the row is gone');
+
+        // AC-6: the parent re-invites; the tutor accepts a NEW grant (here
+        // with the edit box unchecked) and Yossi is back on the roster.
+        repo.grants = [
+          dovi,
+          TutorGrant.fromDoc(
+            yossi.doc,
+            permissions: const TutorPermissions(canEditLearning: false),
+          ),
+        ];
+        container.invalidate(incomingTutorGrantsProvider);
+        container.read(incomingTutorGrantsProvider);
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 200));
+        }
+        expect(find.text('Yossi'), findsOneWidget);
       },
     );
   });
