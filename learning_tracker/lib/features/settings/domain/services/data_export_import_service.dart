@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
@@ -59,11 +60,18 @@ final class BackupImportReport {
   BackupImportReport({
     required Map<String, BackupReplayResult> profiles,
     required BackupLearningPort learning,
+    Set<String> alreadyRestored = const {},
   }) : profiles = Map.unmodifiable(profiles),
+       alreadyRestored = Set.unmodifiable(alreadyRestored),
        _learning = learning;
 
   /// Each restored profile's replay result, by profile id.
   final Map<String, BackupReplayResult> profiles;
+
+  /// The profiles whose learning record this backup already restored: not
+  /// replayed again, since a replay writes every record under fresh ids
+  /// and would duplicate the history, awards, spends and redemptions.
+  final Set<String> alreadyRestored;
 
   final BackupLearningPort _learning;
 
@@ -173,6 +181,11 @@ class DataExportImportService {
     'preferences',
     'import_metadata',
   ];
+
+  /// The learner profile doc field recording the learning records this
+  /// profile has been restored from: `{<record key>: <ISO-8601 instant>}`
+  /// ([importData]).
+  static const String restoredBackupsField = 'restored_backups';
 
   /// Every profile collection a backup holds.
   static final List<String> profileCollectionNames = [
@@ -368,6 +381,12 @@ class DataExportImportService {
   ///    updates, sub-tracks and events under fresh ids with `pts_`
   ///    re-derived, then the non-event points and redemptions.
   ///
+  /// A profile whose learning record this backup already restored (its
+  /// doc's [restoredBackupsField] holds the record's key) is not replayed
+  /// again ([BackupImportReport.alreadyRestored]): every replayed record
+  /// gets a fresh id, so a second replay would duplicate the history and
+  /// the points, spends and redemptions.
+  ///
   /// Nothing is deleted. The report never claims a write was saved when
   /// the server refused it: such writes are "not saved — retry" entries
   /// ([BackupImportReport.retryNotSaved]).
@@ -399,6 +418,7 @@ class DataExportImportService {
     );
 
     final replays = <String, BackupReplayInput>{};
+    final recordKeys = <String, String>{};
     for (final rawProfile in _requireList(data, 'profiles')) {
       final profile = _requireMapValue(rawProfile, 'profile');
       final profileId = _requireString(profile, 'id', path: 'profile');
@@ -428,6 +448,7 @@ class DataExportImportService {
         profileId: profileId,
         profileData: profileData,
       );
+      recordKeys[profileId] = await _recordKey(profileId, collections);
     }
 
     for (var offset = 0; offset < writes.length; offset += _maxBatchWrites) {
@@ -436,10 +457,52 @@ class DataExportImportService {
     }
 
     final results = <String, BackupReplayResult>{};
+    final alreadyRestored = <String>{};
     for (final MapEntry(key: profileId, value: input) in replays.entries) {
-      results[profileId] = await _learning.replay(profileId, input);
+      final profilePath = '$_profilesPath/$profileId';
+      final key = recordKeys[profileId]!;
+      final current = await _gateway.readDocument(profilePath);
+      final restored = current?[restoredBackupsField];
+      if (restored is Map && restored.containsKey(key)) {
+        alreadyRestored.add(profileId);
+        continue;
+      }
+      final result = await _learning.replay(profileId, input);
+      results[profileId] = result;
+      if (result.result is CaptureSuccess && result.steps.isNotEmpty) {
+        // Something was written (or queued): mark the record restored so
+        // a repeat import cannot replay it a second time. Its unsaved
+        // writes stay retryable through the report, never by re-importing.
+        await _gateway.writeBatch([
+          BackupDocumentWrite(profilePath, {
+            restoredBackupsField: {key: _clock.nowUtc().toIso8601String()},
+          }, merge: true),
+        ]);
+      }
     }
-    return BackupImportReport(profiles: results, learning: _learning);
+    return BackupImportReport(
+      profiles: results,
+      learning: _learning,
+      alreadyRestored: alreadyRestored,
+    );
+  }
+
+  /// The identity of one profile's learning record in a backup: the
+  /// SHA-256 of its profile id and its AD-49 collections. The same backup
+  /// (or another export of an unchanged record) has the same key.
+  static Future<String> _recordKey(
+    String profileId,
+    Map<String, dynamic> collections,
+  ) async {
+    final record = [
+      profileId,
+      for (final name in profileCollectionNames)
+        if (!rawProfileCollections.contains(name)) [name, collections[name]],
+    ];
+    final hash = await Sha256().hash(utf8.encode(jsonEncode(record)));
+    return [
+      for (final b in hash.bytes) b.toRadixString(16).padLeft(2, '0'),
+    ].join();
   }
 
   /// The strictly decoded AD-49 learning record of one profile's

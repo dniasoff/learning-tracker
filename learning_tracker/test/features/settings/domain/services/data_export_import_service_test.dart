@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/data/repositories/firestore_learning_event_repository.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -43,7 +45,10 @@ final class _ScriptedLearningPort implements BackupLearningPort {
     BackupReplayInput input,
   ) async {
     replays[profileId] = input;
-    return const BackupReplayResult(result: CaptureResult.success());
+    return const BackupReplayResult(
+      result: CaptureResult.success(),
+      steps: [BackupReplayStep.learnEvents],
+    );
   }
 
   @override
@@ -329,6 +334,83 @@ void main() {
           )
           .get();
       expect(events.docs.single.data()['ref'], event.ref);
+    });
+
+    test('importing the same backup twice restores its record once: no '
+        'duplicate events, points, redemptions or sub-tracks', () async {
+      final source = FakeFirebaseFirestore();
+      await seedProfile(source, uid: testUid, profileId: testProfileId);
+      const profilePath = 'users/$testUid/learner_profiles/$testProfileId';
+      await FirestoreLearningEventRepository(firestore: source).create(
+        LearnerScope(ownerUid: testUid, profileId: testProfileId),
+        LearningEvent.learn(
+          id: ulidA,
+          curriculumId: 'mishnayos',
+          ref: 'Mishnah Berakhot 1:1',
+          source: LearningEvent.sourceMain,
+          dateState: DateState.dated,
+          learnedOn: '2026-08-01',
+          recordedAt: DateTime.utc(2026, 8, 1, 9),
+          actor: parentActor,
+        ),
+      );
+      await source.doc('$profilePath/points_ledger/$ulidB').set({
+        'ulid': ulidB,
+        'entry_kind': 'redemption_debit',
+        'delta': -5,
+        'redemption_ulid': ulidC,
+      });
+      await source.doc('$profilePath/reward_redemptions/$ulidC').set({
+        'ulid': ulidC,
+        'status': 'fulfilled',
+      });
+      final payload = await backupService(source).exportData();
+
+      final target = FakeFirebaseFirestore();
+      Future<Map<String, int>> counts() async => {
+        for (final name in [
+          'learning_events',
+          'points_ledger',
+          'reward_redemptions',
+          'sub_tracks',
+          'change_log',
+        ])
+          name: (await target.collection('$profilePath/$name').get()).size,
+      };
+
+      final first = await backupService(target).importData(payload);
+      expect(first.saved, isTrue);
+      expect(first.alreadyRestored, isEmpty);
+      final once = await counts();
+      expect(once['learning_events'], 1);
+      // The re-derived pts_ entry and the copied spend.
+      expect(once['points_ledger'], 2);
+      expect(once['reward_redemptions'], 1);
+
+      final second = await backupService(target).importData(payload);
+      expect(second.alreadyRestored, {testProfileId});
+      expect(second.profiles, isEmpty);
+      expect(second.saved, isTrue);
+      expect(await counts(), once);
+    });
+
+    test('a backup of a different record is still restored', () async {
+      final firestore = FakeFirebaseFirestore();
+      await seedProfile(firestore, uid: testUid, profileId: testProfileId);
+      final learning = _ScriptedLearningPort();
+      final service = _service(firestore, learning);
+      final payload = await service.exportData();
+      await service.importData(payload);
+      expect(learning.replays.keys, [testProfileId]);
+      learning.replays.clear();
+      expect((await service.importData(payload)).alreadyRestored, {
+        testProfileId,
+      });
+      expect(learning.replays, isEmpty);
+      learning.subTracks[testProfileId] = [_ended];
+      final report = await service.importData(await service.exportData());
+      expect(report.alreadyRestored, isEmpty);
+      expect(learning.replays.keys, [testProfileId]);
     });
 
     test('an undecodable learning record fails validation', () async {
