@@ -279,6 +279,64 @@ describe('AC-1 — tutorUpsertSubTrack covers the subTrack entity', () => {
     assert.equal((await changeLog()).length, 2);
   });
 
+  for (const [op, reason] of [['end', 'ended'], ['delete', 'deleted']]) {
+    test(`an edit after ${op} is rejected: the tombstone and its history stay as they were`, async () => {
+      await create();
+      await upsert(op, SUB, { actionId: ulid(1) });
+      const ended = await subTrackDoc();
+      for (const fields of [
+        { name: 'Renamed' }, { rate_per_week: 9 }, { type: 'school_year', academic_year: 2026 },
+        { window_end: '2027-06-30' }, { ground: [{ level: 'masechta', ref: 'Shabbat' }] },
+      ]) {
+        await expectHttpsError(edit(fields, ulid(2)), 'failed-precondition');
+      }
+      assert.deepEqual(await subTrackDoc(), ended, 'the ended doc is unchanged');
+      assert.equal((await subTrackDoc()).end_reason, reason);
+      assert.deepEqual((await changeLog()).map((e) => e.id).sort(), [SUB, ulid(1)].sort(),
+        'no change_log entry for the refused edit');
+    });
+  }
+
+  test('an end racing an edit: the edit commits before the end or is refused', async () => {
+    await create();
+    const [edited, ended] = await Promise.allSettled([
+      edit({ name: 'Racing rename' }, ulid(1)),
+      upsert('end', SUB, { actionId: ulid(2) }),
+    ]);
+    assert.equal(ended.status, 'fulfilled', 'the end always commits');
+    const doc = await subTrackDoc();
+    assert.equal(doc.end_reason, 'ended');
+    const entries = await changeLog();
+    const endEntry = entries.find((e) => e.id === ulid(2));
+    if (edited.status === 'fulfilled') {
+      const editEntry = entries.find((e) => e.id === ulid(1));
+      assert.equal(doc.name, 'Racing rename');
+      assert.ok(editEntry.at.toMillis() <= endEntry.at.toMillis(), 'the edit committed before the end');
+    } else {
+      await expectHttpsError(Promise.reject(edited.reason), 'failed-precondition');
+      assert.equal(doc.name, NAME, 'the refused edit changed nothing');
+      assert.equal(entries.find((e) => e.id === ulid(1)), undefined);
+    }
+  });
+
+  test('a parent undo may still restore a pre-end field on an ended sub-track', async () => {
+    await create();
+    await edit({ name: 'Renamed' }, ulid(1));
+    await upsert('end', SUB, { actionId: ulid(2) });
+    const res = await call(fns.ownerOversizedGovernedWrite, {
+      profileId: PROFILE,
+      revertsActionId: ulid(1),
+      entries: [{
+        id: ulid(3), entity: 'subTrack', entityId: SUB,
+        docs: [{ collection: 'sub_tracks', docId: SUB, fields: { name: NAME }, mode: 'update' }],
+      }],
+    }, parentAuth);
+    assert.deepEqual(res.change_ids, [ulid(3)]);
+    const doc = await subTrackDoc();
+    assert.equal(doc.name, NAME);
+    assert.equal(doc.end_reason, 'ended', 'the undo of the rename does not re-add the sub-track');
+  });
+
   test('the parent (owner) is accepted by the same callable with an owner actor', async () => {
     const res = await create(SUB, ONGOING, {}, parentAuth);
     assert.equal(res.success, true);

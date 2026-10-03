@@ -1024,6 +1024,18 @@ export async function writeWithChangeLog(
           after[changeKey(d.collection, d.docId, field)] =
             value === TOMBSTONE && field === "ended_at" ? admin.firestore.FieldValue.serverTimestamp() : value;
         }
+        // An ended sub-track (end, delete, undo of its create, track removal)
+        // is frozen: a call may re-add it (clear ended_at, then edit in the
+        // same patch) but never change an intent field while it stays ended,
+        // so a tombstone and its history are not rewritten. Judged on the
+        // transactional prior, so an edit racing an end loses once the end
+        // commits. A parent undo (reverts_action_id, parent-only above) still
+        // restores a pre-end field value, matching AD-38 undo semantics.
+        if (d.collection === "sub_tracks" && cur !== null && !isLive(cur) && !isLive(finalState) &&
+          !req.revertsActionId &&
+          Object.keys(data).some((f) => f !== "ended_at" && f !== "end_reason")) {
+          reject("failed-precondition", "An ended sub-track cannot be edited");
+        }
         if (MAIN_TRACK_ENTITIES.has(e.entity)) {
           const cid = finalState.curriculum_id;
           if (typeof cid !== "string") reject("invalid-argument", "curriculum_id is required");
