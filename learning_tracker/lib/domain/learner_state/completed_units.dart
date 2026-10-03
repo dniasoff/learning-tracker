@@ -6,6 +6,8 @@
 /// completion, and a later re-completion has a new `first_completed_at(1)`.
 library;
 
+import 'dart:typed_data';
+
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -45,8 +47,14 @@ final class _Unit {
   final NodeEntry node;
   final int index;
   final List<LeafRef> leaves;
+
+  /// [leaves] as slots into the per-leaf count array (fyh.325).
+  late final Int32List slots;
   int k = 0;
   int atLeastNext = 0;
+
+  /// The last event (by position) that touched this unit; -1 for none.
+  int touchedBy = -1;
   final Map<int, DateTime> firstCompletedAt = {};
 }
 
@@ -89,33 +97,74 @@ List<CompletedUnit> completedUnits({
   corpus.roots.forEach(walk);
   if (units.isEmpty) return const [];
 
-  final unitsByLeaf = <LeafRef, List<_Unit>>{};
+  // fyh.325: every unit leaf gets an int slot, so the per-event loop is
+  // array arithmetic. Counts, owners and touch order are as before: a leaf
+  // count is the number of counted events covering it, and the units an
+  // event touched are re-checked in first-touch order.
+  final slotOf = <LeafRef, int>{};
+  final owners = <List<_Unit>>[];
   for (final unit in units) {
-    for (final leaf in unit.leaves) {
-      (unitsByLeaf[leaf] ??= []).add(unit);
+    final slots = Int32List(unit.leaves.length);
+    for (final (i, leaf) in unit.leaves.indexed) {
+      final slot = slotOf.putIfAbsent(leaf, () {
+        owners.add([]);
+        return owners.length - 1;
+      });
+      owners[slot].add(unit);
+      slots[i] = slot;
     }
+    unit.slots = slots;
   }
-  final counts = <LeafRef, int>{};
+  final counts = Int32List(owners.length);
+  // The slots of a multi-leaf (node) event's leaves, by the identity of
+  // its covered-leaf list: expandGround memoises that list per node, so a
+  // repeated node event resolves its slots once.
+  final nodeSlots = Map<List<LeafRef>, Int32List>.identity();
+  Int32List slotsOf(List<LeafRef> leaves) {
+    final out = Int32List(leaves.length);
+    for (final (i, leaf) in leaves.indexed) {
+      out[i] = slotOf[leaf] ?? -1;
+    }
+    return out;
+  }
+
+  final touched = <_Unit>[];
+  var position = 0;
   for (final event in countedLearns) {
+    final eventIndex = position++;
     final stage = event.stage;
     if (stage != null && firstStage != null && stage > firstStage) continue;
-    final touched = <_Unit>{};
-    for (final leaf in coveredLeaves(event, corpus)) {
-      final owners = unitsByLeaf[leaf];
-      if (owners == null) continue;
-      final count = counts[leaf] = (counts[leaf] ?? 0) + 1;
-      for (final unit in owners) {
+    final leaves = coveredLeaves(event, corpus);
+    if (leaves.isEmpty) continue;
+    final Int32List slots;
+    if (leaves.length == 1) {
+      final slot = slotOf[leaves.first];
+      if (slot == null) continue;
+      slots = Int32List(1)..[0] = slot;
+    } else {
+      slots = nodeSlots[leaves] ??= slotsOf(leaves);
+    }
+    touched.clear();
+    for (final slot in slots) {
+      if (slot < 0) continue;
+      final count = ++counts[slot];
+      for (final unit in owners[slot]) {
         if (count == unit.k + 1) unit.atLeastNext++;
-        touched.add(unit);
+        if (unit.touchedBy != eventIndex) {
+          unit.touchedBy = eventIndex;
+          touched.add(unit);
+        }
       }
     }
     for (final unit in touched) {
       while (unit.atLeastNext == unit.leaves.length) {
         unit.k++;
         unit.firstCompletedAt[unit.k] = effectiveAt(event);
-        unit.atLeastNext = unit.leaves
-            .where((l) => (counts[l] ?? 0) >= unit.k + 1)
-            .length;
+        var atLeast = 0;
+        for (final slot in unit.slots) {
+          if (counts[slot] >= unit.k + 1) atLeast++;
+        }
+        unit.atLeastNext = atLeast;
       }
     }
   }

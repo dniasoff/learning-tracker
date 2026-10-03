@@ -38,9 +38,17 @@ Map<LeafRef, CivilDate> newlyLearntOn({
   required int? firstStage,
 }) {
   final known = <LeafRef>{};
+  // fyh.325: `before_tracking` node events already added to [known]; a
+  // repeat covers the same leaves, so it adds nothing and is skipped.
+  final knownNodes = <(String, String)>{};
   final firstDay = <LeafRef, CivilDate>{};
   for (final e in countedLearns) {
     if (e.dateState == DateState.beforeTracking) {
+      final level = e.level;
+      final ref = e.ref;
+      if (level != null && ref != null && !knownNodes.add((level, ref))) {
+        continue;
+      }
       known.addAll(coveredLeaves(e, corpus));
       continue;
     }
