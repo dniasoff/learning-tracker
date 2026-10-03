@@ -64,7 +64,6 @@ LearnerProfileEntity _profile(ProfileMode mode) => LearnerProfileEntity(
 CurriculumTrackEntity _track() => CurriculumTrackEntity(
   curriculumId: CurriculumId.mishnayos,
   state: 'active',
-  stateChangedAt: DateTime.utc(2026),
   activatedAt: DateTime.utc(2026),
 );
 
