@@ -203,7 +203,6 @@ void main() {
         ),
         beforeTrackingRecorderProvider.overrideWith(
           (ref) => BeforeTrackingRecorder(
-            ownsBookmark: () => true,
             contentRepository: contentRepo,
             commands: () async => commands,
             events: () async => const [],

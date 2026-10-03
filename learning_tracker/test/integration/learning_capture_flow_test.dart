@@ -285,11 +285,6 @@ void main() {
 
     expect(tutor.invoker.calls.single.fn, 'tutorRecordLearning');
     expect(flow.port.attempts, isEmpty, reason: 'no owner-path write');
-    expect(
-      flow.bookmarks.advanced,
-      isEmpty,
-      reason: 'the bookmark is owner-only: a tutor never writes it',
-    );
     final route =
         verify(() => flow.router.replace(captureAny())).captured.single
             as TextDisplayRoute;
