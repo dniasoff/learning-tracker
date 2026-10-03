@@ -326,7 +326,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   /// Tears a transient sign-up named app down, best-effort: a cleanup
   /// failure must never replace the sign-up's own outcome.
-  Future<void> _discardQuietly(AuthRepository authRepo, String accountId) async {
+  Future<void> _discardQuietly(
+    AuthRepository authRepo,
+    String accountId,
+  ) async {
     try {
       await authRepo.discardAccountSession(accountId);
     } on Exception catch (_) {

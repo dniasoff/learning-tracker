@@ -36,7 +36,6 @@ class _HebrewOff extends UseHebrewTerms {
   bool build() => false;
 }
 
-
 const _uid = 'track-hub-test-uid';
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 

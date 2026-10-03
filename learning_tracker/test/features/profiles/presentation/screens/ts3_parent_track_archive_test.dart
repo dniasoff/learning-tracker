@@ -40,7 +40,6 @@ class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
-
 class _HebrewTermsOff extends UseHebrewTerms {
   @override
   bool build() => false;

@@ -40,7 +40,6 @@ class _Router extends Mock implements StackRouter {}
 
 class _OrderRepo extends Mock implements TrackLearningOrderRepository {}
 
-
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY9';
 
 CurriculumTrackEntity _track() => CurriculumTrackEntity(

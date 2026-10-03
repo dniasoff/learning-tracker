@@ -196,9 +196,7 @@ final class FakeLearningCommands implements LearningCommands {
 
   @override
   Future<BackupReplayResult> importBackup(BackupReplayInput input) async =>
-      BackupReplayResult(
-        result: _record('importBackup', {'input': input}),
-      );
+      BackupReplayResult(result: _record('importBackup', {'input': input}));
 
   @override
   Stream<List<PendingFailure>> watchPendingFailures() {

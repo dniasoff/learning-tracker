@@ -128,7 +128,7 @@ class ContentItemTile extends ConsumerWidget {
               opacity: 0.4,
               child: _TickBox(state: tickState ?? state, onTick: null),
             )
-          : _TickBox(state: tickState ?? state, onTick: onTick!),
+          : _TickBox(state: tickState ?? state, onTick: onTick),
       title: CurriculumLabel.item(
         item,
         style: theme.textTheme.titleLarge?.copyWith(
