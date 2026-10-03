@@ -25,13 +25,19 @@ import '../../../../helpers/sub_tracks/sub_track_harness.dart';
 
 void main() {
   late SubTrackHarness h;
+  // Dispose only a harness this test built; tests that never build one can
+  // run first under randomized ordering.
+  var built = false;
   SubTrackGoalSetupOutcome? outcome;
 
   setUp(() {
     outcome = null;
     SharedPreferences.setMockInitialValues({});
   });
-  tearDown(() async => h.dispose());
+  tearDown(() async {
+    if (built) await h.dispose();
+    built = false;
+  });
 
   Future<void> pumpFlow(
     WidgetTester tester, {
@@ -90,6 +96,7 @@ void main() {
     tester,
   ) async {
     h = SubTrackHarness();
+    built = true;
     await pumpFlow(tester);
     expect(screen(tester).curriculumId, CurriculumId.mishnayos);
     expect(screen(tester).existingGoal, isNull);
@@ -103,6 +110,7 @@ void main() {
     tester,
   ) async {
     h = SubTrackHarness();
+    built = true;
     await pumpFlow(tester);
     await complete(tester, deadline(DateTime(2028, 6, 1)));
     expect(outcome, SubTrackGoalSetupOutcome.saved);
@@ -132,6 +140,7 @@ void main() {
     'granularity',
     (tester) async {
       h = SubTrackHarness();
+      built = true;
       await pumpFlow(tester);
       // Drive the real goal screen: Mishnayos has no granularity picker.
       await tester.tap(find.text('Pace'));
@@ -161,6 +170,7 @@ void main() {
           paceGranularity: kLeafPaceGranularity,
         ),
       );
+      built = true;
       await pumpFlow(tester);
       // The whole-number goal screen shows the rounded value...
       expect(screen(tester).existingGoal?.paceValue, 2);
@@ -175,6 +185,7 @@ void main() {
 
   testWidgets('a refused governed save is reported as failed', (tester) async {
     h = SubTrackHarness();
+    built = true;
     h.commands.nextGovernedResult = const CaptureResult.onlineRequired();
     await pumpFlow(tester);
     await complete(tester, deadline(DateTime(2028, 6, 1)));
@@ -184,6 +195,7 @@ void main() {
 
   testWidgets('without commands the goal screen never opens', (tester) async {
     h = SubTrackHarness();
+    built = true;
     await pumpFlow(tester, withCommands: false);
     await tester.pumpAndSettle();
     expect(find.byType(GoalSetupScreen, skipOffstage: false), findsNothing);
@@ -195,6 +207,7 @@ void main() {
       tester,
     ) async {
       h = SubTrackHarness();
+      built = true;
       await pumpFlow(tester, sessionLive: false);
       expect(find.byType(GoalSetupScreen, skipOffstage: false), findsNothing);
       expect(outcome, SubTrackGoalSetupOutcome.failed);
@@ -204,6 +217,7 @@ void main() {
     testWidgets('a session that expires between render and save refuses the '
         'save', (tester) async {
       h = SubTrackHarness();
+      built = true;
       await pumpFlow(tester);
       expect(find.byType(GoalSetupScreen), findsOneWidget);
       // The PIN session locks while the goal screen is open; the save
@@ -218,6 +232,7 @@ void main() {
       tester,
     ) async {
       h = SubTrackHarness();
+      built = true;
       await pumpFlow(tester);
       await tester.tap(find.text('Pace'));
       await tester.pumpAndSettle();
