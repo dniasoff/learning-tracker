@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
-import 'package:learning_tracker/features/sub_tracks/domain/sub_track_lifecycle.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/academic_year_picker.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The ended group over [tracks] (already split by the learner's today).
@@ -73,8 +73,7 @@ class EndedSubTracksSection extends StatelessWidget {
                 minTileHeight: 48,
                 title: Text(
                   switch (track.academicYear) {
-                    final year? =>
-                      '${track.name} ${subTrackAcademicYearLabel(year)}',
+                    final year? => '${track.name} ${academicYearLabel(year)}',
                     null => track.name,
                   },
                   style: text.bodyLarge?.copyWith(color: colors.brandInkMuted),

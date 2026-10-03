@@ -906,6 +906,125 @@ class AppLocalizationsHe extends AppLocalizations {
   String get statActiveTracks => 'מסלולים פעילים';
 
   @override
+  String subTrackLifecycleAddNextYear(String yearLabel) {
+    return 'הוספת השנה הבאה ($yearLabel)';
+  }
+
+  @override
+  String subTrackLifecycleAddNextYearUsed(String yearLabel) {
+    return 'לשנה $yearLabel כבר יש מסלול שנת לימודים';
+  }
+
+  @override
+  String subTrackLifecycleAddNextYearOutOfRange(String yearLabel) {
+    return 'שנת $yearLabel מעבר לשנים שאפשר לתכנן';
+  }
+
+  @override
+  String get subTrackLifecycleEndAction => 'סיום מסלול המשנה עכשיו';
+
+  @override
+  String get subTrackLifecycleDeleteAction => 'מחיקת המסלול';
+
+  @override
+  String subTrackLifecycleDeleteTitle(String name) {
+    return 'למחוק את $name?';
+  }
+
+  @override
+  String get subTrackLifecycleDeleteBody =>
+      'החומר שלא הושלם יחזור ללימוד בבית. כל מה שכבר נלמד יישאר ברשומת הלימוד לכל החיים.';
+
+  @override
+  String get subTrackLifecycleDeleteConfirm => 'מחיקה';
+
+  @override
+  String subTrackLifecycleEndTitle(String name) {
+    return 'לסיים את $name עכשיו?';
+  }
+
+  @override
+  String get subTrackLifecycleEndBody =>
+      'החומר שלא הושלם יחזור ללימוד בבית. כל מה שכבר נלמד יישאר ברשומת הלימוד לכל החיים.';
+
+  @override
+  String get subTrackLifecycleEndConfirm => 'סיום מסלול המשנה';
+
+  @override
+  String subTrackLifecycleDeleted(String name) {
+    return '$name נמחק';
+  }
+
+  @override
+  String subTrackLifecycleEnded(String name) {
+    return '$name הסתיים';
+  }
+
+  @override
+  String get subTrackLifecycleActionFailed =>
+      'לא ניתן היה לשמור את השינוי. נסו שוב.';
+
+  @override
+  String subTrackLifecycleEndedGroup(int count) {
+    return 'מסלולי משנה שהסתיימו ($count)';
+  }
+
+  @override
+  String subTrackLifecycleEndedOn(String date) {
+    return 'הסתיים ב$date';
+  }
+
+  @override
+  String subTrackLifecycleEndedRowLabel(String name) {
+    return '$name, הסתיים';
+  }
+
+  @override
+  String get subTrackLifecycleReadOnlyNote =>
+      'מסלול המשנה הזה הסתיים. אי אפשר לשנות אותו.';
+
+  @override
+  String get subTrackLifecycleNextYearTitle => 'שנת הלימודים הבאה';
+
+  @override
+  String subTrackLifecycleNextYearSaved(String name, String yearLabel) {
+    return '$name נוסף לשנת $yearLabel';
+  }
+
+  @override
+  String subTrackLifecycleNextYearSourceEnded(String name) {
+    return '$name הסתיים או נמחק, ולכן השנה הבאה לא נוספה.';
+  }
+
+  @override
+  String get subTrackLifecycleQueued => 'נשמר במכשיר. יסונכרן כשתחזרו לרשת.';
+
+  @override
+  String subTrackLifecycleSyncAddNextYear(String name, String yearLabel) {
+    return 'הוספת $name לשנת $yearLabel';
+  }
+
+  @override
+  String subTrackLifecycleSyncDelete(String name) {
+    return 'מחיקת $name';
+  }
+
+  @override
+  String subTrackLifecycleSyncEnd(String name) {
+    return 'סיום $name';
+  }
+
+  @override
+  String subTrackLifecycleSyncNotSaved(String action) {
+    return '$action: לא נשמר';
+  }
+
+  @override
+  String subTrackLifecycleSyncWaiting(String action) {
+    return '$action: ממתין לסנכרון';
+  }
+
+  @override
   String get progressChartsTile => 'גרפי התקדמות';
 
   @override
@@ -1507,21 +1626,6 @@ class AppLocalizationsHe extends AppLocalizations {
       'מדריכים אינם יכולים לסמן השלמות חיות';
 
   @override
-  String get tutorCaptureKeptNotCounted =>
-      'נשמר, לא נספר — שבת / יום טוב כבר התחילו';
-
-  @override
-  String get tutorCaptureLearnerLocked => 'שבת / יום טוב';
-
-  @override
-  String tutorCaptureNoEditAccess(String learner) {
-    return 'ההורה של $learner לא נתן לך הרשאת עריכה';
-  }
-
-  @override
-  String get tutorCaptureOnlineRequired => 'נדרש חיבור לאינטרנט';
-
-  @override
   String get tutorWriteForbiddenTitle => 'פעולה לא מורשית';
 
   @override
@@ -1900,257 +2004,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get changeParentPin => 'שינוי קוד הורה';
-
-  @override
-  String changeHistoryAlsoChanged(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'ועוד $count שינויים בפעולה זו',
-      one: 'ועוד שינוי אחד בפעולה זו',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get changeHistoryBeforeTracking => 'לפני תחילת המעקב';
-
-  @override
-  String get changeHistoryDateCatchUp => 'השלמה';
-
-  @override
-  String get changeHistoryDayToday => 'היום';
-
-  @override
-  String get changeHistoryDayYesterday => 'אתמול';
-
-  @override
-  String changeHistoryDeadlineSet(String date) {
-    return 'שינה את תאריך היעד ל־$date';
-  }
-
-  @override
-  String get changeHistoryDetailsTitle => 'פרטי השינוי';
-
-  @override
-  String get changeHistoryDetailsWhat => 'מה השתנה';
-
-  @override
-  String get changeHistoryDetailsWhen => 'מתי';
-
-  @override
-  String get changeHistoryDetailsWho => 'בוצע על ידי';
-
-  @override
-  String get changeHistoryEmpty => 'אין שינויים עדיין.';
-
-  @override
-  String get changeHistoryFieldDates => 'תאריכים';
-
-  @override
-  String get changeHistoryFieldGround => 'מה הוא כולל';
-
-  @override
-  String get changeHistoryFieldLocation => 'מיקום';
-
-  @override
-  String get changeHistoryFieldName => 'שם';
-
-  @override
-  String get changeHistoryFieldOther => 'הגדרות';
-
-  @override
-  String get changeHistoryFieldPace => 'קצב';
-
-  @override
-  String get changeHistoryFieldShabbos => 'לימוד בשבת';
-
-  @override
-  String get changeHistoryFieldTimeZone => 'אזור זמן';
-
-  @override
-  String get changeHistoryFilterAll => 'הכול';
-
-  @override
-  String get changeHistoryFilterLabel => 'הצג';
-
-  @override
-  String get changeHistoryFilterLearning => 'לימוד';
-
-  @override
-  String get changeHistoryFilterParent => 'הורה';
-
-  @override
-  String get changeHistoryFilterTutor => 'מורה';
-
-  @override
-  String get changeHistoryGoalChanged => 'שינה את היעד';
-
-  @override
-  String get changeHistoryGoalCreated => 'הגדיר יעד';
-
-  @override
-  String get changeHistoryGoalEnded => 'הסיר את היעד';
-
-  @override
-  String changeHistoryLearned(String refs, String source) {
-    return 'למד $refs · $source';
-  }
-
-  @override
-  String get changeHistoryLockIgnored => 'נשמר, לא נספר — נרשם בשבת/יום טוב';
-
-  @override
-  String get changeHistoryMainTrackChanged => 'שינה את המסלול הראשי';
-
-  @override
-  String get changeHistoryMainTrackCreated => 'הוסיף את המסלול הראשי';
-
-  @override
-  String get changeHistoryMainTrackEnded => 'הסיר את המסלול הראשי';
-
-  @override
-  String get changeHistoryNoMatches => 'אין שינויים התואמים לסינון זה.';
-
-  @override
-  String get changeHistoryNotAvailable =>
-      'היסטוריית השינויים פתוחה להורה בלבד.';
-
-  @override
-  String get changeHistoryNotified => 'ההורה קיבל התראה';
-
-  @override
-  String get changeHistoryOrderChanged => 'שינה את סדר הלימוד';
-
-  @override
-  String get changeHistoryProgramChanged => 'שינה את התוכנית';
-
-  @override
-  String changeHistoryRefList(String first, String second) {
-    return '$first, $second';
-  }
-
-  @override
-  String changeHistoryRefRange(String first, String last, int count) {
-    return '$first – $last ($count)';
-  }
-
-  @override
-  String changeHistoryRemovedLearning(String refs, String source) {
-    return 'הסיר $refs · $source';
-  }
-
-  @override
-  String get changeHistoryRemovedUnknown => 'הסיר רישום לימוד קודם';
-
-  @override
-  String changeHistoryReverted(String summary) {
-    return 'שינוי שבוטל: $summary';
-  }
-
-  @override
-  String get changeHistoryRoleChild => 'ילד';
-
-  @override
-  String get changeHistoryRoleParent => 'הורה';
-
-  @override
-  String get changeHistoryRoleTutor => 'מורה';
-
-  @override
-  String get changeHistoryScopeChanged => 'שינה את היקף המסלול הראשי';
-
-  @override
-  String get changeHistorySelectPrompt => 'בחרו שינוי כדי לראות את פרטיו.';
-
-  @override
-  String changeHistorySettingsChanged(String fields) {
-    return 'שינה הגדרות לומד: $fields';
-  }
-
-  @override
-  String get changeHistorySettingsSubtitle =>
-      'כל שינוי במסלולים, ביעדים ובלימוד, על ידי כל אחד';
-
-  @override
-  String get changeHistorySourceMain => 'מסלול ראשי';
-
-  @override
-  String get changeHistorySourceSeveral => 'כמה מסלולים';
-
-  @override
-  String get changeHistoryStagesChanged => 'שינה את שלבי החזרה';
-
-  @override
-  String get changeHistoryStudyDaysChanged => 'שינה את ימי הלימוד';
-
-  @override
-  String changeHistorySubTrackChanged(String name, String fields) {
-    return 'שינה את $name: $fields';
-  }
-
-  @override
-  String changeHistorySubTrackCreated(String name) {
-    return 'הוסיף את $name';
-  }
-
-  @override
-  String changeHistorySubTrackEnded(String name) {
-    return 'סיים את $name';
-  }
-
-  @override
-  String changeHistorySubTrackRemoved(String name) {
-    return 'הסיר את $name';
-  }
-
-  @override
-  String changeHistorySubTrackRenamed(String name) {
-    return 'שינה שם של מסלול משנה ל־$name';
-  }
-
-  @override
-  String get changeHistorySubTrackUnnamed => 'מסלול משנה';
-
-  @override
-  String get changeHistoryTitle => 'היסטוריית שינויים';
-
-  @override
-  String get changeHistoryUndo => 'ביטול';
-
-  @override
-  String get changeHistoryUndone => 'בוטל';
-
-  @override
-  String changeHistoryUndoneBy(String name, String time) {
-    return 'בוטל על ידי $name · $time';
-  }
-
-  @override
-  String changeHistoryUpdates(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count עדכונים',
-      one: 'עדכון אחד',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String changeHistoryVoidedBy(String name, String time) {
-    return 'הוסר על ידי $name · $time';
-  }
-
-  @override
-  String changeHistoryVoidedSome(
-    int count,
-    int total,
-    String name,
-    String time,
-  ) {
-    return '$count מתוך $total הוסרו על ידי $name · $time';
-  }
 
   @override
   String get pinChangedSuccessfully => 'הקוד שונה בהצלחה';
@@ -2682,100 +2535,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get offlineAccountLabel => 'חשבון לא מקוון';
 
   @override
-  String get ongoingSubTrackFormTitle => 'תת-מסלול קבוע';
-
-  @override
-  String get ongoingSubTrackEditTitle => 'עריכת תת-מסלול קבוע';
-
-  @override
-  String get ongoingSubTrackNameLabel => 'שם תת-המסלול';
-
-  @override
-  String ongoingSubTrackRateLabel(String unit) {
-    return '$unit בשבוע';
-  }
-
-  @override
-  String ongoingSubTrackRateDecrease(String unit) {
-    return 'פחות $unit בשבוע';
-  }
-
-  @override
-  String ongoingSubTrackRateIncrease(String unit) {
-    return 'יותר $unit בשבוע';
-  }
-
-  @override
-  String get ongoingSubTrackBeinHazmanimLabel => 'לא לומדים בבין הזמנים';
-
-  @override
-  String get ongoingSubTrackBeinHazmanimHelper => 'מוריד את מספר השבועות בשנה';
-
-  @override
-  String get ongoingSubTrackWeeksLabel => 'שבועות בשנה';
-
-  @override
-  String get ongoingSubTrackWeeksPrefillHelper =>
-      'מולא לפי מתג בין הזמנים — אפשר לערוך';
-
-  @override
-  String get ongoingSubTrackStartLabel => 'תאריך התחלה (רשות)';
-
-  @override
-  String get ongoingSubTrackEndLabel => 'תאריך סיום (רשות)';
-
-  @override
-  String get ongoingSubTrackClearDate => 'ניקוי התאריך';
-
-  @override
-  String get ongoingSubTrackShabbosLabel => 'לומדים בשבת / יום טוב';
-
-  @override
-  String get ongoingSubTrackShabbosHelper =>
-      'לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת';
-
-  @override
-  String ongoingSubTrackLimitLine(int count) {
-    return 'אפשר עד 5 תתי-מסלולים קבועים. $count בשימוש.';
-  }
-
-  @override
-  String get ongoingSubTrackLimitReached => 'כבר יש 5 תתי-מסלולים קבועים.';
-
-  @override
-  String get ongoingSubTrackSave => 'שמירת תת-המסלול';
-
-  @override
-  String get ongoingSubTrackNameRequired => 'יש להזין שם';
-
-  @override
-  String get ongoingSubTrackPositiveNumber => 'יש להזין מספר גדול מ-0';
-
-  @override
-  String get ongoingSubTrackEndBeforeStart =>
-      'תאריך הסיום לא יכול להיות לפני תאריך ההתחלה';
-
-  @override
-  String get ongoingSubTrackSaveFailed =>
-      'לא ניתן היה לשמור את תת-המסלול. מה שהוזן נשמר בטופס.';
-
-  @override
-  String ongoingSubTrackStarts(String date) {
-    return 'מתחיל ב-$date';
-  }
-
-  @override
-  String ongoingSubTrackRateSummary(String rate, String weeks) {
-    return '$rate בשבוע × $weeks שבועות';
-  }
-
-  @override
-  String get ongoingSubTrackTabletSummaryTitle => 'תתי-המסלולים של הלומד';
-
-  @override
-  String get ongoingSubTrackTabletSummaryEmpty => 'עדיין אין תתי-מסלולים';
-
-  @override
   String get signUpVerificationEmailSent =>
       'אימייל אימות נשלח. אמת את האימייל שלך ולאחר מכן היכנס.';
 
@@ -3248,18 +3007,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get reportEntryTooltip => 'פתיחת הדוח המצטבר';
 
   @override
-  String get reportExportAction => 'ייצוא PDF';
-
-  @override
-  String get reportExportBusy => 'מכין PDF…';
-
-  @override
-  String get reportExportError => 'לא הצלחנו לייצא את הדוח — נסו שוב.';
-
-  @override
-  String get reportExportSemantics => 'ייצוא הדוח המצטבר כ-PDF ושיתופו';
-
-  @override
   String get reportGroupCollapseHint => 'הסתרת השנים';
 
   @override
@@ -3366,16 +3113,6 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String reportPaceTrailing(String days, String rate) {
     return '$days הימים האחרונים: $rate / שבוע';
-  }
-
-  @override
-  String reportPdfGeneratedOn(String date) {
-    return 'הופק ב-$date';
-  }
-
-  @override
-  String reportPdfPageLabel(String page, String total) {
-    return 'עמוד $page מתוך $total';
   }
 
   @override
@@ -3584,102 +3321,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get captureTickUpToHere => 'סימון עד כאן';
 
   @override
-  String get subTrackRowAllRecorded => 'כל התחום נרשם';
-
-  @override
-  String subTrackRowNext(String position) {
-    return 'הבא: $position';
-  }
-
-  @override
-  String get subTrackRowNoGround => 'עדיין אין תחום';
-
-  @override
-  String get subTrackRowPlusOne => '+1';
-
-  @override
-  String subTrackRowPlusOneSemantics(String unit, String name) {
-    return 'רישום $unit אחת עבור $name';
-  }
-
-  @override
-  String subTrackRowSemantics(String name, String position) {
-    return '$name, הבא $position';
-  }
-
-  @override
-  String subTrackRowsTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count תתי-מסלולים',
-      one: 'תת-מסלול אחד',
-    );
-    return 'לומד גם · $_temp0';
-  }
-
-  @override
-  String get upToPickerAction => 'עד…';
-
-  @override
-  String upToPickerActionSemantics(String name) {
-    return 'רישום עד, $name';
-  }
-
-  @override
-  String upToPickerExhausted(String units, String name) {
-    return 'אין עוד $units בתחום של $name.';
-  }
-
-  @override
-  String upToPickerInstruction(String unit) {
-    return 'הקש על ה$unit האחרונה שלמדת';
-  }
-
-  @override
-  String upToPickerRecord(int count, String unit) {
-    return 'רישום $count $unit';
-  }
-
-  @override
-  String upToPickerRecorded(int count) {
-    return 'נרשמו $count';
-  }
-
-  @override
-  String upToPickerRowSemantics(String label, String status) {
-    return '$label, $status';
-  }
-
-  @override
-  String upToPickerRowTargetSemantics(String label, String status) {
-    return '$label, $status, האחרון שנלמד';
-  }
-
-  @override
-  String get upToPickerSetTargetAction => 'סמן כאחרון שנלמד';
-
-  @override
-  String get upToPickerStatusAlreadyRecorded => 'כבר נרשם';
-
-  @override
-  String get upToPickerStatusIncluded => 'כלול';
-
-  @override
-  String get upToPickerStatusNextUp => 'הבא בתור';
-
-  @override
-  String get upToPickerStatusNotSelected => 'לא נבחר';
-
-  @override
-  String get upToPickerStatusSkipped => 'דולג';
-
-  @override
-  String upToPickerTitle(String name) {
-    return '$name · עד…';
-  }
-
-  @override
   String get markedComplete => 'סומן כהושלם';
 
   @override
@@ -3779,7 +3420,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב, מ-10 דקות לפני הדלקת נרות ועד 10 דקות אחרי צאת הכוכבים לפי המיקום של הלומד.';
+    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
   }
 
   @override
@@ -3831,27 +3472,6 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא ניתן לזהות מיקום. נסו שוב, או בחרו עיר במקום.';
 
   @override
-  String get sacredTimeLocationPromptAction => 'הגדרת מיקום';
-
-  @override
-  String sacredTimeLocationPromptMessage(String term) {
-    return 'ללומד זה אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
-  }
-
-  @override
-  String sacredTimeLocationPromptMessageNamed(String name, String term) {
-    return 'ל$name אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
-  }
-
-  @override
-  String get sacredTimeSettingsNotSaved =>
-      'לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.';
-
-  @override
-  String get sacredTimeSettingsUnavailable =>
-      'ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.';
-
-  @override
   String get newPasswordLabel => 'סיסמה חדשה';
 
   @override
@@ -3877,25 +3497,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get dayNameShabbos => 'שבת';
-
-  @override
-  String erevBannerBeginsAt(String term, String time) {
-    return 'כניסת $term בשעה $time — רשמו מה שאפשר לפני כן.';
-  }
-
-  @override
-  String get erevLockIgnoredSnackbar =>
-      'חלק מהלימוד נשמר אך לא נספר — הוא נרשם בשבת.';
-
-  @override
-  String erevPlannedForDay(String day) {
-    return 'מתוכנן ל$day';
-  }
-
-  @override
-  String erevPlannedTickSemantics(String item) {
-    return 'סמנו את $item כנלמד';
-  }
 
   @override
   String get statusPendingTapToAccept => 'ממתין — הקישו לאישור';
@@ -6522,36 +6123,6 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String get parentPushTitle => 'שינוי של המורה';
-
-  @override
-  String parentPushBody(String tutorName, String learnerName, String kind) {
-    String _temp0 = intl.Intl.selectLogic(kind, {
-      'deadline': 'תאריך היעד',
-      'pace': 'הקצב היומי',
-      'mainTrack': 'המסלול הראשי',
-      'mainTrackOrder': 'סדר הלימוד',
-      'mainTrackProgram': 'התוכנית',
-      'mainTrackStudyDays': 'ימי הלימוד',
-      'other': 'תוכנית הלימוד',
-    });
-    return '$tutorName שינה את $_temp0 של $learnerName';
-  }
-
-  @override
-  String get parentPushTutorFallback => 'המורה';
-
-  @override
-  String get parentPushLearnerFallback => 'ילדכם';
-
-  @override
-  String get parentPushChannelName => 'שינויים של המורה';
-
-  @override
-  String get parentPushChannelDescription =>
-      'כשמורה משנה תאריך יעד או מסלול ראשי';
-
-  @override
   String get onboardingNamePrompt => 'מה נקרא לך?';
 
   @override
@@ -7043,6 +6614,554 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get backupImportError => 'לא ניתן לשחזר את הגיבוי. נסו שוב.';
+
+  @override
+  String get tutorCaptureKeptNotCounted =>
+      'נשמר, לא נספר — שבת / יום טוב כבר התחילו';
+
+  @override
+  String get tutorCaptureLearnerLocked => 'שבת / יום טוב';
+
+  @override
+  String tutorCaptureNoEditAccess(String learner) {
+    return 'ההורה של $learner לא נתן לך הרשאת עריכה';
+  }
+
+  @override
+  String get tutorCaptureOnlineRequired => 'נדרש חיבור לאינטרנט';
+
+  @override
+  String changeHistoryAlsoChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ועוד $count שינויים בפעולה זו',
+      one: 'ועוד שינוי אחד בפעולה זו',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get changeHistoryBeforeTracking => 'לפני תחילת המעקב';
+
+  @override
+  String get changeHistoryDateCatchUp => 'השלמה';
+
+  @override
+  String get changeHistoryDayToday => 'היום';
+
+  @override
+  String get changeHistoryDayYesterday => 'אתמול';
+
+  @override
+  String changeHistoryDeadlineSet(String date) {
+    return 'שינה את תאריך היעד ל־$date';
+  }
+
+  @override
+  String get changeHistoryDetailsTitle => 'פרטי השינוי';
+
+  @override
+  String get changeHistoryDetailsWhat => 'מה השתנה';
+
+  @override
+  String get changeHistoryDetailsWhen => 'מתי';
+
+  @override
+  String get changeHistoryDetailsWho => 'בוצע על ידי';
+
+  @override
+  String get changeHistoryEmpty => 'אין שינויים עדיין.';
+
+  @override
+  String get changeHistoryFieldDates => 'תאריכים';
+
+  @override
+  String get changeHistoryFieldGround => 'מה הוא כולל';
+
+  @override
+  String get changeHistoryFieldLocation => 'מיקום';
+
+  @override
+  String get changeHistoryFieldName => 'שם';
+
+  @override
+  String get changeHistoryFieldOther => 'הגדרות';
+
+  @override
+  String get changeHistoryFieldPace => 'קצב';
+
+  @override
+  String get changeHistoryFieldShabbos => 'לימוד בשבת';
+
+  @override
+  String get changeHistoryFieldTimeZone => 'אזור זמן';
+
+  @override
+  String get changeHistoryFilterAll => 'הכול';
+
+  @override
+  String get changeHistoryFilterLabel => 'הצג';
+
+  @override
+  String get changeHistoryFilterLearning => 'לימוד';
+
+  @override
+  String get changeHistoryFilterParent => 'הורה';
+
+  @override
+  String get changeHistoryFilterTutor => 'מורה';
+
+  @override
+  String get changeHistoryGoalChanged => 'שינה את היעד';
+
+  @override
+  String get changeHistoryGoalCreated => 'הגדיר יעד';
+
+  @override
+  String get changeHistoryGoalEnded => 'הסיר את היעד';
+
+  @override
+  String changeHistoryLearned(String refs, String source) {
+    return 'למד $refs · $source';
+  }
+
+  @override
+  String get changeHistoryLockIgnored => 'נשמר, לא נספר — נרשם בשבת/יום טוב';
+
+  @override
+  String get changeHistoryMainTrackChanged => 'שינה את המסלול הראשי';
+
+  @override
+  String get changeHistoryMainTrackCreated => 'הוסיף את המסלול הראשי';
+
+  @override
+  String get changeHistoryMainTrackEnded => 'הסיר את המסלול הראשי';
+
+  @override
+  String get changeHistoryNoMatches => 'אין שינויים התואמים לסינון זה.';
+
+  @override
+  String get changeHistoryNotAvailable =>
+      'היסטוריית השינויים פתוחה להורה בלבד.';
+
+  @override
+  String get changeHistoryNotified => 'ההורה קיבל התראה';
+
+  @override
+  String get changeHistoryOrderChanged => 'שינה את סדר הלימוד';
+
+  @override
+  String get changeHistoryProgramChanged => 'שינה את התוכנית';
+
+  @override
+  String changeHistoryRefList(String first, String second) {
+    return '$first, $second';
+  }
+
+  @override
+  String changeHistoryRefRange(String first, String last, int count) {
+    return '$first – $last ($count)';
+  }
+
+  @override
+  String changeHistoryRemovedLearning(String refs, String source) {
+    return 'הסיר $refs · $source';
+  }
+
+  @override
+  String get changeHistoryRemovedUnknown => 'הסיר רישום לימוד קודם';
+
+  @override
+  String changeHistoryReverted(String summary) {
+    return 'שינוי שבוטל: $summary';
+  }
+
+  @override
+  String get changeHistoryRoleChild => 'ילד';
+
+  @override
+  String get changeHistoryRoleParent => 'הורה';
+
+  @override
+  String get changeHistoryRoleTutor => 'מורה';
+
+  @override
+  String get changeHistoryScopeChanged => 'שינה את היקף המסלול הראשי';
+
+  @override
+  String get changeHistorySelectPrompt => 'בחרו שינוי כדי לראות את פרטיו.';
+
+  @override
+  String changeHistorySettingsChanged(String fields) {
+    return 'שינה הגדרות לומד: $fields';
+  }
+
+  @override
+  String get changeHistorySettingsSubtitle =>
+      'כל שינוי במסלולים, ביעדים ובלימוד, על ידי כל אחד';
+
+  @override
+  String get changeHistorySourceMain => 'מסלול ראשי';
+
+  @override
+  String get changeHistorySourceSeveral => 'כמה מסלולים';
+
+  @override
+  String get changeHistoryStagesChanged => 'שינה את שלבי החזרה';
+
+  @override
+  String get changeHistoryStudyDaysChanged => 'שינה את ימי הלימוד';
+
+  @override
+  String changeHistorySubTrackChanged(String name, String fields) {
+    return 'שינה את $name: $fields';
+  }
+
+  @override
+  String changeHistorySubTrackCreated(String name) {
+    return 'הוסיף את $name';
+  }
+
+  @override
+  String changeHistorySubTrackEnded(String name) {
+    return 'סיים את $name';
+  }
+
+  @override
+  String changeHistorySubTrackRemoved(String name) {
+    return 'הסיר את $name';
+  }
+
+  @override
+  String changeHistorySubTrackRenamed(String name) {
+    return 'שינה שם של מסלול משנה ל־$name';
+  }
+
+  @override
+  String get changeHistorySubTrackUnnamed => 'מסלול משנה';
+
+  @override
+  String get changeHistoryTitle => 'היסטוריית שינויים';
+
+  @override
+  String get changeHistoryUndo => 'ביטול';
+
+  @override
+  String get changeHistoryUndone => 'בוטל';
+
+  @override
+  String changeHistoryUndoneBy(String name, String time) {
+    return 'בוטל על ידי $name · $time';
+  }
+
+  @override
+  String changeHistoryUpdates(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count עדכונים',
+      one: 'עדכון אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String changeHistoryVoidedBy(String name, String time) {
+    return 'הוסר על ידי $name · $time';
+  }
+
+  @override
+  String changeHistoryVoidedSome(
+    int count,
+    int total,
+    String name,
+    String time,
+  ) {
+    return '$count מתוך $total הוסרו על ידי $name · $time';
+  }
+
+  @override
+  String get ongoingSubTrackFormTitle => 'תת-מסלול קבוע';
+
+  @override
+  String get ongoingSubTrackEditTitle => 'עריכת תת-מסלול קבוע';
+
+  @override
+  String get ongoingSubTrackNameLabel => 'שם תת-המסלול';
+
+  @override
+  String ongoingSubTrackRateLabel(String unit) {
+    return '$unit בשבוע';
+  }
+
+  @override
+  String ongoingSubTrackRateDecrease(String unit) {
+    return 'פחות $unit בשבוע';
+  }
+
+  @override
+  String ongoingSubTrackRateIncrease(String unit) {
+    return 'יותר $unit בשבוע';
+  }
+
+  @override
+  String get ongoingSubTrackBeinHazmanimLabel => 'לא לומדים בבין הזמנים';
+
+  @override
+  String get ongoingSubTrackBeinHazmanimHelper => 'מוריד את מספר השבועות בשנה';
+
+  @override
+  String get ongoingSubTrackWeeksLabel => 'שבועות בשנה';
+
+  @override
+  String get ongoingSubTrackWeeksPrefillHelper =>
+      'מולא לפי מתג בין הזמנים — אפשר לערוך';
+
+  @override
+  String get ongoingSubTrackStartLabel => 'תאריך התחלה (רשות)';
+
+  @override
+  String get ongoingSubTrackEndLabel => 'תאריך סיום (רשות)';
+
+  @override
+  String get ongoingSubTrackClearDate => 'ניקוי התאריך';
+
+  @override
+  String get ongoingSubTrackShabbosLabel => 'לומדים בשבת / יום טוב';
+
+  @override
+  String get ongoingSubTrackShabbosHelper =>
+      'לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת';
+
+  @override
+  String ongoingSubTrackLimitLine(int count) {
+    return 'אפשר עד 5 תתי-מסלולים קבועים. $count בשימוש.';
+  }
+
+  @override
+  String get ongoingSubTrackLimitReached => 'כבר יש 5 תתי-מסלולים קבועים.';
+
+  @override
+  String get ongoingSubTrackSave => 'שמירת תת-המסלול';
+
+  @override
+  String get ongoingSubTrackNameRequired => 'יש להזין שם';
+
+  @override
+  String get ongoingSubTrackPositiveNumber => 'יש להזין מספר גדול מ-0';
+
+  @override
+  String get ongoingSubTrackEndBeforeStart =>
+      'תאריך הסיום לא יכול להיות לפני תאריך ההתחלה';
+
+  @override
+  String get ongoingSubTrackSaveFailed =>
+      'לא ניתן היה לשמור את תת-המסלול. מה שהוזן נשמר בטופס.';
+
+  @override
+  String ongoingSubTrackStarts(String date) {
+    return 'מתחיל ב-$date';
+  }
+
+  @override
+  String ongoingSubTrackRateSummary(String rate, String weeks) {
+    return '$rate בשבוע × $weeks שבועות';
+  }
+
+  @override
+  String get ongoingSubTrackTabletSummaryTitle => 'תתי-המסלולים של הלומד';
+
+  @override
+  String get ongoingSubTrackTabletSummaryEmpty => 'עדיין אין תתי-מסלולים';
+
+  @override
+  String get reportExportAction => 'ייצוא PDF';
+
+  @override
+  String get reportExportBusy => 'מכין PDF…';
+
+  @override
+  String get reportExportError => 'לא הצלחנו לייצא את הדוח — נסו שוב.';
+
+  @override
+  String get reportExportSemantics => 'ייצוא הדוח המצטבר כ-PDF ושיתופו';
+
+  @override
+  String reportPdfGeneratedOn(String date) {
+    return 'הופק ב-$date';
+  }
+
+  @override
+  String reportPdfPageLabel(String page, String total) {
+    return 'עמוד $page מתוך $total';
+  }
+
+  @override
+  String get subTrackRowAllRecorded => 'כל התחום נרשם';
+
+  @override
+  String subTrackRowNext(String position) {
+    return 'הבא: $position';
+  }
+
+  @override
+  String get subTrackRowNoGround => 'עדיין אין תחום';
+
+  @override
+  String get subTrackRowPlusOne => '+1';
+
+  @override
+  String subTrackRowPlusOneSemantics(String unit, String name) {
+    return 'רישום $unit אחת עבור $name';
+  }
+
+  @override
+  String subTrackRowSemantics(String name, String position) {
+    return '$name, הבא $position';
+  }
+
+  @override
+  String subTrackRowsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count תתי-מסלולים',
+      one: 'תת-מסלול אחד',
+    );
+    return 'לומד גם · $_temp0';
+  }
+
+  @override
+  String get upToPickerAction => 'עד…';
+
+  @override
+  String upToPickerActionSemantics(String name) {
+    return 'רישום עד, $name';
+  }
+
+  @override
+  String upToPickerExhausted(String units, String name) {
+    return 'אין עוד $units בתחום של $name.';
+  }
+
+  @override
+  String upToPickerInstruction(String unit) {
+    return 'הקש על ה$unit האחרונה שלמדת';
+  }
+
+  @override
+  String upToPickerRecord(int count, String unit) {
+    return 'רישום $count $unit';
+  }
+
+  @override
+  String upToPickerRecorded(int count) {
+    return 'נרשמו $count';
+  }
+
+  @override
+  String upToPickerRowSemantics(String label, String status) {
+    return '$label, $status';
+  }
+
+  @override
+  String upToPickerRowTargetSemantics(String label, String status) {
+    return '$label, $status, האחרון שנלמד';
+  }
+
+  @override
+  String get upToPickerSetTargetAction => 'סמן כאחרון שנלמד';
+
+  @override
+  String get upToPickerStatusAlreadyRecorded => 'כבר נרשם';
+
+  @override
+  String get upToPickerStatusIncluded => 'כלול';
+
+  @override
+  String get upToPickerStatusNextUp => 'הבא בתור';
+
+  @override
+  String get upToPickerStatusNotSelected => 'לא נבחר';
+
+  @override
+  String get upToPickerStatusSkipped => 'דולג';
+
+  @override
+  String upToPickerTitle(String name) {
+    return '$name · עד…';
+  }
+
+  @override
+  String get sacredTimeLocationPromptAction => 'הגדרת מיקום';
+
+  @override
+  String sacredTimeLocationPromptMessage(String term) {
+    return 'ללומד זה אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
+  }
+
+  @override
+  String sacredTimeLocationPromptMessageNamed(String name, String term) {
+    return 'ל$name אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
+  }
+
+  @override
+  String get sacredTimeSettingsNotSaved =>
+      'לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.';
+
+  @override
+  String get sacredTimeSettingsUnavailable =>
+      'ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.';
+
+  @override
+  String erevBannerBeginsAt(String term, String time) {
+    return 'כניסת $term בשעה $time — רשמו מה שאפשר לפני כן.';
+  }
+
+  @override
+  String get erevLockIgnoredSnackbar =>
+      'חלק מהלימוד נשמר אך לא נספר — הוא נרשם בשבת.';
+
+  @override
+  String erevPlannedForDay(String day) {
+    return 'מתוכנן ל$day';
+  }
+
+  @override
+  String erevPlannedTickSemantics(String item) {
+    return 'סמנו את $item כנלמד';
+  }
+
+  @override
+  String get parentPushTitle => 'שינוי של המורה';
+
+  @override
+  String parentPushBody(String tutorName, String learnerName, String kind) {
+    String _temp0 = intl.Intl.selectLogic(kind, {
+      'deadline': 'תאריך היעד',
+      'pace': 'הקצב היומי',
+      'mainTrack': 'המסלול הראשי',
+      'mainTrackOrder': 'סדר הלימוד',
+      'mainTrackProgram': 'התוכנית',
+      'mainTrackStudyDays': 'ימי הלימוד',
+      'other': 'תוכנית הלימוד',
+    });
+    return '$tutorName שינה את $_temp0 של $learnerName';
+  }
+
+  @override
+  String get parentPushTutorFallback => 'המורה';
+
+  @override
+  String get parentPushLearnerFallback => 'ילדכם';
+
+  @override
+  String get parentPushChannelName => 'שינויים של המורה';
+
+  @override
+  String get parentPushChannelDescription =>
+      'כשמורה משנה תאריך יעד או מסלול ראשי';
 
   @override
   String get backupImportNotSaved =>

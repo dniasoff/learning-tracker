@@ -484,6 +484,33 @@
   "statUnitsDone": "משימות",
   "statDayStreak": "רצף ימים",
   "statActiveTracks": "מסלולים פעילים",
+  "subTrackLifecycleAddNextYear": "הוספת השנה הבאה ({yearLabel})",
+  "subTrackLifecycleAddNextYearUsed": "לשנה {yearLabel} כבר יש מסלול שנת לימודים",
+  "subTrackLifecycleAddNextYearOutOfRange": "שנת {yearLabel} מעבר לשנים שאפשר לתכנן",
+  "subTrackLifecycleEndAction": "סיום מסלול המשנה עכשיו",
+  "subTrackLifecycleDeleteAction": "מחיקת המסלול",
+  "subTrackLifecycleDeleteTitle": "למחוק את {name}?",
+  "subTrackLifecycleDeleteBody": "החומר שלא הושלם יחזור ללימוד בבית. כל מה שכבר נלמד יישאר ברשומת הלימוד לכל החיים.",
+  "subTrackLifecycleDeleteConfirm": "מחיקה",
+  "subTrackLifecycleEndTitle": "לסיים את {name} עכשיו?",
+  "subTrackLifecycleEndBody": "החומר שלא הושלם יחזור ללימוד בבית. כל מה שכבר נלמד יישאר ברשומת הלימוד לכל החיים.",
+  "subTrackLifecycleEndConfirm": "סיום מסלול המשנה",
+  "subTrackLifecycleDeleted": "{name} נמחק",
+  "subTrackLifecycleEnded": "{name} הסתיים",
+  "subTrackLifecycleActionFailed": "לא ניתן היה לשמור את השינוי. נסו שוב.",
+  "subTrackLifecycleEndedGroup": "מסלולי משנה שהסתיימו ({count})",
+  "subTrackLifecycleEndedOn": "הסתיים ב{date}",
+  "subTrackLifecycleEndedRowLabel": "{name}, הסתיים",
+  "subTrackLifecycleReadOnlyNote": "מסלול המשנה הזה הסתיים. אי אפשר לשנות אותו.",
+  "subTrackLifecycleNextYearTitle": "שנת הלימודים הבאה",
+  "subTrackLifecycleNextYearSaved": "{name} נוסף לשנת {yearLabel}",
+  "subTrackLifecycleNextYearSourceEnded": "{name} הסתיים או נמחק, ולכן השנה הבאה לא נוספה.",
+  "subTrackLifecycleQueued": "נשמר במכשיר. יסונכרן כשתחזרו לרשת.",
+  "subTrackLifecycleSyncAddNextYear": "הוספת {name} לשנת {yearLabel}",
+  "subTrackLifecycleSyncDelete": "מחיקת {name}",
+  "subTrackLifecycleSyncEnd": "סיום {name}",
+  "subTrackLifecycleSyncNotSaved": "{action}: לא נשמר",
+  "subTrackLifecycleSyncWaiting": "{action}: ממתין לסנכרון",
   "progressChartsTile": "גרפי התקדמות",
   "progressChartsTileSubtitle": "השלמות, מגמות ועוד",
   "learningLifetime": "לימוד לאורך חיים",
@@ -806,17 +833,6 @@
   "switchIntoChildMessage": "אתה עומד להיכנס לחוויה המלאה של {name}. ניתן לצאת בכל עת מהפס שבראש המסך.",
   "switchIntoChildConfirm": "כניסה",
   "tutorCannotMarkLiveCompletion": "מדריכים אינם יכולים לסמן השלמות חיות",
-  "tutorCaptureKeptNotCounted": "נשמר, לא נספר — שבת / יום טוב כבר התחילו",
-  "tutorCaptureLearnerLocked": "שבת / יום טוב",
-  "tutorCaptureNoEditAccess": "ההורה של {learner} לא נתן לך הרשאת עריכה",
-  "@tutorCaptureNoEditAccess": {
-    "placeholders": {
-      "learner": {
-        "type": "String"
-      }
-    }
-  },
-  "tutorCaptureOnlineRequired": "נדרש חיבור לאינטרנט",
   "tutorWriteForbiddenTitle": "פעולה לא מורשית",
   "tutorWriteForbiddenMessage": "מדריכים אינם יכולים לסמן השלמות חיות. פעולה זו מזכה את הרצף והפרסים של הילד, ושמורה להורה או לילד.",
   "tutorPermissionDenied": "אין לך הרשאה לבצע עריכה זו",
@@ -994,72 +1010,6 @@
   "enterNewPinSubtitle": "בחרו קוד חדש בן 4 ספרות.",
   "confirmNewPinSubtitle": "הזינו שוב את אותו קוד לאישור.",
   "changeParentPin": "שינוי קוד הורה",
-  "changeHistoryAlsoChanged": "{count, plural, =1{ועוד שינוי אחד בפעולה זו} other{ועוד {count} שינויים בפעולה זו}}",
-  "changeHistoryBeforeTracking": "לפני תחילת המעקב",
-  "changeHistoryDateCatchUp": "השלמה",
-  "changeHistoryDayToday": "היום",
-  "changeHistoryDayYesterday": "אתמול",
-  "changeHistoryDeadlineSet": "שינה את תאריך היעד ל־{date}",
-  "changeHistoryDetailsTitle": "פרטי השינוי",
-  "changeHistoryDetailsWhat": "מה השתנה",
-  "changeHistoryDetailsWhen": "מתי",
-  "changeHistoryDetailsWho": "בוצע על ידי",
-  "changeHistoryEmpty": "אין שינויים עדיין.",
-  "changeHistoryFieldDates": "תאריכים",
-  "changeHistoryFieldGround": "מה הוא כולל",
-  "changeHistoryFieldLocation": "מיקום",
-  "changeHistoryFieldName": "שם",
-  "changeHistoryFieldOther": "הגדרות",
-  "changeHistoryFieldPace": "קצב",
-  "changeHistoryFieldShabbos": "לימוד בשבת",
-  "changeHistoryFieldTimeZone": "אזור זמן",
-  "changeHistoryFilterAll": "הכול",
-  "changeHistoryFilterLabel": "הצג",
-  "changeHistoryFilterLearning": "לימוד",
-  "changeHistoryFilterParent": "הורה",
-  "changeHistoryFilterTutor": "מורה",
-  "changeHistoryGoalChanged": "שינה את היעד",
-  "changeHistoryGoalCreated": "הגדיר יעד",
-  "changeHistoryGoalEnded": "הסיר את היעד",
-  "changeHistoryLearned": "למד {refs} · {source}",
-  "changeHistoryLockIgnored": "נשמר, לא נספר — נרשם בשבת/יום טוב",
-  "changeHistoryMainTrackChanged": "שינה את המסלול הראשי",
-  "changeHistoryMainTrackCreated": "הוסיף את המסלול הראשי",
-  "changeHistoryMainTrackEnded": "הסיר את המסלול הראשי",
-  "changeHistoryNoMatches": "אין שינויים התואמים לסינון זה.",
-  "changeHistoryNotAvailable": "היסטוריית השינויים פתוחה להורה בלבד.",
-  "changeHistoryNotified": "ההורה קיבל התראה",
-  "changeHistoryOrderChanged": "שינה את סדר הלימוד",
-  "changeHistoryProgramChanged": "שינה את התוכנית",
-  "changeHistoryRefList": "{first}, {second}",
-  "changeHistoryRefRange": "{first} – {last} ({count})",
-  "changeHistoryRemovedLearning": "הסיר {refs} · {source}",
-  "changeHistoryRemovedUnknown": "הסיר רישום לימוד קודם",
-  "changeHistoryReverted": "שינוי שבוטל: {summary}",
-  "changeHistoryRoleChild": "ילד",
-  "changeHistoryRoleParent": "הורה",
-  "changeHistoryRoleTutor": "מורה",
-  "changeHistoryScopeChanged": "שינה את היקף המסלול הראשי",
-  "changeHistorySelectPrompt": "בחרו שינוי כדי לראות את פרטיו.",
-  "changeHistorySettingsChanged": "שינה הגדרות לומד: {fields}",
-  "changeHistorySettingsSubtitle": "כל שינוי במסלולים, ביעדים ובלימוד, על ידי כל אחד",
-  "changeHistorySourceMain": "מסלול ראשי",
-  "changeHistorySourceSeveral": "כמה מסלולים",
-  "changeHistoryStagesChanged": "שינה את שלבי החזרה",
-  "changeHistoryStudyDaysChanged": "שינה את ימי הלימוד",
-  "changeHistorySubTrackChanged": "שינה את {name}: {fields}",
-  "changeHistorySubTrackCreated": "הוסיף את {name}",
-  "changeHistorySubTrackEnded": "סיים את {name}",
-  "changeHistorySubTrackRemoved": "הסיר את {name}",
-  "changeHistorySubTrackRenamed": "שינה שם של מסלול משנה ל־{name}",
-  "changeHistorySubTrackUnnamed": "מסלול משנה",
-  "changeHistoryTitle": "היסטוריית שינויים",
-  "changeHistoryUndo": "ביטול",
-  "changeHistoryUndone": "בוטל",
-  "changeHistoryUndoneBy": "בוטל על ידי {name} · {time}",
-  "changeHistoryUpdates": "{count, plural, =1{עדכון אחד} other{{count} עדכונים}}",
-  "changeHistoryVoidedBy": "הוסר על ידי {name} · {time}",
-  "changeHistoryVoidedSome": "{count} מתוך {total} הוסרו על ידי {name} · {time}",
   "pinChangedSuccessfully": "הקוד שונה בהצלחה",
   "pinFlowSetupSubtitle": "הגדירו קוד חדש בן 4 ספרות להפעלת מצב הורה.",
   "pinFlowSetupDeviceLocalBanner": "קודי ההורה נשמרים רק במכשיר זה. הגדירו קוד חדש בן 4 ספרות להפעלת מצב הורה. מכשירים אחרים שומרים קוד משלהם.",
@@ -1369,32 +1319,6 @@
   "signUpOfflineConfirmTitle": "אין אינטרנט — ליצור חשבון לא מקוון?",
   "signUpRetryConnection": "נסו להתחבר שוב",
   "offlineAccountLabel": "חשבון לא מקוון",
-  "ongoingSubTrackFormTitle": "תת-מסלול קבוע",
-  "ongoingSubTrackEditTitle": "עריכת תת-מסלול קבוע",
-  "ongoingSubTrackNameLabel": "שם תת-המסלול",
-  "ongoingSubTrackRateLabel": "{unit} בשבוע",
-  "ongoingSubTrackRateDecrease": "פחות {unit} בשבוע",
-  "ongoingSubTrackRateIncrease": "יותר {unit} בשבוע",
-  "ongoingSubTrackBeinHazmanimLabel": "לא לומדים בבין הזמנים",
-  "ongoingSubTrackBeinHazmanimHelper": "מוריד את מספר השבועות בשנה",
-  "ongoingSubTrackWeeksLabel": "שבועות בשנה",
-  "ongoingSubTrackWeeksPrefillHelper": "מולא לפי מתג בין הזמנים — אפשר לערוך",
-  "ongoingSubTrackStartLabel": "תאריך התחלה (רשות)",
-  "ongoingSubTrackEndLabel": "תאריך סיום (רשות)",
-  "ongoingSubTrackClearDate": "ניקוי התאריך",
-  "ongoingSubTrackShabbosLabel": "לומדים בשבת / יום טוב",
-  "ongoingSubTrackShabbosHelper": "לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת",
-  "ongoingSubTrackLimitLine": "אפשר עד 5 תתי-מסלולים קבועים. {count} בשימוש.",
-  "ongoingSubTrackLimitReached": "כבר יש 5 תתי-מסלולים קבועים.",
-  "ongoingSubTrackSave": "שמירת תת-המסלול",
-  "ongoingSubTrackNameRequired": "יש להזין שם",
-  "ongoingSubTrackPositiveNumber": "יש להזין מספר גדול מ-0",
-  "ongoingSubTrackEndBeforeStart": "תאריך הסיום לא יכול להיות לפני תאריך ההתחלה",
-  "ongoingSubTrackSaveFailed": "לא ניתן היה לשמור את תת-המסלול. מה שהוזן נשמר בטופס.",
-  "ongoingSubTrackStarts": "מתחיל ב-{date}",
-  "ongoingSubTrackRateSummary": "{rate} בשבוע × {weeks} שבועות",
-  "ongoingSubTrackTabletSummaryTitle": "תתי-המסלולים של הלומד",
-  "ongoingSubTrackTabletSummaryEmpty": "עדיין אין תתי-מסלולים",
   "signUpVerificationEmailSent": "אימייל אימות נשלח. אמת את האימייל שלך ולאחר מכן היכנס.",
   "signUpEmailAlreadyExists": "חשבון כבר קיים עם האימייל הזה.",
   "signUpDeviceEmailExists": "חשבון עם האימייל הזה כבר קיים במכשיר. היכנס במקום זאת.",
@@ -1644,10 +1568,6 @@
   "reportDistinctSemantics": "ייחודיים · {count} {unit}",
   "reportEntry": "דוח",
   "reportEntryTooltip": "פתיחת הדוח המצטבר",
-  "reportExportAction": "ייצוא PDF",
-  "reportExportBusy": "מכין PDF…",
-  "reportExportError": "לא הצלחנו לייצא את הדוח — נסו שוב.",
-  "reportExportSemantics": "ייצוא הדוח המצטבר כ-PDF ושיתופו",
   "reportGroupCollapseHint": "הסתרת השנים",
   "reportGroupExpandHint": "הצגת השנים",
   "reportGroupOngoing": "מתמשך",
@@ -1673,8 +1593,6 @@
   "reportPaceTitle": "קצב לפי מקור",
   "reportPaceTooEarly": "מוקדם מדי לדעת",
   "reportPaceTrailing": "{days} הימים האחרונים: {rate} / שבוע",
-  "reportPdfGeneratedOn": "הופק ב-{date}",
-  "reportPdfPageLabel": "עמוד {page} מתוך {total}",
   "reportSchoolYears": "שנות לימודים",
   "reportSourceBeforeTracking": "לפני המעקב",
   "reportSourceCounts": "{events} אירועי לימוד · {distinct} {unit}",
@@ -1890,130 +1808,6 @@
   "captureStateNotLearnt": "טרם נלמד",
   "captureStatePartial": "נלמד בחלקו",
   "captureTickUpToHere": "סימון עד כאן",
-  "subTrackRowAllRecorded": "כל התחום נרשם",
-  "subTrackRowNext": "הבא: {position}",
-  "@subTrackRowNext": {
-    "placeholders": {
-      "position": {
-        "type": "String"
-      }
-    }
-  },
-  "subTrackRowNoGround": "עדיין אין תחום",
-  "subTrackRowPlusOne": "+1",
-  "subTrackRowPlusOneSemantics": "רישום {unit} אחת עבור {name}",
-  "@subTrackRowPlusOneSemantics": {
-    "placeholders": {
-      "unit": {
-        "type": "String"
-      },
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "subTrackRowSemantics": "{name}, הבא {position}",
-  "@subTrackRowSemantics": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "position": {
-        "type": "String"
-      }
-    }
-  },
-  "subTrackRowsTitle": "לומד גם · {count, plural, =1{תת-מסלול אחד} other{{count} תתי-מסלולים}}",
-  "@subTrackRowsTitle": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "upToPickerAction": "עד…",
-  "upToPickerActionSemantics": "רישום עד, {name}",
-  "@upToPickerActionSemantics": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "upToPickerExhausted": "אין עוד {units} בתחום של {name}.",
-  "@upToPickerExhausted": {
-    "placeholders": {
-      "units": {
-        "type": "String"
-      },
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "upToPickerInstruction": "הקש על ה{unit} האחרונה שלמדת",
-  "@upToPickerInstruction": {
-    "placeholders": {
-      "unit": {
-        "type": "String"
-      }
-    }
-  },
-  "upToPickerRecord": "רישום {count} {unit}",
-  "@upToPickerRecord": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "unit": {
-        "type": "String"
-      }
-    }
-  },
-  "upToPickerRecorded": "נרשמו {count}",
-  "@upToPickerRecorded": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "upToPickerRowSemantics": "{label}, {status}",
-  "@upToPickerRowSemantics": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      },
-      "status": {
-        "type": "String"
-      }
-    }
-  },
-  "upToPickerRowTargetSemantics": "{label}, {status}, האחרון שנלמד",
-  "@upToPickerRowTargetSemantics": {
-    "placeholders": {
-      "label": {
-        "type": "String"
-      },
-      "status": {
-        "type": "String"
-      }
-    }
-  },
-  "upToPickerSetTargetAction": "סמן כאחרון שנלמד",
-  "upToPickerStatusAlreadyRecorded": "כבר נרשם",
-  "upToPickerStatusIncluded": "כלול",
-  "upToPickerStatusNextUp": "הבא בתור",
-  "upToPickerStatusNotSelected": "לא נבחר",
-  "upToPickerStatusSkipped": "דולג",
-  "upToPickerTitle": "{name} · עד…",
-  "@upToPickerTitle": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "markedComplete": "סומן כהושלם",
   "couldNotSave": "לא ניתן לשמור: {error}",
   "@couldNotSave": {
@@ -2056,7 +1850,7 @@
   "textReaderTextUnavailableTitle": "הטקסט אינו זמין",
   "textReaderCheckConnection": "בדקו את חיבור האינטרנט ונסו שוב.",
   "textReaderFailedToLoad": "טעינת הטקסט נכשלה",
-  "sacredTimeCardDescription": "האפליקציה מושתקת ונעולה בשבת וביום טוב, מ-10 דקות לפני הדלקת נרות ועד 10 דקות אחרי צאת הכוכבים לפי המיקום של הלומד.",
+  "sacredTimeCardDescription": "האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.",
   "sacredTimeShabbosModeLabel": "מצב שבת",
   "sacredTimeAlwaysOn": "תמיד פעיל",
   "sacredTimeNoLocation": "לא הוגדר מיקום",
@@ -2071,11 +1865,6 @@
   "sacredTimeLocationServicesOff": "שירותי המיקום כבויים במכשיר זה.",
   "sacredTimeLocationDetectErrorTimeout": "לא ניתן לזהות מיקום: הבקשה נמשכה זמן רב מדי. נסו שוב בשטח פתוח, או בחרו עיר במקום.",
   "sacredTimeLocationDetectErrorGeneric": "לא ניתן לזהות מיקום. נסו שוב, או בחרו עיר במקום.",
-  "sacredTimeLocationPromptAction": "הגדרת מיקום",
-  "sacredTimeLocationPromptMessage": "ללומד זה אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב{term} וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.",
-  "sacredTimeLocationPromptMessageNamed": "ל{name} אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב{term} וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.",
-  "sacredTimeSettingsNotSaved": "לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.",
-  "sacredTimeSettingsUnavailable": "ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.",
   "newPasswordLabel": "סיסמה חדשה",
   "confirmNewPasswordLabel": "אישור סיסמה חדשה",
   "passwordMinLengthError": "הסיסמה חייבת להכיל לפחות 6 תווים",
@@ -2085,34 +1874,6 @@
   "invalidPasswordError": "סיסמה שגויה. אנא נסו שוב.",
   "calendarOffsetToday": "היום",
   "dayNameShabbos": "שבת",
-  "erevBannerBeginsAt": "כניסת {term} בשעה {time} — רשמו מה שאפשר לפני כן.",
-  "@erevBannerBeginsAt": {
-    "placeholders": {
-      "term": {
-        "type": "String"
-      },
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "erevLockIgnoredSnackbar": "חלק מהלימוד נשמר אך לא נספר — הוא נרשם בשבת.",
-  "erevPlannedForDay": "מתוכנן ל{day}",
-  "@erevPlannedForDay": {
-    "placeholders": {
-      "day": {
-        "type": "String"
-      }
-    }
-  },
-  "erevPlannedTickSemantics": "סמנו את {item} כנלמד",
-  "@erevPlannedTickSemantics": {
-    "placeholders": {
-      "item": {
-        "type": "String"
-      }
-    }
-  },
   "statusPendingTapToAccept": "ממתין — הקישו לאישור",
   "calendarOffsetDay": "יום {offset}",
   "@calendarOffsetDay": {
@@ -3851,25 +3612,6 @@
       }
     }
   },
-  "parentPushTitle": "שינוי של המורה",
-  "parentPushBody": "{tutorName} שינה את {kind, select, deadline{תאריך היעד} pace{הקצב היומי} mainTrack{המסלול הראשי} mainTrackOrder{סדר הלימוד} mainTrackProgram{התוכנית} mainTrackStudyDays{ימי הלימוד} other{תוכנית הלימוד}} של {learnerName}",
-  "@parentPushBody": {
-    "placeholders": {
-      "tutorName": {
-        "type": "String"
-      },
-      "learnerName": {
-        "type": "String"
-      },
-      "kind": {
-        "type": "String"
-      }
-    }
-  },
-  "parentPushTutorFallback": "המורה",
-  "parentPushLearnerFallback": "ילדכם",
-  "parentPushChannelName": "שינויים של המורה",
-  "parentPushChannelDescription": "כשמורה משנה תאריך יעד או מסלול ראשי",
   "onboardingNamePrompt": "מה נקרא לך?",
   "onboardingLearningExperience": "חוויית למידה",
   "onboardingCalendarLabel": "לוח שנה",
@@ -4026,6 +3768,291 @@
   "backupImportConfirm": "שחזור גיבוי",
   "backupImportSuccess": "הגיבוי שוחזר בהצלחה.",
   "backupImportError": "לא ניתן לשחזר את הגיבוי. נסו שוב.",
+  "tutorCaptureKeptNotCounted": "נשמר, לא נספר — שבת / יום טוב כבר התחילו",
+  "tutorCaptureLearnerLocked": "שבת / יום טוב",
+  "tutorCaptureNoEditAccess": "ההורה של {learner} לא נתן לך הרשאת עריכה",
+  "@tutorCaptureNoEditAccess": {
+    "placeholders": {
+      "learner": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorCaptureOnlineRequired": "נדרש חיבור לאינטרנט",
+  "changeHistoryAlsoChanged": "{count, plural, =1{ועוד שינוי אחד בפעולה זו} other{ועוד {count} שינויים בפעולה זו}}",
+  "changeHistoryBeforeTracking": "לפני תחילת המעקב",
+  "changeHistoryDateCatchUp": "השלמה",
+  "changeHistoryDayToday": "היום",
+  "changeHistoryDayYesterday": "אתמול",
+  "changeHistoryDeadlineSet": "שינה את תאריך היעד ל־{date}",
+  "changeHistoryDetailsTitle": "פרטי השינוי",
+  "changeHistoryDetailsWhat": "מה השתנה",
+  "changeHistoryDetailsWhen": "מתי",
+  "changeHistoryDetailsWho": "בוצע על ידי",
+  "changeHistoryEmpty": "אין שינויים עדיין.",
+  "changeHistoryFieldDates": "תאריכים",
+  "changeHistoryFieldGround": "מה הוא כולל",
+  "changeHistoryFieldLocation": "מיקום",
+  "changeHistoryFieldName": "שם",
+  "changeHistoryFieldOther": "הגדרות",
+  "changeHistoryFieldPace": "קצב",
+  "changeHistoryFieldShabbos": "לימוד בשבת",
+  "changeHistoryFieldTimeZone": "אזור זמן",
+  "changeHistoryFilterAll": "הכול",
+  "changeHistoryFilterLabel": "הצג",
+  "changeHistoryFilterLearning": "לימוד",
+  "changeHistoryFilterParent": "הורה",
+  "changeHistoryFilterTutor": "מורה",
+  "changeHistoryGoalChanged": "שינה את היעד",
+  "changeHistoryGoalCreated": "הגדיר יעד",
+  "changeHistoryGoalEnded": "הסיר את היעד",
+  "changeHistoryLearned": "למד {refs} · {source}",
+  "changeHistoryLockIgnored": "נשמר, לא נספר — נרשם בשבת/יום טוב",
+  "changeHistoryMainTrackChanged": "שינה את המסלול הראשי",
+  "changeHistoryMainTrackCreated": "הוסיף את המסלול הראשי",
+  "changeHistoryMainTrackEnded": "הסיר את המסלול הראשי",
+  "changeHistoryNoMatches": "אין שינויים התואמים לסינון זה.",
+  "changeHistoryNotAvailable": "היסטוריית השינויים פתוחה להורה בלבד.",
+  "changeHistoryNotified": "ההורה קיבל התראה",
+  "changeHistoryOrderChanged": "שינה את סדר הלימוד",
+  "changeHistoryProgramChanged": "שינה את התוכנית",
+  "changeHistoryRefList": "{first}, {second}",
+  "changeHistoryRefRange": "{first} – {last} ({count})",
+  "changeHistoryRemovedLearning": "הסיר {refs} · {source}",
+  "changeHistoryRemovedUnknown": "הסיר רישום לימוד קודם",
+  "changeHistoryReverted": "שינוי שבוטל: {summary}",
+  "changeHistoryRoleChild": "ילד",
+  "changeHistoryRoleParent": "הורה",
+  "changeHistoryRoleTutor": "מורה",
+  "changeHistoryScopeChanged": "שינה את היקף המסלול הראשי",
+  "changeHistorySelectPrompt": "בחרו שינוי כדי לראות את פרטיו.",
+  "changeHistorySettingsChanged": "שינה הגדרות לומד: {fields}",
+  "changeHistorySettingsSubtitle": "כל שינוי במסלולים, ביעדים ובלימוד, על ידי כל אחד",
+  "changeHistorySourceMain": "מסלול ראשי",
+  "changeHistorySourceSeveral": "כמה מסלולים",
+  "changeHistoryStagesChanged": "שינה את שלבי החזרה",
+  "changeHistoryStudyDaysChanged": "שינה את ימי הלימוד",
+  "changeHistorySubTrackChanged": "שינה את {name}: {fields}",
+  "changeHistorySubTrackCreated": "הוסיף את {name}",
+  "changeHistorySubTrackEnded": "סיים את {name}",
+  "changeHistorySubTrackRemoved": "הסיר את {name}",
+  "changeHistorySubTrackRenamed": "שינה שם של מסלול משנה ל־{name}",
+  "changeHistorySubTrackUnnamed": "מסלול משנה",
+  "changeHistoryTitle": "היסטוריית שינויים",
+  "changeHistoryUndo": "ביטול",
+  "changeHistoryUndone": "בוטל",
+  "changeHistoryUndoneBy": "בוטל על ידי {name} · {time}",
+  "changeHistoryUpdates": "{count, plural, =1{עדכון אחד} other{{count} עדכונים}}",
+  "changeHistoryVoidedBy": "הוסר על ידי {name} · {time}",
+  "changeHistoryVoidedSome": "{count} מתוך {total} הוסרו על ידי {name} · {time}",
+  "ongoingSubTrackFormTitle": "תת-מסלול קבוע",
+  "ongoingSubTrackEditTitle": "עריכת תת-מסלול קבוע",
+  "ongoingSubTrackNameLabel": "שם תת-המסלול",
+  "ongoingSubTrackRateLabel": "{unit} בשבוע",
+  "ongoingSubTrackRateDecrease": "פחות {unit} בשבוע",
+  "ongoingSubTrackRateIncrease": "יותר {unit} בשבוע",
+  "ongoingSubTrackBeinHazmanimLabel": "לא לומדים בבין הזמנים",
+  "ongoingSubTrackBeinHazmanimHelper": "מוריד את מספר השבועות בשנה",
+  "ongoingSubTrackWeeksLabel": "שבועות בשנה",
+  "ongoingSubTrackWeeksPrefillHelper": "מולא לפי מתג בין הזמנים — אפשר לערוך",
+  "ongoingSubTrackStartLabel": "תאריך התחלה (רשות)",
+  "ongoingSubTrackEndLabel": "תאריך סיום (רשות)",
+  "ongoingSubTrackClearDate": "ניקוי התאריך",
+  "ongoingSubTrackShabbosLabel": "לומדים בשבת / יום טוב",
+  "ongoingSubTrackShabbosHelper": "לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת",
+  "ongoingSubTrackLimitLine": "אפשר עד 5 תתי-מסלולים קבועים. {count} בשימוש.",
+  "ongoingSubTrackLimitReached": "כבר יש 5 תתי-מסלולים קבועים.",
+  "ongoingSubTrackSave": "שמירת תת-המסלול",
+  "ongoingSubTrackNameRequired": "יש להזין שם",
+  "ongoingSubTrackPositiveNumber": "יש להזין מספר גדול מ-0",
+  "ongoingSubTrackEndBeforeStart": "תאריך הסיום לא יכול להיות לפני תאריך ההתחלה",
+  "ongoingSubTrackSaveFailed": "לא ניתן היה לשמור את תת-המסלול. מה שהוזן נשמר בטופס.",
+  "ongoingSubTrackStarts": "מתחיל ב-{date}",
+  "ongoingSubTrackRateSummary": "{rate} בשבוע × {weeks} שבועות",
+  "ongoingSubTrackTabletSummaryTitle": "תתי-המסלולים של הלומד",
+  "ongoingSubTrackTabletSummaryEmpty": "עדיין אין תתי-מסלולים",
+  "reportExportAction": "ייצוא PDF",
+  "reportExportBusy": "מכין PDF…",
+  "reportExportError": "לא הצלחנו לייצא את הדוח — נסו שוב.",
+  "reportExportSemantics": "ייצוא הדוח המצטבר כ-PDF ושיתופו",
+  "reportPdfGeneratedOn": "הופק ב-{date}",
+  "reportPdfPageLabel": "עמוד {page} מתוך {total}",
+  "subTrackRowAllRecorded": "כל התחום נרשם",
+  "subTrackRowNext": "הבא: {position}",
+  "@subTrackRowNext": {
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowNoGround": "עדיין אין תחום",
+  "subTrackRowPlusOne": "+1",
+  "subTrackRowPlusOneSemantics": "רישום {unit} אחת עבור {name}",
+  "@subTrackRowPlusOneSemantics": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowSemantics": "{name}, הבא {position}",
+  "@subTrackRowSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "subTrackRowsTitle": "לומד גם · {count, plural, =1{תת-מסלול אחד} other{{count} תתי-מסלולים}}",
+  "@subTrackRowsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToPickerAction": "עד…",
+  "upToPickerActionSemantics": "רישום עד, {name}",
+  "@upToPickerActionSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerExhausted": "אין עוד {units} בתחום של {name}.",
+  "@upToPickerExhausted": {
+    "placeholders": {
+      "units": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerInstruction": "הקש על ה{unit} האחרונה שלמדת",
+  "@upToPickerInstruction": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRecord": "רישום {count} {unit}",
+  "@upToPickerRecord": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRecorded": "נרשמו {count}",
+  "@upToPickerRecorded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "upToPickerRowSemantics": "{label}, {status}",
+  "@upToPickerRowSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerRowTargetSemantics": "{label}, {status}, האחרון שנלמד",
+  "@upToPickerRowTargetSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "upToPickerSetTargetAction": "סמן כאחרון שנלמד",
+  "upToPickerStatusAlreadyRecorded": "כבר נרשם",
+  "upToPickerStatusIncluded": "כלול",
+  "upToPickerStatusNextUp": "הבא בתור",
+  "upToPickerStatusNotSelected": "לא נבחר",
+  "upToPickerStatusSkipped": "דולג",
+  "upToPickerTitle": "{name} · עד…",
+  "@upToPickerTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sacredTimeLocationPromptAction": "הגדרת מיקום",
+  "sacredTimeLocationPromptMessage": "ללומד זה אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב{term} וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.",
+  "sacredTimeLocationPromptMessageNamed": "ל{name} אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב{term} וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.",
+  "sacredTimeSettingsNotSaved": "לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.",
+  "sacredTimeSettingsUnavailable": "ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.",
+  "erevBannerBeginsAt": "כניסת {term} בשעה {time} — רשמו מה שאפשר לפני כן.",
+  "@erevBannerBeginsAt": {
+    "placeholders": {
+      "term": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "erevLockIgnoredSnackbar": "חלק מהלימוד נשמר אך לא נספר — הוא נרשם בשבת.",
+  "erevPlannedForDay": "מתוכנן ל{day}",
+  "@erevPlannedForDay": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "erevPlannedTickSemantics": "סמנו את {item} כנלמד",
+  "@erevPlannedTickSemantics": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "parentPushTitle": "שינוי של המורה",
+  "parentPushBody": "{tutorName} שינה את {kind, select, deadline{תאריך היעד} pace{הקצב היומי} mainTrack{המסלול הראשי} mainTrackOrder{סדר הלימוד} mainTrackProgram{התוכנית} mainTrackStudyDays{ימי הלימוד} other{תוכנית הלימוד}} של {learnerName}",
+  "@parentPushBody": {
+    "placeholders": {
+      "tutorName": {
+        "type": "String"
+      },
+      "learnerName": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "parentPushTutorFallback": "המורה",
+  "parentPushLearnerFallback": "ילדכם",
+  "parentPushChannelName": "שינויים של המורה",
+  "parentPushChannelDescription": "כשמורה משנה תאריך יעד או מסלול ראשי",
   "backupImportNotSaved": "לא נשמר — חלק מהגיבוי לא שוחזר. לנסות שוב?",
   "subTrackDetailNoDeadlineNote": "ללא תאריך יעד, תת-מסלול לא יכול להוריד את היעד היומי.",
   "subTrackDetailNoDeadlineLink": "הגדרת תאריך יעד",

@@ -50,7 +50,7 @@ void main() {
       final c = ProviderContainer();
       addTearDown(c.dispose);
       expect(c.read(subTrackFormLauncherProvider), isNotNull);
-      final edit = c.read(subTrackDetailMenuActionsProvider).single;
+      final edit = c.read(subTrackDetailMenuActionsProvider).first;
       expect(edit.id, 'edit');
       expect(edit.visibleFor(engineDetail(_schoolYear(school))), isTrue);
       expect(edit.visibleFor(engineDetail(school)), isFalse, reason: 'ongoing');
@@ -69,7 +69,7 @@ void main() {
         ],
       );
       addTearDown(c.dispose);
-      final edit = c.read(subTrackDetailMenuActionsProvider).single;
+      final edit = c.read(subTrackDetailMenuActionsProvider).first;
       expect(edit.id, 'edit');
       expect(edit.visibleFor(engineDetail(school)), isTrue);
       for (final role in [SubTrackDetailRole.child, SubTrackDetailRole.tutor]) {
@@ -84,7 +84,33 @@ void main() {
         overrides: [subTrackFormLauncherProvider.overrideWithValue(null)],
       );
       addTearDown(c.dispose);
-      expect(c.read(subTrackDetailMenuActionsProvider), isEmpty);
+      expect(
+        c.read(subTrackDetailMenuActionsProvider).map((a) => a.id),
+        isNot(contains('edit')),
+      );
+    });
+
+    test('DNI-499 registers End and Delete after Edit, for the parent on a '
+        'sub-track that is not ended (tombstoned or past its window)', () {
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      final actions = c.read(subTrackDetailMenuActionsProvider);
+      expect([for (final a in actions) a.id], ['edit', 'end', 'delete']);
+      for (final action in actions.skip(1)) {
+        expect(action.visibleFor(engineDetail(school)), isTrue);
+        for (final role in [
+          SubTrackDetailRole.child,
+          SubTrackDetailRole.tutor,
+        ]) {
+          expect(
+            action.visibleFor(engineDetail(school, role: role)),
+            isFalse,
+            reason: '${action.id} for ${role.name}',
+          );
+        }
+        final ended = detailSubTrack(11, 'Old', const [peah], ended: true);
+        expect(action.visibleFor(engineDetail(ended)), isFalse);
+      }
     });
 
     testWidgets('the default launcher pushes the school-year form for that '

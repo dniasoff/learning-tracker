@@ -26,11 +26,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
-import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_lifecycle_sources.dart';
+import 'package:learning_tracker/features/sub_tracks/data/repositories/sub_track_sources.dart';
 
 /// The explicit lifecycle write that was queued.
 enum SubTrackLifecycleWrite {
@@ -66,6 +67,7 @@ final class SubTrackLifecycleSync {
     required this.name,
     this.yearLabel,
     this.status = SubTrackLifecycleSyncStatus.waiting,
+    this.scope,
   });
 
   /// The write's change-log entry id (its pending-failure id).
@@ -83,15 +85,29 @@ final class SubTrackLifecycleSync {
   /// Where it stands.
   final SubTrackLifecycleSyncStatus status;
 
+  /// The learner the write was issued for, stamped when it is tracked
+  /// ([SubTrackLifecycleSyncNotifier.track]); its retry and removal are
+  /// routed to that learner's store and commands.
+  final LearnerScope? scope;
+
   /// This record at [status].
   SubTrackLifecycleSync withStatus(SubTrackLifecycleSyncStatus status) =>
-      SubTrackLifecycleSync(
-        changeId: changeId,
-        write: write,
-        name: name,
-        yearLabel: yearLabel,
-        status: status,
-      );
+      _copy(status: status);
+
+  /// This record, issued for [scope].
+  SubTrackLifecycleSync forScope(LearnerScope scope) => _copy(scope: scope);
+
+  SubTrackLifecycleSync _copy({
+    SubTrackLifecycleSyncStatus? status,
+    LearnerScope? scope,
+  }) => SubTrackLifecycleSync(
+    changeId: changeId,
+    write: write,
+    name: name,
+    yearLabel: yearLabel,
+    status: status ?? this.status,
+    scope: scope ?? this.scope,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -100,16 +116,18 @@ final class SubTrackLifecycleSync {
       other.write == write &&
       other.name == name &&
       other.yearLabel == yearLabel &&
-      other.status == status;
+      other.status == status &&
+      other.scope == scope;
 
   @override
-  int get hashCode => Object.hash(changeId, write, name, yearLabel, status);
+  int get hashCode =>
+      Object.hash(changeId, write, name, yearLabel, status, scope);
 }
 
 /// One learner's queued lifecycle writes for the session, by change id.
 ///
 /// Held per learner scope ([subTrackLifecycleSyncStoreProvider]) rather
-/// than in the notifier, which Riverpod recreates whenever it rebuilds: a
+/// than in the notifier, which Riverpod rebuilds with its inputs: a
 /// rebuild of `learningCommandsProvider` (a parent-PIN, profile or clock
 /// change) or switching learners and back keeps every pending End, Delete
 /// and *Add next year*, and a settle in flight still lands. The commands'
@@ -210,6 +228,69 @@ final subTrackLifecycleSyncStoreProvider =
       return store;
     });
 
+/// Reads a provider (`WidgetRef.read` or `Ref.read`, torn off).
+typedef SubTrackLifecycleReader = T Function<T>(ProviderListenable<T> provider);
+
+/// The learner a lifecycle write is issued for, paired with the commands
+/// bound to that learner.
+///
+/// Captured once, before the command runs
+/// ([resolveSubTrackLifecycleOrigin]), and carried through the write: the
+/// queued record lands in [scope]'s [SubTrackLifecycleSyncStore] and
+/// settles through [commands], even when the active learner changes while
+/// the command awaits its result.
+@immutable
+final class SubTrackLifecycleOrigin {
+  /// Pairs [scope] with its [commands].
+  const SubTrackLifecycleOrigin({required this.scope, required this.commands});
+
+  /// The learner the write is for.
+  final LearnerScope scope;
+
+  /// The commands bound to [scope] that run the write.
+  final LearningCommands commands;
+}
+
+/// The active learner and the commands bound to it, or null while either
+/// is loading, failed, or absent (no learner, or a tutored session).
+///
+/// `learningCommandsProvider` watches the active scope, so when both are
+/// settled in the same synchronous read the commands were built for that
+/// scope; while a learner switch is in flight one of them is loading.
+SubTrackLifecycleOrigin? settledSubTrackLifecycleOrigin(
+  SubTrackLifecycleReader read,
+) {
+  final scope = read<AsyncValue<LearnerScope?>>(activeLearnerScopeProvider);
+  if (scope.isLoading || scope.hasError) return null;
+  final commands = read<AsyncValue<LearningCommands?>>(
+    learningCommandsProvider,
+  );
+  if (commands.isLoading || commands.hasError) return null;
+  final s = scope.value;
+  final c = commands.value;
+  if (s == null || c == null) return null;
+  return SubTrackLifecycleOrigin(scope: s, commands: c);
+}
+
+/// Resolves the [SubTrackLifecycleOrigin] of a lifecycle write about to be
+/// issued: waits for the active learner and its commands, then pairs them
+/// only when they agree ([settledSubTrackLifecycleOrigin]). A learner
+/// switch racing the wait is retried a few times; null when no consistent
+/// pair settles (the caller reports the write as not run).
+Future<SubTrackLifecycleOrigin?> resolveSubTrackLifecycleOrigin(
+  SubTrackLifecycleReader read,
+) async {
+  for (var attempt = 0; attempt < 3; attempt++) {
+    final scope = await read(activeLearnerScopeProvider.future);
+    if (scope == null) return null;
+    final commands = await read(learningCommandsProvider.future);
+    if (commands == null) return null;
+    final origin = settledSubTrackLifecycleOrigin(read);
+    if (origin != null) return origin;
+  }
+  return null;
+}
+
 /// The active learner's queued lifecycle writes, by change id (empty while
 /// no learner is resolved). Switching learners shows the other learner's
 /// writes; switching back restores these.
@@ -221,12 +302,18 @@ final subTrackLifecycleSyncProvider =
 
 /// See [subTrackLifecycleSyncProvider]. A view over the active learner's
 /// [SubTrackLifecycleSyncStore]; it holds no state of its own.
+///
+/// Every write is routed by the learner it was issued for, never by
+/// whichever learner is active when the call happens: [track] by the
+/// write's [SubTrackLifecycleOrigin], [retry] and [remove] by the scope
+/// stamped on the record ([SubTrackLifecycleSync.scope]).
 class SubTrackLifecycleSyncNotifier
     extends Notifier<Map<String, SubTrackLifecycleSync>> {
   @override
   Map<String, SubTrackLifecycleSync> build() {
-    final store = _activeStore(watch: true);
-    if (store == null) return const {};
+    final scope = ref.watch(activeLearnerScopeProvider).value;
+    if (scope == null) return const {};
+    final store = ref.watch(subTrackLifecycleSyncStoreProvider(scope));
     void publish() {
       if (ref.mounted) state = store.writes;
     }
@@ -236,31 +323,89 @@ class SubTrackLifecycleSyncNotifier
     return store.writes;
   }
 
-  /// Keeps [write], queued by [commands], pending until the server settles
-  /// it.
-  void track(SubTrackLifecycleSync write, LearningCommands commands) =>
-      _activeStore()?.track(write, commands);
+  /// Keeps [write], queued through [origin]'s commands, pending in
+  /// [origin]'s learner's store until the server settles it — whichever
+  /// learner is active by the time the queued result arrives.
+  void track(SubTrackLifecycleSync write, SubTrackLifecycleOrigin origin) => ref
+      .read(subTrackLifecycleSyncStoreProvider(origin.scope))
+      .track(write.forScope(origin.scope), origin.commands);
 
-  /// Re-sends the refused write [changeId] unchanged through the current
-  /// commands.
-  Future<void> retry(String changeId) async {
-    final store = _activeStore();
-    final commands = ref.read(learningCommandsProvider).value;
-    if (store == null || commands == null) return;
-    await store.retry(changeId, commands);
+  /// Re-sends the refused [write], unchanged, through the current commands
+  /// of the learner it was issued for. Does nothing while that learner is
+  /// not the active one (its commands are not available): the write stays
+  /// not saved, with its retry, in that learner's store.
+  Future<void> retry(SubTrackLifecycleSync write) async {
+    final scope = write.scope;
+    if (scope == null || !ref.mounted) return;
+    final store = ref.read(subTrackLifecycleSyncStoreProvider(scope));
+    var origin = settledSubTrackLifecycleOrigin(ref.read);
+    if (origin == null) {
+      // A commands rebuild (parent PIN, profile, clock) or learner switch
+      // in flight.
+      try {
+        await ref.read(learningCommandsProvider.future);
+      } on Object {
+        return;
+      }
+      if (!ref.mounted) return;
+      origin = settledSubTrackLifecycleOrigin(ref.read);
+    }
+    if (origin == null || origin.scope != scope) return;
+    await store.retry(write.changeId, origin.commands);
   }
 
-  /// Forgets [changeId]: its confirmation was shown, or the parent
-  /// dismissed a write that was not saved.
-  void remove(String changeId) => _activeStore()?.remove(changeId);
-
-  SubTrackLifecycleSyncStore? _activeStore({bool watch = false}) {
-    final scope = watch
-        ? ref.watch(activeLearnerScopeProvider).value
-        : ref.read(activeLearnerScopeProvider).value;
-    if (scope == null) return null;
-    return watch
-        ? ref.watch(subTrackLifecycleSyncStoreProvider(scope))
-        : ref.read(subTrackLifecycleSyncStoreProvider(scope));
+  /// Forgets [write] in the store of the learner it was issued for: its
+  /// confirmation was shown, or the parent dismissed a write that was not
+  /// saved.
+  void remove(SubTrackLifecycleSync write) {
+    final scope = write.scope;
+    if (scope == null || !ref.mounted) return;
+    ref.read(subTrackLifecycleSyncStoreProvider(scope)).remove(write.changeId);
   }
+}
+
+/// Saves the *Add next year* [draft] (AC-1) of school-year sub-track
+/// [sourceId] as a new sub-track through `createSubTrack(nextYearOf:
+/// sourceId)` of the active learner's commands,
+/// captured before the save ([resolveSubTrackLifecycleOrigin]) so a queued
+/// result tracks under this learner even if the parent switches learners
+/// while it awaits the server. A queued result (AD-54) is handed to
+/// [subTrackLifecycleSyncProvider] as [yearLabel]'s pending *Add next
+/// year*. Null when no learner or commands are available; nothing is then
+/// written.
+///
+/// AD-45 limits and the source itself are re-checked by the shared command
+/// against the latest complete sub-track read at save time, not the
+/// render-time snapshot: a year another device took after render is
+/// refused, and so is a source another device ended or deleted after the
+/// form opened (`rejected(targetNotFound)`; nothing is written). Two creates made at
+/// once while both devices are offline can both sync; AD-45 has the engine
+/// tolerate that excess. Server-side enforcement for owner batches is
+/// DNI-492's follow-up (learning-tracker-fyh.136; accepted risk fyh.127).
+Future<CaptureResult?> saveNextYearSubTrack(
+  SubTrackLifecycleReader read,
+  SubTrackDraft draft, {
+  required String sourceId,
+  required String yearLabel,
+}) async {
+  final origin = await resolveSubTrackLifecycleOrigin(read);
+  if (origin == null) return null;
+  final result = await origin.commands.createSubTrack(
+    draft,
+    nextYearOf: sourceId,
+  );
+  if (result is CaptureSuccess &&
+      result.queued &&
+      result.changeIds.isNotEmpty) {
+    read(subTrackLifecycleSyncProvider.notifier).track(
+      SubTrackLifecycleSync(
+        changeId: result.changeIds.first,
+        write: SubTrackLifecycleWrite.addNextYear,
+        name: draft.name,
+        yearLabel: yearLabel,
+      ),
+      origin,
+    );
+  }
+  return result;
 }

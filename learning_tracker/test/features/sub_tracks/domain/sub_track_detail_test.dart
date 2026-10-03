@@ -15,6 +15,7 @@ SubTrackDetail _detail({
   SubTrack? track,
   int? capacity,
   bool noDeadline = true,
+  bool holdsGround = true,
 }) {
   final t = track ?? detailSubTrack(10, 'School', const [peah]);
   return SubTrackDetail(
@@ -23,9 +24,9 @@ SubTrackDetail _detail({
     noDeadline: noDeadline,
     state: SubTrackState(
       subTrackId: t.id,
-      holdsGround: true,
-      inForecast: true,
-      onHome: true,
+      holdsGround: holdsGround,
+      inForecast: holdsGround,
+      onHome: holdsGround,
       position: 'Mishnah Peah 1:2',
       ticked: 1,
       remainingPath: const ['Mishnah Peah 1:2'],
@@ -66,6 +67,20 @@ void main() {
     expect(_detail(role: SubTrackDetailRole.tutor).canEdit, isFalse);
     final ended = detailSubTrack(11, 'Old', const [peah], ended: true);
     expect(_detail(track: ended).canEdit, isFalse);
+  });
+
+  test('DNI-499 AC-5: a sub-track whose window passed (no tombstone) is '
+      'ended and read-only for the parent too', () {
+    final elapsed = detailSubTrack(12, 'Last year', const [
+      peah,
+    ], windowEnd: '2026-07-31');
+    final d = _detail(track: elapsed, holdsGround: false);
+    expect(elapsed.isEnded, isFalse, reason: 'no ended_at is ever written');
+    expect(d.isEnded, isTrue);
+    expect(d.canEdit, isFalse);
+    expect(_detail().isEnded, isFalse);
+    final tombstoned = detailSubTrack(11, 'Old', const [peah], ended: true);
+    expect(_detail(track: tombstoned).isEnded, isTrue);
   });
 
   test('the shortfall is never shown to the child', () {

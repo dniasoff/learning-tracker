@@ -155,6 +155,9 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
             children: [
               // DNI-495: reports a sub-track change refused at sync.
               const SubTrackSyncRejectionListener(),
+              // DNI-499 (AD-54): End, Delete and Add next year still waiting
+              // for the server, or refused with a retry.
+              const SubTrackLifecycleSyncPanel(),
               _buildActiveHeader(context, activeTracks.length),
               for (final track in activeTracks) ...[
                 Padding(

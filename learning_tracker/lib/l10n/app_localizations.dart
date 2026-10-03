@@ -1637,6 +1637,168 @@ abstract class AppLocalizations {
   /// **'ACTIVE TRACKS'**
   String get statActiveTracks;
 
+  /// Outlined pill on a school-year sub-track detail that rolls it into the next academic year (UX-DR-28). yearLabel is e.g. 2027–28.
+  ///
+  /// In en, this message translates to:
+  /// **'Add next year ({yearLabel})'**
+  String subTrackLifecycleAddNextYear(String yearLabel);
+
+  /// Why Add next year is disabled: the next academic year is used (UX-DR-36). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{yearLabel} already has a school-year sub-track'**
+  String subTrackLifecycleAddNextYearUsed(String yearLabel);
+
+  /// Why Add next year is disabled: the next academic year is past the academic-year picker range. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{yearLabel} is past the years you can plan'**
+  String subTrackLifecycleAddNextYearOutOfRange(String yearLabel);
+
+  /// Overflow menu action that ends a sub-track (AC-4). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'End sub-track now'**
+  String get subTrackLifecycleEndAction;
+
+  /// Overflow menu action that deletes a sub-track (UX-DR-29).
+  ///
+  /// In en, this message translates to:
+  /// **'Delete track'**
+  String get subTrackLifecycleDeleteAction;
+
+  /// Title of the delete sub-track confirmation. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String subTrackLifecycleDeleteTitle(String name);
+
+  /// Message of the delete sub-track confirmation (UX-DR-81, FR-8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.'**
+  String get subTrackLifecycleDeleteBody;
+
+  /// Destructive confirm button of the delete sub-track confirmation. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get subTrackLifecycleDeleteConfirm;
+
+  /// Title of the end sub-track confirmation. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'End {name} now?'**
+  String subTrackLifecycleEndTitle(String name);
+
+  /// Message of the end sub-track confirmation (AC-4). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Its unfinished ground goes back to home learning. Everything already learnt stays in the lifetime record.'**
+  String get subTrackLifecycleEndBody;
+
+  /// Confirm button of the end sub-track confirmation. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'End sub-track'**
+  String get subTrackLifecycleEndConfirm;
+
+  /// Snackbar after a sub-track is deleted. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} deleted'**
+  String subTrackLifecycleDeleted(String name);
+
+  /// Snackbar after a sub-track is ended. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} ended'**
+  String subTrackLifecycleEnded(String name);
+
+  /// Snackbar when ending or deleting a sub-track fails. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the change. Try again.'**
+  String get subTrackLifecycleActionFailed;
+
+  /// Collapsed group of ended sub-tracks on Manage tracks (UX-DR-44, UX-DR-70). Never say Completed.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended sub-tracks ({count})'**
+  String subTrackLifecycleEndedGroup(int count);
+
+  /// Muted subtitle of an ended sub-track row, e.g. Ended Jul 2026. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended {date}'**
+  String subTrackLifecycleEndedOn(String date);
+
+  /// Screen-reader label of an ended sub-track row. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, ended'**
+  String subTrackLifecycleEndedRowLabel(String name);
+
+  /// Note on the read-only detail of an ended sub-track (UX-DR-82). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'This sub-track has ended. It can\'t be changed.'**
+  String get subTrackLifecycleReadOnlyNote;
+
+  /// Title of the prefilled Add next year form. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Next school year'**
+  String get subTrackLifecycleNextYearTitle;
+
+  /// Snackbar after Add next year saves. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} added for {yearLabel}'**
+  String subTrackLifecycleNextYearSaved(String name, String yearLabel);
+
+  /// Snackbar when Add next year is saved after its source sub-track was ended or deleted (e.g. on another device). Nothing was saved. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} was ended or deleted, so next year wasn\'t added.'**
+  String subTrackLifecycleNextYearSourceEnded(String name);
+
+  /// Snackbar when an End, Delete or Add next year is queued offline and not yet accepted by the server (AD-54). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this device. It will sync when you\'re back online.'**
+  String get subTrackLifecycleQueued;
+
+  /// Sync panel: a queued Add next year, used inside subTrackLifecycleSyncWaiting / subTrackLifecycleSyncNotSaved. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding {name} for {yearLabel}'**
+  String subTrackLifecycleSyncAddNextYear(String name, String yearLabel);
+
+  /// Sync panel: a queued Delete track. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting {name}'**
+  String subTrackLifecycleSyncDelete(String name);
+
+  /// Sync panel: a queued End sub-track now. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Ending {name}'**
+  String subTrackLifecycleSyncEnd(String name);
+
+  /// Sync panel row: the server refused the queued action for good; Retry re-sends it (AD-54 Recovery). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{action}: not saved'**
+  String subTrackLifecycleSyncNotSaved(String action);
+
+  /// Sync panel row: the action is applied on this device and not yet accepted by the server. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{action}: waiting to sync'**
+  String subTrackLifecycleSyncWaiting(String action);
+
   /// No description provided for @progressChartsTile.
   ///
   /// In en, this message translates to:
@@ -2681,30 +2843,6 @@ abstract class AppLocalizations {
   /// **'Tutors cannot mark live completions'**
   String get tutorCannotMarkLiveCompletion;
 
-  /// DNI-486 AC-7: a tutor capture the server stamped inside the learner's lock window. The event is stored but does not count.
-  ///
-  /// In en, this message translates to:
-  /// **'Kept, not counted — Shabbos / Yom Tov had started'**
-  String get tutorCaptureKeptNotCounted;
-
-  /// DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data.
-  ///
-  /// In en, this message translates to:
-  /// **'Shabbos / Yom Tov'**
-  String get tutorCaptureLearnerLocked;
-
-  /// DNI-486 AC-4: note under a tutor's disabled write controls when the grant's can_edit_learning is false.
-  ///
-  /// In en, this message translates to:
-  /// **'{learner}\'s parent hasn\'t given you editing access'**
-  String tutorCaptureNoEditAccess(String learner);
-
-  /// DNI-486 AC-5: tutor writes are online-only (AD-53); shown on disabled tutor write controls while offline.
-  ///
-  /// In en, this message translates to:
-  /// **'Online required'**
-  String get tutorCaptureOnlineRequired;
-
   /// No description provided for @tutorWriteForbiddenTitle.
   ///
   /// In en, this message translates to:
@@ -3382,407 +3520,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change Parent PIN'**
   String get changeParentPin;
-
-  /// No description provided for @changeHistoryAlsoChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{+1 more change in this action} other{+{count} more changes in this action}}'**
-  String changeHistoryAlsoChanged(int count);
-
-  /// No description provided for @changeHistoryBeforeTracking.
-  ///
-  /// In en, this message translates to:
-  /// **'Before tracking'**
-  String get changeHistoryBeforeTracking;
-
-  /// No description provided for @changeHistoryDateCatchUp.
-  ///
-  /// In en, this message translates to:
-  /// **'catch-up'**
-  String get changeHistoryDateCatchUp;
-
-  /// No description provided for @changeHistoryDayToday.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get changeHistoryDayToday;
-
-  /// No description provided for @changeHistoryDayYesterday.
-  ///
-  /// In en, this message translates to:
-  /// **'Yesterday'**
-  String get changeHistoryDayYesterday;
-
-  /// No description provided for @changeHistoryDeadlineSet.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed the deadline to {date}'**
-  String changeHistoryDeadlineSet(String date);
-
-  /// No description provided for @changeHistoryDetailsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Change details'**
-  String get changeHistoryDetailsTitle;
-
-  /// No description provided for @changeHistoryDetailsWhat.
-  ///
-  /// In en, this message translates to:
-  /// **'What changed'**
-  String get changeHistoryDetailsWhat;
-
-  /// No description provided for @changeHistoryDetailsWhen.
-  ///
-  /// In en, this message translates to:
-  /// **'When'**
-  String get changeHistoryDetailsWhen;
-
-  /// No description provided for @changeHistoryDetailsWho.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed by'**
-  String get changeHistoryDetailsWho;
-
-  /// No description provided for @changeHistoryEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No changes yet.'**
-  String get changeHistoryEmpty;
-
-  /// No description provided for @changeHistoryFieldDates.
-  ///
-  /// In en, this message translates to:
-  /// **'dates'**
-  String get changeHistoryFieldDates;
-
-  /// No description provided for @changeHistoryFieldGround.
-  ///
-  /// In en, this message translates to:
-  /// **'what it covers'**
-  String get changeHistoryFieldGround;
-
-  /// No description provided for @changeHistoryFieldLocation.
-  ///
-  /// In en, this message translates to:
-  /// **'location'**
-  String get changeHistoryFieldLocation;
-
-  /// No description provided for @changeHistoryFieldName.
-  ///
-  /// In en, this message translates to:
-  /// **'name'**
-  String get changeHistoryFieldName;
-
-  /// No description provided for @changeHistoryFieldOther.
-  ///
-  /// In en, this message translates to:
-  /// **'settings'**
-  String get changeHistoryFieldOther;
-
-  /// No description provided for @changeHistoryFieldPace.
-  ///
-  /// In en, this message translates to:
-  /// **'pace'**
-  String get changeHistoryFieldPace;
-
-  /// No description provided for @changeHistoryFieldShabbos.
-  ///
-  /// In en, this message translates to:
-  /// **'Shabbos learning'**
-  String get changeHistoryFieldShabbos;
-
-  /// No description provided for @changeHistoryFieldTimeZone.
-  ///
-  /// In en, this message translates to:
-  /// **'time zone'**
-  String get changeHistoryFieldTimeZone;
-
-  /// No description provided for @changeHistoryFilterAll.
-  ///
-  /// In en, this message translates to:
-  /// **'All'**
-  String get changeHistoryFilterAll;
-
-  /// No description provided for @changeHistoryFilterLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Show'**
-  String get changeHistoryFilterLabel;
-
-  /// No description provided for @changeHistoryFilterLearning.
-  ///
-  /// In en, this message translates to:
-  /// **'Learning'**
-  String get changeHistoryFilterLearning;
-
-  /// No description provided for @changeHistoryFilterParent.
-  ///
-  /// In en, this message translates to:
-  /// **'Parent'**
-  String get changeHistoryFilterParent;
-
-  /// No description provided for @changeHistoryFilterTutor.
-  ///
-  /// In en, this message translates to:
-  /// **'Tutor'**
-  String get changeHistoryFilterTutor;
-
-  /// No description provided for @changeHistoryGoalChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed the goal'**
-  String get changeHistoryGoalChanged;
-
-  /// No description provided for @changeHistoryGoalCreated.
-  ///
-  /// In en, this message translates to:
-  /// **'Set a goal'**
-  String get changeHistoryGoalCreated;
-
-  /// No description provided for @changeHistoryGoalEnded.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed the goal'**
-  String get changeHistoryGoalEnded;
-
-  /// No description provided for @changeHistoryLearned.
-  ///
-  /// In en, this message translates to:
-  /// **'Learned {refs} · {source}'**
-  String changeHistoryLearned(String refs, String source);
-
-  /// No description provided for @changeHistoryLockIgnored.
-  ///
-  /// In en, this message translates to:
-  /// **'kept, not counted — recorded during Shabbos/Yom Tov'**
-  String get changeHistoryLockIgnored;
-
-  /// No description provided for @changeHistoryMainTrackChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed the main track'**
-  String get changeHistoryMainTrackChanged;
-
-  /// No description provided for @changeHistoryMainTrackCreated.
-  ///
-  /// In en, this message translates to:
-  /// **'Added the main track'**
-  String get changeHistoryMainTrackCreated;
-
-  /// No description provided for @changeHistoryMainTrackEnded.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed the main track'**
-  String get changeHistoryMainTrackEnded;
-
-  /// No description provided for @changeHistoryNoMatches.
-  ///
-  /// In en, this message translates to:
-  /// **'No changes match this filter.'**
-  String get changeHistoryNoMatches;
-
-  /// No description provided for @changeHistoryNotAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Change history is open to the parent only.'**
-  String get changeHistoryNotAvailable;
-
-  /// No description provided for @changeHistoryNotified.
-  ///
-  /// In en, this message translates to:
-  /// **'Parent notified'**
-  String get changeHistoryNotified;
-
-  /// No description provided for @changeHistoryOrderChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed the learning order'**
-  String get changeHistoryOrderChanged;
-
-  /// No description provided for @changeHistoryProgramChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed the program'**
-  String get changeHistoryProgramChanged;
-
-  /// No description provided for @changeHistoryRefList.
-  ///
-  /// In en, this message translates to:
-  /// **'{first}, {second}'**
-  String changeHistoryRefList(String first, String second);
-
-  /// No description provided for @changeHistoryRefRange.
-  ///
-  /// In en, this message translates to:
-  /// **'{first} – {last} ({count})'**
-  String changeHistoryRefRange(String first, String last, int count);
-
-  /// No description provided for @changeHistoryRemovedLearning.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed {refs} · {source}'**
-  String changeHistoryRemovedLearning(String refs, String source);
-
-  /// No description provided for @changeHistoryRemovedUnknown.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed an earlier learning record'**
-  String get changeHistoryRemovedUnknown;
-
-  /// No description provided for @changeHistoryReverted.
-  ///
-  /// In en, this message translates to:
-  /// **'Reverted change: {summary}'**
-  String changeHistoryReverted(String summary);
-
-  /// No description provided for @changeHistoryRoleChild.
-  ///
-  /// In en, this message translates to:
-  /// **'Child'**
-  String get changeHistoryRoleChild;
-
-  /// No description provided for @changeHistoryRoleParent.
-  ///
-  /// In en, this message translates to:
-  /// **'Parent'**
-  String get changeHistoryRoleParent;
-
-  /// No description provided for @changeHistoryRoleTutor.
-  ///
-  /// In en, this message translates to:
-  /// **'Tutor'**
-  String get changeHistoryRoleTutor;
-
-  /// No description provided for @changeHistoryScopeChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed what the main track covers'**
-  String get changeHistoryScopeChanged;
-
-  /// No description provided for @changeHistorySelectPrompt.
-  ///
-  /// In en, this message translates to:
-  /// **'Select a change to see its details.'**
-  String get changeHistorySelectPrompt;
-
-  /// No description provided for @changeHistorySettingsChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed learner settings: {fields}'**
-  String changeHistorySettingsChanged(String fields);
-
-  /// No description provided for @changeHistorySettingsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Every change to tracks, goals and learning, by anyone'**
-  String get changeHistorySettingsSubtitle;
-
-  /// No description provided for @changeHistorySourceMain.
-  ///
-  /// In en, this message translates to:
-  /// **'Main track'**
-  String get changeHistorySourceMain;
-
-  /// No description provided for @changeHistorySourceSeveral.
-  ///
-  /// In en, this message translates to:
-  /// **'Several tracks'**
-  String get changeHistorySourceSeveral;
-
-  /// No description provided for @changeHistoryStagesChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed the review stages'**
-  String get changeHistoryStagesChanged;
-
-  /// No description provided for @changeHistoryStudyDaysChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed the study days'**
-  String get changeHistoryStudyDaysChanged;
-
-  /// No description provided for @changeHistorySubTrackChanged.
-  ///
-  /// In en, this message translates to:
-  /// **'Changed {name}: {fields}'**
-  String changeHistorySubTrackChanged(String name, String fields);
-
-  /// No description provided for @changeHistorySubTrackCreated.
-  ///
-  /// In en, this message translates to:
-  /// **'Added {name}'**
-  String changeHistorySubTrackCreated(String name);
-
-  /// No description provided for @changeHistorySubTrackEnded.
-  ///
-  /// In en, this message translates to:
-  /// **'Ended {name}'**
-  String changeHistorySubTrackEnded(String name);
-
-  /// No description provided for @changeHistorySubTrackRemoved.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed {name}'**
-  String changeHistorySubTrackRemoved(String name);
-
-  /// No description provided for @changeHistorySubTrackRenamed.
-  ///
-  /// In en, this message translates to:
-  /// **'Renamed a sub-track to {name}'**
-  String changeHistorySubTrackRenamed(String name);
-
-  /// No description provided for @changeHistorySubTrackUnnamed.
-  ///
-  /// In en, this message translates to:
-  /// **'a sub-track'**
-  String get changeHistorySubTrackUnnamed;
-
-  /// No description provided for @changeHistoryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Change history'**
-  String get changeHistoryTitle;
-
-  /// No description provided for @changeHistoryUndo.
-  ///
-  /// In en, this message translates to:
-  /// **'Undo'**
-  String get changeHistoryUndo;
-
-  /// No description provided for @changeHistoryUndone.
-  ///
-  /// In en, this message translates to:
-  /// **'Undone'**
-  String get changeHistoryUndone;
-
-  /// No description provided for @changeHistoryUndoneBy.
-  ///
-  /// In en, this message translates to:
-  /// **'Undone by {name} · {time}'**
-  String changeHistoryUndoneBy(String name, String time);
-
-  /// No description provided for @changeHistoryUpdates.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 update} other{{count} updates}}'**
-  String changeHistoryUpdates(int count);
-
-  /// No description provided for @changeHistoryVoidedBy.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed by {name} · {time}'**
-  String changeHistoryVoidedBy(String name, String time);
-
-  /// No description provided for @changeHistoryVoidedSome.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} of {total} removed by {name} · {time}'**
-  String changeHistoryVoidedSome(
-    int count,
-    int total,
-    String name,
-    String time,
-  );
 
   /// No description provided for @pinChangedSuccessfully.
   ///
@@ -4738,162 +4475,6 @@ abstract class AppLocalizations {
   /// **'Offline account'**
   String get offlineAccountLabel;
 
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Ongoing sub-track'**
-  String get ongoingSubTrackFormTitle;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Edit ongoing sub-track'**
-  String get ongoingSubTrackEditTitle;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Sub-track name'**
-  String get ongoingSubTrackNameLabel;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'{unit} per week'**
-  String ongoingSubTrackRateLabel(String unit);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Fewer {unit} per week'**
-  String ongoingSubTrackRateDecrease(String unit);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'More {unit} per week'**
-  String ongoingSubTrackRateIncrease(String unit);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Not learning during bein hazmanim'**
-  String get ongoingSubTrackBeinHazmanimLabel;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Lowers weeks per year'**
-  String get ongoingSubTrackBeinHazmanimHelper;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Weeks per year'**
-  String get ongoingSubTrackWeeksLabel;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Prefilled from bein hazmanim toggle — edit if needed'**
-  String get ongoingSubTrackWeeksPrefillHelper;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Start date (optional)'**
-  String get ongoingSubTrackStartLabel;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'End date (optional)'**
-  String get ongoingSubTrackEndLabel;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Clear date'**
-  String get ongoingSubTrackClearDate;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Learns on shabbos / yom tov'**
-  String get ongoingSubTrackShabbosLabel;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Include this source on the catch-up card after shabbos'**
-  String get ongoingSubTrackShabbosHelper;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'You can have up to 5 ongoing sub-tracks. {count} in use.'**
-  String ongoingSubTrackLimitLine(int count);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'You already have 5 ongoing sub-tracks.'**
-  String get ongoingSubTrackLimitReached;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Save sub-track'**
-  String get ongoingSubTrackSave;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a name'**
-  String get ongoingSubTrackNameRequired;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a number above 0'**
-  String get ongoingSubTrackPositiveNumber;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'The end date can\'t be before the start date'**
-  String get ongoingSubTrackEndBeforeStart;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t save the sub-track. Your entries are kept.'**
-  String get ongoingSubTrackSaveFailed;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'Starts {date}'**
-  String ongoingSubTrackStarts(String date);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'{rate}/wk × {weeks} weeks'**
-  String ongoingSubTrackRateSummary(String rate, String weeks);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'This learner\'s sub-tracks'**
-  String get ongoingSubTrackTabletSummaryTitle;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'No sub-tracks yet'**
-  String get ongoingSubTrackTabletSummaryEmpty;
-
   /// No description provided for @signUpVerificationEmailSent.
   ///
   /// In en, this message translates to:
@@ -5704,30 +5285,6 @@ abstract class AppLocalizations {
   /// **'Open the lifetime report'**
   String get reportEntryTooltip;
 
-  /// Primary pill on the lifetime report that exports it as a PDF and opens the share sheet (UX-DR-43).
-  ///
-  /// In en, this message translates to:
-  /// **'Export PDF'**
-  String get reportExportAction;
-
-  /// The Export PDF pill while the PDF is being generated; the pill is disabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Preparing PDF…'**
-  String get reportExportBusy;
-
-  /// Floating snackbar when generating or saving the report PDF fails (UX-DR-145); shown with a Retry action.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t export the report — try again.'**
-  String get reportExportError;
-
-  /// Accessibility hint of the Export PDF pill.
-  ///
-  /// In en, this message translates to:
-  /// **'Export the lifetime report as a PDF and share it'**
-  String get reportExportSemantics;
-
   /// No description provided for @reportGroupCollapseHint.
   ///
   /// In en, this message translates to:
@@ -5888,18 +5445,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last {days} days: {rate} / week'**
   String reportPaceTrailing(String days, String rate);
-
-  /// Line under the learner and curriculum in the report PDF; the date is the learner's civil date in their time zone.
-  ///
-  /// In en, this message translates to:
-  /// **'Generated on {date}'**
-  String reportPdfGeneratedOn(String date);
-
-  /// Footer on every page of the report PDF.
-  ///
-  /// In en, this message translates to:
-  /// **'Page {page} of {total}'**
-  String reportPdfPageLabel(String page, String total);
 
   /// No description provided for @reportSchoolYears.
   ///
@@ -6219,138 +5764,6 @@ abstract class AppLocalizations {
   /// **'Tick up to here'**
   String get captureTickUpToHere;
 
-  /// DNI-501 seam for the Story 2.9 (DNI-500) Learn row: every ground leaf is ticked in this sub-track. [ASSUMPTION copy] from DNI-500 AC-4.
-  ///
-  /// In en, this message translates to:
-  /// **'All ground recorded'**
-  String get subTrackRowAllRecorded;
-
-  /// Learn-tab sub-track row: the sub-track's next leaf (UX-DR-16).
-  ///
-  /// In en, this message translates to:
-  /// **'Next: {position}'**
-  String subTrackRowNext(String position);
-
-  /// Learn-tab sub-track row of a sub-track with no ground; its actions are disabled (Story 2.9, UX-DR-88).
-  ///
-  /// In en, this message translates to:
-  /// **'No ground yet'**
-  String get subTrackRowNoGround;
-
-  /// Learn-tab sub-track row action: record the next leaf (UX-DR-17).
-  ///
-  /// In en, this message translates to:
-  /// **'+1'**
-  String get subTrackRowPlusOne;
-
-  /// Screen-reader label of the +1 action (UX-DR-157); unit is the curriculum's singular leaf unit.
-  ///
-  /// In en, this message translates to:
-  /// **'Record one {unit} for {name}'**
-  String subTrackRowPlusOneSemantics(String unit, String name);
-
-  /// Screen-reader label of a Learn-tab sub-track row (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'{name}, next {position}'**
-  String subTrackRowSemantics(String name, String position);
-
-  /// Header of the Learn-tab sub-track rows under today's tasks (UX-DR-46).
-  ///
-  /// In en, this message translates to:
-  /// **'Also learning · {count, plural, =1{1 sub-track} other{{count} sub-tracks}}'**
-  String subTrackRowsTitle(int count);
-
-  /// Action on a Learn-tab sub-track row and on the main-track today list: opens the Up to… picker (UX-DR-18).
-  ///
-  /// In en, this message translates to:
-  /// **'Up to…'**
-  String get upToPickerAction;
-
-  /// Screen-reader label of the Up to… action (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'Record up to, {name}'**
-  String upToPickerActionSemantics(String name);
-
-  /// Up to… on a track with no leaves left after its position (UX-DR-108); units is the curriculum's plural leaf unit.
-  ///
-  /// In en, this message translates to:
-  /// **'No more {units} in {name}\'s ground.'**
-  String upToPickerExhausted(String units, String name);
-
-  /// Up to… picker instruction (UX-DR-18); unit is the curriculum's singular leaf unit.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap the last {unit} you learnt'**
-  String upToPickerInstruction(String unit);
-
-  /// Up to… picker confirm button with the live count of included rows (UX-DR-72, UX-DR-157); unit is the leaf unit, singular for 1.
-  ///
-  /// In en, this message translates to:
-  /// **'Record {count} {unit}'**
-  String upToPickerRecord(int count, String unit);
-
-  /// Snackbar after an Up to… capture, shown with Undo that voids all of its events (UX-DR-154).
-  ///
-  /// In en, this message translates to:
-  /// **'Recorded {count}'**
-  String upToPickerRecorded(int count);
-
-  /// Screen-reader label of an Up to… picker row: the leaf and its state (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'{label}, {status}'**
-  String upToPickerRowSemantics(String label, String status);
-
-  /// Screen-reader label of the highlighted target row of the Up to… picker (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'{label}, {status}, last one learnt'**
-  String upToPickerRowTargetSemantics(String label, String status);
-
-  /// Screen-reader custom action on an Up to… picker row inside the run: makes it the last one learnt, cutting the run short there (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'Make this the last one learnt'**
-  String get upToPickerSetTargetAction;
-
-  /// Up to… row state: ticked in this track before; not selectable (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'already recorded'**
-  String get upToPickerStatusAlreadyRecorded;
-
-  /// Up to… row state: will be recorded (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'included'**
-  String get upToPickerStatusIncluded;
-
-  /// Up to… row state: the track position, before a target is chosen (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'next up'**
-  String get upToPickerStatusNextUp;
-
-  /// Up to… row state: after the target (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'not selected'**
-  String get upToPickerStatusNotSelected;
-
-  /// Up to… row state: unticked inside the run; gets no event (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'skipped'**
-  String get upToPickerStatusSkipped;
-
-  /// Up to… picker title (UX-DR-18).
-  ///
-  /// In en, this message translates to:
-  /// **'{name} · up to…'**
-  String upToPickerTitle(String name);
-
   /// No description provided for @markedComplete.
   ///
   /// In en, this message translates to:
@@ -6522,7 +5935,7 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeCardDescription.
   ///
   /// In en, this message translates to:
-  /// **'App is silenced and locked during {term} and Yom Tov, from 10 minutes before candle-lighting until 10 minutes after tzeis at this learner\'s location.'**
+  /// **'App is silenced and locked during {term} and Yom Tov. Times computed locally from your location with a 15-minute cushion.'**
   String sacredTimeCardDescription(String term);
 
   /// No description provided for @sacredTimeShabbosModeLabel.
@@ -6609,36 +6022,6 @@ abstract class AppLocalizations {
   /// **'Could not detect location. Try again, or choose a city instead.'**
   String get sacredTimeLocationDetectErrorGeneric;
 
-  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner.
-  ///
-  /// In en, this message translates to:
-  /// **'Set location'**
-  String get sacredTimeLocationPromptAction;
-
-  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for a learner with no location.
-  ///
-  /// In en, this message translates to:
-  /// **'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
-  String sacredTimeLocationPromptMessage(String term);
-
-  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).
-  ///
-  /// In en, this message translates to:
-  /// **'{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
-  String sacredTimeLocationPromptMessageNamed(String name, String term);
-
-  /// DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved.
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t save this learner\'s Sacred Time settings. Try again.'**
-  String get sacredTimeSettingsNotSaved;
-
-  /// DRAFT copy, pending zc4. DNI-481: no own learner is active (none selected, or a tutored session), so no learnerSettings change can be written.
-  ///
-  /// In en, this message translates to:
-  /// **'Sacred Time settings can be changed only for your own learners.'**
-  String get sacredTimeSettingsUnavailable;
-
   /// No description provided for @newPasswordLabel.
   ///
   /// In en, this message translates to:
@@ -6692,30 +6075,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shabbos'**
   String get dayNameShabbos;
-
-  /// Erev banner line on the Learn tab (DNI-504, A-2): {term} is the lock's Shabbos/Yom Tov label per the Hebrew Terms setting, {time} the lock start (learner-local) from lockWindows. DRAFT copy, pending zc4.
-  ///
-  /// In en, this message translates to:
-  /// **'{term} begins at {time} — record what you can before then.'**
-  String erevBannerBeginsAt(String term, String time);
-
-  /// Learn-tab snackbar when synced learning was recorded during a Shabbos/Yom Tov lock: it is stored but the engine does not count it (DNI-504 AC-9, UX-DR-107). DRAFT copy, pending zc4.
-  ///
-  /// In en, this message translates to:
-  /// **'Some learning was kept, not counted — it was recorded during Shabbos.'**
-  String get erevLockIgnoredSnackbar;
-
-  /// Heading of one locked day's planned section on erev (DNI-504 AC-1); {day} is the weekday name, or the Shabbos term for Shabbos. DRAFT copy, pending zc4.
-  ///
-  /// In en, this message translates to:
-  /// **'Planned for {day}'**
-  String erevPlannedForDay(String day);
-
-  /// Screen-reader label of a planned row's tick control on erev (DNI-504 AC-3, AC-11). DRAFT copy, pending zc4.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark {item} as learnt'**
-  String erevPlannedTickSemantics(String item);
 
   /// No description provided for @statusPendingTapToAccept.
   ///
@@ -10922,42 +10281,6 @@ abstract class AppLocalizations {
   /// **'Your {currentStreak}-day streak is at risk!'**
   String notificationStreakBody(int currentStreak);
 
-  /// Title of the push a parent gets when a tutor changes a learner's deadline or main track (Story 4.7).
-  ///
-  /// In en, this message translates to:
-  /// **'Tutor change'**
-  String get parentPushTitle;
-
-  /// Body of the tutor-change push, e.g. 'Rav Cohen changed Yehuda's deadline'. kind is the change kind the server reports.
-  ///
-  /// In en, this message translates to:
-  /// **'{tutorName} changed {learnerName}\'s {kind, select, deadline{deadline} pace{daily pace} mainTrack{main track} mainTrackOrder{learning order} mainTrackProgram{program} mainTrackStudyDays{study days} other{learning plan}}'**
-  String parentPushBody(String tutorName, String learnerName, String kind);
-
-  /// No description provided for @parentPushTutorFallback.
-  ///
-  /// In en, this message translates to:
-  /// **'Your tutor'**
-  String get parentPushTutorFallback;
-
-  /// No description provided for @parentPushLearnerFallback.
-  ///
-  /// In en, this message translates to:
-  /// **'your child'**
-  String get parentPushLearnerFallback;
-
-  /// No description provided for @parentPushChannelName.
-  ///
-  /// In en, this message translates to:
-  /// **'Tutor changes'**
-  String get parentPushChannelName;
-
-  /// No description provided for @parentPushChannelDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'When a tutor changes a deadline or a main track'**
-  String get parentPushChannelDescription;
-
   /// No description provided for @onboardingNamePrompt.
   ///
   /// In en, this message translates to:
@@ -11663,6 +10986,845 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t restore the backup. Please try again.'**
   String get backupImportError;
+
+  /// DNI-486 AC-7: a tutor capture the server stamped inside the learner's lock window. The event is stored but does not count.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept, not counted — Shabbos / Yom Tov had started'**
+  String get tutorCaptureKeptNotCounted;
+
+  /// DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data.
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos / Yom Tov'**
+  String get tutorCaptureLearnerLocked;
+
+  /// DNI-486 AC-4: note under a tutor's disabled write controls when the grant's can_edit_learning is false.
+  ///
+  /// In en, this message translates to:
+  /// **'{learner}\'s parent hasn\'t given you editing access'**
+  String tutorCaptureNoEditAccess(String learner);
+
+  /// DNI-486 AC-5: tutor writes are online-only (AD-53); shown on disabled tutor write controls while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online required'**
+  String get tutorCaptureOnlineRequired;
+
+  /// No description provided for @changeHistoryAlsoChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{+1 more change in this action} other{+{count} more changes in this action}}'**
+  String changeHistoryAlsoChanged(int count);
+
+  /// No description provided for @changeHistoryBeforeTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Before tracking'**
+  String get changeHistoryBeforeTracking;
+
+  /// No description provided for @changeHistoryDateCatchUp.
+  ///
+  /// In en, this message translates to:
+  /// **'catch-up'**
+  String get changeHistoryDateCatchUp;
+
+  /// No description provided for @changeHistoryDayToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get changeHistoryDayToday;
+
+  /// No description provided for @changeHistoryDayYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get changeHistoryDayYesterday;
+
+  /// No description provided for @changeHistoryDeadlineSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the deadline to {date}'**
+  String changeHistoryDeadlineSet(String date);
+
+  /// No description provided for @changeHistoryDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change details'**
+  String get changeHistoryDetailsTitle;
+
+  /// No description provided for @changeHistoryDetailsWhat.
+  ///
+  /// In en, this message translates to:
+  /// **'What changed'**
+  String get changeHistoryDetailsWhat;
+
+  /// No description provided for @changeHistoryDetailsWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get changeHistoryDetailsWhen;
+
+  /// No description provided for @changeHistoryDetailsWho.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed by'**
+  String get changeHistoryDetailsWho;
+
+  /// No description provided for @changeHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes yet.'**
+  String get changeHistoryEmpty;
+
+  /// No description provided for @changeHistoryFieldDates.
+  ///
+  /// In en, this message translates to:
+  /// **'dates'**
+  String get changeHistoryFieldDates;
+
+  /// No description provided for @changeHistoryFieldGround.
+  ///
+  /// In en, this message translates to:
+  /// **'what it covers'**
+  String get changeHistoryFieldGround;
+
+  /// No description provided for @changeHistoryFieldLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'location'**
+  String get changeHistoryFieldLocation;
+
+  /// No description provided for @changeHistoryFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'name'**
+  String get changeHistoryFieldName;
+
+  /// No description provided for @changeHistoryFieldOther.
+  ///
+  /// In en, this message translates to:
+  /// **'settings'**
+  String get changeHistoryFieldOther;
+
+  /// No description provided for @changeHistoryFieldPace.
+  ///
+  /// In en, this message translates to:
+  /// **'pace'**
+  String get changeHistoryFieldPace;
+
+  /// No description provided for @changeHistoryFieldShabbos.
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos learning'**
+  String get changeHistoryFieldShabbos;
+
+  /// No description provided for @changeHistoryFieldTimeZone.
+  ///
+  /// In en, this message translates to:
+  /// **'time zone'**
+  String get changeHistoryFieldTimeZone;
+
+  /// No description provided for @changeHistoryFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get changeHistoryFilterAll;
+
+  /// No description provided for @changeHistoryFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get changeHistoryFilterLabel;
+
+  /// No description provided for @changeHistoryFilterLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning'**
+  String get changeHistoryFilterLearning;
+
+  /// No description provided for @changeHistoryFilterParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent'**
+  String get changeHistoryFilterParent;
+
+  /// No description provided for @changeHistoryFilterTutor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor'**
+  String get changeHistoryFilterTutor;
+
+  /// No description provided for @changeHistoryGoalChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the goal'**
+  String get changeHistoryGoalChanged;
+
+  /// No description provided for @changeHistoryGoalCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a goal'**
+  String get changeHistoryGoalCreated;
+
+  /// No description provided for @changeHistoryGoalEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed the goal'**
+  String get changeHistoryGoalEnded;
+
+  /// No description provided for @changeHistoryLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Learned {refs} · {source}'**
+  String changeHistoryLearned(String refs, String source);
+
+  /// No description provided for @changeHistoryLockIgnored.
+  ///
+  /// In en, this message translates to:
+  /// **'kept, not counted — recorded during Shabbos/Yom Tov'**
+  String get changeHistoryLockIgnored;
+
+  /// No description provided for @changeHistoryMainTrackChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the main track'**
+  String get changeHistoryMainTrackChanged;
+
+  /// No description provided for @changeHistoryMainTrackCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Added the main track'**
+  String get changeHistoryMainTrackCreated;
+
+  /// No description provided for @changeHistoryMainTrackEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed the main track'**
+  String get changeHistoryMainTrackEnded;
+
+  /// No description provided for @changeHistoryNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes match this filter.'**
+  String get changeHistoryNoMatches;
+
+  /// No description provided for @changeHistoryNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Change history is open to the parent only.'**
+  String get changeHistoryNotAvailable;
+
+  /// No description provided for @changeHistoryNotified.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent notified'**
+  String get changeHistoryNotified;
+
+  /// No description provided for @changeHistoryOrderChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the learning order'**
+  String get changeHistoryOrderChanged;
+
+  /// No description provided for @changeHistoryProgramChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the program'**
+  String get changeHistoryProgramChanged;
+
+  /// No description provided for @changeHistoryRefList.
+  ///
+  /// In en, this message translates to:
+  /// **'{first}, {second}'**
+  String changeHistoryRefList(String first, String second);
+
+  /// No description provided for @changeHistoryRefRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{first} – {last} ({count})'**
+  String changeHistoryRefRange(String first, String last, int count);
+
+  /// No description provided for @changeHistoryRemovedLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {refs} · {source}'**
+  String changeHistoryRemovedLearning(String refs, String source);
+
+  /// No description provided for @changeHistoryRemovedUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed an earlier learning record'**
+  String get changeHistoryRemovedUnknown;
+
+  /// No description provided for @changeHistoryReverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverted change: {summary}'**
+  String changeHistoryReverted(String summary);
+
+  /// No description provided for @changeHistoryRoleChild.
+  ///
+  /// In en, this message translates to:
+  /// **'Child'**
+  String get changeHistoryRoleChild;
+
+  /// No description provided for @changeHistoryRoleParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent'**
+  String get changeHistoryRoleParent;
+
+  /// No description provided for @changeHistoryRoleTutor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor'**
+  String get changeHistoryRoleTutor;
+
+  /// No description provided for @changeHistoryScopeChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed what the main track covers'**
+  String get changeHistoryScopeChanged;
+
+  /// No description provided for @changeHistorySelectPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a change to see its details.'**
+  String get changeHistorySelectPrompt;
+
+  /// No description provided for @changeHistorySettingsChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed learner settings: {fields}'**
+  String changeHistorySettingsChanged(String fields);
+
+  /// No description provided for @changeHistorySettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Every change to tracks, goals and learning, by anyone'**
+  String get changeHistorySettingsSubtitle;
+
+  /// No description provided for @changeHistorySourceMain.
+  ///
+  /// In en, this message translates to:
+  /// **'Main track'**
+  String get changeHistorySourceMain;
+
+  /// No description provided for @changeHistorySourceSeveral.
+  ///
+  /// In en, this message translates to:
+  /// **'Several tracks'**
+  String get changeHistorySourceSeveral;
+
+  /// No description provided for @changeHistoryStagesChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the review stages'**
+  String get changeHistoryStagesChanged;
+
+  /// No description provided for @changeHistoryStudyDaysChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed the study days'**
+  String get changeHistoryStudyDaysChanged;
+
+  /// No description provided for @changeHistorySubTrackChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed {name}: {fields}'**
+  String changeHistorySubTrackChanged(String name, String fields);
+
+  /// No description provided for @changeHistorySubTrackCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {name}'**
+  String changeHistorySubTrackCreated(String name);
+
+  /// No description provided for @changeHistorySubTrackEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended {name}'**
+  String changeHistorySubTrackEnded(String name);
+
+  /// No description provided for @changeHistorySubTrackRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {name}'**
+  String changeHistorySubTrackRemoved(String name);
+
+  /// No description provided for @changeHistorySubTrackRenamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Renamed a sub-track to {name}'**
+  String changeHistorySubTrackRenamed(String name);
+
+  /// No description provided for @changeHistorySubTrackUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'a sub-track'**
+  String get changeHistorySubTrackUnnamed;
+
+  /// No description provided for @changeHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change history'**
+  String get changeHistoryTitle;
+
+  /// No description provided for @changeHistoryUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get changeHistoryUndo;
+
+  /// No description provided for @changeHistoryUndone.
+  ///
+  /// In en, this message translates to:
+  /// **'Undone'**
+  String get changeHistoryUndone;
+
+  /// No description provided for @changeHistoryUndoneBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Undone by {name} · {time}'**
+  String changeHistoryUndoneBy(String name, String time);
+
+  /// No description provided for @changeHistoryUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 update} other{{count} updates}}'**
+  String changeHistoryUpdates(int count);
+
+  /// No description provided for @changeHistoryVoidedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed by {name} · {time}'**
+  String changeHistoryVoidedBy(String name, String time);
+
+  /// No description provided for @changeHistoryVoidedSome.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {total} removed by {name} · {time}'**
+  String changeHistoryVoidedSome(
+    int count,
+    int total,
+    String name,
+    String time,
+  );
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Ongoing sub-track'**
+  String get ongoingSubTrackFormTitle;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Edit ongoing sub-track'**
+  String get ongoingSubTrackEditTitle;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Sub-track name'**
+  String get ongoingSubTrackNameLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'{unit} per week'**
+  String ongoingSubTrackRateLabel(String unit);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Fewer {unit} per week'**
+  String ongoingSubTrackRateDecrease(String unit);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'More {unit} per week'**
+  String ongoingSubTrackRateIncrease(String unit);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Not learning during bein hazmanim'**
+  String get ongoingSubTrackBeinHazmanimLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Lowers weeks per year'**
+  String get ongoingSubTrackBeinHazmanimHelper;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Weeks per year'**
+  String get ongoingSubTrackWeeksLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Prefilled from bein hazmanim toggle — edit if needed'**
+  String get ongoingSubTrackWeeksPrefillHelper;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Start date (optional)'**
+  String get ongoingSubTrackStartLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'End date (optional)'**
+  String get ongoingSubTrackEndLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Clear date'**
+  String get ongoingSubTrackClearDate;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Learns on shabbos / yom tov'**
+  String get ongoingSubTrackShabbosLabel;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Include this source on the catch-up card after shabbos'**
+  String get ongoingSubTrackShabbosHelper;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'You can have up to 5 ongoing sub-tracks. {count} in use.'**
+  String ongoingSubTrackLimitLine(int count);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'You already have 5 ongoing sub-tracks.'**
+  String get ongoingSubTrackLimitReached;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Save sub-track'**
+  String get ongoingSubTrackSave;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name'**
+  String get ongoingSubTrackNameRequired;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number above 0'**
+  String get ongoingSubTrackPositiveNumber;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'The end date can\'t be before the start date'**
+  String get ongoingSubTrackEndBeforeStart;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the sub-track. Your entries are kept.'**
+  String get ongoingSubTrackSaveFailed;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'Starts {date}'**
+  String ongoingSubTrackStarts(String date);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}/wk × {weeks} weeks'**
+  String ongoingSubTrackRateSummary(String rate, String weeks);
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'This learner\'s sub-tracks'**
+  String get ongoingSubTrackTabletSummaryTitle;
+
+  /// DNI-496 ongoing sub-track form
+  ///
+  /// In en, this message translates to:
+  /// **'No sub-tracks yet'**
+  String get ongoingSubTrackTabletSummaryEmpty;
+
+  /// Primary pill on the lifetime report that exports it as a PDF and opens the share sheet (UX-DR-43).
+  ///
+  /// In en, this message translates to:
+  /// **'Export PDF'**
+  String get reportExportAction;
+
+  /// The Export PDF pill while the PDF is being generated; the pill is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing PDF…'**
+  String get reportExportBusy;
+
+  /// Floating snackbar when generating or saving the report PDF fails (UX-DR-145); shown with a Retry action.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t export the report — try again.'**
+  String get reportExportError;
+
+  /// Accessibility hint of the Export PDF pill.
+  ///
+  /// In en, this message translates to:
+  /// **'Export the lifetime report as a PDF and share it'**
+  String get reportExportSemantics;
+
+  /// Line under the learner and curriculum in the report PDF; the date is the learner's civil date in their time zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated on {date}'**
+  String reportPdfGeneratedOn(String date);
+
+  /// Footer on every page of the report PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {total}'**
+  String reportPdfPageLabel(String page, String total);
+
+  /// DNI-501 seam for the Story 2.9 (DNI-500) Learn row: every ground leaf is ticked in this sub-track. [ASSUMPTION copy] from DNI-500 AC-4.
+  ///
+  /// In en, this message translates to:
+  /// **'All ground recorded'**
+  String get subTrackRowAllRecorded;
+
+  /// Learn-tab sub-track row: the sub-track's next leaf (UX-DR-16).
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {position}'**
+  String subTrackRowNext(String position);
+
+  /// Learn-tab sub-track row of a sub-track with no ground; its actions are disabled (Story 2.9, UX-DR-88).
+  ///
+  /// In en, this message translates to:
+  /// **'No ground yet'**
+  String get subTrackRowNoGround;
+
+  /// Learn-tab sub-track row action: record the next leaf (UX-DR-17).
+  ///
+  /// In en, this message translates to:
+  /// **'+1'**
+  String get subTrackRowPlusOne;
+
+  /// Screen-reader label of the +1 action (UX-DR-157); unit is the curriculum's singular leaf unit.
+  ///
+  /// In en, this message translates to:
+  /// **'Record one {unit} for {name}'**
+  String subTrackRowPlusOneSemantics(String unit, String name);
+
+  /// Screen-reader label of a Learn-tab sub-track row (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, next {position}'**
+  String subTrackRowSemantics(String name, String position);
+
+  /// Header of the Learn-tab sub-track rows under today's tasks (UX-DR-46).
+  ///
+  /// In en, this message translates to:
+  /// **'Also learning · {count, plural, =1{1 sub-track} other{{count} sub-tracks}}'**
+  String subTrackRowsTitle(int count);
+
+  /// Action on a Learn-tab sub-track row and on the main-track today list: opens the Up to… picker (UX-DR-18).
+  ///
+  /// In en, this message translates to:
+  /// **'Up to…'**
+  String get upToPickerAction;
+
+  /// Screen-reader label of the Up to… action (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Record up to, {name}'**
+  String upToPickerActionSemantics(String name);
+
+  /// Up to… on a track with no leaves left after its position (UX-DR-108); units is the curriculum's plural leaf unit.
+  ///
+  /// In en, this message translates to:
+  /// **'No more {units} in {name}\'s ground.'**
+  String upToPickerExhausted(String units, String name);
+
+  /// Up to… picker instruction (UX-DR-18); unit is the curriculum's singular leaf unit.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the last {unit} you learnt'**
+  String upToPickerInstruction(String unit);
+
+  /// Up to… picker confirm button with the live count of included rows (UX-DR-72, UX-DR-157); unit is the leaf unit, singular for 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Record {count} {unit}'**
+  String upToPickerRecord(int count, String unit);
+
+  /// Snackbar after an Up to… capture, shown with Undo that voids all of its events (UX-DR-154).
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded {count}'**
+  String upToPickerRecorded(int count);
+
+  /// Screen-reader label of an Up to… picker row: the leaf and its state (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {status}'**
+  String upToPickerRowSemantics(String label, String status);
+
+  /// Screen-reader label of the highlighted target row of the Up to… picker (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {status}, last one learnt'**
+  String upToPickerRowTargetSemantics(String label, String status);
+
+  /// Screen-reader custom action on an Up to… picker row inside the run: makes it the last one learnt, cutting the run short there (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'Make this the last one learnt'**
+  String get upToPickerSetTargetAction;
+
+  /// Up to… row state: ticked in this track before; not selectable (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'already recorded'**
+  String get upToPickerStatusAlreadyRecorded;
+
+  /// Up to… row state: will be recorded (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'included'**
+  String get upToPickerStatusIncluded;
+
+  /// Up to… row state: the track position, before a target is chosen (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'next up'**
+  String get upToPickerStatusNextUp;
+
+  /// Up to… row state: after the target (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'not selected'**
+  String get upToPickerStatusNotSelected;
+
+  /// Up to… row state: unticked inside the run; gets no event (UX-DR-157).
+  ///
+  /// In en, this message translates to:
+  /// **'skipped'**
+  String get upToPickerStatusSkipped;
+
+  /// Up to… picker title (UX-DR-18).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · up to…'**
+  String upToPickerTitle(String name);
+
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner.
+  ///
+  /// In en, this message translates to:
+  /// **'Set location'**
+  String get sacredTimeLocationPromptAction;
+
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for a learner with no location.
+  ///
+  /// In en, this message translates to:
+  /// **'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
+  String sacredTimeLocationPromptMessage(String term);
+
+  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
+  String sacredTimeLocationPromptMessageNamed(String name, String term);
+
+  /// DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save this learner\'s Sacred Time settings. Try again.'**
+  String get sacredTimeSettingsNotSaved;
+
+  /// DRAFT copy, pending zc4. DNI-481: no own learner is active (none selected, or a tutored session), so no learnerSettings change can be written.
+  ///
+  /// In en, this message translates to:
+  /// **'Sacred Time settings can be changed only for your own learners.'**
+  String get sacredTimeSettingsUnavailable;
+
+  /// Erev banner line on the Learn tab (DNI-504, A-2): {term} is the lock's Shabbos/Yom Tov label per the Hebrew Terms setting, {time} the lock start (learner-local) from lockWindows. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{term} begins at {time} — record what you can before then.'**
+  String erevBannerBeginsAt(String term, String time);
+
+  /// Learn-tab snackbar when synced learning was recorded during a Shabbos/Yom Tov lock: it is stored but the engine does not count it (DNI-504 AC-9, UX-DR-107). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Some learning was kept, not counted — it was recorded during Shabbos.'**
+  String get erevLockIgnoredSnackbar;
+
+  /// Heading of one locked day's planned section on erev (DNI-504 AC-1); {day} is the weekday name, or the Shabbos term for Shabbos. DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Planned for {day}'**
+  String erevPlannedForDay(String day);
+
+  /// Screen-reader label of a planned row's tick control on erev (DNI-504 AC-3, AC-11). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark {item} as learnt'**
+  String erevPlannedTickSemantics(String item);
+
+  /// Title of the push a parent gets when a tutor changes a learner's deadline or main track (Story 4.7).
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor change'**
+  String get parentPushTitle;
+
+  /// Body of the tutor-change push, e.g. 'Rav Cohen changed Yehuda's deadline'. kind is the change kind the server reports.
+  ///
+  /// In en, this message translates to:
+  /// **'{tutorName} changed {learnerName}\'s {kind, select, deadline{deadline} pace{daily pace} mainTrack{main track} mainTrackOrder{learning order} mainTrackProgram{program} mainTrackStudyDays{study days} other{learning plan}}'**
+  String parentPushBody(String tutorName, String learnerName, String kind);
+
+  /// No description provided for @parentPushTutorFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Your tutor'**
+  String get parentPushTutorFallback;
+
+  /// No description provided for @parentPushLearnerFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'your child'**
+  String get parentPushLearnerFallback;
+
+  /// No description provided for @parentPushChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor changes'**
+  String get parentPushChannelName;
+
+  /// No description provided for @parentPushChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When a tutor changes a deadline or a main track'**
+  String get parentPushChannelDescription;
 
   /// Snackbar after a backup restore when the server refused some of the replayed learning writes (AD-49, AD-54 Recovery: not saved — retry). Shown with a Retry action that re-sends exactly those writes. DRAFT copy, pending zc4.
   ///
