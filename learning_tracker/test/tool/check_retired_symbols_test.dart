@@ -215,12 +215,8 @@ void main() {
       final indexes = File(
         '$packageDir/firestore.indexes.json',
       ).readAsStringSync();
-      final rules = File('$packageDir/firestore.rules').readAsStringSync();
       final expected = <String>{
-        // DNI-491 removes the deny-all matches; any one still present must
-        // be allowlisted exactly once.
-        for (final c in collections)
-          if (rules.contains('match /$c/')) 'firestore.rules|$c|1',
+        for (final c in collections) 'firestore.rules|$c|1',
         for (final c in collections)
           if (RegExp('"collectionGroup":\\s*"$c"').allMatches(indexes)
               case final m when m.isNotEmpty)
