@@ -466,12 +466,15 @@ void main() {
 
     Future<ProviderContainer> pumpShell(
       WidgetTester tester,
-      String label,
-    ) async {
+      String label, {
+      Locale locale = const Locale('en'),
+      double textScale = 1,
+      String? mirrorName = 'Yossi',
+    }) async {
       final navigatorKey = GlobalKey<NavigatorState>();
       final container = ProviderContainer(
         overrides: [
-          ...overrides(),
+          ...overrides(mirrorName: mirrorName),
           tutorRosterReturnProvider.overrideWithValue(
             (_) => navigatorKey.currentState!.pushAndRemoveUntil(
               MaterialPageRoute<void>(
@@ -492,6 +495,13 @@ void main() {
           container: container,
           child: MaterialApp(
             navigatorKey: navigatorKey,
+            locale: locale,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!,
+            ),
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -556,6 +566,66 @@ void main() {
         );
       });
     }
+
+    testWidgets('T7: the notice is a live region a screen reader announces, '
+        'with keyboard focus dropped from the closed screen', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final container = await pumpShell(tester, 'sub-track form');
+      await tester.tap(find.byKey(const Key('draft')).last);
+      await tester.pump();
+      expect(FocusManager.instance.primaryFocus, isNotNull);
+
+      container
+          .read(_scopeValueProvider.notifier)
+          .set(_denied(TutorScopeDenialReason.permissionDenied));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.ancestor(
+          of: find.text('Access to Yossi has ended.'),
+          matching: find.byWidgetPredicate(
+            (w) => w is Semantics && (w.properties.liveRegion ?? false),
+          ),
+        ),
+        findsWidgets,
+      );
+      expect(
+        find.byType(EditableText),
+        findsNothing,
+        reason: 'no stale control',
+      );
+      final focused = FocusManager.instance.primaryFocus?.context;
+      expect(
+        focused == null ||
+            focused.findAncestorWidgetOfExactType<EditableText>() == null,
+        isTrue,
+      );
+      semantics.dispose();
+    });
+
+    testWidgets(
+      'T7: Hebrew, right-to-left, at 2x text — copy fits, no overflow',
+      (tester) async {
+        final container = await pumpShell(
+          tester,
+          'Learn tab',
+          locale: const Locale('he'),
+          textScale: 2,
+          mirrorName: 'יוסי',
+        );
+
+        container
+            .read(_scopeValueProvider.notifier)
+            .set(_denied(TutorScopeDenialReason.grantNotActive));
+        await tester.pumpAndSettle();
+
+        final message = find.textContaining('יוסי');
+        expect(message, findsOneWidget);
+        expect(Directionality.of(tester.element(message)), TextDirection.rtl);
+        expect(tester.takeException(), isNull);
+        expect(find.text('My talmidim'), findsOneWidget);
+      },
+    );
 
     testWidgets('Hebrew copy names the learner', (tester) async {
       final l10n = await AppLocalizations.delegate.load(const Locale('he'));
