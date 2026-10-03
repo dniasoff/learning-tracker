@@ -577,6 +577,9 @@ describe('AC-1 / AC-3 — malformed requests write nothing', () => {
       ...ONGOING, ground: [{ level: 'masechta', ref: 'Berakhot', note: 'x' }],
     })],
     ['a ground that is not a list', () => create(SUB, { ...ONGOING, ground: 'Berakhot' })],
+    // NodeEntry.fromStorage (Dart) requires a non-empty string level.
+    ['a ground entry with a numeric level', () => create(SUB, { ...ONGOING, ground: [{ level: 3, ref: 'Berakhot' }] })],
+    ['a ground entry with an empty level', () => create(SUB, { ...ONGOING, ground: [{ level: '', ref: 'Berakhot' }] })],
     ['a non-numeric rate', () => create(SUB, { ...ONGOING, rate_per_week: 'five' })],
     ['a bad window date', () => create(SUB, { ...ONGOING, window_start: '2026-13-01' })],
     ['an unknown type', () => create(SUB, { ...ONGOING, type: 'summer' })],
@@ -609,6 +612,17 @@ describe('AC-1 / AC-3 — malformed requests write nothing', () => {
     await expectHttpsError(edit({ rate_per_week: 0 }, ulid(1)), 'invalid-argument');
     assert.equal((await subTrackDoc()).rate_per_week, 5);
     assert.equal((await changeLog()).length, 1);
+  });
+
+  test('a ground edit with a numeric level is rejected before any doc or change_log write', async () => {
+    await create();
+    const before = await subTrackDoc();
+    await expectHttpsError(
+      edit({ ground: [{ level: 'masechta', ref: 'Berakhot' }, { level: 2, ref: 'Berakhot 2' }] }, ulid(1)),
+      'invalid-argument',
+    );
+    assert.deepEqual(await subTrackDoc(), before, 'the stored ground is unchanged');
+    assert.equal((await changeLog()).length, 1, 'only the create entry exists');
   });
 
   test('curriculum_id is immutable on an edit', async () => {

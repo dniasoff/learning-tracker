@@ -132,10 +132,17 @@ const date: Check = (v) => {
   const d = new Date(`${v}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
 };
+/**
+ * AD-52 `NodeEntry{level, ref}`: both non-empty strings, exactly as the Dart
+ * `NodeEntry.fromStorage` decodes them (`requiredString`). A numeric level
+ * would land a doc the engine cannot read, and Rules cannot check list
+ * elements (see `isValidSubTrack`), so this is the only server-side guard on
+ * the Admin path.
+ */
 const groundItem: Check = (v) =>
   typeof v === "object" && v !== null && !Array.isArray(v) &&
   Object.keys(v).every((k) => k === "level" || k === "ref") &&
-  either(str(64), int)((v as Record<string, unknown>).level) &&
+  str(64)((v as Record<string, unknown>).level) &&
   str(500)((v as Record<string, unknown>).ref);
 
 const CURRICULUM_ID = str(200);
