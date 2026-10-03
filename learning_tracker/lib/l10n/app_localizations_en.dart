@@ -1368,6 +1368,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get talmidChochomCaps => 'TALMID CHOCHOM';
 
   @override
+  String get talmidimUnnamed => 'Talmid';
+
+  @override
+  String get talmidimTitle => 'My talmidim';
+
+  @override
+  String get talmidimAccessNote =>
+      'You see only learners whose parents gave you access.';
+
+  @override
+  String get talmidimEmpty =>
+      'No talmidim yet — a parent needs to give you access.';
+
+  @override
+  String talmidimTrackNext(String track, String position) {
+    return '$track: next $position';
+  }
+
+  @override
+  String talmidimTrackNoGround(String track) {
+    return '$track: no ground yet';
+  }
+
+  @override
+  String talmidimTrackAllRecorded(String track) {
+    return '$track: all ground recorded';
+  }
+
+  @override
+  String get talmidimLocked => 'Shabbos / Yom Tov';
+
+  @override
+  String get talmidimRowLoadFailed => 'Couldn\'t load this talmid\'s standing.';
+
+  @override
+  String get talmidimSelectPrompt => 'Choose a talmid to see his standing.';
+
+  @override
+  String talmidimOpen(String name) {
+    return 'Open $name';
+  }
+
+  @override
   String get mainFocus => 'MAIN FOCUS';
 
   @override

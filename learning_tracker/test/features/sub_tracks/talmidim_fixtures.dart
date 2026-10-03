@@ -1,16 +1,25 @@
 /// Shared fixtures for the My talmidim tests (Story 4.3, DNI-511).
 library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // `Override` is only re-exported from `misc.dart` (as test/helpers/pump_app).
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/repositories/tutor_roster_repository.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/talmid_context_opener.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/talmid_roster_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/talmid_row_state_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/screens/my_talmidim_screen.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
+import '../../helpers/dashboard/forecast_fixtures.dart';
 import '../../helpers/learner_state/engine_fixtures.dart';
+import '../../helpers/pump_app.dart';
 
 /// The owner uid of the [n]th test parent.
 String talmidOwner(int n) => 'parent-uid-$n';
@@ -117,4 +126,115 @@ final class RecordingTalmidRowDiagnostics implements TalmidRowDiagnostics {
 
   @override
   void engineLoadTimedOut(TalmidLoadStage stage) => timeouts.add(stage);
+}
+
+/// The fixture position of the Rebbe track ("Beitzah 3:1" once rendered).
+const talmidRebbePosition = 'Mishnah Beitzah 3:1';
+
+/// A live "Rebbe" sub-track state; groundless without [position].
+SubTrackState rebbeTrack({String? position = talmidRebbePosition}) =>
+    SubTrackState(
+      subTrackId: rebbeSubTrackId,
+      name: 'Rebbe',
+      holdsGround: true,
+      inForecast: true,
+      onHome: true,
+      position: position,
+    );
+
+/// A talmid's engine state: [status] (with a deadline unless
+/// [ProjectionStatus.noDeadline]) and an optional live [sub]-track.
+LearnerState talmidState({
+  ProjectionStatus status = ProjectionStatus.onTrack,
+  SubTrackState? sub,
+}) => forecastState([
+  forecastCurriculumState(
+    projection: Projection(status: status),
+    dailyTarget: status == ProjectionStatus.noDeadline ? null : 3,
+    subTracks: {if (sub != null) sub.subTrackId: sub},
+  ),
+]);
+
+/// Records every open request; answers [result].
+final class RecordingTalmidOpener implements TalmidContextOpener {
+  /// `(grantId, groundSubTrackId)` of every open, in order.
+  final List<(String, String?)> calls = [];
+
+  /// What [open] answers.
+  bool result = true;
+
+  @override
+  Future<bool> open(
+    BuildContext context,
+    TalmidRosterEntry entry, {
+    String? groundSubTrackId,
+  }) async {
+    calls.add((entry.grantId, groundSubTrackId));
+    return result;
+  }
+}
+
+/// Renders a leaf ref the way the content index would ("Moed › Beitzah
+/// 3:1" → the row shows "Beitzah 3:1").
+String talmidRenderedRef(String ref) =>
+    'Moed › ${ref.replaceFirst('Mishnah ', '')}';
+
+/// The overrides of a My talmidim screen over [repo] and [inputs].
+List<Override> talmidimOverrides({
+  required TutorRosterRepository repo,
+  required FakeTalmidInputs inputs,
+  TalmidContextOpener? opener,
+  bool online = true,
+  TalmidRowDiagnostics? diagnostics,
+}) => [
+  tutorRosterRepositoryProvider.overrideWithValue(repo),
+  talmidRosterAccountKeyProvider.overrideWithValue('tutor-uid'),
+  ...inputs.overrides,
+  connectivityStreamProvider.overrideWith((ref) => Stream.value(online)),
+  renderedDisplayForRefProvider.overrideWith(
+    (ref, sefariaRef) async => talmidRenderedRef(sefariaRef),
+  ),
+  talmidContextOpenerProvider.overrideWithValue(
+    opener ?? RecordingTalmidOpener(),
+  ),
+  talmidRowDiagnosticsProvider.overrideWithValue(
+    diagnostics ?? RecordingTalmidRowDiagnostics(),
+  ),
+];
+
+/// Pumps [MyTalmidimScreen] at [size] (logical pixels) and settles its
+/// first frames.
+Future<void> pumpTalmidim(
+  WidgetTester tester, {
+  required TutorRosterRepository repo,
+  required FakeTalmidInputs inputs,
+  TalmidContextOpener? opener,
+  bool online = true,
+  Size size = const Size(400, 800),
+  ThemeData? theme,
+  Locale locale = const Locale('en'),
+  List<Override> extra = const [],
+}) async {
+  tester.view
+    ..physicalSize = size
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    pumpApp(
+      child: const MyTalmidimScreen(),
+      theme: theme,
+      locale: locale,
+      overrides: [
+        ...talmidimOverrides(
+          repo: repo,
+          inputs: inputs,
+          opener: opener,
+          online: online,
+        ),
+        ...extra,
+      ],
+    ),
+  );
+  await tester.pump();
+  await tester.pump();
 }

@@ -1359,6 +1359,47 @@ class AppLocalizationsHe extends AppLocalizations {
   String get talmidChochomCaps => 'תלמיד חכם';
 
   @override
+  String get talmidimUnnamed => 'תלמיד';
+
+  @override
+  String get talmidimTitle => 'התלמידים שלי';
+
+  @override
+  String get talmidimAccessNote => 'מוצגים רק תלמידים שהוריהם נתנו לך גישה.';
+
+  @override
+  String get talmidimEmpty => 'אין עדיין תלמידים — הורה צריך לתת לך גישה.';
+
+  @override
+  String talmidimTrackNext(String track, String position) {
+    return '$track: הבא $position';
+  }
+
+  @override
+  String talmidimTrackNoGround(String track) {
+    return '$track: עוד לא נקבע חומר';
+  }
+
+  @override
+  String talmidimTrackAllRecorded(String track) {
+    return '$track: כל החומר נרשם';
+  }
+
+  @override
+  String get talmidimLocked => 'שבת / יום טוב';
+
+  @override
+  String get talmidimRowLoadFailed => 'לא הצלחנו לטעון את מצב התלמיד.';
+
+  @override
+  String get talmidimSelectPrompt => 'בחר תלמיד כדי לראות את מצבו.';
+
+  @override
+  String talmidimOpen(String name) {
+    return 'פתיחת $name';
+  }
+
+  @override
   String get mainFocus => 'מיקוד ראשי';
 
   @override

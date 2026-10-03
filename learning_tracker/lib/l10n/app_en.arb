@@ -1262,6 +1262,73 @@
   "bubbleChazara": "CHAZARA",
   "talmidChochom": "Talmid Chochom",
   "talmidChochomCaps": "TALMID CHOCHOM",
+  "talmidimUnnamed": "Talmid",
+  "@talmidimUnnamed": {
+    "description": "Talmid row name when the server has no learner name; never the raw profile id (DNI-511)."
+  },
+  "talmidimTitle": "My talmidim",
+  "@talmidimTitle": {
+    "description": "My talmidim screen title and its entry in Settings (DNI-511, UX-DR-58)."
+  },
+  "talmidimAccessNote": "You see only learners whose parents gave you access.",
+  "@talmidimAccessNote": {
+    "description": "My talmidim footer info note (DNI-511 AC-1, UX-DR-39, UX-DR-68)."
+  },
+  "talmidimEmpty": "No talmidim yet — a parent needs to give you access.",
+  "@talmidimEmpty": {
+    "description": "My talmidim empty state (DNI-511 AC-6, UX-DR-134; EXPERIENCE.md [ASSUMPTION copy]). DRAFT copy, pending zc4."
+  },
+  "talmidimTrackNext": "{track}: next {position}",
+  "@talmidimTrackNext": {
+    "description": "Talmid row detail line: the tutor's sub-track and the engine's next position (DNI-511 AC-1).",
+    "placeholders": {
+      "track": {
+        "type": "String"
+      },
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "talmidimTrackNoGround": "{track}: no ground yet",
+  "@talmidimTrackNoGround": {
+    "description": "Talmid row detail line for a groundless sub-track (DNI-511 AC-3, UX-DR-83).",
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "talmidimTrackAllRecorded": "{track}: all ground recorded",
+  "@talmidimTrackAllRecorded": {
+    "description": "Talmid row detail line when every ground leaf of the sub-track is recorded (DNI-511). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "talmidimLocked": "Shabbos / Yom Tov",
+  "@talmidimLocked": {
+    "description": "Talmid row while that learner is inside a lock window: no name, status, position or action (DNI-511 AC-4, AD-36)."
+  },
+  "talmidimRowLoadFailed": "Couldn't load this talmid's standing.",
+  "@talmidimRowLoadFailed": {
+    "description": "Talmid row whose learner state could not be loaded or timed out; shown with Retry (DNI-511 AC-7). DRAFT copy, pending zc4."
+  },
+  "talmidimSelectPrompt": "Choose a talmid to see his standing.",
+  "@talmidimSelectPrompt": {
+    "description": "Tablet My talmidim detail pane before a talmid is selected (DNI-511 AC-8). DRAFT copy, pending zc4."
+  },
+  "talmidimOpen": "Open {name}",
+  "@talmidimOpen": {
+    "description": "Tablet My talmidim detail pane action that opens the selected talmid through the tutor PIN gate (DNI-511 AC-5, AC-8). DRAFT copy, pending zc4.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "mainFocus": "MAIN FOCUS",
   "carouselCompletion": "Completion (with {chazara})",
   "@carouselCompletion": {

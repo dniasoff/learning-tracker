@@ -2333,6 +2333,72 @@ abstract class AppLocalizations {
   /// **'TALMID CHOCHOM'**
   String get talmidChochomCaps;
 
+  /// Talmid row name when the server has no learner name; never the raw profile id (DNI-511).
+  ///
+  /// In en, this message translates to:
+  /// **'Talmid'**
+  String get talmidimUnnamed;
+
+  /// My talmidim screen title and its entry in Settings (DNI-511, UX-DR-58).
+  ///
+  /// In en, this message translates to:
+  /// **'My talmidim'**
+  String get talmidimTitle;
+
+  /// My talmidim footer info note (DNI-511 AC-1, UX-DR-39, UX-DR-68).
+  ///
+  /// In en, this message translates to:
+  /// **'You see only learners whose parents gave you access.'**
+  String get talmidimAccessNote;
+
+  /// My talmidim empty state (DNI-511 AC-6, UX-DR-134; EXPERIENCE.md [ASSUMPTION copy]). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'No talmidim yet — a parent needs to give you access.'**
+  String get talmidimEmpty;
+
+  /// Talmid row detail line: the tutor's sub-track and the engine's next position (DNI-511 AC-1).
+  ///
+  /// In en, this message translates to:
+  /// **'{track}: next {position}'**
+  String talmidimTrackNext(String track, String position);
+
+  /// Talmid row detail line for a groundless sub-track (DNI-511 AC-3, UX-DR-83).
+  ///
+  /// In en, this message translates to:
+  /// **'{track}: no ground yet'**
+  String talmidimTrackNoGround(String track);
+
+  /// Talmid row detail line when every ground leaf of the sub-track is recorded (DNI-511). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'{track}: all ground recorded'**
+  String talmidimTrackAllRecorded(String track);
+
+  /// Talmid row while that learner is inside a lock window: no name, status, position or action (DNI-511 AC-4, AD-36).
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos / Yom Tov'**
+  String get talmidimLocked;
+
+  /// Talmid row whose learner state could not be loaded or timed out; shown with Retry (DNI-511 AC-7). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this talmid\'s standing.'**
+  String get talmidimRowLoadFailed;
+
+  /// Tablet My talmidim detail pane before a talmid is selected (DNI-511 AC-8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a talmid to see his standing.'**
+  String get talmidimSelectPrompt;
+
+  /// Tablet My talmidim detail pane action that opens the selected talmid through the tutor PIN gate (DNI-511 AC-5, AC-8). DRAFT copy, pending zc4.
+  ///
+  /// In en, this message translates to:
+  /// **'Open {name}'**
+  String talmidimOpen(String name);
+
   /// No description provided for @mainFocus.
   ///
   /// In en, this message translates to:
