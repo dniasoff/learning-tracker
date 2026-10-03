@@ -23,6 +23,8 @@ import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
@@ -105,18 +107,24 @@ class _PredicateStreakService implements StreakAlertService {
   final bool Function(DateTime utc) _isLockedAt;
 
   @override
-  Future<void> evaluate({
+  Future<StreakAlertOutcome> evaluate({
+    required String curriculumId,
+    required CurriculumStreak? streak,
+    required LearnerSettingsHistory settingsHistory,
     required int hour,
     required int minute,
     String? title,
     String Function(int currentStreak)? localizedBody,
-  }) => _gateway.scheduleStreakAlertForProfile(
-    profileId: _profileId,
-    hour: hour,
-    minute: minute,
-    body: 'streak',
-    isLockedAt: _isLockedAt,
-  );
+  }) async {
+    await _gateway.scheduleStreakAlertForProfile(
+      profileId: _profileId,
+      hour: hour,
+      minute: minute,
+      body: 'streak',
+      isLockedAt: _isLockedAt,
+    );
+    return StreakAlertOutcome.scheduled;
+  }
 
   @override
   Future<void> cancelAlert() =>
