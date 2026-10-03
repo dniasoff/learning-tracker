@@ -1,17 +1,22 @@
 // DNI-497 (Story 2.6) AC-1, AC-3/AC-5 (fully ticked), AC-7: the detail
 // renders from a hub selection with the engine's values; the child is
-// read-only.
+// read-only. DNI-498 (Story 2.7) AC-1 and AC-9 on the real detail: the
+// parent's *+ Add ground*, groundless and populated, opens the picker (the
+// phone route, or a right pane at >= 840dp).
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_picker_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:mocktail/mocktail.dart';
@@ -48,11 +53,16 @@ void main() {
     SubTrackDetailRole role = SubTrackDetailRole.parent,
     List<Override> extra = const [],
     Stream<LearnerState> Function()? engine,
+    bool calendarProgram = false,
   }) async {
     await tester.pumpWidget(
       pumpApp(
         overrides: [
-          ...h.overrides(role: role, engine: engine),
+          ...h.overrides(
+            role: role,
+            engine: engine,
+            calendarProgram: calendarProgram,
+          ),
           ...extra,
         ],
         child: StackRouterScope(
@@ -239,5 +249,113 @@ void main() {
     ]) {
       expect(find.textContaining(word), findsNothing, reason: word);
     }
+  });
+  group('Add ground (DNI-498 AC-1, AC-9)', () {
+    const phone = Size(412, 915);
+    const tablet = Size(1280, 800);
+    final addGround = find.byKey(const ValueKey('subTrackDetailAddGround'));
+    String? focused() => FocusManager.instance.primaryFocus?.debugLabel;
+
+    void sized(WidgetTester tester, Size size) {
+      tester.view
+        ..physicalSize = size
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    for (final (label, ground) in [
+      ('groundless', const <NodeEntry>[]),
+      ('populated', const [berakhot1, peah]),
+    ]) {
+      testWidgets('$label: the parent sees + Add ground under the ground '
+          'list, and on a phone it pushes the picker route for this '
+          'sub-track; focus returns to it', (tester) async {
+        sized(tester, phone);
+        final track = detailSubTrack(40, 'Rebbe', ground);
+        h.seed(subTracks: [track]);
+        await pump(tester, id: track.id);
+        await tester.ensureVisible(addGround);
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(of: addGround, matching: find.text('Add ground')),
+          findsOneWidget,
+        );
+        expect(
+          tester.getTopLeft(addGround).dy,
+          greaterThan(tester.getTopLeft(find.text('Ground (in order)')).dy),
+        );
+        await tester.tap(addGround);
+        await tester.pumpAndSettle();
+        final pushed =
+            verify(() => router.push<Object?>(captureAny())).captured.single
+                as GroundPickerRoute;
+        expect(pushed.args!.subTrackId, track.id);
+        expect(focused(), 'addGround');
+      });
+    }
+
+    for (final role in [SubTrackDetailRole.child, SubTrackDetailRole.tutor]) {
+      testWidgets('a ${role.name} sees no + Add ground (ground is read-only)', (
+        tester,
+      ) async {
+        h.seed(subTracks: [school]);
+        await pump(tester, role: role);
+        expect(find.text('Ground (in order)'), findsOneWidget);
+        expect(addGround, findsNothing);
+        expect(find.text('Add ground'), findsNothing);
+      });
+    }
+
+    testWidgets('an ended sub-track has no + Add ground', (tester) async {
+      final ended = detailSubTrack(50, 'Last year', const [peah], ended: true);
+      h.seed(subTracks: [ended]);
+      await pump(tester, id: ended.id);
+      expect(find.text('Ground (in order)'), findsOneWidget);
+      expect(find.text('Add ground'), findsNothing);
+    });
+
+    testWidgets('a calendar-program curriculum has no + Add ground (AD-45)', (
+      tester,
+    ) async {
+      h.seed(subTracks: [school]);
+      await pump(tester, calendarProgram: true);
+      expect(find.text('Ground (in order)'), findsOneWidget);
+      expect(find.text('Add ground'), findsNothing);
+    });
+
+    testWidgets('at >= 840dp the picker opens as a right pane beside the '
+        'detail, without a route; closing it returns focus', (tester) async {
+      sized(tester, tablet);
+      h.seed(subTracks: [school]);
+      await pump(
+        tester,
+        extra: [
+          // The pane's own content is covered by the picker tests; here it
+          // only has to open beside the detail.
+          groundPickerAccessProvider.overrideWith(
+            (ref, _) async => const GroundPickerUnavailable(
+              GroundPickerBlock.calendarProgram,
+            ),
+          ),
+        ],
+      );
+      await tester.ensureVisible(addGround);
+      await tester.pumpAndSettle();
+      await tester.tap(addGround);
+      await tester.pumpAndSettle();
+      verifyNever(() => router.push<Object?>(any()));
+      final pane = find.byKey(ValueKey('groundPickerPane-${school.id}'));
+      expect(pane, findsOneWidget);
+      expect(find.text('Ground (in order)'), findsOneWidget);
+      expect(
+        tester.getTopLeft(pane).dx,
+        greaterThan(tester.getTopRight(find.text('Ground (in order)')).dx),
+      );
+      expect(focused(), 'groundPickerTitle');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(pane, findsNothing);
+      expect(focused(), 'addGround');
+    });
   });
 }

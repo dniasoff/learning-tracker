@@ -10,10 +10,10 @@
 /// the picker as a right pane beside the detail (UX-DR-164). Either way
 /// focus returns to the button when the picker closes (UX-DR-160).
 ///
-/// Story 2.6's detail screen (DNI-497) hosts these: it wraps its body in
-/// [GroundPickerSplitView] and places [AddGroundButton] in its ground
-/// section. Until DNI-497 lands on the integration branch they have no
-/// production host (follow-up bead in the DNI-498 hand-off).
+/// Story 2.6's detail (`SubTrackDetailView`, DNI-497) hosts these: it
+/// wraps its body in [GroundPickerSplitView] and places [AddGroundButton]
+/// under its ground list. `add_ground_host_gate_test.dart` keeps that
+/// wiring from being dropped (merge gate learning-tracker-fyh.228).
 library;
 
 import 'package:auto_route/auto_route.dart';
@@ -70,8 +70,6 @@ class _AddGroundButtonState extends ConsumerState<AddGroundButton> {
 
   @override
   Widget build(BuildContext context) {
-    // The picker has usually closed when a queued assignment is refused.
-    listenForGroundRollbacks(ref, context, widget.subTrackId);
     final parent = ref.watch(parentSessionProvider).value ?? false;
     final scope = ref.watch(activeLearnerScopeProvider).value;
     if (!parent || scope == null) return const SizedBox.shrink();
