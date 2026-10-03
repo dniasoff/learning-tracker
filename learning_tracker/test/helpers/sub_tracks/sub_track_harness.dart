@@ -145,11 +145,16 @@ final class SubTrackBackedLearningCommands implements LearningCommands {
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
+    String? nextYearOf,
   }) {
     creates.add(draft);
     return _scripted() ??
         Zone.root.run(
-          () => subTracks.createSubTrack(draft, subTrackId: subTrackId),
+          () => subTracks.createSubTrack(
+            draft,
+            subTrackId: subTrackId,
+            nextYearOf: nextYearOf,
+          ),
         );
   }
 

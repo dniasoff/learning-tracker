@@ -417,6 +417,85 @@ void main() {
       expect(port.attempts, isEmpty);
     });
 
+    group('wires the governed sub-track commands (DNI-492, DNI-499): the '
+        'lifecycle actions are saved, never answered onlineRequired', () {
+      // The 2026-27 school year; the clock is 2026-09-01 10:00 UTC.
+      final school = SubTrack(
+        id: ulidD,
+        curriculumId: engineCurriculum,
+        name: 'School',
+        type: SubTrackType.schoolYear,
+        academicYear: 2026,
+        windowStart: '2026-09-01',
+        windowEnd: '2027-07-31',
+        ratePerWeek: 8,
+        weeksPerYear: 36,
+        learnsOnShabbos: true,
+        ground: const [],
+        lastChangeId: ulidE,
+      );
+
+      Future<LearningCommands> commandsOf() async {
+        subTracks.seed(c0Scope(), [school]);
+        final container = ProviderContainer.test(overrides: ready());
+        return (await settledAsync(container, learningCommandsProvider)).value!;
+      }
+
+      test('Add next year creates the 2027-28 school year and reports '
+          'subtrack_lifecycle add_next_year', () async {
+        final commands = await commandsOf();
+        final result = await commands.createSubTrack(
+          const SubTrackDraft(
+            curriculumId: engineCurriculum,
+            name: 'School',
+            type: SubTrackType.schoolYear,
+            academicYear: 2027,
+            windowStart: '2027-09-01',
+            windowEnd: '2028-07-31',
+            ratePerWeek: 8,
+            weeksPerYear: 36,
+            learnsOnShabbos: true,
+            ground: [],
+          ),
+          subTrackId: ulidC,
+          nextYearOf: ulidD,
+        );
+        expect(result, isA<CaptureSuccess>());
+        expect((result as CaptureSuccess).queued, isFalse);
+        final created = subTracks
+            .tracksOf(c0Scope())
+            .singleWhere((t) => t.id == ulidC);
+        expect(created.academicYear, 2027);
+        final (scope, entry) = subTracks.entries.single;
+        expect(scope, c0Scope());
+        expect(entry.actor.uid, 'auth-uid');
+        expect(entry.actor.role, ActorRole.parent);
+        await pumpEventQueue();
+        expect(
+          analytics.lastParamsOf(AnalyticsEvent.subTrackLifecycle)?['action'],
+          'add_next_year',
+        );
+      });
+
+      test('End writes the ended tombstone', () async {
+        final commands = await commandsOf();
+        final result = await commands.endSubTrack(ulidD);
+        expect(result, isA<CaptureSuccess>());
+        final ended = subTracks.tracksOf(c0Scope()).single;
+        expect(ended.endedAt, isNotNull);
+        expect(ended.endReason, SubTrackEndReason.ended);
+      });
+
+      test('Delete writes the deleted tombstone', () async {
+        final commands = await commandsOf();
+        final result = await commands.deleteSubTrack(ulidD);
+        expect(result, isA<CaptureSuccess>());
+        final deleted = subTracks.tracksOf(c0Scope()).single;
+        expect(deleted.endedAt, isNotNull);
+        expect(deleted.endReason, SubTrackEndReason.deleted);
+      });
+    });
+
     test('wires the governed sub-track commands: a parent ground reorder '
         'through editSubTrack is saved, not answered onlineRequired '
         '(DNI-497)', () async {

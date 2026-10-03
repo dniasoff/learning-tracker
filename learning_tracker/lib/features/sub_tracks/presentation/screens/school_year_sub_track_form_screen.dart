@@ -54,8 +54,9 @@ const kSubTrackFormMaxWidth = 600.0;
 /// With [nextYearOf] it is Story 2.8's *Add next year* form (DNI-499,
 /// AC-1): prefilled from that school-year sub-track for `academic_year + 1`
 /// with empty ground ([nextYearSubTrackDraft]), every field editable, and
-/// *Save sub-track* creates a NEW sub-track (`createSubTrack(addNextYear:
-/// true)`); the source is never edited.
+/// *Save sub-track* creates a NEW sub-track (`createSubTrack(nextYearOf:
+/// source)`); the source is never edited, and a source ended or deleted
+/// elsewhere after the form opened refuses the save.
 @RoutePage()
 class SchoolYearSubTrackFormScreen extends ConsumerWidget {
   const SchoolYearSubTrackFormScreen({
@@ -433,12 +434,15 @@ class _SchoolYearSubTrackFormState
         throw StateError('No parent session for the sub-track save');
       }
       final existing = widget.existing;
-      if (existing == null && widget.nextYearOf != null) {
+      final source = widget.nextYearOf;
+      if (existing == null && source != null) {
         // Story 2.8: a new sub-track through the lifecycle save, which
-        // keeps a queued result visibly pending (AD-54).
+        // keeps a queued result visibly pending (AD-54) and re-checks that
+        // the source is still live.
         result = await saveNextYearSubTrack(
           ref.read,
           schoolYearDraft(values, curriculumId: widget.curriculumId),
+          sourceId: source.id,
           yearLabel: academicYearLabel(values.academicYear!),
         );
       } else if (existing == null) {
@@ -488,6 +492,20 @@ class _SchoolYearSubTrackFormState
             ),
           );
         }
+        return;
+      case CaptureRejected(reason: CaptureRejection.targetNotFound)
+          when widget.existing == null && widget.nextYearOf != null:
+        // The source was ended or deleted (e.g. on another device) after
+        // the form opened: nothing was written, and retrying cannot help.
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.subTrackLifecycleNextYearSourceEnded(
+                widget.nextYearOf!.name,
+              ),
+            ),
+          ),
+        );
         return;
       case CaptureRejected(:final violations)
           when violations.any(
