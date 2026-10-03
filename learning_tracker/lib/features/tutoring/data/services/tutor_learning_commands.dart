@@ -590,6 +590,7 @@ final class TutorLearningCommands implements LearningCommands {
   Future<CaptureResult> createSubTrack(
     SubTrackDraft draft, {
     String? subTrackId,
+    String? nextYearOf,
   }) async => _invalid;
 
   @override
@@ -603,6 +604,9 @@ final class TutorLearningCommands implements LearningCommands {
 
   @override
   Future<CaptureResult> deleteSubTrack(String subTrackId) async => _invalid;
+
+  @override
+  Future<bool> whenSubTrackChangeConfirmed(String changeId) async => false;
 
   @override
   Future<CaptureResult> removeTrack(String curriculumId) async => _invalid;
@@ -615,23 +619,4 @@ final class TutorLearningCommands implements LearningCommands {
   @override
   Future<BackupReplayResult> importBackup(BackupReplayInput input) async =>
       const BackupReplayResult(result: _invalid);
-  // Sub-track writes by a tutor go through the DNI-509 callable
-  // (tutorUpsertSubTrack, post-cutover); until then they are refused here.
-  @override
-  Future<CaptureResult> createSubTrack(
-    SubTrackDraft draft, {
-    String? subTrackId,
-  }) async => _invalid;
-
-  @override
-  Future<CaptureResult> editSubTrack(
-    String subTrackId,
-    SubTrackEdit edit,
-  ) async => _invalid;
-
-  @override
-  Future<CaptureResult> endSubTrack(String subTrackId) async => _invalid;
-
-  @override
-  Future<CaptureResult> deleteSubTrack(String subTrackId) async => _invalid;
 }
