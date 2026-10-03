@@ -41,6 +41,7 @@ Future<AsyncValue<List<CurriculumForecast>>> _settledForecast(
   ProviderContainer container,
 ) async {
   await settledAsync(container, parentSessionProvider);
+  await settledAsync(container, forecastAccessProvider);
   return settledAsync(container, parentForecastProvider);
 }
 

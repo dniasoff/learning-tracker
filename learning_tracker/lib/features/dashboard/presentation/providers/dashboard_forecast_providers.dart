@@ -11,9 +11,10 @@
 /// report's own mapping ([OnTrackView.of], Story 5.3, DNI-518), so the
 /// Dashboard and the report cannot disagree for one state (DNI-518 AC-11).
 ///
-/// * [parentForecastProvider] is parent-only (NFR-9, UX-DR-48): it builds
-///   nothing unless [parentSessionProvider] says the session is a parent's,
-///   so a child or tutored session never holds status, projection or
+/// * [parentForecastProvider] is for the parent and the tutor (NFR-9,
+///   UX-DR-48; Story 4.2 / DNI-510 AC-7): it builds nothing unless
+///   [forecastAccessProvider] says the session is a parent's or a tutor's
+///   in tutor mode, so a child session never holds status, projection or
 ///   shortfall values, not even off screen.
 /// * [learnerTodayProvider] is the encouragement read every role may see
 ///   (UX-DR-67): today's new leaves, the daily target and the streak.
@@ -35,6 +36,7 @@ import 'package:learning_tracker/features/learner_state/data/repositories/learne
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/progress/progress.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// One sub-track whose ground will not all be reached before the deadline
 /// (FR-21): the engine's [SubTrackState] values for the warning copy.
@@ -194,19 +196,33 @@ AsyncValue<List<T>> _fromActiveState<T>(
   return AsyncData<List<T>>(build(learner));
 }
 
+/// Whether the session sees the parent forecast (on-track card,
+/// projection, daily target, shortfall warning; UX-DR-48, UX-DR-97): a
+/// parent session, or a tutor in tutor mode viewing his talmid (Story 4.2,
+/// DNI-510, AC-7). A child without the parent PIN never does. Fails closed
+/// on any error.
+final forecastAccessProvider = FutureProvider.autoDispose<bool>((ref) async {
+  if (ref.watch(activeTutoredProfileSelectionProvider) != null) return true;
+  try {
+    return await ref.watch(parentSessionProvider.future);
+  } on Object {
+    return false;
+  }
+});
+
 /// The parent forecast cards of the active learner, one per evaluated
-/// curriculum.
+/// curriculum — for the parent and a tutor in tutor mode.
 ///
-/// Fail closed: only a confirmed parent session reads the learner state.
-/// Until the role resolves (or while it re-resolves), and for any session
-/// that is not a parent's (a child without the parent PIN, a tutored
-/// session, an error), the value is an empty list, so not even the loading
+/// Fail closed: only a confirmed parent or tutor session
+/// ([forecastAccessProvider]) reads the learner state. Until the role
+/// resolves (or while it re-resolves), and for a child without the parent
+/// PIN or an error, the value is an empty list, so not even the loading
 /// placeholder or its "Loading pace status" label reaches a child's first
 /// frame (NFR-9, UX-DR-48, UX-DR-97). Loading and error states exist only
-/// after parent authorization.
+/// after authorization.
 final parentForecastProvider =
     Provider.autoDispose<AsyncValue<List<CurriculumForecast>>>((ref) {
-      final access = ref.watch(parentSessionProvider);
+      final access = ref.watch(forecastAccessProvider);
       if (access.isLoading || access.hasError || access.value != true) {
         return const AsyncData(<CurriculumForecast>[]);
       }

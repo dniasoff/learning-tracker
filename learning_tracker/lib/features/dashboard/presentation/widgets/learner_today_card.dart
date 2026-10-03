@@ -16,7 +16,6 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// One [LearnerTodayCard] per evaluated curriculum, followed by
@@ -58,11 +57,11 @@ class LearnerTodaySection extends ConsumerWidget {
   }
 }
 
-/// The Dashboard's today section outside a parent session (a child without
-/// the parent PIN, a tutored session): encouragement in place of the
-/// parent forecast (UX-DR-67, UX-DR-97). It takes no space in a parent
-/// session, whose on-track card already shows the target, or while the
-/// session is resolving; an unresolvable session fails closed to this
+/// The Dashboard's today section for a child without the parent PIN:
+/// encouragement in place of the parent forecast (UX-DR-67, UX-DR-97). It
+/// takes no space in a parent or tutor session (Story 4.2 / DNI-510 AC-7),
+/// whose on-track card already shows the target, or while the session is
+/// resolving; an unresolvable session fails closed to this
 /// encouragement-only view.
 class NonParentTodaySection extends ConsumerWidget {
   /// Creates the section.
@@ -70,7 +69,7 @@ class NonParentTodaySection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final access = ref.watch(parentSessionProvider);
+    final access = ref.watch(forecastAccessProvider);
     if (access.isLoading || access.value == true) {
       return const SizedBox.shrink();
     }
