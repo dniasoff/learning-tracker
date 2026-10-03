@@ -15,16 +15,13 @@
 // below (the rulings order this sweep last in Epic 2).
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_sub_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/shortfall_warning_card.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_home_row.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -106,30 +103,6 @@ LearnerState _state(ProjectionStatus status) => forecastState([
   ),
 ]);
 
-/// The learner's two sub-tracks behind [_state]'s sub-track states, so the
-/// Dashboard summary cards and the Learn rows render for them.
-SubTrack _subTrack(String id, String name) => SubTrack(
-  id: id,
-  curriculumId: forecastCurriculum,
-  name: name,
-  type: SubTrackType.ongoing,
-  windowStart: '2026-09-01',
-  ratePerWeek: 3,
-  weeksPerYear: 40,
-  learnsOnShabbos: false,
-  ground: const [NodeEntry(level: 'masechta', ref: 'Mishnah Berakhot')],
-  lastChangeId: '01J6Q2H4A8M7K3P9R5T6V8WX90',
-);
-
-List<Override> _withSubTracks() => [
-  subTracksForScopeProvider.overrideWith(
-    (ref, _) => Stream.value([
-      _subTrack(schoolSubTrackId, 'School'),
-      _subTrack(rebbeSubTrackId, 'Rebbe'),
-    ]),
-  ),
-];
-
 /// One Epic 2 surface: how to pump it for a session whose role is
 /// `parent`, what proves its Epic 2 content rendered (so the sweep is not
 /// vacuous), and whether it carries the child's today section (UX-DR-67).
@@ -150,7 +123,7 @@ final Map<String, _Surface> _surfaces = {
       router: router,
       parent: parent,
       state: state,
-      extra: _withSubTracks(),
+      extra: epic2SubTrackOverrides(),
     ),
     rendered: () => find.byType(DashboardSubTrackCard),
     showsToday: true,
@@ -160,7 +133,7 @@ final Map<String, _Surface> _surfaces = {
       router: router,
       parent: parent,
       state: state,
-      extra: _withSubTracks(),
+      extra: epic2SubTrackOverrides(),
     ),
     rendered: () => find.byType(SubTrackHomeRow),
     showsToday: true,
