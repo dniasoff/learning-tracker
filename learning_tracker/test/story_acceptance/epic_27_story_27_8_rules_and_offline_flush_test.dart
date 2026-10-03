@@ -144,7 +144,7 @@ void main() {
             );
             expect(
               ppBlock,
-              contains('.hasOnly('),
+              contains('writesOnlyLiveKeys(['),
               reason:
                   'profile_programs must restrict writes to a fixed field list',
             );
