@@ -83,7 +83,8 @@ import {
 //                        op: "create" | "edit" | "end" | "delete",
 //                        fields?: <AD-52 sub_tracks fields>}
 //                        create: `fields` is the full new doc (the doc must be
-//                        absent); actionId defaults to subTrackId. edit:
+//                        absent; a null field is simply not written);
+//                        actionId defaults to subTrackId. edit:
 //                        `fields` holds only the changed fields, `null`
 //                        clears a nullable one (the doc must exist); actionId
 //                        required. end / delete: no `fields`; actionId
@@ -169,9 +170,11 @@ function requestObject(raw: unknown): Record<string, unknown> {
 }
 
 /**
- * Validates one tutor learn event `{id, fields}` against the Epic 1 tutor
- * contract — `kind = learn`, `source = main`, `date_state` dated or
- * before_tracking, no caller-supplied time or actor — and normalises a
+ * Validates one tutor learn event `{id, fields}` against the tutor
+ * contract — `kind = learn`, `source = main` (or, with
+ * [allowSubTrackSource], a sub-track ULID on a `dated` event — Story 4.1),
+ * `date_state` dated or before_tracking, no caller-supplied time or
+ * actor — and normalises a
  * before_tracking event's absent `learned_on` to the stored `null`. The
  * helper re-validates the full AD-52 shape (types, level only on
  * before_tracking, learned_on required on dated, stage on main only).
@@ -257,11 +260,10 @@ function subTrackSourcePlan(events: LearningEventIntent[]): (ctx: PlanContext) =
       .filter((source) => source !== MAIN_SOURCE))];
     const snaps = await ctx.txn.getAll(
       ...ids.map((id) => ctx.profileRef.collection(ENTITY_COLLECTION.subTrack).doc(id)));
-    const curriculumOf = new Map<string, unknown>();
-    snaps.forEach((snap, i) => {
+    const curriculumOf = new Map<string, unknown>(snaps.map((snap, i) => {
       if (!snap.exists) throw new HttpsError("not-found", "Sub-track source does not exist");
-      curriculumOf.set(ids[i], snap.get("curriculum_id"));
-    });
+      return [ids[i], snap.get("curriculum_id")];
+    }));
     for (const e of events) {
       if (e.fields.source === MAIN_SOURCE) continue;
       if (curriculumOf.get(String(e.fields.source)) !== e.fields.curriculum_id) {
@@ -611,8 +613,6 @@ function parseSubTrackFields(raw: unknown, op: "create" | "edit"): Record<string
   if (keys.length === 0) bad("fields must not be empty");
   for (const k of keys) {
     if (!SUB_TRACK_INTENT_FIELDS.has(k)) bad(`Field not allowed on a tutor sub-track ${op}: ${k}`);
-    // A create writes the whole new doc: there is nothing to clear.
-    if (op === "create" && fields[k] === null) bad(`A create cannot clear ${k}`);
   }
   return { ...fields };
 }
