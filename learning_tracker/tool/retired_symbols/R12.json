@@ -3,11 +3,11 @@
   "title": "Retired callables",
   "description": "Action: delete; UI becomes unlearn.",
   "entries": [
-    {"symbol": "tutorResetCompletion", "kind": "callable", "state": "pending", "owner": "DNI-488"},
-    {"symbol": "tutorBulkPriorCompletions", "kind": "callable", "state": "pending", "owner": "DNI-488"},
-    {"symbol": "deleteBulkMarkedCompletions", "kind": "callable", "state": "pending", "owner": "DNI-488"},
-    {"symbol": "tutor_bulk_completions", "kind": "callable", "state": "pending", "owner": "DNI-488", "note": "functions module path"},
-    {"symbol": "resetCompletion", "kind": "callable", "state": "pending", "owner": "DNI-488", "note": "TutorWriteService.resetCompletion"},
-    {"symbol": "completions", "kind": "collection", "state": "pending", "owner": "DNI-488", "paths": {"include": ["functions/src/**"], "exclude": ["functions/src/deletes.ts"]}, "note": "functions/src writers outside the deletes.ts remnants"}
+    {"symbol": "tutorResetCompletion", "kind": "callable", "state": "retired", "owner": "DNI-488"},
+    {"symbol": "tutorBulkPriorCompletions", "kind": "callable", "state": "retired", "owner": "DNI-488"},
+    {"symbol": "deleteBulkMarkedCompletions", "kind": "callable", "state": "retired", "owner": "DNI-488"},
+    {"symbol": "tutor_bulk_completions", "kind": "callable", "state": "retired", "owner": "DNI-488", "note": "functions module path"},
+    {"symbol": "resetCompletion", "kind": "callable", "state": "retired", "owner": "DNI-488", "note": "TutorWriteService.resetCompletion"},
+    {"symbol": "completions", "kind": "collection", "state": "retired", "owner": "DNI-488", "paths": {"include": ["functions/src/**"], "exclude": ["functions/src/deletes.ts"]}, "note": "functions/src writers outside the deletes.ts remnants"}
   ]
 }

@@ -1,7 +1,6 @@
 // CF tests — tutor settings/profile mutations:
 //   tutorUpdateGamificationSettings, tutorEditProfile (Story 1.10 / DNI-472
-//   AC-4: restricted display_name/avatar/mode field merge),
-//   tutorBulkPriorCompletions
+//   AC-4: restricted display_name/avatar/mode field merge)
 // See _cf_helpers.mjs for the harness.
 
 import assert from 'node:assert/strict';

@@ -1,7 +1,6 @@
 // CF tests — owner self-service delete functions:
 //   deleteLearnerProfile, deleteCurriculumTrack (now the AD-38 remove-track
-//   action — tombstones, no deletes), deleteBulkMarkedCompletions,
-//   deleteAccountData
+//   action — tombstones, no deletes), deleteAccountData
 // See _cf_helpers.mjs for the harness.
 
 import assert from 'node:assert/strict';
