@@ -61,6 +61,39 @@ List<String> retiredKeysOf(
   return keys.toList();
 }
 
+/// The deleted code identifiers (retired types, services, callables and UI,
+/// unscoped and with no pending entry) of inventory [groups], for audits
+/// that a reader or a tree no longer uses the retired stack.
+List<String> retiredIdentifiersIn(Iterable<String> groups) {
+  final symbols = <String>{};
+  for (final group in groups) {
+    final entries =
+        (jsonDecode(File('tool/retired_symbols/$group.json').readAsStringSync())
+                as Map<String, dynamic>)['entries']
+            as List;
+    final typed = entries.cast<Map<String, dynamic>>();
+    final pending = {
+      for (final e in typed)
+        if (e['state'] != 'retired') e['symbol'] as String,
+    };
+    for (final entry in typed) {
+      final symbol = entry['symbol'] as String;
+      if (entry['state'] != 'retired' || pending.contains(symbol)) continue;
+      if (entry['kind'] == 'collection' || entry['kind'] == 'field') continue;
+      if (entry['paths'] != null) continue;
+      symbols.add(symbol);
+    }
+  }
+  if (symbols.isEmpty) throw StateError('No retired identifiers in $groups');
+  return symbols.toList();
+}
+
+/// A pattern matching any of [identifiers] on identifier boundaries.
+RegExp identifierPattern(Iterable<String> identifiers) => RegExp(
+  '(?<![A-Za-z0-9_\$])(${identifiers.map(RegExp.escape).join('|')})'
+  r'(?![A-Za-z0-9_$])',
+);
+
 /// A legacy document fragment holding every key of [keys] at [value].
 Map<String, Object?> legacyKeys(
   Iterable<String> keys, {
