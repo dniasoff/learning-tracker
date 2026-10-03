@@ -5,6 +5,8 @@ import 'package:learning_tracker/features/notifications/data/parent_push_receive
 import 'package:learning_tracker/features/notifications/domain/services/notification_initializer.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/catch_up_reminder_providers.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 /// Initialises the notification system from the provider [container].
 ///
@@ -49,6 +51,23 @@ Future<void> bootstrapNotifications({
       // which opens the learner's Change history behind its usual guards.
       onParentPushTap: (tap) =>
           container.read(pendingParentPushTapProvider.notifier).set(tap),
+
+      // Story 3.5 (DNI-508, AC-9): a catch-up reminder opens its own
+      // profile's Learn tab through the same profile selection (the PIN
+      // guards apply on the way in). Never on a tutored session — a tutor
+      // is never routed to a child's catch-up card — and never for a
+      // profile that is gone.
+      onCatchUpTap: (profileId) async {
+        if (container.read(activeTutoredProfileSelectionProvider) != null) {
+          return false;
+        }
+        final profile = await container
+            .read(profileRepositoryProvider)
+            .getProfileById(profileId);
+        if (profile == null) return false;
+         container.read(selectedProfileIdProvider.notifier).select(profileId);
+         return true;
+       },
     );
     await notificationInitializer.initialize();
     // Kick off sync effects so scheduled notifications reflect current
@@ -60,6 +79,10 @@ Future<void> bootstrapNotifications({
     // WS5.per-profile (DEC-28): schedule reminders for ALL profiles, not just
     // the currently-active one, so inactive profiles' reminders fire on schedule.
     container.read(allProfilesReminderBootstrapProvider);
+    // Story 3.5 (DNI-508): the ONE catch-up reminder scheduler, owner
+    // devices only (it gates tutored sessions itself, AC-5); re-runs on
+    // resume and on every learnerSettings change.
+    container.read(catchUpReminderSyncEffectProvider);
   } catch (e, stack) {
     log.error(
       event: 'notification_init_failed',
