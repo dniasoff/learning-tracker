@@ -386,6 +386,53 @@ void main() {
       },
     );
 
+    /// The roster screen state: no tutored session, the list cached.
+    Future<ProviderContainer> rosterOnly() async {
+      final container = ProviderContainer(overrides: overrides());
+      addTearDown(container.dispose);
+      container.listen(tutorSessionAccessWatchProvider, (_, _) {});
+      container.listen(incomingTutorGrantsProvider, (_, _) {});
+      await container.read(incomingTutorGrantsProvider.future);
+      return container;
+    }
+
+    test(
+      'no session open: reconnect drops a row revoked while offline',
+      () async {
+        final container = await rosterOnly();
+        connectivity.add(false);
+        await pumpEventQueue();
+        serverGrants = [_activeGrant(_otherGrant, _otherProfile, 'Dovi')];
+
+        connectivity.add(true);
+        await pumpEventQueue();
+        final roster = await container.read(incomingTutorGrantsProvider.future);
+
+        expect(roster.map((g) => g.grantId), [_otherGrant]);
+        expect(
+          container.read(tutorAccessEndedProvider),
+          isNull,
+          reason: 'no session to end',
+        );
+      },
+    );
+
+    test(
+      'no session and no cached active row: reconnect costs no call',
+      () async {
+        serverGrants = [];
+        final container = await rosterOnly();
+        final reads = rosterReads;
+        connectivity.add(false);
+        await pumpEventQueue();
+        connectivity.add(true);
+        await pumpEventQueue();
+        await container.read(incomingTutorGrantsProvider.future);
+
+        expect(rosterReads, reads);
+      },
+    );
+
     test('back online with the grant still active keeps the session', () async {
       final container = await openSession();
       connectivity.add(false);

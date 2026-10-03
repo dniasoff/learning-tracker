@@ -6,7 +6,7 @@
 // When a session ends for revocation, the list is re-read and only the
 // revoked learner's row goes — on the next update, without a restart; other
 // active learners stay. A stale read that resolves late never brings the
-// revoked row back.
+// revoked row back, and a cached row is re-verified on reconnect.
 
 @Tags(['dni_512', 'tutor_mode', 'manage_grants'])
 library;
@@ -194,6 +194,27 @@ void main() {
     fresh.complete((grants: doviOnly, ok: true));
     await tester.pumpAndSettle();
     stale.complete((grants: both, ok: true));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Yossi'), findsNothing);
+    expect(find.text('Dovi'), findsOneWidget);
+  });
+
+  testWidgets('cached rows are re-verified on reconnect (revoked offline)', (
+    tester,
+  ) async {
+    await pumpRoster(tester);
+    connectivity.add(false);
+    await tester.pump();
+
+    connectivity.add(true);
+    await tester.pump();
+    expect(
+      pendingReads,
+      hasLength(2),
+      reason: 'reconnect re-reads the active set',
+    );
+    pendingReads.last.complete((grants: doviOnly, ok: true));
     await tester.pumpAndSettle();
 
     expect(find.text('Yossi'), findsNothing);

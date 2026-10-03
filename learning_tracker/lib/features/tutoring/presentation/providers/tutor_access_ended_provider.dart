@@ -122,13 +122,20 @@ bool tutorScopeAccessLost(AsyncValue<Object?> value) => switch (value) {
   _ => false,
 };
 
-/// While a tutored session is open, listens to its learner scope through
-/// DNI-523's grant-gated read and to connectivity:
-/// - access lost → [TutorAccessEndedNotifier.end];
-/// - back online → the active-grant list is re-read before the learner is
-///   trusted again, so an offline revocation ends the session on reconnect
-///   (AC-5).
+/// The live revocation watch, armed by the shell:
+/// - back online → the active-grant list is re-read before a cached roster
+///   row or the open learner is trusted again, so a revocation made while
+///   the tutor was offline removes the row, or ends the session, on that
+///   sync (AC-5, T5). Skipped when there is nothing a revocation could
+///   affect (no open session and no cached active row);
+/// - while a tutored session is open, its learner scope is watched through
+///   DNI-523's grant-gated read: access lost → [TutorAccessEndedNotifier.end].
 final tutorSessionAccessWatchProvider = Provider<void>((ref) {
+  ref.listen(connectivityStreamProvider, (previous, next) {
+    final reconnected = previous?.value == false && next.value == true;
+    if (reconnected && _hasAccessToReverify(ref)) _reReadActiveGrants(ref);
+  });
+
   final selection = ref.watch(activeTutoredProfileSelectionProvider);
   if (selection == null) return;
   final LearnerScope scope;
@@ -145,11 +152,16 @@ final tutorSessionAccessWatchProvider = Provider<void>((ref) {
       ref.read(tutorAccessEndedProvider.notifier).end(selection.grantId);
     }
   });
-  ref.listen(connectivityStreamProvider, (previous, next) {
-    final wasOffline = previous?.value == false;
-    if (wasOffline && next.value == true) _reReadActiveGrants(ref);
-  });
 });
+
+/// Whether a revocation could change what the tutor sees: a tutored session
+/// is open, or the cached roster holds an active grant.
+bool _hasAccessToReverify(Ref ref) {
+  if (ref.read(activeTutoredProfileSelectionProvider) != null) return true;
+  if (!ref.exists(incomingTutorGrantsProvider)) return false;
+  final cached = ref.read(incomingTutorGrantsProvider).value;
+  return cached?.any((grant) => grant.grantState is ActiveGrant) ?? false;
+}
 
 /// Starts a fresh read of the active-grant list now, when it is in use (a
 /// list not yet read is fresh on its first read anyway), so the roster's
