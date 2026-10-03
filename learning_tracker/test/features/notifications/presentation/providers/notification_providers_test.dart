@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
-import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
@@ -239,7 +238,7 @@ void main() {
           actor: parentActor,
         );
 
-    Future<(List<String>, int)> runEffect({
+    Future<List<String>> runEffect({
       required List<LearningEvent> counted,
       Set<String> lockIgnored = const {},
     }) async {
@@ -250,7 +249,6 @@ void main() {
         NotificationPreferencesRepository.streakAlertMinuteKey(profileUlid): 0,
       });
       final alerts = _DoneTodayAlerts();
-      var completionReads = 0;
       final container = ProviderContainer(
         overrides: [
           selectedProfileIdProvider.overrideWithValue(profileUlid),
@@ -288,42 +286,34 @@ void main() {
           learnerLockSettingsProvider.overrideWith(
             (ref, _) => Stream.value(c0SettingsHistory()),
           ),
-          // The retired completion read must never be reached.
-          firestoreCompletionRepositoryProvider.overrideWith((ref) async {
-            completionReads++;
-            throw StateError('completions are retired (R11)');
-          }),
         ],
       );
       addTearDown(container.dispose);
       await container.read(streakAlertSyncEffectProvider.future);
-      return (alerts.scheduled, completionReads);
+      return alerts.scheduled;
     }
 
     test('counted learning today (any source) means done: no alert', () async {
-      final (scheduled, reads) = await runEffect(
+      final scheduled = await runEffect(
         counted: [learnToday(source: engineUlid(900))],
       );
       expect(scheduled, isEmpty);
-      expect(reads, 0);
     });
 
     test('no counted learning today means the streak is at risk', () async {
-      final (scheduled, reads) = await runEffect(counted: const []);
+      final scheduled = await runEffect(counted: const []);
       expect(scheduled, [engineCurriculum]);
-      expect(reads, 0);
     });
 
     test('a voided or lock-ignored event is not in the counted set, so it '
         'never marks today done', () async {
       // The engine leaves voided and lock-ignored events out of
       // countedLearns; the projection reads nothing else.
-      final (scheduled, reads) = await runEffect(
+      final scheduled = await runEffect(
         counted: const [],
         lockIgnored: {engineUlid(1)},
       );
       expect(scheduled, [engineCurriculum]);
-      expect(reads, 0);
     });
   });
 }

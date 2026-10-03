@@ -28,8 +28,6 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -37,8 +35,6 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
-
-class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -84,7 +80,6 @@ void main() {
     '(AUD-onboarding-07)',
     (tester) async {
       final contentRepo = _MockContentRepository();
-      final completionRepo = _MockCompletionRepository();
       final service = _MockBeforeTrackingRecorder();
 
       when(
@@ -129,7 +124,6 @@ void main() {
                   contentRepo.getContentForCurriculum(curriculumId),
             ),
             contentSearchProvider.overrideWith((ref, args) => Future.value([])),
-            completionRepositoryProvider.overrideWithValue(completionRepo),
             beforeTrackingRecorderProvider.overrideWithValue(service),
             activeProfileIdProvider.overrideWithValue(_profileId),
             // Mirrors the real dashboardCompletionPercentageProvider's own

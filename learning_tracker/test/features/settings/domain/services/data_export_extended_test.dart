@@ -22,12 +22,16 @@ void main() {
       profileId: testProfileId,
       curriculumId: CurriculumId.bavli,
     );
-    await seedCompletion(
-      firestore,
-      uid: testUid,
-      profileId: testProfileId,
-      curriculumId: CurriculumId.bavli,
-    );
+    // A leftover document in the retired `completions` collection (R1) must
+    // never be exported.
+    await firestore
+        .collection('users')
+        .doc(testUid)
+        .collection('learner_profiles')
+        .doc(testProfileId)
+        .collection('completions')
+        .doc('retired-completion')
+        .set({'curriculum_id': CurriculumId.bavli.storageKey});
     await seedBookmark(
       firestore,
       uid: testUid,

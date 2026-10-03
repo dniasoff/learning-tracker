@@ -47,7 +47,7 @@ import '../harness/e2e_harness.dart';
 
 // ── Stubs and fakes ──────────────────────────────────────────────────────────
 //
-// FakeCompletionRepository and FakeContentRepository were extracted to the
+// FakeContentRepository was extracted to the
 // shared ../fakes/e2e_fakes.dart module (AUD-t-cross-10). Only the
 // file-specific throwing variant remains here.
 
@@ -248,7 +248,6 @@ void main() {
         addTearDown(h.dispose);
 
         final task = _finePacedTask();
-        final fakeRepo = FakeCompletionRepository();
 
         await h.pumpApp(
           path: '/learn',
@@ -258,7 +257,6 @@ void main() {
               tasks: [task],
             ),
             // Wire the fake repo so mark calls do not touch the real DB stack.
-            completionRepositoryProvider.overrideWithValue(fakeRepo),
             // Stub text content so the TextDisplayScreen renders the reader view
             // (not the offline message) after navigation.
             ..._textContentOverrides(task.contentItemSefariaRef),
@@ -291,7 +289,6 @@ void main() {
       addTearDown(h.dispose);
 
       final task = _finePacedTask();
-      final fakeRepo = FakeCompletionRepository();
       final commands = FakeLearningCommands();
       addTearDown(commands.dispose);
 
@@ -303,7 +300,6 @@ void main() {
           // renders the mark-complete button for this sefariaRef.
           allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
           coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
-          completionRepositoryProvider.overrideWithValue(fakeRepo),
           learningCommandsProvider.overrideWith((ref) async => commands),
           // Stub text content — in-memory ContentDatabase has no rows so the
           // real TextCacheRepository would return null → offline message.
@@ -364,13 +360,12 @@ void main() {
       );
 
       // Story 1.11 (DNI-473): exactly one owner capture — a main, dated
-      // batch of this task's ref at its stage — and no legacy write.
+      // batch of this task's ref at its stage.
       final capture = commands.calls.singleWhere((c) => c.name == 'capture');
       expect(capture.args['refs'], [task.contentItemSefariaRef]);
       expect(capture.args['source'], LearningEvent.sourceMain);
       expect(capture.args['dateState'], DateState.dated);
       expect(capture.args['stage'], task.stageOrder);
-      expect(fakeRepo.markedRequests, isEmpty);
     });
   });
 
@@ -393,7 +388,6 @@ void main() {
       addTearDown(h.dispose);
 
       final task = _finePacedTask();
-      final fakeRepo = FakeCompletionRepository();
 
       await h.pumpApp(
         path: '/text/${task.contentItemSefariaRef}',
@@ -401,7 +395,6 @@ void main() {
           ..._textDisplayBaseOverrides(),
           allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
           coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
-          completionRepositoryProvider.overrideWithValue(fakeRepo),
           // Stub text content so reader view (with Mark Complete) renders.
           ..._textContentOverrides(task.contentItemSefariaRef),
           adjacentContentRefsProvider(
@@ -564,7 +557,6 @@ void main() {
         );
 
         final fakeContentRepo = FakeContentRepository([amud2a, amud2b]);
-        final fakeCompletionRepo = FakeCompletionRepository();
         final commands = FakeLearningCommands();
         addTearDown(commands.dispose);
 
@@ -577,7 +569,6 @@ void main() {
             coarsePacedTrackIdsProvider.overrideWith(
               (ref) => Future.value({CurriculumId.bavli}),
             ),
-            completionRepositoryProvider.overrideWithValue(fakeCompletionRepo),
             learningCommandsProvider.overrideWith((ref) async => commands),
             contentRepositoryProvider.overrideWithValue(fakeContentRepo),
             // Stub text content so reader view (with Mark Complete) renders.
@@ -627,7 +618,6 @@ void main() {
           sefariaRef2a,
           sefariaRef2b,
         ], reason: 'daf-paced mark must record both amudim in one capture');
-        expect(fakeCompletionRepo.markedRequests, isEmpty);
       },
     );
   });

@@ -27,7 +27,6 @@ import 'package:learning_tracker/features/content_browsing/presentation/screens/
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
@@ -151,9 +150,6 @@ final class _Browse {
         contentTreeProvider.overrideWith((ref) async => tree),
         curriculumContentProvider.overrideWith(
           (ref, id) => content.getContentForCurriculum(id),
-        ),
-        completionCountProvider.overrideWith(
-          (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
         ),
         anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
         localDayClockProvider.overrideWithValue(clock),

@@ -14,7 +14,6 @@ import 'package:learning_tracker/data/firestore/doc_ids.dart';
 import 'package:learning_tracker/data/repositories/points_ledger_entry.dart';
 import 'package:learning_tracker/features/account/domain/models/account_entity.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_redemption.dart';
-import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -108,64 +107,6 @@ Future<void> seedTrack(
         DocIds.curriculumTrackDocId({'curriculum_id': curriculumId.storageKey}),
       )
       .set(track.toFirestore());
-}
-
-/// Seeds one immutable completion in the profile's `completions` collection.
-///
-/// The document id is derived by [DocIds.completionDocIdForProfile], exactly
-/// as [FirestoreCompletionRepository] derives it. [completedAt] stays a raw
-/// [DateTime] because the Firestore rules require a timestamp, not an ISO
-/// string. Returns the doc-id so a caller can read the exact document back
-/// without re-deriving the formula itself.
-///
-/// [source] rejects [CompletionSource.lifetimeOnly] — [FirestoreCompletion
-/// Repository.recordCompletion] throws on it too (a lifetimeOnly mark is a
-/// `before_tracking` learning event now, never a `completions` document),
-/// so seeding one here would write a document no production path can
-/// create.
-Future<String> seedCompletion(
-  FakeFirebaseFirestore firestore, {
-  required String uid,
-  required String profileId,
-  CurriculumId curriculumId = CurriculumId.mishnayos,
-  String sefariaRef = 'Mishnah 1',
-  int stageId = 1,
-  String trackType = 'personal',
-  CompletionSource source = CompletionSource.live,
-  DateTime? completedAt,
-  int points = 0,
-  DateTime? purgedAt,
-}) async {
-  if (source == CompletionSource.lifetimeOnly) {
-    throw ArgumentError(
-      'CompletionSource.lifetimeOnly must never be written to the '
-      'completions collection (see '
-      'FirestoreCompletionRepository.recordCompletion\'s matching guard).',
-    );
-  }
-  final completion = CompletionEntity(
-    curriculumId: curriculumId,
-    sefariaRef: sefariaRef,
-    stageId: stageId,
-    trackType: trackType,
-    source: source,
-    completedAt: _fixtureTime(completedAt),
-    points: points,
-    purgedAt: purgedAt,
-  );
-  final docId = DocIds.completionDocIdForProfile(
-    profileId,
-    completion.toFirestore(),
-  );
-  await firestore
-      .collection('users')
-      .doc(uid)
-      .collection('learner_profiles')
-      .doc(profileId)
-      .collection('completions')
-      .doc(docId)
-      .set(completion.toFirestore());
-  return docId;
 }
 
 /// Seeds the profile's current bookmark for [curriculumId].

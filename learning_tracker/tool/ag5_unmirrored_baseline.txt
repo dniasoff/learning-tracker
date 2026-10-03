@@ -173,15 +173,11 @@ lib/features/gamification/presentation/widgets/track_tag_chip.dart
 lib/features/gamification/streak/streak_log_event.dart
 lib/features/gamification/streak/streak_reducer.dart
 lib/features/gamification/streak/streak_state_service.dart
-lib/features/learning/data/repositories/completion_repository_impl.dart
 lib/features/learning/data/repositories/track_repository_impl.dart
 lib/features/learning/domain/entities/bookmark.dart
-lib/features/learning/domain/entities/completion_request.dart
 lib/features/learning/domain/entities/completion_source.dart
 lib/features/learning/domain/entities/completion_tier_filter.dart
-lib/features/learning/domain/entities/mark_completion_result.dart
 lib/features/learning/domain/repositories/bookmark_repository.dart
-lib/features/learning/domain/repositories/completion_repository.dart
 lib/features/learning/domain/repositories/learning_ledger_repository.dart
 lib/features/learning/domain/repositories/track_repository.dart
 lib/features/learning/learning.dart
@@ -238,10 +234,8 @@ lib/features/profiles/presentation/widgets/profile_grid.dart
 lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart
 lib/features/profiles/presentation/widgets/tutored_children_section.dart
 lib/features/profiles/profiles.dart
-lib/features/progress/data/repositories/firestore_chart_data_repository_adapter.dart
 lib/features/progress/domain/models/curriculum_progress_data.dart
 lib/features/progress/domain/models/lifetime_knowledge.dart
-lib/features/progress/domain/repositories/progress_repository.dart
 lib/features/progress/domain/services/overlapping_curricula_deduplicator.dart
 lib/features/progress/presentation/providers/chart_providers.dart
 lib/features/progress/presentation/providers/items_learned_providers.dart
@@ -275,7 +269,6 @@ lib/features/scheduler/domain/models/day_type.dart
 lib/features/scheduler/domain/models/pace_status.dart
 lib/features/scheduler/domain/models/study_day_config.dart
 lib/features/scheduler/domain/repositories/goal_repository.dart
-lib/features/scheduler/domain/repositories/scheduler_completion_repository.dart
 lib/features/scheduler/domain/services/calendar_program_registry.dart
 lib/features/scheduler/domain/services/calendar_program_service.dart
 lib/features/scheduler/domain/services/cross_curriculum_aggregator.dart

@@ -5,7 +5,7 @@
 // The daily task list is the planner's (unchanged by this story): the same
 // tasks in the same order, one tap completes the current one and moves on
 // to the next. The tap writes exactly one learn event with its pts_ entry
-// (AD-50) and never touches the legacy completion writer.
+// (AD-50); the retired completion writer no longer exists (DNI-483).
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -43,7 +43,6 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../e2e/fakes/e2e_fakes.dart' show FakeCompletionRepository;
 import '../helpers/learner_state/c0_fixtures.dart';
 import '../helpers/learner_state/engine_fixtures.dart';
 import '../helpers/learner_state/fake_learning_commands.dart';
@@ -157,7 +156,6 @@ final class _Flow {
 
   final port = InMemoryLearningWritePort();
   late final DefaultLearningCommands commands;
-  final legacy = FakeCompletionRepository();
   final router = _MockStackRouter();
 
   List<LearningEvent> get written => [for (final c in port.chunks) ...c.events];
@@ -202,7 +200,7 @@ final class _Flow {
       trackStorageKeyForTrackIdProvider.overrideWith(
         (ref, trackId) async => 'personal',
       ),
-      completionRepositoryProvider.overrideWithValue(legacy),
+      activeLearnerStateFutureProvider.overrideWith((ref) async => null),
       goalRepositoryProvider.overrideWithValue(_NoGoals()),
       analyticsServiceProvider.overrideWithValue(const NullAnalyticsService()),
       learningCommandsProvider.overrideWith((ref) async => commands),
@@ -234,7 +232,7 @@ void main() {
   });
 
   testWidgets('AC-1: one tap on the current task is one capture — one '
-      'learn event with its pts_ entry, no legacy write — and the reader '
+      'learn event with its pts_ entry — and the reader '
       'moves on to the next task in order', (tester) async {
     final flow = _Flow();
     addTearDown(flow.commands.dispose);
@@ -252,7 +250,6 @@ void main() {
     expect(event.learnedOn, '2026-09-01');
     expect(event.stage, 1);
     expect(flow.awards.single.eventId, event.id, reason: 'AD-50 pts_');
-    expect(flow.legacy.markedRequests, isEmpty, reason: 'no legacy writer');
 
     final route =
         verify(() => flow.router.replace(captureAny())).captured.single
