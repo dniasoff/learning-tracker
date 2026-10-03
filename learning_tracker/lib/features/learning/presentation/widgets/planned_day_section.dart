@@ -135,6 +135,7 @@ class PlannedDaySection extends ConsumerWidget {
     super.key,
     required this.day,
     required this.recorded,
+    this.inFlight = const {},
     required this.onRecord,
     required this.enabled,
   });
@@ -145,6 +146,10 @@ class PlannedDaySection extends ConsumerWidget {
   /// Rows recorded on this screen that the live plan has not dropped yet:
   /// shown ticked.
   final Set<ErevRowKey> recorded;
+
+  /// Rows whose capture is in flight: not tickable again (nor offered to
+  /// *Up to…*) until it settles.
+  final Set<ErevRowKey> inFlight;
 
   /// Records the given rows.
   final void Function(List<DailyTask> rows) onRecord;
@@ -175,10 +180,11 @@ class PlannedDaySection extends ConsumerWidget {
                   t.contentItemSefariaRef,
                 ) ??
                 false));
+    bool busy(DailyTask t) => inFlight.contains(erevRowKey(t));
     final requests = enabled
         ? mainTrackUpToRequests([
             for (final t in day.tasks)
-              if (!ticked(t)) t,
+              if (!ticked(t) && !busy(t)) t,
           ])
         : const <MainTrackUpToRequest>[];
     return Column(
@@ -217,7 +223,9 @@ class PlannedDaySection extends ConsumerWidget {
           PlannedTaskRow(
             task: task,
             ticked: ticked(task),
-            onTick: !enabled || ticked(task) ? null : () => onRecord([task]),
+            onTick: !enabled || ticked(task) || busy(task)
+                ? null
+                : () => onRecord([task]),
           ),
           const SizedBox(height: 8),
         ],

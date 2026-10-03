@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/erev_planned_tasks_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/erev_planned_slot.dart';
@@ -162,6 +163,73 @@ void main() {
         {for (final a in erev.rig.awards) a.eventId},
         {for (final e in written) e.id},
       );
+    });
+  });
+
+  group('AC-3: a planned row is captured once', () {
+    Checkbox firstBox(WidgetTester tester) =>
+        tester.widget<Checkbox>(find.byType(Checkbox).first);
+
+    testWidgets('a rapid double tap while the write is pending records '
+        'one event and one pts_', (tester) async {
+      final erev = await _pump(tester);
+      erev.rig.port.holdNext();
+      // Both taps land before the next frame: the second reaches the
+      // row's old callback.
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.pump();
+      expect(erev.rig.port.attempts, hasLength(1));
+      // Disabled while the capture is in flight.
+      expect(firstBox(tester).onChanged, isNull);
+      await tester.tap(find.byType(Checkbox).first, warnIfMissed: false);
+      await tester.pump();
+      expect(erev.rig.port.attempts, hasLength(1));
+
+      erev.rig.port.release();
+      await tester.pumpAndSettle();
+      expect(erev.rig.written, hasLength(1));
+      expect(erev.rig.written.single.ref, 'Mishnah Berakhot 1:1');
+      expect(erev.rig.awards, hasLength(1));
+      expect(firstBox(tester).value, isTrue);
+    });
+
+    testWidgets('a write that outlives the ack wait is kept queued and '
+        'shown ticked; tapping again writes nothing more', (tester) async {
+      final erev = await _pump(tester);
+      erev.rig.port.holdNext();
+      await tester.tap(find.byType(Checkbox).first);
+      // Past the command's ack wait: the capture settles as queued.
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+      expect(firstBox(tester).value, isTrue);
+      expect(firstBox(tester).onChanged, isNull);
+      await tester.tap(find.byType(Checkbox).first, warnIfMissed: false);
+      await tester.pump();
+      expect(erev.rig.port.attempts, hasLength(1));
+
+      erev.rig.port.release();
+      await tester.pumpAndSettle();
+      expect(erev.rig.written, hasLength(1));
+    });
+
+    testWidgets('a write that was not saved frees the row; the retry '
+        'records it once', (tester) async {
+      final erev = await _pump(tester);
+      erev.rig.port.failNextWith(
+        const PermanentWriteRejection('permission-denied'),
+      );
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.pumpAndSettle();
+      expect(erev.rig.written, isEmpty);
+      expect(firstBox(tester).value, isFalse);
+      expect(firstBox(tester).onChanged, isNotNull);
+
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.pumpAndSettle();
+      expect(erev.rig.written, hasLength(1));
+      expect(erev.rig.written.single.ref, 'Mishnah Berakhot 1:1');
+      expect(erev.rig.awards, hasLength(1));
     });
   });
 

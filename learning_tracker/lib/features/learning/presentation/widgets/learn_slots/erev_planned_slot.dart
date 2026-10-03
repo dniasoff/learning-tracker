@@ -37,17 +37,43 @@ class _ErevPlannedSlotState extends ConsumerState<ErevPlannedSlot> {
   /// soon as the learner state recomputes).
   final _recorded = <ErevRowKey>{};
 
-  Future<void> _record(List<DailyTask> rows) => recordErevTasks(
-    context,
-    ref,
-    rows,
-    onRecorded: (keys) {
-      if (mounted) setState(() => _recorded.addAll(keys));
-    },
-    onUndone: (keys) {
-      if (mounted) setState(() => _recorded.removeAll(keys));
-    },
-  );
+  /// Rows whose capture is in flight: marked before the first await so a
+  /// second tap (even one landing before the next frame, on the old
+  /// callback) records nothing twice, and shown disabled until the
+  /// capture settles. A capture that was not saved frees its rows for a
+  /// deliberate retry.
+  final _inFlight = <ErevRowKey>{};
+
+  Future<void> _record(List<DailyTask> rows) async {
+    final fresh = [
+      for (final t in rows)
+        if (!_inFlight.contains(erevRowKey(t)) &&
+            !_recorded.contains(erevRowKey(t)))
+          t,
+    ];
+    if (fresh.isEmpty) return;
+    final keys = {for (final t in fresh) erevRowKey(t)};
+    setState(() => _inFlight.addAll(keys));
+    try {
+      await recordErevTasks(
+        context,
+        ref,
+        fresh,
+        onRecorded: (keys) {
+          if (mounted) setState(() => _recorded.addAll(keys));
+        },
+        onUndone: (keys) {
+          if (mounted) setState(() => _recorded.removeAll(keys));
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _inFlight.removeAll(keys));
+      } else {
+        _inFlight.removeAll(keys);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +116,7 @@ class _ErevPlannedSlotState extends ConsumerState<ErevPlannedSlot> {
             PlannedDaySection(
               day: day,
               recorded: _recorded,
+              inFlight: _inFlight,
               enabled: enabled,
               onRecord: _record,
             ),
