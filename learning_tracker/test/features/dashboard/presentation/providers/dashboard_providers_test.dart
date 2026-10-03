@@ -24,14 +24,18 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/data/repositories/engine_points_reader.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart'
-    show rewardMilestoneServiceProvider, streakStateProvider;
-import 'package:learning_tracker/features/gamification/streak/streak_event_entry.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
+    show rewardMilestoneServiceProvider;
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -43,6 +47,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learner_state.dart';
+import '../../../../helpers/learner_state/in_memory_ports.dart';
+import '../../../../helpers/learner_state/learner_state_overrides.dart';
 
 class _MockFirebaseApp extends Mock implements FirebaseApp {}
 
@@ -51,7 +60,6 @@ class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
 const _uid = 'dashboard-providers-test';
 const _adultProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYA';
 const _childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXYB';
-const _streakEventId = '01J6Q2H4A8M7K3P9R5T6V8WXYZ';
 
 AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) {
   return AccountFirebaseHandles(
@@ -130,27 +138,6 @@ Future<void> _seedStages(
         ),
     ],
   );
-}
-
-Future<void> _seedStreakEvent(
-  FakeFirebaseFirestore firestore, {
-  required String profileId,
-  required DateTime day,
-}) async {
-  final event = StreakEventEntry(
-    ulid: _streakEventId,
-    eventType: 'completion',
-    dayUtc: DateTime.utc(day.year, day.month, day.day),
-    eventTimestamp: day.toUtc(),
-  );
-  await firestore
-      .collection('users')
-      .doc(_uid)
-      .collection('learner_profiles')
-      .doc(profileId)
-      .collection('streak_events')
-      .doc(_streakEventId)
-      .set(event.toFirestore());
 }
 
 Ref _captureRef(ProviderContainer container) {
@@ -554,81 +541,237 @@ void main() {
     });
   });
 
-  group('dashboardStreakProvider', () {
-    test('emits zero streak when no streak events exist', () async {
+  group('dashboardStreakProvider (DNI-479: the curriculum in view)', () {
+    // AD-40: LearnerState has no profile-wide streak; each curriculum has
+    // its own. Mishnayos and Bavli are both active tracks here.
+    final state = fakeLearnerState(
+      curricula: {
+        CurriculumId.mishnayos.storageKey: FakeCurriculumState(
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          streak: const CurriculumStreak(current: 4, best: 9),
+        ),
+        CurriculumId.bavli.storageKey: FakeCurriculumState(
+          curriculumId: CurriculumId.bavli.storageKey,
+          streak: const CurriculumStreak(current: 1, best: 2),
+        ),
+      },
+    );
+
+    Future<ProviderContainer> streakContainer({LearnerState? learner}) async {
+      for (final c in [CurriculumId.mishnayos, CurriculumId.bavli]) {
+        await seedTrack(
+          firestore,
+          uid: _uid,
+          profileId: _adultProfileId,
+          curriculumId: c,
+        );
+      }
       final container = _container(
         firestore,
-        extraOverrides: [
-          streakStateProvider.overrideWith(
-            (ref) => StreakStateService(
-              ref: ref,
-              clock: FakeLocalDayClock(DateTime.utc(2026, 5, 20, 12)),
-            ),
-          ),
-        ],
+        extraOverrides: learnerStateOverrides(
+          scope: c0Scope(),
+          state: learner ?? state,
+        ),
       );
       addTearDown(container.dispose);
-
       final sub = container.listen(dashboardStreakProvider, (_, __) {});
       addTearDown(sub.close);
-      final value = await container.read(dashboardStreakProvider.future);
+      final inView = container.listen(
+        dashboardStreakCurriculumProvider,
+        (_, __) {},
+      );
+      addTearDown(inView.close);
+      return container;
+    }
 
+    test('shows the first active track until one is put in view', () async {
+      final container = await streakContainer();
+      final first = await container.read(
+        dashboardStreakCurriculumProvider.future,
+      );
+      final value = await container.read(dashboardStreakProvider.future);
+      final expected = first == CurriculumId.mishnayos ? (4, 9) : (1, 2);
+      expect((value.currentStreak, value.maxStreak), expected);
+    });
+
+    test('switching the curriculum in view switches the streak', () async {
+      final container = await streakContainer();
+      await container.read(dashboardStreakProvider.future);
+
+      container
+          .read(dashboardCurriculumInViewProvider.notifier)
+          .show(CurriculumId.bavli);
+      var value = await container.read(dashboardStreakProvider.future);
+      expect(value.currentStreak, 1);
+      expect(value.maxStreak, 2);
+
+      container
+          .read(dashboardCurriculumInViewProvider.notifier)
+          .show(CurriculumId.mishnayos);
+      value = await container.read(dashboardStreakProvider.future);
+      expect(value.currentStreak, 4);
+      expect(value.maxStreak, 9);
+    });
+
+    test('a curriculum in view that is no longer active falls back', () async {
+      final container = await streakContainer();
+      container
+          .read(dashboardCurriculumInViewProvider.notifier)
+          .show(CurriculumId.tanach);
+      expect(
+        await container.read(dashboardStreakCurriculumProvider.future),
+        isNot(CurriculumId.tanach),
+      );
+    });
+
+    test('a curriculum the engine did not evaluate shows zero', () async {
+      final container = await streakContainer(learner: fakeLearnerState());
+      final value = await container.read(dashboardStreakProvider.future);
       expect(value.currentStreak, 0);
       expect(value.maxStreak, 0);
     });
 
-    test('emits streak >= 1 after a streak event for today', () async {
-      final fixedToday = DateTime.utc(2026, 5, 20, 12);
-      await _seedStreakEvent(
-        firestore,
-        profileId: _adultProfileId,
-        day: fixedToday,
-      );
+    test('a learner-state error is an error, never a zero streak', () async {
+      for (final c in [CurriculumId.mishnayos]) {
+        await seedTrack(
+          firestore,
+          uid: _uid,
+          profileId: _adultProfileId,
+          curriculumId: c,
+        );
+      }
       final container = _container(
         firestore,
         extraOverrides: [
-          streakStateProvider.overrideWith(
-            (ref) => StreakStateService(
-              ref: ref,
-              clock: FakeLocalDayClock(fixedToday),
-              dayOf: (dt) => DateTime.utc(
-                dt.toUtc().year,
-                dt.toUtc().month,
-                dt.toUtc().day,
-              ),
-            ),
+          ...learnerStateOverrides(scope: c0Scope()),
+          learnerStateProvider.overrideWith(
+            (ref, _) => Stream.error(StateError('engine failed')),
           ),
         ],
       );
       addTearDown(container.dispose);
-
       final sub = container.listen(dashboardStreakProvider, (_, __) {});
       addTearDown(sub.close);
-      final value = await container.read(dashboardStreakProvider.future);
-
-      expect(value.currentStreak, greaterThanOrEqualTo(1));
+      await expectLater(
+        container.read(dashboardStreakProvider.future),
+        throwsA(isA<StateError>()),
+      );
     });
 
-    test('emits non-negative currentStreak and maxStreak', () async {
+    test('curriculumInView prefers the selection while it is active', () {
+      const active = [CurriculumId.mishnayos, CurriculumId.bavli];
+      expect(curriculumInView(null, active), CurriculumId.mishnayos);
+      expect(curriculumInView(CurriculumId.bavli, active), CurriculumId.bavli);
+      expect(
+        curriculumInView(CurriculumId.tanach, active),
+        CurriculumId.mishnayos,
+      );
+      expect(curriculumInView(CurriculumId.bavli, const []), isNull);
+    });
+  });
+
+  group('dashboardStreakProvider through the real engine (DNI-479 AC-1)', () {
+    // The dashboard streak is the engine's derivation over the whole event
+    // log: a voided event cannot keep a streak, and nothing caps the history
+    // at a page (the retired streak_events read stopped at 500 rows).
+    // Tue 2026-09-01 .. Thu 09-03 are ordinary weekdays; the zone is UTC.
+    late InMemoryLearningEventRepository events;
+    late InMemorySubTrackRepository subTracks;
+    late InMemoryChangeLogRepository changeLog;
+    late InMemoryGovernedIntentRepository intent;
+
+    setUp(() {
+      events = InMemoryLearningEventRepository();
+      subTracks = InMemorySubTrackRepository();
+      changeLog = InMemoryChangeLogRepository();
+      intent = InMemoryGovernedIntentRepository();
+    });
+    tearDown(() async {
+      await events.dispose();
+      await subTracks.dispose();
+      await changeLog.dispose();
+      await intent.dispose();
+    });
+
+    const day = 24 * 60;
+    // 520 main events on 09-01, then one on 09-02 and one on 09-03: the
+    // days after the 500th event must still reach the streak.
+    final history = [
+      for (var i = 1; i <= 520; i++)
+        engineLearn(i, 'Mishnah Berakhot 1:1', minutes: 600 + i),
+      engineLearn(
+        521,
+        'Mishnah Berakhot 1:2',
+        minutes: day + 600,
+        learnedOn: '2026-09-02',
+      ),
+      engineLearn(
+        522,
+        'Mishnah Berakhot 1:3',
+        minutes: 2 * day + 600,
+        learnedOn: '2026-09-03',
+      ),
+    ];
+
+    Future<({int currentStreak, int maxStreak})> streakOf(
+      List<LearningEvent> log,
+    ) async {
+      await seedTrack(
+        firestore,
+        uid: _uid,
+        profileId: _adultProfileId,
+        curriculumId: CurriculumId.mishnayos,
+      );
+      events.seed(c0Scope(), log);
+      subTracks.seed(c0Scope(), const []);
+      changeLog.seed(c0Scope(), const []);
       final container = _container(
         firestore,
         extraOverrides: [
-          streakStateProvider.overrideWith(
-            (ref) => StreakStateService(
-              ref: ref,
-              clock: FakeLocalDayClock(DateTime.utc(2026, 5, 20, 12)),
-            ),
+          ...learnerStateOverrides(scope: c0Scope()),
+          learningEventRepositoryProvider.overrideWith((ref) async => events),
+          subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
+          changeLogRepositoryProvider.overrideWith((ref) async => changeLog),
+          governedIntentRepositoryProvider.overrideWith((ref) async => intent),
+          corporaProvider.overrideWith(
+            (ref) async => <String, Corpus>{
+              engineCurriculum: mishnayosCorpus(),
+            },
           ),
+          learnerCalendarLoaderProvider.overrideWithValue(
+            (intent, settings, now) async => const {},
+          ),
+          localDayClockProvider.overrideWithValue(
+            FakeLocalDayClock(engineAt(2 * day + 720)),
+          ),
+          learnerStateDayTickProvider.overrideWithValue(const Stream.empty()),
         ],
       );
       addTearDown(container.dispose);
-
       final sub = container.listen(dashboardStreakProvider, (_, __) {});
       addTearDown(sub.close);
-      final value = await container.read(dashboardStreakProvider.future);
+      intent.emit(
+        c0Scope(),
+        LearnerIntent(
+          settings: c0Settings,
+          mainTracks: {engineCurriculum: engineIntent()},
+          goals: const {},
+        ),
+      );
+      return container.read(dashboardStreakProvider.future);
+    }
 
-      expect(value.currentStreak, greaterThanOrEqualTo(0));
-      expect(value.maxStreak, greaterThanOrEqualTo(0));
+    test('a history past 500 events still reaches the streak', () async {
+      final value = await streakOf(history);
+      expect((value.currentStreak, value.maxStreak), (3, 3));
+    });
+
+    test('a voided event does not keep the streak', () async {
+      final value = await streakOf([
+        ...history,
+        engineVoid(523, 521, minutes: day + 660),
+      ]);
+      expect((value.currentStreak, value.maxStreak), (1, 1));
     });
   });
 

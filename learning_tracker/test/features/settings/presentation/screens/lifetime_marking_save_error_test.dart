@@ -32,9 +32,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -137,9 +135,6 @@ Widget _buildScreen({Locale locale = const Locale('en')}) {
     overrides: [
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
       contentRepositoryProvider.overrideWithValue(content),
-      curriculumLedgerProvider.overrideWith(
-        (ref, id) async => const <LearningLedgerEntry>[],
-      ),
       useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
       ...learnerStateOverrides(
         scope: c0Scope(),

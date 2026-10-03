@@ -20,9 +20,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/before_tracking_recorder.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
@@ -299,7 +297,7 @@ void main() {
   });
 
   testWidgets('settings Lifetime Marking: Save writes before_tracking node '
-      'events carrying their level, one capture, nothing to the ledger', (
+      'events carrying their level, one capture (no ledger, DNI-479)', (
     tester,
   ) async {
     final flow = _Capture();
@@ -309,9 +307,6 @@ void main() {
         overrides: [
           activeProfileIdProvider.overrideWith(_ActiveProfile.new),
           contentRepositoryProvider.overrideWithValue(flow.content),
-          curriculumLedgerProvider.overrideWith(
-            (ref, id) async => const <LearningLedgerEntry>[],
-          ),
           useHebrewTermsProvider.overrideWith(_UseHebrewTermsOff.new),
           beforeTrackingRecorderProvider.overrideWithValue(flow.recorder),
         ],

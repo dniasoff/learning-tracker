@@ -3,8 +3,13 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/features/notifications/domain/services/curriculum_streak_alerts.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
+import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -77,15 +82,58 @@ void main() {
     );
   });
 
-  group(
-    'Story 12.2 — streak protection alerts',
-    tags: ['story_12_2'],
-    skip:
-        'Blocked: this acceptance flow seeds and reads Drift streak_events; Firestore streak state is not wired into StreakAlertService here.',
-    () {
-      test('placeholder for the pending Firestore streak-alert seam', () {});
-    },
-  );
+  // DNI-479: the streak alert is per curriculum, from LearnerState (AD-40);
+  // the full AC-2 matrix is streak_alert_service_test.dart.
+  group('Story 12.2 — streak protection alerts', tags: ['story_12_2'], () {
+    StreakAlertService service(_StreakAlerts alerts) => StreakAlertService(
+      notifications: alerts,
+      markers: _Markers(),
+      profileId: '01JQ8M9Y7V3K2N6P4R5T8W0X1Z',
+      // Wed 2026-03-25, noon UTC (the learner's zone is UTC).
+      clock: () => DateTime.utc(2026, 3, 25, 12),
+    );
+    final utc = LearnerSettingsHistory.constant(
+      const LearnerSettings(
+        profileId: '01JQ8M9Y7V3K2N6P4R5T8W0X1Z',
+        timeZone: 'UTC',
+        latitude: 40.0821,
+        longitude: -74.2097,
+        inIsrael: false,
+      ),
+    );
+
+    test('a running streak not yet kept today schedules its alert', () async {
+      final alerts = _StreakAlerts();
+      await service(alerts).evaluate(
+        curriculumId: 'mishnayos',
+        streak: const CurriculumStreak(
+          current: 4,
+          best: 4,
+          lastDay: '2026-03-24',
+        ),
+        settingsHistory: utc,
+        hour: 21,
+        minute: 0,
+      );
+      expect(alerts.scheduled, ['mishnayos']);
+    });
+
+    test('a streak already kept today schedules nothing', () async {
+      final alerts = _StreakAlerts();
+      await service(alerts).evaluate(
+        curriculumId: 'mishnayos',
+        streak: const CurriculumStreak(
+          current: 5,
+          best: 5,
+          lastDay: '2026-03-25',
+        ),
+        settingsHistory: utc,
+        hour: 21,
+        minute: 0,
+      );
+      expect(alerts.scheduled, isEmpty);
+    });
+  });
 
   group(
     'Story 12.4 — notification preferences',
@@ -96,4 +144,44 @@ void main() {
       test('placeholder for the pending Firestore preference seam', () {});
     },
   );
+}
+
+class _StreakAlerts implements StreakAlertNotifications {
+  final scheduled = <String>[];
+
+  @override
+  Future<void> schedule({
+    required String profileId,
+    required String curriculumId,
+    required DateTime fireAtUtc,
+    required String title,
+    required String body,
+  }) async => scheduled.add(curriculumId);
+
+  @override
+  Future<void> cancel({
+    required String profileId,
+    required String curriculumId,
+  }) async {}
+
+  @override
+  Future<void> cancelAll(String profileId) async {}
+}
+
+class _Markers implements StreakAlertMarkers {
+  @override
+  Future<String?> read(String profileId, String curriculumId) async => null;
+
+  @override
+  Future<void> write(
+    String profileId,
+    String curriculumId,
+    String marker,
+  ) async {}
+
+  @override
+  Future<void> clear(String profileId, String curriculumId) async {}
+
+  @override
+  Future<void> clearAll(String profileId) async {}
 }

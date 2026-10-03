@@ -517,24 +517,145 @@ final class DashboardLastCompletionFamily extends $Family
   String toString() => r'dashboardLastCompletionProvider';
 }
 
-/// Streak data provider, scoped to the active profile.
+/// The curriculum the home/dashboard has in view (AD-40 surfaces): the
+/// active-tracks carousel reports its visible page here. Null until the
+/// learner pages the carousel; [dashboardStreakCurriculum] then falls back
+/// to the first active track. Reset on every profile switch.
+
+@ProviderFor(DashboardCurriculumInView)
+final dashboardCurriculumInViewProvider = DashboardCurriculumInViewProvider._();
+
+/// The curriculum the home/dashboard has in view (AD-40 surfaces): the
+/// active-tracks carousel reports its visible page here. Null until the
+/// learner pages the carousel; [dashboardStreakCurriculum] then falls back
+/// to the first active track. Reset on every profile switch.
+final class DashboardCurriculumInViewProvider
+    extends $NotifierProvider<DashboardCurriculumInView, CurriculumId?> {
+  /// The curriculum the home/dashboard has in view (AD-40 surfaces): the
+  /// active-tracks carousel reports its visible page here. Null until the
+  /// learner pages the carousel; [dashboardStreakCurriculum] then falls back
+  /// to the first active track. Reset on every profile switch.
+  DashboardCurriculumInViewProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'dashboardCurriculumInViewProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$dashboardCurriculumInViewHash();
+
+  @$internal
+  @override
+  DashboardCurriculumInView create() => DashboardCurriculumInView();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CurriculumId? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CurriculumId?>(value),
+    );
+  }
+}
+
+String _$dashboardCurriculumInViewHash() =>
+    r'51f4c8fd50a52a9e3be1a8ebd98bf093f26de7ec';
+
+/// The curriculum the home/dashboard has in view (AD-40 surfaces): the
+/// active-tracks carousel reports its visible page here. Null until the
+/// learner pages the carousel; [dashboardStreakCurriculum] then falls back
+/// to the first active track. Reset on every profile switch.
+
+abstract class _$DashboardCurriculumInView extends $Notifier<CurriculumId?> {
+  CurriculumId? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<CurriculumId?, CurriculumId?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<CurriculumId?, CurriculumId?>,
+              CurriculumId?,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// The curriculum whose streak the home/dashboard shows (DNI-479, AD-40):
+/// [DashboardCurriculumInView] resolved against the active tracks.
+
+@ProviderFor(dashboardStreakCurriculum)
+final dashboardStreakCurriculumProvider = DashboardStreakCurriculumProvider._();
+
+/// The curriculum whose streak the home/dashboard shows (DNI-479, AD-40):
+/// [DashboardCurriculumInView] resolved against the active tracks.
+
+final class DashboardStreakCurriculumProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<CurriculumId?>,
+          CurriculumId?,
+          FutureOr<CurriculumId?>
+        >
+    with $FutureModifier<CurriculumId?>, $FutureProvider<CurriculumId?> {
+  /// The curriculum whose streak the home/dashboard shows (DNI-479, AD-40):
+  /// [DashboardCurriculumInView] resolved against the active tracks.
+  DashboardStreakCurriculumProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'dashboardStreakCurriculumProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$dashboardStreakCurriculumHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<CurriculumId?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<CurriculumId?> create(Ref ref) {
+    return dashboardStreakCurriculum(ref);
+  }
+}
+
+String _$dashboardStreakCurriculumHash() =>
+    r'c1354b8aeab9ffa092c237057b707f2eb9af27bc';
+
+/// The streak of the curriculum in view (DNI-479, AD-40): that
+/// curriculum's `LearnerState` streak. `LearnerState` has no profile-wide
+/// streak; switching curricula switches the streak.
 ///
-/// Reads streak state through [StreakStateService] — the only read path.
-/// [StreakStateService] delegates to [FirestoreStreakStateRepository], which
-/// derives state from the synced Firestore event log directly (D-E: throws
-/// when the backend isn't ready rather than returning a fabricated zero
-/// streak).
+/// Zero with no active learner, no active track, or a curriculum the
+/// engine does not evaluate. A learner-state error is an error (never a
+/// fabricated zero streak, owner ruling D-E); it stays loading while the
+/// state loads.
 
 @ProviderFor(dashboardStreak)
 final dashboardStreakProvider = DashboardStreakProvider._();
 
-/// Streak data provider, scoped to the active profile.
+/// The streak of the curriculum in view (DNI-479, AD-40): that
+/// curriculum's `LearnerState` streak. `LearnerState` has no profile-wide
+/// streak; switching curricula switches the streak.
 ///
-/// Reads streak state through [StreakStateService] — the only read path.
-/// [StreakStateService] delegates to [FirestoreStreakStateRepository], which
-/// derives state from the synced Firestore event log directly (D-E: throws
-/// when the backend isn't ready rather than returning a fabricated zero
-/// streak).
+/// Zero with no active learner, no active track, or a curriculum the
+/// engine does not evaluate. A learner-state error is an error (never a
+/// fabricated zero streak, owner ruling D-E); it stays loading while the
+/// state loads.
 
 final class DashboardStreakProvider
     extends
@@ -546,13 +667,14 @@ final class DashboardStreakProvider
     with
         $FutureModifier<({int currentStreak, int maxStreak})>,
         $StreamProvider<({int currentStreak, int maxStreak})> {
-  /// Streak data provider, scoped to the active profile.
+  /// The streak of the curriculum in view (DNI-479, AD-40): that
+  /// curriculum's `LearnerState` streak. `LearnerState` has no profile-wide
+  /// streak; switching curricula switches the streak.
   ///
-  /// Reads streak state through [StreakStateService] — the only read path.
-  /// [StreakStateService] delegates to [FirestoreStreakStateRepository], which
-  /// derives state from the synced Firestore event log directly (D-E: throws
-  /// when the backend isn't ready rather than returning a fabricated zero
-  /// streak).
+  /// Zero with no active learner, no active track, or a curriculum the
+  /// engine does not evaluate. A learner-state error is an error (never a
+  /// fabricated zero streak, owner ruling D-E); it stays loading while the
+  /// state loads.
   DashboardStreakProvider._()
     : super(
         from: null,
@@ -579,7 +701,55 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'4a1e8fa5e4063ae523d79ab165930d5bf2ab1ea5';
+String _$dashboardStreakHash() => r'92742efaf18e857241a576b0290ca7a7a5166c4a';
+
+/// The days of the last 30 with counted learning in the curriculum in view
+/// (DNI-479), for the gamification streak calendar.
+
+@ProviderFor(dashboardStreakCalendar)
+final dashboardStreakCalendarProvider = DashboardStreakCalendarProvider._();
+
+/// The days of the last 30 with counted learning in the curriculum in view
+/// (DNI-479), for the gamification streak calendar.
+
+final class DashboardStreakCalendarProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Set<DateTime>>,
+          Set<DateTime>,
+          FutureOr<Set<DateTime>>
+        >
+    with $FutureModifier<Set<DateTime>>, $FutureProvider<Set<DateTime>> {
+  /// The days of the last 30 with counted learning in the curriculum in view
+  /// (DNI-479), for the gamification streak calendar.
+  DashboardStreakCalendarProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'dashboardStreakCalendarProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$dashboardStreakCalendarHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Set<DateTime>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Set<DateTime>> create(Ref ref) {
+    return dashboardStreakCalendar(ref);
+  }
+}
+
+String _$dashboardStreakCalendarHash() =>
+    r'71a2b5f3c28ca8278869f3e875b3872f7cbf94e7';
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
@@ -821,12 +991,16 @@ final class DashboardChildNextRewardProvider
 String _$dashboardChildNextRewardHash() =>
     r'491c0d5c208a3958d96738f600d7b25c76f7ccb7';
 
-/// Streak recovery info — whether the streak was just saved by grace period.
+/// Streak recovery info for the curriculum in view. The grace-period
+/// feature was dropped (W3.20), so `wasRecovered` is always false; the
+/// current streak is [dashboardStreak]'s.
 
 @ProviderFor(dashboardStreakRecovery)
 final dashboardStreakRecoveryProvider = DashboardStreakRecoveryProvider._();
 
-/// Streak recovery info — whether the streak was just saved by grace period.
+/// Streak recovery info for the curriculum in view. The grace-period
+/// feature was dropped (W3.20), so `wasRecovered` is always false; the
+/// current streak is [dashboardStreak]'s.
 
 final class DashboardStreakRecoveryProvider
     extends
@@ -838,7 +1012,9 @@ final class DashboardStreakRecoveryProvider
     with
         $FutureModifier<StreakRecoveryInfo>,
         $FutureProvider<StreakRecoveryInfo> {
-  /// Streak recovery info — whether the streak was just saved by grace period.
+  /// Streak recovery info for the curriculum in view. The grace-period
+  /// feature was dropped (W3.20), so `wasRecovered` is always false; the
+  /// current streak is [dashboardStreak]'s.
   DashboardStreakRecoveryProvider._()
     : super(
         from: null,
@@ -866,4 +1042,4 @@ final class DashboardStreakRecoveryProvider
 }
 
 String _$dashboardStreakRecoveryHash() =>
-    r'c3ae9a8a5eb1fec79e4dba73fb3ee7c92fa4c0a9';
+    r'a68c9420f0004e19f4f7a42e90bba2ed696c7b16';

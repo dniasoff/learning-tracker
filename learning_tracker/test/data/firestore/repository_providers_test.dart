@@ -51,10 +51,8 @@ import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_re
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_learning_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_stage_definition_repository.dart';
-import 'package:learning_tracker/data/repositories/firestore_streak_event_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
@@ -650,12 +648,6 @@ void main() {
         );
         expect(
           await container.read(
-            firestoreLearningLedgerRepositoryProvider.future,
-          ),
-          isNull,
-        );
-        expect(
-          await container.read(
             firestoreTrackLearningOrderRepositoryProvider.future,
           ),
           isNull,
@@ -670,10 +662,6 @@ void main() {
           await container.read(
             firestoreStageDefinitionRepositoryProvider.future,
           ),
-          isNull,
-        );
-        expect(
-          await container.read(firestoreStreakEventRepositoryProvider.future),
           isNull,
         );
         expect(
@@ -711,10 +699,6 @@ void main() {
         isA<FirestoreCurriculumTrackRepository>(),
       );
       expect(
-        await container.read(firestoreLearningLedgerRepositoryProvider.future),
-        isA<FirestoreLearningLedgerRepository>(),
-      );
-      expect(
         await container.read(
           firestoreTrackLearningOrderRepositoryProvider.future,
         ),
@@ -727,10 +711,6 @@ void main() {
       expect(
         await container.read(firestoreStageDefinitionRepositoryProvider.future),
         isA<FirestoreStageDefinitionRepository>(),
-      );
-      expect(
-        await container.read(firestoreStreakEventRepositoryProvider.future),
-        isA<FirestoreStreakEventRepository>(),
       );
       expect(
         await container.read(firestoreStudyDayConfigRepositoryProvider.future),

@@ -81,6 +81,12 @@ int _blockForProfile(String profileId) =>
 // Per-profile ID helpers — used instead of the old singleton constants.
 // ---------------------------------------------------------------------------
 
+/// The first notification ID of [profileId]'s block; every per-profile ID
+/// is this plus a fixed offset (the per-curriculum streak alerts use
+/// offsets 100 and up, DNI-479).
+int notificationBlockBaseForProfile(String profileId) =>
+    _blockForProfile(profileId) * _idsPerProfile;
+
 /// Returns the notification ID for the daily reminder of [profileId].
 int dailyReminderIdForProfile(String profileId) =>
     _blockForProfile(profileId) * _idsPerProfile + _dailyReminderOffset;

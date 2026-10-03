@@ -6,15 +6,19 @@ import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
-import 'package:learning_tracker/features/notifications/data/repositories/firestore_notifications_completion_adapter.dart';
+import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/notifications/data/repositories/shared_prefs_streak_alert_markers.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
     show NotificationPreferencesRepository;
+import 'package:learning_tracker/features/notifications/domain/services/curriculum_streak_alerts.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -515,34 +519,30 @@ Future<void> reminderSyncEffect(Ref ref) async {
   );
 }
 
+/// The per-curriculum streak-alert notifications (DNI-479).
+final streakAlertNotificationsProvider = Provider<StreakAlertNotifications>(
+  (ref) => LocalStreakAlertNotifications(),
+);
+
+/// The device-local per-curriculum streak-alert markers (DNI-479).
+final streakAlertMarkersProvider = Provider<StreakAlertMarkers>(
+  (ref) => SharedPrefsStreakAlertMarkers(),
+);
+
 /// Provides the [StreakAlertService] instance for [profileId].
 ///
 /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
 /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
-/// not just the active one — can construct its per-profile [StreakAlertService]
+/// not just the active one — reaches its per-profile [StreakAlertService]
 /// through this same provider seam instead of hand-constructing a second
-/// instance. A test overriding this family for a specific inactive profileId
-/// now observably changes bootstrap's behavior for that profile.
+/// instance.
 @riverpod
 StreakAlertService streakAlertService(Ref ref, String profileId) {
-  final notifService = ref.watch(notificationServiceProvider);
-  final analytics = ref.watch(analyticsServiceProvider);
-  // The date-range read is injected rather than resolved inside the service:
-  // its Firestore implementation lives in the data-access ring, which
-  // AD-23/AD-28 forbid a `domain/` file from importing. This provider is the
-  // composition root, so the dependency belongs here.
-  //
-  // The adapter applies the P3-32 cold-cache gate on a `false` answer, which
-  // matters more here than on a progress screen: "no completions in range" read
-  // from an unsynced cache would fire a SPURIOUS streak-at-risk notification,
-  // telling a learner they have not studied when they have.
-  final completions = FirestoreNotificationsCompletionAdapter(ref: ref);
   return StreakAlertService(
-    ref: ref,
-    hasCompletionsInRange: completions.hasCompletionsInRange,
-    notificationService: notifService,
+    notifications: ref.watch(streakAlertNotificationsProvider),
+    markers: ref.watch(streakAlertMarkersProvider),
     profileId: profileId,
-    analytics: analytics,
+    analytics: ref.watch(analyticsServiceProvider),
   );
 }
 
@@ -580,9 +580,7 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
   // (e.g. container teardown during navigation/tests) while the above await
   // was in flight — guard before touching ref again.
   if (!ref.mounted) return;
-  final gateway = ref.read(notificationServiceProvider);
   final scheduler = ref.read(notificationSchedulerProvider);
-  final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
   final ownDeviceProfileId = ref.watch(selectedProfileIdProvider);
 
   // L2: resolve Sacred Location so per-profile reminders get the SAME per-fire
@@ -614,7 +612,7 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
 
   for (final removedId in previousIds.difference(presentIds)) {
     await scheduler.cancelForProfile(removedId);
-    await gateway.cancelStreakAlertForProfile(removedId);
+    await ref.read(streakAlertServiceProvider(removedId)).cancelAlert();
   }
 
   for (final profile in profiles) {
@@ -663,36 +661,13 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
       );
     }
 
-    // --- Streak alert (inactive profile, H2) ---
-    final streakEnabled =
-        prefs.getBool(
-          NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
-        ) ??
-        true;
-    // AUD-notifications-03 (SM-7): construct through the family provider seam
-    // (not a hand-rolled StreakAlertService(...)) so a test override reaches
-    // inactive-profile scheduling too.
-    final streakService = ref.read(streakAlertServiceProvider(profileId));
-    if (!streakEnabled || sacredTimeActive) {
-      await streakService.cancelAlert();
-    } else {
-      final streakHour =
-          prefs.getInt(
-            NotificationPreferencesRepository.streakAlertHourKey(profileId),
-          ) ??
-          defaultStreakAlertHour;
-      final streakMinute =
-          prefs.getInt(
-            NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
-          ) ??
-          defaultStreakAlertMinute;
-      await streakService.evaluate(
-        hour: streakHour,
-        minute: streakMinute,
-        title: l10n.notificationStreakTitle,
-        localizedBody: l10n.notificationStreakBody,
-      );
-    }
+    // --- Streak alert (inactive profile, DNI-479) ---
+    // AD-40: the alert is per curriculum, from that profile's own
+    // LearnerState. Only the active learner's state is loaded on this
+    // device, so an inactive profile's streak cannot be evaluated here;
+    // its alerts (and any legacy daily-repeating one) are cancelled rather
+    // than fired from another profile's streak.
+    await ref.read(streakAlertServiceProvider(profileId)).cancelAlert();
   }
 
   // Record the full present set for the next reconcile (H3).
@@ -702,10 +677,45 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
   );
 }
 
-/// Watches streak alert settings and evaluates whether to schedule or cancel
-/// the streak protection alert.
+/// Runs the streak-alert effect's alert work one run at a time.
 ///
-/// Also respects sacred time mode — cancels alerts during Shabbos.
+/// Each run of [streakAlertSyncEffect] awaits its inputs before it touches
+/// the alerts, so without this a superseded run could still be scheduling
+/// after a newer run has cancelled (or the other way round). Every run
+/// queues its alert work here and drops it when the run is stale
+/// (`ref.mounted` is false), so the newest run always acts last.
+class StreakAlertWorkQueue {
+  Future<void> _tail = Future<void>.value();
+
+  /// Runs [work] after every previously queued work has finished.
+  Future<T> run<T>(Future<T> Function() work) {
+    final result = _tail.then((_) => work());
+    _tail = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+}
+
+/// The [StreakAlertWorkQueue] of [streakAlertSyncEffect] (DNI-479).
+final streakAlertWorkQueueProvider = Provider<StreakAlertWorkQueue>(
+  (ref) => StreakAlertWorkQueue(),
+);
+
+/// Watches the streak-alert settings and the active learner's state, and
+/// evaluates each evaluated curriculum's streak-at-risk alert (DNI-479,
+/// AD-40): one alert per curriculum at risk, at most once per civil day per
+/// curriculum, none inside a lock window (the service checks
+/// `lockWindows`; a suppression is reported to analytics).
+///
+/// Only the device's own selected profile is evaluated: in a tutored
+/// session the active learner is another profile, whose streak is not
+/// this device's to alert on. While the selected profile is not the active
+/// learner (no scope, logout, a tutored session) its alerts are cancelled,
+/// since its streak is no longer being evaluated; they are re-evaluated
+/// when it is the active learner again.
+///
+/// A run superseded while awaiting its inputs touches no alert: the alert
+/// work is serialized through [streakAlertWorkQueueProvider] and skipped
+/// once the run is stale.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -726,31 +736,59 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
   // No active profile yet (cold start) — nothing to evaluate for.
   if (profileId == null) return;
   final service = ref.watch(streakAlertServiceProvider(profileId));
-  final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
+  final queue = ref.read(streakAlertWorkQueueProvider);
+
+  // Cancels the profile's alerts unless this run has been superseded.
+  Future<void> cancelUnlessStale() => queue.run(() async {
+    if (ref.mounted) await service.cancelAlert();
+  });
 
   if (!enabled) {
-    await service.cancelAlert();
-    return;
-  }
-  if (sacredTimeActive) {
-    // Story 27.14 (DNI-390): fire suppression event when sacred time blocks.
-    await service.cancelAlert();
-    // AUD-notifications-01 (SM-4): guard again — another await just completed.
-    if (!ref.mounted) return;
-    final analytics = ref.read(analyticsServiceProvider);
-    unawaited(
-      analytics.logNotificationSuppressedSacredTime(
-        notificationType: 'streak_alert',
-      ),
-    );
+    await cancelUnlessStale();
     return;
   }
 
-  final l10n = lookupAppLocalizations(ref.read(currentAppLocaleProvider));
-  await service.evaluate(
-    hour: time.hour,
-    minute: time.minute,
-    title: l10n.notificationStreakTitle,
-    localizedBody: l10n.notificationStreakBody,
-  );
+  final scope = await ref.watch(activeLearnerScopeProvider.future);
+  if (!ref.mounted) return;
+  if (scope == null || scope.profileId != profileId) {
+    // The selected profile is not the active learner: its streak is not
+    // evaluated, so an alert scheduled earlier must not fire stale.
+    await cancelUnlessStale();
+    return;
+  }
+  try {
+    final state = await ref.watch(learnerStateProvider(scope).future);
+    if (!ref.mounted) return;
+    final settings = await ref.watch(learnerLockSettingsProvider(scope).future);
+    if (!ref.mounted) return;
+
+    final l10n = lookupAppLocalizations(ref.read(currentAppLocaleProvider));
+    final outcomes = await queue.run(() async {
+      if (!ref.mounted) return null;
+      return service.evaluateAll(
+        state: state,
+        settingsHistory: settings,
+        hour: time.hour,
+        minute: time.minute,
+        title: l10n.notificationStreakTitle,
+        localizedBody: l10n.notificationStreakBody,
+      );
+    });
+    if (outcomes == null || !ref.mounted) return;
+    if (outcomes.values.contains(StreakAlertOutcome.lockSuppressed)) {
+      // Story 27.14 (DNI-390): a lock window suppressed an alert.
+      unawaited(
+        ref
+            .read(analyticsServiceProvider)
+            .logNotificationSuppressedSacredTime(
+              notificationType: 'streak_alert',
+            ),
+      );
+    }
+  } catch (_) {
+    // Fail closed: a learner state or lock-settings history that cannot be
+    // read must not leave an alert that might fire inside a lock.
+    await cancelUnlessStale();
+    rethrow;
+  }
 }

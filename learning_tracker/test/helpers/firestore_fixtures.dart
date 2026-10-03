@@ -17,7 +17,6 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_rede
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_entity.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-import 'package:learning_tracker/features/learning/domain/entities/learning_ledger_entry.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
@@ -121,10 +120,10 @@ Future<void> seedTrack(
 /// without re-deriving the formula itself.
 ///
 /// [source] rejects [CompletionSource.lifetimeOnly] — [FirestoreCompletion
-/// Repository.recordCompletion] throws on it too (a lifetimeOnly mark writes
-/// only a `learning_ledger` entry, via [seedLedgerEntry], never a
-/// `completions` document), so seeding one here would write a document no
-/// production path can create.
+/// Repository.recordCompletion] throws on it too (a lifetimeOnly mark is a
+/// `before_tracking` learning event now, never a `completions` document),
+/// so seeding one here would write a document no production path can
+/// create.
 Future<String> seedCompletion(
   FakeFirebaseFirestore firestore, {
   required String uid,
@@ -141,7 +140,7 @@ Future<String> seedCompletion(
   if (source == CompletionSource.lifetimeOnly) {
     throw ArgumentError(
       'CompletionSource.lifetimeOnly must never be written to the '
-      'completions collection — use seedLedgerEntry instead (see '
+      'completions collection (see '
       'FirestoreCompletionRepository.recordCompletion\'s matching guard).',
     );
   }
@@ -168,60 +167,6 @@ Future<String> seedCompletion(
       .doc(docId)
       .set(completion.toFirestore());
   return docId;
-}
-
-/// Seeds one append-only learning-ledger entry at `learning_ledger/{ulid}`.
-///
-/// [ulid] is required because it is the entry's real identity and doc-id;
-/// this helper does not mint or substitute an integer id. [markedBy] defaults
-/// to the profile ULID because that is the current profile identity field.
-Future<void> seedLedgerEntry(
-  FakeFirebaseFirestore firestore, {
-  required String uid,
-  required String profileId,
-  required String ulid,
-  CurriculumId curriculumId = CurriculumId.mishnayos,
-  String entryScope = 'masechta',
-  String unitIdentifier = 'unit-1',
-  String unitDisplayNameHe = 'שם',
-  String unitDisplayNameEn = 'Unit 1',
-  String trackType = 'personal',
-  DateTime? completedAt,
-  int completionNumber = 1,
-  String? markedBy,
-  bool isManual = false,
-  CompletionSource source = CompletionSource.live,
-  DateTime? purgedAt,
-}) async {
-  final entry = LearningLedgerEntry(
-    ulid: ulid,
-    curriculumId: curriculumId,
-    entryScope: entryScope,
-    unitIdentifier: unitIdentifier,
-    unitDisplayNameHe: unitDisplayNameHe,
-    unitDisplayNameEn: unitDisplayNameEn,
-    trackType: trackType,
-    completedAt: _fixtureTime(completedAt),
-    completionNumber: completionNumber,
-    markedBy: markedBy ?? profileId,
-    isManual: isManual,
-    source: source,
-    purgedAt: purgedAt,
-  );
-  // [ulid] is `required`, so DocIds.learningLedgerDocId's nullable-payload
-  // fallback is never reached — force-unwrapped into a local rather than
-  // inline, matching FirestoreLearningLedgerRepository._doc's own discipline
-  // (`.doc()` itself silently accepts null, falling back to a random id,
-  // which would break this collection's append-only idempotency).
-  final docId = DocIds.learningLedgerDocId({'ulid': ulid})!;
-  await firestore
-      .collection('users')
-      .doc(uid)
-      .collection('learner_profiles')
-      .doc(profileId)
-      .collection('learning_ledger')
-      .doc(docId)
-      .set(entry.toFirestore());
 }
 
 /// Seeds one goal and returns its deterministic Firestore document id.

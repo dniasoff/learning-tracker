@@ -1,15 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_profile_program_reader_adapter.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/next_reward_selector.dart';
 import 'package:learning_tracker/features/gamification/gamification.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
-import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -155,22 +156,78 @@ Future<DateTime?> dashboardLastCompletion(
   return lastLearntAt(state, curricula: {curriculum.storageKey});
 }
 
-/// Streak data provider, scoped to the active profile.
+/// The curriculum the home/dashboard has in view (AD-40 surfaces): the
+/// active-tracks carousel reports its visible page here. Null until the
+/// learner pages the carousel; [dashboardStreakCurriculum] then falls back
+/// to the first active track. Reset on every profile switch.
+@Riverpod(keepAlive: true)
+class DashboardCurriculumInView extends _$DashboardCurriculumInView {
+  @override
+  CurriculumId? build() {
+    ref.watch(activeProfileIdProvider);
+    return null;
+  }
+
+  /// Puts [curriculum] in view.
+  void show(CurriculumId curriculum) {
+    if (state != curriculum) state = curriculum;
+  }
+}
+
+/// The curriculum in view among [activeCurricula] (in carousel order):
+/// [selected] while it is still active, otherwise the first active one;
+/// null with no active curriculum.
+CurriculumId? curriculumInView(
+  CurriculumId? selected,
+  List<CurriculumId> activeCurricula,
+) {
+  if (selected != null && activeCurricula.contains(selected)) return selected;
+  return activeCurricula.firstOrNull;
+}
+
+/// The curriculum whose streak the home/dashboard shows (DNI-479, AD-40):
+/// [DashboardCurriculumInView] resolved against the active tracks.
+@riverpod
+Future<CurriculumId?> dashboardStreakCurriculum(Ref ref) async {
+  final selected = ref.watch(dashboardCurriculumInViewProvider);
+  final tracks = await ref.watch(dashboardActiveTracksStreamProvider.future);
+  return curriculumInView(selected, [for (final t in tracks) t.curriculumId]);
+}
+
+/// The streak of the curriculum in view (DNI-479, AD-40): that
+/// curriculum's `LearnerState` streak. `LearnerState` has no profile-wide
+/// streak; switching curricula switches the streak.
 ///
-/// Reads streak state through [StreakStateService] — the only read path.
-/// [StreakStateService] delegates to [FirestoreStreakStateRepository], which
-/// derives state from the synced Firestore event log directly (D-E: throws
-/// when the backend isn't ready rather than returning a fabricated zero
-/// streak).
+/// Zero with no active learner, no active track, or a curriculum the
+/// engine does not evaluate. A learner-state error is an error (never a
+/// fabricated zero streak, owner ruling D-E); it stays loading while the
+/// state loads.
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
-  ref.watch(activeProfileIdProvider);
-  ref.watch(profileRepositoryReadinessProvider);
+  final state = await watchActiveLearnerState(ref);
+  final curriculum = await ref.watch(dashboardStreakCurriculumProvider.future);
+  final streak = curriculum == null
+      ? null
+      : state?[curriculum.storageKey]?.streak;
+  yield (currentStreak: streak?.current ?? 0, maxStreak: streak?.best ?? 0);
+}
 
-  final stateProvider = ref.watch(streakStateProvider);
-  yield* stateProvider.watch().map(
-    (state) => (currentStreak: state.currentStreak, maxStreak: state.maxStreak),
-  );
+/// The days of the last 30 with counted learning in the curriculum in view
+/// (DNI-479), for the gamification streak calendar.
+@riverpod
+Future<Set<DateTime>> dashboardStreakCalendar(Ref ref) async {
+  final state = await watchActiveLearnerState(ref);
+  final curriculum = await ref.watch(dashboardStreakCurriculumProvider.future);
+  if (curriculum == null) return const {};
+  final now = state?.nowUtc ?? DateTimeFactory.nowUtc();
+  return ref
+      .watch(chartDataServiceProvider)
+      .getStreakCalendar(
+        state,
+        startDate: now.subtract(const Duration(days: 30)).toLocal(),
+        endDate: now.toLocal(),
+        curriculumId: curriculum.storageKey,
+      );
 }
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
@@ -296,16 +353,20 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   );
 }
 
-/// Streak recovery info — whether the streak was just saved by grace period.
+/// Streak recovery info for the curriculum in view. The grace-period
+/// feature was dropped (W3.20), so `wasRecovered` is always false; the
+/// current streak is [dashboardStreak]'s.
 @riverpod
 Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
   final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
   if (userMode != ProfileMode.child) {
     return const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0);
   }
-
-  final streakService = ref.watch(streakServiceProvider);
-  return streakService.getRecoveryInfo();
+  final streak = await ref.watch(dashboardStreakProvider.future);
+  return StreakRecoveryInfo(
+    wasRecovered: false,
+    currentStreak: streak.currentStreak,
+  );
 }
 
 /// Whether the active profile has a programmed enrollment for a curriculum.
