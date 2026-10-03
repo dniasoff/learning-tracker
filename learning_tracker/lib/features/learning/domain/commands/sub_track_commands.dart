@@ -32,8 +32,7 @@
 ///   when the server has not acknowledged within [SubTrackCommands.ackTimeout]
 ///   the command returns `success(queued: true)`. A queued batch the server
 ///   later refuses for good becomes a [PendingFailure] ("not saved —
-///   retry"); [SubTrackCommands.retry] re-sends the identical batch and
-///   keeps the entry until the server acknowledges it.
+///   retry"); [SubTrackCommands.retry] re-sends the identical batch.
 ///
 /// Imports only `lib/domain/learner_state/**`, sibling command files and
 /// `dart:` (C0 AC-1).
@@ -211,10 +210,8 @@ final class SubTrackCommands {
 
   final Map<String, (PendingFailure, SubTrackChange)> _pending = {};
 
-  /// Pending failures whose retry awaits the server. They stay tracked
-  /// (the entry is the only retry handle for an unsaved batch) but are
-  /// withheld from [watchPendingFailures] until the retry fails.
-  final Set<String> _inFlight = {};
+  /// Pending-failure ids whose retry is in flight.
+  final Set<String> _retrying = {};
   final _pendingController = StreamController<List<PendingFailure>>.broadcast(
     sync: true,
   );
@@ -242,8 +239,9 @@ final class SubTrackCommands {
       ground: draft.ground,
       lastChangeId: entryId,
     );
-    final siblings = await _readSubTracks();
-    if (siblings == null) return const CaptureResult.onlineRequired();
+    final read = await _readSubTracks();
+    if (read.refusal case final refusal?) return refusal;
+    final siblings = read.items;
     if (siblings.any((s) => s.id == id)) {
       return const CaptureResult.rejected(CaptureRejection.invalid);
     }
@@ -275,8 +273,9 @@ final class SubTrackCommands {
     SubTrackEdit edit,
   ) async {
     if (actor.role == ActorRole.child) return const CaptureResult.childLimit();
-    final siblings = await _readSubTracks();
-    if (siblings == null) return const CaptureResult.onlineRequired();
+    final read = await _readSubTracks();
+    if (read.refusal case final refusal?) return refusal;
+    final siblings = read.items;
     final current = _find(siblings, subTrackId);
     if (current == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
@@ -323,8 +322,7 @@ final class SubTrackCommands {
   Future<CaptureResult> deleteSubTrack(String subTrackId) =>
       _tombstone(subTrackId, SubTrackEndReason.deleted);
 
-  /// Queued sub-track batches the server refused for good, live; a batch
-  /// whose retry awaits the server is withheld until that retry fails.
+  /// Queued sub-track batches the server refused for good, live.
   Stream<List<PendingFailure>> watchPendingFailures() async* {
     yield _pendingList();
     yield* _pendingController.stream;
@@ -333,31 +331,30 @@ final class SubTrackCommands {
   /// Re-sends the identical batch of pending failure [pendingFailureId]
   /// (AD-46: the retry payload carries no freshly stamped time).
   ///
-  /// The failure stays tracked until the server acknowledges the retry
-  /// (as `LearningWriteDispatcher.retry` does for events): it is withheld
-  /// from [watchPendingFailures] while the retry is in flight and restored
-  /// on every outcome that is not an acknowledgement, in or after the ack
-  /// window. A retry refused within the window answers
-  /// `CaptureResult.rejected(CaptureRejection.notSaved)`; a second retry
-  /// while one is in flight writes nothing and reports it queued.
+  /// The pending record stays listed until the retry is accepted (saved,
+  /// or queued again; a queued retry the server later refuses is recorded
+  /// afresh under the same id). A retry refused at once or one that throws
+  /// leaves the identical record in place, so the "not saved — retry"
+  /// entry is never lost for an operation that did not succeed. A second
+  /// retry of the same record while one is in flight is `targetNotFound`
+  /// (it is not re-sent twice).
   Future<CaptureResult> retry(String pendingFailureId) async {
     final pending = _pending[pendingFailureId];
-    if (pending == null) {
+    if (pending == null || !_retrying.add(pendingFailureId)) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
     }
-    final change = pending.$2;
-    if (!_inFlight.add(pendingFailureId)) {
-      return CaptureResult.success(
-        changeIds: [change.entry.id],
-        actionId: change.entry.actionId,
-        queued: true,
-      );
+    try {
+      final result = await _commit(pending.$2);
+      if (result is CaptureSuccess &&
+          // Records have no identity; compare the failure object.
+          identical(_pending[pendingFailureId]?.$1, pending.$1)) {
+        _pending.remove(pendingFailureId);
+        _publishPending();
+      }
+      return result;
+    } finally {
+      _retrying.remove(pendingFailureId);
     }
-    _publishPending();
-    final result = await _commit(change);
-    return result is CaptureRejected
-        ? const CaptureResult.rejected(CaptureRejection.notSaved)
-        : result;
   }
 
   /// Closes the pending-failure feed.
@@ -370,8 +367,9 @@ final class SubTrackCommands {
     SubTrackEndReason reason,
   ) async {
     if (actor.role == ActorRole.child) return const CaptureResult.childLimit();
-    final siblings = await _readSubTracks();
-    if (siblings == null) return const CaptureResult.onlineRequired();
+    final read = await _readSubTracks();
+    if (read.refusal case final refusal?) return refusal;
+    final siblings = read.items;
     final current = _find(siblings, subTrackId);
     if (current == null) {
       return const CaptureResult.rejected(CaptureRejection.targetNotFound);
@@ -421,17 +419,33 @@ final class SubTrackCommands {
     return result;
   }
 
-  /// The complete sub-track read of [scope] (live and ended), or null when
-  /// it is not available within [readTimeout] (offline with no cache).
-  Future<List<SubTrack>?> _readSubTracks() async {
+  /// The complete sub-track read of [scope] (live and ended), or a refusal:
+  /// - `onlineRequired` when it is not available within [readTimeout]
+  ///   (offline with no cache);
+  /// - `rejected(invalid)` when the read holds rows that failed strict
+  ///   decode. Their limits cannot be checked, so every write fails closed
+  ///   rather than validating against a partial sibling set (AD-35 complete
+  ///   inputs, AD-45).
+  Future<({List<SubTrack> items, CaptureResult? refusal})>
+  _readSubTracks() async {
     try {
       final ready = await _subTracks
           .watchAll(scope)
           .firstWhere((r) => r is CompleteReadReady<SubTrack>)
           .timeout(readTimeout);
-      return (ready as CompleteReadReady<SubTrack>).items;
+      final complete = ready as CompleteReadReady<SubTrack>;
+      if (!complete.isClean) {
+        return (
+          items: const <SubTrack>[],
+          refusal: const CaptureResult.rejected(CaptureRejection.invalid),
+        );
+      }
+      return (items: complete.items, refusal: null);
     } on TimeoutException {
-      return null;
+      return (
+        items: const <SubTrack>[],
+        refusal: const CaptureResult.onlineRequired(),
+      );
     }
   }
 
@@ -527,17 +541,14 @@ final class SubTrackCommands {
           .applyGovernedChange(scope, change)
           .then(
             (_) {
-              _acknowledged(change.entry.id);
               if (!outcome.isCompleted) outcome.complete(null);
             },
             onError: (Object error, StackTrace stack) {
-              // A refusal after the ack window, or any failure of a retry,
-              // is (again) a "not saved — retry" entry; a first write
-              // refused within the window is only returned to its caller.
-              if (outcome.isCompleted || _inFlight.contains(change.entry.id)) {
+              if (!outcome.isCompleted) {
+                outcome.complete(_Failed(error, stack));
+              } else {
                 _recordPending(change, error);
               }
-              if (!outcome.isCompleted) outcome.complete(_Failed(error, stack));
             },
           ),
     );
@@ -583,20 +594,12 @@ final class SubTrackCommands {
         _ => PendingFailureReason.other,
       },
     );
-    _inFlight.remove(failure.id);
     _pending[failure.id] = (failure, change);
     _publishPending();
   }
 
-  /// The server acknowledged change [entryId]: a retry of it is settled.
-  void _acknowledged(String entryId) {
-    _inFlight.remove(entryId);
-    if (_pending.remove(entryId) != null) _publishPending();
-  }
-
   List<PendingFailure> _pendingList() => [
-    for (final MapEntry(:key, value: (failure, _)) in _pending.entries)
-      if (!_inFlight.contains(key)) failure,
+    for (final (failure, _) in _pending.values) failure,
   ];
 
   void _publishPending() {
