@@ -8,6 +8,7 @@
 // runs against the Firestore emulator. See _cf_helpers.mjs for the harness.
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, test } from 'node:test';
 import admin from 'firebase-admin';
 import {
@@ -319,5 +320,28 @@ describe('AC-8: recipients are the owning account, never the tutor', () => {
     await fire(ulid(1));
     assert.deepEqual(fcm.messages.map((m) => m.token), ['tok-parent']);
     assert.equal(fcm.messages[0].data.owner_uid, PARENT);
+  });
+});
+
+// AC-9 / ruling B5: the gated backend deploy (DNI-490's release job,
+// `firebase deploy --only firestore:rules,firestore:indexes,functions`)
+// deploys every export of index.ts, so exporting the trigger is what puts it
+// in that deploy; the deploy runs only after the rules and functions suites
+// that CI runs here. No second workflow is added.
+describe('AC-9: the trigger ships through the gated backend deploy', () => {
+  test('index.ts exports onChangeLogCreated bound to the profile change_log', () => {
+    assert.equal(typeof fns.onChangeLogCreated, 'function');
+    const endpoint = fns.onChangeLogCreated.__endpoint;
+    assert.equal(endpoint.eventTrigger.eventType, 'google.cloud.firestore.document.v1.created');
+    assert.equal(
+      endpoint.eventTrigger.eventFilterPathPatterns.document,
+      'users/{ownerUid}/learner_profiles/{profileId}/change_log/{entryId}',
+    );
+  });
+
+  test('CI runs the rules and functions suites that gate the deploy', () => {
+    const ci = readFileSync(new URL('../../../.github/workflows/ci.yml', import.meta.url), 'utf8');
+    assert.match(ci, /node --test functions\/test\/firestore_rules\.test\.mjs/);
+    assert.match(ci, /make test-functions/);
   });
 });
