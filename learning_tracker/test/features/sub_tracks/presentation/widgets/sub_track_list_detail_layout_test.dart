@@ -1,12 +1,15 @@
 // DNI-497 (Story 2.6) AC-8 and AC-5 RTL: the tablet list-detail split
 // keeps the hub selection while the detail updates in place; dark tokens;
-// tri-state announcements; mirrored handles and chevrons.
+// tri-state announcements; mirrored handles and chevrons. DNI-498 AC-9:
+// the detail pane hosts the ground picker, which a new selection closes.
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_picker_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/sub_track_detail_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_list_detail_layout.dart';
@@ -74,6 +77,7 @@ void main() {
     required double width,
     Locale locale = const Locale('en'),
     Brightness brightness = Brightness.light,
+    List<Override> extra = const [],
   }) async {
     tester.view
       ..physicalSize = Size(width, 900)
@@ -81,7 +85,7 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       pumpApp(
-        overrides: h.overrides(),
+        overrides: [...h.overrides(), ...extra],
         locale: locale,
         theme: AppTheme.themeFor(brightness: brightness),
         child: StackRouterScope(
@@ -129,6 +133,49 @@ void main() {
     expect(isSelected(tester, rebbe.id), isTrue);
     expect(isSelected(tester, school.id), isFalse);
     verifyNever(() => router.push<Object?>(any()));
+  });
+
+  testWidgets('the detail pane hosts + Add ground: the picker opens in '
+      'place of the detail beside the kept list, and selecting another '
+      'sub-track closes it (DNI-498 AC-9)', (tester) async {
+    await pumpHub(
+      tester,
+      width: 1000,
+      extra: [
+        groundPickerAccessProvider.overrideWith(
+          (ref, _) async =>
+              const GroundPickerUnavailable(GroundPickerBlock.calendarProgram),
+        ),
+      ],
+    );
+    await tester.tap(find.byKey(ValueKey('hubRow:${school.id}')));
+    await tester.pumpAndSettle();
+    final addGround = find.byKey(const ValueKey('subTrackDetailAddGround'));
+    await tester.ensureVisible(addGround);
+    await tester.pumpAndSettle();
+    await tester.tap(addGround);
+    await tester.pumpAndSettle();
+
+    verifyNever(() => router.push<Object?>(any()));
+    final picker = find.byKey(ValueKey('groundPickerPane-${school.id}'));
+    expect(picker, findsOneWidget);
+    expect(find.text('Hub School'), findsOneWidget, reason: 'list stays');
+    expect(
+      tester.getTopLeft(picker).dx,
+      greaterThanOrEqualTo(subTrackSplitListWidth),
+    );
+
+    await tester.tap(find.byKey(ValueKey('hubRow:${rebbe.id}')));
+    await tester.pumpAndSettle();
+    expect(picker, findsNothing);
+    expect(find.byKey(ValueKey('groundPickerPane-${rebbe.id}')), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('subTrackSplitDetail')),
+        matching: find.text('Rebbe'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('below 840dp a row tap pushes the detail route and there is '

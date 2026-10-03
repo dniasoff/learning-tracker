@@ -1,5 +1,6 @@
 /// Sub-track detail (Story 2.6 / DNI-497; screens.md #07): the window,
-/// "Up next", "{n} ticked", capacity vs path and the ordered ground.
+/// "Up next", "{n} ticked", capacity vs path and the ordered ground, with
+/// the parent's *+ Add ground* (Story 2.7 / DNI-498 AC-1) below it.
 library;
 
 import 'dart:async';
@@ -15,6 +16,7 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_actions.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/widgets/add_ground_entry.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_capacity_bar.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_ground_tree.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -58,6 +60,13 @@ class SubTrackDetailScreen extends ConsumerWidget {
 /// The detail body for [subTrackId]: the routed screen's body, and the
 /// detail pane of the tablet list-detail split ([showTitle] adds the name
 /// and ⋮ there, since the pane has no app bar).
+///
+/// Either way it hosts the ground picker's [GroundPickerSplitView]
+/// (Story 2.7 / DNI-498 AC-9, UX-DR-164): from
+/// [groundPickerTabletBreakpoint] *+ Add ground* opens the picker as a
+/// right pane beside the detail instead of pushing the phone route. The
+/// host is keyed by [subTrackId], so selecting another sub-track in the
+/// hub closes a pane that belonged to the previous one.
 class SubTrackDetailView extends ConsumerWidget {
   /// Creates the view.
   const SubTrackDetailView({
@@ -74,18 +83,21 @@ class SubTrackDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return switch (ref.watch(subTrackDetailProvider(subTrackId))) {
-      AsyncValue(:final error?, :final stackTrace) => AppErrorView(
-        error: error,
-        stackTrace: stackTrace,
-        onRetry: () => retrySubTrackDetail(ref),
-      ),
-      AsyncValue(:final value?) => _DetailBody(
-        detail: value,
-        showTitle: showTitle,
-      ),
-      _ => const Center(child: CircularProgressIndicator()),
-    };
+    return GroundPickerSplitView(
+      key: ValueKey('groundPickerSplit:$subTrackId'),
+      detail: switch (ref.watch(subTrackDetailProvider(subTrackId))) {
+        AsyncValue(:final error?, :final stackTrace) => AppErrorView(
+          error: error,
+          stackTrace: stackTrace,
+          onRetry: () => retrySubTrackDetail(ref),
+        ),
+        AsyncValue(:final value?) => _DetailBody(
+          detail: value,
+          showTitle: showTitle,
+        ),
+        _ => const Center(child: CircularProgressIndicator()),
+      },
+    );
   }
 }
 
@@ -149,6 +161,21 @@ class _DetailBody extends ConsumerWidget {
             MishnaHistoryRoute(curriculumId: track.curriculumId, leafRef: leaf),
           ),
         ),
+        // *+ Add ground* (Story 2.7 / DNI-498 AC-1, UX-DR-54, UX-DR-122):
+        // under the ground list, groundless included, for a parent on a
+        // sub-track that has not ended. The button also hides itself for a
+        // non-parent session and on a calendar-program curriculum (AD-45).
+        if (detail.canEdit) ...[
+          const SizedBox(height: 12),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: AddGroundButton(
+              key: const ValueKey('subTrackDetailAddGround'),
+              subTrackId: track.id,
+              curriculumId: track.curriculumId,
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -1,14 +1,13 @@
 // Merge gate for Story 2.7 (DNI-498) AC-1 and the AC-9 tablet split:
 // *+ Add ground* and the tablet picker pane must have a production host.
 //
-// Story 2.6's sub-track detail (DNI-497, `SubTrackDetailScreen`) is that
-// host, and it is not on integ/sub-tracks yet (rulings: the
-// track_management_body + sub_track_detail_screen hotspot merges 497 before
-// 498). Until it lands this test is skipped. The moment a
-// `SubTrackDetailScreen` exists in `lib/`, it fails unless production code
-// outside `add_ground_entry.dart` builds both [AddGroundButton] and
-// [GroundPickerSplitView], so the integ full suite cannot go green with the
-// picker unreachable from the detail (bead learning-tracker-fyh.228).
+// Story 2.6's sub-track detail (DNI-497, `SubTrackDetailScreen` /
+// `SubTrackDetailView`) is that host. While a `SubTrackDetailScreen` exists
+// in `lib/`, this fails unless production code outside
+// `add_ground_entry.dart` builds both [AddGroundButton] and
+// [GroundPickerSplitView], so the picker can never silently become
+// unreachable from the detail (bead learning-tracker-fyh.228). The
+// behaviour itself is tested in sub_track_detail_screen_test.dart.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';

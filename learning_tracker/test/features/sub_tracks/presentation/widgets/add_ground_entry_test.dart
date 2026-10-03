@@ -5,9 +5,11 @@
 // route on a phone, a right pane on a tablet), is absent for a child and on
 // a calendar-program curriculum, and focus returns to it on close.
 //
-// Story 2.6's detail screen (DNI-497) is not on the integration branch
-// yet, so a minimal detail stands in for it here: the entry point under
-// test is the widget that screen hosts.
+// A minimal host keeps these widget-level tests independent of the
+// detail's own data; the same behaviour on the real Story 2.6 detail
+// (DNI-497) is covered in
+// test/features/sub_tracks/presentation/screens/sub_track_detail_screen_test.dart
+// and, for the hub's tablet pane, sub_track_list_detail_layout_test.dart.
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,7 +26,7 @@ import '../../../../helpers/sub_tracks/ground_picker_harness.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
-/// A stand-in sub-track detail (DNI-497 owns the real one).
+/// A minimal host for the entry point.
 class _Detail extends StatelessWidget {
   const _Detail({required this.ground});
 

@@ -20,7 +20,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Each stored entry is one tri-state row; a non-leaf row expands into its
 /// ContentIndex children (indented 20dp per depth), a leaf's label opens
 /// its history through [onOpenLeaf]. A groundless sub-track shows the
-/// groundless state (UX-DR-122); *+ Add ground* is Story 2.7's.
+/// groundless state (UX-DR-122); the detail screen puts *+ Add ground*
+/// (Story 2.7 / DNI-498) under it.
 ///
 /// The parent ([SubTrackDetail.canEdit]) also gets, per entry, a drag
 /// handle and a ⋮ menu with *Move up*, *Move down* (the non-drag

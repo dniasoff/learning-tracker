@@ -30,8 +30,10 @@ import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_detail.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/sub_track_ground_projection.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/ground_picker_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_detail_provider.dart';
 
 import '../../helpers/learner_state/c0_fixtures.dart';
@@ -179,12 +181,23 @@ final class DetailHarness {
   }
 
   /// Provider overrides for the detail.
+  ///
+  /// *+ Add ground* (Story 2.7 / DNI-498) reads the parent session and the
+  /// curriculum's calendar program itself: the session follows [role] and
+  /// the curriculum follows [calendarProgram].
   List<Override> overrides({
     SubTrackDetailRole role = SubTrackDetailRole.parent,
     LearningCommands? commands,
     Stream<LearnerState>? state,
     Stream<LearnerState> Function()? engine,
+    bool calendarProgram = false,
   }) => [
+    parentSessionProvider.overrideWith(
+      (ref) async => role == SubTrackDetailRole.parent,
+    ),
+    groundPickerCalendarProgramProvider.overrideWith(
+      (ref, _) => Stream.value(calendarProgram),
+    ),
     activeLearnerScopeProvider.overrideWith((ref) async => scope),
     subTrackRepositoryProvider.overrideWith((ref) async => repository),
     learningEventRepositoryProvider.overrideWith((ref) async => events),
