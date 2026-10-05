@@ -157,7 +157,7 @@ void main() {
   });
 
   test('LearningLogView: voided, counted and lock-ignored', () {
-    // engineAt(5040..7260) is the UTC fail-closed Shabbos lock.
+    // The configured New York fixture's Shabbos contains engineAt(6000).
     final kept = engineLearn(1, 'a');
     final voided = engineLearn(2, 'b');
     final locked = engineLearn(3, 'c', minutes: 6000);
@@ -170,5 +170,20 @@ void main() {
     expect(view.isVoided(voided.id), isTrue);
     expect(view.isLockIgnored(locked.id), isTrue);
     expect(view.byId, hasLength(4));
+  });
+
+  test('a tutor device history supplies lock windows independently of the '
+      'target learner history', () {
+    final target = c0NoLocationHistory();
+    final deviceUser = c0SettingsHistory();
+    final locked = engineLearn(5, 'device-lock', minutes: 6000);
+    final view = LearningLogView.of(
+      [locked],
+      target,
+      engineAt(9000),
+      lockSettingsHistories: [deviceUser],
+    );
+
+    expect(view.isLockIgnored(locked.id), isTrue);
   });
 }

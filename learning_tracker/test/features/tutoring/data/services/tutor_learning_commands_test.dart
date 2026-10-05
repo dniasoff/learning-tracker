@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_learning_commands.dart';
 
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/tutoring/tutor_learning_harness.dart';
@@ -205,10 +206,14 @@ void main() {
     test('AC-7: a lock-window learn that is stored but not counted is never '
         'voided — only the counted event ids are sent', () async {
       const leaf = 'Mishnah Berakhot 2:1';
+      final deviceHistory = c0SettingsHistory();
       final h = TutorHarness(
+        history: c0NoLocationHistory(),
+        lockHistories: [deviceHistory],
         events: [
           engineLearn(1, leaf),
-          // Recorded inside the talmid's Shabbos lock: stored, not counted.
+          // The device user's lock stamps this event; the talmid has no
+          // location, so their settings do not create the lock.
           engineLearn(2, leaf, minutes: 6000),
         ],
         corpora: {_curriculum: mishnayosCorpus()},
@@ -425,17 +430,22 @@ void main() {
       expect(h.invoker.calls, isEmpty);
     });
 
-    test('inside the TARGET learner\'s lock', () async {
+    test('inside the device user\'s lock', () async {
       final window = LockWindow(
         DateTime.utc(2026, 10, 1, 8),
         DateTime.utc(2026, 10, 1, 20),
       );
-      final h = TutorHarness(gate: FakeCaptureGate.locked(window));
+      final deviceHistory = c0SettingsHistory();
+      final h = TutorHarness(
+        history: c0NoLocationHistory(),
+        lockHistories: [deviceHistory],
+        gate: FakeCaptureGate.locked(window),
+      );
       addTearDown(h.dispose);
       expect(await capture(h), CaptureResult.locked(window));
       expect(h.invoker.calls, isEmpty);
-      // The gate judged the talmid's settings history, never the device's.
-      expect((h.gate as FakeCaptureGate).checks.single.$1, same(h.history));
+      // The gate reads the device-user history, never the talmid's.
+      expect((h.gate as FakeCaptureGate).checks.single.$1, same(deviceHistory));
     });
   });
 }

@@ -12,10 +12,12 @@ import 'package:learning_tracker/domain/learner_state/learner_settings_history.d
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/points.dart';
 
+import '../../helpers/learner_state/c0_fixtures.dart';
 import '../../helpers/learner_state/engine_fixtures.dart';
 import '../../helpers/learner_state/lock_fixtures.dart';
 import '../../helpers/learner_state_fixtures.dart';
@@ -446,9 +448,8 @@ void main() {
   });
 
   group('DNI-466 AC-4: lock-ignored events', () {
-    // The fixture learner is UTC with no location, so the fail-closed
-    // Shabbos lock is Fri 2026-09-04 12:00Z → Sun 2026-09-06 01:00Z
-    // (engineAt(5040) → engineAt(7260)).
+    // The fixture learner has a configured New Jersey location and UTC
+    // timezone. Use the actual Saturday interval from the shared source.
     const inLock = 6000;
     const b21 = 'Mishnah Berakhot 2:1';
     const b22 = 'Mishnah Berakhot 2:2';
@@ -522,8 +523,13 @@ void main() {
 
     test('both lock bounds are inside the lock; 1 µs outside counts', () {
       const us = Duration(microseconds: 1);
-      final lockStart = DateTime.utc(2026, 9, 4, 12);
-      final lockEnd = DateTime.utc(2026, 9, 6, 1);
+      final window = lockWindows(
+        c0SettingsHistory(),
+        DateTime.utc(2026, 9, 4),
+        DateTime.utc(2026, 9, 6),
+      ).single;
+      final lockStart = window.startUtc;
+      final lockEnd = window.endUtc;
       final state = engine.run(
         engineInputs(
           events: [
@@ -554,15 +560,15 @@ void main() {
     });
 
     test('each event is judged by the window of the settings in force', () {
-      // Fri 13:00Z and Sat 20:00Z are inside the no-location fallback but
-      // outside Jerusalem's computed Shabbos.
+      // Friday afternoon is before candle-lighting in the configured
+      // location; Saturday evening is after Jerusalem havdalah.
       final events = [
         at(1, b11, DateTime.utc(2026, 9, 4, 13)),
         at(2, b12, DateTime.utc(2026, 9, 5, 20)),
         at(3, b21, DateTime.utc(2026, 9, 5, 12)),
       ];
-      final fallback = engine.run(engineInputs(events: events));
-      expect(fallback.lockIgnoredEventIds, hasLength(3));
+      final located = engine.run(engineInputs(events: events));
+      expect(located.lockIgnoredEventIds, {engineUlid(2), engineUlid(3)});
 
       final moved = engine.run(
         engineInputs(
@@ -580,9 +586,9 @@ void main() {
   });
 
   group('DNI-466 AC-6: per-curriculum streak', () {
-    // UTC learner with no location: the Shabbos lock is Fri 09-04 12:00Z →
-    // Sun 09-06 01:00Z, locked day Sat 09-05; Sunday holds locked
-    // instants, so its catch-up runs to the end of Monday 09-07.
+    // The test learner has a New York location. Its Shabbos lock covers
+    // Saturday and the pre-havdalah part of Sunday, so Sunday learns below
+    // are placed just after the actual window end.
     // nowUtc is Mon 09-07 22:40Z.
     int day(int d) => (d - 1) * 1440 + 600; // 10:00Z on 2026-09-[d]
     String on(int d) => '2026-09-0$d';
@@ -601,8 +607,8 @@ void main() {
       corpora: {engineCurriculum: mishnayosCorpus(), 'other': other},
     );
 
-    LearningEvent dated(int id, int d) =>
-        engineLearn(id, b11, minutes: day(d), learnedOn: on(d));
+    LearningEvent dated(int id, int d, {int? minutes}) =>
+        engineLearn(id, b11, minutes: minutes ?? day(d), learnedOn: on(d));
 
     final excluded = [
       // Tue 09-01: a sub-track learn, a voided learn and a before-tracking
@@ -660,10 +666,11 @@ void main() {
       );
       expect(state.lockIgnoredEventIds, {engineUlid(5)});
       // Saturday's catch-up window is still open on Monday night, so
-      // Saturday is pending, not a streak day and not a break.
+      // Saturday is pending. Sunday and Monday are the current streak; the
+      // run before Shabbos remains the best streak.
       expect(
         state[engineCurriculum]!.streak,
-        const CurriculumStreak(current: 5, best: 5, lastDay: '2026-09-07'),
+        const CurriculumStreak(current: 2, best: 3, lastDay: '2026-09-07'),
       );
     });
 
@@ -704,8 +711,8 @@ void main() {
   });
 
   group('DNI-468 AC-1: countedEventIds', () {
-    // Inside the fixture learner's fail-closed Shabbos lock (see the
-    // DNI-466 group below).
+    // Inside the fixture learner's configured-location Shabbos lock (see
+    // the DNI-466 group above).
     const inLock = 6000;
 
     test('profile-wide learn events not voided and not lock-ignored', () {

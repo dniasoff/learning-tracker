@@ -41,6 +41,20 @@ void main() {
     });
   });
 
+  group('mergeLockWindows', () {
+    test('unions overlapping histories and keeps a separate later window', () {
+      final overlap = LockWindow(
+        a.startUtc.add(const Duration(hours: 1)),
+        a.endUtc.add(const Duration(hours: 2)),
+      );
+      expect(mergeLockWindows([b, overlap, a]), [
+        LockWindow(a.startUtc, overlap.endUtc),
+        b,
+      ]);
+      expect(mergeLockWindows(const []), isEmpty);
+    });
+  });
+
   group('engineLockWindows', () {
     test('covers every event and the look-back before now', () {
       final h = constantHistory(newYorkLocated);

@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/tutoring/data/services/tutor_write_pre
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
+import '../../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../../helpers/tutoring/tutor_learning_harness.dart';
 
 final _lock = LockWindow(
@@ -25,17 +26,19 @@ TutorWritePreflight _preflight({
   bool online = true,
   CaptureGate? gate,
   bool settingsFail = false,
+  LearnerSettingsHistory? settingsHistory,
   List<LearnerSettingsHistory>? lockHistories,
+  DateTime? now,
 }) => TutorWritePreflight(
   selection: tutorSelection(canEditLearning: canEditLearning),
   settingsHistory: () async {
     if (settingsFail) throw StateError('unreadable');
-    return c0SettingsHistory();
+    return settingsHistory ?? c0SettingsHistory();
   },
   lockHistories: () async => lockHistories ?? [c0SettingsHistory()],
   gate: gate ?? FakeCaptureGate.open(),
   isOnline: () => online,
-  clock: () => tutorFixtureNow,
+  clock: () => now ?? tutorFixtureNow,
 );
 
 void main() {
@@ -64,6 +67,40 @@ void main() {
       isA<TutorPreflightLocked>().having((l) => l.window, 'window', _lock),
     );
   });
+
+  test(
+    'a locked talmid does not lock a tutor with no configured location',
+    () async {
+      final now = DateTime.utc(2026, 9, 5, 12);
+      final target = constantHistory(lakewood);
+      final result = await _preflight(
+        gate: const LockWindowCaptureGate(),
+        settingsHistory: target,
+        lockHistories: [constantHistory(newYorkNoLocation)],
+        now: now,
+      ).check();
+
+      expect(result, isA<TutorPreflightPassed>());
+      expect((result as TutorPreflightPassed).history, same(target));
+    },
+  );
+
+  test(
+    'the tutor device user\'s configured Shabbos lock governs captures',
+    () async {
+      final now = DateTime.utc(2026, 9, 5, 12);
+      final tutor = constantHistory(lakewood);
+      final target = constantHistory(newYorkNoLocation);
+      final result = await _preflight(
+        gate: const LockWindowCaptureGate(),
+        settingsHistory: target,
+        lockHistories: [tutor],
+        now: now,
+      ).check();
+
+      expect(result, isA<TutorPreflightLocked>());
+    },
+  );
 
   test(
     'unreadable target settings are unavailable, not a Sacred-Time lock',

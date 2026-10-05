@@ -42,15 +42,15 @@ void main() {
   group('LockWindowCaptureGate.check (AD-36)', () {
     test('open outside every lock window', () {
       expect(
-        gate.check(c0SettingsHistory(), DateTime.utc(2026, 9, 3, 12)),
+        gate.check(c0NoLocationHistory(), DateTime.utc(2026, 9, 3, 12)),
         const GateOpen(),
       );
       expect(
-        gate.check(c0SettingsHistory(), _lockStart.subtract(_tick)),
+        gate.check(c0NoLocationHistory(), _lockStart.subtract(_tick)),
         const GateOpen(),
       );
       expect(
-        gate.check(c0SettingsHistory(), _lockEnd.add(_tick)),
+        gate.check(c0NoLocationHistory(), _lockEnd.add(_tick)),
         const GateOpen(),
       );
     });
@@ -60,7 +60,7 @@ void main() {
         DateTime.utc(2026, 9, 4, 17),
         DateTime.utc(2026, 9, 5, 19),
       ]) {
-        expect(gate.check(c0SettingsHistory(), at), const GateOpen());
+        expect(gate.check(c0NoLocationHistory(), at), const GateOpen());
       }
     });
 

@@ -73,13 +73,10 @@ void main() {
     expect(result, isA<CaptureSuccess>());
 
     final after = _history(h);
-    // The past Shabbos is still the New York no-location fallback
-    // (Fri 12:00 EDT → Sun 01:00 EDT), unchanged by the edit.
+    // The past Shabbos still has no window because the learner had no
+    // location at that time; the later location edit cannot add one.
     expect(lockWindows(after, pastShabbos, pastShabbos), pastBefore);
-    expect(
-      pastBefore.single,
-      LockWindow(DateTime.utc(2026, 9, 4, 16), DateTime.utc(2026, 9, 6, 5)),
-    );
+    expect(pastBefore, isEmpty);
 
     // The next Shabbos uses the Jerusalem zmanim.
     final jerusalem = LearnerSettingsHistory.constant(
@@ -95,10 +92,7 @@ void main() {
       lockWindows(after, nextShabbos, nextShabbos),
       lockWindows(jerusalem, nextShabbos, nextShabbos),
     );
-    expect(
-      lockWindows(before, nextShabbos, nextShabbos),
-      isNot(lockWindows(after, nextShabbos, nextShabbos)),
-    );
+    expect(lockWindows(before, nextShabbos, nextShabbos), isEmpty);
   });
 
   test(
@@ -107,6 +101,8 @@ void main() {
       final h = GovernedHarness()
         ..seedDoc('learner_profiles', profileUlid, {
           'time_zone': 'Asia/Jerusalem',
+          'latitude': 31.778,
+          'longitude': 35.235,
           'in_israel': true,
           'last_change_id': ulidA,
         });
@@ -116,8 +112,18 @@ void main() {
           entity: GovernedEntity.learnerSettings,
           entityId: profileUlid,
           actionId: ulidA,
-          before: {_key('time_zone'): null, _key('in_israel'): null},
-          after: {_key('time_zone'): 'Asia/Jerusalem', _key('in_israel'): true},
+          before: {
+            _key('time_zone'): null,
+            _key('latitude'): null,
+            _key('longitude'): null,
+            _key('in_israel'): null,
+          },
+          after: {
+            _key('time_zone'): 'Asia/Jerusalem',
+            _key('latitude'): 31.778,
+            _key('longitude'): 35.235,
+            _key('in_israel'): true,
+          },
           at: DateTime.utc(2026, 8, 1),
           actor: parentActor,
         ),

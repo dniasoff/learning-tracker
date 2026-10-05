@@ -87,6 +87,11 @@ final class TutorWritePreflight {
   final UtcClock _clock;
   List<LearnerSettingsHistory> _lastLockHistories = const [];
 
+  /// The device user's settings histories from the most recent preflight.
+  /// An empty list means settings were unavailable or no location was set;
+  /// either way the device has no lock source to apply to stamped events.
+  List<LearnerSettingsHistory> get deviceLockHistories => _lastLockHistories;
+
   /// Permission first, then connectivity, then the device user's lock.
   Future<TutorPreflight> check() async {
     if (!_selection.permissions.canEditLearning) {

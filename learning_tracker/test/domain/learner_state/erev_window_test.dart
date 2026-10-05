@@ -149,24 +149,21 @@ void main() {
     });
   });
 
-  group('AC-6 no location: the fail-closed fallback', () {
+  group('AC-6 no location: there is no erev or lock window', () {
     final h = constantHistory(newYorkNoLocation);
 
-    test('Friday banner time is 12:00 from the same lockWindows value', () {
-      final w = erevWindowAt(h, _local(ny, 2026, 10, 9, 9))!;
-      expect(w.lockStartLocal.hour, 12);
-      expect(w.lockStartLocal.minute, 0);
-      expect(w.lock.startUtc, _local(ny, 2026, 10, 9, 12));
+    test('the Friday erev banner is absent', () {
+      expect(erevWindowAt(h, _local(ny, 2026, 10, 9, 9)), isNull);
     });
 
-    test('the banner time is never later than the gate / overlay lock', () {
-      final w = erevWindowAt(h, _local(ny, 2026, 10, 9, 9))!;
-      final gate = const LockWindowCaptureGate().check(h, w.lock.startUtc);
-      expect(gate, GateLocked(w.lock));
-      expect(
-        const LockWindowCaptureGate().check(h, w.lock.startUtc.subtract(_us)),
-        const GateOpen(),
-      );
+    test('Friday afternoon and Shabbos remain open', () {
+      for (final at in [
+        _local(ny, 2026, 10, 9, 16),
+        _local(ny, 2026, 10, 10, 12),
+      ]) {
+        expect(erevWindowAt(h, at), isNull);
+        expect(const LockWindowCaptureGate().check(h, at), const GateOpen());
+      }
     });
   });
 

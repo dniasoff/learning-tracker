@@ -334,7 +334,7 @@ void main() {
         ),
       );
       expect(find.text("What was planned couldn't load."), findsOneWidget);
-      expect(find.text('Available until the end of Monday'), findsOneWidget);
+      expect(find.text('Available until the end of Sunday'), findsOneWidget);
       final retry = find.byKey(const ValueKey('catchUpCardRetry'));
       expect(tester.getSize(retry).height, greaterThanOrEqualTo(48));
 

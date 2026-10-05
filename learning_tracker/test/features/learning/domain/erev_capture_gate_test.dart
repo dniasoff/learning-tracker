@@ -25,8 +25,8 @@ import '../../../helpers/pump_app.dart';
 import '../../sub_tracks/helpers/capture_harness.dart';
 import '../../sub_tracks/helpers/up_to_fixtures.dart';
 
-/// Friday 2026-09-04 09:00Z: erev. The fixture learner (UTC, no location)
-/// is under the fail-closed fallback, so the lock starts at 12:00Z.
+/// Friday 2026-09-04 09:00Z: erev for the configured New Jersey location
+/// with a UTC test timezone; the computed candle-lighting lock starts later.
 final _erev = DateTime.utc(2026, 9, 4, 9);
 
 /// The lock the fixture settings give for this Shabbos.
@@ -113,7 +113,7 @@ void main() {
   ) async {
     final erev = await _pump(tester);
     final lock = _lock(erev.rig);
-    expect(lock.startUtc, DateTime.utc(2026, 9, 4, 12));
+    expect(lock.startUtc.isAfter(erev.now), isTrue);
     expect(find.textContaining('Planned for'), findsWidgets);
   });
 

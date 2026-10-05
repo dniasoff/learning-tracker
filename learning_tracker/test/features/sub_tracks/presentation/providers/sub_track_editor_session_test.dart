@@ -12,10 +12,11 @@ import 'package:flutter_riverpod/misc.dart' show Override, ProviderListenable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
 
-import '../../../../helpers/learner_state/fake_learning_commands.dart';
+import '../../../../helpers/learner_state_fixtures.dart';
 import '../../../../helpers/tutoring/tutor_learning_harness.dart';
 
 Future<T> _settled<T>(
@@ -103,10 +104,16 @@ void main() {
         ),
       ),
       (
-        'the talmid locked',
+        "the tutor's device-user lock active",
         tutoredOverrides(
           selection: tutorSelection(),
-          gate: FakeCaptureGate.locked(_lock),
+          deviceWindow: SacredWindow(
+            startUtc: _lock.startUtc,
+            endUtc: _lock.endUtc,
+            kind: SacredWindowKind.shabbos,
+            profileId: profileUlid,
+            timeZone: 'UTC',
+          ),
         ),
       ),
     ]) {

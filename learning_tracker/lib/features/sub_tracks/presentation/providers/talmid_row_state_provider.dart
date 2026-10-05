@@ -9,8 +9,8 @@
 /// (AD-35 "Tutor list"; 4.2a [learnerStateForScopeProvider]).
 ///
 /// Lock (AD-36, product ruling 2026-10-05): the row follows the lock of
-/// the person using the device (the tutor's own, [talmidLockProvider]),
-/// never the talmid's own settings; while that lock is in force the row is
+/// the person using the device ([currentSacredWindowProvider]), never the
+/// talmid's own settings; while that lock is in force the row is
 /// [TalmidRowLocked] (the overlay covers the app anyway).
 ///
 /// Timeout (AD-54 Observability): a row still loading after
@@ -71,7 +71,7 @@ final class TalmidEngineLoadTimeoutError implements Exception {
 
 /// The input a timed-out row was still waiting for.
 enum TalmidLoadStage {
-  /// The talmid's lock settings.
+  /// The device user's lock settings.
   lock,
 
   /// The talmid's engine state.

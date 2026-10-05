@@ -166,10 +166,9 @@ void main() {
   });
 
   group('AC-3: the window at the tap instant', () {
-    test('a tap at 23:59 on the window\'s last day is written', () async {
-      final h = CatchUpCommandHarness(
-        now: catchUpZone.at(DateTime.utc(2026, 10, 12), hour: 23, minute: 59),
-      );
+    test('the last instant in the window is written', () async {
+      final window = catchUpWindow(catchUpShabbosLock(), catchUpHistory);
+      final h = CatchUpCommandHarness(now: window.endUtc);
       final result = await h.commands.recordCatchUp(
         catchUpAllAction([mainCatchUpLeaf('Mishnah Berakhot 2:1')]),
       );

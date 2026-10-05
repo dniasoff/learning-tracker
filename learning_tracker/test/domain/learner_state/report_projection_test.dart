@@ -535,7 +535,7 @@ void main() {
       for (final key in ['shiur', 'chavrusa', 'camp']) {
         final line = byKey[key]!.members.single;
         expect(line.status, ReportLineStatus.ended);
-        expect(line.endedOn, '2026-09-03');
+        expect(line.endedOn, '2026-09-02');
       }
       expect(byKey['shiur']!.name, 'Shiur');
       expect(

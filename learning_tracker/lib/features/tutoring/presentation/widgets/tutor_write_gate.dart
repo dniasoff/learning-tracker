@@ -98,9 +98,8 @@ String? tutorWriteNoteText(
         ? l10n.tutorPermissionDenied
         : l10n.tutorCaptureNoEditAccess(learnerName),
   TutorWriteAvailability.offline => l10n.tutorCaptureOnlineRequired,
-  TutorWriteAvailability.locked =>
-    learnerName == null || learnerName.isEmpty
-        ? l10n.tutorCaptureLearnerLockedNote
-        : l10n.tutorCaptureLearnerLockedNoteNamed(learnerName),
+  // Sacred-Time is a device-wide overlay sourced from the tutor's own
+  // settings. It already explains the lock and covers these controls.
+  TutorWriteAvailability.locked => null,
   TutorWriteAvailability.owner || TutorWriteAvailability.available => null,
 };

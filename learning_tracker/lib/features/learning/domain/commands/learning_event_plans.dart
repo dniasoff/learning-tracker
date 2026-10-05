@@ -253,9 +253,14 @@ final class LearningLogView {
   factory LearningLogView.of(
     List<LearningEvent> events,
     LearnerSettingsHistory settingsHistory,
-    DateTime nowUtc,
-  ) {
-    final locks = engineLockWindows(settingsHistory, events, nowUtc);
+    DateTime nowUtc, {
+    Iterable<LearnerSettingsHistory>? lockSettingsHistories,
+  }) {
+    final lockHistories = lockSettingsHistories ?? [settingsHistory];
+    final locks = mergeLockWindows([
+      for (final history in lockHistories)
+        ...engineLockWindows(history, events, nowUtc),
+    ]);
     final byId = <String, LearningEvent>{};
     for (final e in events) {
       byId.putIfAbsent(e.id, () => e);

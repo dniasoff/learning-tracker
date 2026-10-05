@@ -11,6 +11,7 @@ import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
@@ -123,6 +124,12 @@ LearnerState _run(
 CurriculumState _mishnayos(LearnerState s) => s[engineCurriculum]!;
 
 void main() {
+  final shabbos = lockWindows(
+    catchUpHistory,
+    DateTime.utc(2026, 10, 9),
+    DateTime.utc(2026, 10, 14),
+  ).single;
+  final catchUpEnd = catchUpWindow(shabbos, catchUpHistory).endUtc;
   final week = [_day(8), _day(9), _day(11), _day(12), _day(13)];
 
   group('AC-2: a counted main catch_up keeps the streak across the lock', () {
@@ -152,7 +159,10 @@ void main() {
     test('a catch_up recorded at 23:59 on the last day counts', () {
       final state = _run([
         ...week,
-        _catchUp('Mishnah Berakhot 2:1', at: _at(12, hour: 23, minute: 59)),
+        _catchUp(
+          'Mishnah Berakhot 2:1',
+          at: catchUpEnd.subtract(const Duration(minutes: 1)),
+        ),
       ], now: _at(13, hour: 12));
       expect(_mishnayos(state).streak!.current, 6);
     });
@@ -226,7 +236,10 @@ void main() {
   group('AC-5: a queued action that syncs after the window still counts', () {
     test('effectiveAt is the tap instant, not the sync time', () {
       // Tapped offline on Monday 22:00; evaluated on Wednesday.
-      final tapped = _catchUp('Mishnah Berakhot 2:1', at: _at(12, hour: 22));
+      final tapped = _catchUp(
+        'Mishnah Berakhot 2:1',
+        at: catchUpEnd.subtract(const Duration(minutes: 1)),
+      );
       final state = _run([...week, _day(14), tapped], now: _at(14, hour: 12));
       expect(_mishnayos(state).streak!.current, 7);
     });

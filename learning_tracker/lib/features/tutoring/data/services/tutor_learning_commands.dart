@@ -446,7 +446,14 @@ final class TutorLearningCommands implements LearningCommands {
   );
 
   Future<LearningLogView> _log(DateTime now, LearnerSettingsHistory h) =>
-      _events().then((events) => LearningLogView.of(events, h, now));
+      _events().then(
+        (events) => LearningLogView.of(
+          events,
+          h,
+          now,
+          lockSettingsHistories: _checks.deviceLockHistories,
+        ),
+      );
 
   @override
   Future<CaptureResult> voidEvent(String targetId) => _preflight((

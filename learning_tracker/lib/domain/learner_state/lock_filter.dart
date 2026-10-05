@@ -45,6 +45,27 @@ List<LockWindow> engineLockWindows(
   return lockWindows(settingsHistory, lo, hi);
 }
 
+/// The sorted, disjoint union of lock windows computed from multiple
+/// settings histories. Each source window still comes from [lockWindows].
+List<LockWindow> mergeLockWindows(Iterable<LockWindow> windows) {
+  final sorted = windows.toList()
+    ..sort((a, b) => a.startUtc.compareTo(b.startUtc));
+  if (sorted.isEmpty) return const [];
+  final merged = <LockWindow>[sorted.first];
+  for (final next in sorted.skip(1)) {
+    final last = merged.last;
+    if (!next.startUtc.isAfter(last.endUtc)) {
+      merged[merged.length - 1] = LockWindow(
+        last.startUtc,
+        next.endUtc.isAfter(last.endUtc) ? next.endUtc : last.endUtc,
+      );
+    } else {
+      merged.add(next);
+    }
+  }
+  return List.unmodifiable(merged);
+}
+
 /// Whether [t] lies inside one of [locks] (ascending and disjoint, as
 /// [lockWindows] returns them). Bounds are inside (closed intervals).
 bool insideLock(List<LockWindow> locks, DateTime t) => lockAt(locks, t) != null;

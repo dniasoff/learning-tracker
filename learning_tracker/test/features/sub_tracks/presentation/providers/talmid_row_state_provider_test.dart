@@ -3,17 +3,17 @@
 // settings history.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
-import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/tutor_scope_grant_source.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/talmid_row_state.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/talmid_row_state_provider.dart';
 
 import '../../../../helpers/dashboard/forecast_fixtures.dart';
-import '../../../../helpers/learner_state/c0_fixtures.dart';
-import '../../../../helpers/learner_state/fake_learning_commands.dart';
+import '../../../../helpers/learner_state/lock_fixtures.dart';
 import '../../talmidim_fixtures.dart';
 
 final _onTrack = forecastState([
@@ -102,39 +102,53 @@ void main() {
     expect(row.identityVisible, isTrue);
   });
 
-  group('talmidLockProvider', () {
-    test("judges the talmid's own settings with the shared gate", () {
-      final gate = FakeCaptureGate.locked(
-        LockWindow(DateTime.utc(2026, 9, 4, 17), DateTime.utc(2026, 9, 5, 19)),
-      );
-      final history = c0SettingsHistory();
+  group('talmidLockProvider follows the device user', () {
+    Future<bool> readLock({
+      required LearnerSettingsHistory deviceHistory,
+      required LearnerSettingsHistory targetHistory,
+    }) async {
       final container = ProviderContainer(
         overrides: [
-          learnerLockSettingsProvider.overrideWith(
-            (ref, _) => Stream.value(history),
+          accountLockHistoriesProvider.overrideWithValue([deviceHistory]),
+          localDayClockProvider.overrideWithValue(
+            FakeLocalDayClock(DateTime.utc(2026, 9, 5, 12)),
           ),
-          captureGateProvider.overrideWithValue(gate),
-          learningCommandClockProvider.overrideWithValue(
-            () => DateTime.utc(2026, 9, 5, 12),
+          learnerLockSettingsProvider.overrideWith(
+            (ref, _) => Stream.value(targetHistory),
           ),
         ],
       );
       addTearDown(container.dispose);
       final scope = talmidScope(1);
       container.listen(talmidLockProvider(scope), (_, _) {});
-      return Future<void>.delayed(Duration.zero, () {
+      await Future<void>.delayed(Duration.zero);
+      return container.read(talmidLockProvider(scope)).requireValue;
+    }
+
+    test(
+      'a talmid location cannot lock a tutor whose device has no location',
+      () async {
         expect(
-          container.read(talmidLockProvider(scope)),
-          const AsyncData(true),
+          await readLock(
+            deviceHistory: constantHistory(newYorkNoLocation),
+            targetHistory: constantHistory(lakewood),
+          ),
+          isFalse,
         );
-        expect(gate.checks.single.$1, same(history));
-        gate.decision = FakeCaptureGate.open().decision;
-        container.invalidate(talmidLockProvider(scope));
+      },
+    );
+
+    test(
+      'a tutor location locks the device even when the talmid has none',
+      () async {
         expect(
-          container.read(talmidLockProvider(scope)),
-          const AsyncData(false),
+          await readLock(
+            deviceHistory: constantHistory(lakewood),
+            targetHistory: constantHistory(newYorkNoLocation),
+          ),
+          isTrue,
         );
-      });
-    });
+      },
+    );
   });
 }

@@ -10,10 +10,12 @@ import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/study_days.dart';
 
 import '../../helpers/learner_state/bundled_corpus.dart';
+import '../../helpers/learner_state/c0_fixtures.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
 import '../../helpers/learner_state_fixtures.dart';
@@ -350,8 +352,7 @@ void main() {
     });
   });
 
-  group('during a lock (default settings: UTC with no location, so Shabbos '
-      'locks Fri 12:00 → Sun 01:00 UTC)', () {
+  group('during a configured-location lock', () {
     // Leaf A on 2026-09-12 is inside the 28-day window that ends on Friday
     // 2026-10-09 (the lock's start day) but outside the one ending on
     // Saturday 2026-10-10.
@@ -371,22 +372,26 @@ void main() {
       nowUtc: nowUtc,
     ).projection!;
 
-    test('returns the projection evaluated at the lock start', () {
-      final beforeLock = at(DateTime.utc(2026, 10, 9, 11));
-      // 2 new leaves / 28 days; 7 left → 2026-10-09 + 98 = 2027-01-15.
-      expect(beforeLock.velocityPerDay, 2 / 28);
-      expect(beforeLock.projectedFinish, '2027-01-15');
-      expect(beforeLock.status, ProjectionStatus.onTrack);
-      expect(at(DateTime.utc(2026, 10, 9, 12)), beforeLock);
-      expect(at(DateTime.utc(2026, 10, 10, 12)), beforeLock);
-      expect(at(DateTime.utc(2026, 10, 11, 1)), beforeLock);
+    test('keeps the lock-start projection fixed until the lock ends', () {
+      final lock = lockWindows(
+        c0SettingsHistory(),
+        DateTime.utc(2026, 10, 9),
+        DateTime.utc(2026, 10, 11),
+      ).single;
+      final atStart = at(lock.startUtc);
+      expect(at(lock.startUtc.add(const Duration(microseconds: 1))), atStart);
+      expect(at(lock.endUtc), atStart);
+      expect(
+        at(lock.endUtc.add(const Duration(microseconds: 1))),
+        isNot(atStart),
+      );
     });
 
     test('re-evaluates after the lock ends', () {
       final after = at(DateTime.utc(2026, 10, 11, 2));
       // Window [2026-09-14, 2026-10-11]: 1 leaf; 2026-10-11 + 196.
       expect(after.velocityPerDay, 1 / 28);
-      expect(after.projectedFinish, '2027-04-25');
+      expect(after.projectedFinish, '2027-04-24');
       expect(after.status, ProjectionStatus.behindPace);
     });
   });

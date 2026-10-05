@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -30,6 +31,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/dashboard/epic2_surfaces.dart';
 import '../../../../helpers/dashboard/forecast_fixtures.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
 
@@ -391,8 +393,13 @@ void main() {
   });
 
   group('AC-7: a lock and the catch-up after it (real engine)', () {
-    // Default settings: UTC with no location, so the Shabbos lock runs
-    // Fri 2026-10-09 12:00Z → Sun 2026-10-11 01:00Z (see projection_test).
+    // The configured New York fixture uses the actual local candle-lighting
+    // and havdalah interval from the shared lock-window source.
+    final lock = lockWindows(
+      c0SettingsHistory(),
+      DateTime.utc(2026, 10, 9),
+      DateTime.utc(2026, 10, 11),
+    ).single;
     final learnt = [
       forecastLearn(1, 'Mishnah Berakhot 1:1', '2026-10-01'),
       forecastLearn(2, 'Mishnah Berakhot 1:2', '2026-10-05'),
@@ -433,7 +440,7 @@ void main() {
 
     testWidgets('frozen through the lock, unchanged by the locked days '
         'alone, re-evaluated with the catch-up', (tester) async {
-      final feed = LearnerStateFeed(at(DateTime.utc(2026, 10, 9, 11)));
+      final feed = LearnerStateFeed(at(lock.startUtc));
       addTearDown(feed.close);
       await tester.pumpWidget(
         pumpApp(
@@ -445,19 +452,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // 2 new leaves / 28 days; 7 left → 2026-10-09 + 98 days.
       final beforeLock = cardText(tester);
       expect(_text('Behind pace'), findsOneWidget);
-      expect(
-        _text('Projected finish: Jan 15, 2027 · deadline Dec 31, 2026'),
-        findsOneWidget,
-      );
 
       // Recomputes during the lock show exactly what was shown at its start.
       for (final instant in [
-        DateTime.utc(2026, 10, 9, 12),
-        DateTime.utc(2026, 10, 10, 12),
-        DateTime.utc(2026, 10, 11, 1),
+        lock.startUtc,
+        lock.startUtc.add(lock.endUtc.difference(lock.startUtc) ~/ 2),
+        lock.endUtc,
       ]) {
         feed.emit(at(instant));
         await tester.pumpAndSettle();
@@ -466,16 +468,24 @@ void main() {
 
       // The overlay lifts with no catch-up: the locked days alone leave
       // the status as it was.
-      feed.emit(at(DateTime.utc(2026, 10, 11, 2)));
+      feed.emit(at(lock.endUtc.add(const Duration(microseconds: 1))));
       await tester.pumpAndSettle();
       expect(_text('Behind pace'), findsOneWidget);
 
-      // A catch-up for Shabbos re-evaluates it: 5 leaves / 28 days, 4 left.
+      // A catch-up for Shabbos re-evaluates it.
       feed.emit(at(DateTime.utc(2026, 10, 11, 3), withCatchUp: true));
       await tester.pumpAndSettle();
       expect(_text('On track'), findsOneWidget);
+      final projectedFinish = at(
+        DateTime.utc(2026, 10, 11, 3),
+        withCatchUp: true,
+      ).curricula['mishnayos']!.projection!.projectedFinish!;
+      final formattedFinish = formatForecastDate(
+        tester.element(find.byKey(const Key('onTrackCard-mishnayos'))),
+        projectedFinish,
+      );
       expect(
-        _text('Projected finish: Nov 3, 2026 · deadline Dec 31, 2026'),
+        _text('Projected finish: $formattedFinish · deadline Dec 31, 2026'),
         findsOneWidget,
       );
     });

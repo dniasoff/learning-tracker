@@ -14,8 +14,8 @@
 /// * [subTrackWritesBlockedProvider] — whether their write controls are
 ///   visible but disabled right now: only for a tutor, and exactly when
 ///   [tutorWriteAvailabilityProvider] blocks him (no `can_edit_learning`,
-///   not positively online, or the talmid inside a lock). The parent's own
-///   gates are unchanged.
+///   not positively online, or the tutor's device-user lock is active). The
+///   parent's own gates are unchanged.
 /// * [readSubTrackEditorSession] — the same answer read fresh at a command
 ///   boundary, so a save re-checks the session (a PIN lock, a revoked
 ///   grant or a dropped connection after the screen opened).
@@ -51,7 +51,8 @@ final subTrackTutorSessionProvider = Provider.autoDispose<bool>(
 
 /// Whether the sub-track write controls are visible but disabled right now
 /// (UX-DR-36, UX-DR-158): a tutor without editing access, offline, or with
-/// the talmid locked (AC-5, AC-6). Never true for an owner session.
+/// the tutor's device-user lock active (AC-5, AC-6). Never true for an owner
+/// session.
 final subTrackWritesBlockedProvider = Provider.autoDispose<bool>(
   (ref) => ref.watch(tutorWriteAvailabilityProvider).blocksTutor,
 );
