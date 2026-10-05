@@ -73,12 +73,17 @@ Future<_Router> _pumpHub(WidgetTester tester, SubTrackHarness h) async {
 Finder _row(int n) => find.byKey(ValueKey('subTrackHubRow:${_id(n)}'));
 Finder _endedRow(int n) => find.byKey(ValueKey('endedSubTrackRow:${_id(n)}'));
 
-void main() {
-  late SubTrackHarness h;
+// Only the widget tests build a harness; the plain test() cases never do,
+// and with randomized ordering they can run first (fyh.330 pattern).
+SubTrackHarness? _built;
+SubTrackHarness get h => _built!;
+set h(SubTrackHarness harness) => _built = harness;
 
+void main() {
   setUpAll(() => registerFallbackValue(const SettingsRoute()));
 
-  tearDown(() async => h.dispose());
+  setUp(() => _built = null);
+  tearDown(() async => _built?.dispose());
 
   testWidgets('explicitly ended and elapsed tracks leave the active rows for '
       'a collapsed Ended sub-tracks group at the foot, never "Completed"', (
