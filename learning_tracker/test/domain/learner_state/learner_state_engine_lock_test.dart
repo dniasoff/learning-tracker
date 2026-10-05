@@ -83,14 +83,14 @@ void main() {
     expect(state.countedEventIds, {engineUlid(1)});
   });
 
-  test('a learner with no location is judged by the fail-closed fallback: '
-      'a Friday 13:00 capture is ignored', () {
+  test('a learner with no location is not lock-ignored on Friday', () {
     final state = _engine.run(
       engineInputs(
         events: [_learn(1, _b11, DateTime.utc(2026, 9, 4, 17))],
         settingsHistory: LearnerSettingsHistory.constant(newYorkNoLocation),
       ),
     );
-    expect(state.lockIgnoredEventIds, {engineUlid(1)});
+    expect(state.lockIgnoredEventIds, isEmpty);
+    expect(state.countedEventIds, {engineUlid(1)});
   });
 }

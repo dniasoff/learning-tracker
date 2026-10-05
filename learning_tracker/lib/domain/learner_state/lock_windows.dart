@@ -16,10 +16,14 @@
 /// zman (its default offset before sea-level sunset); tzeis is the
 /// `kosher_dart` default (8.5° below the horizon).
 ///
-/// ## Fail-closed fallbacks (FR-23)
+/// ## No location: no lock
 ///
-/// * No location: `[D1 − 1 at 12:00, Dn + 1 at 01:00]` learner-local
-///   (Fri 12:00 → Sun 01:00 for a plain Shabbos).
+/// Settings with no location produce NO lock window (product ruling
+/// 2026-10-05, superseding the FR-23 Fri 12:00 → Sun 01:00 fallback):
+/// nothing is refused, suppressed or lock-ignored for that span.
+///
+/// ## Fail-closed fallbacks (with a location, FR-23 / NFR-6)
+///
 /// * A zman that cannot be computed (high latitude): the hull of that
 ///   fixed window and whatever bound could be computed, so the window is
 ///   never narrower than either.
@@ -210,6 +214,11 @@ UtcInterval catchUpWindow(
   return UtcInterval(start, dayEnd);
 }
 
+/// Whether [settings] carry a location; only then can they lock (product
+/// ruling 2026-10-05: no location, no Sacred Time lock).
+bool hasLockLocation(LearnerSettings settings) =>
+    settings.latitude != null && settings.longitude != null;
+
 bool _inIsrael(LearnerSettings settings) => settings.inIsrael ?? false;
 
 bool _isAssur(DateTime day, bool inIsrael) =>
@@ -221,6 +230,10 @@ Iterable<(DateTime, DateTime)> _windowsFor(
   DateTime a,
   DateTime b,
 ) sync* {
+  // No location, no lock (product ruling 2026-10-05, supersedes the FR-23
+  // no-location fallback): Sacred Time is not active until a location is
+  // set.
+  if (!hasLockLocation(settings)) return;
   final zone = LearnerZone.of(settings.timeZone);
   final inIsrael = _inIsrael(settings);
   // A lock over days D1..Dn lies inside civil days D1 − 2 .. Dn + 1 (the

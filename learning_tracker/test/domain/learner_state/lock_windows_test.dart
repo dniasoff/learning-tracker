@@ -223,73 +223,43 @@ void main() {
   });
 
   group('AC-3: fail-closed fallbacks', () {
-    test('no location: Fri 12:00 → Sun 01:00 learner-local', () {
-      final h = constantHistory(newYorkNoLocation);
-      final shabbos = _single(h, DateTime.utc(2026, 3, 28, 12));
-      expect(
-        shabbos,
-        LockWindow(DateTime.utc(2026, 3, 27, 16), DateTime.utc(2026, 3, 29, 5)),
-      );
-      // The yom tov equivalent: erev 12:00 → the day after 01:00.
-      final pesach = _single(h, DateTime.utc(2026, 4, 3));
-      expect(
-        pesach,
-        LockWindow(DateTime.utc(2026, 4, 1, 16), DateTime.utc(2026, 4, 5, 5)),
-      );
-      expect(lockedDays(pesach, h), hasLength(3));
-    });
-
-    test('a fall-back night ends the fixed window at the later 01:00', () {
-      final h = constantHistory(newYorkNoLocation);
-      final lock = _single(h, DateTime.utc(2026, 10, 31, 12));
-      // 01:00 EST on 2026-11-01, not the earlier 01:00 EDT.
-      expect(lock.endUtc, DateTime.utc(2026, 11, 1, 6));
-    });
-
-    test('the fixed window holds the computed one for cities in its zone '
-        '(2026)', () {
-      const cities = <(String, double, double)>[
-        ('America/New_York', 40.0821, -74.2097),
-        ('America/New_York', 40.65, -73.95),
-        ('America/New_York', 42.36, -71.06),
-        ('America/New_York', 25.76, -80.19),
-        ('America/Toronto', 43.65, -79.38),
-        ('America/Chicago', 41.88, -87.63),
-        ('America/Los_Angeles', 34.05, -118.24),
-        ('Europe/London', 51.51, -0.13),
-        ('Europe/Paris', 48.86, 2.35),
-        ('Europe/Brussels', 51.22, 4.40),
-        ('Asia/Jerusalem', 31.778, 35.235),
-        ('Asia/Jerusalem', 32.08, 34.83),
-        ('Africa/Johannesburg', -26.2, 28.05),
-        ('Australia/Melbourne', -37.81, 144.96),
-        ('America/Argentina/Buenos_Aires', -34.6, -58.38),
-      ];
-      final from = DateTime.utc(2026);
-      final to = DateTime.utc(2026, 12, 31);
-      for (final (zone, lat, lng) in cities) {
-        final located = lockWindows(
-          constantHistory(
-            lockSettings(timeZone: zone, latitude: lat, longitude: lng),
-          ),
-          from,
-          to,
+    // Product ruling 2026-10-05 (supersedes the FR-23 no-location fixed
+    // window): no location, no lock. The fall-back-night and "fixed window
+    // holds the computed one" cases pinned that retired fallback.
+    test('no location: no lock at any time (Friday afternoon, Shabbos, '
+        'yom tov), in any zone', () {
+      for (final settings in [
+        newYorkNoLocation,
+        lockSettings(timeZone: 'Europe/London'),
+        lockSettings(timeZone: 'Asia/Jerusalem', inIsrael: true),
+        lockSettings(timeZone: 'Mars/Olympus_Mons'),
+      ]) {
+        final h = constantHistory(settings);
+        expect(
+          lockWindows(h, DateTime.utc(2026), DateTime.utc(2026, 12, 31)),
+          isEmpty,
+          reason: settings.timeZone,
         );
-        final fixed = lockWindows(
-          constantHistory(lockSettings(timeZone: zone)),
-          from,
-          to,
-        );
-        expect(located, hasLength(fixed.length), reason: '$zone $lat');
-        for (var i = 0; i < located.length; i++) {
-          expect(
-            !fixed[i].startUtc.isAfter(located[i].startUtc) &&
-                !fixed[i].endUtc.isBefore(located[i].endUtc),
-            isTrue,
-            reason: '$zone $lat: ${fixed[i]} ⊉ ${located[i]}',
-          );
-        }
       }
+    });
+
+    test('a move from no location to a location locks only after the '
+        'move', () {
+      final h = movedHistory(
+        newYorkNoLocation,
+        DateTime.utc(2026, 9, 1),
+        lakewood,
+      );
+      final windows = lockWindows(
+        h,
+        DateTime.utc(2026, 8, 1),
+        DateTime.utc(2026, 9, 30),
+      );
+      expect(windows, isNotEmpty);
+      expect(
+        windows.every((w) => w.startUtc.isAfter(DateTime.utc(2026, 9, 1))),
+        isTrue,
+      );
     });
 
     test('high latitude: an uncomputable zman gives the fixed window', () {
@@ -367,9 +337,14 @@ void main() {
       }
     });
 
-    test('an unknown zone widens the fixed window to every UTC offset', () {
+    test('a location with an unknown zone widens the fixed window to '
+        'every UTC offset (NFR-6 kept where a location is set)', () {
       final unknown = constantHistory(
-        lockSettings(timeZone: 'Mars/Olympus_Mons'),
+        lockSettings(
+          timeZone: 'Mars/Olympus_Mons',
+          latitude: 40.0821,
+          longitude: -74.2097,
+        ),
       );
       final lock = _single(unknown, DateTime.utc(2026, 9, 5, 12));
       expect(
@@ -377,9 +352,21 @@ void main() {
         LockWindow(DateTime.utc(2026, 9, 3, 22), DateTime.utc(2026, 9, 6, 13)),
       );
       for (final known in [
-        constantHistory(newYorkNoLocation),
-        constantHistory(lockSettings(timeZone: 'Pacific/Kiritimati')),
-        constantHistory(lockSettings(timeZone: 'Pacific/Pago_Pago')),
+        constantHistory(lakewood),
+        constantHistory(
+          lockSettings(
+            timeZone: 'Pacific/Kiritimati',
+            latitude: 1.87,
+            longitude: -157.4,
+          ),
+        ),
+        constantHistory(
+          lockSettings(
+            timeZone: 'Pacific/Pago_Pago',
+            latitude: -14.27,
+            longitude: -170.7,
+          ),
+        ),
         constantHistory(jerusalem),
       ]) {
         // 06:00Z Saturday is inside every one of these locks.
@@ -487,16 +474,14 @@ void main() {
       expect(lockedDays(windows.last, h), {'2027-04-24'});
     });
 
-    test('no location: a plain Shabbos starts Friday 12:00 local', () {
+    test('no location: no erev window, a plain Shabbos does not lock', () {
       final h = constantHistory(newYorkNoLocation);
       final zone = LearnerZone.of('America/New_York');
       final friday = zone.at(_day(2026, 10, 9), hour: 9);
-      final window = lockWindows(
-        h,
-        friday,
-        friday.add(const Duration(days: 1)),
-      ).single;
-      expect(window.startUtc, zone.at(_day(2026, 10, 9), hour: 12));
+      expect(
+        lockWindows(h, friday, friday.add(const Duration(days: 1))),
+        isEmpty,
+      );
     });
   });
 
@@ -505,39 +490,15 @@ void main() {
   // boundary and calendar cases the 1.19 acceptance table names that the
   // DNI-466 groups above do not already cover.
   group('DNI-481: lock surfaces consumer cases', () {
-    test('no location, Israel vs diaspora: Sukkot on Shabbos locks one day '
-        'in Israel and chains the second day in the diaspora', () {
-      final israel = constantHistory(
-        lockSettings(timeZone: 'Asia/Jerusalem', inIsrael: true),
-      );
-      final diaspora = constantHistory(
-        lockSettings(timeZone: 'Asia/Jerusalem', inIsrael: false),
-      );
-      // 15 Tishrei 5787 is Shabbos 2026-09-26.
+    test('no location: Sukkot on Shabbos does not lock, in Israel or the '
+        'diaspora', () {
       final at = DateTime.utc(2026, 9, 26, 12);
-      final (iStart, iEnd) = _fixed(
-        'Asia/Jerusalem',
-        _day(2026, 9, 26),
-        _day(2026, 9, 26),
-      );
-      final (dStart, dEnd) = _fixed(
-        'Asia/Jerusalem',
-        _day(2026, 9, 26),
-        _day(2026, 9, 27),
-      );
-      expect(_single(israel, at), LockWindow(iStart, iEnd));
-      expect(_single(diaspora, at), LockWindow(dStart, dEnd));
-    });
-
-    test('no location across a spring-forward Sunday: the fixed window ends '
-        'at 01:00 standard time', () {
-      final h = constantHistory(newYorkNoLocation);
-      // US DST starts 2026-03-08 02:00 local; 01:00 is still EST (UTC−5).
-      final lock = _single(h, DateTime.utc(2026, 3, 7, 12));
-      expect(
-        lock,
-        LockWindow(DateTime.utc(2026, 3, 6, 17), DateTime.utc(2026, 3, 8, 6)),
-      );
+      for (final inIsrael in [true, false]) {
+        final h = constantHistory(
+          lockSettings(timeZone: 'Asia/Jerusalem', inIsrael: inIsrael),
+        );
+        expect(lockWindows(h, at, at), isEmpty, reason: '$inIsrael');
+      }
     });
 
     test('exact bounds: one microsecond either side of a lock is outside, '

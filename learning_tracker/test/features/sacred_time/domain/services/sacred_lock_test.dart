@@ -1,6 +1,6 @@
 // Mirror test for `lib/features/sacred_time/domain/services/sacred_lock.dart`
 // (DNI-481 AC-1, AC-2, AC-5): the union device lock over lockWindows, its
-// fail-closed stand-in and the greeting kind.
+// NFR-6 widening (with a location only) and the greeting kind.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
@@ -37,11 +37,14 @@ void main() {
   final shabbos = DateTime.utc(2026, 9, 5, 12);
   final tuesday = DateTime.utc(2026, 9, 8, 12);
 
-  group('failClosedSettingsHistory', () {
-    test('an unknown zone with no location: the widest fixed window', () {
-      final h = failClosedSettingsHistory('p');
+  // Product ruling 2026-10-05: no location, no lock; NFR-6 widening only
+  // where a location is set but the zone / computation is corrupt.
+  group('widenedLockHistory', () {
+    test('a location in the unresolved zone: the widest fixed window', () {
+      final h = widenedLockHistory(lakewoodH)!;
       expect(LearnerZone.of(unresolvedLearnerZone).isKnown, isFalse);
-      expect(h.at(shabbos).hasLocation, isFalse);
+      expect(h.at(shabbos).timeZone, unresolvedLearnerZone);
+      expect(h.at(shabbos).latitude, lakewood.latitude);
       expect(
         lockWindows(h, shabbos, shabbos).single,
         LockWindow(DateTime.utc(2026, 9, 3, 22), DateTime.utc(2026, 9, 6, 13)),
@@ -49,65 +52,39 @@ void main() {
       expect(lockWindows(h, tuesday, tuesday), isEmpty);
     });
 
-    // Stuck Sacred-Time lock hotfix (1.0.74): a learner whose settings
-    // cannot be read is judged in the device's zone, not every UTC offset.
-    group('in the device zone (Europe/London)', () {
-      final h = failClosedSettingsHistory('p', deviceZone: 'Europe/London');
+    test('no location: nothing to widen (no lock)', () {
+      expect(widenedLockHistory(constantHistory(newYorkNoLocation)), isNull);
+    });
+  });
 
-      test('no location, diaspora, the device zone', () {
-        final s = h.at(shabbos);
-        expect(s.timeZone, 'Europe/London');
-        expect(s.hasLocation, isFalse);
-        expect(s.inIsrael, isNull);
-      });
+  group('no location: never locked', () {
+    final london = constantHistory(lockSettings(timeZone: 'Europe/London'));
 
-      test('Shabbos: Fri 12:00 -> Sun 01:00 London local, not wider', () {
-        // 2026-10-10 is Shabbos; BST is UTC+1.
-        expect(
-          lockWindows(
-            h,
-            DateTime.utc(2026, 10, 10, 12),
-            DateTime.utc(2026, 10, 10, 12),
-          ).single,
-          LockWindow(DateTime.utc(2026, 10, 9, 11), DateTime.utc(2026, 10, 11)),
-        );
-        expect(isLockedAt([h], DateTime.utc(2026, 10, 10, 12)), isTrue);
-        // Friday morning in London: the unresolved zone would already lock.
-        final fridayMorning = DateTime.utc(2026, 10, 9, 8);
-        expect(isLockedAt([h], fridayMorning), isFalse);
-        expect(
-          isLockedAt([failClosedSettingsHistory('p')], fridayMorning),
-          isTrue,
-        );
-      });
+    test('a London user with no location is unlocked at 2026-10-05T01:00Z '
+        '(after Simchat Torah), on Shabbos and Friday afternoon', () {
+      for (final t in [
+        DateTime.utc(2026, 10, 5, 1),
+        DateTime.utc(2026, 10, 4, 12),
+        DateTime.utc(2026, 10, 9, 15),
+        DateTime.utc(2026, 10, 10, 12),
+      ]) {
+        expect(sacredWindowAt([london], t), isNull, reason: '$t');
+        expect(isLockedAt([london], t), isFalse, reason: '$t');
+      }
+      expect(nextLockChange([london], DateTime.utc(2026, 10, 5)), isNull);
+    });
 
-      test('a normal weekday is unlocked', () {
-        expect(isLockedAt([h], DateTime.utc(2026, 10, 6, 12)), isFalse);
-        expect(isLockedAt([h], DateTime.utc(2026, 10, 7, 9)), isFalse);
-      });
-
-      test('after Shemini Atzeret / Simchat Torah (diaspora): unlocked at '
-          '2026-10-05T01:00Z, which the unresolved zone kept locked', () {
-        final mondayNight = DateTime.utc(2026, 10, 5, 1);
-        expect(sacredWindowAt([h], mondayNight), isNull);
-        expect(isLockedAt([h], DateTime.utc(2026, 10, 4, 12)), isTrue);
-        expect(
-          sacredWindowAt([failClosedSettingsHistory('p')], mondayNight)?.kind,
-          SacredWindowKind.shabbosYomTov,
-          reason: 'the reported stuck overlay',
-        );
-      });
-
-      test('an unknown device zone keeps the unresolved-zone widening', () {
-        expect(
-          failClosedSettingsHistory('p', deviceZone: 'Mars/Olympus'),
-          failClosedSettingsHistory('p'),
-        );
-        expect(
-          failClosedSettingsHistory('p', deviceZone: null),
-          failClosedSettingsHistory('p'),
-        );
-      });
+    test('a London user WITH a location is unlocked at 2026-10-05T01:00Z '
+        'and locked on Shabbos', () {
+      final located = constantHistory(
+        lockSettings(
+          timeZone: 'Europe/London',
+          latitude: 51.51,
+          longitude: -0.13,
+        ),
+      );
+      expect(isLockedAt([located], DateTime.utc(2026, 10, 5, 1)), isFalse);
+      expect(isLockedAt([located], DateTime.utc(2026, 10, 10, 12)), isTrue);
     });
   });
 
@@ -125,6 +102,7 @@ void main() {
       expect(w.startUtc, lakewoodLock.startUtc);
       expect(w.endUtc, lakewoodLock.endUtc);
       expect(w.kind, SacredWindowKind.shabbos);
+      expect(w.profileId, lakewood.profileId);
       // Only Lakewood is still locked after Jerusalem's tzeis + 10.
       final afterJerusalem = lockWindows(
         jerusalemH,

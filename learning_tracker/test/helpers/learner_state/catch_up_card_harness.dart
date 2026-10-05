@@ -41,9 +41,8 @@ final catchUpOtherScope = LearnerScope(
 /// New York, the fixtures' learner zone.
 final catchUpZone = LearnerZone.of('America/New_York');
 
-/// No-location fallback history: Shabbos 2026-10-10 locks Fri 12:00 to
-/// Sun 01:00 and its card lasts through Monday 2026-10-12.
-final catchUpHistory = constantHistory(newYorkNoLocation);
+/// Configured New York history for Shabbos 2026-10-10 and its catch-up card.
+final catchUpHistory = constantHistory(newYorkLocated);
 
 /// Sunday 2026-10-11 12:00 learner-local: the Shabbos card is pending.
 final catchUpSunday = catchUpZone.at(DateTime.utc(2026, 10, 11), hour: 12);

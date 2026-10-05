@@ -3,13 +3,15 @@
 /// with the functions here, over `lockWindows` — the only window function
 /// (AD-36). No second window calculation exists.
 ///
-/// * The overlay window is the UNION of `lockWindows` over every learner
-///   whose lock drives the device (every learner profile of the signed-in
-///   account, plus the talmid of an active tutored session).
-/// * A learner whose settings cannot be read (still loading, or an error)
-///   is judged with [failClosedSettingsHistory]: the no-location fixed
-///   window in the device's zone (the unknown-zone widening only when the
-///   device zone is unknown too), never "unlocked".
+/// * The lock follows the PERSON USING THE DEVICE (product ruling
+///   2026-10-05): the overlay window is the UNION of `lockWindows` over the
+///   signed-in account's own learner profiles; a talmid viewed in a tutored
+///   session never drives it.
+/// * No location, no lock (`lockWindows`); a learner whose settings are
+///   still loading or cannot be read is NOT locked and is judged again when
+///   they arrive. Only settings that HAVE a location but whose zone or
+///   window computation is corrupt still fail closed (NFR-6), widened to
+///   every UTC offset ([widenedLockHistory]).
 /// * The [SacredWindowKind] only picks the overlay's existing greeting and
 ///   background; it is classified from the lock's locked civil days.
 library;
@@ -21,41 +23,35 @@ import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 
-/// The zone id [failClosedSettingsHistory] uses: deliberately absent from
-/// the tz database, so `lockWindows` widens its fixed window to every UTC
-/// offset.
+/// The zone id [widenedLockHistory] uses: deliberately absent from the tz
+/// database, so `lockWindows` widens its fixed window to every UTC offset.
 const String unresolvedLearnerZone = 'Etc/Unresolved_Learner';
 
-/// The settings history a lock surface judges a learner by while that
-/// learner's real settings cannot be read (AD-36 fail closed, NFR-6): no
-/// location (the FR-23 Fri 12:00 → Sun 01:00 learner-local fallback and
-/// its yom tov equivalent) and diaspora yom tov (a superset of the Israel
-/// days), never "unlocked".
-///
-/// The zone is [deviceZone] — the device's IANA zone, the same zone a
-/// profile is seeded with on creation (AD-37) — when it resolves in the tz
-/// database, so the lock follows the real local Shabbos / Yom Tov times.
-/// Only when no usable device zone is known is the zone unresolved, which
-/// widens the fixed window to every UTC offset. (Hotfix ruling, see
-/// `decisions-for-user.md`: settings that are merely unavailable must not
-/// lock a London learner from Thursday night to Sunday afternoon.)
-LearnerSettingsHistory failClosedSettingsHistory(
-  String profileId, {
-  String? deviceZone,
-}) => LearnerSettingsHistory.constant(
-  LearnerSettings(
-    profileId: profileId,
-    timeZone: deviceZone != null && LearnerZone.of(deviceZone).isKnown
-        ? deviceZone
-        : unresolvedLearnerZone,
-  ),
-);
+/// The history a lock surface judges [history] by when its window
+/// computation throws (NFR-6, only with a location): the latest settings,
+/// in the unresolved zone, so the fixed window is widened to every UTC
+/// offset. Null when those settings have no location (no location, no
+/// lock).
+LearnerSettingsHistory? widenedLockHistory(LearnerSettingsHistory history) {
+  final last = history.spans.last.settings;
+  if (!hasLockLocation(last)) return null;
+  return LearnerSettingsHistory.constant(
+    LearnerSettings(
+      profileId: last.profileId,
+      timeZone: unresolvedLearnerZone,
+      latitude: last.latitude,
+      longitude: last.longitude,
+      inIsrael: last.inIsrael,
+    ),
+  );
+}
 
 /// How far ahead [nextLockChange] looks; every lock chain starts within it.
 const Duration _lookAhead = Duration(days: 9);
 
 /// The locks of [history] overlapping `[from, to]`; a history whose window
-/// computation throws is judged by [failClosedSettingsHistory].
+/// computation throws is judged by [widenedLockHistory] (none without a
+/// location).
 List<LockWindow> _locks(
   LearnerSettingsHistory history,
   DateTime from,
@@ -64,8 +60,8 @@ List<LockWindow> _locks(
   try {
     return lockWindows(history, from, to);
   } on Object {
-    final profileId = history.spans.last.settings.profileId;
-    return lockWindows(failClosedSettingsHistory(profileId), from, to);
+    final widened = widenedLockHistory(history);
+    return widened == null ? const [] : lockWindows(widened, from, to);
   }
 }
 
@@ -95,6 +91,8 @@ SacredWindow? sacredWindowAt(
     startUtc: lock.startUtc,
     endUtc: lock.endUtc,
     kind: classifyLock(lock, history),
+    profileId: history.spans.last.settings.profileId,
+    timeZone: history.at(lock.startUtc).timeZone,
   );
 }
 

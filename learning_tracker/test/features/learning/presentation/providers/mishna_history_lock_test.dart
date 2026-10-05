@@ -15,12 +15,14 @@ import 'package:learning_tracker/features/learning/presentation/providers/mishna
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
 import '../../../../helpers/learner_state/provider_settle.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
+import '../../../../helpers/tutoring/tutor_learning_harness.dart';
 
 /// The device owner's own learner: no lock in force.
 final _ownScope = c0Scope();
@@ -53,6 +55,7 @@ ProviderContainer _container({
   required CaptureGate gate,
   SacredWindow? deviceLock,
   Stream<LearnerSettingsHistory> Function(LearnerScope scope)? settings,
+  bool tutored = false,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -65,6 +68,10 @@ ProviderContainer _container({
               scope == _talmidScope ? _talmidSettings : _ownSettings,
             ),
       ),
+      if (tutored)
+        activeTutoredProfileSelectionProvider.overrideWith(
+          () => FixedTutoredSelection(tutorSelection()),
+        ),
     ],
   );
   addTearDown(container.dispose);
@@ -72,17 +79,23 @@ ProviderContainer _container({
 }
 
 void main() {
-  group('AC-1 history lock follows the target learner (AD-36)', () {
-    test('a tutored talmid inside their lock locks the history even with no '
-        'device lock', () async {
-      final gate = _TalmidLockedGate();
-      final container = _container(active: _talmidScope, gate: gate);
+  group('history visibility follows the device user (AD-36)', () {
+    test(
+      'a tutored talmid lock does not hide history from an unlocked tutor',
+      () async {
+        final gate = _TalmidLockedGate();
+        final container = _container(
+          active: _talmidScope,
+          gate: gate,
+          tutored: true,
+        );
 
-      final lock = await settledAsync(container, mishnaHistoryLockProvider);
+        final lock = await settledAsync(container, mishnaHistoryLockProvider);
 
-      expect(lock, const AsyncData(true));
-      expect(gate.checked, [same(_talmidSettings)]);
-    });
+        expect(lock, const AsyncData(false));
+        expect(gate.checked, isEmpty);
+      },
+    );
 
     test("the device owner's own open lock does not unlock the talmid's "
         'history, and the talmid lock does not lock the owner', () async {
@@ -111,16 +124,15 @@ void main() {
       );
     });
 
-    test('fails closed: loading while the learner settings load, an error '
-        'when they cannot be read', () async {
+    test('loading or unreadable settings do not create a lock', () async {
       final loading = _container(
         active: _talmidScope,
         gate: FakeCaptureGate.open(),
         settings: (_) => const Stream<LearnerSettingsHistory>.empty(),
       );
       expect(
-        (await settledAsync(loading, mishnaHistoryLockProvider)).isLoading,
-        isTrue,
+        await settledAsync(loading, mishnaHistoryLockProvider),
+        const AsyncData(false),
       );
 
       final failing = _container(
@@ -129,8 +141,7 @@ void main() {
         settings: (_) => Stream.error(StateError('settings unreadable')),
       );
       final lock = await settledAsync(failing, mishnaHistoryLockProvider);
-      expect(lock, isA<AsyncError<bool>>());
-      expect(lock.hasValue, isFalse);
+      expect(lock, const AsyncData(false));
     });
 
     test('re-judges the lock as time passes', () async {

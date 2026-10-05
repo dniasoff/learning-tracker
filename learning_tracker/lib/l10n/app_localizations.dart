@@ -11509,11 +11509,35 @@ abstract class AppLocalizations {
   /// **'Kept, not counted — Shabbos / Yom Tov had started'**
   String get tutorCaptureKeptNotCounted;
 
-  /// DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data.
+  /// Note under a tutor's disabled write controls while the TUTORED learner is inside their own Shabbos / Yom Tov lock (the tutor can still view the account). Used when the learner's name is unknown.
   ///
   /// In en, this message translates to:
-  /// **'Shabbos / Yom Tov'**
-  String get tutorCaptureLearnerLocked;
+  /// **'It\'s Shabbos / Yom Tov for this talmid, so learning can\'t be recorded for them right now'**
+  String get tutorCaptureLearnerLockedNote;
+
+  /// Note under a tutor's disabled write controls while the named tutored learner is inside their own Shabbos / Yom Tov lock (the tutor can still view the account).
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s Shabbos / Yom Tov for {learner}, so learning can\'t be recorded for them right now'**
+  String tutorCaptureLearnerLockedNoteNamed(String learner);
+
+  /// Action on the full-screen Shabbos / Yom Tov lock overlay: opens the city picker so the person using the device can set or correct their location; the lock is recomputed for the new location.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong location? Change location'**
+  String get sacredTimeLockChangeLocation;
+
+  /// Start time of the current Sacred-Time lock window, shown on the lock overlay in the locked person's configured time zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Started {day} at {time}'**
+  String sacredTimeLockStartedAt(String day, String time);
+
+  /// Prominent final end time of the current Sacred-Time lock window (including chained holidays), shown in the locked person's configured time zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocks {day} at {time}'**
+  String sacredTimeLockUnlocksAt(String day, String time);
 
   /// DNI-486 AC-4: note under a tutor's disabled write controls when the grant's can_edit_learning is false.
   ///
@@ -12258,16 +12282,16 @@ abstract class AppLocalizations {
   /// **'Set location'**
   String get sacredTimeLocationPromptAction;
 
-  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for a learner with no location.
+  /// Shown after a recent Sacred-Time lock when the learner no longer has a configured location, so future lock times can follow their area.
   ///
   /// In en, this message translates to:
-  /// **'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
+  /// **'Set a location so {term} and Yom Tov lock times follow this learner\'s area.'**
   String sacredTimeLocationPromptMessage(String term);
 
-  /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).
+  /// Named form of the after-lock reminder when the learner no longer has a configured location.
   ///
   /// In en, this message translates to:
-  /// **'{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.'**
+  /// **'{name}\'s location isn\'t set. Set it so {term} and Yom Tov lock times follow their area.'**
   String sacredTimeLocationPromptMessageNamed(String name, String term);
 
   /// DRAFT copy, pending zc4. DNI-481: a governed learnerSettings change (location, time zone or Israel flag) was not saved.

@@ -10,6 +10,7 @@ import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
@@ -37,11 +38,24 @@ const _b11 = 'Mishnah Berakhot 1:1';
 const _b12 = 'Mishnah Berakhot 1:2';
 const _b13 = 'Mishnah Berakhot 1:3';
 
-// The UTC no-location learner (c0SettingsHistory): Shabbos lock
-// Fri 2026-09-04 12:00Z → Sun 2026-09-06 01:00Z; catch-up to the end of
-// Mon 2026-09-07.
-final _lockStart = DateTime.utc(2026, 9, 4, 12);
-final _lockEnd = DateTime.utc(2026, 9, 6, 1);
+// Known-location history for gate tests; no-location fixtures now correctly
+// produce no lock. Lock bounds come from the shared engine window.
+final _lockHistory = LearnerSettingsHistory.constant(
+  const LearnerSettings(
+    profileId: profileUlid,
+    timeZone: 'America/New_York',
+    latitude: 40.0,
+    longitude: -74.0,
+    inIsrael: false,
+  ),
+);
+final _lockWindow = lockWindows(
+  _lockHistory,
+  DateTime.utc(2026, 9, 1),
+  DateTime.utc(2026, 9, 8),
+).first;
+final _lockStart = _lockWindow.startUtc;
+final _lockEnd = _lockWindow.endUtc;
 final _tuesday = engineAt(600); // 2026-09-01 10:00Z, unlocked
 
 /// Every read, gate check and commit, in order.
@@ -174,7 +188,7 @@ final class _Harness {
     SubTrackCommands? subTrackCommands,
   }) : now = now ?? _tuesday {
     fakeReads = FakeLearningCommandReads(
-      history: history ?? c0SettingsHistory(),
+      history: history ?? _lockHistory,
       log: events,
       corpora: {engineCurriculum: mishnayosCorpus()},
     );
@@ -329,7 +343,7 @@ void main() {
         expect(result, CaptureResult.locked(LockWindow(_lockStart, _lockEnd)));
         expect(h.log, ['settings', 'gate'], reason: 'no read-for-write');
         expect(h.port.attempts, isEmpty);
-        expect(h.gate.checks.single.$1, c0SettingsHistory());
+        expect(h.gate.checks.single.$1, _lockHistory);
         expect(h.gate.checks.single.$2, DateTime.utc(2026, 9, 5, 10));
         expect(h.analytics.captures, isEmpty);
       });
@@ -363,11 +377,11 @@ void main() {
     });
 
     test(
-      'an unreadable settings history fails closed: no gate, no write',
+      'unreadable settings do not create a Sacred-Time lock: no write',
       () async {
         final h = _Harness()..fakeReads.history = null;
         final result = await _captureDated(h);
-        expect(result, CaptureResult.locked(LockWindow(h.now, h.now)));
+        expect(result, const CaptureResult.rejected(CaptureRejection.notSaved));
         expect(h.log, ['settings']);
         expect(h.port.attempts, isEmpty);
       },
@@ -673,7 +687,7 @@ void main() {
 
     test('allowed inside the locked day\'s catch-up window', () async {
       final h = _Harness(
-        now: DateTime.utc(2026, 9, 7, 20),
+        now: DateTime.utc(2026, 9, 6, 20),
         role: ActorRole.child,
         events: [target()],
       );
@@ -684,7 +698,7 @@ void main() {
       final next = h.written.firstWhere((e) => e.isLearn);
       expect(next.dateState, DateState.catchUp);
       expect(next.learnedOn, '2026-09-05');
-      expect(effectiveAt(next), DateTime.utc(2026, 9, 7, 20));
+      expect(effectiveAt(next), DateTime.utc(2026, 9, 6, 20));
     });
 
     test('rejected at the end of the window: childLimit and nothing written; '
@@ -706,7 +720,7 @@ void main() {
     test('a child may not re-date to a non-locked day; a ref-only fix is '
         'not a re-date', () async {
       final h = _Harness(
-        now: DateTime.utc(2026, 9, 7, 20),
+        now: DateTime.utc(2026, 9, 6, 20),
         role: ActorRole.child,
         events: [target()],
       );
@@ -1139,18 +1153,18 @@ void main() {
     );
   });
 
-  test(
-    'an unreadable settings history fails a governed command closed',
-    () async {
-      final h = _Harness(governed: true)..fakeReads.history = null;
-      expect(
-        await h.commands.applyGovernedChange(_governedAction),
-        CaptureResult.locked(LockWindow(h.now, h.now)),
-      );
-      expect(await h.commands.undoAction(engineUlid(1)), isA<CaptureLocked>());
-      expect(h.log, ['settings', 'settings'], reason: 'never delegated');
-    },
-  );
+  test('unreadable settings do not report a Sacred-Time lock', () async {
+    final h = _Harness(governed: true)..fakeReads.history = null;
+    expect(
+      await h.commands.applyGovernedChange(_governedAction),
+      const CaptureResult.rejected(CaptureRejection.notSaved),
+    );
+    expect(
+      await h.commands.undoAction(engineUlid(1)),
+      const CaptureResult.rejected(CaptureRejection.notSaved),
+    );
+    expect(h.log, ['settings', 'settings'], reason: 'never delegated');
+  });
 
   test('node fixtures used above are the corpus nodes', () {
     expect(mishnayosCorpus().nodeForRef(berakhot2.ref), berakhot2);

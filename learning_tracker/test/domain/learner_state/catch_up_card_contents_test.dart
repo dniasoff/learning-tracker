@@ -114,9 +114,9 @@ LearningEvent _learn(
 
 void main() {
   final ny = LearnerZone.of('America/New_York');
-  // A plain Shabbos (2026-10-10), no-location fallback, seen on Sunday.
+  // A plain Shabbos (2026-10-10) in the configured New York location.
   final shabbos = catchUpCardWindowsAt(
-    constantHistory(newYorkNoLocation),
+    constantHistory(newYorkLocated),
     ny.at(_day(2026, 10, 11), hour: 12),
   );
   final saturday = shabbos.single.lockedDays.single.date;

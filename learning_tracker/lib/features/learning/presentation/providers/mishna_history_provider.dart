@@ -13,10 +13,11 @@
 ///   until the refreshed history confirms it; a queued (offline) write the
 ///   server later rejects (`watchPendingFailures`) rolls back then, counted
 ///   in [MishnaHistoryCorrectionsState.lateRollbacks] for the snackbar.
-/// - [mishnaHistoryLockProvider] is the AD-36 lock of the learner whose
-///   history is shown: that learner's [learnerLockSettingsProvider] judged
-///   by the shared [captureGateProvider], so a tutor or another profile on
-///   this device sees the target learner's lock, not only the device's.
+/// - [mishnaHistoryLockProvider] uses the device user's
+///   [currentSacredWindowProvider] in every session. In an own-profile
+///   session the active learner's settings are also judged by the shared
+///   [captureGateProvider]; in a tutored session the talmid's lock never
+///   hides their history from the tutor.
 ///
 /// Plain Riverpod providers (no codegen), matching the C0 provider style.
 library;
@@ -117,17 +118,14 @@ final mishnaHistoryProvider = Provider.autoDispose
 const mishnaHistoryLockRecheck = Duration(seconds: 30);
 
 /// Whether the history must be unreadable now (AD-36): `AsyncData(true)`
-/// while the target learner is inside a lock window.
+/// while the device user is inside a lock window.
 ///
-/// The lock is the active learner's, not the device's: it reads that
-/// learner's [learnerLockSettingsProvider] for the active
-/// `LearnerScope` (in a tutored session, the talmid's scope) and asks the
-/// shared [captureGateProvider] — the same judgement `LearningCommands`
-/// applies to writes, so no second lock-window calculation exists. The
-/// device lock ([currentSacredWindowProvider], the app-wide overlay) also
-/// locks it. It fails closed: while the learner's settings load the value
-/// is loading and the screen shows no event content; a read failure is an
-/// error the screen offers to retry.
+/// The device lock ([currentSacredWindowProvider]) always locks it. In an
+/// own (non-tutored) session the active learner's settings are also checked
+/// by the shared [captureGateProvider], the same gate used by writes. In a
+/// tutored session the talmid's settings do not hide history from the tutor.
+/// Missing or unreadable settings do not create a lock; fresh settings cause
+/// the provider to re-evaluate.
 final mishnaHistoryLockProvider = Provider.autoDispose<AsyncValue<bool>>((ref) {
   if (ref.watch(currentSacredWindowProvider) != null) {
     return const AsyncData(true);
@@ -141,12 +139,17 @@ final mishnaHistoryLockProvider = Provider.autoDispose<AsyncValue<bool>>((ref) {
   // No learner: the history itself reports NoActiveLearnerException and
   // has no event content to hide.
   if (active == null) return const AsyncData(false);
+  // A tutored talmid's own lock never hides his history from the tutor:
+  // the lock follows the person using the device (product ruling
+  // 2026-10-05), which is the device lock above.
+  if (ref.watch(activeTutoredProfileSelectionProvider) != null) {
+    return const AsyncData(false);
+  }
 
   final settings = ref.watch(learnerLockSettingsProvider(active));
-  if (settings case AsyncError(:final error, :final stackTrace)) {
-    return AsyncError<bool>(error, stackTrace);
-  }
-  if (!settings.hasValue) return const AsyncLoading<bool>();
+  // Settings that have not arrived or cannot be read do not create a lock;
+  // the watched provider will rebuild and re-judge when they recover.
+  if (!settings.hasValue) return const AsyncData(false);
 
   final timer = Timer(mishnaHistoryLockRecheck, ref.invalidateSelf);
   ref.onDispose(timer.cancel);

@@ -1,10 +1,8 @@
 // Story 4.2 (DNI-510) AC-7 — a tutor viewing his talmid's Dashboard sees
 // the on-track card, projection, daily target and shortfall warning the
 // parent sees (UX-DR-48, UX-DR-97); he does not get Change history or Undo
-// (parent-only: DNI-513's route refuses a tutored session); and when the
-// talmid's lock starts, the talmid's screens on the tutor device are
-// covered (Story 1.24 behaviour): nothing behind the cover is readable,
-// focusable or reachable.
+// (parent-only: DNI-513's route refuses a tutored session). A talmid's
+// configured Sacred-Time lock does not cover the tutor's device.
 
 @Tags(['tutor_mode'])
 library;
@@ -15,19 +13,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/guards/own_session_guard.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
-import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_forecast_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/learner_today_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/parent_on_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/shortfall_warning_card.dart';
-import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
-import 'package:learning_tracker/features/tutoring/presentation/widgets/tutored_learner_lock_overlay.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/dashboard/forecast_fixtures.dart';
-import '../../../helpers/learner_state/fake_learning_commands.dart';
+import '../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../helpers/pump_app.dart';
 import '../../../helpers/tutoring/tutor_learning_harness.dart';
 
@@ -115,59 +111,35 @@ void main() {
     expect(allowed, isFalse);
   });
 
-  testWidgets('a lock starting while the tutor views the talmid covers his '
-      'screens: nothing readable, focusable or reachable', (tester) async {
-    final gate = FakeCaptureGate.open();
-    var taps = 0;
-    await tester.pumpWidget(
-      pumpApp(
-        overrides: tutoredOverrides(selection: tutorSelection(), gate: gate),
-        child: TutoredLearnerLockCover(
-          child: Scaffold(
-            body: Center(
-              child: TextButton(
-                onPressed: () => taps++,
-                child: const Text('talmid dashboard'),
+  testWidgets(
+    "the talmid's configured lock does not cover the tutor's device",
+    (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: tutoredOverrides(
+            selection: tutorSelection(),
+            lockSettings: constantHistory(newYorkLocated),
+            deviceLockHistories: [constantHistory(newYorkNoLocation)],
+            pinDeviceWindow: false,
+            deviceNow: DateTime.utc(2026, 9, 5, 19),
+          ),
+          child: SacredTimeLockOverlay(
+            child: Scaffold(
+              body: Center(
+                child: TextButton(
+                  onPressed: () => taps++,
+                  child: const Text('talmid dashboard'),
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('talmid dashboard'));
-    expect(taps, 1, reason: 'open before the lock');
-
-    // The talmid's lock starts; the overlay re-judges at its boundary
-    // (backstop: 30 s).
-    gate.decision = GateLocked(
-      LockWindow(
-        tutorFixtureNow.subtract(const Duration(minutes: 1)),
-        tutorFixtureNow.add(const Duration(days: 1)),
-      ),
-    );
-    await tester.pump(const Duration(seconds: 31));
-    await tester.pumpAndSettle();
-
-    final semantics = tester.widget<ExcludeSemantics>(
-      find
-          .ancestor(
-            of: find.text('talmid dashboard'),
-            matching: find.byType(ExcludeSemantics),
-          )
-          .first,
-    );
-    expect(semantics.excluding, isTrue, reason: 'nothing readable');
-    await tester.tap(find.text('talmid dashboard'), warnIfMissed: false);
-    expect(taps, 1, reason: 'no pointer input reaches the covered screen');
-    final focus = tester.widget<ExcludeFocus>(
-      find
-          .ancestor(
-            of: find.text('talmid dashboard'),
-            matching: find.byType(ExcludeFocus),
-          )
-          .first,
-    );
-    expect(focus.excluding, isTrue);
-  });
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('talmid dashboard'));
+      expect(taps, 1, reason: 'the talmid lock does not cover the tutor');
+      expect(find.text('talmid dashboard'), findsOneWidget);
+    },
+  );
 }

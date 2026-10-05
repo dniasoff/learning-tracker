@@ -8,12 +8,10 @@
 /// each row's [LearnerState] stays warm in memory while the row is built
 /// (AD-35 "Tutor list"; 4.2a [learnerStateForScopeProvider]).
 ///
-/// Lock privacy (AD-36): the row judges the TALMID's own settings history
-/// with the shared [captureGateProvider]. Until his lock is known to be
-/// open the row carries no identity or data ([TalmidRowPending]); while
-/// locked it is [TalmidRowLocked]. Nothing here feeds the tutor device's
-/// own `SacredTimeLockOverlay`, which stays driven by the account's own
-/// profiles.
+/// Lock (AD-36, product ruling 2026-10-05): the row follows the lock of
+/// the person using the device (the tutor's own, [talmidLockProvider]),
+/// never the talmid's own settings; while that lock is in force the row is
+/// [TalmidRowLocked] (the overlay covers the app anyway).
 ///
 /// Timeout (AD-54 Observability): a row still loading after
 /// [talmidRowLoadTimeoutProvider] shows an inline retry on that row only
@@ -31,13 +29,10 @@ import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/ports/tutor_scope_grant_source.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_for_scope_provider.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
-import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/talmid_row_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/use_cases/build_talmid_row_state.dart';
-import 'package:learning_tracker/features/tutoring/tutoring.dart'
-    show tutoredLearnerLockRecheckDelay;
 
 /// The talmid's engine state: the 4.2a grant-validated read path
 /// ([learnerStateForScopeProvider]). The one seam tests replace.
@@ -46,26 +41,15 @@ final talmidLearnerStateProvider = Provider.autoDispose
       (ref, scope) => ref.watch(learnerStateForScopeProvider(scope)),
     );
 
-/// Whether the TALMID is inside a lock window now, judged on his own
-/// settings history (AD-36); loading while it loads. Re-judged at the next
-/// lock boundary.
+/// Whether the row must hide behind the lock now: the lock of the PERSON
+/// USING THE DEVICE ([currentSacredWindowProvider], the tutor's own), never
+/// the talmid's (product ruling 2026-10-05) — a talmid's Shabbos never
+/// hides him from his tutor. Kept per row (and [scope]-keyed) so a row
+/// retry re-reads it like every other row input.
 final talmidLockProvider = Provider.autoDispose
-    .family<AsyncValue<bool>, LearnerScope>((ref, scope) {
-      final settings = ref.watch(learnerLockSettingsProvider(scope));
-      if (settings case AsyncError(:final error, :final stackTrace)) {
-        return AsyncError<bool>(error, stackTrace);
-      }
-      if (!settings.hasValue) return const AsyncLoading<bool>();
-      final history = settings.requireValue;
-      final now = ref.watch(learningCommandClockProvider)().toUtc();
-      final decision = ref.watch(captureGateProvider).check(history, now);
-      final timer = Timer(
-        tutoredLearnerLockRecheckDelay(history, now, decision),
-        ref.invalidateSelf,
-      );
-      ref.onDispose(timer.cancel);
-      return AsyncData(decision is GateLocked);
-    });
+    .family<AsyncValue<bool>, LearnerScope>(
+      (ref, scope) => AsyncData(ref.watch(currentSacredWindowProvider) != null),
+    );
 
 /// How long a row may load before it shows its inline retry.
 final talmidRowLoadTimeoutProvider = Provider<Duration>(

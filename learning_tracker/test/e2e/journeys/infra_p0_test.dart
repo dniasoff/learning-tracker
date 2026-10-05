@@ -63,7 +63,8 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:flutter/material.dart' show Key, Switch, TextField;
+import 'package:flutter/material.dart' show Key, MaterialApp, Switch, TextField;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/router_provider.dart'
@@ -94,10 +95,14 @@ import 'package:learning_tracker/features/sacred_time/domain/learner_settings_ch
     show LearnerSettingsEdit, learnerSettingsAction;
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart'
     show City;
+import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart'
+    show SacredWindow, SacredWindowKind;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart'
     show citySearchProvider;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart'
     show LearnerSettingsEditor, learnerSettingsEditorProvider;
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
+    show currentSacredWindowProvider;
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
 
@@ -158,6 +163,28 @@ List<Override> _notificationSilenceOverrides(_FakeNotificationGateway fakeGw) =>
 
 void main() {
   setUpAll(e2eSetUpAll);
+
+  group('E2EHarness Sacred-Time pinning', () {
+    testWidgets('a supplied device lock window stays pinned', (tester) async {
+      final window = SacredWindow(
+        startUtc: DateTime.utc(2026, 9, 4, 22),
+        endUtc: DateTime.utc(2026, 9, 5, 23),
+        kind: SacredWindowKind.shabbos,
+        profileId: _learnerId,
+        timeZone: 'America/New_York',
+      );
+      final h = E2EHarness(tester);
+      addTearDown(h.dispose);
+
+      await h.pumpApp(
+        extraOverrides: [currentSacredWindowProvider.overrideWithValue(window)],
+      );
+
+      final app = tester.element(find.byType(MaterialApp).first);
+      final container = ProviderScope.containerOf(app, listen: false);
+      expect(container.read(currentSacredWindowProvider), same(window));
+    });
+  });
 
   // ── E2E-1101 ─────────────────────────────────────────────────────────────────
 

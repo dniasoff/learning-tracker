@@ -123,9 +123,9 @@ class _History extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // AD-36: nor under the learner's own lock, nor while it is unknown.
-    // The lock is settled before the paging controller is created, so a
-    // locked (or not yet known) learner causes no history read at all.
+    // AD-36: an available sacred window or configured-location lock keeps
+    // this learner's history covered. Missing or unreadable settings are
+    // not a lock; dependent history formatting may still be loading below.
     final locked = ref.watch(changeHistoryLockedProvider(scope));
     if (locked case AsyncError(:final error, :final stackTrace)) {
       return AppErrorView(

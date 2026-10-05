@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/scrollable_fill_body.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/lock_cover_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// The full-screen Sacred Time lock (AD-36, DNI-481 AC-1).
@@ -26,6 +31,13 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// [Offstage] / [TickerMode] flags flip), so navigation state survives a
 /// lock. The overlay lifts by itself when the lock ends: the provider
 /// re-judges at the lock's boundaries.
+///
+/// Its one action, "Wrong location? Change location" (product ruling
+/// 2026-10-05), opens the city picker INSIDE the overlay (behind the same
+/// Parent PIN guards as the after-lock prompt) for the learner whose lock
+/// is shown — an own profile of the person using the device. Saving
+/// recomputes the lock at once; the app behind stays covered throughout,
+/// so it is never a way around the lock itself.
 class SacredTimeLockOverlay extends ConsumerWidget {
   const SacredTimeLockOverlay({required this.child, super.key});
 
@@ -34,38 +46,6 @@ class SacredTimeLockOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) =>
       _LockCover(window: ref.watch(currentSacredWindowProvider), child: child);
-}
-
-/// The cover over a locked talmid's screens in a tutored session (DNI-481
-/// AC-1 tutor rule, AD-36 "Multi-learner devices").
-///
-/// A talmid viewed through a tutor grant never drives the device lock
-/// ([SacredTimeLockOverlay]). While an active tutored session shows a
-/// talmid inside their own lock ([currentTutoredSacredWindowProvider]),
-/// this covers what the router renders — the talmid's data and controls
-/// are offstage, exactly as under the device lock — with the same
-/// sacred-time surface, plus ONE control of the tutor's own: [onExit]
-/// leaves the tutored session, so the tutor is never trapped behind the
-/// talmid's lock. Mounted inside [SacredTimeLockOverlay], so the tutor's
-/// own account lock still covers everything.
-class TutoredLearnerLockOverlay extends ConsumerWidget {
-  const TutoredLearnerLockOverlay({
-    required this.onExit,
-    required this.child,
-    super.key,
-  });
-
-  /// Leaves the tutored session (back to the tutor's own profile).
-  final VoidCallback onExit;
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => _LockCover(
-    window: ref.watch(currentTutoredSacredWindowProvider),
-    onExitTutoredSession: onExit,
-    child: child,
-  );
 }
 
 /// Shows [child] while [window] is null; otherwise keeps it in the tree
@@ -88,15 +68,10 @@ class TutoredLearnerLockOverlay extends ConsumerWidget {
 /// release, so after-lock surfaces (the location prompt) are requested
 /// only once the discard has run.
 class _LockCover extends ConsumerStatefulWidget {
-  const _LockCover({
-    required this.window,
-    required this.child,
-    this.onExitTutoredSession,
-  });
+  const _LockCover({required this.window, required this.child});
 
   final SacredWindow? window;
   final Widget child;
-  final VoidCallback? onExitTutoredSession;
 
   @override
   ConsumerState<_LockCover> createState() => _LockCoverState();
@@ -112,6 +87,10 @@ class _LockCoverState extends ConsumerState<_LockCover> {
   /// lock starts or changes, but outlives it by the release step when the
   /// lock ends.
   SacredWindow? _shown;
+
+  /// The learner whose location the in-overlay city picker edits, while
+  /// it is open.
+  String? _fixingLocationFor;
 
   @override
   void initState() {
@@ -160,7 +139,10 @@ class _LockCoverState extends ConsumerState<_LockCover> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || widget.window != null) return;
       _dismissMessengerSurfaces();
-      setState(() => _shown = null);
+      setState(() {
+        _shown = null;
+        _fixingLocationFor = null;
+      });
       _covers.release(_token);
     });
   }
@@ -203,7 +185,19 @@ class _LockCoverState extends ConsumerState<_LockCover> {
           _LockScreen(
             window: activeWindow,
             shabbos: shabbos!,
-            onExitTutoredSession: widget.onExitTutoredSession,
+            onChangeLocation: activeWindow.profileId == null
+                ? null
+                : () => setState(
+                    () => _fixingLocationFor = activeWindow.profileId,
+                  ),
+          ),
+        if (locked && _fixingLocationFor != null)
+          _LockLocationFlow(
+            key: ValueKey(_fixingLocationFor),
+            profileId: _fixingLocationFor!,
+            onClose: () {
+              if (mounted) setState(() => _fixingLocationFor = null);
+            },
           ),
       ],
     );
@@ -214,13 +208,13 @@ class _LockScreen extends StatelessWidget {
   const _LockScreen({
     required this.window,
     required this.shabbos,
-    this.onExitTutoredSession,
+    this.onChangeLocation,
   });
 
   final SacredWindow window;
 
-  /// When set (a tutored session's cover), the tutor's exit control.
-  final VoidCallback? onExitTutoredSession;
+  /// Opens the in-overlay city picker; null hides the action.
+  final VoidCallback? onChangeLocation;
 
   /// Variant-resolved Shabbos term ("Shabbos" / "Shabbat" / "שבת"), composed
   /// into the localized greeting and subtitle frames.
@@ -231,6 +225,16 @@ class _LockScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final spec = _specFor(context, window.kind);
     final (greeting, subtitle) = _stringsFor(window.kind, l10n, shabbos);
+    final zone = LearnerZone.of(window.timeZone);
+    final start = zone.wallTimeOf(window.startUtc);
+    final end = zone.wallTimeOf(window.endUtc);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    String weekday(DateTime local) => DateFormat.E(locale).format(local);
+    String time(DateTime local) =>
+        MaterialLocalizations.of(context).formatTimeOfDay(
+          TimeOfDay(hour: local.hour, minute: local.minute),
+          alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+        );
     return PopScope(
       canPop: false,
       child: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -281,21 +285,36 @@ class _LockScreen extends StatelessWidget {
                               height: 1.4,
                             ),
                       ),
-                      if (onExitTutoredSession case final onExit?) ...[
-                        const SizedBox(height: 32),
-                        Text(
-                          l10n.tutorModeIndicator,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: context.colors.sacredTimeLockInk
-                                    .withValues(alpha: 0.78),
-                              ),
+                      const SizedBox(height: 24),
+                      Text(
+                        l10n.sacredTimeLockStartedAt(
+                          weekday(start),
+                          time(start),
                         ),
-                        const SizedBox(height: 8),
+                        key: const Key('sacredTimeLockStartTime'),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: context.colors.sacredTimeLockInk.withValues(
+                            alpha: 0.86,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.sacredTimeLockUnlocksAt(weekday(end), time(end)),
+                        key: const Key('sacredTimeLockUnlockTime'),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: context.colors.sacredTimeLockInk,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      if (onChangeLocation case final onChange?) ...[
+                        const SizedBox(height: 32),
                         OutlinedButton.icon(
-                          key: const Key('tutoredLearnerLockExit'),
-                          onPressed: onExit,
+                          key: const Key('sacredTimeLockChangeLocation'),
+                          onPressed: onChange,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: context.colors.sacredTimeLockInk,
                             side: BorderSide(
@@ -306,8 +325,11 @@ class _LockScreen extends StatelessWidget {
                               kMinInteractiveDimension,
                             ),
                           ),
-                          icon: const Icon(Icons.logout_rounded),
-                          label: Text(l10n.tutorModeExit),
+                          icon: const Icon(Icons.edit_location_alt_outlined),
+                          label: Text(
+                            l10n.sacredTimeLockChangeLocation,
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ],
                     ],
@@ -388,4 +410,78 @@ class _LockSpec {
 
   final IconData icon;
   final Color background;
+}
+
+/// The overlay's "change location" flow for own learner [profileId]: the
+/// Parent PIN guards of the after-lock prompt
+/// ([guardLearnerLocationPromptAccess]), then the city picker writing to
+/// that learner ([lockLocationEditorProvider]). Hosted in its own
+/// [Navigator] inside the overlay, so the PIN dialog and the picker show
+/// above the lock screen while the app stays covered. [onClose] runs on
+/// cancel, a refused PIN, or a saved city.
+class _LockLocationFlow extends ConsumerStatefulWidget {
+  const _LockLocationFlow({
+    required this.profileId,
+    required this.onClose,
+    super.key,
+  });
+
+  final String profileId;
+  final VoidCallback onClose;
+
+  @override
+  ConsumerState<_LockLocationFlow> createState() => _LockLocationFlowState();
+}
+
+class _LockLocationFlowState extends ConsumerState<_LockLocationFlow> {
+  final GlobalKey<NavigatorState> _navigator = GlobalKey<NavigatorState>();
+  bool _authorized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _authorize());
+  }
+
+  Future<void> _authorize() async {
+    final navigatorContext = _navigator.currentContext;
+    if (!mounted || navigatorContext == null) return;
+    final ok = await guardLearnerLocationPromptAccess(
+      navigatorContext,
+      ref,
+      widget.profileId,
+    );
+    if (!mounted) return;
+    if (!ok) {
+      widget.onClose();
+      return;
+    }
+    setState(() => _authorized = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Watched, so the editor and its write dependencies stay alive while
+    // the picker is open.
+    final editor = ref.watch(lockLocationEditorProvider(widget.profileId));
+    return HeroControllerScope.none(
+      child: Navigator(
+        key: _navigator,
+        pages: [
+          MaterialPage<void>(
+            key: ValueKey(_authorized),
+            child: _authorized
+                ? CityPickerView(
+                    key: const Key('sacredTimeLockCityPicker'),
+                    editor: (_) => editor,
+                    onSaved: (_) => widget.onClose(),
+                    onCancel: widget.onClose,
+                  )
+                : Material(color: Theme.of(context).colorScheme.surface),
+          ),
+        ],
+        onDidRemovePage: (_) {},
+      ),
+    );
+  }
 }

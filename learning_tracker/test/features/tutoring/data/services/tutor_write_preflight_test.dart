@@ -1,12 +1,12 @@
 // Story 1.24 (DNI-486) — the tutor write preflight: permission first, then
-// a positive connectivity probe, then the TARGET learner's lock (fail
-// closed when the learner's settings cannot be read), and the AC-7 re-check
-// of a server-stamped recorded_at.
+// a positive connectivity probe, then the device user's lock, and the AC-7
+// re-check of a server-stamped recorded_at under that same owner history.
 
 @Tags(['tutor_mode'])
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_preflight.dart';
@@ -25,12 +25,14 @@ TutorWritePreflight _preflight({
   bool online = true,
   CaptureGate? gate,
   bool settingsFail = false,
+  List<LearnerSettingsHistory>? lockHistories,
 }) => TutorWritePreflight(
   selection: tutorSelection(canEditLearning: canEditLearning),
   settingsHistory: () async {
     if (settingsFail) throw StateError('unreadable');
     return c0SettingsHistory();
   },
+  lockHistories: () async => lockHistories ?? [c0SettingsHistory()],
   gate: gate ?? FakeCaptureGate.open(),
   isOnline: () => online,
   clock: () => tutorFixtureNow,
@@ -63,29 +65,21 @@ void main() {
     );
   });
 
-  test('unreadable learner settings fail closed as a lock', () async {
-    expect(
-      await _preflight(settingsFail: true).check(),
-      isA<TutorPreflightLocked>(),
-    );
-  });
+  test(
+    'unreadable target settings are unavailable, not a Sacred-Time lock',
+    () async {
+      expect(
+        await _preflight(settingsFail: true).check(),
+        isA<TutorPreflightTargetSettingsUnavailable>(),
+      );
+    },
+  );
 
-  test('stampedInLock re-runs the gate on the server stamp', () {
+  test('stampedInLock re-runs the device gate on the server stamp', () async {
     final preflight = _preflight(gate: _WindowGate());
-    expect(
-      preflight.stampedInLock(
-        c0SettingsHistory(),
-        DateTime.utc(2026, 10, 1, 9),
-      ),
-      isTrue,
-    );
-    expect(
-      preflight.stampedInLock(
-        c0SettingsHistory(),
-        DateTime.utc(2026, 10, 1, 7),
-      ),
-      isFalse,
-    );
+    await preflight.check();
+    expect(preflight.stampedInLock(DateTime.utc(2026, 10, 1, 9)), isTrue);
+    expect(preflight.stampedInLock(DateTime.utc(2026, 10, 1, 7)), isFalse);
   });
 }
 

@@ -6979,7 +6979,26 @@ class AppLocalizationsHe extends AppLocalizations {
       'נשמר, לא נספר — שבת / יום טוב כבר התחילו';
 
   @override
-  String get tutorCaptureLearnerLocked => 'שבת / יום טוב';
+  String get tutorCaptureLearnerLockedNote =>
+      'אצל התלמיד זה שבת / יום טוב, ולכן אי אפשר לרשום עבורו לימוד כרגע';
+
+  @override
+  String tutorCaptureLearnerLockedNoteNamed(String learner) {
+    return 'אצל $learner זה שבת / יום טוב, ולכן אי אפשר לרשום עבורו לימוד כרגע';
+  }
+
+  @override
+  String get sacredTimeLockChangeLocation => 'מיקום שגוי? שינוי מיקום';
+
+  @override
+  String sacredTimeLockStartedAt(String day, String time) {
+    return 'התחיל ביום $day בשעה $time';
+  }
+
+  @override
+  String sacredTimeLockUnlocksAt(String day, String time) {
+    return 'הנעילה תסתיים ביום $day בשעה $time';
+  }
 
   @override
   String tutorCaptureNoEditAccess(String learner) {
@@ -7457,12 +7476,12 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeLocationPromptMessage(String term) {
-    return 'ללומד זה אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
+    return 'הגדירו מיקום כדי שזמני הנעילה ב$term וביום טוב יתאימו לאזור של הלומד.';
   }
 
   @override
   String sacredTimeLocationPromptMessageNamed(String name, String term) {
-    return 'ל$name אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב$term וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.';
+    return 'המיקום של $name לא מוגדר. הגדירו אותו כדי שזמני הנעילה ב$term וביום טוב יתאימו לאזור שלהם.';
   }
 
   @override

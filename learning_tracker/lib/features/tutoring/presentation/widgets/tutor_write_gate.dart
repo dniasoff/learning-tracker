@@ -98,7 +98,9 @@ String? tutorWriteNoteText(
         ? l10n.tutorPermissionDenied
         : l10n.tutorCaptureNoEditAccess(learnerName),
   TutorWriteAvailability.offline => l10n.tutorCaptureOnlineRequired,
-  TutorWriteAvailability.owner ||
-  TutorWriteAvailability.available ||
-  TutorWriteAvailability.locked => null,
+  TutorWriteAvailability.locked =>
+    learnerName == null || learnerName.isEmpty
+        ? l10n.tutorCaptureLearnerLockedNote
+        : l10n.tutorCaptureLearnerLockedNoteNamed(learnerName),
+  TutorWriteAvailability.owner || TutorWriteAvailability.available => null,
 };

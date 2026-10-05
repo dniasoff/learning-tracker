@@ -17,7 +17,14 @@ import 'package:learning_tracker/features/change_history/domain/services/change_
 import '../../../../helpers/change_history_fixtures.dart';
 import '../../../../helpers/learner_state/lock_fixtures.dart';
 
-final _ny = constantHistory(newYorkNoLocation);
+final _ny = constantHistory(
+  lockSettings(
+    timeZone: 'America/New_York',
+    latitude: 40.7128,
+    longitude: -74.006,
+    inIsrael: false,
+  ),
+);
 
 /// Rows of everything in [entries] and [events], both sources exhausted.
 List<ChangeHistoryRow> _rows({
@@ -766,8 +773,7 @@ void main() {
   });
 
   group('AC-6 lock-ignored learning', () {
-    // 2026-09-05 is a Saturday; with no location the New York lock is
-    // Fri 12:00 → Sun 01:00 local (fail-closed fallback).
+    // 2026-09-05 is a Saturday in the configured New York location.
     final saturday = DateTime.utc(2026, 9, 5, 19);
     final fridayMorningUtc = DateTime.utc(2026, 9, 4, 14); // 10:00 in NY
     int minutesTo(DateTime t) => t.difference(historyAt(0)).inMinutes;
@@ -787,19 +793,19 @@ void main() {
 
     test('the lock is judged with the settings in force at the effective '
         'instant', () {
-      // In UTC until Friday 15:00Z, so Friday 14:00Z is inside the UTC
-      // fallback lock (Fri 12:00Z →) though not inside New York's.
+      // No location until Friday 15:00Z, then New York is configured; the
+      // Saturday event is judged with New York's settings in force.
       final moved = movedHistory(
         lockSettings(timeZone: 'UTC'),
         DateTime.utc(2026, 9, 4, 15),
-        newYorkNoLocation,
+        _ny.spans.last.settings,
       );
       final row = _rows(
-        events: [historyLearn(1, minutes: minutesTo(fridayMorningUtc))],
+        events: [historyLearn(1, minutes: minutesTo(saturday))],
         history: moved,
       ).single;
       expect(row.lockIgnored, isTrue);
-      expect(row.stamp.day, '2026-09-04');
+      expect(row.stamp.day, '2026-09-05');
     });
 
     test('a lock-ignored void removes nothing', () {

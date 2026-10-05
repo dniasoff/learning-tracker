@@ -38,8 +38,15 @@ final jerusalem = lockSettings(
   inIsrael: true,
 );
 
-/// New York time zone with no location (fail-closed fallback).
+/// New York time zone with no configured location.
 final newYorkNoLocation = lockSettings();
+
+/// New York with a configured location, for tests that exercise a real lock.
+final newYorkLocated = lockSettings(
+  latitude: 40.7128,
+  longitude: -74.006,
+  inIsrael: false,
+);
 
 /// A one-span history holding [s].
 LearnerSettingsHistory constantHistory(LearnerSettings s) =>

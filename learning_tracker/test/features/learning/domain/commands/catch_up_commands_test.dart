@@ -1,9 +1,9 @@
 // DNI-506 (Story 3.3) T1 / T1.1: the catch-up action's window rule (AC-3,
 // AC-5) and leaf validation (AC-1).
 //
-// The learner is the no-location New York fallback of the DNI-505 harness:
-// Shabbos 2026-10-10 locks Fri 12:00 to Sun 01:00 learner-local, so its
-// catch-up window runs to the end of Monday 2026-10-12.
+// The learner has a configured New York location. Shabbos 2026-10-10 locks
+// from candle-lighting through havdalah, so its catch-up window ends at the
+// end of Sunday 2026-10-11 learner-local.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/learning/domain/commands/catch_up_commands.dart';
@@ -14,8 +14,8 @@ import '../../../../helpers/learner_state_fixtures.dart';
 
 LockWindow _shabbosLock() => lockWindows(
   catchUpHistory,
-  catchUpZone.at(DateTime.utc(2026, 10, 9), hour: 18),
-  catchUpZone.at(DateTime.utc(2026, 10, 9), hour: 18),
+  catchUpZone.at(DateTime.utc(2026, 10, 9)),
+  catchUpZone.at(DateTime.utc(2026, 10, 12)),
 ).single;
 
 CatchUpAction _action({LockWindow? lock, List<CatchUpLeaf>? leaves}) =>
@@ -54,9 +54,9 @@ void main() {
       );
     });
 
-    test('23:59 on the last day of the window is accepted', () {
+    test('23:59 on Sunday, the last day of the window, is accepted', () {
       expect(
-        checkCatchUp(_action(), catchUpHistory, _local(12, 23, 59)),
+        checkCatchUp(_action(), catchUpHistory, _local(11, 23, 59)),
         CatchUpCheck.ok,
       );
     });
@@ -79,7 +79,7 @@ void main() {
 
     test('a stale screen confirmed at 00:01 after the window is refused', () {
       expect(
-        checkCatchUp(_action(), catchUpHistory, _local(13, 0, 1)),
+        checkCatchUp(_action(), catchUpHistory, _local(12, 0, 1)),
         CatchUpCheck.ended,
       );
     });
@@ -105,20 +105,20 @@ void main() {
     });
 
     test('the window is judged in the learner zone, not UTC', () {
-      // 03:30Z Tuesday is still Monday 23:30 in New York (EDT).
-      final mondayNight = DateTime.utc(2026, 10, 13, 3, 30);
+      // 03:30Z Monday is still Sunday 23:30 in New York (EDT).
+      final sundayNight = DateTime.utc(2026, 10, 12, 3, 30);
       expect(
-        checkCatchUp(_action(), catchUpHistory, mondayNight),
+        checkCatchUp(_action(), catchUpHistory, sundayNight),
         CatchUpCheck.ok,
       );
       // ... and a learner who moved to Jerusalem keeps the lock's own
       // window (the settings in force at L.end).
       final moved = movedHistory(
-        newYorkNoLocation,
-        catchUpSunday.add(const Duration(hours: 1)),
+        newYorkLocated,
+        catchUpSunday.subtract(const Duration(hours: 1)),
         jerusalem,
       );
-      expect(checkCatchUp(_action(), moved, _local(12, 12)), CatchUpCheck.ok);
+      expect(checkCatchUp(_action(), moved, _local(11, 12)), CatchUpCheck.ok);
     });
   });
 

@@ -28,11 +28,18 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
+import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/lock_cover_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
@@ -56,6 +63,8 @@ SacredWindow _activeShabbosWindow() => SacredWindow(
   startUtc: DateTime.utc(2026, 5, 15, 18),
   endUtc: DateTime.utc(2026, 5, 16, 20),
   kind: SacredWindowKind.shabbos,
+  profileId: profileUlid,
+  timeZone: 'America/New_York',
 );
 
 const _owner = 'owner-uid';
@@ -66,10 +75,13 @@ const _talmid = '01ARZ3NDEKTSV4RRFFQ69G5FB3';
 /// Jerusalem (Shabbos is out there, so unlocked).
 final _saturdayEvening = DateTime.utc(2026, 9, 5, 20);
 
-LearnerProfileEntity _profile(String id) => LearnerProfileEntity(
+LearnerProfileEntity _profile(
+  String id, {
+  ProfileMode mode = ProfileMode.child,
+}) => LearnerProfileEntity(
   profileId: id,
   displayName: id,
-  mode: ProfileMode.child,
+  mode: mode,
   createdAt: DateTime.utc(2026),
   updatedAt: DateTime.utc(2026),
 );
@@ -92,6 +104,7 @@ List<Override> _account({
   List<String> profiles = const [profileUlid, _sibling],
   Set<String> locked = const {},
   bool tutored = false,
+  ProfileMode profileMode = ProfileMode.child,
   DateTime? now,
 }) {
   final unlocked = constantHistory(jerusalem);
@@ -105,7 +118,9 @@ List<Override> _account({
     ),
     ownAccountPathUidProvider.overrideWith((ref) async => uid),
     profileListStreamProvider.overrideWith(
-      (ref) => Stream.value([for (final id in profiles) _profile(id)]),
+      (ref) => Stream.value([
+        for (final id in profiles) _profile(id, mode: profileMode),
+      ]),
     ),
     if (tutored)
       activeTutoredProfileSelectionProvider.overrideWith(_Tutored.new),
@@ -125,7 +140,6 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   required List<Override> overrides,
   Widget home = const Text('DASHBOARD'),
-  VoidCallback? onExit,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -135,12 +149,7 @@ Future<void> _pumpApp(
         supportedLocales: AppLocalizations.supportedLocales,
         // As in learning_tracker_app.dart: the overlay wraps the router
         // output in the builder slot.
-        builder: (context, child) => SacredTimeLockOverlay(
-          child: TutoredLearnerLockOverlay(
-            onExit: onExit ?? () {},
-            child: child!,
-          ),
-        ),
+        builder: (context, child) => SacredTimeLockOverlay(child: child!),
         home: home,
       ),
     ),
@@ -149,6 +158,50 @@ Future<void> _pumpApp(
   for (var i = 0; i < 5; i++) {
     await tester.pump();
   }
+}
+
+class _MutableSacredWindow extends CurrentSacredWindow {
+  _MutableSacredWindow(this.window);
+
+  SacredWindow? window;
+
+  @override
+  SacredWindow? build() => window;
+
+  void replace(SacredWindow next) {
+    window = next;
+    state = next;
+  }
+}
+
+class _LocationSavedGovernedCommands implements GovernedLearningCommands {
+  _LocationSavedGovernedCommands(this.onSave);
+
+  final void Function() onSave;
+
+  @override
+  Future<CaptureResult> applyGovernedChange(GovernedAction action) async {
+    onSave();
+    return const CaptureResult.success();
+  }
+
+  @override
+  Future<CaptureResult> undoAction(String actionId) async =>
+      const CaptureResult.success();
+
+  @override
+  Future<CaptureResult> removeTrack(String curriculumId) async =>
+      const CaptureResult.success();
+
+  @override
+  Future<CaptureResult> reAddTrack(String curriculumId) async =>
+      const CaptureResult.success();
+
+  @override
+  Stream<List<PendingFailure>> watchPendingFailures() => Stream.value(const []);
+
+  @override
+  Future<CaptureResult?> retry(String pendingFailureId) async => null;
 }
 
 class _Counter extends StatefulWidget {
@@ -304,9 +357,7 @@ void main() {
             scaffoldMessengerKey: messengerKey,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            builder: (context, child) => SacredTimeLockOverlay(
-              child: TutoredLearnerLockOverlay(onExit: () {}, child: child!),
-            ),
+            builder: (context, child) => SacredTimeLockOverlay(child: child!),
             home: const Scaffold(body: Text('DASHBOARD')),
           ),
         ),
@@ -378,9 +429,7 @@ void main() {
             scaffoldMessengerKey: messengerKey,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            builder: (context, child) => SacredTimeLockOverlay(
-              child: TutoredLearnerLockOverlay(onExit: () {}, child: child!),
-            ),
+            builder: (context, child) => SacredTimeLockOverlay(child: child!),
             home: const Scaffold(body: Text('DASHBOARD')),
           ),
         ),
@@ -466,32 +515,94 @@ void main() {
       expect(find.text('Good Shabbos'), findsNothing);
     });
 
-    testWidgets("(e) a tutored session covers the locked talmid's screens "
-        "but not the tutor's way out, and drives no device lock", (
+    testWidgets('(e) a locked talmid never locks the tutor device', (
       tester,
     ) async {
-      var exits = 0;
       await _pumpApp(
         tester,
         overrides: _account(locked: {_talmid}, tutored: true),
-        onExit: () => exits++,
       );
-      expect(find.text('Good Shabbos'), findsOneWidget);
-      expect(find.text('DASHBOARD'), findsNothing);
+      expect(find.text('Good Shabbos'), findsNothing);
+      expect(find.text('DASHBOARD'), findsOneWidget);
       final container = ProviderScope.containerOf(
         tester.element(find.byType(MaterialApp)),
       );
       expect(container.read(currentSacredWindowProvider), isNull);
-
-      await tester.tap(find.byKey(const Key('tutoredLearnerLockExit')));
-      expect(exits, 1);
     });
 
-    testWidgets('(e) the device lock shows no tutor exit', (tester) async {
+    testWidgets('(e) the device lock shows the location correction action', (
+      tester,
+    ) async {
       await _pumpApp(tester, overrides: _account(locked: {_sibling}));
       expect(find.text('Good Shabbos'), findsOneWidget);
-      expect(find.byKey(const Key('tutoredLearnerLockExit')), findsNothing);
+      expect(
+        find.byKey(const Key('sacredTimeLockChangeLocation')),
+        findsOneWidget,
+      );
     });
+
+    testWidgets(
+      'location correction opens the picker and refreshes unlock time',
+      (tester) async {
+        final windowSource = _MutableSacredWindow(_activeShabbosWindow());
+        late final _LocationSavedGovernedCommands writes;
+        writes = _LocationSavedGovernedCommands(() {
+          windowSource.replace(
+            SacredWindow(
+              startUtc: DateTime.utc(2026, 5, 15, 18),
+              endUtc: DateTime.utc(2026, 5, 18, 21),
+              kind: SacredWindowKind.shabbos,
+              profileId: profileUlid,
+              timeZone: 'Europe/London',
+            ),
+          );
+        });
+        final editor = LearnerSettingsEditor.forLearner(
+          governed: () async => writes,
+          profileId: profileUlid,
+          locationService: const LocationService(),
+          deviceTimeZone: () async => 'UTC',
+        );
+        const city = City(
+          id: 1,
+          name: 'Jerusalem',
+          countryCode: 'IL',
+          latitude: 31.778,
+          longitude: 35.235,
+          population: 900000,
+          timezone: 'Asia/Jerusalem',
+        );
+        await _pumpApp(
+          tester,
+          overrides: [
+            ..._account(
+              profiles: const [profileUlid],
+              locked: const {profileUlid},
+              profileMode: ProfileMode.adult,
+            ),
+            currentSacredWindowProvider.overrideWith(() => windowSource),
+            lockLocationEditorProvider(profileUlid).overrideWithValue(editor),
+            citySearchProvider('Jerusalem').overrideWith((ref) async => [city]),
+          ],
+        );
+
+        expect(find.text('Unlocks Sat at 4:00 PM'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('sacredTimeLockChangeLocation')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('sacredTimeLockCityPicker')),
+          findsOneWidget,
+        );
+
+        await tester.enterText(find.byType(TextField), 'Jerusalem');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Jerusalem').last);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('sacredTimeLockCityPicker')), findsNothing);
+        expect(find.text('Unlocks Mon at 10:00 PM'), findsOneWidget);
+      },
+    );
 
     testWidgets('(e) a tutored session with an unlocked talmid is open', (
       tester,

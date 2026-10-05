@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
@@ -19,7 +20,10 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_gate.
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_governed_writes.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_learning_commands.dart';
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_preflight.dart';
@@ -165,6 +169,7 @@ final class TutorHarness {
     bool online = true,
     CaptureGate? gate,
     LearnerSettingsHistory? history,
+    List<LearnerSettingsHistory>? lockHistories,
     List<LearningEvent>? events,
     Map<String, Corpus>? corpora,
     RecordingTutorInvoker? invoker,
@@ -178,6 +183,7 @@ final class TutorHarness {
        subTrackRows = subTracks,
        invoker = invoker ?? RecordingTutorInvoker(),
        analytics = RecordingLearningAnalytics() {
+    this.lockHistories = lockHistories ?? [this.history];
     service = TutorWriteService(
       invoker: this.invoker.call,
       analytics: analytics,
@@ -185,6 +191,7 @@ final class TutorHarness {
     preflight = TutorWritePreflight(
       selection: selection,
       settingsHistory: () async => this.history,
+      lockHistories: () async => this.lockHistories,
       gate: this.gate,
       isOnline: () => connectivity.online,
       clock: () => tutorFixtureNow,
@@ -215,11 +222,14 @@ final class TutorHarness {
   /// The connectivity probe.
   final ScriptedConnectivity connectivity;
 
-  /// The target learner's gate.
+  /// The gate used to judge lock windows.
   final CaptureGate gate;
 
   /// The target learner's settings history.
   LearnerSettingsHistory history;
+
+  /// The device user's lock histories (tutor-owned in a tutored session).
+  late final List<LearnerSettingsHistory> lockHistories;
 
   /// The talmid's event log the commands read.
   final List<LearningEvent> eventLog;
@@ -312,9 +322,10 @@ final class ConnectivityFeed {
 /// Provider overrides for a tutored session over the talmid in
 /// [tutorFixtureScope]: the selection (null: the tutor's own app), the
 /// connectivity probe ([online] or a [connectivity] feed; an
-/// `Exception` makes it error), the talmid's settings history and gate,
-/// a fixed clock at [now] (default [tutorFixtureNow]; [clock] replaces it
-/// with a moving one) and the talmid's profile name.
+/// `Exception` makes it error), the talmid's settings history, the device
+/// user's lock histories/window and gate, a fixed clock at [now] (default
+/// [tutorFixtureNow]; [clock] replaces it with a moving one) and the
+/// talmid's profile name.
 /// Pass `withScope: false` when another helper overrides the active scope.
 List<Override> tutoredOverrides({
   TutoredProfileSelection? selection,
@@ -322,11 +333,15 @@ List<Override> tutoredOverrides({
   ConnectivityFeed? connectivity,
   Object? connectivityError,
   LearnerSettingsHistory? lockSettings,
+  List<LearnerSettingsHistory> deviceLockHistories = const [],
+  SacredWindow? deviceWindow,
   Stream<LearnerSettingsHistory>? lockSettingsStream,
   CaptureGate? gate,
   DateTime? now,
+  DateTime? deviceNow,
   DateTime Function()? clock,
   bool withScope = true,
+  bool pinDeviceWindow = true,
 }) => [
   activeTutoredProfileSelectionProvider.overrideWith(
     () => FixedTutoredSelection(selection),
@@ -341,6 +356,13 @@ List<Override> tutoredOverrides({
     (ref, _) =>
         lockSettingsStream ?? Stream.value(lockSettings ?? c0SettingsHistory()),
   ),
+  accountLockHistoriesProvider.overrideWithValue(deviceLockHistories),
+  if (pinDeviceWindow)
+    currentSacredWindowProvider.overrideWithValue(deviceWindow),
+  if (!pinDeviceWindow)
+    localDayClockProvider.overrideWithValue(
+      FakeLocalDayClock(deviceNow ?? now ?? tutorFixtureNow),
+    ),
   captureGateProvider.overrideWithValue(gate ?? FakeCaptureGate.open()),
   learningCommandClockProvider.overrideWithValue(
     clock ?? () => now ?? tutorFixtureNow,

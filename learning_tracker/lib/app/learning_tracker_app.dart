@@ -19,7 +19,6 @@ import 'package:learning_tracker/features/sacred_time/presentation/widgets/learn
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_back_button_dispatcher.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Root application widget.
@@ -48,9 +47,7 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     // force (the lock overlay sits above the router's navigator).
     _routerConfig = withSacredTimeBackBlock(
       ref.read(routerProvider).config(),
-      isLocked: () =>
-          ref.read(currentSacredWindowProvider) != null ||
-          ref.read(currentTutoredSacredWindowProvider) != null,
+      isLocked: () => ref.read(currentSacredWindowProvider) != null,
     );
     WidgetsBinding.instance.addObserver(this);
   }
@@ -106,13 +103,6 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     );
   }
 
-  /// The tutor's exit from a tutored session whose talmid is locked: the
-  /// same exit as the tutor-mode bar (back to the tutor's own app shell).
-  void _exitTutoredSession() {
-    ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
-    unawaited(ref.read(routerProvider).replaceAll([const AppShellRoute()]));
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.watch(magicLinkInitializationProvider);
@@ -161,14 +151,11 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
       // the after-lock location prompt listens beside it.
       builder: (context, child) => LearnerLocationPromptListener(
         onSetLocation: _openLearnerLocationPicker,
+        // The lock follows the person using the device: in a tutored
+        // session it is the tutor's own lock, never the talmid's.
         child: SacredTimeLockOverlay(
-          // A locked talmid in a tutored session covers only the talmid's
-          // screens and keeps the tutor's exit reachable (AD-36).
-          child: TutoredLearnerLockOverlay(
-            onExit: _exitTutoredSession,
-            child: PersistentSwitcherScaffold(
-              child: child ?? const SizedBox.shrink(),
-            ),
+          child: PersistentSwitcherScaffold(
+            child: child ?? const SizedBox.shrink(),
           ),
         ),
       ),

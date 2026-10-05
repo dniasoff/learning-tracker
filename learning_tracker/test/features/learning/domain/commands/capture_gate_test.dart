@@ -18,10 +18,14 @@ LockWindow? lockOf(GateDecision d) => switch (d) {
   GateLocked(:final window) => window,
 };
 
-// The UTC no-location learner's fail-closed Shabbos lock (AD-36 FR-23):
-// Fri 2026-09-04 12:00Z → Sun 2026-09-06 01:00Z.
-final _lockStart = DateTime.utc(2026, 9, 4, 12);
-final _lockEnd = DateTime.utc(2026, 9, 6, 1);
+final _locatedHistory = LearnerSettingsHistory.constant(newYorkLocated);
+final _lock = lockWindows(
+  _locatedHistory,
+  DateTime.utc(2026, 9, 4),
+  DateTime.utc(2026, 9, 6),
+).single;
+final _lockStart = _lock.startUtc;
+final _lockEnd = _lock.endUtc;
 const _tick = Duration(microseconds: 1);
 
 void main() {
@@ -51,23 +55,33 @@ void main() {
       );
     });
 
+    test('no location: open on Friday afternoon and Shabbos', () {
+      for (final at in [
+        DateTime.utc(2026, 9, 4, 17),
+        DateTime.utc(2026, 9, 5, 19),
+      ]) {
+        expect(gate.check(c0SettingsHistory(), at), const GateOpen());
+      }
+    });
+
     test('locked inside a window, reporting its true bounds; both bounds '
         'are inside (closed interval, fail closed)', () {
-      final window = LockWindow(_lockStart, _lockEnd);
+      final window = _lock;
       for (final at in [_lockStart, DateTime.utc(2026, 9, 5, 10), _lockEnd]) {
-        expect(gate.check(c0SettingsHistory(), at), GateLocked(window));
+        expect(gate.check(_locatedHistory, at), GateLocked(window));
       }
     });
 
     test('judges the instant with the settings in force at it', () {
-      // UTC until Fri 00:00Z, then New York (fail-closed window shifts to
-      // Fri 12:00 → Sun 01:00 New York = 16:00Z → 05:00Z).
+      // Lakewood until Friday 17:00Z, then Jerusalem: settings at each
+      // instant choose the appropriate location's window.
       final history = movedHistory(
-        c0Settings,
-        DateTime.utc(2026, 9, 4),
-        newYorkNoLocation,
+        lakewood,
+        DateTime.utc(2026, 9, 4, 17),
+        jerusalem,
       );
-      // 13:00Z Friday is inside the UTC window, outside the New York one.
+      // Friday 13:00Z is before Lakewood candle-lighting; 17:00Z is
+      // after Jerusalem candle-lighting.
       expect(
         gate.check(history, DateTime.utc(2026, 9, 4, 13)),
         const GateOpen(),
@@ -80,7 +94,13 @@ void main() {
 
     test('an unknown time zone fails closed to the widened window', () {
       final history = LearnerSettingsHistory.constant(
-        const LearnerSettings(profileId: profileUlid, timeZone: 'Mars/Base'),
+        const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'Mars/Base',
+          latitude: 40.0,
+          longitude: -74.0,
+          inIsrael: false,
+        ),
       );
       // Fri 00:00Z is before the UTC window but inside the widened one.
       expect(lockOf(gate.check(history, DateTime.utc(2026, 9, 4))), isNotNull);

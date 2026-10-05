@@ -65,8 +65,8 @@ const Duration kChangeHistoryLockRecheck = Duration(minutes: 1);
 
 /// Whether the history must be unreadable now (AD-36, E-4): the device's
 /// sacred-time window, or the learner's own lock judged by [lockWindows]
-/// with the learner's settings history. Loading or failing while the
-/// learner's settings are unknown (fail closed).
+/// with the learner's settings history. Missing or unreadable settings do
+/// not create a lock and are re-evaluated when the settings provider updates.
 ///
 /// Judged again when the learner's lock begins or ends (and at least every
 /// [kChangeHistoryLockRecheck]), so an open history becomes unreadable at
@@ -100,11 +100,9 @@ final changeHistoryLockedProvider = Provider.autoDispose
         ref.onDispose(timer.cancel);
         return AsyncData(current != null);
       }
-      // Settings still loading or failed (a reload may keep the last
-      // history): judged as before, with no boundary timer.
-      return settings.whenData(
-        (h) => insideLock(lockWindows(h, now, now), now),
-      );
+      // Unknown or unreadable settings do not create a lock. The watched
+      // settings provider rebuilds this judgment when they become available.
+      return const AsyncData(false);
     });
 
 /// The start of the first of [windows] after [now], or null.

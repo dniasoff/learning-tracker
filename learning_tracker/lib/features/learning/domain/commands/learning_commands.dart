@@ -419,7 +419,10 @@ final class DefaultLearningCommands implements LearningCommands {
       history = await _reads.settingsHistory(_scope);
       decision = _gate.check(history, now);
     } on Object {
-      return CaptureResult.locked(unknownLockAt(now)); // FR-23 fail closed
+      // Settings that are still loading or unreadable do not create a
+      // Sacred-Time lock (product ruling 2026-10-05). The caller can retry
+      // after the settings source recovers.
+      return const CaptureResult.rejected(CaptureRejection.notSaved);
     }
     if (decision case GateLocked(:final window)) {
       return CaptureResult.locked(window);

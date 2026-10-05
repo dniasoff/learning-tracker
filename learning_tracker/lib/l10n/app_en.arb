@@ -5626,9 +5626,38 @@
   "@tutorCaptureKeptNotCounted": {
     "description": "DNI-486 AC-7: a tutor capture the server stamped inside the learner's lock window. The event is stored but does not count."
   },
-  "tutorCaptureLearnerLocked": "Shabbos / Yom Tov",
-  "@tutorCaptureLearnerLocked": {
-    "description": "DNI-486 AC-6: covers a tutored learner's screens while that learner is in a lock window. Shows no learner data."
+  "tutorCaptureLearnerLockedNote": "It's Shabbos / Yom Tov for this talmid, so learning can't be recorded for them right now",
+  "@tutorCaptureLearnerLockedNote": {
+    "description": "Note under a tutor's disabled write controls while the TUTORED learner is inside their own Shabbos / Yom Tov lock (the tutor can still view the account). Used when the learner's name is unknown."
+  },
+  "tutorCaptureLearnerLockedNoteNamed": "It's Shabbos / Yom Tov for {learner}, so learning can't be recorded for them right now",
+  "@tutorCaptureLearnerLockedNoteNamed": {
+    "description": "Note under a tutor's disabled write controls while the named tutored learner is inside their own Shabbos / Yom Tov lock (the tutor can still view the account).",
+    "placeholders": {
+      "learner": {
+        "type": "String"
+      }
+    }
+  },
+  "sacredTimeLockChangeLocation": "Wrong location? Change location",
+  "@sacredTimeLockChangeLocation": {
+    "description": "Action on the full-screen Shabbos / Yom Tov lock overlay: opens the city picker so the person using the device can set or correct their location; the lock is recomputed for the new location."
+  },
+  "sacredTimeLockStartedAt": "Started {day} at {time}",
+  "@sacredTimeLockStartedAt": {
+    "description": "Start time of the current Sacred-Time lock window, shown on the lock overlay in the locked person's configured time zone.",
+    "placeholders": {
+      "day": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "sacredTimeLockUnlocksAt": "Unlocks {day} at {time}",
+  "@sacredTimeLockUnlocksAt": {
+    "description": "Prominent final end time of the current Sacred-Time lock window (including chained holidays), shown in the locked person's configured time zone.",
+    "placeholders": {
+      "day": { "type": "String" },
+      "time": { "type": "String" }
+    }
   },
   "tutorCaptureNoEditAccess": "{learner}'s parent hasn't given you editing access",
   "@tutorCaptureNoEditAccess": {
@@ -6205,18 +6234,18 @@
   "@sacredTimeLocationPromptAction": {
     "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner."
   },
-  "sacredTimeLocationPromptMessage": "This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.",
+  "sacredTimeLocationPromptMessage": "Set a location so {term} and Yom Tov lock times follow this learner's area.",
   "@sacredTimeLocationPromptMessage": {
-    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for a learner with no location.",
+    "description": "Shown after a recent Sacred-Time lock when the learner no longer has a configured location, so future lock times can follow their area.",
     "placeholders": {
       "term": {
         "type": "String"
       }
     }
   },
-  "sacredTimeLocationPromptMessageNamed": "{name} has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on {term} and Yom Tov.",
+  "sacredTimeLocationPromptMessageNamed": "{name}'s location isn't set. Set it so {term} and Yom Tov lock times follow their area.",
   "@sacredTimeLocationPromptMessageNamed": {
-    "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): shown after a fail-closed fallback lock ends for the named learner, who has no location (multi-learner accounts).",
+    "description": "Named form of the after-lock reminder when the learner no longer has a configured location.",
     "placeholders": {
       "name": {
         "type": "String"

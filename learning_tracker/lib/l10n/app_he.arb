@@ -3925,7 +3925,32 @@
   "backupImportSuccess": "הגיבוי שוחזר בהצלחה.",
   "backupImportError": "לא ניתן לשחזר את הגיבוי. נסו שוב.",
   "tutorCaptureKeptNotCounted": "נשמר, לא נספר — שבת / יום טוב כבר התחילו",
-  "tutorCaptureLearnerLocked": "שבת / יום טוב",
+  "tutorCaptureLearnerLockedNote": "אצל התלמיד זה שבת / יום טוב, ולכן אי אפשר לרשום עבורו לימוד כרגע",
+  "tutorCaptureLearnerLockedNoteNamed": "אצל {learner} זה שבת / יום טוב, ולכן אי אפשר לרשום עבורו לימוד כרגע",
+  "@tutorCaptureLearnerLockedNoteNamed": {
+    "placeholders": {
+      "learner": {
+        "type": "String"
+      }
+    }
+  },
+  "sacredTimeLockChangeLocation": "מיקום שגוי? שינוי מיקום",
+  "sacredTimeLockStartedAt": "התחיל ביום {day} בשעה {time}",
+  "@sacredTimeLockStartedAt": {
+    "description": "Start time of the current Sacred-Time lock window, shown on the lock overlay in the locked person's configured time zone.",
+    "placeholders": {
+      "day": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "sacredTimeLockUnlocksAt": "הנעילה תסתיים ביום {day} בשעה {time}",
+  "@sacredTimeLockUnlocksAt": {
+    "description": "Prominent final end time of the current Sacred-Time lock window (including chained holidays), shown in the locked person's configured time zone.",
+    "placeholders": {
+      "day": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
   "tutorCaptureNoEditAccess": "ההורה של {learner} לא נתן לך הרשאת עריכה",
   "@tutorCaptureNoEditAccess": {
     "placeholders": {
@@ -4158,8 +4183,8 @@
     }
   },
   "sacredTimeLocationPromptAction": "הגדרת מיקום",
-  "sacredTimeLocationPromptMessage": "ללומד זה אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב{term} וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.",
-  "sacredTimeLocationPromptMessageNamed": "ל{name} אין מיקום, ולכן האפליקציה ננעלה מיום שישי בצהריים. הגדירו מיקום כדי שהנעילה ב{term} וביום טוב תתחיל 10 דקות לפני הדלקת נרות ותסתיים 10 דקות אחרי צאת הכוכבים.",
+  "sacredTimeLocationPromptMessage": "הגדירו מיקום כדי שזמני הנעילה ב{term} וביום טוב יתאימו לאזור של הלומד.",
+  "sacredTimeLocationPromptMessageNamed": "המיקום של {name} לא מוגדר. הגדירו אותו כדי שזמני הנעילה ב{term} וביום טוב יתאימו לאזור שלהם.",
   "sacredTimeSettingsNotSaved": "לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.",
   "sacredTimeSettingsUnavailable": "ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.",
   "erevBannerBeginsAt": "כניסת {term} בשעה {time} — רשמו מה שאפשר לפני כן.",

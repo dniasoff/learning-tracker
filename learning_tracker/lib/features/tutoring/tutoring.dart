@@ -42,7 +42,6 @@ export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
 export 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 export 'package:learning_tracker/features/tutoring/presentation/utils/tutor_write_failure_message.dart';
 export 'package:learning_tracker/features/tutoring/presentation/widgets/tutor_write_gate.dart';
-export 'package:learning_tracker/features/tutoring/presentation/widgets/tutored_learner_lock_overlay.dart';
 
 // ── Presentation screens (W6.4–W6.10) ────────────────────────────────────
 export 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';

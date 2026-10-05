@@ -89,7 +89,7 @@ final class _PlannedCall {
 /// Tutor [LearningCommands] bound to one tutored [selection].
 final class TutorLearningCommands implements LearningCommands {
   /// Creates the commands. [preflight] runs the permission, online and
-  /// target-learner lock checks; [events] reads the talmid's complete event
+  /// device-user lock checks; [events] reads the talmid's complete event
   /// log; [corpus] a curriculum's ContentIndex corpus. [subTracks] reads
   /// the talmid's complete `sub_tracks` (null when unavailable — a
   /// sub-track command then answers `onlineRequired`); [ledger] freezes a
@@ -142,7 +142,7 @@ final class TutorLearningCommands implements LearningCommands {
   // ── Preflight ──────────────────────────────────────────────────────────
 
   /// Runs [body] only when the grant allows editing, the device is online
-  /// and the target learner is outside a lock — all checked before any
+  /// and the device user is outside a lock — all checked before any
   /// callable is invoked.
   Future<CaptureResult> _preflight(
     Future<CaptureResult> Function(DateTime nowUtc, LearnerSettingsHistory h)
@@ -155,6 +155,9 @@ final class TutorLearningCommands implements LearningCommands {
     // The control was enabled when tapped: the grant changed since.
     TutorPreflightNoEditAccess() => _editingTurnedOff,
     TutorPreflightOffline() => const CaptureResult.onlineRequired(),
+    TutorPreflightTargetSettingsUnavailable() => const CaptureResult.rejected(
+      CaptureRejection.notSaved,
+    ),
     TutorPreflightLocked(:final window) => CaptureResult.locked(window),
   };
 
@@ -209,8 +212,7 @@ final class TutorLearningCommands implements LearningCommands {
               // may be stamped inside it. The server keeps its events; they
               // are not counted.
               for (final (c, w) in written)
-                if (w.recordedAt case final at?
-                    when _checks.stampedInLock(history, at))
+                if (w.recordedAt case final at? when _checks.stampedInLock(at))
                   ...c.eventIds,
             ],
     );

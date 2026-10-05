@@ -50,6 +50,7 @@ import 'package:learning_tracker/features/learning/domain/commands/sub_track_sou
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_learning_providers.dart';
@@ -416,6 +417,55 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
   ref.onDispose(subTrackCommands.dispose);
   return commands;
 }, retry: (retryCount, error) => null);
+
+/// The owner-device governed commands of ONE own learner [scope] — the
+/// signed-in account's own profile — for the Sacred Time lock overlay's
+/// "change location" action (product ruling 2026-10-05). It deliberately
+/// does NOT pass the [CaptureGate]: a location correction is the one write
+/// allowed inside a lock, and it is reachable only from the lock overlay
+/// and only for the learner whose lock is shown. Null while the session's
+/// write dependencies are not ready.
+final lockLocationGovernedCommandsProvider = FutureProvider.autoDispose
+    .family<GovernedLearningCommands?, LearnerScope>((ref, scope) async {
+      final uid = await ref.watch(activeAuthUidProvider.future);
+      final changeLog = await ref.watch(changeLogRepositoryProvider.future);
+      final docReader = await ref.watch(governedDocReaderProvider.future);
+      final oversized = await ref.watch(
+        oversizedGovernedWritePortProvider.future,
+      );
+      if (uid == null ||
+          changeLog == null ||
+          docReader == null ||
+          oversized == null) {
+        return null;
+      }
+      final profiles = await ref.watch(profileListStreamProvider.future);
+      LearnerProfileEntity? profile;
+      for (final p in profiles) {
+        if (p.profileId == scope.profileId) profile = p;
+      }
+      final subTrackRepository = ref.listen(
+        subTrackRepositoryProvider.future,
+        (_, _) {},
+      );
+      final governed = DefaultGovernedLearningCommands(
+        scope: scope,
+        actor: learningSessionActor(
+          uid: uid,
+          profile: profile,
+          pinProfileId: ref.watch(parentPinAuthenticatedProfileIdProvider),
+        ),
+        changeLog: changeLog,
+        subTracks: _DeferredSubTrackRepository(subTrackRepository.read),
+        reader: docReader,
+        oversized: oversized,
+        clock: ref.watch(learningCommandClockProvider),
+        newUlid: newUlid,
+        failureReporter: ref.watch(learningFailureReporterProvider),
+      );
+      ref.onDispose(governed.dispose);
+      return governed;
+    }, retry: (retryCount, error) => null);
 
 /// The governed writer the owner repositories (goals, curriculum tracks,
 /// order, programs, study days, stages, scopes) write through (AD-38,

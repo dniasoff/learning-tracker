@@ -522,8 +522,7 @@ void main() {
     });
 
     test('F4. a settings change moves future suppression only', () {
-      // No location (fail-closed Fri 12:00 → Sun 01:00 New York) until a
-      // move to Lakewood on Wednesday 2026-09-09.
+      // No location until a move to Lakewood on Wednesday 2026-09-09.
       final moved = movedHistory(
         newYorkNoLocation,
         DateTime.utc(2026, 9, 9),
@@ -539,10 +538,12 @@ void main() {
       final isLocked = container
           .read(notificationSchedulerProvider)
           .isLockedAt!;
-      // Past Friday 13:00 EDT: inside the fallback, still locked.
-      expect(isLocked(DateTime.utc(2026, 9, 4, 17)), isTrue);
+      // Before the location was set, even Friday afternoon was unlocked.
+      expect(isLocked(DateTime.utc(2026, 9, 4, 17)), isFalse);
       // Next Friday 13:00 EDT: before candle-lighting at Lakewood — open.
       expect(isLocked(DateTime.utc(2026, 9, 11, 17)), isFalse);
+      // Saturday afternoon in Lakewood, after the move — locked.
+      expect(isLocked(DateTime.utc(2026, 9, 12, 19)), isTrue);
     });
   });
 

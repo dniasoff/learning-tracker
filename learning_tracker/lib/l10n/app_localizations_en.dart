@@ -7055,7 +7055,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Kept, not counted — Shabbos / Yom Tov had started';
 
   @override
-  String get tutorCaptureLearnerLocked => 'Shabbos / Yom Tov';
+  String get tutorCaptureLearnerLockedNote =>
+      'It\'s Shabbos / Yom Tov for this talmid, so learning can\'t be recorded for them right now';
+
+  @override
+  String tutorCaptureLearnerLockedNoteNamed(String learner) {
+    return 'It\'s Shabbos / Yom Tov for $learner, so learning can\'t be recorded for them right now';
+  }
+
+  @override
+  String get sacredTimeLockChangeLocation => 'Wrong location? Change location';
+
+  @override
+  String sacredTimeLockStartedAt(String day, String time) {
+    return 'Started $day at $time';
+  }
+
+  @override
+  String sacredTimeLockUnlocksAt(String day, String time) {
+    return 'Unlocks $day at $time';
+  }
 
   @override
   String tutorCaptureNoEditAccess(String learner) {
@@ -7538,12 +7557,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sacredTimeLocationPromptMessage(String term) {
-    return 'This learner has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
+    return 'Set a location so $term and Yom Tov lock times follow this learner\'s area.';
   }
 
   @override
   String sacredTimeLocationPromptMessageNamed(String name, String term) {
-    return '$name has no location, so the app locked from Friday noon. Set a location to lock from 10 minutes before candle-lighting until 10 minutes after tzeis on $term and Yom Tov.';
+    return '$name\'s location isn\'t set. Set it so $term and Yom Tov lock times follow their area.';
   }
 
   @override

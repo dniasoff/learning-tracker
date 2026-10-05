@@ -43,7 +43,7 @@ void main() {
 
   group('engineLockWindows', () {
     test('covers every event and the look-back before now', () {
-      final h = constantHistory(newYorkNoLocation);
+      final h = constantHistory(newYorkLocated);
       final events = [
         engineLearn(1, 'x', minutes: 0), // Tue 2026-09-01
         engineLearn(2, 'y', minutes: 19 * 1440), // Sun 2026-09-20 00:00Z
@@ -64,7 +64,7 @@ void main() {
     });
 
     test('reaches the lock an old catch-up event catches up', () {
-      final h = constantHistory(newYorkNoLocation);
+      final h = constantHistory(newYorkLocated);
       // Sun 2026-09-06 18:00Z: catching up Shabbos 09-05, whose lock ended
       // before the event; now is weeks later, past the look-back.
       final catchUp = engineLearn(

@@ -14,5 +14,12 @@ abstract class SacredWindow with _$SacredWindow {
     required DateTime startUtc,
     required DateTime endUtc,
     required SacredWindowKind kind,
+
+    /// The learner whose lock this is (the one the overlay's "change
+    /// location" action edits); null when unknown.
+    String? profileId,
+
+    /// IANA time zone for rendering the window's UTC bounds as local times.
+    @Default('UTC') String timeZone,
   }) = _SacredWindow;
 }

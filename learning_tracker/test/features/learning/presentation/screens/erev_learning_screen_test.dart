@@ -349,14 +349,14 @@ void main() {
     });
   });
 
-  group('AC-6: no location — the fail-closed fallback time', () {
-    testWidgets('Friday banner says 12:00', (tester) async {
+  group('AC-6: no location means no erev window', () {
+    testWidgets('Friday has no Sacred-Time banner', (tester) async {
       final world = _World(
         now: _local(2026, 10, 9, 9),
         history: constantHistory(newYorkNoLocation),
       );
       await _pump(tester, _app(world));
-      expect(find.textContaining('begins at 12:00 PM'), findsOneWidget);
+      expect(_banner, findsNothing);
       await _unmount(tester);
     });
   });

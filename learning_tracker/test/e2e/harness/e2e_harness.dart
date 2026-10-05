@@ -411,9 +411,6 @@ class E2EHarness {
     final hasSacredWindowOverride = extraOverrides.any(
       (override) => override.origin == currentSacredWindowProvider,
     );
-    final hasTutoredSacredWindowOverride = extraOverrides.any(
-      (override) => override.origin == currentTutoredSacredWindowProvider,
-    );
 
     await _tester.pumpWidget(
       ProviderScope(
@@ -422,7 +419,6 @@ class E2EHarness {
             identity,
             includeDashboardCurriculaOverride: !hasDashboardCurriculaOverride,
             includeSacredWindowOverride: !hasSacredWindowOverride,
-            includeTutoredSacredWindowOverride: !hasTutoredSacredWindowOverride,
           ),
           ...extraOverrides,
         ],
@@ -677,7 +673,6 @@ class E2EHarness {
     E2EIdentity? identity, {
     bool includeDashboardCurriculaOverride = true,
     bool includeSacredWindowOverride = true,
-    bool includeTutoredSacredWindowOverride = true,
   }) {
     final profileId = identity?._resolvedProfileId ?? identity?._seedProfileId;
     final accountId = identity?._resolvedAccountId ?? identity?._seedAccountId;
@@ -729,11 +724,9 @@ class E2EHarness {
       // default. Unpinned, every journey run during Shabbos or Yom Tov lands
       // behind the full-screen lock instead of the screen under test. Keep
       // the app open by default; a journey that exercises the lock supplies
-      // its own override for either provider.
+      // its own currentSacredWindowProvider override.
       if (includeSacredWindowOverride)
         currentSacredWindowProvider.overrideWithValue(null),
-      if (includeTutoredSacredWindowOverride)
-        currentTutoredSacredWindowProvider.overrideWithValue(null),
 
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),

@@ -77,35 +77,26 @@ void main() {
     });
   });
 
-  group('AC-3: no-location fallback (Fri 12:00 to Sun 01:00)', () {
+  group('AC-3: no location means no catch-up card', () {
     final h = constantHistory(newYorkNoLocation);
 
-    test('Saturday only; the window runs to the end of Monday', () {
-      final card = catchUpCardWindowsAt(
-        h,
-        ny.at(_day(2026, 10, 11), hour: 12),
-      ).single;
-      expect(card.lock.startUtc, ny.at(_day(2026, 10, 9), hour: 12));
-      expect(card.lock.endUtc, ny.at(_day(2026, 10, 11), hour: 1));
-      expect(card.lockedDays.map((d) => d.date), ['2026-10-10']);
-      expect(card.lastDay, '2026-10-12');
-    });
-
-    test('available all of Monday, gone at 00:00 Tuesday', () {
-      final tuesday = ny.startOf(_day(2026, 10, 13));
-      expect(
-        catchUpCardWindowsAt(h, tuesday.subtract(civilTick)),
-        hasLength(1),
-      );
-      expect(catchUpCardWindowsAt(h, tuesday), isEmpty);
-    });
-
-    test('none at Sunday 00:30 (still inside the lock)', () {
-      expect(
-        catchUpCardWindowsAt(h, ny.at(_day(2026, 10, 11), hour: 0, minute: 30)),
-        isEmpty,
-      );
-    });
+    test(
+      'there is no lock or catch-up card at any point on Friday/Shabbos',
+      () {
+        expect(
+          catchUpCardWindowsAt(h, ny.at(_day(2026, 10, 9), hour: 16)),
+          isEmpty,
+        );
+        expect(
+          catchUpCardWindowsAt(h, ny.at(_day(2026, 10, 10), hour: 12)),
+          isEmpty,
+        );
+        expect(
+          catchUpCardWindowsAt(h, ny.at(_day(2026, 10, 11), hour: 12)),
+          isEmpty,
+        );
+      },
+    );
   });
 
   group('AC-4: diaspora yom tov chained into Shabbos vs Israel', () {
@@ -218,32 +209,36 @@ void main() {
 
   group('EC-1: learner-local days, not UTC or device days', () {
     test('a zone east of UTC: the card ends at local midnight, not UTC', () {
-      final h = constantHistory(lockSettings(timeZone: 'Pacific/Auckland'));
+      final h = constantHistory(
+        lockSettings(
+          timeZone: 'Pacific/Auckland',
+          latitude: -36.8485,
+          longitude: 174.7633,
+          inIsrael: false,
+        ),
+      );
       final nz = LearnerZone.of('Pacific/Auckland');
-      // Fallback lock Fri 2026-10-09 12:00 → Sun 2026-10-11 01:00 NZ.
+      // Saturday Shabbos in the configured Auckland location.
       final card = catchUpCardWindowsAt(
         h,
         nz.at(_day(2026, 10, 11), hour: 12),
       ).single;
       expect(card.lockedDays.map((d) => d.date), ['2026-10-10']);
-      expect(card.lastDay, '2026-10-12');
-      final tuesday = nz.startOf(_day(2026, 10, 13));
-      // Local Tuesday 00:00 is still Monday in UTC.
-      expect(tuesday.toUtc().day, 12);
-      expect(
-        catchUpCardWindowsAt(h, tuesday.subtract(civilTick)),
-        hasLength(1),
-      );
-      expect(catchUpCardWindowsAt(h, tuesday), isEmpty);
+      expect(card.lastDay, '2026-10-11');
+      final monday = nz.startOf(_day(2026, 10, 12));
+      // Local Monday 00:00 is still Sunday in UTC.
+      expect(monday.toUtc().day, 11);
+      expect(catchUpCardWindowsAt(h, monday.subtract(civilTick)), hasLength(1));
+      expect(catchUpCardWindowsAt(h, monday), isEmpty);
     });
 
     test('across a spring-forward Sunday the card ends at EDT midnight', () {
-      final h = constantHistory(newYorkNoLocation);
+      final h = constantHistory(newYorkLocated);
       final card = catchUpCardWindowsAt(h, DateTime.utc(2026, 3, 8, 18)).single;
       expect(card.lockedDays.map((d) => d.date), ['2026-03-07']);
-      expect(card.lastDay, '2026-03-09');
-      // 00:00 Tuesday EDT (UTC−4), not EST.
-      expect(card.expiresAtUtc, DateTime.utc(2026, 3, 10, 4));
+      expect(card.lastDay, '2026-03-08');
+      // 00:00 Monday EDT (UTC−4), not EST.
+      expect(card.expiresAtUtc, DateTime.utc(2026, 3, 9, 4));
     });
 
     test('a move after the lock: days by the lock-start zone, expiry by the '

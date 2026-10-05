@@ -1,7 +1,7 @@
 /// Whether a Sacred Time lock cover is on screen (DNI-481 AC-1/AC-2).
 ///
-/// The lock covers (`SacredTimeLockOverlay`, `TutoredLearnerLockOverlay`)
-/// engage the moment their lock starts and release only after the lock has
+/// The Sacred Time lock cover engages the moment its lock starts and
+/// releases only after the lock has
 /// ended AND they have discarded every root snack bar and material banner
 /// requested while they were up. Anything that must surface after a lock
 /// (the after-lock location prompt) waits for [lockCoverEngagedProvider]

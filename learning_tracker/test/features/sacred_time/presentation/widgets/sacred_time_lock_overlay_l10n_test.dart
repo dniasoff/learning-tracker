@@ -25,11 +25,31 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/sac
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-SacredWindow _windowOf(SacredWindowKind kind) => SacredWindow(
-  startUtc: DateTime.utc(2026, 5, 15, 18, 0),
-  endUtc: DateTime.utc(2026, 5, 16, 20, 0),
+SacredWindow _windowOf(
+  SacredWindowKind kind, {
+  DateTime? startUtc,
+  DateTime? endUtc,
+  String timeZone = 'America/New_York',
+}) => SacredWindow(
+  startUtc: startUtc ?? DateTime.utc(2026, 5, 15, 18, 0),
+  endUtc: endUtc ?? DateTime.utc(2026, 5, 16, 20, 0),
   kind: kind,
+  timeZone: timeZone,
 );
+
+class _MutableSacredWindow extends CurrentSacredWindow {
+  _MutableSacredWindow(this.current);
+
+  SacredWindow? current;
+
+  @override
+  SacredWindow? build() => current;
+
+  void replace(SacredWindow window) {
+    current = window;
+    state = window;
+  }
+}
 
 Future<void> _pumpOverlay(
   WidgetTester tester, {
@@ -37,11 +57,15 @@ Future<void> _pumpOverlay(
   required bool useHebrewTerms,
   required TransliterationVariant variant,
   Locale locale = const Locale('en'),
+  SacredWindow? window,
+  bool alwaysUse24HourFormat = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        currentSacredWindowProvider.overrideWithValue(_windowOf(kind)),
+        currentSacredWindowProvider.overrideWithValue(
+          window ?? _windowOf(kind),
+        ),
         useHebrewTermsProvider.overrideWithValue(useHebrewTerms),
         currentTransliterationVariantProvider.overrideWithValue(variant),
       ],
@@ -54,7 +78,10 @@ Future<void> _pumpOverlay(
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const SacredTimeLockOverlay(child: SizedBox.expand()),
+        home: MediaQuery(
+          data: MediaQueryData(alwaysUse24HourFormat: alwaysUse24HourFormat),
+          child: const SacredTimeLockOverlay(child: SizedBox.expand()),
+        ),
       ),
     ),
   );
@@ -145,6 +172,98 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  group('SacredTimeLockOverlay — lock window times', () {
+    testWidgets('shows configured-zone start and local 24-hour unlock time', (
+      tester,
+    ) async {
+      await _pumpOverlay(
+        tester,
+        kind: SacredWindowKind.shabbos,
+        useHebrewTerms: false,
+        variant: TransliterationVariant.ashkenazi,
+        alwaysUse24HourFormat: true,
+      );
+
+      // UTC bounds are rendered in the configured America/New_York zone.
+      expect(find.text('Started Fri at 14:00'), findsOneWidget);
+      expect(find.text('Unlocks Sat at 16:00'), findsOneWidget);
+    });
+
+    testWidgets('a chained window displays its final end, in Hebrew RTL', (
+      tester,
+    ) async {
+      await _pumpOverlay(
+        tester,
+        kind: SacredWindowKind.shabbosYomTov,
+        useHebrewTerms: true,
+        variant: TransliterationVariant.ashkenazi,
+        locale: const Locale('he'),
+        window: _windowOf(
+          SacredWindowKind.shabbosYomTov,
+          endUtc: DateTime.utc(2026, 5, 18, 20),
+        ),
+      );
+
+      expect(find.textContaining('התחיל ביום'), findsOneWidget);
+      expect(find.textContaining('הנעילה תסתיים ביום'), findsOneWidget);
+      expect(find.textContaining('Mon'), findsNothing);
+      final unlock = tester.widget<Text>(
+        find.byKey(const Key('sacredTimeLockUnlockTime')),
+      );
+      expect(unlock.data, contains('יום ב׳'));
+      expect(unlock.data, contains('16:00'));
+      expect(
+        Directionality.of(tester.element(find.byType(SacredTimeLockOverlay))),
+        TextDirection.rtl,
+      );
+    });
+
+    testWidgets(
+      'refreshes displayed times when a location edit recomputes the window',
+      (tester) async {
+        final source = _MutableSacredWindow(
+          _windowOf(SacredWindowKind.shabbos),
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              currentSacredWindowProvider.overrideWith(() => source),
+              useHebrewTermsProvider.overrideWithValue(false),
+              currentTransliterationVariantProvider.overrideWithValue(
+                TransliterationVariant.ashkenazi,
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: SacredTimeLockOverlay(child: SizedBox.expand()),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Unlocks Sat at 4:00 PM'), findsOneWidget);
+
+        // The governed location save refreshes the shared lock window. The
+        // overlay rebuilds from the replacement bounds and zone immediately.
+        source.replace(
+          _windowOf(
+            SacredWindowKind.shabbos,
+            endUtc: DateTime.utc(2026, 5, 18, 21),
+            timeZone: 'Europe/London',
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Unlocks Mon at 10:00 PM'), findsOneWidget);
+        expect(find.text('Unlocks Sat at 4:00 PM'), findsNothing);
+      },
+    );
   });
 
   // DNI-481 AC-1 edge row: accessibility and display resilience — the

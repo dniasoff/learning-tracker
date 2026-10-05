@@ -7,12 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/data/firestore/account_firebase.dart';
-import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
-import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
 import 'package:learning_tracker/features/sacred_time/domain/services/sacred_lock.dart';
@@ -22,7 +19,6 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
-import '../../../../helpers/creating_device_settings_fakes.dart';
 import '../../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 
@@ -146,37 +142,59 @@ void main() {
       expect(c.read(accountLockHistoriesProvider), [lakewoodH, jerusalemH]);
     });
 
-    test(
-      'a learner whose settings load or fail is judged fail-closed',
-      () async {
-        final c = _container(
-          extra: [
-            learnerLockSettingsProvider(
-              _a,
-            ).overrideWithValue(const AsyncLoading()),
-            learnerLockSettingsProvider(_b).overrideWithValue(
-              AsyncError(StateError('unreadable'), StackTrace.empty),
-            ),
-          ],
-        );
-        await _scopes(c);
-        expect(c.read(accountLockHistoriesProvider), [
-          failClosedSettingsHistory(profileUlid),
-          failClosedSettingsHistory(_sibling),
-        ]);
-      },
-    );
+    // Product ruling 2026-10-05: settings that are not readable (yet) are
+    // NOT locked; the lock is judged again when they arrive.
+    test('a learner whose settings load or fail contributes no lock', () async {
+      final c = _container(
+        extra: [
+          learnerLockSettingsProvider(
+            _a,
+          ).overrideWithValue(const AsyncLoading()),
+          learnerLockSettingsProvider(_b).overrideWithValue(
+            AsyncError(StateError('unreadable'), StackTrace.empty),
+          ),
+        ],
+      );
+      await _scopes(c);
+      expect(c.read(accountLockHistoriesProvider), isEmpty);
+      expect(
+        c.read(deviceLockPredicateProvider)(DateTime.utc(2026, 9, 5, 20)),
+        isFalse,
+      );
+    });
 
-    test('the whole account is fail-closed while its learners load', () {
+    test('not locked while settings load, then judged again as soon as '
+        'they arrive', () async {
+      final settings = StreamController<LearnerSettingsHistory>();
+      addTearDown(settings.close);
+      final c = _container(
+        profiles: const [profileUlid],
+        extra: [
+          learnerLockSettingsProvider(
+            _a,
+          ).overrideWith((ref) => settings.stream),
+        ],
+      );
+      await _scopes(c);
+      final histories = c.listen(accountLockHistoriesProvider, (_, _) {});
+      addTearDown(histories.close);
+      final saturdayEvening = DateTime.utc(2026, 9, 5, 20);
+      expect(sacredWindowAt(histories.read(), saturdayEvening), isNull);
+
+      settings.add(lakewoodH);
+      await pumpEventQueue();
+      expect(histories.read(), [lakewoodH]);
+      expect(sacredWindowAt(histories.read(), saturdayEvening), isNotNull);
+    });
+
+    test('no lock while the account itself loads', () {
       final never = Completer<String?>();
       final c = ProviderContainer.test(
         overrides: [
           ownAccountPathUidProvider.overrideWith((ref) => never.future),
         ],
       );
-      expect(c.read(accountLockHistoriesProvider), [
-        failClosedSettingsHistory(unknownAccountLearner),
-      ]);
+      expect(c.read(accountLockHistoriesProvider), isEmpty);
     });
 
     test('signed out: no history, so no lock', () async {
@@ -192,190 +210,109 @@ void main() {
       );
     });
 
-    test('LearnerSettingsHistory equality keeps the list stable', () {
-      expect(
-        failClosedSettingsHistory('x'),
-        LearnerSettingsHistory.constant(
-          failClosedSettingsHistory('x').spans.single.settings,
-        ),
-      );
-    });
-  });
-
-  // Stuck Sacred-Time lock hotfix (1.0.74): every profile created before
-  // learner settings existed has no `time_zone`, so its settings errored
-  // and the overlay judged it in an unresolved zone (every UTC offset).
-  group('settings unavailable: judged in the device zone '
-      '(Europe/London)', () {
-    final londonDevice = creatingDeviceSettingsOverride(
-      FakeCreatingDeviceSettingsSource(
-        const CreatingDeviceSettings(
-          timeZone: 'Europe/London',
-          inIsrael: false,
-        ),
-      ),
-    );
-    final weekday = DateTime.utc(2026, 10, 6, 12);
-    final shabbos = DateTime.utc(2026, 10, 10, 12);
-    final afterSimchatTorah = DateTime.utc(2026, 10, 5, 1);
-
-    Future<ProviderContainer> settled(ProviderContainer c) async {
-      await _scopes(c);
-      final zone = c.listen(deviceLockZoneProvider, (_, _) {});
-      addTearDown(zone.close);
-      for (var i = 0; i < 10 && zone.read().isLoading; i++) {
-        await pumpEventQueue();
-      }
-      return c;
-    }
-
-    for (final (name, value) in <(String, AsyncValue<LearnerSettingsHistory>)>[
-      (
-        'a legacy profile with no time_zone (undecodable settings)',
-        const AsyncError(
-          StorageFormatException('LearnerSettings', 'time_zone', 'missing'),
-          StackTrace.empty,
-        ),
-      ),
-      (
-        'a settings source that is not ready',
-        const AsyncError(
-          LearnerSettingsNotReadyException(profileUlid),
-          StackTrace.empty,
-        ),
-      ),
-      ('settings still loading', const AsyncLoading()),
-    ]) {
-      test('$name: unlocked on a weekday and after Simchat Torah at '
-          '01:00Z, locked on Shabbos in London time', () async {
-        final c = await settled(
-          _container(
-            profiles: const [profileUlid],
-            extra: [
-              londonDevice,
-              learnerLockSettingsProvider(_a).overrideWithValue(value),
-            ],
-          ),
-        );
-        expect(c.read(accountLockHistoriesProvider), [
-          failClosedSettingsHistory(profileUlid, deviceZone: 'Europe/London'),
-        ]);
-        final isLocked = c.read(deviceLockPredicateProvider);
-        expect(isLocked(weekday), isFalse);
-        expect(isLocked(afterSimchatTorah), isFalse);
-        expect(isLocked(shabbos), isTrue);
-        expect(
-          sacredWindowAt(c.read(accountLockHistoriesProvider), shabbos),
-          isNotNull,
-        );
-      });
-    }
-
-    test('the whole account while its learners load: the device zone', () {
-      final never = Completer<String?>();
-      final c = ProviderContainer.test(
-        overrides: [
-          londonDevice,
-          ownAccountPathUidProvider.overrideWith((ref) => never.future),
-        ],
-      );
-      final zone = c.listen(deviceLockZoneProvider, (_, _) {});
-      addTearDown(zone.close);
-      return pumpEventQueue().then((_) {
-        expect(c.read(accountLockHistoriesProvider), [
-          failClosedSettingsHistory(
-            unknownAccountLearner,
-            deviceZone: 'Europe/London',
-          ),
-        ]);
-        expect(c.read(deviceLockPredicateProvider)(weekday), isFalse);
-        expect(c.read(deviceLockPredicateProvider)(shabbos), isTrue);
-      });
-    });
-
-    test('an upgraded account with no named-app session yet '
-        '(AccountNotAuthenticatedException): no learner drives the lock, '
-        'so the app opens', () async {
-      final c = ProviderContainer.test(
-        overrides: [
-          londonDevice,
-          activeAccountFirebaseProvider.overrideWith(
-            (ref) async => throw const AccountNotAuthenticatedException('acc'),
-          ),
-        ],
-      );
-      final scopes = await _scopes(c);
-      expect(scopes.requireValue, isEmpty);
-      expect(c.read(deviceLockPredicateProvider)(afterSimchatTorah), isFalse);
-      expect(c.read(deviceLockPredicateProvider)(weekday), isFalse);
-    });
-
-    test('a tutored talmid keeps the unresolved zone (the tutor device zone '
-        'is not the talmid\'s)', () {
+    test('a legacy profile with undecodable settings is not locked, '
+        'even on Shabbos or after Simchat Torah', () async {
       final c = _container(
-        tutored: true,
+        profiles: const [profileUlid],
         extra: [
-          londonDevice,
-          learnerLockSettingsProvider(
-            _t,
-          ).overrideWithValue(const AsyncLoading()),
+          learnerLockSettingsProvider(_a).overrideWithValue(
+            const AsyncError(
+              StorageFormatException('LearnerSettings', 'time_zone', 'missing'),
+              StackTrace.empty,
+            ),
+          ),
         ],
       );
-      expect(
-        c.read(tutoredLearnerLockHistoryProvider),
-        failClosedSettingsHistory(_talmid),
-      );
-    });
-  });
-
-  group('tutoredLearnerLockHistoryProvider (AD-36 tutor rule)', () {
-    test('null outside a tutored session', () {
-      expect(_container().read(tutoredLearnerLockHistoryProvider), isNull);
+      await _scopes(c);
+      final isLocked = c.read(deviceLockPredicateProvider);
+      expect(isLocked(DateTime.utc(2026, 10, 5, 1)), isFalse);
+      expect(isLocked(DateTime.utc(2026, 10, 10, 12)), isFalse);
     });
 
-    test("the talmid's own history in a tutored session, and it stays out "
-        'of the account histories', () async {
-      final lakewoodH = constantHistory(lakewood);
-      final jerusalemH = constantHistory(jerusalem);
+    test('an own learner with no location is never locked (Friday '
+        'afternoon, Saturday, Saturday night)', () async {
       final c = _container(
-        tutored: true,
+        profiles: const [profileUlid],
         extra: [
           learnerLockSettingsProvider(
             _a,
-          ).overrideWithValue(AsyncData(jerusalemH)),
-          learnerLockSettingsProvider(
-            _b,
-          ).overrideWithValue(AsyncData(jerusalemH)),
-          learnerLockSettingsProvider(
-            _t,
-          ).overrideWithValue(AsyncData(lakewoodH)),
+          ).overrideWithValue(AsyncData(constantHistory(newYorkNoLocation))),
         ],
       );
       await _scopes(c);
-      expect(c.read(tutoredLearnerLockHistoryProvider), lakewoodH);
-      expect(c.read(accountLockHistoriesProvider), [jerusalemH, jerusalemH]);
-      // Saturday 20:00Z: Lakewood (the talmid) is locked, Jerusalem (the
-      // tutor's own learners) is not — the device predicate stays open.
-      expect(
-        c.read(deviceLockPredicateProvider)(DateTime.utc(2026, 9, 5, 20)),
-        isFalse,
+      final isLocked = c.read(deviceLockPredicateProvider);
+      for (final t in [
+        DateTime.utc(2026, 9, 4, 18),
+        DateTime.utc(2026, 9, 5, 12),
+        DateTime.utc(2026, 9, 5, 23),
+        DateTime.utc(2026, 10, 3, 12),
+      ]) {
+        expect(isLocked(t), isFalse, reason: '$t');
+      }
+    });
+  });
+
+  // Product ruling 2026-10-05: the lock follows the PERSON USING THE
+  // DEVICE. In a tutored session that is the tutor's own account.
+  group('tutored session: the tutor\'s own lock decides', () {
+    final saturdayEvening = DateTime.utc(2026, 9, 5, 20);
+
+    test('a talmid locked in Lakewood never locks a tutor with no '
+        'location', () async {
+      final c = _container(
+        tutored: true,
+        profiles: const [profileUlid],
+        extra: [
+          learnerLockSettingsProvider(
+            _a,
+          ).overrideWithValue(AsyncData(constantHistory(newYorkNoLocation))),
+          learnerLockSettingsProvider(
+            _t,
+          ).overrideWithValue(AsyncData(constantHistory(lakewood))),
+        ],
       );
+      await _scopes(c);
+      expect(isLockedAt([constantHistory(lakewood)], saturdayEvening), isTrue);
+      expect(c.read(deviceLockPredicateProvider)(saturdayEvening), isFalse);
     });
 
-    test("fail closed while the talmid's settings load or fail", () {
-      for (final value in <AsyncValue<LearnerSettingsHistory>>[
-        const AsyncLoading(),
-        AsyncError(StateError('unreadable'), StackTrace.empty),
-      ]) {
-        final c = _container(
-          tutored: true,
-          extra: [learnerLockSettingsProvider(_t).overrideWithValue(value)],
-        );
-        expect(
-          c.read(tutoredLearnerLockHistoryProvider),
-          failClosedSettingsHistory(_talmid),
-        );
-      }
+    test('a tutor-only account (no learner profile) is never locked', () async {
+      final c = _container(
+        tutored: true,
+        profiles: const [],
+        extra: [
+          learnerLockSettingsProvider(
+            _t,
+          ).overrideWithValue(AsyncData(constantHistory(lakewood))),
+        ],
+      );
+      await _scopes(c);
+      expect(c.read(accountLockHistoriesProvider), isEmpty);
+      expect(c.read(deviceLockPredicateProvider)(saturdayEvening), isFalse);
+    });
+
+    test("a tutor in their own Shabbos is locked by the tutor's window, "
+        "whatever the talmid's", () async {
+      final c = _container(
+        tutored: true,
+        profiles: const [profileUlid],
+        extra: [
+          learnerLockSettingsProvider(
+            _a,
+          ).overrideWithValue(AsyncData(constantHistory(lakewood))),
+          learnerLockSettingsProvider(
+            _t,
+          ).overrideWithValue(AsyncData(constantHistory(newYorkNoLocation))),
+        ],
+      );
+      await _scopes(c);
+      final window = sacredWindowAt(
+        c.read(accountLockHistoriesProvider),
+        saturdayEvening,
+      );
+      expect(window, isNotNull);
+      expect(window!.profileId, profileUlid);
+      expect(c.read(deviceLockPredicateProvider)(saturdayEvening), isTrue);
     });
   });
 

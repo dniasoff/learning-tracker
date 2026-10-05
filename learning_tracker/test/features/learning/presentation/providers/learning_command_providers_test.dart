@@ -310,8 +310,7 @@ void main() {
       expect(batch.entry.at, engineAt(600));
     });
 
-    test('the gate reads learnerLockSettingsProvider: an unreadable '
-        'learner settings doc fails a capture closed (DNI-470 AC-7)', () async {
+    test('unreadable settings do not create a Sacred-Time lock', () async {
       final container = ProviderContainer.test(
         overrides: [
           ...ready(lockSettings: false),
@@ -331,7 +330,7 @@ void main() {
           source: LearningEvent.sourceMain,
           dateState: DateState.dated,
         ),
-        isA<CaptureLocked>(),
+        const CaptureResult.rejected(CaptureRejection.notSaved),
       );
       expect(port.attempts, isEmpty);
     });
@@ -394,8 +393,7 @@ void main() {
       });
     });
 
-    test('fails closed (locked, nothing written) while the settings '
-        'history is unavailable', () async {
+    test('unavailable settings do not report a Sacred-Time lock', () async {
       final container = ProviderContainer.test(
         overrides: [
           ...ready(lockSettings: false),
@@ -415,7 +413,7 @@ void main() {
           source: LearningEvent.sourceMain,
           dateState: DateState.dated,
         ),
-        isA<CaptureLocked>(),
+        const CaptureResult.rejected(CaptureRejection.notSaved),
       );
       expect(port.attempts, isEmpty);
     });

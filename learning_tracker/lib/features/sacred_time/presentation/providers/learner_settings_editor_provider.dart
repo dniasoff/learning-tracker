@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -22,6 +23,7 @@ import 'package:learning_tracker/features/sacred_time/data/services/location_ser
 import 'package:learning_tracker/features/sacred_time/domain/learner_settings_change.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/location_service_provider.dart';
 
@@ -66,39 +68,62 @@ typedef LearnerLocationDetectResult = ({
   LearnerSettingsEditOutcome? outcome,
 });
 
-/// Edits the active learner's lock settings through governed commands.
+/// Where an edit is written: the governed apply and the learner it edits.
+typedef _SettingsTarget = ({
+  Future<CaptureResult> Function(GovernedAction) apply,
+  String profileId,
+});
+
+/// Edits a learner's lock settings through governed commands (the active
+/// learner's, or one given learner's with [LearnerSettingsEditor.forLearner]).
 final class LearnerSettingsEditor {
-  /// Creates the editor over its seams.
+  /// Creates the editor over its seams: the ACTIVE learner's [commands]
+  /// and [scope].
   LearnerSettingsEditor({
     required Future<LearningCommands?> Function() commands,
     required Future<LearnerScope?> Function() scope,
     required LocationService locationService,
     required DeviceTimeZoneReader deviceTimeZone,
-  }) : _commands = commands,
-       _scope = scope,
+  }) : _resolve = (() async {
+         final c = await commands();
+         final s = await scope();
+         if (c == null || s == null) return null;
+         return (apply: c.applyGovernedChange, profileId: s.profileId);
+       }),
        _locationService = locationService,
        _deviceTimeZone = deviceTimeZone;
 
-  final Future<LearningCommands?> Function() _commands;
-  final Future<LearnerScope?> Function() _scope;
+  /// An editor of ONE learner through [governed] commands bound to
+  /// [profileId] (the lock overlay's "change location" action, which
+  /// writes to the learner whose lock is shown, not the active one).
+  LearnerSettingsEditor.forLearner({
+    required Future<GovernedLearningCommands?> Function() governed,
+    required String profileId,
+    required LocationService locationService,
+    required DeviceTimeZoneReader deviceTimeZone,
+  }) : _resolve = (() async {
+         final g = await governed();
+         if (g == null) return null;
+         return (apply: g.applyGovernedChange, profileId: profileId);
+       }),
+       _locationService = locationService,
+       _deviceTimeZone = deviceTimeZone;
+
+  final Future<_SettingsTarget?> Function() _resolve;
   final LocationService _locationService;
   final DeviceTimeZoneReader _deviceTimeZone;
 
   /// Writes [edit] onto the active learner as one governed change.
   Future<LearnerSettingsEditOutcome> apply(LearnerSettingsEdit edit) async {
-    final LearningCommands? commands;
-    final LearnerScope? scope;
+    final _SettingsTarget? target;
     try {
-      commands = await _commands();
-      scope = await _scope();
+      target = await _resolve();
     } on Object {
       return LearnerSettingsEditOutcome.unavailable;
     }
-    if (commands == null || scope == null) {
-      return LearnerSettingsEditOutcome.unavailable;
-    }
-    final result = await commands.applyGovernedChange(
-      learnerSettingsAction(scope.profileId, edit),
+    if (target == null) return LearnerSettingsEditOutcome.unavailable;
+    final result = await target.apply(
+      learnerSettingsAction(target.profileId, edit),
     );
     return switch (result) {
       CaptureSuccess() => LearnerSettingsEditOutcome.saved,
@@ -158,3 +183,31 @@ final learnerSettingsEditorProvider = Provider<LearnerSettingsEditor>(
     deviceTimeZone: ref.watch(deviceTimeZoneReaderProvider),
   ),
 );
+
+/// The [LearnerSettingsEditor] of own learner [profileId], for the lock
+/// overlay's "change location" action (product ruling 2026-10-05): it
+/// writes to the learner whose lock is shown — one of the signed-in
+/// account's own profiles ([lockDrivingScopesProvider]), so in a tutored
+/// session the TUTOR's own, never the talmid's. Unavailable when
+/// [profileId] is not one of them.
+final lockLocationEditorProvider = Provider.autoDispose
+    .family<LearnerSettingsEditor, String>((ref, profileId) {
+      LearnerScope? scope;
+      for (final s
+          in ref.watch(lockDrivingScopesProvider).value ??
+              const <LearnerScope>[]) {
+        if (s.profileId == profileId) scope = s;
+      }
+      final governed = scope == null
+          ? null
+          : ref.listen(
+              lockLocationGovernedCommandsProvider(scope).future,
+              (_, _) {},
+            );
+      return LearnerSettingsEditor.forLearner(
+        governed: () async => governed?.read(),
+        profileId: profileId,
+        locationService: ref.watch(locationServiceProvider),
+        deviceTimeZone: ref.watch(deviceTimeZoneReaderProvider),
+      );
+    });

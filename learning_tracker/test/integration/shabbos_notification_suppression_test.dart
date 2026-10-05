@@ -5,9 +5,8 @@
 ///
 ///   AC-5 (1.19) — a reminder inside a lock is suppressed, at the start, in
 ///   the middle and at the end; an unlocked fire time stays eligible.
-///   NFR-6 — a learner with NO location is locked by the fallback window
-///   (Fri 12:00 → Sun 01:00 learner-local): the old fail-open "no location,
-///   no suppression" path is gone.
+///   Product ruling 2026-10-05 — no location means no Sacred-Time lock or
+///   reminder suppression; a configured location still suppresses normally.
 library;
 
 import 'package:flutter/material.dart';
@@ -95,24 +94,27 @@ void main() {
     });
   });
 
-  group('NFR-6 — no location fails closed', () {
-    test('a learner with no location is locked Fri 12:00 → Sun 01:00 '
-        'learner-local: a Friday 13:00 reminder is suppressed', () {
+  group('no configured location does not suppress reminders', () {
+    test('Friday and Shabbos reminders remain eligible', () {
       final isLocked = _scheduler([
         constantHistory(newYorkNoLocation),
       ]).isLockedAt!;
       // Friday 1 May 2026, 13:00 EDT.
-      expect(isLocked(DateTime.utc(2026, 5, 1, 17)), isTrue);
-      // Thursday 13:00 EDT is open.
-      expect(isLocked(DateTime.utc(2026, 4, 30, 17)), isFalse);
+      expect(isLocked(DateTime.utc(2026, 5, 1, 17)), isFalse);
+      expect(isLocked(DateTime.utc(2026, 5, 2, 19)), isFalse);
     });
 
-    test('a sibling with no location suppresses the whole device (union)', () {
-      final isLocked = _scheduler([
-        lakewoodH,
-        constantHistory(newYorkNoLocation),
-      ]).isLockedAt!;
-      expect(isLocked(DateTime.utc(2026, 5, 1, 17)), isTrue);
-    });
+    test(
+      'a sibling without location adds nothing beside a configured lock',
+      () {
+        final isLocked = _scheduler([
+          lakewoodH,
+          constantHistory(newYorkNoLocation),
+        ]).isLockedAt!;
+        // 19:45 EDT in Lakewood, after that configured location's candle
+        // lighting; the sibling's absent location contributes no window.
+        expect(isLocked(DateTime.utc(2026, 5, 1, 23, 45)), isTrue);
+      },
+    );
   });
 }

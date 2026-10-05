@@ -46,6 +46,7 @@ final class TutorSubTrackRig {
     final preflight = TutorWritePreflight(
       selection: selection,
       settingsHistory: () async => c0SettingsHistory(),
+      lockHistories: () async => [c0SettingsHistory()],
       gate: FakeCaptureGate.open(),
       isOnline: () => _online,
       clock: () => tutorFixtureNow,

@@ -1,7 +1,7 @@
 // Mirror test for
 // `lib/features/sacred_time/presentation/widgets/learner_location_prompt.dart`
-// (DNI-481 AC-2, UX-DR-99): after a fail-closed lock of a learner with no
-// location, the parent is prompted to set it.
+// (DNI-481 AC-2, UX-DR-99): after a configured-location lock, a learner who
+// removed their location can be prompted to set it again.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
@@ -41,10 +42,18 @@ LearnerProfileEntity _profile(String id, String name) => LearnerProfileEntity(
   updatedAt: DateTime.utc(2026),
 );
 
-/// Monday 2026-09-07 12:00Z: the no-location New York Shabbos lock ended
-/// Sunday 01:00 EDT (05:00Z).
+/// Monday 2026-09-07 12:00Z: the prior configured-location Shabbos has ended.
 final _monday = DateTime.utc(2026, 9, 7, 12);
-final _lockEnd = DateTime.utc(2026, 9, 6, 5);
+final _historyAfterLocationRemoved = movedHistory(
+  lakewood,
+  DateTime.utc(2026, 9, 6, 12),
+  newYorkNoLocation,
+);
+final _lockEnd = lockWindows(
+  constantHistory(lakewood),
+  _monday.subtract(const Duration(days: 8)),
+  _monday,
+).single.endUtc;
 
 class _Tutored extends ActiveTutoredProfileSelection {
   @override
@@ -103,9 +112,11 @@ Future<List<LearnerLocationPrompt>> _read(List<Override> overrides) async {
 void main() {
   group('learnerLocationPromptsProvider', () {
     test(
-      'a learner with no location whose lock has ended is prompted',
+      'a missing location is prompted after a recent configured lock',
       () async {
-        final prompts = await _read(_overrides());
+        final prompts = await _read(
+          _overrides(history: _historyAfterLocationRemoved),
+        );
         expect(prompts, [
           LearnerLocationPrompt(profileId: profileUlid, lockEndUtc: _lockEnd),
         ]);
@@ -120,10 +131,14 @@ void main() {
       );
     });
 
-    test('multi-learner: a sibling with no location that drove the lock is '
+    test('multi-learner: a sibling missing location after its lock is '
         'prompted for by its own identity, not the active learner', () async {
       final prompts = await _read(
-        _overrides(withSibling: true, history: constantHistory(lakewood)),
+        _overrides(
+          withSibling: true,
+          history: constantHistory(lakewood),
+          siblingHistory: _historyAfterLocationRemoved,
+        ),
       );
       expect(prompts, [
         LearnerLocationPrompt(profileId: _sibling, lockEndUtc: _lockEnd),
@@ -132,9 +147,15 @@ void main() {
     });
 
     test(
-      'multi-learner: every own learner with no location is prompted',
+      'multi-learner: every own learner missing location after a prior lock is prompted',
       () async {
-        final prompts = await _read(_overrides(withSibling: true));
+        final prompts = await _read(
+          _overrides(
+            withSibling: true,
+            history: _historyAfterLocationRemoved,
+            siblingHistory: _historyAfterLocationRemoved,
+          ),
+        );
         expect(prompts.map((p) => p.profileId), [profileUlid, _sibling]);
       },
     );
@@ -157,7 +178,9 @@ void main() {
     });
 
     test('no prompt while a lock cover is still up (releasing)', () async {
-      final container = ProviderContainer.test(overrides: _overrides());
+      final container = ProviderContainer.test(
+        overrides: _overrides(history: _historyAfterLocationRemoved),
+      );
       final sub = container.listen(learnerLocationPromptsProvider, (_, _) {});
       addTearDown(sub.close);
       final profiles = container.listen(profileListStreamProvider, (_, _) {});
@@ -177,9 +200,15 @@ void main() {
       List<Override> overrides,
     ) async {
       final opened = <LearnerLocationPrompt>[];
+      final container = ProviderContainer(overrides: overrides);
+      addTearDown(container.dispose);
+      final profiles = container.listen(profileListStreamProvider, (_, _) {});
+      addTearDown(profiles.close);
+      await container.read(profileListStreamProvider.future);
+      container.read(learnerLocationPromptsProvider);
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: overrides,
+        UncontrolledProviderScope(
+          container: container,
           child: MaterialApp(
             scaffoldMessengerKey: rootScaffoldMessengerKey,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -201,9 +230,12 @@ void main() {
 
     testWidgets('shows the prompt once, naming the learner; its action opens '
         'the location picker for that learner', (tester) async {
-      final opened = await pumpListener(tester, _overrides());
+      final opened = await pumpListener(
+        tester,
+        _overrides(history: _historyAfterLocationRemoved),
+      );
 
-      expect(find.textContaining('Avi has no location'), findsOneWidget);
+      expect(find.textContaining("Avi's location isn't set"), findsOneWidget);
       await tester.tap(find.text('Set location'));
       await tester.pump();
       expect(opened, [
@@ -215,10 +247,14 @@ void main() {
         'identity to the location picker', (tester) async {
       final opened = await pumpListener(
         tester,
-        _overrides(withSibling: true, history: constantHistory(lakewood)),
+        _overrides(
+          withSibling: true,
+          history: constantHistory(lakewood),
+          siblingHistory: _historyAfterLocationRemoved,
+        ),
       );
 
-      expect(find.textContaining('Bina has no location'), findsOneWidget);
+      expect(find.textContaining("Bina's location isn't set"), findsOneWidget);
       await tester.tap(find.text('Set location'));
       await tester.pump();
       expect(opened.single.profileId, _sibling);
@@ -233,9 +269,15 @@ void main() {
         kind: SacredWindowKind.shabbos,
       );
       final container = ProviderContainer(
-        overrides: _overrides(window: lockedWindow),
+        overrides: _overrides(
+          window: lockedWindow,
+          history: _historyAfterLocationRemoved,
+        ),
       );
       addTearDown(container.dispose);
+      final profiles = container.listen(profileListStreamProvider, (_, _) {});
+      addTearDown(profiles.close);
+      await container.read(profileListStreamProvider.future);
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -258,7 +300,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      container.updateOverrides(_overrides());
+      container.updateOverrides(
+        _overrides(history: _historyAfterLocationRemoved),
+      );
       for (var i = 0; i < 4; i++) {
         await tester.pump();
       }
@@ -266,7 +310,7 @@ void main() {
 
       expect(find.text('HOME'), findsOneWidget);
       expect(find.text('DURING LOCK'), findsNothing);
-      expect(find.textContaining('Avi has no location'), findsOneWidget);
+      expect(find.textContaining("Avi's location isn't set"), findsOneWidget);
     });
   });
 

@@ -14,7 +14,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SacredWindow {
 
- DateTime get startUtc; DateTime get endUtc; SacredWindowKind get kind;
+ DateTime get startUtc; DateTime get endUtc; SacredWindowKind get kind;/// The learner whose lock this is (the one the overlay's "change
+/// location" action edits); null when unknown.
+ String? get profileId;/// IANA time zone for rendering the window's UTC bounds as local times.
+ String get timeZone;
 /// Create a copy of SacredWindow
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +28,16 @@ $SacredWindowCopyWith<SacredWindow> get copyWith => _$SacredWindowCopyWithImpl<S
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SacredWindow&&(identical(other.startUtc, startUtc) || other.startUtc == startUtc)&&(identical(other.endUtc, endUtc) || other.endUtc == endUtc)&&(identical(other.kind, kind) || other.kind == kind));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SacredWindow&&(identical(other.startUtc, startUtc) || other.startUtc == startUtc)&&(identical(other.endUtc, endUtc) || other.endUtc == endUtc)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.timeZone, timeZone) || other.timeZone == timeZone));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,startUtc,endUtc,kind);
+int get hashCode => Object.hash(runtimeType,startUtc,endUtc,kind,profileId,timeZone);
 
 @override
 String toString() {
-  return 'SacredWindow(startUtc: $startUtc, endUtc: $endUtc, kind: $kind)';
+  return 'SacredWindow(startUtc: $startUtc, endUtc: $endUtc, kind: $kind, profileId: $profileId, timeZone: $timeZone)';
 }
 
 
@@ -45,7 +48,7 @@ abstract mixin class $SacredWindowCopyWith<$Res>  {
   factory $SacredWindowCopyWith(SacredWindow value, $Res Function(SacredWindow) _then) = _$SacredWindowCopyWithImpl;
 @useResult
 $Res call({
- DateTime startUtc, DateTime endUtc, SacredWindowKind kind
+ DateTime startUtc, DateTime endUtc, SacredWindowKind kind, String? profileId, String timeZone
 });
 
 
@@ -62,12 +65,14 @@ class _$SacredWindowCopyWithImpl<$Res>
 
 /// Create a copy of SacredWindow
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? startUtc = null,Object? endUtc = null,Object? kind = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? startUtc = null,Object? endUtc = null,Object? kind = null,Object? profileId = freezed,Object? timeZone = null,}) {
   return _then(_self.copyWith(
 startUtc: null == startUtc ? _self.startUtc : startUtc // ignore: cast_nullable_to_non_nullable
 as DateTime,endUtc: null == endUtc ? _self.endUtc : endUtc // ignore: cast_nullable_to_non_nullable
 as DateTime,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
-as SacredWindowKind,
+as SacredWindowKind,profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
+as String?,timeZone: null == timeZone ? _self.timeZone : timeZone // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -152,10 +157,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DateTime startUtc,  DateTime endUtc,  SacredWindowKind kind)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DateTime startUtc,  DateTime endUtc,  SacredWindowKind kind,  String? profileId,  String timeZone)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SacredWindow() when $default != null:
-return $default(_that.startUtc,_that.endUtc,_that.kind);case _:
+return $default(_that.startUtc,_that.endUtc,_that.kind,_that.profileId,_that.timeZone);case _:
   return orElse();
 
 }
@@ -173,10 +178,10 @@ return $default(_that.startUtc,_that.endUtc,_that.kind);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DateTime startUtc,  DateTime endUtc,  SacredWindowKind kind)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DateTime startUtc,  DateTime endUtc,  SacredWindowKind kind,  String? profileId,  String timeZone)  $default,) {final _that = this;
 switch (_that) {
 case _SacredWindow():
-return $default(_that.startUtc,_that.endUtc,_that.kind);case _:
+return $default(_that.startUtc,_that.endUtc,_that.kind,_that.profileId,_that.timeZone);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -193,10 +198,10 @@ return $default(_that.startUtc,_that.endUtc,_that.kind);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DateTime startUtc,  DateTime endUtc,  SacredWindowKind kind)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DateTime startUtc,  DateTime endUtc,  SacredWindowKind kind,  String? profileId,  String timeZone)?  $default,) {final _that = this;
 switch (_that) {
 case _SacredWindow() when $default != null:
-return $default(_that.startUtc,_that.endUtc,_that.kind);case _:
+return $default(_that.startUtc,_that.endUtc,_that.kind,_that.profileId,_that.timeZone);case _:
   return null;
 
 }
@@ -208,12 +213,17 @@ return $default(_that.startUtc,_that.endUtc,_that.kind);case _:
 
 
 class _SacredWindow implements SacredWindow {
-  const _SacredWindow({required this.startUtc, required this.endUtc, required this.kind});
+  const _SacredWindow({required this.startUtc, required this.endUtc, required this.kind, this.profileId, this.timeZone = 'UTC'});
   
 
 @override final  DateTime startUtc;
 @override final  DateTime endUtc;
 @override final  SacredWindowKind kind;
+/// The learner whose lock this is (the one the overlay's "change
+/// location" action edits); null when unknown.
+@override final  String? profileId;
+/// IANA time zone for rendering the window's UTC bounds as local times.
+@override@JsonKey() final  String timeZone;
 
 /// Create a copy of SacredWindow
 /// with the given fields replaced by the non-null parameter values.
@@ -225,16 +235,16 @@ _$SacredWindowCopyWith<_SacredWindow> get copyWith => __$SacredWindowCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SacredWindow&&(identical(other.startUtc, startUtc) || other.startUtc == startUtc)&&(identical(other.endUtc, endUtc) || other.endUtc == endUtc)&&(identical(other.kind, kind) || other.kind == kind));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SacredWindow&&(identical(other.startUtc, startUtc) || other.startUtc == startUtc)&&(identical(other.endUtc, endUtc) || other.endUtc == endUtc)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.profileId, profileId) || other.profileId == profileId)&&(identical(other.timeZone, timeZone) || other.timeZone == timeZone));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,startUtc,endUtc,kind);
+int get hashCode => Object.hash(runtimeType,startUtc,endUtc,kind,profileId,timeZone);
 
 @override
 String toString() {
-  return 'SacredWindow(startUtc: $startUtc, endUtc: $endUtc, kind: $kind)';
+  return 'SacredWindow(startUtc: $startUtc, endUtc: $endUtc, kind: $kind, profileId: $profileId, timeZone: $timeZone)';
 }
 
 
@@ -245,7 +255,7 @@ abstract mixin class _$SacredWindowCopyWith<$Res> implements $SacredWindowCopyWi
   factory _$SacredWindowCopyWith(_SacredWindow value, $Res Function(_SacredWindow) _then) = __$SacredWindowCopyWithImpl;
 @override @useResult
 $Res call({
- DateTime startUtc, DateTime endUtc, SacredWindowKind kind
+ DateTime startUtc, DateTime endUtc, SacredWindowKind kind, String? profileId, String timeZone
 });
 
 
@@ -262,12 +272,14 @@ class __$SacredWindowCopyWithImpl<$Res>
 
 /// Create a copy of SacredWindow
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? startUtc = null,Object? endUtc = null,Object? kind = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? startUtc = null,Object? endUtc = null,Object? kind = null,Object? profileId = freezed,Object? timeZone = null,}) {
   return _then(_SacredWindow(
 startUtc: null == startUtc ? _self.startUtc : startUtc // ignore: cast_nullable_to_non_nullable
 as DateTime,endUtc: null == endUtc ? _self.endUtc : endUtc // ignore: cast_nullable_to_non_nullable
 as DateTime,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
-as SacredWindowKind,
+as SacredWindowKind,profileId: freezed == profileId ? _self.profileId : profileId // ignore: cast_nullable_to_non_nullable
+as String?,timeZone: null == timeZone ? _self.timeZone : timeZone // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

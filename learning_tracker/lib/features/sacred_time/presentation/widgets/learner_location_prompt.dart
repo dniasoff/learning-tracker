@@ -1,14 +1,11 @@
 /// The after-lock prompt to set a learner's location (DNI-481 AC-2,
 /// UX-DR-99).
 ///
-/// A learner with no location is locked by the fail-closed fallback window
-/// (Fri 12:00 → Sun 01:00 learner-local, and the yom tov equivalent). Once
-/// such a lock has ended, the device shows a prompt — once per learner per
-/// lock per app session — naming that learner, whose action opens the
-/// existing city picker (`/sacred-time/city`) for THAT learner. Every own
-/// learner whose lock drives the device is considered (not only the active
-/// one): on a multi-learner account, a sibling with no location also locks
-/// the device and is prompted for. Never during a lock (the overlay covers
+/// After a recent Sacred-Time window ends, the device can prompt for a
+/// missing location so future windows use the learner's actual area. The
+/// action opens the existing city picker (`/sacred-time/city`) for THAT
+/// learner. Profiles that have never had a configured location create no
+/// lock and no after-lock prompt. Never during a lock (the overlay covers
 /// the app) and never in a tutored session (the talmid's settings are the
 /// parent's to set).
 library;
@@ -32,8 +29,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// How far back an ended lock still earns the prompt.
 const Duration learnerLocationPromptLookBack = Duration(days: 8);
 
-/// One prompt: learner [profileId] ([displayName]) has no location and its
-/// lock ended at [lockEndUtc].
+/// One prompt: learner [profileId] ([displayName]) has no current location;
+/// the recent prior lock ended at [lockEndUtc].
 @immutable
 final class LearnerLocationPrompt {
   /// Creates the prompt.
@@ -68,11 +65,11 @@ final class LearnerLocationPrompt {
 
 /// The prompts due now, one per own learner (every learner whose lock
 /// drives the device, [lockDrivingScopesProvider]) that has no location
-/// and whose lock ended within [learnerLocationPromptLookBack]; empty
+/// and whose prior lock ended within [learnerLocationPromptLookBack]; empty
 /// while a lock is in force or its cover is still up
 /// ([lockCoverEngagedProvider]), in a tutored session, or while the
-/// account's learners load. A learner whose settings load or fail is skipped (its
-/// lock is fail-closed anyway; the prompt waits for a readable history).
+/// account's learners load. A learner whose settings load or fail is skipped;
+/// unknown settings do not create a lock or a prompt.
 final learnerLocationPromptsProvider =
     Provider.autoDispose<List<LearnerLocationPrompt>>((ref) {
       if (ref.watch(currentSacredWindowProvider) != null) return const [];

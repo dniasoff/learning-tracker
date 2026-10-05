@@ -16,14 +16,43 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// returning the chosen [City]. A change that is not saved keeps the picker
 /// open with a message.
 @RoutePage()
-class CityPickerScreen extends ConsumerStatefulWidget {
+class CityPickerScreen extends ConsumerWidget {
   const CityPickerScreen({super.key});
 
   @override
-  ConsumerState<CityPickerScreen> createState() => _CityPickerScreenState();
+  Widget build(BuildContext context, WidgetRef ref) => CityPickerView(
+    editor: (ref) => ref.read(learnerSettingsEditorProvider),
+    onSaved: (city) => context.router.pop(city),
+  );
 }
 
-class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
+/// The city picker itself: on selection writes the city through [editor]
+/// and calls [onSaved]; a change that is not saved keeps it open with a
+/// message. Shared by [CityPickerScreen] (the active learner) and the
+/// Sacred Time lock overlay's "change location" action (the learner whose
+/// lock is shown).
+class CityPickerView extends ConsumerStatefulWidget {
+  const CityPickerView({
+    required this.editor,
+    required this.onSaved,
+    this.onCancel,
+    super.key,
+  });
+
+  /// When set, a close button that leaves the picker without a change.
+  final VoidCallback? onCancel;
+
+  /// The editor the chosen city is written through.
+  final LearnerSettingsEditor Function(WidgetRef ref) editor;
+
+  /// Called once the city is saved.
+  final void Function(City city) onSaved;
+
+  @override
+  ConsumerState<CityPickerView> createState() => _CityPickerViewState();
+}
+
+class _CityPickerViewState extends ConsumerState<CityPickerView> {
   final _controller = TextEditingController();
   String _query = '';
 
@@ -42,6 +71,12 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: widget.onCancel == null
+            ? null
+            : CloseButton(
+                key: const Key('cityPickerClose'),
+                onPressed: widget.onCancel,
+              ),
         title: Text(AppLocalizations.of(context)!.cityPickerTitle),
         elevation: 0,
       ),
@@ -103,12 +138,10 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
   }
 
   Future<void> _select(City city) async {
-    final outcome = await ref
-        .read(learnerSettingsEditorProvider)
-        .chooseCity(city);
+    final outcome = await widget.editor(ref).chooseCity(city);
     if (!mounted) return;
     if (outcome == LearnerSettingsEditOutcome.saved) {
-      context.router.pop(city);
+      widget.onSaved(city);
       return;
     }
     final l10n = AppLocalizations.of(context)!;

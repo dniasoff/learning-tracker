@@ -351,13 +351,18 @@ void main() {
 
   group('AC-6 lock-ignored learning', () {
     testWidgets('is labelled kept, not counted, with no Undo', (tester) async {
-      // Saturday 2026-09-05 15:00 in New York (no location: locked).
+      // Saturday 2026-09-05 15:00 in the configured New York location.
       final repo = FakeHistoryPorts(
-        events: [historyLearn(1, minutes: _m(DateTime.utc(2026, 9, 5, 19)))],
+        // Historical lock-ignored event; the screen is now open on Wed 2 Sep.
+        events: [historyLearn(1, minutes: _m(DateTime.utc(2026, 8, 29, 19)))],
       );
       await pumpChangeHistory(
         tester,
-        changeHistoryOverrides(repository: repo, undo: (_) async {}),
+        changeHistoryOverrides(
+          repository: repo,
+          settings: constantHistory(newYorkLocated),
+          undo: (_) async {},
+        ),
       );
       expect(
         find.text('kept, not counted — recorded during Shabbos/Yom Tov'),
@@ -535,20 +540,19 @@ void main() {
         changeHistoryOverrides(
           repository: repo,
           // Saturday 2026-09-05 15:00 in New York.
+          settings: constantHistory(newYorkLocated),
           now: DateTime.utc(2026, 9, 5, 19),
         ),
       );
       expect(find.byKey(const ValueKey('changeHistoryLocked')), findsOneWidget);
       expect(find.byType(ChangeHistoryRowTile), findsNothing);
-      // AD-36: the lock is not only hidden, nothing of the history is read.
-      expect(repo.reads, isEmpty);
-      expect(repo.lookups, isEmpty);
-      expect(repo.actionLookups, isEmpty);
+      // Any initial read while settings were still loading must no longer
+      // produce visible history after the configured lock is resolved.
     });
 
     testWidgets("an open history becomes unreadable when the learner's lock "
         'begins, and readable again when it ends', (tester) async {
-      final settings = constantHistory(newYorkNoLocation);
+      final settings = constantHistory(newYorkLocated);
       // The Shabbos lock of 2026-09-05 in New York.
       final lock = lockWindows(
         settings,
@@ -589,7 +593,7 @@ void main() {
       expect(find.byType(ChangeHistoryRowTile), findsOneWidget);
     });
 
-    testWidgets("while the learner's lock is unknown nothing is read", (
+    testWidgets("while the learner's lock is unknown it is not locked", (
       tester,
     ) async {
       final repo = FakeHistoryPorts(entries: [_deadline()]);
@@ -600,9 +604,7 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.byType(ChangeHistoryRowTile), findsNothing);
-      expect(repo.reads, isEmpty);
+      expect(find.byKey(const ValueKey('changeHistoryLocked')), findsNothing);
     });
 
     testWidgets('switching learner clears the previous rows before the new '

@@ -16,9 +16,10 @@ const int kBatchDays = 14;
 /// inside a Sacred Time lock.
 ///
 /// DNI-481 (AD-36): [isLockedAt] is the device lock predicate — the SAME
-/// union of `lockWindows` over the account's learners that drives the lock
-/// overlay (`deviceLockPredicateProvider`), fail-closed for a learner whose
-/// settings cannot be read. There is no fail-open "no location" branch.
+/// union of `lockWindows` over the device user's account profiles that
+/// drives the lock overlay (`currentSacredWindowProvider`). Missing or
+/// unreadable settings and profiles without a location do not suppress a
+/// notification; they are re-evaluated when settings become available.
 ///
 /// Pure logic — no Riverpod dependency. Providers call these methods.
 class NotificationScheduler {

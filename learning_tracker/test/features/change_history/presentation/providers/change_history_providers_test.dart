@@ -117,7 +117,7 @@ void main() {
   });
 
   group('changeHistoryLockedProvider (AD-36, E-4)', () {
-    final settings = constantHistory(newYorkNoLocation);
+    final settings = constantHistory(newYorkLocated);
     // The Shabbos lock of 2026-09-05 in New York.
     final lock = lockWindows(
       settings,
@@ -178,14 +178,12 @@ void main() {
       expect(value, const AsyncData(true));
     });
 
-    test("not judged readable while the learner's settings are unknown "
-        '(fail closed)', () async {
+    test('missing learner settings do not create a Sacred-Time lock', () async {
       final value = await locked(
         now: DateTime.utc(2026, 9, 2, 12),
         learner: Completer<LearnerSettingsHistory>().future.asStream(),
       );
-      expect(value.isLoading, isTrue);
-      expect(value.hasValue, isFalse);
+      expect(value, const AsyncData(false));
     });
   });
 

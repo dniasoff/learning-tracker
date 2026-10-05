@@ -1,51 +1,29 @@
 /// The learners whose lock drives this device's lock surfaces, and their
 /// settings histories (DNI-481 AC-1, AD-36 "Multi-learner devices").
 ///
+/// The lock follows the PERSON USING THE DEVICE (product ruling
+/// 2026-10-05):
 /// * Every learner profile of the signed-in account drives the app-wide
 ///   overlay, notification suppression and reminders: its window is the
-///   union of their `lockWindows`.
-/// * A learner viewed through a tutor grant NEVER drives that account
-///   lock — not even during a tutored session. While a tutored session
-///   shows a locked talmid, only the talmid's screens are covered
-///   ([tutoredLearnerLockHistoryProvider], `currentTutoredSacredWindow`),
-///   and the tutor's own way out of the session stays reachable.
-/// * Signed out (no account, or its path uid unbound): no learner, so no
-///   lock — sign-in and onboarding stay reachable (DNI-368).
-/// * Fail closed: while the account's profiles or a learner's settings are
-///   loading or unreadable, that learner is judged with
-///   [failClosedSettingsHistory] in this device's zone
-///   ([deviceLockZoneProvider]) — never treated as unlocked (NFR-6). A
-///   tutored talmid's unreadable settings keep the unresolved zone (the
-///   tutor's device zone is not the talmid's, AD-37).
+///   union of their `lockWindows`. In a tutored session that is the
+///   TUTOR's own account, never the talmid's — a talmid's lock never
+///   covers or blocks the tutor.
+/// * Signed out (no account, or its path uid unbound), or an account with
+///   no learner profile (a tutor-only account): no lock.
+/// * Not locked while unknown: a learner whose settings are loading, not
+///   ready or unreadable — and the whole account while its learner list
+///   is — contributes no lock, and the lock is judged again as soon as the
+///   settings arrive (the providers rebuild). No location, no lock
+///   (`lockWindows`).
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
-import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
 import 'package:learning_tracker/features/sacred_time/domain/services/sacred_lock.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
-
-/// The profile id a fail-closed stand-in history carries when the
-/// account's learner list itself cannot be read.
-const String unknownAccountLearner = 'account';
-
-/// This device's IANA zone (the zone profile creation seeds, AD-37), or
-/// null while it is read or when it cannot be read. The account lock judges
-/// a learner whose settings cannot be read in this zone, so the fail-closed
-/// lock follows the real local Shabbos / Yom Tov times rather than every
-/// UTC offset.
-final deviceLockZoneProvider = FutureProvider<String?>((ref) async {
-  try {
-    return (await ref.watch(creatingDeviceSettingsSourceProvider).read())
-        .timeZone;
-  } on Object {
-    return null;
-  }
-}, retry: (retryCount, error) => null);
 
 /// The learners whose lock drives the device: every learner profile of the
 /// signed-in account (owner = the account's persisted path uid). A tutored
@@ -73,25 +51,6 @@ final lockDrivingScopesProvider = Provider<AsyncValue<List<LearnerScope>>>((
   ]);
 });
 
-/// The settings history of the talmid an active tutored session shows, or
-/// null outside a tutored session (DNI-481 AC-1 tutor rule, AD-36). Drives
-/// only the cover over that talmid's screens, never the account lock.
-/// Fail closed: while the talmid's settings load or cannot be read (or
-/// the selection names no addressable learner), the talmid is judged with
-/// [failClosedSettingsHistory].
-final tutoredLearnerLockHistoryProvider = Provider<LearnerSettingsHistory?>((
-  ref,
-) {
-  final tutored = ref.watch(activeTutoredProfileSelectionProvider);
-  if (tutored == null) return null;
-  final scope = _scopeOrNull(tutored.ownerUid, tutored.profileId);
-  if (scope == null) return failClosedSettingsHistory(tutored.profileId);
-  return _historyOrFailClosed(
-    ref.watch(learnerLockSettingsProvider(scope)),
-    scope.profileId,
-  );
-});
-
 /// A scope, or null for an id pair `LearnerScope` refuses (never a
 /// learner the lock could address).
 LearnerScope? _scopeOrNull(String ownerUid, String profileId) {
@@ -102,41 +61,21 @@ LearnerScope? _scopeOrNull(String ownerUid, String profileId) {
   }
 }
 
-/// The settings history of every learner in [lockDrivingScopesProvider],
-/// each from `learnerLockSettingsProvider` — the ONE settings source of
-/// every lock reader (AD-37). A learner whose settings are loading or
-/// unreadable, and the whole account while its learner list is, is judged
-/// with [failClosedSettingsHistory] in the device's zone (fail closed).
+/// The settings history of every learner in [lockDrivingScopesProvider]
+/// whose settings have been read, each from `learnerLockSettingsProvider`
+/// — the ONE settings source of every lock reader (AD-37). A learner whose
+/// settings are loading or unreadable, and the whole account while its
+/// learner list is, contributes nothing (not locked) until they arrive.
 final accountLockHistoriesProvider = Provider<List<LearnerSettingsHistory>>((
   ref,
 ) {
-  final deviceZone = ref.watch(deviceLockZoneProvider).value;
   final scopes = ref.watch(lockDrivingScopesProvider);
-  if (scopes.hasError || !scopes.hasValue) {
-    return [
-      failClosedSettingsHistory(unknownAccountLearner, deviceZone: deviceZone),
-    ];
-  }
+  if (scopes.hasError || !scopes.hasValue) return const [];
   return [
     for (final scope in scopes.requireValue)
-      _historyOrFailClosed(
-        ref.watch(learnerLockSettingsProvider(scope)),
-        scope.profileId,
-        deviceZone: deviceZone,
-      ),
+      ?ref.watch(learnerLockSettingsProvider(scope)).value,
   ];
 });
-
-LearnerSettingsHistory _historyOrFailClosed(
-  AsyncValue<LearnerSettingsHistory> history,
-  String profileId, {
-  String? deviceZone,
-}) {
-  if (history.hasError || !history.hasValue) {
-    return failClosedSettingsHistory(profileId, deviceZone: deviceZone);
-  }
-  return history.requireValue;
-}
 
 /// The device lock predicate for a UTC instant: [isLockedAt] over
 /// [accountLockHistoriesProvider] — the SAME union the lock overlay shows
