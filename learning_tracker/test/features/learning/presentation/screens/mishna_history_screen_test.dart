@@ -449,8 +449,9 @@ void main() {
       expect(find.text('Learnt'), findsNothing);
     });
 
-    testWidgets('an unreadable learner lock shows AppErrorView, never the '
-        'rows (fail closed)', (tester) async {
+    testWidgets('unreadable learner lock settings do not hide the rows', (
+      tester,
+    ) async {
       _seedLearnt(ports);
       await _pump(tester, [
         ...historyOverrides(ports, state: _learntState(), withLock: false),
@@ -460,12 +461,12 @@ void main() {
         ),
       ]);
 
-      expect(find.byType(AppErrorView), findsOneWidget);
-      expect(_row(1), findsNothing);
-      expect(find.text('Learnt'), findsNothing);
-      // The route stays leavable: the app bar shows only the title.
+      expect(find.byType(AppErrorView), findsNothing);
+      expect(_row(1), findsOneWidget);
+      expect(find.text('Learnt'), findsOneWidget);
+      // The lock is not active while settings are unavailable.
       expect(find.text('Mishna history'), findsOneWidget);
-      expect(find.byKey(const Key('mishnaHistoryOpenText')), findsNothing);
+      expect(find.byKey(const Key('mishnaHistoryOpenText')), findsOneWidget);
     });
   });
 
