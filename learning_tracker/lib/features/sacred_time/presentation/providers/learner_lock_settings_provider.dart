@@ -21,19 +21,40 @@ import 'package:learning_tracker/features/sacred_time/data/repositories/learner_
 /// the profile's current settings and its complete `learnerSettings`
 /// change log, through [LearnerSettingsHistory.reconstruct].
 ///
-/// Loading while the account is not ready or the history is still paging
-/// in (never a partial history); an error — and so a fail-closed gate —
-/// when the profile's settings or the history cannot be read.
+/// Loading while the history is still paging in (never a partial history);
+/// an error — and so a fail-closed gate — when the profile's settings or
+/// the history cannot be read, and a [LearnerSettingsNotReadyException]
+/// while the account's settings source is not ready (no authenticated
+/// session yet). That is an observable terminal state, never a stream that
+/// ends without a value (which would leave the provider loading forever);
+/// the provider re-evaluates when the sources become ready, because it
+/// watches them.
 final learnerLockSettingsProvider = StreamProvider.autoDispose
     .family<LearnerSettingsHistory, LearnerScope>((ref, scope) async* {
       final reader = await ref.watch(learnerSettingsReaderProvider.future);
       final changeLog = await ref.watch(changeLogRepositoryProvider.future);
-      if (reader == null || changeLog == null) return; // not ready: loading
+      if (reader == null || changeLog == null) {
+        throw LearnerSettingsNotReadyException(scope.profileId);
+      }
       yield* watchLearnerSettingsHistory(
         reader.watch(scope),
         changeLog.watchIntentHistory(scope),
       );
     }, retry: (retryCount, error) => null);
+
+/// The account's settings source is not ready (no authenticated session),
+/// so a learner's settings cannot be read yet; readers fail closed until the
+/// source is ready and the provider rebuilds.
+final class LearnerSettingsNotReadyException implements Exception {
+  /// Creates the exception for profile [profileId].
+  const LearnerSettingsNotReadyException(this.profileId);
+
+  /// The profile whose settings are not readable yet.
+  final String profileId;
+
+  @override
+  String toString() => 'LearnerSettingsNotReadyException($profileId)';
+}
 
 /// The learner's intent history holds rows that could not be decoded, so
 /// its settings chronology cannot be trusted (AC-7 fails closed).

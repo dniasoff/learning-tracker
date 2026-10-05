@@ -33,6 +33,14 @@ final class _Reader implements LearnerSettingsReader {
   }
 }
 
+/// Whether the account's settings sources are ready (test-driven).
+final class _Ready extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set() => state = true;
+}
+
 String _key(String field) => 'learner_profiles/$profileUlid.$field';
 
 ChangeLogEntry _settingsEntry(
@@ -109,18 +117,47 @@ void main() {
       expect(history.at(t1).timeZone, 'Asia/Jerusalem');
     });
 
-    test('loading while the account is not ready', () async {
+    test('a not-ready account is an observable error, never loading '
+        'forever, and recovers once the sources are ready', () async {
+      final ready = NotifierProvider<_Ready, bool>(_Ready.new);
+      final reader = _Reader();
+      addTearDown(reader.controller.close);
+      final changeLog = InMemoryChangeLogRepository()..seed(c0Scope(), [seed]);
       final container = ProviderContainer.test(
         overrides: [
-          learnerSettingsReaderProvider.overrideWith((ref) async => null),
-          changeLogRepositoryProvider.overrideWith((ref) async => null),
+          learnerSettingsReaderProvider.overrideWith(
+            (ref) async => ref.watch(ready) ? reader : null,
+          ),
+          changeLogRepositoryProvider.overrideWith(
+            (ref) async => ref.watch(ready) ? changeLog : null,
+          ),
         ],
       );
       final value = await settledAsync(
         container,
         learnerLockSettingsProvider(c0Scope()),
       );
-      expect(value.isLoading, isTrue);
+      expect(value.isLoading, isFalse);
+      expect(value.error, isA<LearnerSettingsNotReadyException>());
+
+      final sub = container.listen(
+        learnerLockSettingsProvider(c0Scope()),
+        (_, _) {},
+      );
+      addTearDown(sub.close);
+      container.read(ready.notifier).set(); // auth became ready
+      await pumpEventQueue();
+      reader.controller.add(
+        const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'UTC',
+          inIsrael: false,
+          lastChangeId: ulidA,
+        ),
+      );
+      await pumpEventQueue();
+      expect(sub.read().hasError, isFalse);
+      expect(sub.read().value?.at(t1).timeZone, 'UTC');
     });
 
     test(

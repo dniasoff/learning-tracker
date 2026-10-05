@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/legacy_learner_settings_seed_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/learner_location_prompt.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_back_button_dispatcher.dart';
@@ -117,6 +118,9 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     ref.watch(magicLinkInitializationProvider);
     // Story 27.14 (DNI-390): activate streak milestone analytics observer.
     ref.watch(streakMilestoneAnalyticsObserverProvider);
+    // Seeds the learner settings of profiles created before they existed,
+    // which otherwise leave the Sacred Time lock stuck fail-closed.
+    ref.watch(legacyLearnerSettingsSeedProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode ==
         ProfileMode.child;

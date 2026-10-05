@@ -48,6 +48,67 @@ void main() {
       );
       expect(lockWindows(h, tuesday, tuesday), isEmpty);
     });
+
+    // Stuck Sacred-Time lock hotfix (1.0.74): a learner whose settings
+    // cannot be read is judged in the device's zone, not every UTC offset.
+    group('in the device zone (Europe/London)', () {
+      final h = failClosedSettingsHistory('p', deviceZone: 'Europe/London');
+
+      test('no location, diaspora, the device zone', () {
+        final s = h.at(shabbos);
+        expect(s.timeZone, 'Europe/London');
+        expect(s.hasLocation, isFalse);
+        expect(s.inIsrael, isNull);
+      });
+
+      test('Shabbos: Fri 12:00 -> Sun 01:00 London local, not wider', () {
+        // 2026-10-10 is Shabbos; BST is UTC+1.
+        expect(
+          lockWindows(
+            h,
+            DateTime.utc(2026, 10, 10, 12),
+            DateTime.utc(2026, 10, 10, 12),
+          ).single,
+          LockWindow(DateTime.utc(2026, 10, 9, 11), DateTime.utc(2026, 10, 11)),
+        );
+        expect(isLockedAt([h], DateTime.utc(2026, 10, 10, 12)), isTrue);
+        // Friday morning in London: the unresolved zone would already lock.
+        final fridayMorning = DateTime.utc(2026, 10, 9, 8);
+        expect(isLockedAt([h], fridayMorning), isFalse);
+        expect(
+          isLockedAt([failClosedSettingsHistory('p')], fridayMorning),
+          isTrue,
+        );
+      });
+
+      test('a normal weekday is unlocked', () {
+        expect(isLockedAt([h], DateTime.utc(2026, 10, 6, 12)), isFalse);
+        expect(isLockedAt([h], DateTime.utc(2026, 10, 7, 9)), isFalse);
+      });
+
+      test('after Shemini Atzeret / Simchat Torah (diaspora): unlocked at '
+          '2026-10-05T01:00Z, which the unresolved zone kept locked', () {
+        final mondayNight = DateTime.utc(2026, 10, 5, 1);
+        expect(sacredWindowAt([h], mondayNight), isNull);
+        expect(isLockedAt([h], DateTime.utc(2026, 10, 4, 12)), isTrue);
+        expect(
+          sacredWindowAt([failClosedSettingsHistory('p')], mondayNight)?.kind,
+          SacredWindowKind.shabbosYomTov,
+          reason: 'the reported stuck overlay',
+        );
+      });
+
+      test('an unknown device zone keeps the unresolved-zone widening', () {
+        expect(
+          failClosedSettingsHistory('p', deviceZone: 'Mars/Olympus'),
+          failClosedSettingsHistory('p'),
+        );
+        expect(
+          failClosedSettingsHistory('p', deviceZone: null),
+          failClosedSettingsHistory('p'),
+        );
+      });
+    });
   });
 
   group('sacredWindowAt (the union)', () {

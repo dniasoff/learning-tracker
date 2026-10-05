@@ -42,6 +42,7 @@ import {
   collection,
   query,
   limit,
+  runTransaction,
   Timestamp,
   setLogLevel,
   writeBatch,
@@ -1734,6 +1735,34 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
       changeEntry('learnerSettings', 'new_profile', changeId),
     );
     await assertSucceeds(batch.commit());
+  });
+
+  test('a pre-1.0.74 profile with no settings is seeded by the owner in one transaction (stuck-lock hotfix)', async () => {
+    const path = `users/${OWNER}/learner_profiles/legacy_profile`;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), path), {
+        display_name: 'Daniel', mode: 'adult', avatar: '',
+        created_at: '2026-08-25T09:11:23.505175Z', updated_at: '2026-08-25T09:11:23.505176Z',
+      });
+    });
+    const changeId = nextUlid();
+    const db = owner();
+    await assertSucceeds(runTransaction(db, async (tx) => {
+      const snap = await tx.get(doc(db, path));
+      assert.equal(snap.data().time_zone, undefined);
+      tx.update(doc(db, path), { time_zone: 'Europe/London', in_israel: false, last_change_id: changeId });
+      tx.set(
+        doc(db, `${path}/change_log/${changeId}`),
+        changeEntry('learnerSettings', 'legacy_profile', changeId),
+      );
+    }));
+    // Without its entry the same seed is denied.
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}/learner_profiles/legacy_2`), { display_name: 'X' });
+    });
+    await assertFails(updateDoc(doc(owner(), `users/${OWNER}/learner_profiles/legacy_2`), {
+      time_zone: 'Europe/London', in_israel: false, last_change_id: nextUlid(),
+    }));
   });
 
   test('wrong entity / entity_id, tutor role and invalid settings types are denied', async () => {

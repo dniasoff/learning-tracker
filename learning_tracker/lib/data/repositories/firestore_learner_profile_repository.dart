@@ -133,6 +133,10 @@ class FirestoreLearnerProfileRepository {
   final FirebaseFirestore _firestore;
   final String _uid;
 
+  /// The `users/{uid}` path segment this repository addresses (the
+  /// account's persisted path uid).
+  String get uid => _uid;
+
   /// The live signed-in uid: the AD-46 `actor.uid` of the settings seed
   /// entry, which the owner rule requires to equal `request.auth.uid`.
   final String _authUid;
@@ -354,6 +358,49 @@ class FirestoreLearnerProfileRepository {
         lastChangeId: entryId,
       ),
     );
+  }
+
+  /// Seeds the AD-37 learner settings of an EXISTING profile created
+  /// before they existed (pre-1.0.74: no `time_zone`, no `last_change_id`),
+  /// exactly as creation does: the [seed] settings keys plus their
+  /// `learnerSettings` seed entry (`before` all-null), in one transaction.
+  ///
+  /// Without it such a profile's settings never decode, so every lock
+  /// reader fails closed forever (the overlay and every capture refused).
+  /// Only ordinary settings keys are written — never the profile's own
+  /// fields. Returns false, writing nothing, when the doc is missing or
+  /// already carries settings (a profile seeded by another device or at
+  /// creation is never re-seeded). Online only: the transaction reads the
+  /// server doc, so two devices never both seed.
+  Future<bool> seedLegacySettings(LearnerSettings seed) async {
+    final profileId = seed.profileId;
+    final doc = _doc(profileId);
+    return _firestore.runTransaction<bool>((tx) async {
+      final snapshot = await tx.get(doc);
+      final data = snapshot.data();
+      if (data == null ||
+          data.containsKey(LearnerSettings.kTimeZone) ||
+          data[LearnerSettings.kLastChangeId] != null) {
+        return false;
+      }
+      final now = DateTimeFactory.nowUtc();
+      final entryId = _newChangeId(now);
+      final (entry, merge) = settingsSeed(
+        settings: seed,
+        entryId: entryId,
+        at: now,
+        actor: Actor(uid: _authUid, role: ActorRole.parent, displayName: ''),
+      );
+      tx
+        // Field-level update of the (existing) doc: only the settings keys
+        // and last_change_id, never the profile's own fields.
+        ..update(doc, toFirestoreMap(merge.toMergePatch(entryId)))
+        ..set(
+          doc.collection(kChangeLogCollection).doc(entryId),
+          toFirestoreMap(entry.toStorage()),
+        );
+      return true;
+    });
   }
 
   /// The AD-37 seed of [settings]: an ordinary `learnerSettings` entry

@@ -7,8 +7,9 @@
 ///   whose lock drives the device (every learner profile of the signed-in
 ///   account, plus the talmid of an active tutored session).
 /// * A learner whose settings cannot be read (still loading, or an error)
-///   is judged with [failClosedSettingsHistory]: the widest fixed window
-///   (the unknown-zone fallback of `lockWindows`), never "unlocked".
+///   is judged with [failClosedSettingsHistory]: the no-location fixed
+///   window in the device's zone (the unknown-zone widening only when the
+///   device zone is unknown too), never "unlocked".
 /// * The [SacredWindowKind] only picks the overlay's existing greeting and
 ///   background; it is classified from the lock's locked civil days.
 library;
@@ -27,12 +28,28 @@ const String unresolvedLearnerZone = 'Etc/Unresolved_Learner';
 
 /// The settings history a lock surface judges a learner by while that
 /// learner's real settings cannot be read (AD-36 fail closed, NFR-6): no
-/// location, an unknown zone (the fixed window widened to every UTC offset)
-/// and diaspora yom tov (a superset of the Israel days).
-LearnerSettingsHistory failClosedSettingsHistory(String profileId) =>
-    LearnerSettingsHistory.constant(
-      LearnerSettings(profileId: profileId, timeZone: unresolvedLearnerZone),
-    );
+/// location (the FR-23 Fri 12:00 → Sun 01:00 learner-local fallback and
+/// its yom tov equivalent) and diaspora yom tov (a superset of the Israel
+/// days), never "unlocked".
+///
+/// The zone is [deviceZone] — the device's IANA zone, the same zone a
+/// profile is seeded with on creation (AD-37) — when it resolves in the tz
+/// database, so the lock follows the real local Shabbos / Yom Tov times.
+/// Only when no usable device zone is known is the zone unresolved, which
+/// widens the fixed window to every UTC offset. (Hotfix ruling, see
+/// `decisions-for-user.md`: settings that are merely unavailable must not
+/// lock a London learner from Thursday night to Sunday afternoon.)
+LearnerSettingsHistory failClosedSettingsHistory(
+  String profileId, {
+  String? deviceZone,
+}) => LearnerSettingsHistory.constant(
+  LearnerSettings(
+    profileId: profileId,
+    timeZone: deviceZone != null && LearnerZone.of(deviceZone).isKnown
+        ? deviceZone
+        : unresolvedLearnerZone,
+  ),
+);
 
 /// How far ahead [nextLockChange] looks; every lock chain starts within it.
 const Duration _lookAhead = Duration(days: 9);

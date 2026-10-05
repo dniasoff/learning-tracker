@@ -706,6 +706,84 @@ void main() {
       expect(spy.ops, isEmpty);
     });
 
+    group('seedLegacySettings (pre-1.0.74 profiles: stuck Sacred-Time '
+        'lock hotfix)', () {
+      const london = LearnerSettings(
+        profileId: profileUlid,
+        timeZone: 'Europe/London',
+        inIsrael: false,
+      );
+      const legacyDoc = {
+        'display_name': 'Daniel',
+        'mode': 'adult',
+        'avatar': '',
+        'created_at': '2026-08-25T09:11:23.505175Z',
+        'updated_at': '2026-08-25T09:11:23.505176Z',
+      };
+
+      test('seeds the settings keys and an all-null-before seed entry on a '
+          'profile with no settings, leaving its own fields alone, so the '
+          'settings decode', () async {
+        final fs = FakeFirebaseFirestore();
+        final doc = fs.doc('users/$_uid/learner_profiles/$profileUlid');
+        await doc.set(legacyDoc);
+
+        expect(await seededRepo(fs).seedLegacySettings(london), isTrue);
+
+        final data = (await doc.get()).data()!;
+        expect(data, containsPair('display_name', 'Daniel'));
+        expect(data, containsPair('updated_at', legacyDoc['updated_at']));
+        expect(data, containsPair('time_zone', 'Europe/London'));
+        expect(data, containsPair('in_israel', false));
+        expect(data, containsPair('last_change_id', seedId));
+        expect(
+          LearnerSettings.fromProfileDoc(profileUlid, fromFirestoreMap(data)),
+          const LearnerSettings(
+            profileId: profileUlid,
+            timeZone: 'Europe/London',
+            inIsrael: false,
+            lastChangeId: seedId,
+          ),
+        );
+        final raw = (await doc.collection('change_log').doc(seedId).get())
+            .data()!;
+        final entry = ChangeLogEntry.fromStorage(seedId, fromFirestoreMap(raw));
+        expect(entry.entity, GovernedEntity.learnerSettings);
+        expect(entry.before, {key('time_zone'): null, key('in_israel'): null});
+        expect(entry.after, {
+          key('time_zone'): 'Europe/London',
+          key('in_israel'): false,
+        });
+        expect(
+          entry.actor,
+          const Actor(uid: 'auth-uid', role: ActorRole.parent, displayName: ''),
+        );
+      });
+
+      test('never re-seeds a profile that already has settings, and writes '
+          'nothing for a missing profile', () async {
+        final fs = FakeFirebaseFirestore();
+        final doc = fs.doc('users/$_uid/learner_profiles/$profileUlid');
+        await doc.set({
+          ...legacyDoc,
+          'time_zone': 'Asia/Jerusalem',
+          'in_israel': true,
+          'last_change_id': ulidA,
+        });
+        expect(await seededRepo(fs).seedLegacySettings(london), isFalse);
+        expect((await doc.get()).data()!['time_zone'], 'Asia/Jerusalem');
+        expect((await doc.collection('change_log').get()).docs, isEmpty);
+
+        final empty = FakeFirebaseFirestore();
+        expect(await seededRepo(empty).seedLegacySettings(london), isFalse);
+        expect(
+          (await empty.doc('users/$_uid/learner_profiles/$profileUlid').get())
+              .exists,
+          isFalse,
+        );
+      });
+    });
+
     test('the profile codec never emits a settings key', () {
       final entity = LearnerProfileEntity(
         profileId: profileUlid,

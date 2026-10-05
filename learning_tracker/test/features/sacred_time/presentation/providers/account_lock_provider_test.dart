@@ -7,8 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/data/firestore/account_firebase.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
+import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
 import 'package:learning_tracker/features/sacred_time/domain/services/sacred_lock.dart';
@@ -18,6 +22,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
+import '../../../../helpers/creating_device_settings_fakes.dart';
 import '../../../../helpers/learner_state/lock_fixtures.dart';
 import '../../../../helpers/learner_state_fixtures.dart';
 
@@ -193,6 +198,132 @@ void main() {
         LearnerSettingsHistory.constant(
           failClosedSettingsHistory('x').spans.single.settings,
         ),
+      );
+    });
+  });
+
+  // Stuck Sacred-Time lock hotfix (1.0.74): every profile created before
+  // learner settings existed has no `time_zone`, so its settings errored
+  // and the overlay judged it in an unresolved zone (every UTC offset).
+  group('settings unavailable: judged in the device zone '
+      '(Europe/London)', () {
+    final londonDevice = creatingDeviceSettingsOverride(
+      FakeCreatingDeviceSettingsSource(
+        const CreatingDeviceSettings(
+          timeZone: 'Europe/London',
+          inIsrael: false,
+        ),
+      ),
+    );
+    final weekday = DateTime.utc(2026, 10, 6, 12);
+    final shabbos = DateTime.utc(2026, 10, 10, 12);
+    final afterSimchatTorah = DateTime.utc(2026, 10, 5, 1);
+
+    Future<ProviderContainer> settled(ProviderContainer c) async {
+      await _scopes(c);
+      final zone = c.listen(deviceLockZoneProvider, (_, _) {});
+      addTearDown(zone.close);
+      for (var i = 0; i < 10 && zone.read().isLoading; i++) {
+        await pumpEventQueue();
+      }
+      return c;
+    }
+
+    for (final (name, value) in <(String, AsyncValue<LearnerSettingsHistory>)>[
+      (
+        'a legacy profile with no time_zone (undecodable settings)',
+        const AsyncError(
+          StorageFormatException('LearnerSettings', 'time_zone', 'missing'),
+          StackTrace.empty,
+        ),
+      ),
+      (
+        'a settings source that is not ready',
+        const AsyncError(
+          LearnerSettingsNotReadyException(profileUlid),
+          StackTrace.empty,
+        ),
+      ),
+      ('settings still loading', const AsyncLoading()),
+    ]) {
+      test('$name: unlocked on a weekday and after Simchat Torah at '
+          '01:00Z, locked on Shabbos in London time', () async {
+        final c = await settled(
+          _container(
+            profiles: const [profileUlid],
+            extra: [
+              londonDevice,
+              learnerLockSettingsProvider(_a).overrideWithValue(value),
+            ],
+          ),
+        );
+        expect(c.read(accountLockHistoriesProvider), [
+          failClosedSettingsHistory(profileUlid, deviceZone: 'Europe/London'),
+        ]);
+        final isLocked = c.read(deviceLockPredicateProvider);
+        expect(isLocked(weekday), isFalse);
+        expect(isLocked(afterSimchatTorah), isFalse);
+        expect(isLocked(shabbos), isTrue);
+        expect(
+          sacredWindowAt(c.read(accountLockHistoriesProvider), shabbos),
+          isNotNull,
+        );
+      });
+    }
+
+    test('the whole account while its learners load: the device zone', () {
+      final never = Completer<String?>();
+      final c = ProviderContainer.test(
+        overrides: [
+          londonDevice,
+          ownAccountPathUidProvider.overrideWith((ref) => never.future),
+        ],
+      );
+      final zone = c.listen(deviceLockZoneProvider, (_, _) {});
+      addTearDown(zone.close);
+      return pumpEventQueue().then((_) {
+        expect(c.read(accountLockHistoriesProvider), [
+          failClosedSettingsHistory(
+            unknownAccountLearner,
+            deviceZone: 'Europe/London',
+          ),
+        ]);
+        expect(c.read(deviceLockPredicateProvider)(weekday), isFalse);
+        expect(c.read(deviceLockPredicateProvider)(shabbos), isTrue);
+      });
+    });
+
+    test('an upgraded account with no named-app session yet '
+        '(AccountNotAuthenticatedException): no learner drives the lock, '
+        'so the app opens', () async {
+      final c = ProviderContainer.test(
+        overrides: [
+          londonDevice,
+          activeAccountFirebaseProvider.overrideWith(
+            (ref) async => throw const AccountNotAuthenticatedException('acc'),
+          ),
+        ],
+      );
+      final scopes = await _scopes(c);
+      expect(scopes.requireValue, isEmpty);
+      expect(c.read(deviceLockPredicateProvider)(afterSimchatTorah), isFalse);
+      expect(c.read(deviceLockPredicateProvider)(weekday), isFalse);
+    });
+
+    test('a tutored talmid keeps the unresolved zone (the tutor device zone '
+        'is not the talmid\'s)', () {
+      final c = _container(
+        tutored: true,
+        extra: [
+          londonDevice,
+          learnerLockSettingsProvider(
+            _t,
+          ).overrideWithValue(const AsyncLoading()),
+        ],
+      );
+      expect(
+        c.read(tutoredLearnerLockHistoryProvider),
+        failClosedSettingsHistory(_talmid),
       );
     });
   });
