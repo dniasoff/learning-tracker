@@ -174,13 +174,13 @@ Future<void> _pumpJourney(
   await tester.pump(const Duration(milliseconds: 250));
   expect(find.byKey(const Key('sacredTimeLockCityPicker')), findsOneWidget);
   expect(find.text('Choose a city'), findsOneWidget);
-  await binding.takeScreenshot('e2e-1103-city-picker-covered');
 
   final field = find.byType(TextField);
   await tester.enterText(field, 'Je');
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 250));
   expect(find.text('Jerusalem'), findsOneWidget);
+  await binding.takeScreenshot('e2e-1103-city-picker-covered');
 
   await tester.tap(find.text('Jerusalem'));
   await tester.pump();
