@@ -73,6 +73,7 @@ Stream<LearnerState> composeLearnerState({
   required DateTime Function() nowUtc,
   Stream<void>? recompute,
   LearnerStateEngine engine = const LearnerStateEngine(),
+  void Function(String input, bool pending)? onInputStatusChanged,
 }) {
   late final StreamController<LearnerState> out;
   final subscriptions = <StreamSubscription<Object?>>[];
@@ -171,9 +172,11 @@ Stream<LearnerState> composeLearnerState({
       return;
     }
     final generation = ++calendarGeneration;
+    onInputStatusChanged?.call('calendar', true);
     loadCalendars(learner, settingsHistory, now).then(
       (loaded) {
         if (generation != calendarGeneration || out.isClosed) return;
+        onInputStatusChanged?.call('calendar', false);
         calendarsFor = learner;
         calendars = loaded;
         // Inputs may have moved on while the calendars loaded; the engine
@@ -196,7 +199,8 @@ Stream<LearnerState> composeLearnerState({
         run(latestSettings, nowUtc());
       },
       onError: (Object error, StackTrace stackTrace) {
-        if (generation != calendarGeneration) return;
+        if (generation != calendarGeneration || out.isClosed) return;
+        onInputStatusChanged?.call('calendar', false);
         calendars = null;
         calendarsFor = null;
         forwardError(error, stackTrace);
@@ -206,15 +210,23 @@ Stream<LearnerState> composeLearnerState({
 
   out = StreamController<LearnerState>(
     onListen: () {
+      onInputStatusChanged?.call('events', true);
+      onInputStatusChanged?.call('sub_tracks', true);
+      onInputStatusChanged?.call('change_log', true);
+      onInputStatusChanged?.call('intents', true);
       subscriptions
         ..add(
           events.listen((read) {
             switch (read) {
               case CompleteReadLoading():
                 eventsPaging = true;
+                if (latestEvents == null) {
+                  onInputStatusChanged?.call('events', true);
+                }
               case CompleteReadReady():
                 eventsPaging = false;
                 latestEvents = read;
+                onInputStatusChanged?.call('events', false);
                 publish();
             }
           }, onError: forwardError),
@@ -224,9 +236,13 @@ Stream<LearnerState> composeLearnerState({
             switch (read) {
               case CompleteReadLoading():
                 subTracksPaging = true;
+                if (latestSubTracks == null) {
+                  onInputStatusChanged?.call('sub_tracks', true);
+                }
               case CompleteReadReady():
                 subTracksPaging = false;
                 latestSubTracks = read;
+                onInputStatusChanged?.call('sub_tracks', false);
                 publish();
             }
           }, onError: forwardError),
@@ -236,9 +252,13 @@ Stream<LearnerState> composeLearnerState({
             switch (read) {
               case CompleteReadLoading():
                 historyPaging = true;
+                if (latestHistory == null) {
+                  onInputStatusChanged?.call('change_log', true);
+                }
               case CompleteReadReady():
                 if (!read.isClean) {
                   historyPaging = true; // nothing computed from a partial log
+                  onInputStatusChanged?.call('change_log', true);
                   forwardError(
                     UnreadableIntentHistoryException(read.rejected),
                     StackTrace.current,
@@ -247,6 +267,7 @@ Stream<LearnerState> composeLearnerState({
                 }
                 historyPaging = false;
                 latestHistory = read.items;
+                onInputStatusChanged?.call('change_log', false);
                 publish();
             }
           }, onError: forwardError),
@@ -254,6 +275,7 @@ Stream<LearnerState> composeLearnerState({
         ..add(
           intent.listen((value) {
             latestIntent = value;
+            onInputStatusChanged?.call('intents', false);
             publish();
           }, onError: forwardError),
         );

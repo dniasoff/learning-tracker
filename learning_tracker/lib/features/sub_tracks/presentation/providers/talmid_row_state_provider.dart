@@ -21,8 +21,10 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -33,6 +35,9 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/lea
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/talmid_row_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/use_cases/build_talmid_row_state.dart';
+
+/// Enables detailed, identity-bearing row diagnostics in internal builds.
+const kInternalBuild = bool.fromEnvironment('INTERNAL_BUILD');
 
 /// The talmid's engine state: the 4.2a grant-validated read path
 /// ([learnerStateForScopeProvider]). The one seam tests replace.
@@ -54,6 +59,11 @@ final talmidLockProvider = Provider.autoDispose
 /// How long a row may load before it shows its inline retry.
 final talmidRowLoadTimeoutProvider = Provider<Duration>(
   (ref) => const Duration(seconds: 20),
+);
+
+/// The `INTERNAL_BUILD` compile-time flag enables on-device row diagnostics.
+final talmidRowInternalDiagnosticsEnabledProvider = Provider<bool>(
+  (ref) => kInternalBuild,
 );
 
 /// The AD-54 engine load-timeout diagnostic: enums only — no learner id,
@@ -120,9 +130,17 @@ class TalmidRowLoad extends Notifier<bool> {
 
   /// The row's scope.
   final LearnerScope scope;
+  Object? _lastLoggedError;
 
   @override
   bool build() => false;
+
+  /// Whether [error] is a new instance for this row's current lifetime.
+  bool shouldLog(Object error) {
+    if (identical(_lastLoggedError, error)) return false;
+    _lastLoggedError = error;
+    return true;
+  }
 
   /// The row's load ran out of time while [stage] was loading.
   void timedOut(TalmidLoadStage stage) {
@@ -147,37 +165,184 @@ class TalmidRowLoad extends Notifier<bool> {
 /// The row of the talmid at [scope].
 final talmidRowStateProvider = Provider.autoDispose
     .family<TalmidRowState, LearnerScope>((ref, scope) {
+      void logOnce(String stage, Object error, StackTrace stackTrace) {
+        if (!ref
+            .read(talmidRowTimedOutProvider(scope).notifier)
+            .shouldLog(error)) {
+          return;
+        }
+        if (stage == TalmidRowFailure.accessEnded.name) {
+          AppLogger.instance.info(
+            event: 'talmid_row_load_failed',
+            fields: {'stage': stage, 'errorType': error.runtimeType.toString()},
+          );
+        } else {
+          _logTalmidRowError(stage, scope, error, stackTrace);
+        }
+      }
+
       final lock = ref.watch(talmidLockProvider(scope));
       final learner = ref.watch(talmidLearnerStateProvider(scope));
       final timedOut = ref.watch(talmidRowTimedOutProvider(scope));
 
       // Access ended outranks everything: the row leaves on the next
       // roster refresh and shows nothing of the learner meanwhile.
-      if (learner case AsyncError(error: TutorScopeAccessDeniedException())) {
-        return const TalmidRowFailed(TalmidRowFailure.accessEnded);
+      if (learner case AsyncError(
+        :final error,
+        :final stackTrace,
+      ) when error is TutorScopeAccessDeniedException) {
+        logOnce(TalmidRowFailure.accessEnded.name, error, stackTrace);
+        return TalmidRowFailed(
+          TalmidRowFailure.accessEnded,
+          diagnosticDetail: kInternalBuild
+              ? _failureDetail(
+                  scope: scope,
+                  kind: TalmidRowFailure.accessEnded.name,
+                  error: error,
+                )
+              : null,
+        );
       }
       // Fail closed on the lock: no identity until it is known open.
       if (lock case AsyncData(value: true)) return const TalmidRowLocked();
       if (lock.hasError) {
-        return const TalmidRowFailed(TalmidRowFailure.loadFailed);
+        final failure = lock as AsyncError<bool>;
+        logOnce('lock', failure.error, failure.stackTrace);
+        return TalmidRowFailed(
+          TalmidRowFailure.loadFailed,
+          diagnosticDetail: kInternalBuild
+              ? _failureDetail(
+                  scope: scope,
+                  kind: TalmidRowFailure.loadFailed.name,
+                  error: failure.error,
+                )
+              : null,
+        );
       }
       final lockOpen = lock is AsyncData<bool> && !lock.value;
-      if (learner case AsyncError()) {
+      if (learner case AsyncError(:final error, :final stackTrace)) {
+        logOnce('engine', error, stackTrace);
         return TalmidRowFailed(
           TalmidRowFailure.loadFailed,
           identityVisible: lockOpen,
+          diagnosticDetail: kInternalBuild
+              ? _failureDetail(
+                  scope: scope,
+                  kind: TalmidRowFailure.loadFailed.name,
+                  error: error,
+                )
+              : null,
         );
       }
       if (lockOpen && learner.hasValue) {
         return buildTalmidRowState(learner.requireValue);
       }
-      if (timedOut) return TalmidRowTimedOut(identityVisible: lockOpen);
-      final timer = Timer(
-        ref.watch(talmidRowLoadTimeoutProvider),
-        () => ref
-            .read(talmidRowTimedOutProvider(scope).notifier)
-            .timedOut(lockOpen ? TalmidLoadStage.engine : TalmidLoadStage.lock),
-      );
+      if (timedOut) {
+        final stage = lockOpen ? TalmidLoadStage.engine : TalmidLoadStage.lock;
+        final grant = kInternalBuild
+            ? ref.watch(tutorScopeGrantProvider(scope))
+            : null;
+        final readiness = kInternalBuild
+            ? ref.read(learnerStateInputReadinessProvider).pendingFor(scope)
+            : const <String>[];
+        return TalmidRowTimedOut(
+          identityVisible: lockOpen,
+          diagnosticDetail: kInternalBuild
+              ? _timeoutDetail(
+                  scope: scope,
+                  stage: stage,
+                  grantHasValue: grant?.hasValue ?? false,
+                  pendingInputs: readiness,
+                )
+              : null,
+        );
+      }
+      final timer = Timer(ref.watch(talmidRowLoadTimeoutProvider), () {
+        if (!ref.mounted) return;
+        final stage = lockOpen ? TalmidLoadStage.engine : TalmidLoadStage.lock;
+        ref.read(talmidRowTimedOutProvider(scope).notifier).timedOut(stage);
+      });
       ref.onDispose(timer.cancel);
       return lockOpen ? const TalmidRowLoading() : const TalmidRowPending();
     });
+
+String _failureDetail({
+  required LearnerScope scope,
+  required String kind,
+  required Object error,
+}) {
+  final errorSummary = '${error.runtimeType}: $error';
+  final shortened = errorSummary.length <= 300
+      ? errorSummary
+      : '${errorSummary.substring(0, 297)}...';
+  return 'Failure kind: $kind\n'
+      'Scope: ownerUid=${scope.ownerUid}, profileId=${scope.profileId}\n'
+      'Error: $shortened';
+}
+
+String _timeoutDetail({
+  required LearnerScope scope,
+  required TalmidLoadStage stage,
+  required bool grantHasValue,
+  required Iterable<String> pendingInputs,
+}) {
+  final pending = <String>[];
+  if (stage == TalmidLoadStage.lock) {
+    pending.add('device lock settings');
+  } else {
+    if (!grantHasValue) pending.add('grant');
+    pending.addAll(pendingInputs);
+    if (pending.isEmpty) {
+      pending.add('learner-state composition');
+    }
+  }
+  return 'Failure kind: timeout\n'
+      'Scope: ownerUid=${scope.ownerUid}, profileId=${scope.profileId}\n'
+      'Stage still pending: ${stage.name}\n'
+      'Inputs without a value: ${pending.join(', ')}\n'
+      'Error: none (load is still pending)';
+}
+
+void _logTalmidRowError(
+  String stage,
+  LearnerScope scope,
+  Object error,
+  StackTrace stackTrace,
+) {
+  logTalmidRowFailure(
+    stage: stage,
+    ownerUid: scope.ownerUid,
+    profileId: scope.profileId,
+    error: error,
+    stackTrace: stackTrace,
+  );
+}
+
+/// Logs the complete failure through Talker and, for internal release builds,
+/// writes it directly to logcat.
+void logTalmidRowFailure({
+  required String stage,
+  required String ownerUid,
+  required String profileId,
+  required Object error,
+  required StackTrace stackTrace,
+}) {
+  if (kInternalBuild) {
+    AppLogger.instance.error(
+      event: 'talmid_row_load_failed',
+      fields: {'stage': stage, 'errorType': error.runtimeType.toString()},
+      exception: error,
+      stackTrace: stackTrace,
+    );
+    debugPrint(
+      '[talmid_row_load_failed] stage=$stage '
+      'ownerUid=$ownerUid profileId=$profileId\n'
+      '$error\n$stackTrace',
+    );
+  } else {
+    AppLogger.instance.error(
+      event: 'talmid_row_load_failed',
+      fields: {'stage': stage, 'errorType': error.runtimeType.toString()},
+    );
+  }
+}

@@ -65,6 +65,21 @@ LearnerIntent _intent() => LearnerIntent(
 void main() {
   final now = DateTime.utc(2026, 9, 1, 12);
 
+  test('readiness ignores updates from a cleared provider lifetime', () {
+    final readiness = LearnerStateInputReadiness();
+    final scope = c0Scope();
+    final generation = readiness.begin(scope);
+    readiness.setPending(scope, 'events', true, generation: generation);
+    readiness.clear(scope, generation: generation);
+    readiness.setPending(
+      scope,
+      'late calendar callback',
+      true,
+      generation: generation,
+    );
+    expect(readiness.pendingFor(scope), isEmpty);
+  });
+
   test('learnerStateEngineProvider is the real const engine', () {
     final container = ProviderContainer.test();
     expect(

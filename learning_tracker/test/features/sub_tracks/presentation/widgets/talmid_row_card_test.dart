@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/talmid_row_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/repositories/tutor_roster_repository.dart';
+import 'package:learning_tracker/features/sub_tracks/presentation/providers/talmid_row_state_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/talmid_row_card.dart';
 
 import '../../../../helpers/pump_app.dart';
@@ -17,10 +18,14 @@ Future<void> _pump(
   TalmidRosterEntry? entry,
   VoidCallback? onRetry,
   VoidCallback? onOpen,
+  bool internalDiagnostics = false,
 }) async {
   await tester.pumpWidget(
     pumpApp(
       overrides: [
+        talmidRowInternalDiagnosticsEnabledProvider.overrideWithValue(
+          internalDiagnostics,
+        ),
         renderedDisplayForRefProvider.overrideWith(
           (ref, sefariaRef) async => talmidRenderedRef(sefariaRef),
         ),
@@ -98,6 +103,39 @@ void main() {
     expect(retried, 1);
     await tester.tap(find.text('Yehuda Klein'));
     expect(opened, isFalse);
+  });
+
+  testWidgets('internal builds show selectable failure diagnostics', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const TalmidRowTimedOut(
+        identityVisible: true,
+        diagnosticDetail: 'Failure kind: timeout\nScope: ownerUid=owner-1',
+      ),
+      internalDiagnostics: true,
+    );
+
+    final detail = find.byKey(const Key('talmidRowDiagnostics-grant-1'));
+    expect(detail, findsOneWidget);
+    expect(find.textContaining('Failure kind: timeout'), findsOneWidget);
+    expect(tester.widget(detail), isA<SelectableText>());
+  });
+
+  testWidgets('production builds hide failure diagnostics', (tester) async {
+    await _pump(
+      tester,
+      const TalmidRowFailed(
+        TalmidRowFailure.loadFailed,
+        identityVisible: true,
+        diagnosticDetail: 'StateError: internal details',
+      ),
+    );
+
+    expect(find.byKey(const Key('talmidRowDiagnostics-grant-1')), findsNothing);
+    expect(find.textContaining('StateError: internal details'), findsNothing);
+    expect(find.text("Couldn't load this talmid's standing."), findsOneWidget);
   });
 
   testWidgets('a row for an unaddressable learner has no Retry', (
