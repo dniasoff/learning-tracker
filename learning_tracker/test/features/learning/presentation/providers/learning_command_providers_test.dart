@@ -33,6 +33,7 @@ import 'package:learning_tracker/features/learning/domain/commands/owner_governe
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 
@@ -190,6 +191,7 @@ void main() {
       bool corpora = true,
       Override? subTrackRepo,
       DateTime? now,
+      ProfileMode profileMode = ProfileMode.adult,
     }) => [
       analyticsServiceProvider.overrideWithValue(analytics),
       learningCommandClockProvider.overrideWithValue(
@@ -210,9 +212,7 @@ void main() {
       ),
       subTrackRepo ??
           subTrackRepositoryProvider.overrideWith((ref) async => subTracks),
-      activeProfileProvider.overrideWith(
-        (ref) async => _profile(ProfileMode.adult),
-      ),
+      activeProfileProvider.overrideWith((ref) async => _profile(profileMode)),
       if (corpora)
         corporaProvider.overrideWith(
           (ref) async => <String, Corpus>{engineCurriculum: mishnayosCorpus()},
@@ -533,6 +533,48 @@ void main() {
       expect(scope, c0Scope());
       expect(entry.actor.uid, 'auth-uid');
       expect(entry.actor.role, ActorRole.parent);
+    });
+
+    test('a PIN lock after provider build rejects a stale ground reorder '
+        'before committing anything', () async {
+      final container = ProviderContainer.test(
+        overrides: ready(profileMode: ProfileMode.child),
+      );
+      container
+          .read(parentPinAuthenticatedProfileIdProvider.notifier)
+          .setAuthenticated(profileUlid);
+      subTracks.seed(c0Scope(), [
+        SubTrack(
+          id: ulidD,
+          curriculumId: engineCurriculum,
+          name: 'School',
+          type: SubTrackType.ongoing,
+          windowStart: '2026-09-01',
+          ratePerWeek: 3,
+          weeksPerYear: 40,
+          learnsOnShabbos: false,
+          ground: const [berakhot1, peah],
+          lastChangeId: ulidE,
+        ),
+      ]);
+      final commands = (await settledAsync(
+        container,
+        learningCommandsProvider,
+      )).value!;
+      container.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
+
+      expect(
+        await commands.editSubTrack(
+          ulidD,
+          const SubTrackEdit(ground: [peah, berakhot1]),
+        ),
+        const CaptureResult.childLimit(),
+      );
+      expect(subTracks.entries, isEmpty);
+      expect(subTracks.tracksOf(c0Scope()).single.ground, const [
+        berakhot1,
+        peah,
+      ]);
     });
 
     test('a sub-track create and edit save through the production '

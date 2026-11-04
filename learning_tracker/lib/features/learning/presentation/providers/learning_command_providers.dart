@@ -177,6 +177,24 @@ CivilDate learnerToday(DateTime nowUtc, LearnerSettingsHistory? history) =>
     ? formatCivilDay(DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day))
     : civilDate(nowUtc, history);
 
+/// Resolves the owner actor again at a command's write boundary. Provider
+/// invalidation is not enough: an already-open screen can retain an older
+/// `LearningCommands` instance after a PIN lock, profile switch or tutor
+/// session begins.
+Future<Actor?> _liveOwnerActor(Ref ref, LearnerScope scope) async {
+  if (ref.read(activeTutoredProfileSelectionProvider) != null) return null;
+  final uid = await ref.read(activeAuthUidProvider.future);
+  final currentScope = await ref.read(activeLearnerScopeProvider.future);
+  if (uid == null || currentScope != scope) return null;
+  final profile = await ref.read(activeProfileProvider.future);
+  if (profile == null || profile.profileId != scope.profileId) return null;
+  return learningSessionActor(
+    uid: uid,
+    profile: profile,
+    pinProfileId: ref.read(parentPinAuthenticatedProfileIdProvider),
+  );
+}
+
 final class _DeferredGovernedIntentRepository
     implements GovernedIntentRepository {
   _DeferredGovernedIntentRepository(this._resolve);
@@ -348,6 +366,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
     failureReporter: failureReporter,
+    liveActor: () => _liveOwnerActor(ref, scope),
   );
   final achievements = AchievementLatch(
     FirestoreAchievementLatchAdapter(
@@ -380,6 +399,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       );
     },
     ledger: ref.watch(subTrackWriteLedgerProvider(scope)),
+    liveActor: () => _liveOwnerActor(ref, scope),
   );
   final commands = DefaultLearningCommands(
     scope: scope,
@@ -407,6 +427,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     sourceCheck: subTrackSourceCheckFrom(subTracks, scope),
     subTrackCommands: subTrackCommands,
     sourceTypeOf: sourceTypeOf,
+    liveActor: () => _liveOwnerActor(ref, scope),
   );
   // Recover any latch a failed check left absent (app start, learner
   // switch); runs in the background and retries its own failures.
@@ -462,6 +483,7 @@ final lockLocationGovernedCommandsProvider = FutureProvider.autoDispose
         clock: ref.watch(learningCommandClockProvider),
         newUlid: newUlid,
         failureReporter: ref.watch(learningFailureReporterProvider),
+        liveActor: () => _liveOwnerActor(ref, scope),
       );
       ref.onDispose(governed.dispose);
       return governed;

@@ -22,6 +22,8 @@ import 'package:learning_tracker/features/content_browsing/presentation/widgets/
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/free_tick_capture_sheet.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_for_scope_provider.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
@@ -365,10 +367,19 @@ class _ContentHierarchyScreenState
                         .watch(curriculumContentProvider(curriculum))
                         .asData
                         ?.value;
-                    final learnerState = ref
-                        .watch(activeLearnerStateProvider)
-                        .asData
-                        ?.value;
+                    final activeScope = ref.watch(activeLearnerScopeProvider);
+                    final tutorScope = activeScope.value;
+                    final learnerState =
+                        ref.watch(activeTutoredProfileSelectionProvider) != null
+                        ? tutorScope != null
+                              ? ref
+                                    .watch(
+                                      learnerStateForScopeProvider(tutorScope),
+                                    )
+                                    .asData
+                                    ?.value
+                              : null
+                        : ref.watch(activeLearnerStateProvider).asData?.value;
                     final learnt =
                         learnerState?[curriculum.storageKey]?.learntLeaves;
                     bool isLearnt(String leaf) =>

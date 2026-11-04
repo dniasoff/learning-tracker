@@ -362,6 +362,7 @@ final class DefaultLearningCommands implements LearningCommands {
     SubTrackSourceCheck? sourceCheck,
     BackupImportReplay? backupReplay,
     Future<CaptureSourceType?> Function(String source)? sourceTypeOf,
+    Future<Actor?> Function()? liveActor,
   }) : _scope = scope,
        _achievements = achievements,
        _sourceCheck = sourceCheck,
@@ -377,6 +378,7 @@ final class DefaultLearningCommands implements LearningCommands {
        _governed = governed,
        _subTrackCommands = subTrackCommands,
        _sourceTypeOf = sourceTypeOf,
+       _liveActor = liveActor,
        _dispatcher = LearningWriteDispatcher(
          scope: scope,
          port: writePort,
@@ -395,6 +397,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final SubTrackSourceCheck? _sourceCheck;
   final SubTrackCommands? _subTrackCommands;
   final Future<CaptureSourceType?> Function(String source)? _sourceTypeOf;
+  final Future<Actor?> Function()? _liveActor;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
   final AchievementLatch? _achievements;
@@ -405,6 +408,21 @@ final class DefaultLearningCommands implements LearningCommands {
   static const _sourceTypeWait = Duration(seconds: 2);
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
+
+  /// Returns a refusal when the session actor changed after this command
+  /// instance was built.  The provider can rebuild on a PIN change, but an
+  /// already-open screen may still hold the old instance; every write must
+  /// therefore re-check the live session at the write boundary.
+  Future<CaptureResult?> _authorizationFailure() async {
+    final liveActor = _liveActor;
+    if (liveActor == null) return null;
+    try {
+      if (await liveActor() == _actor) return null;
+    } on Object {
+      // Session resolution failures fail closed.
+    }
+    return const CaptureResult.rejected(CaptureRejection.notSaved);
+  }
 
   /// Reads the clock once, then the target learner's settings, then runs
   /// the gate; [body] runs only when the gate is open.
@@ -437,6 +455,8 @@ final class DefaultLearningCommands implements LearningCommands {
     List<WriteUnit> units,
   ) async {
     if (units.isEmpty) return const CaptureResult.success();
+    final authorizationFailure = await _authorizationFailure();
+    if (authorizationFailure != null) return authorizationFailure;
     final outcome = await _dispatcher.dispatch(kind, chunkWrites(units));
     if (outcome.allRejected) {
       return const CaptureResult.rejected(CaptureRejection.notSaved);
@@ -1021,6 +1041,8 @@ final class DefaultLearningCommands implements LearningCommands {
           for (final u in units)
             for (final e in u.events) e.id,
         ];
+        final authorizationFailure = await _authorizationFailure();
+        if (authorizationFailure != null) return authorizationFailure;
         final outcome = await _dispatcher.dispatch(
           LearningCommandKind.capture,
           chunkWrites(units),
@@ -1075,6 +1097,7 @@ final class DefaultLearningCommands implements LearningCommands {
     required List<String> saved,
   }) async {
     _dispatcher.discard(planned);
+    if (await _authorizationFailure() != null) return;
     final targets = [
       for (final id in planned)
         if (saved.contains(id)) id,

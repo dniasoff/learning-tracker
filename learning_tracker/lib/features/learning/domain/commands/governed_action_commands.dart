@@ -142,6 +142,7 @@ final class DefaultGovernedLearningCommands
     required UtcClock clock,
     required UlidSource newUlid,
     LearningFailureReporter? failureReporter,
+    Future<Actor?> Function()? liveActor,
     this.ackWait = defaultLearningAckWait,
   }) : _failures = GovernedPendingFailures(
          reporter: failureReporter,
@@ -154,7 +155,8 @@ final class DefaultGovernedLearningCommands
        _reader = reader,
        _oversized = oversized,
        _clock = clock,
-       _newUlid = newUlid;
+       _newUlid = newUlid,
+       _liveActor = liveActor;
 
   final LearnerScope _scope;
   final Actor _actor;
@@ -164,6 +166,7 @@ final class DefaultGovernedLearningCommands
   final OversizedGovernedWritePort _oversized;
   final UtcClock _clock;
   final UlidSource _newUlid;
+  final Future<Actor?> Function()? _liveActor;
   final GovernedPendingFailures _failures;
 
   /// How long a batch waits for the server before it counts as queued.
@@ -171,6 +174,18 @@ final class DefaultGovernedLearningCommands
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
   static const _notSaved = CaptureResult.rejected(CaptureRejection.notSaved);
+
+  /// The provider may rebuild after a PIN/session change while a caller still
+  /// holds this commands instance. Fail closed before any governed write.
+  Future<bool> _actorIsCurrent() async {
+    final liveActor = _liveActor;
+    if (liveActor == null) return true;
+    try {
+      return await liveActor() == _actor;
+    } on Object {
+      return false;
+    }
+  }
 
   @override
   Future<CaptureResult> applyGovernedChange(GovernedAction action) =>
@@ -181,8 +196,10 @@ final class DefaultGovernedLearningCommands
       _failures.watchPendingFailures();
 
   @override
-  Future<CaptureResult?> retry(String pendingFailureId) =>
-      _failures.retry(pendingFailureId);
+  Future<CaptureResult?> retry(String pendingFailureId) async {
+    if (!await _actorIsCurrent()) return _notSaved;
+    return _failures.retry(pendingFailureId);
+  }
 
   /// Closes the pending-failure stream.
   Future<void> dispose() => _failures.dispose();
@@ -492,6 +509,7 @@ final class DefaultGovernedLearningCommands
       return _notSaved; // a doc could not be read: write nothing
     }
     if (changes.any((c) => c.docs.length > GovernedBatch.maxDocs)) {
+      if (!await _actorIsCurrent()) return _notSaved;
       return _writeOversized(changes, now, revertsActionId, changedSince);
     }
 
@@ -534,6 +552,8 @@ final class DefaultGovernedLearningCommands
     if (plans.isEmpty) {
       return CaptureResult.success(changedSince: changedSince);
     }
+
+    if (!await _actorIsCurrent()) return _notSaved;
 
     // Fix every id, time and payload before the first write (AC-2, T2).
     final ids = [for (final _ in plans) _newUlid(now)];
