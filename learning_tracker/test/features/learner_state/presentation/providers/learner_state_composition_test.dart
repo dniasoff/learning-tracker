@@ -31,7 +31,6 @@ final class _Inputs {
   // ignore: close_sinks
   final ticks = StreamController<void>();
   final calendarCalls = <LearnerIntent>[];
-  final inputStatuses = <String, List<bool>>{};
   var now = engineAt(10000);
   StateError? calendarError;
 
@@ -48,8 +47,6 @@ final class _Inputs {
     },
     nowUtc: () => now,
     recompute: ticks.stream,
-    onInputStatusChanged: (input, pending) =>
-        inputStatuses.putIfAbsent(input, () => []).add(pending),
   );
 
   void allReady({List<LearningEvent> learns = const []}) {
@@ -159,27 +156,11 @@ void main() {
     inputs.intent.add(_intent());
     await pumpEventQueue();
     expect(sink.states, hasLength(1), reason: 'events are re-paging');
-    expect(inputs.inputStatuses['events'], [true, false]);
 
     inputs.events.add(CompleteReadReady([engineLearn(1, 'Mishnah Peah 1:1')]));
     await pumpEventQueue();
     expect(sink.states, hasLength(2));
     expect(sink.states.last[engineCurriculum]!.distinctLearnt, 1);
-  });
-
-  test('an unreadable change log remains marked pending', () async {
-    final sink = listen();
-    inputs.allReady();
-    await pumpEventQueue();
-    inputs.history.add(
-      CompleteReadReady(
-        const [],
-        rejected: const [RejectedRow('bad', 'entry')],
-      ),
-    );
-    await pumpEventQueue();
-    expect(inputs.inputStatuses['change_log'], [true, false, true]);
-    expect(sink.errors, hasLength(1));
   });
 
   test('undecodable event and sub-track rows are carried on '

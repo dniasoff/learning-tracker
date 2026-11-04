@@ -8,11 +8,13 @@
 //   only reached after the caller identity check passes.
 
 import assert from 'node:assert/strict';
+import admin from 'firebase-admin';
 import { beforeEach, describe, test } from 'node:test';
 import {
   GRANT,
   PARENT,
   PROFILE,
+  PROJECT,
   TUTOR,
   call,
   clearFirestore,
@@ -278,12 +280,24 @@ describe('listTutorGrants', () => {
   });
 
   test('HTTP callable runtime returns active grant for tutor', async () => {
-    await seedActiveGrant();
-    await seedAuthUser({
-      uid: TUTOR,
-      email: 'runtime-tutor@example.com',
+    const httpTutorUid = `http-tutor-${Date.now()}`;
+    const httpTutorEmail = `${httpTutorUid}@example.com`;
+    const authApp = admin.initializeApp(
+      { projectId: PROJECT },
+      `http-list-tutor-${Date.now()}`,
+    );
+    await authApp.auth().createUser({
+      uid: httpTutorUid,
+      email: httpTutorEmail,
       emailVerified: true,
       password: 'test-password',
+    });
+    await authApp.firestore().collection('tutor_grants').doc(GRANT).set({
+      grant_id: GRANT,
+      tutor_uid: httpTutorUid,
+      parent_uid: PARENT,
+      child_profile_id: String(PROFILE),
+      state: 'active',
     });
 
     const signIn = await fetch(
@@ -293,7 +307,7 @@ describe('listTutorGrants', () => {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          email: 'runtime-tutor@example.com',
+          email: httpTutorEmail,
           password: 'test-password',
           returnSecureToken: true,
         }),
@@ -304,7 +318,7 @@ describe('listTutorGrants', () => {
     const { idToken } = signInBody;
 
     const response = await fetch(
-      'http://127.0.0.1:5001/learning-tracker-local/us-central1/listTutorGrants',
+      `http://127.0.0.1:5001/${PROJECT}/us-central1/listTutorGrants`,
       {
         method: 'POST',
         headers: {
@@ -319,6 +333,7 @@ describe('listTutorGrants', () => {
     assert.equal(response.status, 200, JSON.stringify(body));
     assert.equal(body.result.grants.length, 1);
     assert.equal(body.result.grants[0].id, GRANT);
+    await authApp.delete();
   });
 
   test('outgoing mode happy path → returns grant for parent+child', async () => {

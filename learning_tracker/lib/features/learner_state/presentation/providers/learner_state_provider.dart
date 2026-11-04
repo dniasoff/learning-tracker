@@ -35,60 +35,6 @@ final learnerStateEngineProvider = Provider<LearnerStateEngine>(
   (ref) => const LearnerStateEngine(),
 );
 
-/// Tracks which learner-state inputs have not produced a complete value yet.
-final learnerStateInputReadinessProvider = Provider<LearnerStateInputReadiness>(
-  (ref) => LearnerStateInputReadiness(),
-);
-
-/// Container-scoped input readiness, read by timed-out learner rows.
-final class LearnerStateInputReadiness {
-  final Map<LearnerScope, Set<String>> _pendingByScope = {};
-  final Map<LearnerScope, Object> _generationByScope = {};
-
-  /// Inputs waiting for their first complete value at [scope].
-  Set<String> pendingFor(LearnerScope scope) =>
-      Set.unmodifiable(_pendingByScope[scope] ?? const {});
-
-  /// Start tracking a new provider lifetime for [scope].
-  Object begin(LearnerScope scope) {
-    final generation = Object();
-    _generationByScope[scope] = generation;
-    _pendingByScope[scope] = {};
-    return generation;
-  }
-
-  /// Mark [input] pending or ready for the active generation at [scope].
-  void setPending(
-    LearnerScope scope,
-    String input,
-    bool pending, {
-    required Object generation,
-  }) {
-    if (!identical(_generationByScope[scope], generation)) return;
-    final current = {...?_pendingByScope[scope]};
-    if (pending) {
-      current.add(input);
-    } else {
-      current.remove(input);
-    }
-    if (current.isEmpty) {
-      _pendingByScope.remove(scope);
-    } else {
-      _pendingByScope[scope] = current;
-    }
-  }
-
-  /// Forget a disposed learner state's readiness.
-  void clear(LearnerScope scope, {Object? generation}) {
-    if (generation != null &&
-        !identical(_generationByScope[scope], generation)) {
-      return;
-    }
-    _pendingByScope.remove(scope);
-    _generationByScope.remove(scope);
-  }
-}
-
 /// The unscoped ContentIndex corpora by curriculum id (AD-42): every
 /// curriculum's bundled hierarchy, through [contentIndexCorpus]. Built once
 /// and kept for the app's lifetime, like `contentIndexProvider`.
@@ -165,79 +111,17 @@ final learnerStateDayTickProvider = Provider.autoDispose<Stream<void>>((ref) {
 /// dependency.
 final learnerStateProvider = StreamProvider.autoDispose
     .family<LearnerState, LearnerScope>((ref, scope) async* {
-      final readiness = ref.read(learnerStateInputReadinessProvider);
-      final readinessGeneration = readiness.begin(scope);
-      ref.onDispose(
-        () => readiness.clear(scope, generation: readinessGeneration),
-      );
-      for (final input in [
-        'events repository',
-        'sub_tracks repository',
-        'change_log repository',
-        'intents repository',
-      ]) {
-        readiness.setPending(
-          scope,
-          input,
-          true,
-          generation: readinessGeneration,
-        );
-      }
       final events = await ref.watch(learningEventRepositoryProvider.future);
-      if (events != null) {
-        readiness.setPending(
-          scope,
-          'events repository',
-          false,
-          generation: readinessGeneration,
-        );
-      }
       final subTracks = await ref.watch(subTrackRepositoryProvider.future);
-      if (subTracks != null) {
-        readiness.setPending(
-          scope,
-          'sub_tracks repository',
-          false,
-          generation: readinessGeneration,
-        );
-      }
       final changeLog = await ref.watch(changeLogRepositoryProvider.future);
-      if (changeLog != null) {
-        readiness.setPending(
-          scope,
-          'change_log repository',
-          false,
-          generation: readinessGeneration,
-        );
-      }
       final intent = await ref.watch(governedIntentRepositoryProvider.future);
-      if (intent != null) {
-        readiness.setPending(
-          scope,
-          'intents repository',
-          false,
-          generation: readinessGeneration,
-        );
-      }
       if (events == null ||
           subTracks == null ||
           changeLog == null ||
           intent == null) {
         return; // not ready: loading
       }
-      readiness.setPending(
-        scope,
-        'corpora',
-        true,
-        generation: readinessGeneration,
-      );
       final corpora = await ref.watch(corporaProvider.future);
-      readiness.setPending(
-        scope,
-        'corpora',
-        false,
-        generation: readinessGeneration,
-      );
       final clock = ref.watch(localDayClockProvider);
       yield* composeLearnerState(
         events: events.watchAll(scope),
@@ -249,12 +133,6 @@ final learnerStateProvider = StreamProvider.autoDispose
         nowUtc: clock.nowUtc,
         recompute: ref.watch(learnerStateDayTickProvider),
         engine: ref.watch(learnerStateEngineProvider),
-        onInputStatusChanged: (input, pending) => readiness.setPending(
-          scope,
-          input,
-          pending,
-          generation: readinessGeneration,
-        ),
       );
     }, retry: (retryCount, error) => null);
 

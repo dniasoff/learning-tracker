@@ -246,13 +246,7 @@ final class TalmidRowReady extends TalmidRowState {
 /// The load did not finish in time: inline retry on this row only.
 final class TalmidRowTimedOut extends TalmidRowState {
   /// Creates the state; [identityVisible] once the lock is known open.
-  const TalmidRowTimedOut({
-    required this.identityVisible,
-    this.diagnosticDetail,
-  });
-
-  /// Internal-build explanation of the timeout and pending inputs.
-  final String? diagnosticDetail;
+  const TalmidRowTimedOut({required this.identityVisible});
 
   @override
   final bool identityVisible;
@@ -262,29 +256,19 @@ final class TalmidRowTimedOut extends TalmidRowState {
 
   @override
   bool operator ==(Object other) =>
-      other is TalmidRowTimedOut &&
-      other.identityVisible == identityVisible &&
-      other.diagnosticDetail == diagnosticDetail;
+      other is TalmidRowTimedOut && other.identityVisible == identityVisible;
 
   @override
-  int get hashCode =>
-      Object.hash(TalmidRowTimedOut, identityVisible, diagnosticDetail);
+  int get hashCode => Object.hash(TalmidRowTimedOut, identityVisible);
 }
 
 /// The row could not be shown for [reason].
 final class TalmidRowFailed extends TalmidRowState {
   /// Creates the state.
-  const TalmidRowFailed(
-    this.reason, {
-    this.identityVisible = false,
-    this.diagnosticDetail,
-  });
+  const TalmidRowFailed(this.reason, {this.identityVisible = false});
 
   /// Why.
   final TalmidRowFailure reason;
-
-  /// Internal-build explanation including the scope ids and error summary.
-  final String? diagnosticDetail;
 
   @override
   final bool identityVisible;
@@ -299,9 +283,8 @@ final class TalmidRowFailed extends TalmidRowState {
   bool operator ==(Object other) =>
       other is TalmidRowFailed &&
       other.reason == reason &&
-      other.identityVisible == identityVisible &&
-      other.diagnosticDetail == diagnosticDetail;
+      other.identityVisible == identityVisible;
 
   @override
-  int get hashCode => Object.hash(reason, identityVisible, diagnosticDetail);
+  int get hashCode => Object.hash(reason, identityVisible);
 }

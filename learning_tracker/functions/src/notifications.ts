@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+import admin from "firebase-admin";
 import { logger } from "firebase-functions/v1";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 

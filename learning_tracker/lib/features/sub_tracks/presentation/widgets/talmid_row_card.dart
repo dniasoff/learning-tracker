@@ -14,7 +14,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/talmid_row_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/repositories/tutor_roster_repository.dart';
-import 'package:learning_tracker/features/sub_tracks/presentation/providers/talmid_row_state_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_home_row.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart'
     show TutorDisabledControl;
@@ -181,14 +180,6 @@ class TalmidRowCard extends ConsumerWidget {
       TalmidRowTimedOut() || TalmidRowFailed() => l10n.talmidimRowLoadFailed,
       _ => null,
     };
-    final diagnosticDetail = switch (row) {
-      TalmidRowTimedOut(:final diagnosticDetail) => diagnosticDetail,
-      TalmidRowFailed(:final diagnosticDetail) => diagnosticDetail,
-      _ => null,
-    };
-    final showDiagnostics = ref.watch(
-      talmidRowInternalDiagnosticsEnabledProvider,
-    );
     final opens = row.opensLearner && onOpen != null;
 
     final label = [
@@ -257,16 +248,6 @@ class TalmidRowCard extends ConsumerWidget {
                 Text(
                   failedText,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.brandInkMuted,
-                  ),
-                ),
-              ],
-              if (showDiagnostics && diagnosticDetail != null) ...[
-                const SizedBox(height: 4),
-                SelectableText(
-                  diagnosticDetail,
-                  key: Key('talmidRowDiagnostics-${entry.grantId}'),
-                  style: theme.textTheme.labelSmall?.copyWith(
                     color: colors.brandInkMuted,
                   ),
                 ),

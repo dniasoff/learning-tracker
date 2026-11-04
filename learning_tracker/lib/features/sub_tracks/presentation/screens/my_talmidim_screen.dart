@@ -15,7 +15,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/info_note.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/talmid_row_state.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/repositories/tutor_roster_repository.dart';
@@ -26,9 +25,6 @@ import 'package:learning_tracker/features/sub_tracks/presentation/widgets/talmid
 import 'package:learning_tracker/features/tutoring/tutoring.dart'
     show TutorDisabledControl;
 import 'package:learning_tracker/l10n/app_localizations.dart';
-
-/// Enables detailed, identity-bearing row diagnostics in internal builds.
-const kInternalBuild = bool.fromEnvironment('INTERNAL_BUILD');
 
 /// The window width from which the roster and the selected learner sit
 /// side by side (AC-8, UX-DR-162).
@@ -343,53 +339,15 @@ class TalmidRosterList extends ConsumerWidget {
 
 /// The row state of [entry]: its engine projection, or a failed row when
 /// the grant names no addressable learner.
-TalmidRowState watchTalmidRow(
-  WidgetRef ref,
-  TalmidRosterEntry entry, {
-  ({Object error, StackTrace stackTrace})? scopeFailure,
-}) {
+TalmidRowState watchTalmidRow(WidgetRef ref, TalmidRosterEntry entry) {
   final scope = entry.scope;
   if (scope == null) {
-    return TalmidRowFailed(
+    return const TalmidRowFailed(
       TalmidRowFailure.invalidLearner,
       identityVisible: true,
-      diagnosticDetail: kInternalBuild
-          ? _invalidScopeDetail(
-              entry,
-              scopeFailure ?? _invalidScopeFailure(entry),
-            )
-          : null,
     );
   }
   return ref.watch(talmidRowStateProvider(scope));
-}
-
-({Object error, StackTrace stackTrace}) _invalidScopeFailure(
-  TalmidRosterEntry entry,
-) {
-  try {
-    LearnerScope(ownerUid: entry.ownerUid, profileId: entry.profileId);
-  } on ArgumentError catch (error, stackTrace) {
-    return (error: error, stackTrace: stackTrace);
-  }
-  final error = StateError(
-    'TalmidRosterEntry.scope returned null unexpectedly',
-  );
-  final stackTrace = StackTrace.current;
-  return (error: error, stackTrace: stackTrace);
-}
-
-String _invalidScopeDetail(
-  TalmidRosterEntry entry,
-  ({Object error, StackTrace stackTrace}) failure,
-) {
-  final errorSummary = '${failure.error.runtimeType}: ${failure.error}';
-  final shortened = errorSummary.length <= 300
-      ? errorSummary
-      : '${errorSummary.substring(0, 297)}...';
-  return 'Failure kind: ${TalmidRowFailure.invalidLearner.name}\n'
-      'Scope: ownerUid=${entry.ownerUid}, profileId=${entry.profileId}\n'
-      'Error: $shortened';
 }
 
 /// Whether *Add ground* may be used for [entry] now: the grant's
@@ -426,29 +384,12 @@ class _TalmidRowState extends ConsumerState<TalmidRow> {
   /// The roster was asked to re-read for this row's ended access; asked
   /// once per row, so a lagging grant list cannot cause a refresh loop.
   bool _rosterRefreshRequested = false;
-  ({Object error, StackTrace stackTrace})? _scopeFailure;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.entry.scope == null) {
-      _scopeFailure = _invalidScopeFailure(widget.entry);
-      final failure = _scopeFailure!;
-      logTalmidRowFailure(
-        stage: 'scope',
-        ownerUid: widget.entry.ownerUid,
-        profileId: widget.entry.profileId,
-        error: failure.error,
-        stackTrace: failure.stackTrace,
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final entry = widget.entry;
     final scope = entry.scope;
-    final row = watchTalmidRow(ref, entry, scopeFailure: _scopeFailure);
+    final row = watchTalmidRow(ref, entry);
     if (row case TalmidRowFailed(reason: TalmidRowFailure.accessEnded)) {
       // A revoked grant: re-read the roster once, so the row leaves.
       if (!_rosterRefreshRequested) {

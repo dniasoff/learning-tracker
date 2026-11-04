@@ -71,8 +71,7 @@ void main() {
         StackTrace.empty,
       );
     final row = read(containerFor(), 1);
-    expect(row, isA<TalmidRowFailed>());
-    expect((row as TalmidRowFailed).reason, TalmidRowFailure.loadFailed);
+    expect(row, const TalmidRowFailed(TalmidRowFailure.loadFailed));
     expect(row.identityVisible, isFalse);
   });
 
@@ -87,13 +86,10 @@ void main() {
         StackTrace.empty,
       )
       ..locks[scope] = const AsyncData(true);
-    final row = read(containerFor(), 1) as TalmidRowFailed;
-    expect(row.reason, TalmidRowFailure.accessEnded);
-    if (kInternalBuild) {
-      expect(row.diagnosticDetail, contains('TutorScopeAccessDeniedException'));
-    } else {
-      expect(row.diagnosticDetail, isNull);
-    }
+    expect(
+      read(containerFor(), 1),
+      const TalmidRowFailed(TalmidRowFailure.accessEnded),
+    );
   });
 
   test('an engine failure on an open row is retryable and named', () {
@@ -104,28 +100,6 @@ void main() {
     final row = read(containerFor(), 1) as TalmidRowFailed;
     expect(row.retryable, isTrue);
     expect(row.identityVisible, isTrue);
-    if (kInternalBuild) {
-      expect(row.diagnosticDetail, contains('Failure kind: loadFailed'));
-      expect(row.diagnosticDetail, contains('ownerUid=${talmidOwner(1)}'));
-      expect(row.diagnosticDetail, contains('profileId=${talmidProfile(1)}'));
-      expect(row.diagnosticDetail, contains('StateError: Bad state: engine'));
-    } else {
-      expect(row.diagnosticDetail, isNull);
-    }
-  });
-
-  test('production failure states omit diagnostic details', () {
-    if (kInternalBuild) return;
-    inputs.states[talmidScope(1)] = AsyncError<LearnerState>(
-      StateError('private detail'),
-      StackTrace.empty,
-    );
-    final row = read(containerFor(), 1) as TalmidRowFailed;
-    expect(
-      row,
-      const TalmidRowFailed(TalmidRowFailure.loadFailed, identityVisible: true),
-    );
-    expect(row.diagnosticDetail, isNull);
   });
 
   group('talmidLockProvider follows the device user', () {
