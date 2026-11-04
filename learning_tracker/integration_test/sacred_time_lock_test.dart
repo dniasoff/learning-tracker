@@ -15,10 +15,10 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
-import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
@@ -26,9 +26,11 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/cit
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FB1';
+const _pin = '1234';
 
 const _jerusalem = City(
   id: 1103,
@@ -58,6 +60,35 @@ final class _MutableSacredWindow extends CurrentSacredWindow {
   }
 }
 
+final class _SelectedProfile extends SelectedProfileId {
+  _SelectedProfile(this._id);
+
+  final String? _id;
+
+  @override
+  String? build() => _id;
+
+  @override
+  void select(String profileId) => state = profileId;
+}
+
+final class _DeterministicPinService extends Fake implements PinService {
+  final hasPinCalls = <String>[];
+  final verifyCalls = <({String profileId, String pin})>[];
+
+  @override
+  Future<bool> hasProfilePin(String profileId) async {
+    hasPinCalls.add(profileId);
+    return profileId == _profileId;
+  }
+
+  @override
+  Future<bool> verifyProfilePin(String profileId, String pin) async {
+    verifyCalls.add((profileId: profileId, pin: pin));
+    return profileId == _profileId && pin == _pin;
+  }
+}
+
 final class _RecordingGovernedCommands extends Fake
     implements GovernedLearningCommands {
   _RecordingGovernedCommands(this.onApplied);
@@ -68,9 +99,27 @@ final class _RecordingGovernedCommands extends Fake
   @override
   Future<CaptureResult> applyGovernedChange(GovernedAction action) async {
     applied.add(action);
-    onApplied(action);
+    if (_isJerusalemLocationAction(action)) onApplied(action);
     return const CaptureResult.success();
   }
+}
+
+bool _isJerusalemLocationAction(GovernedAction action) {
+  if (action.changes.length != 1) return false;
+  final change = action.changes.single;
+  if (change.entity != GovernedEntity.learnerSettings ||
+      change.entityId != _profileId ||
+      change.docs.length != 1) {
+    return false;
+  }
+  final doc = change.docs.single;
+  return doc.mode == DocMode.update &&
+      doc.docId == _profileId &&
+      doc.fields.length == 4 &&
+      doc.fields[LearnerSettings.kLatitude] == 31.768 &&
+      doc.fields[LearnerSettings.kLongitude] == 35.214 &&
+      doc.fields[LearnerSettings.kTimeZone] == 'Asia/Jerusalem' &&
+      doc.fields[LearnerSettings.kInIsrael] == true;
 }
 
 final class _StaticRouterDelegate extends RouterDelegate<Object>
@@ -95,6 +144,20 @@ final class _StaticRouterDelegate extends RouterDelegate<Object>
   Future<bool> popRoute() async => false;
 }
 
+Future<void> _pumpUntil(WidgetTester tester, bool Function() condition) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 3));
+  while (!condition() && DateTime.now().isBefore(deadline)) {
+    await tester.pump(const Duration(milliseconds: 20));
+  }
+  expect(condition(), isTrue);
+}
+
+Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) =>
+    _pumpUntil(tester, () => finder.evaluate().isNotEmpty);
+
+Future<void> _pumpUntilGranted(WidgetTester tester, bool? Function() value) =>
+    _pumpUntil(tester, () => value() != null);
+
 Future<void> _pumpJourney(
   WidgetTester tester,
   IntegrationTestWidgetsFlutterBinding binding,
@@ -110,6 +173,7 @@ Future<void> _pumpJourney(
   );
   final source = _MutableSacredWindow(window);
   final commands = _RecordingGovernedCommands((_) => source.release());
+  final pinService = _DeterministicPinService();
   final editor = LearnerSettingsEditor.forLearner(
     governed: () async => commands,
     profileId: _profileId,
@@ -119,7 +183,7 @@ Future<void> _pumpJourney(
   final profile = LearnerProfileEntity(
     profileId: _profileId,
     displayName: 'Device Learner',
-    mode: ProfileMode.adult,
+    mode: ProfileMode.child,
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
   );
@@ -128,12 +192,15 @@ Future<void> _pumpJourney(
     ProviderScope(
       overrides: [
         currentSacredWindowProvider.overrideWith(() => source),
+        pinServiceProvider.overrideWithValue(pinService),
+        selectedProfileIdProvider.overrideWith(
+          () => _SelectedProfile(_profileId),
+        ),
         profileListStreamProvider.overrideWith(
           (ref) => Stream.value([profile]),
         ),
-        // The overlay's location flow remains guarded by the production
-        // guard function, while this seam supplies its already-authorized
-        // governed write for the device journey.
+        // The overlay's location flow runs the production child PIN guard;
+        // this seam supplies only the deterministic governed write afterward.
         lockLocationEditorProvider(_profileId).overrideWithValue(editor),
         citySearchProvider(
           'Je',
@@ -148,6 +215,7 @@ Future<void> _pumpJourney(
           routerDelegate: _StaticRouterDelegate(),
         ),
         debugShowCheckedModeBanner: false,
+        locale: const Locale('en'),
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -155,8 +223,10 @@ Future<void> _pumpJourney(
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) =>
-            SacredTimeLockOverlay(child: child ?? const SizedBox.shrink()),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+          child: SacredTimeLockOverlay(child: child ?? const SizedBox.shrink()),
+        ),
       ),
     ),
   );
@@ -170,29 +240,79 @@ Future<void> _pumpJourney(
   await binding.takeScreenshot('e2e-1103-lock-covered');
 
   await tester.tap(find.byKey(const Key('sacredTimeLockChangeLocation')));
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 250));
+  await _pumpUntilFound(tester, find.text('Enter Parent PIN'));
+  for (final digit in _pin.split('')) {
+    await tester.tap(find.text(digit).last);
+    await tester.pump();
+  }
+  await _pumpUntilFound(
+    tester,
+    find.byKey(const Key('sacredTimeLockCityPicker')),
+  );
+  expect(pinService.hasPinCalls, contains(_profileId));
+  expect(pinService.verifyCalls, contains((profileId: _profileId, pin: _pin)));
   expect(find.byKey(const Key('sacredTimeLockCityPicker')), findsOneWidget);
   expect(find.text('Choose a city'), findsOneWidget);
 
   final field = find.byType(TextField);
   await tester.enterText(field, 'Je');
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 250));
-  expect(find.text('Jerusalem'), findsOneWidget);
+  await _pumpUntilFound(tester, find.text('Jerusalem'));
   await binding.takeScreenshot('e2e-1103-city-picker-covered');
 
   await tester.tap(find.text('Jerusalem'));
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 250));
+  await _pumpUntilFound(tester, find.text('UNDER THE LOCK'));
 
   expect(commands.applied, hasLength(1));
-  expect(
-    commands.applied.single.changes.single.entity,
-    GovernedEntity.learnerSettings,
-  );
+  final change = commands.applied.single.changes.single;
+  expect(change.entity, GovernedEntity.learnerSettings);
+  expect(change.entityId, _profileId);
+  expect(change.docs, hasLength(1));
+  expect(change.docs.single.mode, DocMode.update);
+  expect(change.docs.single.fields, {
+    LearnerSettings.kLatitude: 31.768,
+    LearnerSettings.kLongitude: 35.214,
+    LearnerSettings.kTimeZone: 'Asia/Jerusalem',
+    LearnerSettings.kInIsrael: true,
+  });
   expect(find.text('UNDER THE LOCK'), findsOneWidget);
   expect(find.byKey(const Key('sacredTimeLockChangeLocation')), findsNothing);
+}
+
+Future<void> _runAdultUnguardedCase(WidgetTester tester) async {
+  bool? granted;
+  const adultId = '01ARZ3NDEKTSV4RRFFQ69G5FA1';
+  final adult = LearnerProfileEntity(
+    profileId: adultId,
+    displayName: 'Adult Device Holder',
+    mode: ProfileMode.adult,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  );
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        pinServiceProvider.overrideWithValue(_DeterministicPinService()),
+        selectedProfileIdProvider.overrideWith(() => _SelectedProfile(adultId)),
+        profileListStreamProvider.overrideWith((ref) => Stream.value([adult])),
+      ],
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Consumer(
+          builder: (context, ref, _) => TextButton(
+            onPressed: () async => granted =
+                await guardLearnerLocationPromptAccess(context, ref, adultId),
+            child: const Text('SET LOCATION'),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('SET LOCATION'));
+  await _pumpUntilGranted(tester, () => granted);
+  expect(find.text('Enter Parent PIN'), findsNothing);
+  expect(granted, isTrue);
 }
 
 void main() {
@@ -204,5 +324,10 @@ void main() {
       await binding.convertFlutterSurfaceToImage();
       await _pumpJourney(tester, binding);
     },
+  );
+
+  testWidgets(
+    'E2E-1103 adult device holder keeps location access unguarded',
+    _runAdultUnguardedCase,
   );
 }
