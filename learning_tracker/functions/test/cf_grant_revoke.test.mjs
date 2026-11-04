@@ -277,6 +277,50 @@ describe('listTutorGrants', () => {
     assert.equal(res.grants[0].state, 'active');
   });
 
+  test('HTTP callable runtime returns active grant for tutor', async () => {
+    await seedActiveGrant();
+    await seedAuthUser({
+      uid: TUTOR,
+      email: 'runtime-tutor@example.com',
+      emailVerified: true,
+      password: 'test-password',
+    });
+
+    const signIn = await fetch(
+      'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/' +
+        'accounts:signInWithPassword?key=AIzaSyA00000000000000000000000000000000',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: 'runtime-tutor@example.com',
+          password: 'test-password',
+          returnSecureToken: true,
+        }),
+      },
+    );
+    const signInBody = await signIn.json();
+    assert.equal(signIn.ok, true, JSON.stringify(signInBody));
+    const { idToken } = signInBody;
+
+    const response = await fetch(
+      'http://127.0.0.1:5001/learning-tracker-local/us-central1/listTutorGrants',
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${idToken}`,
+          'x-firebase-appcheck': 'debug-token',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ data: { mode: 'incoming' } }),
+      },
+    );
+    const body = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(body));
+    assert.equal(body.result.grants.length, 1);
+    assert.equal(body.result.grants[0].id, GRANT);
+  });
+
   test('outgoing mode happy path → returns grant for parent+child', async () => {
     // AUD-firebase-07: seedActiveGrant stores child_profile_id as a STRING
     // (String(PROFILE)) matching every production writer (inviteTutor

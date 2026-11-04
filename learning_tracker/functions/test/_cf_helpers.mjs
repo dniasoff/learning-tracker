@@ -124,11 +124,12 @@ export async function expectHttpsError(promise, code) {
 //
 // Idempotent (create-or-update) so repeated calls across tests/files sharing
 // one emulator instance never collide on `auth/uid-already-exists`.
-export async function seedAuthUser({ uid, email, emailVerified = true, displayName }) {
+export async function seedAuthUser({ uid, email, emailVerified = true, displayName, password }) {
   const props = {
     email,
     emailVerified,
     ...(displayName !== undefined ? { displayName } : {}),
+    ...(password !== undefined ? { password } : {}),
   };
   try {
     await admin.auth().createUser({ uid, ...props });
