@@ -50,10 +50,10 @@ class _StubParentPinNotifier extends ParentPinAuthenticatedProfileId {
 
 class _StubActiveProfileId extends ActiveProfileId {
   _StubActiveProfileId(this._id);
-  final String _id;
+  final String? _id;
 
   @override
-  String build() => _id;
+  String? build() => _id;
 }
 
 class _StubActiveTutoredProfileSelection extends ActiveTutoredProfileSelection {
@@ -106,9 +106,10 @@ const _kAdultAuthState = AuthState.signedIn(
 
 Widget _buildBar({
   required AuthState authState,
-  required String activeId,
+  required String? activeId,
   required LearnerProfileEntity? profile,
   required String? parentAuthedId,
+  Locale locale = const Locale('en'),
 }) {
   return ProviderScope(
     overrides: [
@@ -129,14 +130,16 @@ Widget _buildBar({
         () => _StubParentPinNotifier(parentAuthedId),
       ),
     ],
-    child: const MaterialApp(
+    child: MaterialApp(
+      locale: locale,
       localizationsDelegates: [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: ProfileSwitcherBar()),
+      home: const Scaffold(body: ProfileSwitcherBar()),
     ),
   );
 }
@@ -214,6 +217,33 @@ void main() {
       expect(find.text('CHILD MODE'), findsNothing);
       expect(find.text('PARENT MODE'), findsNothing);
     });
+
+    testWidgets(
+      'shows no mode badge when no profile is selected in English and Hebrew',
+      (tester) async {
+        for (final locale in const [Locale('en'), Locale('he')]) {
+          await tester.pumpWidget(
+            _buildBar(
+              authState: _kAdultAuthState,
+              activeId: null,
+              profile: null,
+              parentAuthedId: null,
+              locale: locale,
+            ),
+          );
+          await tester.pump();
+
+          expect(find.text('ADULT MODE'), findsNothing);
+          expect(find.text('מצב מבוגרים'), findsNothing);
+          expect(find.text('CHILD MODE'), findsNothing);
+          expect(find.text('מצב ילדים'), findsNothing);
+          expect(find.text('PARENT MODE'), findsNothing);
+          expect(find.text('מצב הורה'), findsNothing);
+          expect(find.text('TUTOR'), findsNothing);
+          expect(find.text('מורה'), findsNothing);
+        }
+      },
+    );
 
     testWidgets(
       'parent PIN elevated for a DIFFERENT child does not change this child badge',
