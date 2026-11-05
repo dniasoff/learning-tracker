@@ -56,6 +56,30 @@ describe('parent PIN and session callables', () => {
     assert.ok(session.get('expires_at').toMillis() > session.get('created_at').toMillis());
   });
 
+  test('an adult without a server PIN can mint a session without a prompt PIN', async () => {
+    await profileRef().update({ mode: 'adult' });
+    const created = await call(fns.createParentSession, {
+      profileId: PROFILE,
+    }, parentAuth);
+
+    assert.match(created.sessionId, /^[a-f0-9]{64}$/);
+    assert.equal((await sessionRef(created.sessionId).get()).get('revoked'), false);
+  });
+
+  test('an adult with a server PIN still requires and verifies the PIN', async () => {
+    await profileRef().update({ mode: 'adult' });
+    await call(fns.setParentPin, { profileId: PROFILE, pin: '2468' }, recentParentAuth);
+    await expectHttpsError(
+      call(fns.createParentSession, { profileId: PROFILE }, parentAuth),
+      'invalid-argument',
+    );
+    const created = await call(fns.createParentSession, {
+      profileId: PROFILE,
+      pin: '2468',
+    }, parentAuth);
+    assert.match(created.sessionId, /^[a-f0-9]{64}$/);
+  });
+
   test('a client cannot enroll a PIN without recent account reauthentication', async () => {
     await expectHttpsError(
       call(fns.setParentPin, { profileId: PROFILE, pin: '2468' }, parentAuth),

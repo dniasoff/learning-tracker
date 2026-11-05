@@ -49,7 +49,8 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
   }
   const hiddenRefs = validateHiddenRefs(data.hiddenRefs);
-  if (data.parentSessionId !== undefined &&
+  const parentSessionRequired = request.auth?.token?.parent_session_enforced === true;
+  if (parentSessionRequired && data.parentSessionId !== undefined &&
     (typeof data.parentSessionId !== "string" || !data.parentSessionId)) {
     throw new HttpsError("invalid-argument", "parentSessionId must be a non-empty string");
   }
@@ -58,9 +59,8 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
   if (isTutorCall && (typeof grantId !== "string" || !grantId)) {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   }
-  const parentSessionRequired = request.auth?.token?.parent_session_enforced === true;
   const parentSessionId = data.parentSessionId;
-  if (!isTutorCall && (parentSessionRequired || parentSessionId !== undefined)) {
+  if (!isTutorCall && parentSessionRequired) {
     if (typeof parentSessionId !== "string" || !parentSessionId) {
       throw new HttpsError("permission-denied", "A server-issued parent session is required");
     }
@@ -74,8 +74,13 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
   let tutorGrant: FirebaseFirestore.DocumentData | undefined;
 
   await db.runTransaction(async (txn) => {
-    if (!isTutorCall && typeof parentSessionId === "string") {
-      await assertActiveParentSessionInTransaction(txn, ownerUid, profileId, parentSessionId);
+    if (!isTutorCall && parentSessionRequired) {
+      await assertActiveParentSessionInTransaction(
+        txn,
+        ownerUid,
+        profileId,
+        parentSessionId as string,
+      );
     }
     if (isTutorCall) {
       const grantRef = db.collection("tutor_grants").doc(grantId as string);

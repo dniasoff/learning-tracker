@@ -179,17 +179,18 @@ export const createParentSession = onCall(CALL_OPTS, async (request) => {
   // changing that UX. If an adult profile does have a server PIN, however,
   // it follows the same verification and lockout path as a child profile.
   const secretRef = pinSecretRef(uid, profileId);
-  const secret = await secretRef.get();
-  if (secret.exists || profile.get("mode") === "child") {
-    const pin = requirePin(data.pin);
-    if (!secret.exists) {
-      throw new HttpsError("failed-precondition", "Parent PIN enrollment is required");
-    }
-    const result = await db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
+      // Read the secret only inside the transaction. An adult PIN can be
+      // enrolled between the profile read and this point; using an earlier
+      // snapshot would incorrectly take the no-PIN branch.
       const current = await transaction.get(secretRef);
-      if (!current.exists) {
-        return { verified: false, locked: false };
+      if (profile.get("mode") !== "child" && !current.exists) {
+        return { verified: true, locked: false };
       }
+      if (!current.exists) {
+        return { verified: false, locked: false, enrollmentRequired: true };
+      }
+      const pin = requirePin(data.pin);
       const secretData = current.data()!;
       const lockedUntil = timestamp(secretData.locked_until);
       if (lockedUntil && lockedUntil.toMillis() > Date.now()) {
@@ -211,12 +212,14 @@ export const createParentSession = onCall(CALL_OPTS, async (request) => {
       transaction.set(secretRef, update, { merge: true });
       return { verified: false, locked };
     });
-    if (!result.verified) {
-      throw new HttpsError(
-        result.locked ? "resource-exhausted" : "permission-denied",
-        result.locked ? "Parent PIN is temporarily locked" : "Incorrect parent PIN",
-      );
-    }
+  if ("enrollmentRequired" in result && result.enrollmentRequired) {
+    throw new HttpsError("failed-precondition", "Parent PIN enrollment is required");
+  }
+  if (!result.verified) {
+    throw new HttpsError(
+      result.locked ? "resource-exhausted" : "permission-denied",
+      result.locked ? "Parent PIN is temporarily locked" : "Incorrect parent PIN",
+    );
   }
 
   const sessionId = crypto.randomBytes(32).toString("hex");
