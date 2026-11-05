@@ -52,4 +52,17 @@ void main() {
       ),
     );
   });
+
+  test('round-trips an optional parent session id', () {
+    final sessionId = 'a' * 64;
+    final actor = Actor(
+      uid: 'owner-uid',
+      role: ActorRole.parent,
+      displayName: '',
+      sessionId: sessionId,
+    );
+    expect(actor.toStorage()['session_id'], sessionId);
+    expect(Actor.fromStorage(actor.toStorage()), actor);
+    expect(parentActor.toStorage().containsKey('session_id'), isFalse);
+  });
 }

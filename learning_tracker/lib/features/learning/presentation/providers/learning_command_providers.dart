@@ -142,6 +142,7 @@ Actor learningSessionActor({
   required String uid,
   required LearnerProfileEntity? profile,
   required String? pinProfileId,
+  String? parentSessionId,
 }) {
   final child =
       profile != null &&
@@ -151,6 +152,7 @@ Actor learningSessionActor({
     uid: uid,
     role: child ? ActorRole.child : ActorRole.parent,
     displayName: child ? profile.displayName : '',
+    sessionId: child ? null : parentSessionId,
   );
 }
 
@@ -192,6 +194,7 @@ Future<Actor?> liveOwnerActor(Ref ref, LearnerScope scope) async {
     uid: uid,
     profile: profile,
     pinProfileId: ref.read(parentPinAuthenticatedProfileIdProvider),
+    parentSessionId: ref.read(parentSessionIdProvider),
   );
 }
 
@@ -311,6 +314,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     uid: uid,
     profile: await ref.watch(activeProfileProvider.future),
     pinProfileId: ref.watch(parentPinAuthenticatedProfileIdProvider),
+    parentSessionId: ref.watch(parentSessionIdProvider),
   );
   final settings = ref.listen(
     learnerLockSettingsProvider(scope).future,
@@ -475,6 +479,7 @@ final lockLocationGovernedCommandsProvider = FutureProvider.autoDispose
           uid: uid,
           profile: profile,
           pinProfileId: ref.watch(parentPinAuthenticatedProfileIdProvider),
+          parentSessionId: ref.watch(parentSessionIdProvider),
         ),
         changeLog: changeLog,
         subTracks: _DeferredSubTrackRepository(subTrackRepository.read),

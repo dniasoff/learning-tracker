@@ -1,3 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/providers/account_functions_provider.dart';
+import 'package:learning_tracker/data/repositories/parent_session_client.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'parent_pin_session_provider.g.dart';
@@ -17,3 +21,31 @@ class ParentPinAuthenticatedProfileId
 
   void clear() => state = null;
 }
+
+/// The currently active server-issued parent session id, or `null` when the
+/// parent PIN gate is locked. This is intentionally separate from the local
+/// PIN marker: a local unlock is not authorization until the callable returns
+/// this id.
+@Riverpod(keepAlive: true)
+class ParentSessionId extends _$ParentSessionId {
+  @override
+  String? build() => null;
+
+  void set(String sessionId) => state = sessionId;
+
+  void clear() => state = null;
+}
+
+/// The short-lived server session API for the active named Firebase app.
+final parentSessionClientProvider = Provider<ParentSessionClient>((ref) {
+  final resolveFunctions = ref.watch(accountFunctionsProvider);
+  return ParentSessionClient((name, data) async {
+    final result = await (await resolveFunctions())
+        .httpsCallable(name)
+        .call<Map<String, dynamic>>(data);
+    final raw = Map<String, Object?>.from(result.data as Map);
+    final expiry = raw['expiresAt'];
+    if (expiry is Timestamp) raw['expiresAt'] = expiry.toDate().toUtc();
+    return raw;
+  });
+});
