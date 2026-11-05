@@ -572,6 +572,93 @@ def _strategy_grouped(
     return go
 
 
+# Shulchan Arukh, Orach Chaim's printed table of contents groups these
+# inclusive siman ranges. The Wikisource page documents that the grouping is
+# based on the Tur's introduction and printed editions; its שבת/עירובין
+# subdivision is the source for the 242-344 / 345-416 split used here.
+_MISHNA_BERURAH_SECTIONS = [
+    ("Morning conduct", "הלכות הנהגת אדם בבוקר", 1, 7),
+    ("Tzitzis", "הלכות ציצית", 8, 24),
+    ("Tefillin", "הלכות תפילין", 25, 45),
+    ("Morning blessings", "הלכות ברכות השחר ושאר ברכות", 46, 57),
+    ("Krias Shema", "הלכות קריאת שמע", 58, 88),
+    ("Tefillah", "הלכות תפילה", 89, 127),
+    ("Birkat Kohanim and nefilat apayim", "הלכות נשיאת כפים ונפילת אפים", 128, 134),
+    ("Krias HaTorah", "הלכות קריאת ספר תורה", 135, 149),
+    ("Beis Haknesses", "הלכות בית הכנסת", 150, 156),
+    ("Netilas Yadayim", "הלכות נטילת ידים", 157, 165),
+    ("Bitzias HaPas", "הלכות בציעת הפת", 166, 168),
+    ("Seudah", "הלכות דברים הנוהגים בסעודה", 169, 181),
+    ("Birkat Hamazon", "הלכות ברכת המזון", 182, 201),
+    ("Fruit and fragrance blessings", "הלכות ברכת הפירות והריח", 202, 217),
+    ("Other blessings", "הלכות שאר מיני ברכות", 218, 231),
+    ("Mincha", "הלכות תפילת המנחה", 232, 234),
+    ("Maariv", "הלכות קריאת שמע ותפילה של ערבית", 235, 239),
+    ("Tznius", "הלכות צניעות", 240, 241),
+    ("Shabbos", "הלכות שבת", 242, 344),
+    ("Eruvin", "הלכות עירובין", 345, 416),
+    ("Rosh Chodesh", "הלכות ראש חודש", 417, 428),
+    ("Pesach", "הלכות פסח", 429, 494),
+    ("Yom Tov", "הלכות יום טוב", 495, 529),
+    ("Chol HaMoed", "הלכות חול המועד", 530, 548),
+    ("Tisha B'Av and other fasts", "הלכות תשעה באב ושאר תעניות", 549, 561),
+    ("Fast days", "הלכות תענית", 562, 580),
+    ("Rosh Hashanah", "הלכות ראש השנה", 581, 603),
+    ("Yom Kippur", "הלכות יום הכיפורים", 604, 624),
+    ("Sukkah", "הלכות סוכה", 625, 644),
+    ("Lulav", "הלכות לולב", 645, 669),
+    ("Chanukah", "הלכות חנוכה", 670, 685),
+    ("Purim", "הלכות מגילה", 686, 697),
+]
+
+
+def _mishna_berurah_strategy(curr="mishna_berurah"):
+    """Mishnah Berurah: Orach Chaim section → Siman → Seif.
+
+    Sefaria stores the text as Mishnah Berurah Siman/Seif Katan. The
+    section rows are app hierarchy containers only; every existing siman and
+    leaf `sefariaRef` remains the canonical Sefaria ref.
+    """
+    raw_items, _, _ = _strategy_simple(
+        "mishna_berurah",
+        ["Mishnah Berurah"],
+        ["Book", "Siman", "Seif"],
+    )(curr)
+    by_siman = {}
+    for en, he, start, end in _MISHNA_BERURAH_SECTIONS:
+        for siman in range(start, end + 1):
+            by_siman[siman] = (en, he)
+
+    items = []
+    emitted = set()
+    for raw in raw_items:
+        siman = raw.get("level2")
+        if siman is None:
+            # Drop the generic self-named book wrapper; it is the redundant
+            # level reported by users and has no leaf identity.
+            continue
+        section = by_siman[int(siman)]
+        en, he = section
+        if section not in emitted:
+            items.append({
+                "curriculumId": curr,
+                "level1": en,
+                "displayNameHe": he,
+                "displayNameEn": en,
+                "sefariaRef": f"Mishnah Berurah|section|{en}",
+                "sortOrder": 0,
+                "isLeaf": False,
+            })
+            emitted.add(section)
+        item = dict(raw)
+        item["level1"] = en
+        items.append(item)
+
+    for sort_order, item in enumerate(items):
+        item["sortOrder"] = sort_order
+    return items, ["Section", "Siman", "Seif"], 3
+
+
 # Per-curriculum strategy table.
 STRATEGIES = {
     "bavli": bavli_strategy,
@@ -638,11 +725,7 @@ STRATEGIES = {
     "nach_prophets": _strategy_grouped(  # placeholder; nach is special
         "nach", "Tanakh/Prophets", None, ["Sefer", "Chapter", "Verse"],
     ),
-    "mishna_berurah": _strategy_simple(
-        "mishna_berurah",
-        ["Mishnah Berurah"],
-        ["Book", "Siman", "Seif"],
-    ),
+    "mishna_berurah": _mishna_berurah_strategy,
     "mussar": _strategy_simple(
         "mussar",
         [

@@ -277,13 +277,13 @@ class CurriculumLabels {
       ),
     ],
     CurriculumId.mishnaBerurah: [
-      // The bundled mishna_berurah.json has level1='Mishnah Berurah'
-      // (the book name) and Siman/Seif as the numeric levels below it.
+      // Mishnah Berurah is grouped by the authoritative Orach Chaim
+      // halachic sections at level 1, then Siman and Seif.
       LevelLabels(
-        en: 'Sefer',
-        enPlural: 'Seforim',
-        he: 'ספר',
-        hePlural: 'ספרים',
+        en: 'Section',
+        enPlural: 'Sections',
+        he: 'הלכה',
+        hePlural: 'הלכות',
         valueKind: LevelValueKind.named,
         prefixLabelInDisplay: false,
       ),

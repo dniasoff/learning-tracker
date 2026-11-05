@@ -95,10 +95,10 @@ void main() {
       ]);
     });
 
-    test('Mishna Berurah has 3-level hierarchy (Sefer/Siman/Seif)', () {
+    test('Mishna Berurah has 3-level hierarchy (Section/Siman/Seif)', () {
       expect(CurriculumLabels.depth(CurriculumId.mishnaBerurah), 3);
       expect(CurriculumLabels.labelsEn(CurriculumId.mishnaBerurah), [
-        'Sefer',
+        'Section',
         'Siman',
         'Seif',
       ]);
