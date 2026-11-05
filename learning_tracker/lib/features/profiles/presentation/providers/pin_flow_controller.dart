@@ -1,4 +1,3 @@
-import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_entry_machine.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -53,7 +52,7 @@ class PinFlowController extends _$PinFlowController {
       // Pure controller tests and signed-out setup previews have no named
       // Firebase account. There is no server enrollment to perform there;
       // an authenticated production flow always has active account handles.
-      if (await ref.read(activeAccountFirebaseProvider.future) == null) {
+      if (!await ref.read(parentSessionAccountAvailableProvider.future)) {
         return true;
       }
       try {

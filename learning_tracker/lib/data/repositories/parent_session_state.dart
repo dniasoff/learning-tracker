@@ -1,11 +1,23 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/repositories/parent_session_client.dart';
 import 'package:learning_tracker/data/repositories/parent_session_controller.dart';
+import 'package:learning_tracker/data/repositories/parent_session_persistence.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 
 final parentSessionLockStateProvider =
     NotifierProvider<ParentSessionLockStateNotifier, ParentSessionLockState>(
       ParentSessionLockStateNotifier.new,
     );
+
+Map<String, Object?> decodeParentSessionCallableResult(Object? data) {
+  final raw = Map<String, Object?>.from(data as Map);
+  final expiry = raw['expiresAt'];
+  if (expiry is Timestamp) raw['expiresAt'] = expiry.toDate().toUtc();
+  return raw;
+}
 
 final class ParentSessionLockStateNotifier
     extends Notifier<ParentSessionLockState> {
@@ -52,6 +64,51 @@ final parentSessionActorSourceProvider = Provider<ParentSessionActorSource>(
     profileId: () => ref.read(parentSessionProfileIdProvider),
   ),
 );
+
+typedef ParentSessionAccountBindingResolver =
+    Future<ParentSessionBinding> Function(ParentSessionPersistence persistence);
+
+typedef ParentSessionPersistedLeaseResolver =
+    Future<String?> Function(ParentSessionPersistence persistence);
+
+/// Resolves account-specific Firebase handles in the data layer. Presentation
+/// providers consume this boundary instead of importing Firebase directly.
+final parentSessionAccountBindingResolverProvider =
+    Provider<ParentSessionAccountBindingResolver>((ref) {
+      return (persistence) async {
+        final handles = await ref.read(activeAccountFirebaseProvider.future);
+        if (handles == null) throw StateError('No active account');
+        final functions = FirebaseFunctions.instanceFor(app: handles.app);
+        final client = ParentSessionClient((name, data) async {
+          final result = await functions
+              .httpsCallable(name)
+              .call<Map<String, dynamic>>(data);
+          return decodeParentSessionCallableResult(result.data);
+        });
+        return ParentSessionBinding(
+          client: client,
+          disableNetwork: handles.firestore.disableNetwork,
+          enableNetwork: handles.firestore.enableNetwork,
+          persistSessionId: (sessionId) =>
+              persistence.write(handles.uid, sessionId),
+          clearPersistedSessionId: (sessionId) =>
+              persistence.clear(handles.uid),
+        );
+      };
+    });
+
+final parentSessionPersistedLeaseResolverProvider =
+    Provider<ParentSessionPersistedLeaseResolver>((ref) {
+      return (persistence) async {
+        final handles = await ref.read(activeAccountFirebaseProvider.future);
+        if (handles == null) return null;
+        return persistence.read(handles.uid);
+      };
+    });
+
+final parentSessionAccountAvailableProvider = FutureProvider<bool>((ref) async {
+  return await ref.read(activeAccountFirebaseProvider.future) != null;
+});
 
 final class ParentSessionActorSource {
   const ParentSessionActorSource({

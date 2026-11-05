@@ -1,9 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
-import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/repositories/parent_session_client.dart';
 import 'package:learning_tracker/data/repositories/parent_session_controller.dart';
 import 'package:learning_tracker/data/repositories/parent_session_persistence.dart';
@@ -38,10 +34,7 @@ final parentSessionClientProvider = Provider<ParentSessionClient>((ref) {
     final result = await (await resolveFunctions())
         .httpsCallable(name)
         .call<Map<String, dynamic>>(data);
-    final raw = Map<String, Object?>.from(result.data as Map);
-    final expiry = raw['expiresAt'];
-    if (expiry is Timestamp) raw['expiresAt'] = expiry.toDate().toUtc();
-    return raw;
+    return decodeParentSessionCallableResult(result.data);
   });
 });
 
@@ -49,38 +42,11 @@ final parentSessionPersistenceProvider = Provider<ParentSessionPersistence>(
   (ref) => ParentSessionPersistence(ref.watch(flutterSecureStorageProvider)),
 );
 
-ParentSessionClient _clientForApp(FirebaseApp app) {
-  final functions = FirebaseFunctions.instanceFor(app: app);
-  return ParentSessionClient((name, data) async {
-    final result = await functions
-        .httpsCallable(name)
-        .call<Map<String, dynamic>>(data);
-    final raw = Map<String, Object?>.from(result.data as Map);
-    final expiry = raw['expiresAt'];
-    if (expiry is Timestamp) raw['expiresAt'] = expiry.toDate().toUtc();
-    return raw;
-  });
-}
-
 /// The active account's session lifecycle. Every lease captures its account's
 /// Firestore and Functions handles before the active-account pointer changes.
 final parentSessionControllerProvider = Provider<ParentSessionController>((
   ref,
 ) {
-  Future<ParentSessionBinding> binding() async {
-    final handles = await ref.read(activeAccountFirebaseProvider.future);
-    if (handles == null) throw StateError('No active account');
-    final persistence = ref.read(parentSessionPersistenceProvider);
-    return ParentSessionBinding(
-      client: _clientForApp(handles.app),
-      disableNetwork: handles.firestore.disableNetwork,
-      enableNetwork: handles.firestore.enableNetwork,
-      persistSessionId: (sessionId) =>
-          persistence.write(handles.uid, sessionId),
-      clearPersistedSessionId: (sessionId) => persistence.clear(handles.uid),
-    );
-  }
-
   return ParentSessionController(
     client: ref.read(parentSessionClientProvider),
     currentSessionId: () => ref.read(parentSessionIdProvider),
@@ -91,7 +57,9 @@ final parentSessionControllerProvider = Provider<ParentSessionController>((
     clearSessionId: () => ref.read(parentSessionIdProvider.notifier).clear(),
     clearSessionProfileId: () =>
         ref.read(parentSessionProfileIdProvider.notifier).clear(),
-    resolveBinding: binding,
+    resolveBinding: () => ref.read(parentSessionAccountBindingResolverProvider)(
+      ref.read(parentSessionPersistenceProvider),
+    ),
     onLockStateChanged: (state) =>
         ref.read(parentSessionLockStateProvider.notifier).set(state),
     disableNetwork: () async {},
@@ -102,10 +70,10 @@ final parentSessionControllerProvider = Provider<ParentSessionController>((
 /// On startup, revoke any lease that survived process death before allowing
 /// this account's Firestore network back online.
 final parentSessionStartupProvider = FutureProvider<void>((ref) async {
-  final handles = await ref.read(activeAccountFirebaseProvider.future);
-  if (handles == null) return;
   final persistence = ref.read(parentSessionPersistenceProvider);
-  final sessionId = await persistence.read(handles.uid);
+  final sessionId = await ref.read(parentSessionPersistedLeaseResolverProvider)(
+    persistence,
+  );
   if (sessionId == null) return;
 
   final controller = ref.read(parentSessionControllerProvider);

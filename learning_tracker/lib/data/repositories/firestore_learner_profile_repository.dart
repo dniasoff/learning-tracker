@@ -326,6 +326,7 @@ class FirestoreLearnerProfileRepository {
     required DateTime createdAt,
     String avatar = '',
     LearnerSettings? seed,
+    bool allowMissingParentActor = false,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
     final entity = LearnerProfileEntity(
@@ -353,7 +354,10 @@ class FirestoreLearnerProfileRepository {
       actor: _parentActorSource.actor(
         uid: _authUid,
         targetProfileId: profileId,
-        allowMissing: _allowMissingParentActor,
+        // The first profile's seed is the one parent-owned write that can
+        // precede a profile-bound lease. All subsequent settings writes use
+        // the strict source, including seedLegacySettings below.
+        allowMissing: _allowMissingParentActor || allowMissingParentActor,
       ),
     );
     final batch = _firestore.batch()
