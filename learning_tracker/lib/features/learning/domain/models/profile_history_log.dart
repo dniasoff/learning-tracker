@@ -32,6 +32,44 @@ final class ProfileHistoryLog {
   /// the learning recorded under it (FR-30, UX-DR-21).
   final Map<String, SubTrack> subTracksById;
 
+  /// Returns this log without learn rows whose content is hidden for the
+  /// addressed profile. Void rows have no content ref and are retained only
+  /// when their target remains visible, preserving visible corrections while
+  /// removing hidden event metadata.
+  ProfileHistoryLog filterToVisibleContent(
+    Map<String, Set<String>> visibleRefsByCurriculum,
+  ) {
+    bool contentVisible(LearningEvent event) =>
+        event.ref != null &&
+        event.curriculumId != null &&
+        visibleRefsByCurriculum[event.curriculumId!]?.contains(event.ref) ==
+            true;
+
+    final visibleLearnIds = {
+      for (final event in events)
+        if (event.isLearn && contentVisible(event)) event.id,
+    };
+    final filteredEvents = [
+      for (final event in events)
+        if (event.ref != null
+            ? contentVisible(event)
+            : event.targetId == null ||
+                  visibleLearnIds.contains(event.targetId))
+          event,
+    ];
+    final visibleSources = {
+      for (final event in filteredEvents)
+        if (event.isLearn && event.source != null) event.source!,
+    };
+    return ProfileHistoryLog(
+      events: filteredEvents,
+      subTracks: [
+        for (final track in subTracksById.values)
+          if (visibleSources.contains(track.id)) track,
+      ],
+    );
+  }
+
   /// The stored name of sub-track [id] (live or ended), or null when the
   /// complete read holds no such row. Never derived from the ULID.
   String? subTrackName(String id) => subTracksById[id]?.name;

@@ -21,6 +21,27 @@ void main() {
     expect(log.subTrackName(ulidE), isNull);
   });
 
+  test(
+    'filters hidden content refs from history lists but keeps void rows',
+    () {
+      final log = ProfileHistoryLog(
+        events: [
+          historyLearn(1),
+          historyLearn(2, ref: historySibling),
+          historyVoid(3, eid(1)),
+          historyVoid(4, eid(2)),
+        ],
+        subTracks: const [],
+      );
+
+      final visible = log.filterToVisibleContent({
+        historyCurriculum: {historyLeaf},
+      });
+
+      expect(visible.events.map((event) => event.id), [eid(1), eid(3)]);
+    },
+  );
+
   test('UnreadableHistoryException keeps every rejected id and error for '
       'diagnostics', () {
     final error = UnreadableHistoryException(

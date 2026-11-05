@@ -171,6 +171,7 @@ List<Override> historyOverrides(
   CaptureGate? gate,
   LearnerSettingsHistory? lockSettings,
   bool withLock = true,
+  Set<String>? visibleRefs,
 }) => [
   ...learnerStateOverrides(
     scope: ports.scope,
@@ -181,10 +182,16 @@ List<Override> historyOverrides(
   ),
   learningEventRepositoryProvider.overrideWith((ref) async => ports.events),
   subTrackRepositoryProvider.overrideWith((ref) async => ports.tracks),
-  corporaProvider.overrideWith(
-    (ref) async => {historyCurriculum: corpus ?? historyCorpus()},
-  ),
+  corporaForScopeProvider(
+    ports.scope,
+  ).overrideWith((ref) async => {historyCurriculum: corpus ?? historyCorpus()}),
   mishnaHistoryViewerProvider.overrideWithValue(viewer),
+  visibleHistoryRefsForScopeProvider(ports.scope).overrideWith(
+    (ref) async => {
+      historyCurriculum:
+          visibleRefs ?? {historyLeaf, historySibling, historyMasechta.ref},
+    },
+  ),
 ];
 
 /// A [LearningCommands] that delegates to [inner] but holds every write

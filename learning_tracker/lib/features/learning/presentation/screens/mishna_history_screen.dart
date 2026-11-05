@@ -106,6 +106,28 @@ class MishnaHistoryScreen extends ConsumerWidget {
             : const Center(child: CircularProgressIndicator()),
       );
     }
+    final leafVisible = ref.watch(mishnaHistoryLeafVisibleProvider(_args));
+    if (leafVisible case AsyncError(:final error, :final stackTrace)) {
+      return titleOnly(
+        body: AppErrorView(
+          error: error,
+          stackTrace: stackTrace,
+          onRetry: () => retryMishnaHistory(ref),
+        ),
+      );
+    }
+    if (!leafVisible.hasValue) {
+      return titleOnly(
+        key: const Key('mishnaHistoryVisibilityLoading'),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (!leafVisible.requireValue) {
+      return titleOnly(
+        key: const Key('mishnaHistoryUnavailable'),
+        body: const _HistoryUnavailableView(),
+      );
+    }
     final viewer = ref.watch(mishnaHistoryViewerProvider);
     // Story 1.24 (DNI-486, AC-4/AC-5): a tutor reads what the grant allows;
     // without editing access or a connection the corrections stay visible
@@ -179,6 +201,47 @@ class MishnaHistoryScreen extends ConsumerWidget {
                     actions: actions,
                   ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Neutral deep-link result, matching the text reader's unavailable state.
+class _HistoryUnavailableView extends StatelessWidget {
+  const _HistoryUnavailableView();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.cloud_off,
+              size: 64,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.textReaderTextUnavailableTitle,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.textReaderCheckConnection,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
