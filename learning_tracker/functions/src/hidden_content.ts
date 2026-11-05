@@ -5,7 +5,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db, CALL_OPTS } from "./shared";
 import { ULID_RE } from "./write_with_change_log";
 
-const REQUEST_KEYS = new Set(["ownerUid", "profileId", "hiddenRefs", "grantId"]);
+const REQUEST_KEYS = new Set(["ownerUid", "profileId", "hiddenRefs", "grantId", "parentSessionId"]);
 const MAX_HIDDEN_REFS = 500;
 const MAX_REF_LENGTH = 500;
 
@@ -46,6 +46,10 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
   }
   const hiddenRefs = validateHiddenRefs(data.hiddenRefs);
+  if (data.parentSessionId !== undefined &&
+    (typeof data.parentSessionId !== "string" || !data.parentSessionId)) {
+    throw new HttpsError("invalid-argument", "parentSessionId must be a non-empty string");
+  }
 
   const isTutorCall = grantId !== undefined;
   if (isTutorCall && (typeof grantId !== "string" || !grantId)) {

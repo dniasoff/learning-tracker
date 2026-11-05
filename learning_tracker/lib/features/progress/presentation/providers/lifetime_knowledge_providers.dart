@@ -89,7 +89,7 @@ final lifetimeDataProvider = FutureProvider.autoDispose
     .family<CurriculumLifetimeSummary?, CurriculumId>((ref, curriculum) async {
       ref.watch(progressLensRefreshTickProvider);
       final state = await _requireLearnerState(ref);
-      final repo = ref.watch(contentRepositoryProvider);
+      final repo = await ref.watch(visibleContentRepositoryProvider.future);
 
       final leaves = await _safeLoadLeaves(repo, curriculum);
       if (leaves == null || leaves.isEmpty) return null;
@@ -266,7 +266,7 @@ final lifetimeTotalsAcrossAllCurriculaProvider =
     FutureProvider.autoDispose<LifetimeTotals>((ref) async {
       ref.watch(progressLensRefreshTickProvider);
       final state = await _requireLearnerState(ref);
-      final repo = ref.watch(contentRepositoryProvider);
+      final repo = await ref.watch(visibleContentRepositoryProvider.future);
 
       final allDistinct = <String>{};
       final learnt = <String>{

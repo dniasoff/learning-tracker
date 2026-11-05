@@ -30,7 +30,9 @@ final scopedCurriculumContentProvider =
       curriculumId,
     ) async {
       final adapter = ref.watch(curriculumScopeSettingsAdapterProvider);
-      final repository = ref.watch(contentRepositoryProvider);
+      final repository = await ref.watch(
+        visibleContentRepositoryProvider.future,
+      );
 
       final scopes = await adapter.getScopes(curriculumId);
       if (scopes.isEmpty) {
