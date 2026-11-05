@@ -154,7 +154,7 @@ final class TextContentProvider
   }
 }
 
-String _$textContentHash() => r'5d65669a057cd40f08ca73ccf24b627f706d6ecc';
+String _$textContentHash() => r'f195312202ede5fa47e5c0f106dcb675a9101017';
 
 /// Provider for fetching text by Sefaria reference.
 

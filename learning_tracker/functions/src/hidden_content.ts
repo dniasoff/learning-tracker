@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v1";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db, CALL_OPTS } from "./shared";
+import { isKnownHiddenContentRef } from "./hidden_content_manifest";
 import { ULID_RE } from "./write_with_change_log";
 
 const REQUEST_KEYS = new Set(["ownerUid", "profileId", "hiddenRefs", "grantId", "parentSessionId"]);
@@ -11,10 +12,11 @@ const MAX_REF_LENGTH = 500;
 
 function validateHiddenRefs(value: unknown): string[] {
   if (!Array.isArray(value) || value.length > MAX_HIDDEN_REFS ||
-    !value.every((ref) => typeof ref === "string" && ref.length > 0 && ref.length <= MAX_REF_LENGTH)) {
+    !value.every((ref) => typeof ref === "string" && ref.length > 0 &&
+      ref.length <= MAX_REF_LENGTH && isKnownHiddenContentRef(ref))) {
     throw new HttpsError(
       "invalid-argument",
-      `hiddenRefs must be an array of at most ${MAX_HIDDEN_REFS} non-empty strings (max ${MAX_REF_LENGTH} characters each)`,
+      `hiddenRefs must contain known hierarchy refs and be an array of at most ${MAX_HIDDEN_REFS} non-empty strings (max ${MAX_REF_LENGTH} characters each)`,
     );
   }
   return value as string[];

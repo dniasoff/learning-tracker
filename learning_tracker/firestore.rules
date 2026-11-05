@@ -383,6 +383,8 @@ service cloud.firestore {
     // Hidden-content policy is server-written only. The owner UID is shared
     // by parent and child sessions, so client rules cannot safely distinguish
     // PIN-elevated parent mode from child mode. The callable owns this field.
+    // TODO(7vx): if the server-issued parent session is ever accepted by a
+    // client owner branch, bind it to this profile before allowing any write.
     function touchesHiddenContent() {
       return (resource == null
                 ? request.resource.data.keys().toSet()

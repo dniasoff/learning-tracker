@@ -109,7 +109,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       // map pre-ticked refs to selections AND to compute partial checkbox
       // state — so load it unconditionally, even when there are no prior
       // completions to pre-tick.
-      final contentRepo = ref.read(contentRepositoryProvider);
+      final contentRepo = await ref.read(
+        visibleContentRepositoryProvider.future,
+      );
       final allItems = _applyScope(
         await contentRepo.getContentForCurriculum(widget.curriculumId),
       );
@@ -367,7 +369,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     if (!mounted) return;
 
     // Validate: can't mark everything as completed
-    final repository = ref.read(contentRepositoryProvider);
+    final repository = await ref.read(visibleContentRepositoryProvider.future);
     final allItems = await repository.getContentForCurriculum(
       widget.curriculumId,
     );

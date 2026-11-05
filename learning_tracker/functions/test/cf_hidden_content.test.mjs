@@ -181,6 +181,18 @@ describe('setProfileHiddenContent', () => {
     assert.equal((await profileRef().get()).get('hidden_content_refs'), undefined);
   });
 
+  test('rejects a ref that is not present in the curriculum hierarchy assets', async () => {
+    await expectHttpsError(
+      call(fns.setProfileHiddenContent, {
+        ownerUid: PARENT,
+        profileId: PROFILE,
+        hiddenRefs: ['Not a real curriculum node'],
+      }, parentAuth),
+      'invalid-argument',
+    );
+    assert.equal((await profileRef().get()).get('hidden_content_refs'), undefined);
+  });
+
   test('unauthenticated caller is denied', async () => {
     await expectHttpsError(
       call(fns.setProfileHiddenContent, {

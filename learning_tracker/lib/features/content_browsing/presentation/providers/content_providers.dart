@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/core/providers/active_account_firebase_provider.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/content_repository_impl.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/firestore_hidden_content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/profile_visible_content_repository.dart';
@@ -65,9 +66,28 @@ final hiddenContentRefsProvider = StreamProvider<Set<String>>((ref) async* {
   yield* repository.watchHiddenRefs();
 });
 
+/// Hidden refs for an explicitly addressed learner scope. Tutor roster rows
+/// use this family rather than the active-profile stream: several talmidim
+/// can be visible at once, and each row must receive its own policy.
+final hiddenContentRefsForScopeProvider = FutureProvider.autoDispose
+    .family<Set<String>, LearnerScope>((ref, scope) async {
+      final handles = await ref.watch(activeAccountFirebaseProvider.future);
+      if (handles == null) return const {};
+      final repository = FirestoreHiddenContentRepository(
+        firestore: handles.firestore,
+        ownerUid: scope.ownerUid,
+        profileId: scope.profileId,
+        resolveFunctions: ref.watch(accountFunctionsProvider),
+      );
+      return repository.getHiddenRefs();
+    });
+
 /// The profile-keyed visibility seam above the raw, process-cached repository.
 /// Consumers that need content should resolve this provider rather than the
 /// raw repository so a profile switch cannot reuse another child's view.
+///
+/// A separate scope family below serves tutor roster rows whose target is not
+/// the active profile.
 final visibleContentRepositoryProvider = FutureProvider<ContentRepository>((
   ref,
 ) async {
@@ -77,6 +97,19 @@ final visibleContentRepositoryProvider = FutureProvider<ContentRepository>((
     hidden,
   );
 });
+
+/// Profile-keyed visibility for a target learner, including tutor roster
+/// targets that are not the currently active profile.
+final visibleContentRepositoryForScopeProvider = FutureProvider.autoDispose
+    .family<ContentRepository, LearnerScope>((ref, scope) async {
+      final hidden = await ref.watch(
+        hiddenContentRefsForScopeProvider(scope).future,
+      );
+      return ProfileVisibleContentRepository(
+        ref.watch(contentRepositoryProvider),
+        hidden,
+      );
+    });
 
 /// Provides all content items for a specific curriculum (family provider).
 @riverpod
