@@ -668,6 +668,36 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get save;
 
+  /// No description provided for @hiddenContentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden content'**
+  String get hiddenContentTitle;
+
+  /// No description provided for @hiddenContentSuggested.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested'**
+  String get hiddenContentSuggested;
+
+  /// No description provided for @hiddenContentSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden content saved'**
+  String get hiddenContentSaved;
+
+  /// No description provided for @hiddenContentLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load content: {error}'**
+  String hiddenContentLoadError(String error);
+
+  /// No description provided for @hiddenContentSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save hidden content: {error}'**
+  String hiddenContentSaveError(String error);
+
   /// No description provided for @add.
   ///
   /// In en, this message translates to:

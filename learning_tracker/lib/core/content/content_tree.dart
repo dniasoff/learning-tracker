@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/content_browsing.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -71,7 +72,7 @@ class ContentTree {
     if (!root.isLeaf &&
         root.level2 == null &&
         root.sefariaRef == root.level1 &&
-        root.displayNameHe == curriculumId.displayNameHe) {
+        root.displayNameHe == curriculumHebrewName(curriculumId)) {
       return [root.level1];
     }
     return const [];

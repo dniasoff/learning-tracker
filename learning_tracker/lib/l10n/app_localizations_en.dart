@@ -331,6 +331,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get save => 'Save';
 
   @override
+  String get hiddenContentTitle => 'Hidden content';
+
+  @override
+  String get hiddenContentSuggested => 'Suggested';
+
+  @override
+  String get hiddenContentSaved => 'Hidden content saved';
+
+  @override
+  String hiddenContentLoadError(String error) {
+    return 'Could not load content: $error';
+  }
+
+  @override
+  String hiddenContentSaveError(String error) {
+    return 'Could not save hidden content: $error';
+  }
+
+  @override
   String get add => 'Add';
 
   @override

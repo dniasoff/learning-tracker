@@ -54,7 +54,7 @@ class FirestoreHiddenContentRepository {
       'ownerUid': ownerUid ?? _ownerUid,
       'hiddenRefs': refs.toList(growable: false)..sort(),
       if (grantId != null) 'grantId': grantId,
-      // TODO(7vx): require the server-issued parent session id on the owner
+      // TODO(DNI-517): require the server-issued parent session id on the owner
       // branch once the parent-session callable and rules are available.
       if (parentSessionId != null) 'parentSessionId': parentSessionId,
     });

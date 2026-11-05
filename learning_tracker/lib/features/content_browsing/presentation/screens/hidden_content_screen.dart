@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/hidden_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class HiddenContentScreen extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class _HiddenContentScreenState extends ConsumerState<HiddenContentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final refsAsync = ref.watch(hiddenContentRefsProvider);
     final rowsAsync = ref.watch(_hiddenContentRowsProvider);
     final current = refsAsync.asData?.value ?? const <String>{};
@@ -29,7 +31,7 @@ class _HiddenContentScreenState extends ConsumerState<HiddenContentScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hidden content'),
+        title: Text(l10n.hiddenContentTitle),
         actions: [
           TextButton(
             onPressed: _saving || rowsAsync.hasError
@@ -37,20 +39,20 @@ class _HiddenContentScreenState extends ConsumerState<HiddenContentScreen> {
                 : () => setState(
                     () => _selected = {...suggestedHiddenContentRefs},
                   ),
-            child: const Text('Suggested'),
+            child: Text(l10n.hiddenContentSuggested),
           ),
           TextButton(
             onPressed: _saving || refsAsync.isLoading || rowsAsync.hasError
                 ? null
                 : () => _save(selected),
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
       body: rowsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
-            Center(child: Text('Could not load content: $error')),
+            Center(child: Text(l10n.hiddenContentLoadError(error.toString()))),
         data: (rows) => ListView.builder(
           itemCount: rows.length,
           itemBuilder: (context, index) {
@@ -90,6 +92,7 @@ class _HiddenContentScreenState extends ConsumerState<HiddenContentScreen> {
   }
 
   Future<void> _save(Set<String> refs) async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _saving = true);
     try {
       final selection = ref.read(activeTutoredProfileSelectionProvider);
@@ -115,12 +118,14 @@ class _HiddenContentScreenState extends ConsumerState<HiddenContentScreen> {
         setState(() => _selected = refs);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Hidden content saved')));
+        ).showSnackBar(SnackBar(content: Text(l10n.hiddenContentSaved)));
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save hidden content: $error')),
+          SnackBar(
+            content: Text(l10n.hiddenContentSaveError(error.toString())),
+          ),
         );
       }
     } finally {

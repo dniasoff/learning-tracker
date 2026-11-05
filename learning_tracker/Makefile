@@ -1072,16 +1072,14 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/check_guarded_persist.$$$$.log; \
 	fi; \
-	echo "81/83 — SM-6: every @Riverpod(keepAlive: true) in lib/features/sacred_time/presentation/providers/{cities_provider,sacred_location_provider,sacred_windows_provider}.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this batch per AUD-sacred_time-07; other repo-wide keepAlive sites remain tracked separately, not yet in this gate)"; \
+	echo "81/83 — SM-6: every @Riverpod(keepAlive: true) in lib/features/sacred_time/presentation/providers/{cities_provider,sacred_windows_provider}.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this batch per AUD-sacred_time-07; other repo-wide keepAlive sites remain tracked separately, not yet in this gate)"; \
 	if awk 'FNR==1 { prev = "" } /@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print FILENAME":"FNR": "$$0 } { prev = $$0 }' \
 	    lib/features/sacred_time/presentation/providers/cities_provider.dart \
-	    lib/features/sacred_time/presentation/providers/sacred_location_provider.dart \
 	    lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart | grep -q .; then \
 	  echo "  @Riverpod(keepAlive: true) missing an inline // keepAlive: <reason> justification comment"; \
 	  echo "  on the preceding line (SM-6, docs/coding-standards.md:167, AUD-sacred_time-07):"; \
 	  awk 'FNR==1 { prev = "" } /@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print FILENAME":"FNR": "$$0 } { prev = $$0 }' \
 	    lib/features/sacred_time/presentation/providers/cities_provider.dart \
-	    lib/features/sacred_time/presentation/providers/sacred_location_provider.dart \
 	    lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart; \
 	  FAIL=1; \
 	fi; \

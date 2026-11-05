@@ -329,6 +329,25 @@ class AppLocalizationsHe extends AppLocalizations {
   String get save => 'שמירה';
 
   @override
+  String get hiddenContentTitle => 'תוכן מוסתר';
+
+  @override
+  String get hiddenContentSuggested => 'מומלץ';
+
+  @override
+  String get hiddenContentSaved => 'התוכן המוסתר נשמר';
+
+  @override
+  String hiddenContentLoadError(String error) {
+    return 'לא ניתן לטעון את התוכן: $error';
+  }
+
+  @override
+  String hiddenContentSaveError(String error) {
+    return 'לא ניתן לשמור את התוכן המוסתר: $error';
+  }
+
+  @override
   String get add => 'הוספה';
 
   @override

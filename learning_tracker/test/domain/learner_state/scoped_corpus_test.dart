@@ -18,14 +18,11 @@ void main() {
         CorpusNode(
           NodeEntry(level: 'section', ref: 'Mishnah Berurah|section|Shabbos'),
           [
-            CorpusNode(
-              NodeEntry(level: 'siman', ref: 'Mishnah Berurah 242'),
-              [
-                CorpusNode(
-                  NodeEntry(level: 'seif', ref: 'Mishnah Berurah 242:1'),
-                ),
-              ],
-            ),
+            CorpusNode(NodeEntry(level: 'siman', ref: 'Mishnah Berurah 242'), [
+              CorpusNode(
+                NodeEntry(level: 'seif', ref: 'Mishnah Berurah 242:1'),
+              ),
+            ]),
           ],
         ),
       ]),

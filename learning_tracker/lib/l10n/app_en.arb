@@ -229,6 +229,25 @@
   },
   "cancel": "Cancel",
   "save": "Save",
+  "hiddenContentTitle": "Hidden content",
+  "hiddenContentSuggested": "Suggested",
+  "hiddenContentSaved": "Hidden content saved",
+  "hiddenContentLoadError": "Could not load content: {error}",
+  "@hiddenContentLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hiddenContentSaveError": "Could not save hidden content: {error}",
+  "@hiddenContentSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "add": "Add",
   "delete": "Delete",
   "reveal": "Reveal",

@@ -223,6 +223,25 @@
   },
   "cancel": "ביטול",
   "save": "שמירה",
+  "hiddenContentTitle": "תוכן מוסתר",
+  "hiddenContentSuggested": "מומלץ",
+  "hiddenContentSaved": "התוכן המוסתר נשמר",
+  "hiddenContentLoadError": "לא ניתן לטעון את התוכן: {error}",
+  "@hiddenContentLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "hiddenContentSaveError": "לא ניתן לשמור את התוכן המוסתר: {error}",
+  "@hiddenContentSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "add": "הוספה",
   "delete": "מחיקה",
   "reveal": "חשיפה",
