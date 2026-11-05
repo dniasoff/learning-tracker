@@ -557,6 +557,10 @@ service cloud.firestore {
         allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
         // AD-37: settings keys / last_change_id route through the AD-38
         // owner rule; any other profile field stays a plain owner write.
+        // Under the parent-session claim, an existing-profile merge is a
+        // normal governed parent settings edit and needs the same live lease;
+        // child/no-session merges remain denied, so create-only enforcement
+        // is not required here.
         allow create, update: if isOwner(uid) && isLearnerProfileOwnerWrite(uid, profileId);
         allow delete: if false;
 
