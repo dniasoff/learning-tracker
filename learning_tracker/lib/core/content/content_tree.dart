@@ -56,6 +56,27 @@ class ContentTree {
     return _childrenByContainerKey[key] ?? const [];
   }
 
+  /// The structural stack Browse should start from for [curriculumId].
+  ///
+  /// A few legacy curricula have one top-level container whose Hebrew name
+  /// is exactly the curriculum name and whose ref is that same level value.
+  /// The container remains in the tree for stored scope/ground/order refs,
+  /// but Browse can begin at its children so it does not show a redundant
+  /// self-named row. Other curricula, including single-root curricula with a
+  /// different name, start at the true top level.
+  List<String> browseStartStack(CurriculumId curriculumId) {
+    final roots = children(curriculumId, const []);
+    if (roots.length != 1) return const [];
+    final root = roots.single;
+    if (!root.isLeaf &&
+        root.level2 == null &&
+        root.sefariaRef == root.level1 &&
+        root.displayNameHe == curriculumId.displayNameHe) {
+      return [root.level1];
+    }
+    return const [];
+  }
+
   /// Returns the direct parent container of [sefariaRef], or null when the
   /// item is a top-level container or is unknown.
   ContentItem? parent(String sefariaRef) => _parentByRef[sefariaRef];

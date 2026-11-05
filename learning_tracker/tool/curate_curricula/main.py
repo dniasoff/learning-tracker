@@ -40,6 +40,7 @@ BOOK_TEXT_CACHE = APP_ROOT / "tool" / "data" / "book_text_cache.json"
 
 sys.path.insert(0, str(APP_ROOT / "tool"))
 from sefaria_toc_utils import walk_toc_path  # noqa: E402
+from curate_curricula.mishna_berurah_transform import transform_items  # noqa: E402
 
 _TEXT_REFS: set[str] | None = None
 
@@ -572,6 +573,21 @@ def _strategy_grouped(
     return go
 
 
+def _mishna_berurah_strategy(curr="mishna_berurah"):
+    """Mishnah Berurah: Orach Chaim section → Siman → Seif.
+
+    Sefaria stores the text as Mishnah Berurah Siman/Seif Katan. The
+    section rows are app hierarchy containers only; every existing siman and
+    leaf `sefariaRef` remains the canonical Sefaria ref.
+    """
+    raw_items, _, _ = _strategy_simple(
+        "mishna_berurah",
+        ["Mishnah Berurah"],
+        ["Book", "Siman", "Seif"],
+    )(curr)
+    return transform_items(raw_items, curr)
+
+
 # Per-curriculum strategy table.
 STRATEGIES = {
     "bavli": bavli_strategy,
@@ -638,11 +654,7 @@ STRATEGIES = {
     "nach_prophets": _strategy_grouped(  # placeholder; nach is special
         "nach", "Tanakh/Prophets", None, ["Sefer", "Chapter", "Verse"],
     ),
-    "mishna_berurah": _strategy_simple(
-        "mishna_berurah",
-        ["Mishnah Berurah"],
-        ["Book", "Siman", "Seif"],
-    ),
+    "mishna_berurah": _mishna_berurah_strategy,
     "mussar": _strategy_simple(
         "mussar",
         [

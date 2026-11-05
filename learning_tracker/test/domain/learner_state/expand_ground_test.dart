@@ -54,6 +54,25 @@ void main() {
     );
   });
 
+  test('a root-keyed Mishnah Berurah ground expands through its sections', () {
+    const root = NodeEntry(level: 'book', ref: 'Mishnah Berurah');
+    final corpus = InMemoryCorpus('mishna_berurah', [
+      const CorpusNode(root, [
+        CorpusNode(
+          NodeEntry(level: 'section', ref: 'Mishnah Berurah|section|Shabbos'),
+          [
+            CorpusNode(NodeEntry(level: 'siman', ref: 'Mishnah Berurah 242'), [
+              CorpusNode(
+                NodeEntry(level: 'seif', ref: 'Mishnah Berurah 242:1'),
+              ),
+            ]),
+          ],
+        ),
+      ]),
+    ]);
+    expect(expandGround(const [root], corpus), ['Mishnah Berurah 242:1']);
+  });
+
   test('unknown refs and level mismatches expand to nothing', () {
     expect(
       expandGround(const [

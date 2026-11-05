@@ -277,13 +277,22 @@ class CurriculumLabels {
       ),
     ],
     CurriculumId.mishnaBerurah: [
-      // The bundled mishna_berurah.json has level1='Mishnah Berurah'
-      // (the book name) and Siman/Seif as the numeric levels below it.
+      // The legacy Mishnah Berurah root remains at level 1 for stored
+      // scope/ground/order/Siyum refs; Browse hides that single self-named
+      // root and starts at the authoritative Orach Chaim sections.
       LevelLabels(
-        en: 'Sefer',
-        enPlural: 'Seforim',
+        en: 'Book',
+        enPlural: 'Books',
         he: 'ספר',
         hePlural: 'ספרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
+      ),
+      LevelLabels(
+        en: 'Section',
+        enPlural: 'Sections',
+        he: 'הלכה',
+        hePlural: 'הלכות',
         valueKind: LevelValueKind.named,
         prefixLabelInDisplay: false,
       ),
