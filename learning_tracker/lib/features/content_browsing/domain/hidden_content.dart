@@ -46,12 +46,26 @@ abstract final class HiddenContentFilter {
     ContentItem item,
     Set<String> hiddenRefs,
     Map<String, String> refsByPath,
-  ) {
-    if (hiddenRefs.contains(item.sefariaRef)) return true;
-    final levels = _levels(item);
+  ) => isHiddenAtPath(
+    curriculumId: item.curriculumId,
+    itemRef: item.sefariaRef,
+    levels: _levels(item),
+    hiddenRefs: hiddenRefs,
+    refsByPath: refsByPath,
+  );
+
+  /// Checks a hierarchy path against refs indexed separately from leaf rows.
+  static bool isHiddenAtPath({
+    required String curriculumId,
+    required String itemRef,
+    required List<String> levels,
+    required Set<String> hiddenRefs,
+    required Map<String, String> refsByPath,
+  }) {
+    if (hiddenRefs.contains(itemRef)) return true;
     for (var depth = 1; depth <= levels.length; depth++) {
       final ancestor =
-          refsByPath[_pathKey(item.curriculumId, levels.take(depth).toList())];
+          refsByPath[_pathKey(curriculumId, levels.take(depth).toList())];
       if (ancestor != null && hiddenRefs.contains(ancestor)) return true;
     }
     return false;
@@ -64,6 +78,9 @@ abstract final class HiddenContentFilter {
     if (item.level4 != null) item.level4!,
   ];
 
-  static String _pathKey(String curriculumId, List<String> levels) =>
+  static String pathKey(String curriculumId, List<String> levels) =>
       '$curriculumId|${levels.length}|${levels.join('|')}';
+
+  static String _pathKey(String curriculumId, List<String> levels) =>
+      pathKey(curriculumId, levels);
 }

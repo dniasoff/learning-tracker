@@ -96,3 +96,21 @@ abstract class LifetimeUnionLeafSource {
   /// invariant it must satisfy relative to [ContentRepository.getContentForCurriculum].
   Future<List<ContentItem>> loadLeavesTransient(CurriculumId curriculumId);
 }
+
+/// Optional capability for a content source that can apply hidden-container
+/// policy while retaining the bounded leaf-only loading path.
+abstract class LifetimeHiddenContentLeafSource {
+  /// Loads only visible leaves for [curriculumId] without retaining them.
+  Future<List<ContentItem>> loadLeavesTransientForHiddenContent(
+    CurriculumId curriculumId,
+    Set<String> hiddenRefs,
+  );
+}
+
+/// A profile-visible repository's bounded leaf view.
+abstract class LifetimeVisibleLeafSource {
+  /// Loads the leaves visible in this repository view without retaining them.
+  Future<List<ContentItem>> loadVisibleLeavesTransient(
+    CurriculumId curriculumId,
+  );
+}

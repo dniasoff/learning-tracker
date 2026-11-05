@@ -6,7 +6,10 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 
 /// Profile-keyed view over the raw bundled content repository.
 class ProfileVisibleContentRepository
-    implements ContentRepository, LifetimeUnionLeafSource {
+    implements
+        ContentRepository,
+        LifetimeUnionLeafSource,
+        LifetimeVisibleLeafSource {
   ProfileVisibleContentRepository(this._raw, this.hiddenRefs);
 
   final ContentRepository _raw;
@@ -21,16 +24,29 @@ class ProfileVisibleContentRepository
   Future<List<ContentItem>> loadLeavesTransient(
     CurriculumId curriculumId,
   ) async {
-    final leaves = _raw is LifetimeUnionLeafSource
-        ? await (_raw as LifetimeUnionLeafSource).loadLeavesTransient(
-            curriculumId,
-          )
-        : (await _raw.getContentForCurriculum(
-            curriculumId,
-          )).where((item) => item.isLeaf).toList();
-    if (hiddenRefs.isEmpty) return leaves;
-    return HiddenContentFilter.visible(leaves, hiddenRefs);
+    if (hiddenRefs.isEmpty) {
+      return _raw is LifetimeUnionLeafSource
+          ? await (_raw as LifetimeUnionLeafSource).loadLeavesTransient(
+              curriculumId,
+            )
+          : (await _raw.getContentForCurriculum(
+              curriculumId,
+            )).where((item) => item.isLeaf).toList();
+    }
+    if (_raw is LifetimeHiddenContentLeafSource) {
+      return (_raw as LifetimeHiddenContentLeafSource)
+          .loadLeavesTransientForHiddenContent(curriculumId, hiddenRefs);
+    }
+    throw StateError(
+      'Hidden-content bounded leaf loading requires '
+      'LifetimeHiddenContentLeafSource',
+    );
   }
+
+  @override
+  Future<List<ContentItem>> loadVisibleLeavesTransient(
+    CurriculumId curriculumId,
+  ) => loadLeavesTransient(curriculumId);
 
   @override
   Future<List<ContentItem>> getContentForCurriculum(

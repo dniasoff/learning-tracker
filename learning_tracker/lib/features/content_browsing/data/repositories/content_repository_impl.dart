@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
+import 'package:learning_tracker/features/content_browsing/domain/hidden_content.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 
@@ -18,7 +19,10 @@ import 'package:learning_tracker/features/content_browsing/domain/strategies/com
 ///
 /// Assets are at: assets/content/hierarchy/{curriculum_id}.json
 class ContentRepositoryImpl
-    implements ContentRepository, LifetimeUnionLeafSource {
+    implements
+        ContentRepository,
+        LifetimeUnionLeafSource,
+        LifetimeHiddenContentLeafSource {
   /// Cache of loaded content, keyed by curriculum storage key.
   final _contentCache = <String, List<ContentItem>>{};
 
@@ -286,6 +290,116 @@ class ContentRepositoryImpl
       );
     }
   }
+
+  /// Bounded leaf loading with hidden-container filtering.
+  ///
+  /// Container rows are indexed transiently as path-to-ref strings. They are
+  /// never constructed as [ContentItem]s or retained in [_contentCache].
+  @override
+  Future<List<ContentItem>> loadLeavesTransientForHiddenContent(
+    CurriculumId curriculumId,
+    Set<String> hiddenRefs,
+  ) async {
+    if (hiddenRefs.isEmpty) return loadLeavesTransient(curriculumId);
+
+    final key = curriculumId.storageKey;
+    final cached = _contentCache[key];
+    if (cached != null) {
+      return [
+        for (final item in HiddenContentFilter.visible(cached, hiddenRefs))
+          if (item.isLeaf) item,
+      ];
+    }
+
+    final strategy = CompositeCurriculumStrategy.forKey(key);
+    if (strategy != null) {
+      final preamble = HiddenContentFilter.visible(
+        strategy.preamble,
+        hiddenRefs,
+      );
+      if (preamble.length != strategy.preamble.length) return const [];
+
+      final out = <ContentItem>[];
+      for (final source in strategy.sources) {
+        final sourceId = CurriculumId.values.firstWhere(
+          (c) => c.storageKey == source,
+        );
+        final sourceLeaves = await loadLeavesTransientForHiddenContent(
+          sourceId,
+          hiddenRefs,
+        );
+        out.addAll(
+          sourceLeaves.map(
+            (item) =>
+                strategy.remap(item: item, source: source, offset: out.length),
+          ),
+        );
+      }
+      return out;
+    }
+
+    try {
+      final jsonString = await loadRawContentJson(key);
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      final itemsJson = json['items'] as List;
+      final refsByPath = <String, String>{};
+      for (final itemJson in itemsJson) {
+        final item = itemJson as Map<String, dynamic>;
+        if (item['isLeaf'] as bool) continue;
+        final levels = _levelsFromJson(item);
+        if (levels.isEmpty) continue;
+        refsByPath[HiddenContentFilter.pathKey(
+              item['curriculumId'] as String,
+              levels,
+            )] =
+            item['sefariaRef'] as String;
+      }
+
+      final out = <ContentItem>[];
+      for (final itemJson in itemsJson) {
+        final item = itemJson as Map<String, dynamic>;
+        if (!(item['isLeaf'] as bool)) continue;
+        final levels = _levelsFromJson(item);
+        if (HiddenContentFilter.isHiddenAtPath(
+          curriculumId: item['curriculumId'] as String,
+          itemRef: item['sefariaRef'] as String,
+          levels: levels,
+          hiddenRefs: hiddenRefs,
+          refsByPath: refsByPath,
+        )) {
+          continue;
+        }
+        out.add(_contentItemFromJson(item));
+      }
+      return out;
+    } on Exception catch (e) {
+      throw ContentLoadException(
+        'Failed to load visible leaves for ${curriculumId.displayNameEn}',
+        cause: e,
+      );
+    }
+  }
+
+  static List<String> _levelsFromJson(Map<String, dynamic> item) => [
+    item['level1'] as String,
+    if (item['level2'] != null) item['level2'] as String,
+    if (item['level3'] != null) item['level3'] as String,
+    if (item['level4'] != null) item['level4'] as String,
+  ];
+
+  static ContentItem _contentItemFromJson(Map<String, dynamic> item) =>
+      ContentItem(
+        curriculumId: item['curriculumId'] as String,
+        level1: item['level1'] as String,
+        level2: item['level2'] as String?,
+        level3: item['level3'] as String?,
+        level4: item['level4'] as String?,
+        displayNameHe: item['displayNameHe'] as String,
+        displayNameEn: item['displayNameEn'] as String,
+        sefariaRef: item['sefariaRef'] as String,
+        sortOrder: item['sortOrder'] as int,
+        isLeaf: true,
+      );
 
   @override
   Future<CurriculumHierarchyConfig> getHierarchyConfig(

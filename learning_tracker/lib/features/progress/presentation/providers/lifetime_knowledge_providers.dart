@@ -364,6 +364,11 @@ Future<List<ContentItem>?> _boundedLeavesFor(
   ContentRepository repo,
   CurriculumId curriculum,
 ) async {
+  if (repo is LifetimeVisibleLeafSource) {
+    return (repo as LifetimeVisibleLeafSource).loadVisibleLeavesTransient(
+      curriculum,
+    );
+  }
   if (repo is LifetimeUnionLeafSource) {
     final leafSource = repo as LifetimeUnionLeafSource;
     try {

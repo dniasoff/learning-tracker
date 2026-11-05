@@ -60,7 +60,10 @@ class _DiskContentRepository extends ContentRepositoryImpl {
 /// used: the PERMANENT-CACHING [getContentForCurriculum] versus the bounded,
 /// non-retaining [loadLeavesTransient].
 class _CountingUnionRepository
-    implements ContentRepository, LifetimeUnionLeafSource {
+    implements
+        ContentRepository,
+        LifetimeUnionLeafSource,
+        LifetimeHiddenContentLeafSource {
   _CountingUnionRepository(this._inner);
 
   final ContentRepositoryImpl _inner;
@@ -82,6 +85,12 @@ class _CountingUnionRepository
     transientlyLoaded.add(curriculumId.storageKey);
     return _inner.loadLeavesTransient(curriculumId);
   }
+
+  @override
+  Future<List<ContentItem>> loadLeavesTransientForHiddenContent(
+    CurriculumId curriculumId,
+    Set<String> hiddenRefs,
+  ) => _inner.loadLeavesTransientForHiddenContent(curriculumId, hiddenRefs);
 
   @override
   Future<CurriculumHierarchyConfig> getHierarchyConfig(
@@ -200,4 +209,78 @@ void main() {
       reason: 'the single real completed Mussar leaf must still be counted',
     );
   });
+
+  test(
+    'bounded lifetime totals exclude hidden containers and hidden leaves',
+    () async {
+      final raw = _DiskContentRepository();
+      final allMishnaLeaves = await raw.loadLeavesTransient(
+        CurriculumId.mishnayos,
+      );
+      final hiddenMasechtaLeaves = allMishnaLeaves
+          .where((item) => item.sefariaRef.startsWith('Mishnah Niddah'))
+          .map((item) => item.sefariaRef)
+          .toSet();
+
+      final containerRepo = _CountingUnionRepository(_DiskContentRepository());
+      final containerState = fakeLearnerState(
+        curricula: {
+          'mishnayos': FakeCurriculumState(
+            learntLeaves: {...hiddenMasechtaLeaves, 'Mishnah Berakhot 1:1'},
+          ),
+        },
+      );
+      final container = ProviderContainer(
+        overrides: [
+          ...learnerStateOverrides(scope: c0Scope(), state: containerState),
+          ...contentRepositoryOverrides(
+            containerRepo,
+            hiddenRefs: const {'Mishnah Niddah'},
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final containerSubscription = container.listen(
+        lifetimeTotalsAcrossAllCurriculaProvider,
+        (_, __) {},
+      );
+      addTearDown(containerSubscription.close);
+
+      final containerTotals = await container.read(
+        lifetimeTotalsAcrossAllCurriculaProvider.future,
+      );
+      expect(containerTotals.learnedSections, 1);
+      expect(containerRepo.fullyMaterialized, isEmpty);
+
+      final leafRepo = _CountingUnionRepository(_DiskContentRepository());
+      final leafState = fakeLearnerState(
+        curricula: {
+          'mishnayos': FakeCurriculumState(
+            learntLeaves: {'Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:2'},
+          ),
+        },
+      );
+      final leafContainer = ProviderContainer(
+        overrides: [
+          ...learnerStateOverrides(scope: c0Scope(), state: leafState),
+          ...contentRepositoryOverrides(
+            leafRepo,
+            hiddenRefs: const {'Mishnah Berakhot 1:1'},
+          ),
+        ],
+      );
+      addTearDown(leafContainer.dispose);
+      final leafSubscription = leafContainer.listen(
+        lifetimeTotalsAcrossAllCurriculaProvider,
+        (_, __) {},
+      );
+      addTearDown(leafSubscription.close);
+
+      final leafTotals = await leafContainer.read(
+        lifetimeTotalsAcrossAllCurriculaProvider.future,
+      );
+      expect(leafTotals.learnedSections, 1);
+      expect(leafRepo.fullyMaterialized, isEmpty);
+    },
+  );
 }
