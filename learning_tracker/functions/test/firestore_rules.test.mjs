@@ -436,6 +436,21 @@ describe('7vx — parent-session cutover and revoke TOCTOU', () => {
     ));
   });
 
+  test('cutover blocks child-shaped points writes without a live parent actor', async () => {
+    await assertFails(setDoc(
+      doc(cutoverOwner(), `${POINTS}/${nextUlid()}`),
+      { points: 10 },
+    ));
+    await assertFails(setDoc(
+      doc(cutoverOwner(), `${POINTS}/${nextUlid()}`),
+      { points: 10, actor: OWNER_ACTOR },
+    ));
+    await assertSucceeds(setDoc(
+      doc(cutoverOwner(), `${POINTS}/${nextUlid()}`),
+      { points: 10, actor: SESSION_OWNER_ACTOR },
+    ));
+  });
+
   test('a session bound to another profile cannot authorize this profile', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await updateDoc(doc(ctx.firestore(), `users/${OWNER}/parent_sessions/${PARENT_SESSION_ID}`), {

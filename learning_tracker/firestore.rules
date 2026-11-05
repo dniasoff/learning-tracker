@@ -298,6 +298,20 @@ service cloud.firestore {
                 : true);
     }
 
+    // Once parent-session enforcement is enabled, a direct points adjustment
+    // is a parent write too. Keep the legacy payload shape before cutover, but
+    // require the same profile-bound live session proof as governed writes
+    // after cutover; otherwise a child actor on the owner's uid could mint
+    // points because the old ledger schema had no actor field.
+    function isValidPointsActorForCutover(d, uid, profileId) {
+      return !parentSessionCutoverEnabled()
+          || (d is map
+              && 'actor' in d
+              && d.actor is map
+              && d.actor.role == 'parent'
+              && isOwnerActor(d.actor, uid, profileId));
+    }
+
     // `ended_at` on any governed doc: absent/null (re-add clears it) or an
     // AD-54-bounded client timestamp.
     function hasValidEndedAt(d) {
@@ -630,11 +644,15 @@ service cloud.firestore {
           // AD-54 (SR-3 amendment): created_at, when present, must be a
           // Firestore Timestamp <= request.time + 10 min. An event entry's
           // doc-id must be exactly 'pts_' + event_id. No access calls.
-          allow create: if isOwner(uid) && isValidPointsEntry(entryId, request.resource.data);
+          allow create: if isOwner(uid)
+            && isValidPointsEntry(entryId, request.resource.data)
+            && isValidPointsActorForCutover(request.resource.data, uid, profileId);
           // SR-1 (append-only): update is allowed ONLY for the idempotent
           // merge:true re-push of the same doc on outbox retry — a
           // changed-value update is denied.
-          allow update: if isOwner(uid) && request.resource.data == resource.data;
+          allow update: if isOwner(uid)
+            && request.resource.data == resource.data
+            && isValidPointsActorForCutover(request.resource.data, uid, profileId);
           allow delete: if false;
         }
 

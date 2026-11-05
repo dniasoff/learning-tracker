@@ -178,11 +178,13 @@ class PinEntryMachine {
     required PinService Function() pinService,
     required String? Function() profileId,
     required void Function(PinFlowState state) onStateChanged,
+    Future<bool> Function(String pin)? onVerificationSucceeded,
     bool Function() isActive = _alwaysActive,
     PinFlowMode initialMode = PinFlowMode.verify,
   }) : _pinService = pinService,
        _profileId = profileId,
        _onStateChanged = onStateChanged,
+       _onVerificationSucceeded = onVerificationSucceeded,
        _isActive = isActive,
        _state = PinFlowState(
          mode: initialMode,
@@ -196,6 +198,7 @@ class PinEntryMachine {
   final PinService Function() _pinService;
   final String? Function() _profileId;
   final void Function(PinFlowState state) _onStateChanged;
+  final Future<bool> Function(String pin)? _onVerificationSucceeded;
   final bool Function() _isActive;
 
   PinFlowState _state;
@@ -327,6 +330,19 @@ class PinEntryMachine {
       // the verify call above is in flight.
       if (!_isActive()) return;
       if (ok) {
+        if (_onVerificationSucceeded != null &&
+            !await _onVerificationSucceeded(pin)) {
+          if (!_isActive()) return;
+          _emit(
+            _state.copyWith(
+              busy: false,
+              error: PinFlowError.unexpected,
+              digits: '',
+            ),
+          );
+          return;
+        }
+        if (!_isActive()) return;
         _emit(
           _state.copyWith(busy: false, step: PinFlowStep.enterNew, digits: ''),
         );

@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
@@ -394,6 +395,16 @@ class ProfileSwitcherSheet extends ConsumerWidget {
         context,
         profileId: activeProfileId,
         pinService: ref.read(pinServiceProvider),
+        onVerificationSucceeded: (pin) async {
+          try {
+            await ref
+                .read(parentSessionControllerProvider)
+                .authenticate(profileId: activeProfileId, pin: pin);
+            return true;
+          } catch (_) {
+            return false;
+          }
+        },
         subtitle: subtitle,
       ).then((verified) {
         if (verified && context.mounted) action();

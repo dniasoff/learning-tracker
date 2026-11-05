@@ -81,6 +81,20 @@ describe('parent PIN and session callables', () => {
     assert.equal(sessions.empty, true);
   });
 
+  test('parallel incorrect PINs serialize the five-attempt lockout', async () => {
+    await call(fns.setParentPin, { profileId: PROFILE, pin: '2468' }, recentParentAuth);
+    const results = await Promise.allSettled(Array.from({ length: 20 }, () =>
+      call(fns.createParentSession, { profileId: PROFILE, pin: '0000' }, parentAuth)));
+    assert.equal(results.filter((result) => result.status === 'fulfilled').length, 0);
+    assert.equal(results.filter((result) =>
+      result.status === 'rejected' && result.reason?.code === 'permission-denied').length, 4);
+    assert.equal(results.filter((result) =>
+      result.status === 'rejected' && result.reason?.code === 'resource-exhausted').length, 16);
+    const secret = await pinRef().get();
+    assert.equal(secret.get('failed_attempts'), 5);
+    assert.ok(secret.get('locked_until').toMillis() > Date.now());
+  });
+
   test('revoke is owner-bound and idempotent', async () => {
     await call(fns.setParentPin, { profileId: PROFILE, pin: '2468' }, recentParentAuth);
     const created = await call(fns.createParentSession, {

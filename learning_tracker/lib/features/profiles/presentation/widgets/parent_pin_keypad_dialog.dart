@@ -22,6 +22,7 @@ Future<bool> showParentPinVerificationDialog(
   BuildContext context, {
   required String profileId,
   required PinService pinService,
+  Future<bool> Function(String pin)? onVerificationSucceeded,
   AnalyticsService? analytics,
   String? subtitle,
 }) async {
@@ -32,6 +33,7 @@ Future<bool> showParentPinVerificationDialog(
     builder: (ctx) => _ParentPinVerificationDialog(
       profileId: profileId,
       pinService: pinService,
+      onVerificationSucceeded: onVerificationSucceeded,
       subtitle: subtitle,
     ),
   );
@@ -74,11 +76,13 @@ class _ParentPinVerificationDialog extends StatefulWidget {
   const _ParentPinVerificationDialog({
     required this.profileId,
     required this.pinService,
+    this.onVerificationSucceeded,
     this.subtitle,
   });
 
   final String profileId;
   final PinService pinService;
+  final Future<bool> Function(String pin)? onVerificationSucceeded;
 
   /// Overrides the default subtitle copy. When null, falls back to
   /// [AppLocalizations.enterParentPinSubtitle].
@@ -97,6 +101,7 @@ class _ParentPinVerificationDialogState
   late final PinEntryMachine _machine = PinEntryMachine(
     pinService: () => widget.pinService,
     profileId: () => widget.profileId,
+    onVerificationSucceeded: widget.onVerificationSucceeded,
     onStateChanged: _onMachineStateChanged,
     isActive: () => mounted,
     initialMode: PinFlowMode.verify,

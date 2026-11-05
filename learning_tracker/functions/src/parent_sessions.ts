@@ -148,8 +148,8 @@ export const setParentPin = onCall(CALL_OPTS, async (request) => {
     .collection("learner_profiles").doc(profileId);
   const profile = await profileRef.get();
   if (!profile.exists) throw new HttpsError("not-found", "Learner profile not found");
-  if (profile.get("mode") !== "child") {
-    throw new HttpsError("failed-precondition", "Parent PINs are only set for child profiles");
+  if (profile.get("mode") !== "child" && profile.get("mode") !== "adult") {
+    throw new HttpsError("failed-precondition", "Parent PINs are only set for learner profiles");
   }
 
   await pinSecretRef(uid, profileId).set({
@@ -173,33 +173,50 @@ export const createParentSession = onCall(CALL_OPTS, async (request) => {
   const profile = await profileRef.get();
   if (!profile.exists) throw new HttpsError("not-found", "Learner profile not found");
 
-  if (profile.get("mode") === "child") {
+  // An adult profile without a server PIN intentionally remains usable by
+  // anyone holding the already-signed-in device; that is the product's
+  // existing boundary, and the server cannot make it stricter without
+  // changing that UX. If an adult profile does have a server PIN, however,
+  // it follows the same verification and lockout path as a child profile.
+  const secretRef = pinSecretRef(uid, profileId);
+  const secret = await secretRef.get();
+  if (secret.exists || profile.get("mode") === "child") {
     const pin = requirePin(data.pin);
-    const secretRef = pinSecretRef(uid, profileId);
-    const secret = await secretRef.get();
     if (!secret.exists) {
       throw new HttpsError("failed-precondition", "Parent PIN enrollment is required");
     }
-    const secretData = secret.data()!;
-    const lockedUntil = timestamp(secretData.locked_until);
-    if (lockedUntil && lockedUntil.toMillis() > Date.now()) {
-      throw new HttpsError("resource-exhausted", "Parent PIN is temporarily locked");
-    }
-    if (!(await verifyPin(pin, secretData.hash))) {
+    const result = await db.runTransaction(async (transaction) => {
+      const current = await transaction.get(secretRef);
+      if (!current.exists) {
+        return { verified: false, locked: false };
+      }
+      const secretData = current.data()!;
+      const lockedUntil = timestamp(secretData.locked_until);
+      if (lockedUntil && lockedUntil.toMillis() > Date.now()) {
+        return { verified: false, locked: true };
+      }
+      if (await verifyPin(pin, secretData.hash)) {
+        transaction.set(secretRef, { failed_attempts: 0, locked_until: null }, { merge: true });
+        return { verified: true, locked: false };
+      }
+
       const attempts = Number(secretData.failed_attempts ?? 0) + 1;
+      const locked = attempts >= MAX_PIN_ATTEMPTS;
       const update: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> = {
         failed_attempts: attempts,
+        ...(locked
+          ? { locked_until: admin.firestore.Timestamp.fromMillis(Date.now() + PIN_LOCKOUT_MS) }
+          : {}),
       };
-      if (attempts >= MAX_PIN_ATTEMPTS) {
-        update.locked_until = admin.firestore.Timestamp.fromMillis(Date.now() + PIN_LOCKOUT_MS);
-      }
-      await secretRef.set(update, { merge: true });
+      transaction.set(secretRef, update, { merge: true });
+      return { verified: false, locked };
+    });
+    if (!result.verified) {
       throw new HttpsError(
-        attempts >= MAX_PIN_ATTEMPTS ? "resource-exhausted" : "permission-denied",
-        attempts >= MAX_PIN_ATTEMPTS ? "Parent PIN is temporarily locked" : "Incorrect parent PIN",
+        result.locked ? "resource-exhausted" : "permission-denied",
+        result.locked ? "Parent PIN is temporarily locked" : "Incorrect parent PIN",
       );
     }
-    await secretRef.set({ failed_attempts: 0, locked_until: null }, { merge: true });
   }
 
   const sessionId = crypto.randomBytes(32).toString("hex");

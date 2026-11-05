@@ -32,6 +32,17 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 final routerProvider = Provider<AppRouter>((ref) {
   final pinSvc = ref.watch(pinServiceProvider);
 
+  Future<bool> establishParentSession(String profileId, String pin) async {
+    try {
+      await ref
+          .read(parentSessionControllerProvider)
+          .authenticate(profileId: profileId, pin: pin);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   return AppRouter(
     navigatorKey: navigatorKey,
     authGuard: AuthGuard(
@@ -121,6 +132,8 @@ final routerProvider = Provider<AppRouter>((ref) {
           context,
           profileId: profileId,
           pinService: pinSvc,
+          onVerificationSucceeded: (pin) =>
+              establishParentSession(profileId, pin),
           analytics: ref.read(analyticsServiceProvider),
         );
       },
@@ -152,6 +165,9 @@ final routerProvider = Provider<AppRouter>((ref) {
       },
       onSessionLocked: () {
         ref.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
+        if (ref.read(parentSessionIdProvider) != null) {
+          unawaited(ref.read(parentSessionControllerProvider).lock());
+        }
         // If a tutored session was active, exit it on lock.
         if (ref.read(activeTutoredProfileSelectionProvider) != null) {
           ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
@@ -188,6 +204,8 @@ final routerProvider = Provider<AppRouter>((ref) {
           context,
           profileId: profileId,
           pinService: pinSvc,
+          onVerificationSucceeded: (pin) =>
+              establishParentSession(profileId, pin),
           analytics: ref.read(analyticsServiceProvider),
           subtitle: AppLocalizations.of(
             context,

@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
+import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/repositories/parent_session_client.dart';
+import 'package:learning_tracker/data/repositories/parent_session_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'parent_pin_session_provider.g.dart';
@@ -48,4 +50,27 @@ final parentSessionClientProvider = Provider<ParentSessionClient>((ref) {
     if (expiry is Timestamp) raw['expiresAt'] = expiry.toDate().toUtc();
     return raw;
   });
+});
+
+/// The active account's session lifecycle. Firestore is resolved lazily so
+/// locking remains safe during account teardown and account switching.
+final parentSessionControllerProvider = Provider<ParentSessionController>((
+  ref,
+) {
+  Future<FirebaseFirestore?> firestore() async =>
+      (await ref.read(activeAccountFirebaseProvider.future))?.firestore;
+
+  return ParentSessionController(
+    client: ref.read(parentSessionClientProvider),
+    currentSessionId: () => ref.read(parentSessionIdProvider),
+    setSessionId: (sessionId) =>
+        ref.read(parentSessionIdProvider.notifier).set(sessionId),
+    clearSessionId: () => ref.read(parentSessionIdProvider.notifier).clear(),
+    disableNetwork: () async {
+      await (await firestore())?.disableNetwork();
+    },
+    enableNetwork: () async {
+      await (await firestore())?.enableNetwork();
+    },
+  );
 });
