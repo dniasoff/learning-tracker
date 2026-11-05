@@ -11,12 +11,16 @@ final class ParentSessionController {
     required void Function() clearSessionId,
     required Future<void> Function() disableNetwork,
     required Future<void> Function() enableNetwork,
+    Future<void> Function(String sessionId)? persistSessionId,
+    Future<void> Function()? clearPersistedSessionId,
   }) : _client = client,
        _currentSessionId = currentSessionId,
        _setSessionId = setSessionId,
        _clearSessionId = clearSessionId,
        _disableNetwork = disableNetwork,
-       _enableNetwork = enableNetwork;
+       _enableNetwork = enableNetwork,
+       _persistSessionId = persistSessionId,
+       _clearPersistedSessionId = clearPersistedSessionId;
 
   final ParentSessionClient _client;
   final String? Function() _currentSessionId;
@@ -24,6 +28,8 @@ final class ParentSessionController {
   final void Function() _clearSessionId;
   final Future<void> Function() _disableNetwork;
   final Future<void> Function() _enableNetwork;
+  final Future<void> Function(String sessionId)? _persistSessionId;
+  final Future<void> Function()? _clearPersistedSessionId;
 
   /// Mints a lease only after the PIN gate has accepted the entered PIN.
   Future<ParentSessionLease> authenticate({
@@ -31,6 +37,7 @@ final class ParentSessionController {
     required String pin,
   }) async {
     final lease = await _client.create(profileId: profileId, pin: pin);
+    await _persistSessionId?.call(lease.sessionId);
     _setSessionId(lease.sessionId);
     return lease;
   }
@@ -42,10 +49,8 @@ final class ParentSessionController {
     final sessionId = _currentSessionId();
     _clearSessionId();
     await _disableNetwork();
-    try {
-      if (sessionId != null) await _client.revoke(sessionId);
-    } finally {
-      await _enableNetwork();
-    }
+    if (sessionId != null) await _client.revoke(sessionId);
+    if (sessionId != null) await _clearPersistedSessionId?.call();
+    await _enableNetwork();
   }
 }

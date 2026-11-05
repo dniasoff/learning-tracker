@@ -46,6 +46,10 @@ final class ParentSessionClient {
     );
   }
 
+  Future<void> setPin({required String profileId, required String pin}) async {
+    await _call('setParentPin', {'profileId': profileId, 'pin': pin});
+  }
+
   Future<void> revoke(String sessionId) async {
     await _call('revokeParentSession', {'parentSessionId': sessionId});
   }

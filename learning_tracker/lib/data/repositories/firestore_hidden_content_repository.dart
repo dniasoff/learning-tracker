@@ -13,8 +13,10 @@ class FirestoreHiddenContentRepository {
     required String ownerUid,
     required String profileId,
     required AccountFunctionsResolver resolveFunctions,
+    String? parentSessionId,
   }) : _resolveFunctions = resolveFunctions,
        _ownerUid = ownerUid,
+       _parentSessionId = parentSessionId,
        _doc = firestore
            .collection('users')
            .doc(ownerUid)
@@ -24,6 +26,7 @@ class FirestoreHiddenContentRepository {
   final DocumentReference<Map<String, dynamic>> _doc;
   final AccountFunctionsResolver _resolveFunctions;
   final String _ownerUid;
+  final String? _parentSessionId;
 
   static const fieldName = 'hidden_content_refs';
 
@@ -37,9 +40,9 @@ class FirestoreHiddenContentRepository {
 
   /// Single write seam for both the parent and tutor paths.
   ///
-  /// The parent caller must have passed the parent PIN gate. [parentSessionId]
-  /// is reserved for 7vx's server-issued proof and is intentionally optional
-  /// until that story lands.
+  /// The owner caller must have passed the parent PIN gate. The provider
+  /// supplies the server-issued [parentSessionId] for owner writes; tutor
+  /// writes continue to use their grant proof instead.
   Future<void> setHiddenRefs(
     Set<String> refs, {
     String? grantId,
@@ -54,9 +57,8 @@ class FirestoreHiddenContentRepository {
       'ownerUid': ownerUid ?? _ownerUid,
       'hiddenRefs': refs.toList(growable: false)..sort(),
       if (grantId != null) 'grantId': grantId,
-      // TODO(DNI-517): require the server-issued parent session id on the owner
-      // branch once the parent-session callable and rules are available.
-      if (parentSessionId != null) 'parentSessionId': parentSessionId,
+      if ((parentSessionId ?? _parentSessionId) != null)
+        'parentSessionId': parentSessionId ?? _parentSessionId,
     });
   }
 

@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:talker_riverpod_logger/talker_riverpod_logger.dart';
@@ -168,6 +169,19 @@ Future<BootstrapResult> bootstrap() async {
       accountId: accountBootstrap.accountId,
       authenticatedUserId: bootstrapUser?.uid,
       restoredFirebaseUid: restoredFirebaseUid,
+    );
+  }
+
+  // A process death can leave a server lease in secure storage while the
+  // Firestore SDK still has queued writes. Revoke that lease before any app
+  // repository is allowed to use the account's network.
+  try {
+    await container.read(parentSessionStartupProvider.future);
+  } on Exception catch (error, stackTrace) {
+    log.warning(
+      event: 'parent_session_startup_revoke_failed',
+      exception: error,
+      stackTrace: stackTrace,
     );
   }
 

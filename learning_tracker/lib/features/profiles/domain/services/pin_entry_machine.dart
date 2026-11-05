@@ -179,12 +179,14 @@ class PinEntryMachine {
     required String? Function() profileId,
     required void Function(PinFlowState state) onStateChanged,
     Future<bool> Function(String pin)? onVerificationSucceeded,
+    Future<bool> Function(String pin)? onPinSaved,
     bool Function() isActive = _alwaysActive,
     PinFlowMode initialMode = PinFlowMode.verify,
   }) : _pinService = pinService,
        _profileId = profileId,
        _onStateChanged = onStateChanged,
        _onVerificationSucceeded = onVerificationSucceeded,
+       _onPinSaved = onPinSaved,
        _isActive = isActive,
        _state = PinFlowState(
          mode: initialMode,
@@ -199,6 +201,7 @@ class PinEntryMachine {
   final String? Function() _profileId;
   final void Function(PinFlowState state) _onStateChanged;
   final Future<bool> Function(String pin)? _onVerificationSucceeded;
+  final Future<bool> Function(String pin)? _onPinSaved;
   final bool Function() _isActive;
 
   PinFlowState _state;
@@ -430,6 +433,20 @@ class PinEntryMachine {
       await _pinService().setProfilePin(profileId, pin);
       // SM-4: the container/widget behind this machine can be disposed while
       // the bcrypt/secure-storage write above is in flight (e.g. teardown).
+      if (!_isActive()) return;
+      if (_onPinSaved != null && !await _onPinSaved(pin)) {
+        if (!_isActive()) return;
+        _emit(
+          _state.copyWith(
+            busy: false,
+            error: PinFlowError.unexpected,
+            step: PinFlowStep.enterNew,
+            firstPin: null,
+            digits: '',
+          ),
+        );
+        return;
+      }
       if (!_isActive()) return;
       // Clear digits immediately so the completion frame shows an empty
       // keypad instead of 4 filled dots while the caller's pop/dismiss is

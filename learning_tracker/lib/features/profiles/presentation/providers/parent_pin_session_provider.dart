@@ -4,6 +4,8 @@ import 'package:learning_tracker/core/providers/account_functions_provider.dart'
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/repositories/parent_session_client.dart';
 import 'package:learning_tracker/data/repositories/parent_session_controller.dart';
+import 'package:learning_tracker/data/repositories/parent_session_persistence.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'parent_pin_session_provider.g.dart';
@@ -52,6 +54,10 @@ final parentSessionClientProvider = Provider<ParentSessionClient>((ref) {
   });
 });
 
+final parentSessionPersistenceProvider = Provider<ParentSessionPersistence>(
+  (ref) => ParentSessionPersistence(ref.watch(flutterSecureStorageProvider)),
+);
+
 /// The active account's session lifecycle. Firestore is resolved lazily so
 /// locking remains safe during account teardown and account switching.
 final parentSessionControllerProvider = Provider<ParentSessionController>((
@@ -72,5 +78,34 @@ final parentSessionControllerProvider = Provider<ParentSessionController>((
     enableNetwork: () async {
       await (await firestore())?.enableNetwork();
     },
+    persistSessionId: (sessionId) async {
+      final handles = await ref.read(activeAccountFirebaseProvider.future);
+      if (handles != null) {
+        await ref
+            .read(parentSessionPersistenceProvider)
+            .write(handles.uid, sessionId);
+      }
+    },
+    clearPersistedSessionId: () async {
+      final handles = await ref.read(activeAccountFirebaseProvider.future);
+      if (handles != null) {
+        await ref.read(parentSessionPersistenceProvider).clear(handles.uid);
+      }
+    },
   );
+});
+
+/// On startup, revoke any lease that survived process death before allowing
+/// this account's Firestore network back online.
+final parentSessionStartupProvider = FutureProvider<void>((ref) async {
+  final handles = await ref.read(activeAccountFirebaseProvider.future);
+  if (handles == null) return;
+  final persistence = ref.read(parentSessionPersistenceProvider);
+  final sessionId = await persistence.read(handles.uid);
+  if (sessionId == null) return;
+
+  await handles.firestore.disableNetwork();
+  await ref.read(parentSessionClientProvider).revoke(sessionId);
+  await persistence.clear(handles.uid);
+  await handles.firestore.enableNetwork();
 });
