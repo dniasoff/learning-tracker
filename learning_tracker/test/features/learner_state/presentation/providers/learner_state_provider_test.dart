@@ -13,6 +13,7 @@ import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state_engine.dart';
 import 'package:learning_tracker/domain/learner_state/ports/governed_intent_repository.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learning_event_repository.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_composition.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 
@@ -93,6 +94,33 @@ void main() {
       await pumpEventQueue();
       expect(sub.read().isLoading, isTrue);
     });
+
+    test(
+      'does not access its ref when disposed during source loading',
+      () async {
+        final pendingEvents = Completer<LearningEventRepository?>();
+        final overrides = sources.overrides();
+        overrides[0] = learningEventRepositoryProvider.overrideWith(
+          (ref) => pendingEvents.future,
+        );
+        final container = ProviderContainer.test(overrides: overrides);
+        final errors = <Object>[];
+        final sub = container.listen(learnerStateProvider(c0Scope()), (
+          _,
+          state,
+        ) {
+          if (state.hasError) errors.add(state.error!);
+        });
+
+        await pumpEventQueue();
+        sub.close();
+        container.dispose();
+        pendingEvents.complete(sources.events);
+        await pumpEventQueue();
+
+        expect(errors, isEmpty);
+      },
+    );
 
     test('stays loading until every source is complete, then emits the '
         'engine result over all of them', () async {

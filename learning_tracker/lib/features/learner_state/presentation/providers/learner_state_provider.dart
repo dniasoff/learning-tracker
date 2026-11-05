@@ -162,10 +162,21 @@ final learnerStateDayTickProvider = Provider.autoDispose<Stream<void>>((ref) {
 /// dependency.
 final learnerStateProvider = StreamProvider.autoDispose
     .family<LearnerState, LearnerScope>((ref, scope) async* {
+      final clock = ref.watch(localDayClockProvider);
+      final loadCalendars = ref.watch(
+        learnerCalendarLoaderForScopeProvider(scope),
+      );
+      final recompute = ref.watch(learnerStateDayTickProvider);
+      final engine = ref.watch(learnerStateEngineProvider);
+
       final events = await ref.watch(learningEventRepositoryProvider.future);
+      if (!ref.mounted) return;
       final subTracks = await ref.watch(subTrackRepositoryProvider.future);
+      if (!ref.mounted) return;
       final changeLog = await ref.watch(changeLogRepositoryProvider.future);
+      if (!ref.mounted) return;
       final intent = await ref.watch(governedIntentRepositoryProvider.future);
+      if (!ref.mounted) return;
       if (events == null ||
           subTracks == null ||
           changeLog == null ||
@@ -173,17 +184,17 @@ final learnerStateProvider = StreamProvider.autoDispose
         return; // not ready: loading
       }
       final corpora = await ref.watch(corporaForScopeProvider(scope).future);
-      final clock = ref.watch(localDayClockProvider);
+      if (!ref.mounted) return;
       yield* composeLearnerState(
         events: events.watchAll(scope),
         subTracks: subTracks.watchAll(scope),
         intentHistory: changeLog.watchIntentHistory(scope),
         intent: intent.watch(scope),
         corpora: corpora,
-        loadCalendars: ref.watch(learnerCalendarLoaderForScopeProvider(scope)),
+        loadCalendars: loadCalendars,
         nowUtc: clock.nowUtc,
-        recompute: ref.watch(learnerStateDayTickProvider),
-        engine: ref.watch(learnerStateEngineProvider),
+        recompute: recompute,
+        engine: engine,
       );
     }, retry: (retryCount, error) => null);
 
