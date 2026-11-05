@@ -43,6 +43,8 @@ final class DispatchOutcome {
     required this.rejectedChunks,
     required this.totalChunks,
     this.rejectedEventIds = const [],
+    this.acceptedChunks = 0,
+    this.authorizationFailed = false,
   });
 
   /// Events of chunks not rejected within the window, in write order.
@@ -65,6 +67,12 @@ final class DispatchOutcome {
 
   /// Chunks dispatched.
   final int totalChunks;
+
+  /// Chunks accepted locally (acknowledged or queued).
+  final int acceptedChunks;
+
+  /// The boundary callback stopped dispatch before all chunks were sent.
+  final bool authorizationFailed;
 
   /// Whether every chunk was rejected (nothing was saved).
   bool get allRejected => totalChunks > 0 && rejectedChunks == totalChunks;
@@ -146,8 +154,53 @@ final class LearningWriteDispatcher {
   /// SDK, which retries transient errors itself (no app-level queue).
   Future<DispatchOutcome> dispatch(
     LearningCommandKind command,
+    List<LearningWriteChunk> chunks, {
+    Future<bool> Function()? beforeChunk,
+  }) => beforeChunk == null
+      ? _dispatch(command, chunks)
+      : _dispatchSequential(command, chunks, beforeChunk);
+
+  Future<DispatchOutcome> _dispatchSequential(
+    LearningCommandKind command,
     List<LearningWriteChunk> chunks,
-  ) => _dispatch(command, chunks);
+    Future<bool> Function() beforeChunk,
+  ) async {
+    final eventIds = <String>[];
+    final rejectedEventIds = <String>[];
+    final acknowledged = <Future<List<String>>>[];
+    var queued = false;
+    var rejected = 0;
+    var accepted = 0;
+    var index = 0;
+    for (; index < chunks.length; index++) {
+      if (!await beforeChunk()) break;
+      final outcome = await _dispatch(command, [chunks[index]]);
+      eventIds.addAll(outcome.eventIds);
+      rejectedEventIds.addAll(outcome.rejectedEventIds);
+      acknowledged.add(outcome.acknowledgedLearnEventIds);
+      queued = queued || outcome.queued;
+      rejected += outcome.rejectedChunks;
+      accepted += outcome.acceptedChunks;
+    }
+    final authorizationFailed = index < chunks.length;
+    if (authorizationFailed) {
+      for (final chunk in chunks.skip(index)) {
+        defer(command, chunk);
+      }
+    }
+    return DispatchOutcome(
+      eventIds: eventIds,
+      acknowledgedLearnEventIds: Future.wait(
+        acknowledged,
+      ).then((ids) => ids.expand((id) => id).toList()),
+      queued: queued,
+      rejectedChunks: rejected,
+      totalChunks: chunks.length,
+      rejectedEventIds: rejectedEventIds,
+      acceptedChunks: accepted,
+      authorizationFailed: authorizationFailed,
+    );
+  }
 
   Future<DispatchOutcome> _dispatch(
     LearningCommandKind command,
@@ -193,12 +246,14 @@ final class LearningWriteDispatcher {
     final ids = <String>[];
     final rejectedIds = <String>[];
     var rejected = 0;
+    var accepted = 0;
     for (var i = 0; i < chunks.length; i++) {
       final chunkIds = chunks[i].events.map((e) => e.id);
       if (settled[i] == _ChunkStatus.rejected) {
         rejected++;
         rejectedIds.addAll(chunkIds);
       } else {
+        accepted++;
         ids.addAll(chunkIds);
       }
     }
@@ -209,6 +264,7 @@ final class LearningWriteDispatcher {
       rejectedChunks: rejected,
       totalChunks: chunks.length,
       rejectedEventIds: rejectedIds,
+      acceptedChunks: accepted,
     );
   }
 
@@ -256,6 +312,17 @@ final class LearningWriteDispatcher {
     return drop.length;
   }
 
+  /// Keeps an unsent chunk as a retryable failure without dispatching it.
+  /// Used when a live actor check stops a sequential replay at its boundary.
+  void defer(LearningCommandKind command, LearningWriteChunk chunk) {
+    final id = chunk.events.first.id;
+    _pending.putIfAbsent(
+      id,
+      () => _Pending(command, chunk, PendingFailureReason.other, isUndo: false),
+    );
+    _notify();
+  }
+
   Future<_ChunkStatus> _commit(
     LearningCommandKind command,
     LearningWriteChunk chunk, {
@@ -264,7 +331,7 @@ final class LearningWriteDispatcher {
     final id = chunk.events.first.id;
     try {
       await _port.commit(scope, chunk);
-      if (retrying && _pending.remove(id) != null) _notify();
+      if (_pending.remove(id) != null) _notify();
       return _ChunkStatus.acked;
     } on PermanentWriteRejection catch (rejection) {
       final reason = pendingFailureReasonOf(rejection.code);

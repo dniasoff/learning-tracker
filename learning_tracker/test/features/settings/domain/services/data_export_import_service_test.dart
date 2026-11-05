@@ -26,6 +26,7 @@ final class _ScriptedLearningPort implements BackupLearningPort {
   final List<String> reads = [];
   final List<String> eventReads = [];
   final Map<String, BackupReplayInput> replays = {};
+  final List<BackupReplayResult> scriptedResults = [];
 
   @override
   Future<List<LearningEvent>> readLearningEvents(String profileId) async {
@@ -45,10 +46,12 @@ final class _ScriptedLearningPort implements BackupLearningPort {
     BackupReplayInput input,
   ) async {
     replays[profileId] = input;
-    return const BackupReplayResult(
-      result: CaptureResult.success(),
-      steps: [BackupReplayStep.learnEvents],
-    );
+    return scriptedResults.isEmpty
+        ? const BackupReplayResult(
+            result: CaptureResult.success(),
+            steps: [BackupReplayStep.learnEvents],
+          )
+        : scriptedResults.removeAt(0);
   }
 
   @override
@@ -412,6 +415,51 @@ void main() {
       expect(report.alreadyRestored, isEmpty);
       expect(learning.replays.keys, [testProfileId]);
     });
+
+    test(
+      'an incomplete replay is retryable and is not marked restored',
+      () async {
+        final firestore = FakeFirebaseFirestore();
+        await seedProfile(firestore, uid: testUid, profileId: testProfileId);
+        final learning = _ScriptedLearningPort()
+          ..scriptedResults.addAll([
+            const BackupReplayResult(
+              result: CaptureResult.rejected(CaptureRejection.notSaved),
+              completion: BackupReplayIncomplete(
+                acceptedUnits: 1,
+                remainingUnits: 1,
+              ),
+              steps: [BackupReplayStep.learnEvents],
+            ),
+            const BackupReplayResult(
+              result: CaptureResult.success(),
+              steps: [BackupReplayStep.learnEvents],
+            ),
+          ]);
+        final service = _service(firestore, learning);
+        final payload = await service.exportData();
+
+        final first = await service.importData(payload);
+        expect(first.incomplete, isTrue);
+        expect(first.saved, isFalse);
+        final firstKey = learning.replays[testProfileId]!.replayKey;
+        const profilePath = 'users/$testUid/learner_profiles/$testProfileId';
+        expect(
+          (await firestore.doc(profilePath).get())
+              .data()?[DataExportImportService.restoredBackupsField],
+          isNull,
+        );
+
+        final second = await service.importData(payload);
+        expect(second.saved, isTrue);
+        expect(learning.replays[testProfileId]!.replayKey, firstKey);
+        expect(
+          (await firestore.doc(profilePath).get())
+              .data()?[DataExportImportService.restoredBackupsField],
+          isNotNull,
+        );
+      },
+    );
 
     test('an undecodable learning record fails validation', () async {
       final firestore = FakeFirebaseFirestore();

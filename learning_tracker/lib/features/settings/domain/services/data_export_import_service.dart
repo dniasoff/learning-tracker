@@ -94,6 +94,9 @@ final class BackupImportReport {
   int get notSavedCount =>
       profiles.values.fold(0, (n, r) => n + r.notSaved.length);
 
+  /// Whether a profile accepted a prefix but still has a retryable suffix.
+  bool get incomplete => profiles.values.any((r) => r.incomplete);
+
   /// Re-sends every write that was not saved, unchanged (AD-54 Recovery).
   Future<void> retryNotSaved() async {
     for (final MapEntry(key: profileId, value: result) in profiles.entries) {
@@ -439,13 +442,15 @@ class DataExportImportService {
           ),
         );
       }
+      final recordKey = await _recordKey(profileId, collections);
       replays[profileId] = _replayInput(
         collections,
         'profiles.$profileId',
         profileId: profileId,
         profileData: profileData,
+        replayKey: recordKey,
       );
-      recordKeys[profileId] = await _recordKey(profileId, collections);
+      recordKeys[profileId] = recordKey;
     }
 
     for (var offset = 0; offset < writes.length; offset += _maxBatchWrites) {
@@ -466,7 +471,9 @@ class DataExportImportService {
       }
       final result = await _learning.replay(profileId, input);
       results[profileId] = result;
-      if (result.result is CaptureSuccess && result.steps.isNotEmpty) {
+      if (!result.incomplete &&
+          result.result is CaptureSuccess &&
+          result.steps.isNotEmpty) {
         // Something was written (or queued): mark the record restored so
         // a repeat import cannot replay it a second time. Its unsaved
         // writes stay retryable through the report, never by re-importing.
@@ -511,6 +518,7 @@ class DataExportImportService {
     String at, {
     required String profileId,
     required Object? profileData,
+    String? replayKey,
   }) {
     List<(String, Map<String, Object?>)> docs(String name) {
       final value = collections[name];
@@ -533,6 +541,7 @@ class DataExportImportService {
     }
 
     return BackupReplayInput(
+      replayKey: replayKey,
       settingsSeed: _settingsSeed(profileId, profileData, at),
       events: [
         for (final (id, map) in docs(learningEventsCollection))

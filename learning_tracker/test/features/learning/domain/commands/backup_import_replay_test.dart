@@ -516,6 +516,22 @@ void main() {
     expect(h.log, isEmpty);
   });
 
+  test('a first rejected unit followed by actor loss is notSaved', () async {
+    var checks = 0;
+    final h = _destination();
+    h.changeLog.fail.add(engineUlid(5000));
+    h.liveActor = () async => ++checks <= 2 ? parentActor : null;
+    final result = await h.commands.importBackup(_fixture());
+
+    expect(
+      result.result,
+      const CaptureResult.rejected(CaptureRejection.notSaved),
+    );
+    expect(result.incomplete, isFalse);
+    expect(result.eventIds, isNotEmpty); // the fixed plan still has stable ids
+    expect(result.saved, isFalse);
+  });
+
   group('AC-4: AD-54 chunks and "not saved — retry"', () {
     BackupReplayInput large() => BackupReplayInput(
       events: [
@@ -586,6 +602,72 @@ void main() {
       );
       expect(h.writePort.attempts, hasLength(attempts));
       expect(await h.commands.watchPendingFailures().first, [failure]);
+    });
+
+    test('the replay retry boundary is checked independently', () async {
+      final h = BackupReplayHarness()..writePort.rejectAttempts.add(0);
+      final result = await h.commands.importBackup(
+        BackupReplayInput(events: [engineLearn(1, _b11, minutes: 10)]),
+      );
+      final failure = result.notSaved.single;
+      final attempts = h.writePort.attempts.length;
+      h.liveActor = () async => null;
+
+      expect(
+        await h.replay.retry(failure.id),
+        const CaptureResult.rejected(CaptureRejection.notSaved),
+      );
+      expect(h.writePort.attempts, hasLength(attempts));
+      expect(await h.commands.watchPendingFailures().first, [failure]);
+    });
+
+    test(
+      'an accepted prefix stops per chunk and retries the stable suffix',
+      () async {
+        var checks = 0;
+        final h = BackupReplayHarness(
+          liveActor: () async => ++checks <= 3 ? parentActor : null,
+        );
+        final input = BackupReplayInput(
+          events: [
+            for (var i = 0; i < 500; i++) engineLearn(10 + i, 'leaf $i'),
+          ],
+        );
+        final result = await h.commands.importBackup(input);
+
+        expect(result.incomplete, isTrue);
+        expect(result.result, isA<CaptureRejected>());
+        expect((result.completion as BackupReplayIncomplete).acceptedUnits, 1);
+        expect(h.writePort.attempts, hasLength(1));
+        final pending = [...result.notSaved];
+        expect(pending, hasLength(2));
+
+        h.liveActor = () async => parentActor;
+        for (final failure in pending) {
+          expect(await h.commands.retry(failure.id), isA<CaptureSuccess>());
+        }
+        expect(h.events.chunks.expand((c) => c.events), hasLength(500));
+      },
+    );
+
+    test('re-import completes an incomplete suffix with stable ids', () async {
+      var checks = 0;
+      final h = BackupReplayHarness(
+        liveActor: () async => ++checks <= 3 ? parentActor : null,
+      );
+      final input = BackupReplayInput(
+        replayKey: 'backup-record-key',
+        events: [for (var i = 0; i < 500; i++) engineLearn(10 + i, 'leaf $i')],
+      );
+      final first = await h.commands.importBackup(input);
+      expect(first.incomplete, isTrue);
+
+      h.liveActor = () async => parentActor;
+      final second = await h.commands.importBackup(input);
+
+      expect(second.saved, isTrue);
+      expect(second.eventIds, first.eventIds);
+      expect(h.writePort.attempts, hasLength(4));
     });
 
     test('a rejected governed batch is "not saved — retry" too', () async {

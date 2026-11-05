@@ -310,6 +310,11 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
       if (!mounted) return;
       if (report.saved) {
         _showMessage(l10n.backupImportSuccess);
+      } else if (report.incomplete) {
+        // A prefix was accepted but the suffix is still retryable. The
+        // service deliberately did not mark this backup restored, so the
+        // same backup can be imported again with stable ids.
+        _showNotSaved(report);
       } else if (report.notSavedCount > 0) {
         _showNotSaved(report);
       } else if (report.queued) {

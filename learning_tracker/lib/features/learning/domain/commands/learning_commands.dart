@@ -424,6 +424,9 @@ final class DefaultLearningCommands implements LearningCommands {
         : const CaptureResult.rejected(CaptureRejection.notSaved);
   }
 
+  Future<bool> _authorizationIsCurrent() async =>
+      await _authorizationFailure() == null;
+
   /// Reads the clock once, then the target learner's settings, then runs
   /// the gate; [body] runs only when the gate is open.
   Future<CaptureResult> _gated(
@@ -1046,6 +1049,7 @@ final class DefaultLearningCommands implements LearningCommands {
         final outcome = await _dispatcher.dispatch(
           LearningCommandKind.capture,
           chunkWrites(units),
+          beforeChunk: _authorizationIsCurrent,
         );
         if (outcome.rejectedChunks > 0) {
           final compensated = await _compensateCatchUp(
@@ -1105,8 +1109,8 @@ final class DefaultLearningCommands implements LearningCommands {
     List<String> planned, {
     required List<String> saved,
   }) async {
-    _dispatcher.discard(planned);
     if (await _authorizationFailure() != null) return false;
+    _dispatcher.discard(planned);
     final targets = [
       for (final id in planned)
         if (saved.contains(id)) id,

@@ -289,7 +289,7 @@ void main() {
       () async {
         var checks = 0;
         final h = CatchUpCommandHarness(
-          liveActor: () async => ++checks == 1 ? catchUpParent : null,
+          liveActor: () async => ++checks <= 3 ? catchUpParent : null,
         )..port.rejectAttempts.add(1);
         final result = await h.commands.recordCatchUp(
           catchUpAllAction(_mainLeaves(300)),
@@ -297,6 +297,15 @@ void main() {
         expect(result, isA<CaptureSuccess>());
         expect((result as CaptureSuccess).eventIds, isNotEmpty);
         expect(h.log().counted.learns, isNotEmpty);
+        final pending = await h.pending();
+        expect(pending, hasLength(1));
+        final suffix = pending.single;
+        h.liveActor = () async => catchUpParent;
+        h.port.rejectAttempts.clear();
+        expect(await h.commands.retry(suffix.id), isA<CaptureSuccess>());
+        h.sync();
+        expect(h.log().counted.learns, hasLength(300));
+        expect(await h.pending(), isEmpty);
       },
     );
 
