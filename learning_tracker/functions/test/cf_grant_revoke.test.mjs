@@ -8,11 +8,13 @@
 //   only reached after the caller identity check passes.
 
 import assert from 'node:assert/strict';
+import admin from 'firebase-admin';
 import { beforeEach, describe, test } from 'node:test';
 import {
   GRANT,
   PARENT,
   PROFILE,
+  PROJECT,
   TUTOR,
   call,
   clearFirestore,
@@ -275,6 +277,63 @@ describe('listTutorGrants', () => {
     assert.equal(res.grants[0].id, GRANT);
     assert.equal(res.grants[0].tutor_uid, TUTOR);
     assert.equal(res.grants[0].state, 'active');
+  });
+
+  test('HTTP callable runtime returns active grant for tutor', async () => {
+    const httpTutorUid = `http-tutor-${Date.now()}`;
+    const httpTutorEmail = `${httpTutorUid}@example.com`;
+    const authApp = admin.initializeApp(
+      { projectId: PROJECT },
+      `http-list-tutor-${Date.now()}`,
+    );
+    await authApp.auth().createUser({
+      uid: httpTutorUid,
+      email: httpTutorEmail,
+      emailVerified: true,
+      password: 'test-password',
+    });
+    await authApp.firestore().collection('tutor_grants').doc(GRANT).set({
+      grant_id: GRANT,
+      tutor_uid: httpTutorUid,
+      parent_uid: PARENT,
+      child_profile_id: String(PROFILE),
+      state: 'active',
+    });
+
+    const signIn = await fetch(
+      'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/' +
+        'accounts:signInWithPassword?key=AIzaSyA00000000000000000000000000000000',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: httpTutorEmail,
+          password: 'test-password',
+          returnSecureToken: true,
+        }),
+      },
+    );
+    const signInBody = await signIn.json();
+    assert.equal(signIn.ok, true, JSON.stringify(signInBody));
+    const { idToken } = signInBody;
+
+    const response = await fetch(
+      `http://127.0.0.1:5001/${PROJECT}/us-central1/listTutorGrants`,
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${idToken}`,
+          'x-firebase-appcheck': 'debug-token',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ data: { mode: 'incoming' } }),
+      },
+    );
+    const body = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(body));
+    assert.equal(body.result.grants.length, 1);
+    assert.equal(body.result.grants[0].id, GRANT);
+    await authApp.delete();
   });
 
   test('outgoing mode happy path → returns grant for parent+child', async () => {

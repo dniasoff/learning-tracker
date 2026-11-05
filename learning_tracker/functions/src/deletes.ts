@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+import admin from "firebase-admin";
 import { auth, logger } from "firebase-functions/v1";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 

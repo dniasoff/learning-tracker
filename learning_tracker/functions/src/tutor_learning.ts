@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+import admin from "firebase-admin";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { CALL_OPTS } from "./shared";

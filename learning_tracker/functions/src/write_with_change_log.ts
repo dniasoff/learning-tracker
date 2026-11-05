@@ -1,5 +1,5 @@
 import * as crypto from "crypto";
-import * as admin from "firebase-admin";
+import admin from "firebase-admin";
 import { logger } from "firebase-functions/v1";
 import { HttpsError } from "firebase-functions/v2/https";
 

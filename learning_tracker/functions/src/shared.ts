@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+import admin from "firebase-admin";
 
 // Admin SDK init lives here because every other module in this deployment
 // imports `db` from this file — Node's module cache guarantees
