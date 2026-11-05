@@ -31,6 +31,6 @@ for (const filename of fs.readdirSync(hierarchyDir).sort()) {
 
 const payload = Buffer.from(JSON.stringify(refs), 'utf8');
 const compressed = zlib.gzipSync(payload, { level: 9 }).toString('base64');
-const output = `// GENERATED FILE. Run npm run build after changing hierarchy assets.\nimport zlib from "node:zlib";\n\nconst encoded = "${compressed}";\nconst refs = JSON.parse(\n  zlib.gunzipSync(Buffer.from(encoded, "base64")).toString("utf8"),\n);\n\nexport function isKnownHiddenContentRef(ref: string): boolean {\n  return Object.values(refs as Record<string, string[]>).some((items) =>\n    items.includes(ref),\n  );\n}\n`;
+const output = `// GENERATED FILE. Run npm run build after changing hierarchy assets (including 9zc sections).\nimport zlib from "node:zlib";\n\nconst encoded = "${compressed}";\nconst refs = JSON.parse(\n  zlib.gunzipSync(Buffer.from(encoded, "base64")).toString("utf8"),\n);\n\nexport function isKnownHiddenContentRef(ref: string): boolean {\n  return Object.values(refs as Record<string, string[]>).some((items) =>\n    items.includes(ref),\n  );\n}\n`;
 
 fs.writeFileSync(outputPath, output);
