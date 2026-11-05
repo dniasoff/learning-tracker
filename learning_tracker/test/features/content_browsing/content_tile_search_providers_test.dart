@@ -82,8 +82,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/learner_state/fake_learner_state.dart';
 import '../../helpers/content_repository_overrides.dart';
+import '../../helpers/learner_state/fake_learner_state.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 

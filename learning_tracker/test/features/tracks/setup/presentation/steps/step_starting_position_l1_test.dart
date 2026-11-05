@@ -36,7 +36,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
@@ -46,9 +45,10 @@ import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_g
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-import '../../../../../helpers/content_repository_overrides.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../../helpers/content_repository_overrides.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 

@@ -31,16 +31,15 @@ import 'package:learning_tracker/features/gamification/domain/models/streak_reco
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
-import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
-import '../../helpers/learner_state/engine_fixtures.dart';
-import '../../helpers/learner_state/c0_fixtures.dart';
 import '../../helpers/content_repository_overrides.dart';
+import '../../helpers/learner_state/c0_fixtures.dart';
+import '../../helpers/learner_state/engine_fixtures.dart';
 import '../../helpers/learner_state/fake_learner_state.dart';
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';

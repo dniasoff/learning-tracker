@@ -40,11 +40,10 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/content_repository_impl.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
-import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/content_repository_overrides.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learner_state.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
 

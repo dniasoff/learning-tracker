@@ -25,8 +25,8 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 
-import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/content_repository_overrides.dart';
+import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';

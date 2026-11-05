@@ -75,8 +75,8 @@ import 'package:learning_tracker/features/settings/presentation/screens/scope_se
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/content_repository_overrides.dart';
+import '../../../../helpers/firestore_fake.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../helpers/firestore_governed_writer.dart';
 import '../../../../helpers/learner_state/c0_fixtures.dart';
