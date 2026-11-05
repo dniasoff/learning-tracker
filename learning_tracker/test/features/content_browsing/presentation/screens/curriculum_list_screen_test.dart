@@ -81,14 +81,15 @@ void main() {
   }
 
   group('CurriculumListScreen', () {
-    testWidgets('displays all curricula', (tester) async {
+    testWidgets('shows Tanach as the sole Tanakh root in Browse', (
+      tester,
+    ) async {
       final mockRepo = MockContentRepository();
 
       // Mock all curricula returning empty lists (just need the calls to succeed)
       for (final curriculum in CurriculumId.values) {
-        when(
-          () => mockRepo.getContentForCurriculum(curriculum),
-        ).thenAnswer((_) async => []);
+        when(() => mockRepo.getContentForCurriculum(curriculum))
+            .thenAnswer((_) async => []);
       }
 
       await tester.pumpWidget(createTestWidget(repository: mockRepo));
@@ -97,35 +98,36 @@ void main() {
       // Should show curriculum Hebrew names — verify first few visible
       expect(find.text('משניות'), findsWidgets);
       expect(find.text('תלמוד בבלי'), findsWidgets);
+      expect(find.text(CurriculumId.tanach.displayNameHe), findsWidgets);
+      expect(find.text(CurriculumId.chumash.displayNameHe), findsNothing);
+      expect(find.text(CurriculumId.nach.displayNameHe), findsNothing);
     });
 
     testWidgets('displays item counts for each curriculum', (tester) async {
       final mockRepo = MockContentRepository();
 
       // Mock Mishnayos with 10 leaf items
-      when(
-        () => mockRepo.getContentForCurriculum(CurriculumId.mishnayos),
-      ).thenAnswer(
-        (_) async => List.generate(
-          10,
-          (i) => ContentItem(
-            curriculumId: 'mishnayos',
-            level1: 'Level $i',
-            displayNameHe: 'Hebrew $i',
-            displayNameEn: 'English $i',
-            sefariaRef: 'Ref $i',
-            sortOrder: i,
-            isLeaf: true,
-          ),
-        ),
-      );
+      when(() => mockRepo.getContentForCurriculum(CurriculumId.mishnayos))
+          .thenAnswer(
+            (_) async => List.generate(
+              10,
+              (i) => ContentItem(
+                curriculumId: 'mishnayos',
+                level1: 'Level $i',
+                displayNameHe: 'Hebrew $i',
+                displayNameEn: 'English $i',
+                sefariaRef: 'Ref $i',
+                sortOrder: i,
+                isLeaf: true,
+              ),
+            ),
+          );
 
       // Mock others with empty lists
       for (final curriculum in CurriculumId.values) {
         if (curriculum != CurriculumId.mishnayos) {
-          when(
-            () => mockRepo.getContentForCurriculum(curriculum),
-          ).thenAnswer((_) async => []);
+          when(() => mockRepo.getContentForCurriculum(curriculum))
+              .thenAnswer((_) async => []);
         }
       }
 
@@ -152,37 +154,35 @@ void main() {
 
         // Mishnayos with one non-leaf container + one leaf item so both
         // containerCount (>0) and leafCount (>0) render their labels.
-        when(
-          () => mockRepo.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer(
-          (_) async => const [
-            ContentItem(
-              curriculumId: 'mishnayos',
-              level1: 'Zeraim',
-              displayNameHe: 'מסכת ברכות',
-              displayNameEn: 'Berachos',
-              sefariaRef: 'Mishnah Berakhot',
-              sortOrder: 0,
-              isLeaf: false,
-            ),
-            ContentItem(
-              curriculumId: 'mishnayos',
-              level1: 'Zeraim',
-              level2: 'Berachos',
-              displayNameHe: 'משנה א',
-              displayNameEn: 'Mishnah 1',
-              sefariaRef: 'Mishnah Berakhot 1:1',
-              sortOrder: 1,
-              isLeaf: true,
-            ),
-          ],
-        );
+        when(() => mockRepo.getContentForCurriculum(CurriculumId.mishnayos))
+            .thenAnswer(
+              (_) async => const [
+                ContentItem(
+                  curriculumId: 'mishnayos',
+                  level1: 'Zeraim',
+                  displayNameHe: 'מסכת ברכות',
+                  displayNameEn: 'Berachos',
+                  sefariaRef: 'Mishnah Berakhot',
+                  sortOrder: 0,
+                  isLeaf: false,
+                ),
+                ContentItem(
+                  curriculumId: 'mishnayos',
+                  level1: 'Zeraim',
+                  level2: 'Berachos',
+                  displayNameHe: 'משנה א',
+                  displayNameEn: 'Mishnah 1',
+                  sefariaRef: 'Mishnah Berakhot 1:1',
+                  sortOrder: 1,
+                  isLeaf: true,
+                ),
+              ],
+            );
 
         for (final curriculum in CurriculumId.values) {
           if (curriculum != CurriculumId.mishnayos) {
-            when(
-              () => mockRepo.getContentForCurriculum(curriculum),
-            ).thenAnswer((_) async => []);
+            when(() => mockRepo.getContentForCurriculum(curriculum))
+                .thenAnswer((_) async => []);
           }
         }
 
@@ -215,9 +215,8 @@ void main() {
       when(() => router.push<Object?>(any())).thenAnswer((_) async => null);
 
       for (final curriculum in CurriculumId.values) {
-        when(
-          () => mockRepo.getContentForCurriculum(curriculum),
-        ).thenAnswer((_) async => []);
+        when(() => mockRepo.getContentForCurriculum(curriculum))
+            .thenAnswer((_) async => []);
       }
 
       await tester.pumpWidget(
