@@ -34,6 +34,7 @@ void main() {
     String? level2,
     String? level3,
     String? level4,
+    double viewPaddingBottom = 0,
   }) {
     // Build an empty ContentTree so the screen falls back to
     // filteredContentProvider (which is mocked via mockRepo.filterByLevel).
@@ -60,6 +61,17 @@ void main() {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              viewPadding: mediaQuery.viewPadding.copyWith(
+                bottom: viewPaddingBottom,
+              ),
+            ),
+            child: child!,
+          );
+        },
         home: ContentHierarchyScreen(
           curriculumId: curriculumId ?? 'mishnayos',
           level1: level1,
@@ -128,6 +140,200 @@ void main() {
       expect(find.text('Seder Zeraim'), findsNothing);
       expect(find.text('Seder Moed'), findsNothing);
     });
+
+    testWidgets(
+      'Mishneh Torah root keeps every book in canonical order and scrolls back to the top',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(400, 1600));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final books = [
+          ('Introduction', 'הקדמה'),
+          ('Sefer Madda', 'ספר המדע'),
+          ('Sefer Ahavah', 'ספר אהבה'),
+          ('Sefer Zemanim', 'ספר זמנים'),
+          ('Sefer Nashim', 'ספר נשים'),
+          ('Sefer Kedushah', 'ספר קדושה'),
+          ('Sefer Haflaah', 'ספר הפלאה'),
+          ('Sefer Zeraim', 'ספר זרעים'),
+          ('Sefer Avodah', 'ספר עבודה'),
+          ('Sefer Korbanot', 'ספר קרבנות'),
+          ('Sefer Taharah', 'ספר טהרה'),
+          ('Sefer Nezikim', 'ספר נזיקין'),
+          ('Sefer Kinyan', 'ספר קנין'),
+          ('Sefer Mishpatim', 'ספר משפטים'),
+          ('Sefer Shoftim', 'ספר שופטים'),
+        ];
+        final testItems = [
+          for (var index = 0; index < books.length; index++)
+            ContentItem(
+              curriculumId: 'mishneh_torah',
+              level1: books[index].$1,
+              displayNameHe: books[index].$2,
+              displayNameEn: books[index].$1,
+              sefariaRef: books[index].$1,
+              sortOrder: index,
+              isLeaf: false,
+            ),
+        ];
+
+        when(
+          () => mockRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnehTorah,
+            level1: null,
+            level2: null,
+            level3: null,
+            level4: null,
+          ),
+        ).thenAnswer((_) async => testItems);
+        when(
+          () => mockRepo.getHierarchyConfig(CurriculumId.mishnehTorah),
+        ).thenAnswer(
+          (_) async => const CurriculumHierarchyConfig(
+            curriculumId: 'mishneh_torah',
+            levelLabels: ['Sefer', 'Hilchot', 'Chapter', 'Halakhah'],
+            totalItems: 100,
+          ),
+        );
+
+        await tester.pumpWidget(
+          createTestWidget(curriculumId: 'mishneh_torah'),
+        );
+        await tester.pumpAndSettle();
+
+        final expectedLabels = [
+          'הקדמה',
+          'המדע',
+          'אהבה',
+          'זמנים',
+          'נשים',
+          'קדושה',
+          'הפלאה',
+          'זרעים',
+          'עבודה',
+          'קרבנות',
+          'טהרה',
+          'נזיקין',
+          'קנין',
+          'משפטים',
+          'שופטים',
+        ];
+        expect(
+          expectedLabels.map(find.text).every(tester.any),
+          isTrue,
+          reason: 'All Mishneh Torah root books must be present',
+        );
+        final topOffsets = [
+          for (final label in expectedLabels)
+            tester.getTopLeft(find.text(label)).dy,
+        ];
+        expect(topOffsets, orderedEquals(topOffsets.toList()..sort()));
+
+        await tester.drag(find.byType(ListView), const Offset(0, -5000));
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(ListView), const Offset(0, 5000));
+        await tester.pumpAndSettle();
+        expect(find.text('הקדמה'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'last root item clears the Android bottom inset when scrolled into view',
+      (tester) async {
+        final testItems = [
+          for (var index = 0; index < 12; index++)
+            ContentItem(
+              curriculumId: 'mishnayos',
+              level1: 'Seder $index',
+              displayNameHe: 'סדר $index',
+              displayNameEn: 'Seder $index',
+              sefariaRef: 'Seder $index',
+              sortOrder: index,
+              isLeaf: false,
+            ),
+        ];
+        when(
+          () => mockRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: null,
+            level2: null,
+            level3: null,
+            level4: null,
+          ),
+        ).thenAnswer((_) async => testItems);
+        when(
+          () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+        ).thenAnswer(
+          (_) async => const CurriculumHierarchyConfig(
+            curriculumId: 'mishnayos',
+            levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
+            totalItems: 100,
+          ),
+        );
+
+        const bottomInset = 48.0;
+        await tester.pumpWidget(
+          createTestWidget(viewPaddingBottom: bottomInset),
+        );
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(ListView), const Offset(0, -5000));
+        await tester.pumpAndSettle();
+
+        final lastItem = tester.getRect(find.text('11'));
+        final viewportHeight =
+            tester.view.physicalSize.height / tester.view.devicePixelRatio;
+        expect(
+          lastItem.bottom,
+          lessThanOrEqualTo(viewportHeight - bottomInset),
+        );
+      },
+    );
+
+    testWidgets(
+      'the shared hierarchy list scrolls back to its root for every curriculum',
+      (tester) async {
+        for (final curriculum in CurriculumId.values) {
+          final items = [
+            for (var index = 0; index < 8; index++)
+              ContentItem(
+                curriculumId: curriculum.storageKey,
+                level1: 'Root $index',
+                displayNameHe: 'שורש $index',
+                displayNameEn: 'Root $index',
+                sefariaRef: '${curriculum.storageKey}-$index',
+                sortOrder: index,
+                isLeaf: false,
+              ),
+          ];
+          when(
+            () => mockRepo.filterByLevel(
+              curriculumId: curriculum,
+              level1: null,
+              level2: null,
+              level3: null,
+              level4: null,
+            ),
+          ).thenAnswer((_) async => items);
+          when(() => mockRepo.getHierarchyConfig(curriculum)).thenAnswer(
+            (_) async => CurriculumHierarchyConfig(
+              curriculumId: curriculum.storageKey,
+              levelLabels: const ['Level 1', 'Level 2'],
+              totalItems: 100,
+            ),
+          );
+
+          await tester.pumpWidget(
+            createTestWidget(curriculumId: curriculum.storageKey),
+          );
+          await tester.pumpAndSettle();
+          await tester.drag(find.byType(ListView), const Offset(0, -5000));
+          await tester.pumpAndSettle();
+          await tester.drag(find.byType(ListView), const Offset(0, 5000));
+          await tester.pumpAndSettle();
+
+          expect(find.text('שורש 0'), findsOneWidget);
+        }
+      },
+    );
 
     testWidgets('shows breadcrumb navigation', (tester) async {
       final testItems = [

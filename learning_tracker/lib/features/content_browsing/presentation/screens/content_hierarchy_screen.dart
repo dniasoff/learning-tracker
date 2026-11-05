@@ -407,7 +407,11 @@ class _ContentHierarchyScreenState
                     }
 
                     return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: MediaQuery.viewPaddingOf(context).bottom,
+                      ),
                       itemCount: groupedItems.length,
                       itemBuilder: (context, index) {
                         final item = groupedItems[index];
