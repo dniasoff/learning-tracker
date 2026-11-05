@@ -293,38 +293,40 @@ class _StreakHeroCard extends StatelessWidget {
               ],
             ),
           ),
-          Positioned(
-            right: 14,
-            bottom: -14,
-            child: Transform.rotate(
-              angle: 0.08,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: context.colors.peachMid,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.colors.scrimDark.withValues(alpha: 0.12),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+          if (streakAsync.hasValue &&
+              streakAsync.requireValue.currentStreak > 0)
+            Positioned(
+              right: 14,
+              bottom: -14,
+              child: Transform.rotate(
+                angle: 0.08,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.colors.peachMid,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: context.colors.scrimDark.withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    // RTL-safe: no emoji; localised via ARB.
+                    l10n.learnStreakKeepItUp,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: context.colors.peachDark,
+                      fontWeight: FontWeight.w700,
                     ),
-                  ],
-                ),
-                child: Text(
-                  // RTL-safe: no emoji; localised via ARB.
-                  l10n.learnStreakKeepItUp,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: context.colors.peachDark,
-                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

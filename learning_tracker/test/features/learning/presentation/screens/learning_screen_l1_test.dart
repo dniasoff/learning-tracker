@@ -528,6 +528,22 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
+  testWidgets('zero-day streak does not show the keep-it-up chip', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildScreen(curricula: [CurriculumId.mishnayos], tasks: const []),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('0 Day Streak'), findsOneWidget);
+    expect(find.text('Keep it up!'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
   testWidgets('data state: the Up to… / +1 rollback listener is mounted '
       'with no sub-track rows (DNI-501)', (tester) async {
     await tester.pumpWidget(
