@@ -4,6 +4,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/domain/services/siyum_milestones.dart';
 
@@ -96,5 +99,52 @@ void main() {
       ),
       isEmpty,
     );
+  });
+
+  test('curriculum Siyum walk resolves the legacy Mishnah Berurah root', () {
+    const root = NodeEntry(level: 'book', ref: 'Mishnah Berurah');
+    final corpus = InMemoryCorpus(
+      'mishna_berurah',
+      [
+        const CorpusNode(root, [
+          CorpusNode(
+            NodeEntry(level: 'section', ref: 'Mishnah Berurah|section|Shabbos'),
+            [
+              CorpusNode(
+                NodeEntry(level: 'siman', ref: 'Mishnah Berurah 242'),
+                [
+                  CorpusNode(
+                    NodeEntry(level: 'seif', ref: 'Mishnah Berurah 242:1'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ]),
+      ],
+      unitLevels: const ['book'],
+    );
+    const rootItem = ContentItem(
+      curriculumId: 'mishna_berurah',
+      level1: 'Mishnah Berurah',
+      displayNameHe: 'משנה ברורה',
+      displayNameEn: 'Mishnah Berurah',
+      sefariaRef: 'Mishnah Berurah',
+      sortOrder: 0,
+      isLeaf: false,
+    );
+    final completed = [
+      CompletedUnit(
+        unit: root,
+        completionNumber: 1,
+        firstCompletedAt: {1: engineAt(7)},
+      ),
+    ];
+
+    expect(unitLabelKeys(root, {root.ref: rootItem}), (
+      key: 'Mishnah Berurah',
+      parentL1: null,
+    ));
+    expect(curriculumCompletedAt(completed, corpus), engineAt(7));
   });
 }

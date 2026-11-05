@@ -277,8 +277,17 @@ class CurriculumLabels {
       ),
     ],
     CurriculumId.mishnaBerurah: [
-      // Mishnah Berurah is grouped by the authoritative Orach Chaim
-      // halachic sections at level 1, then Siman and Seif.
+      // The legacy Mishnah Berurah root remains at level 1 for stored
+      // scope/ground/order/Siyum refs; Browse hides that single self-named
+      // root and starts at the authoritative Orach Chaim sections.
+      LevelLabels(
+        en: 'Book',
+        enPlural: 'Books',
+        he: 'ספר',
+        hePlural: 'ספרים',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
+      ),
       LevelLabels(
         en: 'Section',
         enPlural: 'Sections',

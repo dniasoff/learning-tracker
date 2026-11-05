@@ -34,6 +34,8 @@ void main() {
     String? level2,
     String? level3,
     String? level4,
+    ContentTree? tree,
+    Map<CurriculumId, List<ContentItem>> content = const {},
   }) {
     // Build an empty ContentTree so the screen falls back to
     // filteredContentProvider (which is mocked via mockRepo.filterByLevel).
@@ -46,10 +48,11 @@ void main() {
         contentRepositoryProvider.overrideWithValue(mockRepo),
         // Provide an empty ContentTree so itemsAsync falls through to
         // filteredContentProvider (backed by the mock repository).
-        contentTreeProvider.overrideWith((ref) async => emptyTree),
+        contentTreeProvider.overrideWith((ref) async => tree ?? emptyTree),
         // Avoid asset loading for all curricula content.
         curriculumContentProvider.overrideWith(
-          (ref, CurriculumId cid) async => const <ContentItem>[],
+          (ref, CurriculumId cid) async =>
+              content[cid] ?? const <ContentItem>[],
         ),
       ],
       child: MaterialApp(
@@ -72,6 +75,55 @@ void main() {
   }
 
   group('ContentHierarchyScreen', () {
+    testWidgets('skips a self-named Mishnah Berurah root in Browse', (
+      tester,
+    ) async {
+      const curriculum = CurriculumId.mishnaBerurah;
+      const root = ContentItem(
+        curriculumId: 'mishna_berurah',
+        level1: 'Mishnah Berurah',
+        displayNameHe: 'משנה ברורה',
+        displayNameEn: 'Mishnah Berurah',
+        sefariaRef: 'Mishnah Berurah',
+        sortOrder: 0,
+        isLeaf: false,
+      );
+      const section = ContentItem(
+        curriculumId: 'mishna_berurah',
+        level1: 'Mishnah Berurah',
+        level2: 'Shabbos',
+        displayNameHe: 'הלכות שבת',
+        displayNameEn: 'Shabbos',
+        sefariaRef: 'Mishnah Berurah|section|Shabbos',
+        sortOrder: 1,
+        isLeaf: false,
+      );
+      final content = [root, section];
+      final tree = ContentTree.fromCurricula({
+        for (final c in CurriculumId.values)
+          c: c == curriculum ? content : const [],
+      });
+      when(() => mockRepo.getHierarchyConfig(curriculum)).thenAnswer(
+        (_) async => const CurriculumHierarchyConfig(
+          curriculumId: 'mishna_berurah',
+          levelLabels: ['Book', 'Section', 'Siman', 'Seif'],
+          totalItems: 1,
+        ),
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(
+          curriculumId: curriculum.storageKey,
+          tree: tree,
+          content: {curriculum: content},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('שבת'), findsOneWidget);
+      expect(find.text('הלכות שבת'), findsNothing);
+    });
+
     testWidgets('displays top-level items when no level filters', (
       tester,
     ) async {

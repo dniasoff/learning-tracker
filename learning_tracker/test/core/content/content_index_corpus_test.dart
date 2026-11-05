@@ -209,7 +209,7 @@ void main() {
       expect(_bundled('nach').unitLevels, ['section', 'sefer']);
       expect(_bundled('mishneh_torah').unitLevels, ['sefer', 'hilchot']);
       expect(_bundled('chumash').unitLevels, ['sefer']);
-      expect(_bundled('mishna_berurah').unitLevels, ['section']);
+      expect(_bundled('mishna_berurah').unitLevels, ['book']);
     });
   });
 }

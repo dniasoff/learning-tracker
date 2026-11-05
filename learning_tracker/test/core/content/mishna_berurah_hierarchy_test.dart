@@ -46,17 +46,20 @@ void main() {
 
     final leaves = items.where((item) => item['isLeaf'] == true).toList();
     expect(leaves, hasLength(17397));
-    expect(
-      items.where((item) => item['level1'] == 'Mishnah Berurah'),
-      isEmpty,
-      reason: 'the redundant self-named wrapper must not be a browse level',
+    final root = items.singleWhere(
+      (item) => item['sefariaRef'] == 'Mishnah Berurah',
     );
+    expect(root['level1'], 'Mishnah Berurah');
+    expect(root['level2'], isNull);
+    expect(root['isLeaf'], isFalse);
 
     final sections = <String, List<int>>{};
     for (final item in items) {
-      final section = item['level1'] as String;
-      final siman = int.tryParse(item['level2'] as String? ?? '');
-      if (siman != null) sections.putIfAbsent(section, () => []).add(siman);
+      final section = item['level2'] as String?;
+      final siman = int.tryParse(item['level3'] as String? ?? '');
+      if (section != null && siman != null) {
+        sections.putIfAbsent(section, () => []).add(siman);
+      }
     }
     expect(sections.keys, containsAll(expected.keys));
     expect(sections, hasLength(expected.length));

@@ -15,20 +15,22 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 
 ContentItem _item({
+  CurriculumId curriculumId = CurriculumId.bavli,
   required String level1,
   String? level2,
   String? level3,
   String? level4,
   required String ref,
   required bool isLeaf,
+  String displayNameHe = '',
   int sortOrder = 0,
 }) => ContentItem(
-  curriculumId: CurriculumId.bavli.storageKey,
+  curriculumId: curriculumId.storageKey,
   level1: level1,
   level2: level2,
   level3: level3,
   level4: level4,
-  displayNameHe: '',
+  displayNameHe: displayNameHe,
   displayNameEn: ref,
   sefariaRef: ref,
   sortOrder: sortOrder,
@@ -92,5 +94,35 @@ void main() {
             'of source ordering',
       );
     });
+  });
+
+  test('Browse skips only a single self-named curriculum root', () {
+    const curriculum = CurriculumId.mishnaBerurah;
+    final root = _item(
+      curriculumId: curriculum,
+      level1: 'Mishnah Berurah',
+      ref: 'Mishnah Berurah',
+      isLeaf: false,
+      displayNameHe: 'משנה ברורה',
+    );
+    final section = _item(
+      curriculumId: curriculum,
+      level1: 'Mishnah Berurah',
+      level2: 'Shabbos',
+      ref: 'Mishnah Berurah|section|Shabbos',
+      isLeaf: false,
+      sortOrder: 1,
+    );
+    final otherRoot = _item(level1: 'Berakhot', ref: 'Berakhot', isLeaf: false);
+    final tree = ContentTree.fromCurricula({
+      curriculum: [root, section],
+      CurriculumId.bavli: [otherRoot],
+    });
+
+    expect(tree.browseStartStack(curriculum), ['Mishnah Berurah']);
+    expect(tree.children(curriculum, tree.browseStartStack(curriculum)), [
+      section,
+    ]);
+    expect(tree.browseStartStack(CurriculumId.bavli), isEmpty);
   });
 }

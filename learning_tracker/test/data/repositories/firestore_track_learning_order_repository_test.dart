@@ -35,9 +35,10 @@ ContentItem _item({
   required String ref,
   required int sortOrder,
   required List<String> path,
+  CurriculumId curriculumId = _c,
   bool isLeaf = false,
 }) => ContentItem(
-  curriculumId: _c.storageKey,
+  curriculumId: curriculumId.storageKey,
   level1: path[0],
   level2: path.length > 1 ? path[1] : null,
   level3: path.length > 2 ? path[2] : null,
@@ -246,6 +247,39 @@ void main() {
       final sedarim = await buildRepo().getSedarimOrder(_c, _items);
       expect(sedarim.map((s) => s.sefariaRef), ['Zeraim', 'Moed']);
       expect(sedarim.every((s) => !s.isCustomOrdered), isTrue);
+    });
+
+    test('a saved Mishnah Berurah root order row still resolves', () async {
+      const curriculum = CurriculumId.mishnaBerurah;
+      final rootItems = [
+        _item(
+          curriculumId: curriculum,
+          ref: 'Mishnah Berurah',
+          sortOrder: 0,
+          path: ['Mishnah Berurah'],
+        ),
+        _item(
+          curriculumId: curriculum,
+          ref: 'Mishnah Berurah|section|Shabbos',
+          sortOrder: 1,
+          path: ['Mishnah Berurah', 'Shabbos'],
+        ),
+        _item(
+          curriculumId: curriculum,
+          ref: 'Mishnah Berurah 242',
+          sortOrder: 2,
+          path: ['Mishnah Berurah', 'Shabbos', '242'],
+          isLeaf: true,
+        ),
+      ];
+      await buildRepo().saveSedarimOrder(curriculum, [
+        _order('Mishnah Berurah'),
+      ]);
+
+      final result = await buildRepo().getSedarimOrder(curriculum, rootItems);
+      expect(result, hasLength(1));
+      expect(result.single.sefariaRef, 'Mishnah Berurah');
+      expect(result.single.isCustomOrdered, isTrue);
     });
 
     test('the saved sedarim order, enriched from the content tree', () async {

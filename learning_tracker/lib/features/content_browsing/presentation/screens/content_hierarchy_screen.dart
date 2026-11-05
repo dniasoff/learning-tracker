@@ -89,13 +89,31 @@ class _ContentHierarchyScreenState
     return matches.isNotEmpty ? matches.first : null;
   }
 
-  /// Returns the value at [depth] in the navigation stack (0-indexed), or null
-  /// when the stack is shallower than [depth] + 1.
-  ///
-  /// Replaces the four separate `_currentLevel1/2/3/4` getters — one helper
-  /// via [ContentTree] eliminates the ladder.
-  String? _levelAt(int depth) =>
-      _navigationStack.length > depth ? _navigationStack[depth] : null;
+  List<String> _effectiveNavigationStack(
+    CurriculumId curriculum,
+    ContentTree? tree,
+  ) {
+    if (_navigationStack.isNotEmpty || tree == null) return _navigationStack;
+    return tree.browseStartStack(curriculum);
+  }
+
+  bool _skipsRoot(CurriculumId curriculum, ContentTree? tree) =>
+      tree?.browseStartStack(curriculum).isNotEmpty ?? false;
+
+  List<String> _visibleNavigationStack(
+    CurriculumId curriculum,
+    ContentTree? tree,
+    List<String> navigationStack,
+  ) {
+    if (!_skipsRoot(curriculum, tree) || navigationStack.isEmpty) {
+      return navigationStack;
+    }
+    final browseRoot = tree!.browseStartStack(curriculum).first;
+    if (navigationStack.first == browseRoot) {
+      return navigationStack.sublist(1);
+    }
+    return navigationStack;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,9 +158,16 @@ class _ContentHierarchyScreenState
     // ContentTree-backed items lookup: O(1) child retrieval replaces the
     // four-argument level1/2/3/4 filter (T2.10).
     final treeAsync = ref.watch(contentTreeProvider);
+    final contentTree = treeAsync.asData?.value;
+    final navigationStack = _effectiveNavigationStack(curriculum, contentTree);
+    final visibleNavigationStack = _visibleNavigationStack(
+      curriculum,
+      contentTree,
+      navigationStack,
+    );
     final itemsAsync = treeAsync.when(
       data: (tree) {
-        final children = tree.children(curriculum, _navigationStack);
+        final children = tree.children(curriculum, navigationStack);
         // Fall back to the filteredContent provider if the tree hasn't
         // indexed these items yet (e.g. during the very first load when the
         // curriculum content hasn't been cached in the tree yet).  This
@@ -152,10 +177,10 @@ class _ContentHierarchyScreenState
           return ref.watch(
             filteredContentProvider(
               curriculumId: curriculum,
-              level1: _levelAt(0),
-              level2: _levelAt(1),
-              level3: _levelAt(2),
-              level4: _levelAt(3),
+              level1: navigationStack.elementAtOrNull(0),
+              level2: navigationStack.elementAtOrNull(1),
+              level3: navigationStack.elementAtOrNull(2),
+              level4: navigationStack.elementAtOrNull(3),
             ),
           );
         }
@@ -165,10 +190,10 @@ class _ContentHierarchyScreenState
       error: (e, st) => ref.watch(
         filteredContentProvider(
           curriculumId: curriculum,
-          level1: _levelAt(0),
-          level2: _levelAt(1),
-          level3: _levelAt(2),
-          level4: _levelAt(3),
+          level1: navigationStack.elementAtOrNull(0),
+          level2: navigationStack.elementAtOrNull(1),
+          level3: navigationStack.elementAtOrNull(2),
+          level4: navigationStack.elementAtOrNull(3),
         ),
       ),
     );
@@ -181,11 +206,11 @@ class _ContentHierarchyScreenState
     // (empty stack) does Back pop the route. canPop is recomputed every build,
     // so it tracks the stack as the user drills in/out.
     return PopScope(
-      canPop: _navigationStack.isEmpty,
+      canPop: visibleNavigationStack.isEmpty,
       onPopInvokedWithResult: (didPop, _) {
         // didPop == false means the pop was blocked (canPop was false because
         // we are drilled in); intercept it to step up one level instead.
-        if (!didPop && _navigationStack.isNotEmpty) {
+        if (!didPop && visibleNavigationStack.isNotEmpty) {
           _navigateUp();
         }
       },
@@ -212,7 +237,7 @@ class _ContentHierarchyScreenState
             ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: _navigationStack.isNotEmpty
+              onPressed: visibleNavigationStack.isNotEmpty
                   ? _navigateUp
                   : () => context.router.maybePop(),
             ),
@@ -244,11 +269,11 @@ class _ContentHierarchyScreenState
                     _RootCurriculumChip(
                       curriculum: curriculum,
                       color: curriculumColor,
-                      onTap: _navigationStack.isNotEmpty
+                      onTap: visibleNavigationStack.isNotEmpty
                           ? _navigateToRoot
                           : null,
                     ),
-                    if (_navigationStack.isNotEmpty) ...[
+                    if (visibleNavigationStack.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         child: Icon(
@@ -279,20 +304,33 @@ class _ContentHierarchyScreenState
                             // English value ('Seder Zeraim').
                             final hebrewNames = _hebrewNamesForNavStack(
                               allCurriculumItems,
+                              navigationStack,
                             );
-                            final segments =
+                            final allSegments =
                                 CurriculumLabelRenderer.renderBreadcrumb(
                                   curriculumId: curriculum,
-                                  rawSegmentValues: _navigationStack,
+                                  rawSegmentValues: navigationStack,
                                   useHebrew: terms.isHebrew,
                                   transliterationVariant: variant,
                                   hebrewNamesPerSegment: hebrewNames,
                                 );
+                            final segments = visibleNavigationStack.isEmpty
+                                ? const <String>[]
+                                : allSegments
+                                      .skip(
+                                        navigationStack.length -
+                                            visibleNavigationStack.length,
+                                      )
+                                      .toList();
                             return BreadcrumbNavigation(
                               curriculum: curriculum,
                               levelLabels: config.levelLabels,
                               navigationStack: segments,
-                              onBreadcrumbTap: _navigateToLevel,
+                              onBreadcrumbTap: (level) => _navigateToLevel(
+                                level +
+                                    (navigationStack.length -
+                                        visibleNavigationStack.length),
+                              ),
                             );
                           },
                           loading: () => const SizedBox.shrink(),
@@ -350,7 +388,7 @@ class _ContentHierarchyScreenState
                         false;
                     final groupedItems = groupItemsByNextLevel(
                       items: items,
-                      currentDepth: _navigationStack.length,
+                      currentDepth: navigationStack.length,
                       curriculumId: curriculum,
                       variant: variant,
                       maxBrowseDepth: CurriculumLabels.maxBrowseDepth(
@@ -681,12 +719,17 @@ class _ContentHierarchyScreenState
   }
 
   void _drillDown(ContentItem item) {
+    final curriculum = _curriculumOrNull;
+    final tree = ref.read(contentTreeProvider).asData?.value;
+    final currentStack = curriculum == null
+        ? _navigationStack
+        : _effectiveNavigationStack(curriculum, tree);
     setState(() {
-      final currentDepth = _navigationStack.length;
+      final currentDepth = currentStack.length;
       final nextValue = _getNextLevelValue(item, currentDepth);
 
       if (nextValue != null && currentDepth < 4) {
-        _navigationStack = [..._navigationStack, nextValue];
+        _navigationStack = [...currentStack, nextValue];
       }
     });
   }
@@ -723,7 +766,7 @@ class _ContentHierarchyScreenState
     }
   }
 
-  /// For each entry in [_navigationStack], find the container ContentItem
+  /// For each entry in [navigationStack], find the container ContentItem
   /// (matching levels 1..N and no deeper) so the renderer can use its
   /// `displayNameHe` instead of falling back to the raw English value.
   ///
@@ -732,8 +775,11 @@ class _ContentHierarchyScreenState
   ///
   /// Returns null entries when no container is found (e.g. during the first
   /// load or when a level carries an ordinal value rather than a named one).
-  List<String?> _hebrewNamesForNavStack(List<ContentItem>? allItems) {
-    if (_navigationStack.isEmpty) return const [];
+  List<String?> _hebrewNamesForNavStack(
+    List<ContentItem>? allItems,
+    List<String> navigationStack,
+  ) {
+    if (navigationStack.isEmpty) return const [];
     final curriculum = _curriculumOrNull;
 
     // Fast path: O(1) via ContentTree when available.
@@ -741,8 +787,8 @@ class _ContentHierarchyScreenState
       final treeValue = ref.read(contentTreeProvider).asData?.value;
       if (treeValue != null) {
         final result = <String?>[];
-        for (var depth = 0; depth < _navigationStack.length; depth++) {
-          final prefixStack = _navigationStack.sublist(0, depth + 1);
+        for (var depth = 0; depth < navigationStack.length; depth++) {
+          final prefixStack = navigationStack.sublist(0, depth + 1);
           final container = treeValue.containerFor(curriculum, prefixStack);
           result.add(CurriculumLabelRenderer.hebrewNameOf(container));
         }
@@ -753,16 +799,16 @@ class _ContentHierarchyScreenState
     // Fallback: linear scan when tree is still loading.
     final result = <String?>[];
     if (allItems == null) {
-      return List<String?>.filled(_navigationStack.length, null);
+      return List<String?>.filled(navigationStack.length, null);
     }
-    for (var depth = 0; depth < _navigationStack.length; depth++) {
+    for (var depth = 0; depth < navigationStack.length; depth++) {
       final segmentDepth = depth + 1;
       ContentItem? match;
       for (final item in allItems) {
-        if (item.level1 != _navigationStack[0]) continue;
-        if (segmentDepth >= 2 && item.level2 != _levelAt(1)) continue;
-        if (segmentDepth >= 3 && item.level3 != _levelAt(2)) continue;
-        if (segmentDepth >= 4 && item.level4 != _levelAt(3)) continue;
+        if (item.level1 != navigationStack[0]) continue;
+        if (segmentDepth >= 2 && item.level2 != navigationStack[1]) continue;
+        if (segmentDepth >= 3 && item.level3 != navigationStack[2]) continue;
+        if (segmentDepth >= 4 && item.level4 != navigationStack[3]) continue;
         if (segmentDepth < 2 && item.level2 != null) continue;
         if (segmentDepth < 3 && item.level3 != null) continue;
         if (segmentDepth < 4 && item.level4 != null) continue;

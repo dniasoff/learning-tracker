@@ -1,13 +1,37 @@
 // Mirror test for `lib/domain/learner_state/scoped_corpus.dart` (DNI-465
 // T2: AD-42 `ContentIndex ∩ curriculum_scope`).
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
+import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/scoped_corpus.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
 
 void main() {
   final corpus = mishnayosCorpus();
+  const mishnaBerurahRoot = NodeEntry(level: 'book', ref: 'Mishnah Berurah');
+  final mishnaBerurahCorpus = InMemoryCorpus(
+    'mishna_berurah',
+    [
+      const CorpusNode(mishnaBerurahRoot, [
+        CorpusNode(
+          NodeEntry(level: 'section', ref: 'Mishnah Berurah|section|Shabbos'),
+          [
+            CorpusNode(
+              NodeEntry(level: 'siman', ref: 'Mishnah Berurah 242'),
+              [
+                CorpusNode(
+                  NodeEntry(level: 'seif', ref: 'Mishnah Berurah 242:1'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ]),
+    ],
+    unitLevels: const ['book'],
+  );
 
   test('no scope is the whole corpus', () {
     expect(scopedLeaves(corpus, null), corpus.leaves);
@@ -34,6 +58,15 @@ void main() {
       'scope_value': 'Mishnah Berakhot',
     });
     expect(resolveScopeNode(corpus, masechta), berakhot);
+  });
+
+  test('a legacy scope keyed to the Mishnah Berurah root still resolves', () {
+    final scope = engineScope({
+      'scope_level': 1,
+      'scope_value': 'Mishnah Berurah',
+    });
+    expect(resolveScopeNode(mishnaBerurahCorpus, scope), mishnaBerurahRoot);
+    expect(scopedLeaves(mishnaBerurahCorpus, scope), ['Mishnah Berurah 242:1']);
   });
 
   test('an unresolvable scope yields no leaves, never the whole corpus', () {
