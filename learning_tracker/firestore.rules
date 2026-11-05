@@ -90,6 +90,15 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Server-controlled rollout claim. It remains absent/false until the
+    // minimum-version client rollout is complete, preserving old-client
+    // behavior while new clients learn to send a parent session id.
+    function parentSessionCutoverEnabled() {
+      return isSignedIn()
+          && request.auth.token.keys().hasAny(['parent_session_enforced'])
+          && request.auth.token.parent_session_enforced == true;
+    }
+
     // ── Tutor grant helpers (W3.41, V2-R3 C2) ────────────────────────────────
     //
     // hasActiveTutorAccess — O(1) lookup via `tutor_active_access` secondary
@@ -110,13 +119,11 @@ service cloud.firestore {
 
     // ── Sub-tracks feature helpers (AD-38 / AD-46 / AD-52 / AD-54) ──────────
     //
-    // ACCESS-CALL BUDGET (AD-54): every helper in this section is free of
-    // document-access calls EXCEPT changeLogCoWritten(), which costs exactly
-    // two (`exists` + `getAfter` on the referenced change_log entry). So:
-    //   learning_events, change_log, points_ledger `pts_` entries  = 0 calls
-    //   each governed doc (AD-38 owner rule)                        = 2 calls
-    // Rules allow ≤ 20 calls per batch, hence ≤ 10 governed docs per owner
-    // batch. Adding ANY access call here means re-deriving AD-54's numbers.
+    // ACCESS-CALL BUDGET (AD-54 / 7vx): a governed parent doc costs four
+    // calls in the worst case: change_log exists + getAfter, and parent
+    // session exists + get. Rules allow <= 20 calls per batch, so the
+    // conservative parent governed batch cap is five docs. Child writes do
+    // not perform the session lookup.
 
     // Crockford base32 ULID as minted by lib/core/time/ulid.dart.
     function isUlid(v) {
@@ -163,15 +170,35 @@ service cloud.firestore {
       return v is timestamp && v <= request.time + duration.value(10, 'm');
     }
 
+    function isActiveParentSession(uid, profileId, sessionId) {
+      let sessionPath = /databases/$(database)/documents/users/$(uid)/parent_sessions/$(sessionId);
+      return sessionId is string
+          && sessionId.matches('^[a-f0-9]{64}$')
+          && exists(sessionPath)
+          && get(sessionPath).data.profile_id == profileId
+          && get(sessionPath).data.revoked == false
+          && get(sessionPath).data.created_at is timestamp
+          && get(sessionPath).data.expires_at is timestamp
+          && get(sessionPath).data.created_at <= request.time
+          && get(sessionPath).data.expires_at > request.time;
+    }
+
     // Client-written actor (AD-46): the caller's own uid and an owner role.
     // `tutor` is Admin-SDK-only (writeWithChangeLog / tutor callables).
-    function isOwnerActor(a) {
+    // Before the server claim is enabled, session_id is accepted but not
+    // required so old clients retain their existing behavior. Once enabled,
+    // parent actors must prove a live server session; child actors remain
+    // unchanged and never need a session.
+    function isOwnerActor(a, uid, profileId) {
       return a is map
           && a.keys().hasAll(['uid', 'role'])
-          && a.keys().hasOnly(['uid', 'role', 'display_name'])
+          && a.keys().hasOnly(['uid', 'role', 'display_name', 'session_id'])
           && a.uid == request.auth.uid
           && a.role in ['parent', 'child']
-          && (isAbsentOrNull(a, 'display_name') || (a.display_name is string && a.display_name.size() <= 200));
+          && (isAbsentOrNull(a, 'display_name') || (a.display_name is string && a.display_name.size() <= 200))
+          && (!parentSessionCutoverEnabled()
+              || (a.role == 'child' && isAbsentOrNull(a, 'session_id'))
+              || (a.role == 'parent' && isActiveParentSession(uid, profileId, a.session_id)));
     }
 
     // SR-1 idempotent identical replay of an existing document.
@@ -181,7 +208,7 @@ service cloud.firestore {
 
     // learning_events/{ulid} — AD-52 whitelist + AD-46 type checks. No
     // document-access calls.
-    function isValidLearningEvent(eventId, d) {
+    function isValidLearningEvent(eventId, d, uid, profileId) {
       return isUlid(eventId)
           && d.keys().hasOnly([
                'kind', 'curriculum_id', 'ref', 'level', 'source', 'date_state',
@@ -191,7 +218,7 @@ service cloud.firestore {
           && d.keys().hasAll(['kind', 'recorded_at', 'actor'])
           && d.kind in ['learn', 'void']
           && isClientTime(d.recorded_at)
-          && isOwnerActor(d.actor)
+          && isOwnerActor(d.actor, uid, profileId)
           && (isAbsentOrNull(d, 'original_recorded_at') || d.original_recorded_at is timestamp)
           && (d.kind == 'void' ? isValidVoidEvent(d) : isValidLearnEvent(d));
     }
@@ -230,7 +257,7 @@ service cloud.firestore {
 
     // change_log/{ulid} — AD-52 whitelist + AD-46 type checks. No
     // document-access calls.
-    function isValidChangeLogEntry(entryId, d) {
+    function isValidChangeLogEntry(entryId, d, uid, profileId) {
       return isUlid(entryId)
           && d.keys().hasOnly([
                'entity', 'entity_id', 'action_id', 'reverts_action_id',
@@ -248,7 +275,7 @@ service cloud.firestore {
           && d.before is map
           && d.after is map
           && isClientTime(d.at)
-          && isOwnerActor(d.actor)
+          && isOwnerActor(d.actor, uid, profileId)
           && (isAbsentOrNull(d, 'original_at') || d.original_at is timestamp);
     }
 
@@ -308,8 +335,7 @@ service cloud.firestore {
           && entry != null
           && entry.data.entity == entity
           && entry.data.entity_id == entityId
-          && entry.data.actor.uid == request.auth.uid
-          && entry.data.actor.role in ['parent', 'child'];
+          && isOwnerActor(entry.data.actor, uid, profileId);
     }
 
     // Owner rule for a mainTrack* doc: entity_id is the doc's curriculum_id.
@@ -525,7 +551,7 @@ service cloud.firestore {
         match /learning_events/{eventId} {
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId)) && request.query.limit <= 500;
-          allow create: if isOwner(uid) && isValidLearningEvent(eventId, request.resource.data);
+          allow create: if isOwner(uid) && isValidLearningEvent(eventId, request.resource.data, uid, profileId);
           allow update: if isOwner(uid) && isIdenticalReplay();
           allow delete: if false;
         }
@@ -536,7 +562,7 @@ service cloud.firestore {
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId)) && request.query.limit <= 500;
           allow create: if isOwner(uid)
-              && isValidChangeLogEntry(entryId, request.resource.data)
+              && isValidChangeLogEntry(entryId, request.resource.data, uid, profileId)
               && isParentOnlyRevert(request.resource.data);
           allow update: if isOwner(uid) && isIdenticalReplay();
           allow delete: if false;

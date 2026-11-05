@@ -4,6 +4,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db, CALL_OPTS } from "./shared";
 import { isKnownHiddenContentRef } from "./hidden_content_manifest";
+import { assertActiveParentSessionInTransaction } from "./parent_sessions";
 import { ULID_RE } from "./write_with_change_log";
 
 const REQUEST_KEYS = new Set(["ownerUid", "profileId", "hiddenRefs", "grantId", "parentSessionId"]);
@@ -57,8 +58,13 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
   if (isTutorCall && (typeof grantId !== "string" || !grantId)) {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   }
-  // TODO(7vx): require a server-issued parent session bound to profileId before
-  // accepting the owner path; parent PIN state is currently device-local.
+  const parentSessionRequired = request.auth?.token?.parent_session_enforced === true;
+  const parentSessionId = data.parentSessionId;
+  if (!isTutorCall && (parentSessionRequired || parentSessionId !== undefined)) {
+    if (typeof parentSessionId !== "string" || !parentSessionId) {
+      throw new HttpsError("permission-denied", "A server-issued parent session is required");
+    }
+  }
   if (!isTutorCall && callerUid !== ownerUid) {
     throw new HttpsError("permission-denied", "Only the profile owner can edit hidden content");
   }
@@ -68,6 +74,9 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
   let tutorGrant: FirebaseFirestore.DocumentData | undefined;
 
   await db.runTransaction(async (txn) => {
+    if (!isTutorCall && typeof parentSessionId === "string") {
+      await assertActiveParentSessionInTransaction(txn, ownerUid, profileId, parentSessionId);
+    }
     if (isTutorCall) {
       const grantRef = db.collection("tutor_grants").doc(grantId as string);
       const grantSnap = await txn.get(grantRef);
