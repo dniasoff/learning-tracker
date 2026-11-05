@@ -196,7 +196,9 @@ jobs:
     # own parallel job below (`test-serial-tools`) — GitHub Actions runs jobs
     # concurrently by default, so this REDUCES wall-clock instead of costing
     # more, since the two no longer share one timeout.
-    timeout-minutes: 45
+    # 2026-11-05: October green runs reached 42-44 minutes (8c27d335f:
+    # 44m11s); allow headroom while bead learning-tracker-yzq tracks sharding.
+    timeout-minutes: 60
 
     steps:
       # See the format-check job above: local composite actions require the
