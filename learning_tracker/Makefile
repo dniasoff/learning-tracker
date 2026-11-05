@@ -112,7 +112,7 @@ check-learning-event-read-boundary: ## Run the AD-35 "Reads" learning-event read
 
 test-functions: ## Run Cloud Functions tests (real handlers vs firestore emulator) (L5)
 	npm --prefix functions run build
-	firebase emulators:exec --only firestore,auth --project demo-cf "npm --prefix functions test"
+	firebase emulators:exec --only firestore,auth,functions --project demo-cf "npm --prefix functions test"
 
 test-story-4.1: ## Run Story 4.1 (Track Management) acceptance tests
 	flutter test test/story_acceptance/epic_04_multi_track_test.dart
