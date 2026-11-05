@@ -53,6 +53,7 @@ library;
 
 import 'dart:async';
 
+import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
@@ -731,6 +732,7 @@ final class BackupImportReplay {
     required GovernedDocReader reader,
     required LearningWritePort writePort,
     required BackupRecordWritePort records,
+    required Future<Actor?> Function() liveActor,
     LearningFailureReporter? failureReporter,
     this.ackWait = defaultLearningAckWait,
   }) : _scope = scope,
@@ -738,6 +740,7 @@ final class BackupImportReplay {
        _subTracks = subTracks,
        _reader = reader,
        _records = records,
+       _liveActor = liveActor,
        _failures = GovernedPendingFailures(
          reporter: failureReporter,
          ackWait: ackWait,
@@ -757,6 +760,7 @@ final class BackupImportReplay {
   final SubTrackRepository _subTracks;
   final GovernedDocReader _reader;
   final BackupRecordWritePort _records;
+  final Future<Actor?> Function() _liveActor;
   final GovernedPendingFailures _failures;
   final LearningWriteDispatcher _events;
 
@@ -1017,6 +1021,15 @@ final class BackupImportReplay {
     String pendingFailureId, {
     void Function(DispatchOutcome outcome)? afterEvents,
   }) async {
+    Actor? liveActor;
+    try {
+      liveActor = await _liveActor();
+    } on Object {
+      liveActor = null;
+    }
+    if (liveActor == null) {
+      return const CaptureResult.rejected(CaptureRejection.notSaved);
+    }
     final outcome = await _events.retry(pendingFailureId);
     if (outcome == null) return _failures.retry(pendingFailureId);
     if (outcome.allRejected) {

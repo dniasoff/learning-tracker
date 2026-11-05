@@ -152,14 +152,17 @@ final class GovernedHarness {
     OversizedGovernedWritePort? oversizedPort,
     this.failureReporter,
     this.ackWait = const Duration(milliseconds: 20),
+    Future<Actor?> Function()? liveActor,
   }) : _next = firstId,
        store = store ?? InMemoryChangeLogRepository(),
        subTracks = subTracks ?? InMemorySubTrackRepository() {
+    this.liveActor = liveActor ?? () async => actor;
     changeLog = ScriptedChangeLog(this.store);
     reader = HarnessReader(this.store, this.subTracks);
     commands = DefaultGovernedLearningCommands(
       scope: scope,
       actor: actor,
+      liveActor: () => this.liveActor(),
       changeLog: changeLog,
       subTracks: this.subTracks,
       reader: reader,
@@ -184,6 +187,8 @@ final class GovernedHarness {
 
   /// The batch ack wait.
   final Duration ackWait;
+
+  late Future<Actor?> Function() liveActor;
 
   /// Governed docs and the change log.
   final InMemoryChangeLogRepository store;

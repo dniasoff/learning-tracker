@@ -90,6 +90,7 @@ final class _Events {
     commands = DefaultLearningCommands(
       scope: c0Scope(),
       actor: parentActor,
+      liveActor: () async => parentActor,
       reads: reads,
       writePort: port,
       gate: const LockWindowCaptureGate(),
@@ -174,6 +175,7 @@ final class _ChildEvents {
     commands = DefaultLearningCommands(
       scope: c0Scope(),
       actor: childActor,
+      liveActor: () async => childActor,
       reads: reads,
       writePort: port,
       gate: const LockWindowCaptureGate(),
@@ -731,6 +733,7 @@ void main() {
       final racing = DefaultGovernedLearningCommands(
         scope: parent.scope,
         actor: parentActor,
+        liveActor: () async => parentActor,
         changeLog: parent.changeLog,
         subTracks: parent.subTracks,
         reader: reader,

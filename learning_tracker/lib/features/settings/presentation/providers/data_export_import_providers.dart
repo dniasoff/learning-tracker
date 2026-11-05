@@ -8,6 +8,7 @@ import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/settings/data/repositories/backup_learning_sources.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -73,6 +74,12 @@ final backupLearningPortProvider = FutureProvider<BackupLearningPort?>((
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
     gate: ref.watch(captureGateProvider),
+    liveActor: (_) async {
+      if (ref.read(activeTutoredProfileSelectionProvider) != null) return null;
+      final uid = await ref.read(activeAuthUidProvider.future);
+      if (uid == null || uid != session.uid) return null;
+      return Actor(uid: uid, role: ActorRole.parent, displayName: '');
+    },
   );
 }, retry: (retryCount, error) => null);
 

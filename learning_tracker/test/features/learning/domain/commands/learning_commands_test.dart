@@ -186,7 +186,11 @@ final class _Harness {
     LearnerSettingsHistory? history,
     bool governed = false,
     SubTrackCommands? subTrackCommands,
+    Future<Actor?> Function()? liveActor,
   }) : now = now ?? _tuesday {
+    this.liveActor =
+        liveActor ??
+        () async => Actor(uid: 'owner-uid', role: role, displayName: 'Abba');
     fakeReads = FakeLearningCommandReads(
       history: history ?? _lockHistory,
       log: events,
@@ -197,6 +201,7 @@ final class _Harness {
     commands = DefaultLearningCommands(
       scope: c0Scope(),
       actor: Actor(uid: 'owner-uid', role: role, displayName: 'Abba'),
+      liveActor: () => this.liveActor(),
       reads: reads,
       writePort: _LoggedPort(port, log, this),
       gate: gate,
@@ -216,6 +221,7 @@ final class _Harness {
   }
 
   DateTime now;
+  late Future<Actor?> Function() liveActor;
   final _Log log = [];
   late final FakeLearningCommandReads fakeReads;
   late final _LoggedReads reads;
@@ -559,6 +565,19 @@ void main() {
       expect(identical(h.port.attempts.last, rejected), isTrue);
       expect(h.minted, 1000, reason: 'no id minted on retry');
     });
+  });
+
+  test('a stale child retry returns childLimit without dispatching', () async {
+    final h = _Harness(role: ActorRole.child);
+    h.port.failNextWith(const PermanentWriteRejection('permission-denied'));
+    await _captureDated(h, refs: [_b11]);
+    final pending = await h.commands.watchPendingFailures().first;
+    h.liveActor = () async => parentActor;
+    expect(
+      await h.commands.retry(pending.single.id),
+      const CaptureResult.childLimit(),
+    );
+    expect(h.port.attempts, hasLength(1));
   });
 
   group('AC-4: void and replace', () {

@@ -554,6 +554,20 @@ void main() {
       expect(await h.commands.watchPendingFailures().first, isEmpty);
     });
 
+    test('a backup retry rechecks the live actor before replaying', () async {
+      final h = BackupReplayHarness()..writePort.rejectAttempts.add(1);
+      final result = await h.commands.importBackup(large());
+      final failure = result.notSaved.single;
+      final attempts = h.writePort.attempts.length;
+      h.liveActor = () async => null;
+
+      expect(
+        await h.commands.retry(failure.id),
+        const CaptureResult.rejected(CaptureRejection.notSaved),
+      );
+      expect(h.writePort.attempts, hasLength(attempts));
+    });
+
     test('a rejected governed batch is "not saved — retry" too', () async {
       final h = _destination();
       final input = _fixture();

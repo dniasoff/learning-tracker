@@ -122,6 +122,7 @@ final class _Rig {
     commands = DefaultLearningCommands(
       scope: world.scope,
       actor: subTrackCommands.actor,
+      liveActor: () async => subTrackCommands.actor,
       reads: FakeLearningCommandReads(history: c0SettingsHistory()),
       writePort: InMemoryLearningWritePort(),
       gate: FakeCaptureGate.open(),

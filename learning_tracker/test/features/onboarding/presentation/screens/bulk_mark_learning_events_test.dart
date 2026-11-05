@@ -133,6 +133,11 @@ final class _Capture {
         role: ActorRole.parent,
         displayName: '',
       ),
+      liveActor: () async => const Actor(
+        uid: 'owner-uid',
+        role: ActorRole.parent,
+        displayName: '',
+      ),
       // Live reads: the commands (and the recorder's pre-tick) see every
       // event written so far, as Firestore would.
       reads: LearningCommandReadsFrom(

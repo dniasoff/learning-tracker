@@ -6,6 +6,7 @@ library;
 
 import 'dart:async';
 
+import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/ports/backup_record_write_port.dart';
@@ -196,9 +197,11 @@ final class BackupReplayHarness {
     LearnerSettingsHistory? settingsHistory,
     CaptureGate gate = const LockWindowCaptureGate(),
     this.ackWait = const Duration(milliseconds: 20),
+    Future<Actor?> Function()? liveActor,
   }) : scope = scope ?? c0Scope(),
        now = now ?? engineAt(600),
        _next = firstId {
+    this.liveActor = liveActor ?? () async => parentActor;
     changeLog = LoggingChangeLog(store, log);
     subTrackPort = LoggingSubTracks(subTracks, log);
     writePort = LoggingWritePort(events, log);
@@ -216,6 +219,7 @@ final class BackupReplayHarness {
       failureReporter: failureReporter,
       clock: () => this.now,
       newUlid: (_) => engineUlid(_next++),
+      liveActor: () => this.liveActor(),
       ackWait: ackWait,
       backupReplay: BackupImportReplay(
         scope: this.scope,
@@ -226,11 +230,14 @@ final class BackupReplayHarness {
         records: records,
         failureReporter: failureReporter,
         ackWait: ackWait,
+        liveActor: () => this.liveActor(),
       ),
     );
   }
 
   int _next;
+
+  late Future<Actor?> Function() liveActor;
 
   /// The destination scope.
   final LearnerScope scope;

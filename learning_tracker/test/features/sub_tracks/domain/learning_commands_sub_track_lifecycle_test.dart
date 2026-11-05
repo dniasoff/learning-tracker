@@ -482,6 +482,7 @@ void main() {
       SubTrackCommands build() => SubTrackCommands(
         scope: scope,
         actor: parentActor,
+        liveActor: () async => parentActor,
         subTracks: repo,
         intent: intent,
         today: () => _today,
@@ -563,6 +564,7 @@ void main() {
       facade = DefaultLearningCommands(
         scope: scope,
         actor: parentActor,
+        liveActor: () async => parentActor,
         reads: FakeLearningCommandReads(history: c0SettingsHistory()),
         writePort: InMemoryLearningWritePort(),
         gate: const LockWindowCaptureGate(),

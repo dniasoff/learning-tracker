@@ -362,7 +362,7 @@ final class DefaultLearningCommands implements LearningCommands {
     SubTrackSourceCheck? sourceCheck,
     BackupImportReplay? backupReplay,
     Future<CaptureSourceType?> Function(String source)? sourceTypeOf,
-    Future<Actor?> Function()? liveActor,
+    required Future<Actor?> Function() liveActor,
   }) : _scope = scope,
        _achievements = achievements,
        _sourceCheck = sourceCheck,
@@ -397,7 +397,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final SubTrackSourceCheck? _sourceCheck;
   final SubTrackCommands? _subTrackCommands;
   final Future<CaptureSourceType?> Function(String source)? _sourceTypeOf;
-  final Future<Actor?> Function()? _liveActor;
+  final Future<Actor?> Function() _liveActor;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
   final AchievementLatch? _achievements;
@@ -414,14 +414,14 @@ final class DefaultLearningCommands implements LearningCommands {
   /// already-open screen may still hold the old instance; every write must
   /// therefore re-check the live session at the write boundary.
   Future<CaptureResult?> _authorizationFailure() async {
-    final liveActor = _liveActor;
-    if (liveActor == null) return null;
     try {
-      if (await liveActor() == _actor) return null;
+      if (await _liveActor() == _actor) return null;
     } on Object {
       // Session resolution failures fail closed.
     }
-    return const CaptureResult.rejected(CaptureRejection.notSaved);
+    return _actor.role == ActorRole.child
+        ? const CaptureResult.childLimit()
+        : const CaptureResult.rejected(CaptureRejection.notSaved);
   }
 
   /// Reads the clock once, then the target learner's settings, then runs
@@ -1192,6 +1192,8 @@ final class DefaultLearningCommands implements LearningCommands {
     stamp,
     history,
   ) async {
+    final authorizationFailure = await _authorizationFailure();
+    if (authorizationFailure != null) return authorizationFailure;
     final subTracks = _subTrackCommands;
     if (subTracks != null && subTracks.hasPendingFailure(pendingFailureId)) {
       return subTracks.retry(pendingFailureId);

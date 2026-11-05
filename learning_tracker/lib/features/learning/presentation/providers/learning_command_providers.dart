@@ -181,7 +181,7 @@ CivilDate learnerToday(DateTime nowUtc, LearnerSettingsHistory? history) =>
 /// invalidation is not enough: an already-open screen can retain an older
 /// `LearningCommands` instance after a PIN lock, profile switch or tutor
 /// session begins.
-Future<Actor?> _liveOwnerActor(Ref ref, LearnerScope scope) async {
+Future<Actor?> liveOwnerActor(Ref ref, LearnerScope scope) async {
   if (ref.read(activeTutoredProfileSelectionProvider) != null) return null;
   final uid = await ref.read(activeAuthUidProvider.future);
   final currentScope = await ref.read(activeLearnerScopeProvider.future);
@@ -366,7 +366,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
     failureReporter: failureReporter,
-    liveActor: () => _liveOwnerActor(ref, scope),
+    liveActor: () => liveOwnerActor(ref, scope),
   );
   final achievements = AchievementLatch(
     FirestoreAchievementLatchAdapter(
@@ -399,7 +399,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
       );
     },
     ledger: ref.watch(subTrackWriteLedgerProvider(scope)),
-    liveActor: () => _liveOwnerActor(ref, scope),
+    liveActor: () => liveOwnerActor(ref, scope),
   );
   final commands = DefaultLearningCommands(
     scope: scope,
@@ -427,7 +427,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     sourceCheck: subTrackSourceCheckFrom(subTracks, scope),
     subTrackCommands: subTrackCommands,
     sourceTypeOf: sourceTypeOf,
-    liveActor: () => _liveOwnerActor(ref, scope),
+    liveActor: () => liveOwnerActor(ref, scope),
   );
   // Recover any latch a failed check left absent (app start, learner
   // switch); runs in the background and retries its own failures.
@@ -483,7 +483,7 @@ final lockLocationGovernedCommandsProvider = FutureProvider.autoDispose
         clock: ref.watch(learningCommandClockProvider),
         newUlid: newUlid,
         failureReporter: ref.watch(learningFailureReporterProvider),
-        liveActor: () => _liveOwnerActor(ref, scope),
+        liveActor: () => liveOwnerActor(ref, scope),
       );
       ref.onDispose(governed.dispose);
       return governed;

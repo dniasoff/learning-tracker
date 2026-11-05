@@ -139,6 +139,7 @@ final class CatchUpCommandHarness {
     commands = DefaultLearningCommands(
       scope: catchUpScope,
       actor: actor,
+      liveActor: () async => actor,
       reads: reads,
       writePort: port,
       gate: const LockWindowCaptureGate(),

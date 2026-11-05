@@ -142,7 +142,7 @@ final class DefaultGovernedLearningCommands
     required UtcClock clock,
     required UlidSource newUlid,
     LearningFailureReporter? failureReporter,
-    Future<Actor?> Function()? liveActor,
+    required Future<Actor?> Function() liveActor,
     this.ackWait = defaultLearningAckWait,
   }) : _failures = GovernedPendingFailures(
          reporter: failureReporter,
@@ -166,7 +166,7 @@ final class DefaultGovernedLearningCommands
   final OversizedGovernedWritePort _oversized;
   final UtcClock _clock;
   final UlidSource _newUlid;
-  final Future<Actor?> Function()? _liveActor;
+  final Future<Actor?> Function() _liveActor;
   final GovernedPendingFailures _failures;
 
   /// How long a batch waits for the server before it counts as queued.
@@ -178,10 +178,8 @@ final class DefaultGovernedLearningCommands
   /// The provider may rebuild after a PIN/session change while a caller still
   /// holds this commands instance. Fail closed before any governed write.
   Future<bool> _actorIsCurrent() async {
-    final liveActor = _liveActor;
-    if (liveActor == null) return true;
     try {
-      return await liveActor() == _actor;
+      return await _liveActor() == _actor;
     } on Object {
       return false;
     }
@@ -197,9 +195,13 @@ final class DefaultGovernedLearningCommands
 
   @override
   Future<CaptureResult?> retry(String pendingFailureId) async {
-    if (!await _actorIsCurrent()) return _notSaved;
+    if (!await _actorIsCurrent()) return _authorizationFailure;
     return _failures.retry(pendingFailureId);
   }
+
+  CaptureResult get _authorizationFailure => _actor.role == ActorRole.child
+      ? const CaptureResult.childLimit()
+      : _notSaved;
 
   /// Closes the pending-failure stream.
   Future<void> dispose() => _failures.dispose();
@@ -509,7 +511,7 @@ final class DefaultGovernedLearningCommands
       return _notSaved; // a doc could not be read: write nothing
     }
     if (changes.any((c) => c.docs.length > GovernedBatch.maxDocs)) {
-      if (!await _actorIsCurrent()) return _notSaved;
+      if (!await _actorIsCurrent()) return _authorizationFailure;
       return _writeOversized(changes, now, revertsActionId, changedSince);
     }
 
@@ -553,7 +555,7 @@ final class DefaultGovernedLearningCommands
       return CaptureResult.success(changedSince: changedSince);
     }
 
-    if (!await _actorIsCurrent()) return _notSaved;
+    if (!await _actorIsCurrent()) return _authorizationFailure;
 
     // Fix every id, time and payload before the first write (AC-2, T2).
     final ids = [for (final _ in plans) _newUlid(now)];

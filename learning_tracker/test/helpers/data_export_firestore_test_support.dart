@@ -82,6 +82,8 @@ CommandsBackupLearningPort firestoreBackupLearningPort(
     failureReporter: RecordingLearningFailureReporter(),
     clock: () => backupTestNow,
     newUlid: newUlid,
+    liveActor: (_) async =>
+        Actor(uid: uid, role: ActorRole.parent, displayName: ''),
     gate: FakeCaptureGate.open(),
   );
 }

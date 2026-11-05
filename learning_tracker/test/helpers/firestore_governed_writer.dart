@@ -195,6 +195,7 @@ final class FirestoreGovernedWriter implements OwnerGovernedWriter {
     commands = DefaultGovernedLearningCommands(
       scope: scope,
       actor: Actor(uid: uid, role: ActorRole.parent, displayName: ''),
+      liveActor: () async => Actor(uid: uid, role: ActorRole.parent, displayName: ''),
       changeLog: this.changeLog,
       subTracks: FirestoreSubTrackRepository(firestore: firestore),
       reader: changeLog,
