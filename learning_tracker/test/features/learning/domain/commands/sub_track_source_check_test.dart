@@ -92,6 +92,11 @@ final class _Harness {
         role: ActorRole.parent,
         displayName: '',
       ),
+      liveActor: () async => const Actor(
+        uid: 'owner-uid',
+        role: ActorRole.parent,
+        displayName: '',
+      ),
       reads: reads,
       writePort: port,
       gate: const LockWindowCaptureGate(),

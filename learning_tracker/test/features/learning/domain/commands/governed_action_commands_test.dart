@@ -49,6 +49,20 @@ void main() {
     expect(unknownChangeActor.displayName, isEmpty);
   });
 
+  test('a stale child governed write returns childLimit', () async {
+    final h = GovernedHarness(
+      actor: childActor,
+      liveActor: () async => parentActor,
+    );
+    final result = await h.commands.applyGovernedChange(
+      oneEntity(GovernedEntity.goal, 'g', [
+        patch(GovernedEntity.goal, 'g', {'v': 1}),
+      ]),
+    );
+    expect(result, const CaptureResult.childLimit());
+    expect(h.store.entriesOf(h.scope), isEmpty);
+  });
+
   test('instants, lists and maps are storage values; other objects are '
       'not', () async {
     final h = GovernedHarness();

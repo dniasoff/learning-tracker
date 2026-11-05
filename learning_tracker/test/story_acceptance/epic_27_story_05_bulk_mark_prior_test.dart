@@ -32,6 +32,11 @@ void main() {
           role: ActorRole.parent,
           displayName: '',
         ),
+        liveActor: () async => const Actor(
+          uid: 'owner-uid',
+          role: ActorRole.parent,
+          displayName: '',
+        ),
         reads: FakeLearningCommandReads(history: c0SettingsHistory()),
         writePort: port,
         gate: const LockWindowCaptureGate(),

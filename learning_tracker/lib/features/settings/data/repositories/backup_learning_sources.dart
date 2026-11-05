@@ -92,6 +92,7 @@ final class CommandsBackupLearningPort implements BackupLearningPort {
     required LearningFailureReporter failureReporter,
     required UtcClock clock,
     required UlidSource newUlid,
+    required Future<Actor?> Function(LearnerScope scope) liveActor,
     CaptureGate gate = const LockWindowCaptureGate(),
   }) : _subTracks = subTracks,
        _changeLog = changeLog,
@@ -104,6 +105,7 @@ final class CommandsBackupLearningPort implements BackupLearningPort {
        _failureReporter = failureReporter,
        _clock = clock,
        _newUlid = newUlid,
+       _liveActor = liveActor,
        _gate = gate;
 
   /// The account's path uid.
@@ -123,6 +125,7 @@ final class CommandsBackupLearningPort implements BackupLearningPort {
   final LearningFailureReporter _failureReporter;
   final UtcClock _clock;
   final UlidSource _newUlid;
+  final Future<Actor?> Function(LearnerScope scope) _liveActor;
   final CaptureGate _gate;
 
   final Map<String, DefaultLearningCommands> _commands = {};
@@ -196,14 +199,17 @@ final class CommandsBackupLearningPort implements BackupLearningPort {
           failureReporter: _failureReporter,
           clock: _clock,
           newUlid: _newUlid,
+          liveActor: () => _liveActor(scope),
           backupReplay: BackupImportReplay(
             scope: scope,
+            actor: actor,
             changeLog: _changeLog,
             subTracks: _subTracks,
             reader: _reader,
             writePort: _writePort,
             records: _records,
             failureReporter: _failureReporter,
+            liveActor: () => _liveActor(scope),
           ),
         );
       });

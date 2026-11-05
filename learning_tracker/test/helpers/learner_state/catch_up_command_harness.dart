@@ -130,8 +130,10 @@ final class CatchUpCommandHarness {
     this.actor = catchUpParent,
     LearnerSettingsHistory? history,
     int idSeed = 40000,
+    Future<Actor?> Function()? liveActor,
   }) : now = now ?? catchUpSunday,
        _seq = idSeed {
+    this.liveActor = liveActor ?? () async => actor;
     reads = FakeLearningCommandReads(
       history: history ?? catchUpHistory,
       corpora: {engineCurriculum: mishnayosCorpus()},
@@ -139,6 +141,7 @@ final class CatchUpCommandHarness {
     commands = DefaultLearningCommands(
       scope: catchUpScope,
       actor: actor,
+      liveActor: () => this.liveActor(),
       reads: reads,
       writePort: port,
       gate: const LockWindowCaptureGate(),
@@ -158,6 +161,8 @@ final class CatchUpCommandHarness {
 
   /// The session actor.
   final Actor actor;
+
+  late Future<Actor?> Function() liveActor;
 
   /// The command reads.
   late final FakeLearningCommandReads reads;

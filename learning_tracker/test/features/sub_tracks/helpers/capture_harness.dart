@@ -87,6 +87,8 @@ final class CaptureRig {
     commands = DefaultLearningCommands(
       scope: c0Scope(),
       actor: Actor(uid: 'owner-uid', role: role, displayName: 'Child'),
+      liveActor: () async =>
+          Actor(uid: 'owner-uid', role: role, displayName: 'Child'),
       reads: _RigReads(this),
       writePort: _NotifyingPort(port, _publish),
       gate: const LockWindowCaptureGate(),

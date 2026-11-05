@@ -141,6 +141,11 @@ final class _Flow {
         role: ActorRole.parent,
         displayName: '',
       ),
+      liveActor: () async => const Actor(
+        uid: 'owner-uid',
+        role: ActorRole.parent,
+        displayName: '',
+      ),
       reads: _PortBackedReads(port),
       writePort: port,
       gate: const LockWindowCaptureGate(),

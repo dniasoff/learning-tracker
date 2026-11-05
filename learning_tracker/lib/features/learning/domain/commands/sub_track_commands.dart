@@ -235,6 +235,7 @@ final class SubTrackCommands {
     SubTrackWriteLedger? ledger,
     Future<SubTrackForecastComparison?> Function(SubTrack track)?
     forecastComparison,
+    Future<Actor?> Function()? liveActor,
     this.ackTimeout = const Duration(seconds: 3),
     this.readTimeout = const Duration(seconds: 10),
   }) : _ledger = ledger ?? SubTrackWriteLedger(),
@@ -246,7 +247,8 @@ final class SubTrackCommands {
        _newId = newId,
        _corpusOf = corpusOf,
        _analytics = analytics,
-       _forecastComparison = forecastComparison;
+       _forecastComparison = forecastComparison,
+       _liveActor = liveActor;
 
   /// The learner the commands write for.
   final LearnerScope scope;
@@ -271,9 +273,28 @@ final class SubTrackCommands {
   final LearningAnalytics? _analytics;
   final Future<SubTrackForecastComparison?> Function(SubTrack track)?
   _forecastComparison;
+  final Future<Actor?> Function()? _liveActor;
 
   final SubTrackWriteLedger _ledger;
   final bool _ownsLedger;
+
+  /// Refuses a write when this command instance's actor is no longer the
+  /// live owner session. A PIN lock or profile/session switch can rebuild the
+  /// provider while an already-open editor still holds the old commands.
+  Future<CaptureResult?> _authorizationFailure() async {
+    final liveActor = _liveActor;
+    if (liveActor == null) return null;
+    Actor? current;
+    try {
+      current = await liveActor();
+    } on Object {
+      return const CaptureResult.rejected(CaptureRejection.notSaved);
+    }
+    if (current == actor) return null;
+    return current?.role == ActorRole.child
+        ? const CaptureResult.childLimit()
+        : const CaptureResult.rejected(CaptureRejection.notSaved);
+  }
 
   Map<String, (PendingFailure, SubTrackChange, void Function()?)>
   get _pending => _ledger._pending;
@@ -546,6 +567,8 @@ final class SubTrackCommands {
 
     final SubTrackChange? change;
     try {
+      final authorizationFailure = await _authorizationFailure();
+      if (authorizationFailure != null) return authorizationFailure;
       change = await writer.applyGovernedChangeToLatest(
         scope,
         subTrackId,
@@ -860,6 +883,8 @@ final class SubTrackCommands {
     SubTrackChange change, {
     void Function()? onConfirmed,
   }) async {
+    final authorizationFailure = await _authorizationFailure();
+    if (authorizationFailure != null) return authorizationFailure;
     final id = change.entry.id;
     final success = CaptureResult.success(
       changeIds: [id],

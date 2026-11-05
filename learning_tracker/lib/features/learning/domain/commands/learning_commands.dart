@@ -362,6 +362,7 @@ final class DefaultLearningCommands implements LearningCommands {
     SubTrackSourceCheck? sourceCheck,
     BackupImportReplay? backupReplay,
     Future<CaptureSourceType?> Function(String source)? sourceTypeOf,
+    required Future<Actor?> Function() liveActor,
   }) : _scope = scope,
        _achievements = achievements,
        _sourceCheck = sourceCheck,
@@ -377,6 +378,7 @@ final class DefaultLearningCommands implements LearningCommands {
        _governed = governed,
        _subTrackCommands = subTrackCommands,
        _sourceTypeOf = sourceTypeOf,
+       _liveActor = liveActor,
        _dispatcher = LearningWriteDispatcher(
          scope: scope,
          port: writePort,
@@ -395,6 +397,7 @@ final class DefaultLearningCommands implements LearningCommands {
   final SubTrackSourceCheck? _sourceCheck;
   final SubTrackCommands? _subTrackCommands;
   final Future<CaptureSourceType?> Function(String source)? _sourceTypeOf;
+  final Future<Actor?> Function() _liveActor;
   final LearningWriteDispatcher _dispatcher;
   final Duration _pointsWait;
   final AchievementLatch? _achievements;
@@ -405,6 +408,24 @@ final class DefaultLearningCommands implements LearningCommands {
   static const _sourceTypeWait = Duration(seconds: 2);
 
   static const _invalid = CaptureResult.rejected(CaptureRejection.invalid);
+
+  /// Returns a refusal when the session actor changed after this command
+  /// instance was built.  The provider can rebuild on a PIN change, but an
+  /// already-open screen may still hold the old instance; every write must
+  /// therefore re-check the live session at the write boundary.
+  Future<CaptureResult?> _authorizationFailure() async {
+    try {
+      if (await _liveActor() == _actor) return null;
+    } on Object {
+      // Session resolution failures fail closed.
+    }
+    return _actor.role == ActorRole.child
+        ? const CaptureResult.childLimit()
+        : const CaptureResult.rejected(CaptureRejection.notSaved);
+  }
+
+  Future<bool> _authorizationIsCurrent() async =>
+      await _authorizationFailure() == null;
 
   /// Reads the clock once, then the target learner's settings, then runs
   /// the gate; [body] runs only when the gate is open.
@@ -437,6 +458,8 @@ final class DefaultLearningCommands implements LearningCommands {
     List<WriteUnit> units,
   ) async {
     if (units.isEmpty) return const CaptureResult.success();
+    final authorizationFailure = await _authorizationFailure();
+    if (authorizationFailure != null) return authorizationFailure;
     final outcome = await _dispatcher.dispatch(kind, chunkWrites(units));
     if (outcome.allRejected) {
       return const CaptureResult.rejected(CaptureRejection.notSaved);
@@ -1021,12 +1044,24 @@ final class DefaultLearningCommands implements LearningCommands {
           for (final u in units)
             for (final e in u.events) e.id,
         ];
+        final authorizationFailure = await _authorizationFailure();
+        if (authorizationFailure != null) return authorizationFailure;
         final outcome = await _dispatcher.dispatch(
           LearningCommandKind.capture,
           chunkWrites(units),
+          beforeChunk: _authorizationIsCurrent,
         );
         if (outcome.rejectedChunks > 0) {
-          await _compensateCatchUp(planned, saved: outcome.eventIds);
+          final compensated = await _compensateCatchUp(
+            planned,
+            saved: outcome.eventIds,
+          );
+          if (!compensated) {
+            return CaptureResult.success(
+              eventIds: outcome.eventIds,
+              queued: outcome.queued,
+            );
+          }
           return const CaptureResult.rejected(CaptureRejection.notSaved);
         }
         if (outcome.queued) {
@@ -1070,16 +1105,17 @@ final class DefaultLearningCommands implements LearningCommands {
   /// the action's first event id), so no subset stays counted and the
   /// card returns while its window is open. A void the server then
   /// rejects is an ordinary pending failure with its own retry.
-  Future<void> _compensateCatchUp(
+  Future<bool> _compensateCatchUp(
     List<String> planned, {
     required List<String> saved,
   }) async {
+    if (await _authorizationFailure() != null) return false;
     _dispatcher.discard(planned);
     final targets = [
       for (final id in planned)
         if (saved.contains(id)) id,
     ];
-    if (targets.isEmpty) return;
+    if (targets.isEmpty) return true;
     final stamp = CommandStamp(
       actor: _actor,
       nowUtc: _clock().toUtc(),
@@ -1101,6 +1137,7 @@ final class DefaultLearningCommands implements LearningCommands {
       // Not accepted locally: nothing more to do here; the engine still
       // sees only what was written.
     }
+    return true;
   }
 
   /// The event failures, then the governed and backup import failures
@@ -1169,6 +1206,8 @@ final class DefaultLearningCommands implements LearningCommands {
     stamp,
     history,
   ) async {
+    final authorizationFailure = await _authorizationFailure();
+    if (authorizationFailure != null) return authorizationFailure;
     final subTracks = _subTrackCommands;
     if (subTracks != null && subTracks.hasPendingFailure(pendingFailureId)) {
       return subTracks.retry(pendingFailureId);

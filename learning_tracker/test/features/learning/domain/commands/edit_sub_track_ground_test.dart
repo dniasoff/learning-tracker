@@ -85,6 +85,7 @@ void main() {
     Future<Corpus?> Function(String)? corpusOf,
     SubTrackRepository? subTracks,
     String Function()? newId,
+    Future<Actor?> Function()? liveActor,
   }) => SubTrackCommands(
     scope: scope,
     actor: actor,
@@ -96,6 +97,7 @@ void main() {
     nowUtc: () => _now,
     newId: newId ?? _ids(),
     corpusOf: corpusOf ?? (id) async => id == engineCurriculum ? corpus : null,
+    liveActor: liveActor,
     ackTimeout: const Duration(milliseconds: 50),
     readTimeout: const Duration(seconds: 2),
   );
@@ -300,6 +302,24 @@ void main() {
       repo.seed(scope, [_school()]);
       expect(await add(const []), const CaptureResult.success());
       expect(repo.calls, isEmpty);
+    });
+
+    test('a parent PIN lock before the append reaches the write port rejects '
+        'and commits nothing', () async {
+      repo.seed(scope, [_school()]);
+      var unlocked = true;
+      final stale = build(
+        liveActor: () async => unlocked ? parentActor : _childActor,
+      );
+      unlocked = false;
+
+      expect(
+        await add(const [berakhot1], via: stale),
+        const CaptureResult.childLimit(),
+      );
+      expect(repo.calls, isEmpty);
+      expect(storedGround(), isEmpty);
+      await stale.dispose();
     });
   });
 

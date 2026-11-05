@@ -142,6 +142,21 @@ final class GovernedPendingFailures {
     );
   }
 
+  /// Keeps an unsent unit as a retryable failure without dispatching it.
+  /// Used when a live actor check stops a sequential replay at its boundary.
+  void defer(LearningCommandKind command, GovernedWriteUnit unit) {
+    _pending.putIfAbsent(
+      unit.id,
+      () => _Pending(unit, PendingFailureReason.other, isUndo: false),
+    );
+    _notify();
+  }
+
+  /// Clears a retry handle after an idempotent replay writes the same unit.
+  void acknowledge(String id) {
+    if (_pending.remove(id) != null) _notify();
+  }
+
   /// Re-sends the unit of pending failure [id] unchanged. Null when [id] is
   /// not a governed pending failure.
   ///
