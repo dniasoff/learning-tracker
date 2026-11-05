@@ -583,8 +583,9 @@ class ProfileSwitcherBar extends ConsumerWidget {
     // must NOT read identically to an adult. Per product Rule 3 the role label
     // is the Learner/Adult/Tutor switcher: derive it from the active profile's
     // mode, and surface TUTOR when a tutored-child selection is active (the
-    // signed-in adult is sitting in a talmid's context). Falls back to the adult
-    // badge while the profile stream is still resolving (account-only identity).
+    // signed-in adult is sitting in a talmid's context). Hide the badge while
+    // the active profile is unresolved so the UI never claims adult mode before
+    // a profile has been selected.
     //
     // AN-3 fix: when the parent has elevated via PIN for this child profile,
     // the badge must show PARENT MODE rather than CHILD MODE — the parent is
@@ -594,15 +595,17 @@ class ProfileSwitcherBar extends ConsumerWidget {
     final parentAuthedId = ref.watch(parentPinAuthenticatedProfileIdProvider);
     final isParentElevated =
         parentAuthedId != null && parentAuthedId == activeProfileId;
-    final String roleBadge;
+    final String? roleBadge;
     if (isTutoredContext) {
       roleBadge = l10n.tutorContextBadge;
     } else if (activeProfile?.mode == ProfileMode.child && isParentElevated) {
       roleBadge = l10n.profileBadgeParentMode;
     } else if (activeProfile?.mode == ProfileMode.child) {
       roleBadge = l10n.profileBadgeChildMode;
-    } else {
+    } else if (activeProfile?.mode == ProfileMode.adult) {
       roleBadge = l10n.profileBadgeAdultMode;
+    } else {
+      roleBadge = null;
     }
     final initial = trimmed.isEmpty
         ? 'U'
@@ -716,27 +719,29 @@ class ProfileSwitcherBar extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            roleBadge,
-                            style: TextStyle(
-                              color: barForeground,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
+                        if (roleBadge != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              roleBadge,
+                              style: TextStyle(
+                                color: barForeground,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
+                          const SizedBox(width: 8),
+                        ],
                         Icon(
                           Icons.unfold_more_rounded,
                           size: 20,
