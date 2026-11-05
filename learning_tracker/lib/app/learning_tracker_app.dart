@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/legacy_learner_settings_seed_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/learner_location_prompt.dart';
@@ -92,6 +93,7 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
             mounted;
       },
       switchTo: (profileId) async {
+        await ref.read(parentSessionControllerProvider).lock();
         router.pinGuard.lock();
         ref.read(selectedProfileIdProvider.notifier).select(profileId);
         await router.replaceAll([const AppShellRoute()]);

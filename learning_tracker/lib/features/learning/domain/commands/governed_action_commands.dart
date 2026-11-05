@@ -107,6 +107,9 @@ const Actor unknownChangeActor = Actor(
   uid: '',
   role: ActorRole.parent,
   displayName: '',
+  // This sentinel is never written; it still carries the field so every
+  // production parent-shaped Actor has an explicit session proof slot.
+  sessionId: 'unknown',
 );
 
 /// One governed doc as the writer sees it: null when absent.

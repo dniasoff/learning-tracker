@@ -21,11 +21,11 @@ final class ParentSessionClient {
 
   Future<ParentSessionLease> create({
     required String profileId,
-    required String pin,
+    String? pin,
   }) async {
     final result = await _call('createParentSession', {
       'profileId': profileId,
-      'pin': pin,
+      if (pin != null) 'pin': pin,
     });
     final sessionId = result['sessionId'];
     final expiresAt = result['expiresAt'];

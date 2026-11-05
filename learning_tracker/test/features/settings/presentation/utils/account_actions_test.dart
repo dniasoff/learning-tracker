@@ -58,6 +58,8 @@ import 'package:learning_tracker/core/network/connectivity_gateway.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/repositories/parent_session_client.dart';
+import 'package:learning_tracker/data/repositories/parent_session_controller.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
@@ -67,6 +69,8 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 // ignore_for_file: directives_ordering
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
+    show parentSessionControllerProvider;
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -188,6 +192,21 @@ Widget _buildApp({
       ...extra,
     ],
     child: child,
+  );
+}
+
+ParentSessionController _trackingSessionController(List<String> events) {
+  var sessionId = 'test-session';
+  return ParentSessionController(
+    client: ParentSessionClient((name, data) async {
+      events.add(name);
+      return {};
+    }),
+    currentSessionId: () => sessionId,
+    setSessionId: (value) => sessionId = value,
+    clearSessionId: () => sessionId = '',
+    disableNetwork: () async => events.add('disableNetwork'),
+    enableNetwork: () async => events.add('enableNetwork'),
   );
 }
 
@@ -383,6 +402,43 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  testWidgets('sign-out revokes the parent lease before account teardown', (
+    tester,
+  ) async {
+    final events = <String>[];
+    when(
+      () => service.signOut(),
+    ).thenAnswer((_) async => events.add('signOut'));
+    await tester.pumpWidget(
+      _buildApp(
+        child: const _SignOutHost(),
+        router: router,
+        authRepo: authRepo,
+        service: service,
+        connectivity: connectivity,
+        registry: registry,
+        extra: [
+          parentSessionControllerProvider.overrideWithValue(
+            _trackingSessionController(events),
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('trigger'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign Out'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(events, [
+      'disableNetwork',
+      'revokeParentSession',
+      'enableNetwork',
+      'signOut',
+    ]);
+  });
 
   testWidgets(
     'sign-out with accounts remaining navigates to AccountPickerRoute',

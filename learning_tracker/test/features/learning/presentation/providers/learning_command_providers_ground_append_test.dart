@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/learning/domain/commands/learning_comm
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
@@ -63,6 +64,12 @@ void main() {
     learningCommandClockProvider.overrideWithValue(() => engineAt(600)),
     activeLearnerScopeProvider.overrideWith((ref) async => scope),
     activeAuthUidProvider.overrideWith((ref) async => 'auth-uid'),
+    parentSessionActorSourceProvider.overrideWithValue(
+      ParentSessionActorSource(
+        sessionId: () => 'test-parent-session',
+        profileId: () => profileUlid,
+      ),
+    ),
     learningWritePortProvider.overrideWith(
       (ref) async => InMemoryLearningWritePort(),
     ),

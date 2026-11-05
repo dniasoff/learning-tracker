@@ -6,6 +6,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/own_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
@@ -16,7 +17,6 @@ import 'package:learning_tracker/features/notifications/data/fcm_parent_push_ser
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/parent_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_time_location_access_provider.dart';
@@ -32,7 +32,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 final routerProvider = Provider<AppRouter>((ref) {
   final pinSvc = ref.watch(pinServiceProvider);
 
-  Future<bool> establishParentSession(String profileId, String pin) async {
+  Future<bool> establishParentSession(String profileId, String? pin) async {
     try {
       await ref
           .read(parentSessionControllerProvider)
@@ -41,6 +41,56 @@ final routerProvider = Provider<AppRouter>((ref) {
     } catch (_) {
       return false;
     }
+  }
+
+  Future<bool> ensureParentSession() async {
+    if (ref.read(activeTutoredProfileSelectionProvider) != null) return true;
+    final profile = await ref.read(activeProfileProvider.future);
+    if (profile == null) return false;
+    final existing = ref.read(parentSessionIdProvider);
+    if (profile.mode == ProfileMode.child) {
+      return existing != null &&
+          ref.read(parentSessionProfileIdProvider) == profile.profileId &&
+          ref.read(parentPinAuthenticatedProfileIdProvider) ==
+              profile.profileId;
+    }
+    if (existing != null &&
+        ref.read(parentSessionProfileIdProvider) == profile.profileId) {
+      return true;
+    }
+
+    final hasPin = await pinSvc.hasProfilePin(profile.profileId);
+    if (!hasPin) {
+      try {
+        await ref
+            .read(parentSessionControllerProvider)
+            .authenticate(profileId: profile.profileId);
+        ref
+            .read(parentPinAuthenticatedProfileIdProvider.notifier)
+            .setAuthenticated(profile.profileId);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    final context = navigatorKey.currentContext;
+    if (context == null) return false;
+    return showParentPinVerificationDialog(
+      context,
+      profileId: profile.profileId,
+      pinService: pinSvc,
+      onVerificationSucceeded: (pin) async {
+        final ok = await establishParentSession(profile.profileId, pin);
+        if (ok) {
+          ref
+              .read(parentPinAuthenticatedProfileIdProvider.notifier)
+              .setAuthenticated(profile.profileId);
+        }
+        return ok;
+      },
+      analytics: ref.read(analyticsServiceProvider),
+    );
   }
 
   return AppRouter(
@@ -71,16 +121,7 @@ final routerProvider = Provider<AppRouter>((ref) {
           ref.read(activeTutoredProfileSelectionProvider) != null,
     ),
     parentSessionGuard: ParentSessionGuard(
-      // listen (not read) keeps the auto-dispose session provider alive
-      // until its future resolves.
-      isParentSession: () async {
-        final sub = ref.listen(parentSessionProvider.future, (_, _) {});
-        try {
-          return await sub.read();
-        } finally {
-          sub.close();
-        }
-      },
+      isParentSession: ensureParentSession,
     ),
     // Story 4.2 (DNI-510, AC-2): the shared sub-track forms and ground
     // picker open for a parent session or a tutor in tutor mode.
@@ -89,12 +130,7 @@ final routerProvider = Provider<AppRouter>((ref) {
         if (ref.read(activeTutoredProfileSelectionProvider) != null) {
           return true;
         }
-        final sub = ref.listen(parentSessionProvider.future, (_, _) {});
-        try {
-          return await sub.read();
-        } finally {
-          sub.close();
-        }
+        return ensureParentSession();
       },
     ),
     // DNI-513: parent-only views refuse a tutored session.
@@ -166,7 +202,9 @@ final routerProvider = Provider<AppRouter>((ref) {
       onSessionLocked: () {
         ref.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
         if (ref.read(parentSessionIdProvider) != null) {
-          unawaited(ref.read(parentSessionControllerProvider).lock());
+          unawaited(
+            ref.read(parentSessionControllerProvider).lock().catchError((_) {}),
+          );
         }
         // If a tutored session was active, exit it on lock.
         if (ref.read(activeTutoredProfileSelectionProvider) != null) {

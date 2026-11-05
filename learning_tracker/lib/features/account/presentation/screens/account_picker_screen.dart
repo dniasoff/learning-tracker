@@ -27,6 +27,8 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
     show kOnboardingComplete;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show selectedProfileIdProvider;
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
+    show parentSessionControllerProvider;
 import 'package:learning_tracker/features/tutoring/tutoring.dart'
     show activeTutoredProfileSelectionProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -805,6 +807,19 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
       return;
     }
 
+    // Lock and revoke before changing the active-account pointer. This keeps
+    // the old account's Firestore/Functions handles bound to its lease.
+    try {
+      await ref.read(parentSessionControllerProvider).lock();
+    } catch (_) {
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.errorSignOutFailed)));
+      }
+      return;
+    }
     final activeAccountId = ref.read(activeAccountIdProvider.notifier);
     final previousAccountId = ref.read(activeAccountIdProvider);
     activeAccountId.set(account.accountId);
@@ -957,10 +972,11 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // route away.
     final isActive = ref.read(activeAccountIdProvider) == account.accountId;
     if (isActive) {
+      await ref.read(parentSessionControllerProvider).lock();
+      ref.read(routerProvider).pinGuard.lock();
       ref.read(activeAccountIdProvider.notifier).set(null);
       ref.read(authStateProvider.notifier).signOut();
       ref.read(selectedProfileIdProvider.notifier).clear();
-      ref.read(routerProvider).pinGuard.lock();
       final prefs = await SharedPreferences.getInstance();
       await SessionPersistenceService(
         prefs: prefs,

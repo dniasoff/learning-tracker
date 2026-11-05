@@ -1,12 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/repositories/parent_session_client.dart';
 import 'package:learning_tracker/data/repositories/parent_session_controller.dart';
 import 'package:learning_tracker/data/repositories/parent_session_persistence.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+export 'package:learning_tracker/data/repositories/parent_session_state.dart';
 
 part 'parent_pin_session_provider.g.dart';
 
@@ -22,20 +27,6 @@ class ParentPinAuthenticatedProfileId
   String? build() => null;
 
   void setAuthenticated(String profileId) => state = profileId;
-
-  void clear() => state = null;
-}
-
-/// The currently active server-issued parent session id, or `null` when the
-/// parent PIN gate is locked. This is intentionally separate from the local
-/// PIN marker: a local unlock is not authorization until the callable returns
-/// this id.
-@Riverpod(keepAlive: true)
-class ParentSessionId extends _$ParentSessionId {
-  @override
-  String? build() => null;
-
-  void set(String sessionId) => state = sessionId;
 
   void clear() => state = null;
 }
@@ -58,40 +49,51 @@ final parentSessionPersistenceProvider = Provider<ParentSessionPersistence>(
   (ref) => ParentSessionPersistence(ref.watch(flutterSecureStorageProvider)),
 );
 
-/// The active account's session lifecycle. Firestore is resolved lazily so
-/// locking remains safe during account teardown and account switching.
+ParentSessionClient _clientForApp(FirebaseApp app) {
+  final functions = FirebaseFunctions.instanceFor(app: app);
+  return ParentSessionClient((name, data) async {
+    final result = await functions
+        .httpsCallable(name)
+        .call<Map<String, dynamic>>(data);
+    final raw = Map<String, Object?>.from(result.data as Map);
+    final expiry = raw['expiresAt'];
+    if (expiry is Timestamp) raw['expiresAt'] = expiry.toDate().toUtc();
+    return raw;
+  });
+}
+
+/// The active account's session lifecycle. Every lease captures its account's
+/// Firestore and Functions handles before the active-account pointer changes.
 final parentSessionControllerProvider = Provider<ParentSessionController>((
   ref,
 ) {
-  Future<FirebaseFirestore?> firestore() async =>
-      (await ref.read(activeAccountFirebaseProvider.future))?.firestore;
+  Future<ParentSessionBinding> binding() async {
+    final handles = await ref.read(activeAccountFirebaseProvider.future);
+    if (handles == null) throw StateError('No active account');
+    final persistence = ref.read(parentSessionPersistenceProvider);
+    return ParentSessionBinding(
+      client: _clientForApp(handles.app),
+      disableNetwork: handles.firestore.disableNetwork,
+      enableNetwork: handles.firestore.enableNetwork,
+      persistSessionId: (sessionId) =>
+          persistence.write(handles.uid, sessionId),
+      clearPersistedSessionId: (sessionId) => persistence.clear(handles.uid),
+    );
+  }
 
   return ParentSessionController(
     client: ref.read(parentSessionClientProvider),
     currentSessionId: () => ref.read(parentSessionIdProvider),
     setSessionId: (sessionId) =>
         ref.read(parentSessionIdProvider.notifier).set(sessionId),
+    setSessionProfileId: (profileId) =>
+        ref.read(parentSessionProfileIdProvider.notifier).set(profileId),
     clearSessionId: () => ref.read(parentSessionIdProvider.notifier).clear(),
-    disableNetwork: () async {
-      await (await firestore())?.disableNetwork();
-    },
-    enableNetwork: () async {
-      await (await firestore())?.enableNetwork();
-    },
-    persistSessionId: (sessionId) async {
-      final handles = await ref.read(activeAccountFirebaseProvider.future);
-      if (handles != null) {
-        await ref
-            .read(parentSessionPersistenceProvider)
-            .write(handles.uid, sessionId);
-      }
-    },
-    clearPersistedSessionId: () async {
-      final handles = await ref.read(activeAccountFirebaseProvider.future);
-      if (handles != null) {
-        await ref.read(parentSessionPersistenceProvider).clear(handles.uid);
-      }
-    },
+    clearSessionProfileId: () =>
+        ref.read(parentSessionProfileIdProvider.notifier).clear(),
+    resolveBinding: binding,
+    disableNetwork: () async {},
+    enableNetwork: () async {},
   );
 });
 
@@ -105,7 +107,7 @@ final parentSessionStartupProvider = FutureProvider<void>((ref) async {
   if (sessionId == null) return;
 
   await handles.firestore.disableNetwork();
-  await ref.read(parentSessionClientProvider).revoke(sessionId);
+  await _clientForApp(handles.app).revoke(sessionId);
   await persistence.clear(handles.uid);
   await handles.firestore.enableNetwork();
 });

@@ -143,16 +143,29 @@ Actor learningSessionActor({
   required LearnerProfileEntity? profile,
   required String? pinProfileId,
   String? parentSessionId,
+  ParentSessionActorSource? parentActorSource,
 }) {
   final child =
       profile != null &&
       profile.mode == ProfileMode.child &&
       pinProfileId != profile.profileId;
-  return Actor(
+  if (child) {
+    return Actor(
+      uid: uid,
+      role: ActorRole.child,
+      displayName: profile.displayName,
+    );
+  }
+  final source =
+      parentActorSource ??
+      ParentSessionActorSource(
+        sessionId: () => parentSessionId,
+        profileId: () => profile?.profileId,
+      );
+  return source.actor(
     uid: uid,
-    role: child ? ActorRole.child : ActorRole.parent,
-    displayName: child ? profile.displayName : '',
-    sessionId: child ? null : parentSessionId,
+    targetProfileId: profile?.profileId,
+    allowMissing: parentActorSource == null,
   );
 }
 
@@ -195,6 +208,7 @@ Future<Actor?> liveOwnerActor(Ref ref, LearnerScope scope) async {
     profile: profile,
     pinProfileId: ref.read(parentPinAuthenticatedProfileIdProvider),
     parentSessionId: ref.read(parentSessionIdProvider),
+    parentActorSource: ref.read(parentSessionActorSourceProvider),
   );
 }
 
@@ -315,6 +329,7 @@ final learningCommandsProvider = FutureProvider<LearningCommands?>((ref) async {
     profile: await ref.watch(activeProfileProvider.future),
     pinProfileId: ref.watch(parentPinAuthenticatedProfileIdProvider),
     parentSessionId: ref.watch(parentSessionIdProvider),
+    parentActorSource: ref.read(parentSessionActorSourceProvider),
   );
   final settings = ref.listen(
     learnerLockSettingsProvider(scope).future,
@@ -480,6 +495,7 @@ final lockLocationGovernedCommandsProvider = FutureProvider.autoDispose
           profile: profile,
           pinProfileId: ref.watch(parentPinAuthenticatedProfileIdProvider),
           parentSessionId: ref.watch(parentSessionIdProvider),
+          parentActorSource: ref.read(parentSessionActorSourceProvider),
         ),
         changeLog: changeLog,
         subTracks: _DeferredSubTrackRepository(subTrackRepository.read),
