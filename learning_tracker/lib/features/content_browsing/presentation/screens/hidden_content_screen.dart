@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/hidden_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -59,28 +60,33 @@ class _HiddenContentScreenState extends ConsumerState<HiddenContentScreen> {
             final row = rows[index];
             if (row.isHeader) {
               return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                child: Text(
-                  row.label,
+                padding: const EdgeInsetsDirectional.only(
+                  start: 16,
+                  top: 20,
+                  end: 16,
+                  bottom: 8,
+                ),
+                child: CurriculumLabel.curriculum(
+                  row.curriculumId!,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               );
             }
             return CheckboxListTile(
-              value: selected.contains(row.ref),
-              contentPadding: EdgeInsets.only(
-                left: 16.0 + row.depth * 24,
-                right: 16,
+              value: selected.contains(row.item!.sefariaRef),
+              contentPadding: EdgeInsetsDirectional.only(
+                start: 16.0 + row.depth * 24,
+                end: 16,
               ),
-              title: Text(row.label),
+              title: CurriculumLabel.item(row.item!),
               onChanged: _saving
                   ? null
                   : (checked) => setState(() {
                       final next = {...selected};
                       if (checked ?? false) {
-                        next.add(row.ref!);
+                        next.add(row.item!.sefariaRef);
                       } else {
-                        next.remove(row.ref);
+                        next.remove(row.item!.sefariaRef);
                       }
                       _selected = next;
                     }),
@@ -140,15 +146,9 @@ final _hiddenContentRowsProvider =
       final rows = <_HiddenContentRow>[];
       for (final curriculum in CurriculumId.all) {
         final items = await raw.getContentForCurriculum(curriculum);
-        rows.add(_HiddenContentRow.header(curriculum.displayNameEn));
+        rows.add(_HiddenContentRow.header(curriculum));
         rows.addAll(
-          items.map(
-            (item) => _HiddenContentRow.item(
-              item.sefariaRef,
-              item.displayNameEn,
-              _depth(item),
-            ),
-          ),
+          items.map((item) => _HiddenContentRow.item(item, _depth(item))),
         );
       }
       return rows;
@@ -162,16 +162,17 @@ int _depth(ContentItem item) {
 }
 
 class _HiddenContentRow {
-  const _HiddenContentRow._({required this.label, this.ref, this.depth = 0});
+  const _HiddenContentRow._({this.curriculumId, this.item, this.depth = 0});
 
-  const _HiddenContentRow.header(String label) : this._(label: label);
+  const _HiddenContentRow.header(CurriculumId curriculumId)
+    : this._(curriculumId: curriculumId);
 
-  const _HiddenContentRow.item(String ref, String label, int depth)
-    : this._(label: label, ref: ref, depth: depth);
+  const _HiddenContentRow.item(ContentItem item, int depth)
+    : this._(item: item, depth: depth);
 
-  final String label;
-  final String? ref;
+  final CurriculumId? curriculumId;
+  final ContentItem? item;
   final int depth;
 
-  bool get isHeader => ref == null;
+  bool get isHeader => item == null;
 }

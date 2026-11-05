@@ -83,6 +83,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/learner_state/fake_learner_state.dart';
+import '../../helpers/content_repository_overrides.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -214,7 +215,7 @@ List<Override> _baseOverrides({
     currentTransliterationVariantProvider.overrideWith(
       () => _AshkenaziVariant(),
     ),
-    contentRepositoryProvider.overrideWithValue(mockRepo),
+    ...contentRepositoryOverrides(mockRepo),
     // Stub all curriculum content lookups (avoid asset loading).
     curriculumContentProvider.overrideWith(
       (ref, CurriculumId cid) async => const <ContentItem>[],
@@ -910,7 +911,7 @@ void main() {
     test('P1. returns items from repository', () async {
       final repo = _FakeContentRepository([_kLeafItem, _kContainerItem]);
       final container = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(container.dispose);
 
@@ -932,7 +933,7 @@ void main() {
         // fake repository's own search() called directly).
         final repo = _FakeContentRepository([_kLeafItem, _kLeafItem2]);
         final container = ProviderContainer(
-          overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+          overrides: contentRepositoryOverrides(repo),
         );
         addTearDown(container.dispose);
 
@@ -969,7 +970,7 @@ void main() {
       ];
       final repo = _FakeContentRepository(items);
       final container = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(container.dispose);
 
@@ -1006,7 +1007,7 @@ void main() {
       ];
       final repo = _FakeContentRepository(items);
       final container = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(container.dispose);
 
@@ -1024,7 +1025,7 @@ void main() {
     test('P5. no match returns empty list', () async {
       final repo = _FakeContentRepository([_kLeafItem, _kLeafItem2]);
       final container = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(container.dispose);
 
@@ -1056,7 +1057,7 @@ void main() {
       );
       final repo = _FakeContentRepository([zeraim, moed]);
       final container = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(container.dispose);
 
@@ -1087,7 +1088,7 @@ void main() {
       );
       final repo = _FakeContentRepository([zeraim1, zeraim2]);
       final container = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(container.dispose);
 
@@ -1136,7 +1137,7 @@ void main() {
       // curriculumHeNamesProvider depends on curriculumContentProvider, which
       // depends on contentRepositoryProvider.
       final scope = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(scope.dispose);
 
@@ -1186,7 +1187,7 @@ void main() {
         // item in the first curriculum it scans and returns prev/next.
         final repo = _FakeContentRepository([first, second, third]);
         final container = ProviderContainer(
-          overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+          overrides: contentRepositoryOverrides(repo),
         );
         addTearDown(container.dispose);
 
@@ -1218,7 +1219,7 @@ void main() {
 
       final repo = _FakeContentRepository([first, last]);
       final container = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(container.dispose);
 
@@ -1240,7 +1241,7 @@ void main() {
     test('P11. known ref returns item; unknown ref returns null', () async {
       final repo = _FakeContentRepository([_kLeafItem, _kContainerItem]);
       final container = ProviderContainer(
-        overrides: [contentRepositoryProvider.overrideWithValue(repo)],
+        overrides: contentRepositoryOverrides(repo),
       );
       addTearDown(container.dispose);
 

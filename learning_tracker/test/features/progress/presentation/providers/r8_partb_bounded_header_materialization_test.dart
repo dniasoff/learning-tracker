@@ -44,6 +44,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/content_repository_overrides.dart';
 import '../../../../helpers/learner_state/fake_learner_state.dart';
 import '../../../../helpers/learner_state/learner_state_overrides.dart';
 
@@ -153,7 +154,7 @@ void main() {
             },
           ),
         ),
-        contentRepositoryProvider.overrideWithValue(repo),
+        ...contentRepositoryOverrides(repo),
       ],
     );
     addTearDown(container.dispose);

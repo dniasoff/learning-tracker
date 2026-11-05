@@ -14,6 +14,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/content_repository_overrides.dart';
+
 class MockContentRepository extends Mock implements ContentRepository {}
 
 void main() {
@@ -46,7 +48,7 @@ void main() {
 
     return ProviderScope(
       overrides: [
-        contentRepositoryProvider.overrideWithValue(mockRepo),
+        ...contentRepositoryOverrides(mockRepo),
         // Provide an empty ContentTree so itemsAsync falls through to
         // filteredContentProvider (backed by the mock repository).
         contentTreeProvider.overrideWith((ref) async => tree ?? emptyTree),

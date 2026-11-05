@@ -46,6 +46,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_g
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import '../../../../../helpers/content_repository_overrides.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -217,7 +218,7 @@ List<Override> _baseOverridesWithContentRepo(
   _MockContentRepository contentRepo,
 ) {
   return [
-    contentRepositoryProvider.overrideWith((ref) => contentRepo),
+    ...contentRepositoryOverrides(contentRepo),
     useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
   ];
@@ -251,7 +252,7 @@ List<Override> _goalStepOverrides({
     ),
   );
   return [
-    contentRepositoryProvider.overrideWith((ref) => contentRepo),
+    ...contentRepositoryOverrides(contentRepo),
     useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     useHebrewDateProvider.overrideWith(
       () => useHebrewDate ? _TrueUseHebrewDate() : _FalseUseHebrewDate(),

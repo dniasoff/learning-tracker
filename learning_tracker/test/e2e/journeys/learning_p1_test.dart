@@ -22,6 +22,7 @@ import 'package:learning_tracker/core/content/content_index_corpus.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
@@ -30,6 +31,7 @@ import 'package:learning_tracker/features/gamification/domain/models/streak_reco
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/mishna_history_provider.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/progress/domain/services/learner_progress.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/learner_progress_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -37,6 +39,8 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/sched
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
+import '../../helpers/learner_state/c0_fixtures.dart';
+import '../../helpers/content_repository_overrides.dart';
 import '../../helpers/learner_state/fake_learner_state.dart';
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
@@ -182,7 +186,7 @@ void main() {
         path: '/curriculum/mishnayos/search',
         extraOverrides: [
           ..._textDisplayBaseOverrides(),
-          contentRepositoryProvider.overrideWithValue(fakeRepo),
+          ...contentRepositoryOverrides(fakeRepo),
           anyActiveTrackHasChazaraProvider.overrideWith(
             (ref) => Future.value(false),
           ),
@@ -228,13 +232,17 @@ void main() {
           path: '/curriculum/mishnayos/search',
           extraOverrides: [
             ..._textDisplayBaseOverrides(),
-            contentRepositoryProvider.overrideWithValue(fakeRepo),
+            ...contentRepositoryOverrides(fakeRepo),
             anyActiveTrackHasChazaraProvider.overrideWith(
               (ref) => Future.value(false),
             ),
             // The learner's lock settings are a C0 stub until DNI-470;
             // this journey covers navigation, so the lock is open here.
             mishnaHistoryLockProvider.overrideWithValue(const AsyncData(false)),
+            // The history route now resolves visibility through the active
+            // learner scope. Keep that scope hermetic while the fake content
+            // repository supplies the visible leaf.
+            activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
             // Stub adjacent refs to avoid curriculum content scan in reader.
             adjacentContentRefsProvider(
               matchRef,
@@ -326,7 +334,7 @@ void main() {
           path: '/curriculum/mishnayos/search',
           extraOverrides: [
             ..._textDisplayBaseOverrides(),
-            contentRepositoryProvider.overrideWithValue(fakeRepo),
+            ...contentRepositoryOverrides(fakeRepo),
             anyActiveTrackHasChazaraProvider.overrideWith(
               (ref) => Future.value(true),
             ),

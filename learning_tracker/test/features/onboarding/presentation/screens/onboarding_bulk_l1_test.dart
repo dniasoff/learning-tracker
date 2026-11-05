@@ -71,6 +71,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/content_repository_overrides.dart';
+
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
@@ -185,7 +187,7 @@ Widget _bulkMarkRig({
 
   return ProviderScope(
     overrides: [
-      contentRepositoryProvider.overrideWithValue(contentRepository),
+      ...contentRepositoryOverrides(contentRepository),
       curriculumContentProvider.overrideWith(
         (ref, curriculumId) =>
             contentRepository.getContentForCurriculum(curriculumId),
@@ -903,7 +905,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            contentRepositoryProvider.overrideWithValue(contentRepo),
+            ...contentRepositoryOverrides(contentRepo),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value(_twoLeaves),
             ),

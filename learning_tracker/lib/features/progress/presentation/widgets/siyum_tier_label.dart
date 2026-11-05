@@ -58,7 +58,10 @@ String _scopeWord(WidgetRef ref, String scope) {
   final variant = ref.watch(currentTransliterationVariantProvider);
   final labels = switch (scope) {
     'masechta' => CurriculumLabels.level(CurriculumId.mishnayos, 2),
-    'siman' => CurriculumLabels.level(CurriculumId.mishnaBerurah, 2),
+    // Mishnah Berurah keeps its legacy Book root in the hierarchy. The
+    // named Siman is therefore level 3 (Book -> Section -> Siman), even
+    // though the siyum scope remains `siman`.
+    'siman' => CurriculumLabels.level(CurriculumId.mishnaBerurah, 3),
     'hilchos' => CurriculumLabels.level(CurriculumId.mishnehTorah, 2),
     'seder' => CurriculumLabels.level(CurriculumId.mishnayos, 1),
     // 'sefer' and any defensive fallback: the clean "Sefer" / "ספר" word.

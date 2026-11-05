@@ -76,6 +76,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/firestore_fake.dart';
+import '../../../../helpers/content_repository_overrides.dart';
 import '../../../../helpers/firestore_fixtures.dart';
 import '../../../../helpers/firestore_governed_writer.dart';
 import '../../../../helpers/learner_state/c0_fixtures.dart';
@@ -248,6 +249,7 @@ final _kChumashItems = [
 // fix routes them through a `SliverList`/`SliverChildBuilderDelegate` so
 // only the on-screen (plus overscan) subset is ever built.
 const _kMishnaBerurahSefer = 'Mishnah Berurah';
+const _kMishnaBerurahSection = 'Morning conduct';
 const _kMishnaBerurahSimanCount = 697;
 
 final _kMishnaBerurahItems = [
@@ -260,15 +262,26 @@ final _kMishnaBerurahItems = [
     sortOrder: 0,
     isLeaf: false,
   ),
+  const ContentItem(
+    curriculumId: 'mishna_berurah',
+    level1: _kMishnaBerurahSefer,
+    level2: _kMishnaBerurahSection,
+    displayNameHe: 'הלכות הנהגת אדם בבוקר',
+    displayNameEn: _kMishnaBerurahSection,
+    sefariaRef: 'Mishnah Berurah|section|Morning conduct',
+    sortOrder: 1,
+    isLeaf: false,
+  ),
   for (var siman = 1; siman <= _kMishnaBerurahSimanCount; siman++)
     ContentItem(
       curriculumId: 'mishna_berurah',
       level1: _kMishnaBerurahSefer,
-      level2: '$siman',
+      level2: _kMishnaBerurahSection,
+      level3: '$siman',
       displayNameHe: 'סימן $siman',
       displayNameEn: '$siman',
       sefariaRef: 'Mishnah_Berurah.$siman',
-      sortOrder: siman,
+      sortOrder: siman + 1,
       isLeaf: false,
     ),
 ];
@@ -347,7 +360,7 @@ Widget _buildScopeApp({
         (ref) async => scopeRepository ?? _scopeRepository,
       ),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      contentRepositoryProvider.overrideWithValue(repo),
+      ...contentRepositoryOverrides(repo),
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
       else
@@ -377,7 +390,7 @@ Widget _buildLifetimeApp({
     locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      contentRepositoryProvider.overrideWithValue(repo),
+      ...contentRepositoryOverrides(repo),
       if (useHebrew)
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
       else
@@ -401,7 +414,7 @@ Widget _buildCurriculumMarkingApp({
     locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
-      contentRepositoryProvider.overrideWithValue(repo),
+      ...contentRepositoryOverrides(repo),
       // DNI-474: saved rows read the engine's learnt set (none here).
       ...learnerStateOverrides(
         scope: c0Scope(),
@@ -780,9 +793,10 @@ void main() {
           await tester.tap(find.byType(SwitchListTile));
           await tester.pump();
 
-          // Select the 'Siman' level (level 2 — 'Sefer' is level 1, 'Seif' is
-          // the excluded leaf level; see CurriculumLabels' mishnaBerurah
-          // entry in core/constants/curriculum_defaults.dart).
+          // Select the 'Siman' level (level 3 — 'Book' is level 1,
+          // 'Section' is level 2, and 'Seif' is the excluded leaf level; see
+          // CurriculumLabels' mishnaBerurah entry in
+          // core/constants/curriculum_defaults.dart).
           final simanTile = find.widgetWithText(ListTile, 'Siman');
           expect(
             simanTile,

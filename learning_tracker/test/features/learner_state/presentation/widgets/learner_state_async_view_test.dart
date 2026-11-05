@@ -23,6 +23,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/local_calend
 import '../../../../helpers/learner_state/c0_fixtures.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';
+import '../../../../helpers/learner_state/progress_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
 
 /// A [LocalCalendarEngine] serving [program] one Berakhot mishnah a day.
@@ -152,6 +153,12 @@ void main() {
     var calendarReads = 0;
     var corporaBuilds = 0;
     final ranges = <String>[];
+    final content = FixtureContentRepository(
+      items: [
+        _leaf('Mishnah Berakhot 1:1', 1),
+        _leaf('Mishnah Berakhot 1:2', 2),
+      ],
+    );
     await tester.pumpWidget(
       pumpApp(
         overrides: [
@@ -164,6 +171,13 @@ void main() {
             corporaBuilds++;
             return <String, Corpus>{engineCurriculum: mishnayosCorpus()};
           }),
+          corporaForScopeProvider(c0Scope()).overrideWith((ref) async {
+            corporaBuilds++;
+            return <String, Corpus>{engineCurriculum: mishnayosCorpus()};
+          }),
+          visibleContentRepositoryForScopeProvider(
+            c0Scope(),
+          ).overrideWith((ref) async => content),
           // The content database under the calendar service: unreadable on
           // the first read only. learnerCalendarLoaderProvider is NOT
           // overridden, so the production loader reads the real

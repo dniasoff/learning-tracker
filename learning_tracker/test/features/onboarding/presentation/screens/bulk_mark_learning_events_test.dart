@@ -26,6 +26,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 
 import '../../../../helpers/learner_state/c0_fixtures.dart';
+import '../../../../helpers/content_repository_overrides.dart';
 import '../../../../helpers/learner_state/engine_fixtures.dart';
 import '../../../../helpers/learner_state/fake_learning_commands.dart';
 import '../../../../helpers/learner_state/in_memory_ports.dart';
@@ -195,7 +196,7 @@ void main() {
     await tester.pumpWidget(
       pumpApp(
         overrides: [
-          contentRepositoryProvider.overrideWithValue(flow.content),
+          ...contentRepositoryOverrides(flow.content),
           curriculumContentProvider.overrideWith(
             (ref, id) => flow.content.getContentForCurriculum(id),
           ),
@@ -238,7 +239,7 @@ void main() {
     await tester.pumpWidget(
       pumpApp(
         overrides: [
-          contentRepositoryProvider.overrideWithValue(flow.content),
+          ...contentRepositoryOverrides(flow.content),
           curriculumContentProvider.overrideWith(
             (ref, id) => flow.content.getContentForCurriculum(id),
           ),
@@ -296,7 +297,7 @@ void main() {
       pumpApp(
         overrides: [
           activeProfileIdProvider.overrideWith(_ActiveProfile.new),
-          contentRepositoryProvider.overrideWithValue(flow.content),
+          ...contentRepositoryOverrides(flow.content),
           useHebrewTermsProvider.overrideWith(_UseHebrewTermsOff.new),
           beforeTrackingRecorderProvider.overrideWithValue(flow.recorder),
         ],

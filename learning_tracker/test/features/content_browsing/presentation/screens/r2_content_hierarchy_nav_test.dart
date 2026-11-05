@@ -27,6 +27,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/content_repository_overrides.dart';
+
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 void main() {
@@ -97,7 +99,7 @@ void main() {
     });
     return ProviderScope(
       overrides: [
-        contentRepositoryProvider.overrideWithValue(mockRepo),
+        ...contentRepositoryOverrides(mockRepo),
         contentTreeProvider.overrideWith((ref) async => emptyTree),
         curriculumContentProvider.overrideWith(
           (ref, CurriculumId cid) async => const <ContentItem>[],

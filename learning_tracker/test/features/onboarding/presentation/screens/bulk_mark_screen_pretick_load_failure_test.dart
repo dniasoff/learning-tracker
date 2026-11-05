@@ -26,6 +26,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/content_repository_overrides.dart';
+
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 const _profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
@@ -54,7 +56,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            contentRepositoryProvider.overrideWithValue(contentRepo),
+            ...contentRepositoryOverrides(contentRepo),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) =>
                   contentRepo.getContentForCurriculum(curriculumId),

@@ -456,9 +456,9 @@ class _ContentHierarchyScreenState
                     }
 
                     return ListView.builder(
-                      padding: EdgeInsets.only(
-                        left: 16,
-                        right: 16,
+                      padding: EdgeInsetsDirectional.only(
+                        start: 16,
+                        end: 16,
                         bottom: MediaQuery.viewPaddingOf(context).bottom,
                       ),
                       itemCount: groupedItems.length,
