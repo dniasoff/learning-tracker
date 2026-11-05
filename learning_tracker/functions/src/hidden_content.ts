@@ -4,7 +4,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db, CALL_OPTS } from "./shared";
 import { isKnownHiddenContentRef } from "./hidden_content_manifest";
-import { assertActiveParentSessionInTransaction } from "./parent_sessions";
+import { assertActiveParentSessionInTransaction } from "./parent_session_validation";
 import { ULID_RE } from "./write_with_change_log";
 
 const REQUEST_KEYS = new Set(["ownerUid", "profileId", "hiddenRefs", "grantId", "parentSessionId"]);

@@ -35,6 +35,7 @@ import {
 //       entityId: string,                      // curriculumId for mainTrack*
 //       docs: [{ collection, docId, fields, mode?: 'create'|'upsert'|'update' }],
 //     }],
+//     parentSessionId?: string,                // required for enforced parent actors
 //   }
 // Field values use AD-52 storage names; `ended_at: true` tombstones a doc.
 // Returns writeWithChangeLog's result ({ success, action_id, change_ids, at, … }).
@@ -56,6 +57,7 @@ export const ownerOversizedGovernedWrite = onCall(CALL_OPTS, (request) => {
       ownerUid: uid,
       profileId: wire.profileId,
       actorRole: wire.actorRole,
+      parentSessionId: wire.parentSessionId,
       actionId: wire.actionId,
       revertsActionId: wire.revertsActionId,
       callerPolicy: "owner-only",

@@ -265,12 +265,13 @@ interface LegacyGovernedArgs {
   ownerUid: string;
   profileId: string;
   actionId?: string;
+  parentSessionId?: unknown;
   targetId: string;
 }
 
 function parseLegacyGovernedArgs(raw: unknown, idParam: string): LegacyGovernedArgs {
   const data = (raw ?? {}) as Record<string, unknown>;
-  const { grantId, ownerUid, profileId, actionId } = data;
+  const { grantId, ownerUid, profileId, actionId, parentSessionId } = data;
   const targetId = data[idParam];
   if (typeof grantId !== "string" || !grantId)
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
@@ -283,7 +284,7 @@ function parseLegacyGovernedArgs(raw: unknown, idParam: string): LegacyGovernedA
   if (actionId !== undefined && actionId !== null &&
     (typeof actionId !== "string" || !ULID_RE.test(actionId)))
     throw new HttpsError("invalid-argument", "actionId must be a ULID");
-  return { grantId, ownerUid, profileId, targetId, actionId: actionId ?? undefined };
+  return { grantId, ownerUid, profileId, targetId, actionId: actionId ?? undefined, parentSessionId };
 }
 
 function parseLegacyData(
@@ -326,6 +327,7 @@ function governedUpsert(spec: LegacyGovernedSpec & { dataParam: string }) {
       ownerUid: args.ownerUid,
       profileId: args.profileId,
       grantId: args.grantId,
+      parentSessionId: args.parentSessionId,
       actionId: args.actionId,
       auditAction: spec.auditAction,
       entries: [{ entity: spec.entity, entityId, docs: [{ collection, docId: args.targetId, fields }] }],
@@ -342,6 +344,7 @@ function governedTombstone(spec: LegacyGovernedSpec) {
       ownerUid: args.ownerUid,
       profileId: args.profileId,
       grantId: args.grantId,
+      parentSessionId: args.parentSessionId,
       actionId: args.actionId,
       auditAction: spec.auditAction,
       entries: [{
@@ -380,6 +383,7 @@ export const tutorDeleteTrack = onCall(CALL_OPTS, (request) => runGoverned("main
     ownerUid: args.ownerUid,
     profileId: args.profileId,
     grantId: args.grantId,
+    parentSessionId: args.parentSessionId,
     actionId: args.actionId,
     auditAction: "track_deleted",
     plan: removeTrackPlan(args.targetId),
@@ -446,6 +450,7 @@ export const tutorReplaceStudyDays = onCall(CALL_OPTS, (request) => runGoverned(
     ownerUid: args.ownerUid,
     profileId: args.profileId,
     grantId: args.grantId,
+    parentSessionId: args.parentSessionId,
     actionId: args.actionId,
     auditAction: "study_days_replaced",
     entries: [{ entity: "mainTrackStudyDays", entityId: args.targetId, docs }],

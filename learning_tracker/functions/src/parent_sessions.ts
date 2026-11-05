@@ -4,16 +4,25 @@ import admin from "firebase-admin";
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 
 import { db, CALL_OPTS } from "./shared";
+import {
+  parentSessionRef,
+  requireParentSessionId,
+} from "./parent_session_validation";
 import { ULID_RE } from "./write_with_change_log";
 
+export { assertActiveParentSessionInTransaction, parentSessionRef } from "./parent_session_validation";
+
 const PIN_RE = /^\d{4}$/;
-const SESSION_ID_RE = /^[a-f0-9]{64}$/;
 const PIN_HASH_VERSION = "scrypt-v1";
 const PIN_KEY_LENGTH = 32;
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const MAX_PIN_ATTEMPTS = 5;
 const PIN_LOCKOUT_MS = 15 * 60 * 1000;
 const MAX_REAUTH_AGE_SECONDS = 5 * 60;
+
+function timestamp(value: unknown): admin.firestore.Timestamp | null {
+  return value instanceof admin.firestore.Timestamp ? value : null;
+}
 
 type AuthenticatedCall = CallableRequest<unknown>;
 
@@ -55,22 +64,10 @@ function requirePin(value: unknown): string {
   return value;
 }
 
-function requireSessionId(value: unknown): string {
-  if (typeof value !== "string" || !SESSION_ID_RE.test(value)) {
-    throw new HttpsError("invalid-argument", "parentSessionId must be a valid session id");
-  }
-  return value;
-}
-
 function pinSecretRef(uid: string, profileId: string): FirebaseFirestore.DocumentReference {
   return db.collection("users").doc(uid)
     .collection("private_security").doc("parent_pins")
     .collection("profiles").doc(profileId);
-}
-
-export function parentSessionRef(uid: string, sessionId: string): FirebaseFirestore.DocumentReference {
-  return db.collection("users").doc(uid)
-    .collection("parent_sessions").doc(sessionId);
 }
 
 function scrypt(password: string, salt: Buffer, keyLength: number): Promise<Buffer> {
@@ -102,39 +99,6 @@ async function verifyPin(pin: string, encoded: unknown): Promise<boolean> {
   }
 }
 
-function timestamp(value: unknown): admin.firestore.Timestamp | null {
-  return value instanceof admin.firestore.Timestamp ? value : null;
-}
-
-function activeSessionData(
-  data: FirebaseFirestore.DocumentData | undefined,
-  profileId: string,
-  now = admin.firestore.Timestamp.now(),
-): boolean {
-  if (!data || data.profile_id !== profileId || data.revoked !== false) return false;
-  const createdAt = timestamp(data.created_at);
-  const expiresAt = timestamp(data.expires_at);
-  return createdAt !== null && expiresAt !== null &&
-    createdAt.toMillis() <= now.toMillis() && expiresAt.toMillis() > now.toMillis();
-}
-
-/**
- * Validates a parent session inside a Firestore transaction. Reading the
- * session before writing the profile makes a concurrent revoke conflict the
- * transaction rather than allowing a stale owner call to commit.
- */
-export async function assertActiveParentSessionInTransaction(
-  transaction: FirebaseFirestore.Transaction,
-  uid: string,
-  profileId: string,
-  sessionId: string,
-): Promise<void> {
-  const ref = parentSessionRef(uid, requireSessionId(sessionId));
-  const snapshot = await transaction.get(ref);
-  if (!snapshot.exists || !activeSessionData(snapshot.data(), profileId)) {
-    throw new HttpsError("permission-denied", "Parent session is missing, revoked, or expired");
-  }
-}
 
 /** Sets the server-owned parent PIN after recent Firebase account reauth. */
 export const setParentPin = onCall(CALL_OPTS, async (request) => {
@@ -239,7 +203,7 @@ export const revokeParentSession = onCall(CALL_OPTS, async (request) => {
   const uid = requireAuth(request);
   const data = dataOf(request);
   requireKnownKeys(data, new Set(["parentSessionId"]));
-  const sessionId = requireSessionId(data.parentSessionId);
+  const sessionId = requireParentSessionId(data.parentSessionId);
   const ref = parentSessionRef(uid, sessionId);
   const snapshot = await ref.get();
   if (!snapshot.exists) return { success: true, alreadyRevoked: true };

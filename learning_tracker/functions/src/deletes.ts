@@ -184,7 +184,7 @@ export const deleteLearnerProfile = onCall(CALL_OPTS, async (request) => {
 export const deleteCurriculumTrack = onCall(CALL_OPTS, (request) => runGoverned("mainTrack", async () => {
   if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Must be signed in");
 
-  const { profileId, curriculumId, actionId, actorRole } = request.data ?? {};
+  const { profileId, curriculumId, actionId, actorRole, parentSessionId } = request.data ?? {};
   if (typeof profileId !== "string" || !profileId) {
     throw new HttpsError("invalid-argument", "profileId must be a non-empty string (ULID)");
   }
@@ -196,6 +196,7 @@ export const deleteCurriculumTrack = onCall(CALL_OPTS, (request) => runGoverned(
     ownerUid: request.auth.uid,
     profileId,
     actorRole,
+    parentSessionId,
     actionId,
     callerPolicy: "owner-only",
     plan: removeTrackPlan(curriculumId),

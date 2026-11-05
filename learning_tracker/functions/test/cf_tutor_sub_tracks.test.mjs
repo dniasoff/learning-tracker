@@ -94,6 +94,11 @@ const parentEdit = (fields, entryId, subTrackId = SUB) => call(fns.ownerOversize
   }],
 }, parentAuth);
 
+const enforcedParentAuth = {
+  ...parentAuth,
+  token: { parent_session_enforced: true },
+};
+
 async function subTrackDoc(id = SUB) {
   const snap = await subTracks().doc(id).get();
   return snap.exists ? snap.data() : null;
@@ -343,6 +348,41 @@ describe('AC-1 — tutorUpsertSubTrack covers the subTrack entity', () => {
     const [entry] = await changeLog();
     assert.equal(entry.actor.role, 'parent');
     assert.equal(entry.actor.uid, PARENT);
+  });
+
+  test('a revoked parent session cannot commit through the Admin-SDK owner path', async () => {
+    await profileRef().update({ mode: 'adult' });
+    const session = await call(fns.createParentSession, { profileId: PROFILE }, parentAuth);
+    const first = {
+      profileId: PROFILE,
+      actorRole: 'parent',
+      parentSessionId: session.sessionId,
+      entries: [{
+        id: ulid(10),
+        entity: 'subTrack',
+        entityId: SUB,
+        docs: [{ collection: 'sub_tracks', docId: SUB, fields: ONGOING, mode: 'create' }],
+      }],
+    };
+    await call(fns.ownerOversizedGovernedWrite, first, enforcedParentAuth);
+    await call(fns.revokeParentSession, { parentSessionId: session.sessionId }, parentAuth);
+
+    await expectHttpsError(
+      call(fns.ownerOversizedGovernedWrite, {
+        ...first,
+        entries: [{
+          ...first.entries[0],
+          id: ulid(11),
+          docs: [{
+            ...first.entries[0].docs[0],
+            fields: { ...ONGOING, name: 'after revoke' },
+            mode: 'update',
+          }],
+        }],
+      }, enforcedParentAuth),
+      'permission-denied',
+    );
+    assert.equal((await changeLog()).length, 1);
   });
 });
 
