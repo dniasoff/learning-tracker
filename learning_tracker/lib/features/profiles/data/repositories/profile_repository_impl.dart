@@ -158,10 +158,6 @@ class FirestoreProfileRepositoryAdapter implements ProfileRepository {
       createdAt: DateTimeFactory.nowUtc(),
       avatar: avatar,
       seed: device.seedFor(profileId),
-      // Profile creation is the bootstrap boundary: there is no profile yet
-      // to which a server lease could be bound. Existing-profile healing and
-      // every other parent write remain strict in the repository.
-      allowMissingParentActor: true,
     );
   }
 

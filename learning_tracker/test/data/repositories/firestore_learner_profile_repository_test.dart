@@ -40,6 +40,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
 import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
@@ -55,6 +56,10 @@ const _uid = 'uid-1';
 /// the specific value — mirrors how a real caller always has one already
 /// (the Drift row's own `createdAt` column), never "now" at call time.
 final _createdAt = DateTime.utc(2024, 3, 1, 12);
+final _testParentActorSource = ParentSessionActorSource(
+  sessionId: () => 'a' * 64,
+  profileId: () => null,
+);
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -67,7 +72,11 @@ void main() {
       firestore.collection('users').doc(_uid).collection('learner_profiles');
 
   FirestoreLearnerProfileRepository buildRepo() =>
-      FirestoreLearnerProfileRepository(firestore: firestore, uid: _uid);
+      FirestoreLearnerProfileRepository(
+        firestore: firestore,
+        uid: _uid,
+        parentActorSource: _testParentActorSource,
+      );
 
   group('doc-id — caller-supplied (P2-2: never minted here)', () {
     test('ensureProfile writes to users/{uid}/learner_profiles/{profileId}, '
@@ -582,11 +591,12 @@ void main() {
           uid: _uid,
           authUid: 'auth-uid',
           newChangeId: (_) => seedId,
+          parentActorSource: _testParentActorSource,
         );
 
     String key(String field) => 'learner_profiles/$profileUlid.$field';
 
-    test('one batch: the profile doc with all four settings and '
+    test('one transaction: the profile doc with all four settings and '
         'last_change_id, and an all-null-before seed entry', () async {
       final spy = _SpyFirestore();
       final created = await seededRepo(spy).ensureProfile(
@@ -598,11 +608,10 @@ void main() {
       );
 
       const profilePath = 'users/$_uid/learner_profiles/$profileUlid';
-      expect(spy.ops, [
-        'set $profilePath merge=true',
-        'set $profilePath/change_log/$seedId merge=false',
-        'commit',
-      ]);
+      // The creation transaction is intentionally not a merge. Its read
+      // guards this path against routing an existing profile through the
+      // bootstrap seed.
+      expect(spy.ops, isEmpty);
       final doc =
           (await spy
                   .collection('users/$_uid/learner_profiles')
@@ -630,7 +639,13 @@ void main() {
       expect(entry.revertsActionId, isNull);
       expect(
         entry.actor,
-        const Actor(uid: 'auth-uid', role: ActorRole.parent, displayName: ''),
+        const Actor(
+          uid: 'auth-uid',
+          role: ActorRole.parent,
+          displayName: '',
+          sessionId:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
       );
       expect(entry.before, {
         key('latitude'): null,
@@ -756,7 +771,13 @@ void main() {
         });
         expect(
           entry.actor,
-          const Actor(uid: 'auth-uid', role: ActorRole.parent, displayName: ''),
+          const Actor(
+            uid: 'auth-uid',
+            role: ActorRole.parent,
+            displayName: '',
+            sessionId:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          ),
         );
       });
 
@@ -782,6 +803,35 @@ void main() {
           isFalse,
         );
       });
+    });
+
+    test('seeded creation rejects an existing profile instead of merging it', () async {
+      final fs = FakeFirebaseFirestore();
+      final doc = fs.doc('users/$_uid/learner_profiles/$profileUlid');
+      await doc.set({
+        'display_name': 'Original',
+        'mode': 'adult',
+        'created_at': _createdAt.toIso8601String(),
+        'updated_at': _createdAt.toIso8601String(),
+        'time_zone': 'UTC',
+        'in_israel': false,
+        'last_change_id': ulidA,
+      });
+
+      await expectLater(
+        seededRepo(fs).ensureProfile(
+          profileId: profileUlid,
+          displayName: 'Attacker merge',
+          mode: ProfileMode.child,
+          createdAt: _createdAt,
+          seed: jerusalem,
+        ),
+        throwsA(isA<StateError>()),
+      );
+      final data = (await doc.get()).data()!;
+      expect(data['display_name'], 'Original');
+      expect(data['time_zone'], 'UTC');
+      expect((await doc.collection('change_log').get()).docs, isEmpty);
     });
 
     test('the profile codec never emits a settings key', () {

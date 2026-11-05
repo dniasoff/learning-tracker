@@ -125,19 +125,13 @@ class FirestoreLearnerProfileRepository {
     String? authUid,
     String Function(DateTime at)? newChangeId,
     AppLogger? logger,
-    ParentSessionActorSource? parentActorSource,
+    required ParentSessionActorSource parentActorSource,
   }) : _firestore = firestore,
        _uid = uid,
        _authUid = authUid ?? uid,
        _newChangeId = newChangeId ?? newUlid,
        _logger = logger ?? AppLogger.instance,
-       _allowMissingParentActor = parentActorSource == null,
-       _parentActorSource =
-           parentActorSource ??
-           const ParentSessionActorSource(
-             sessionId: _missingSession,
-             profileId: _missingProfile,
-           );
+       _parentActorSource = parentActorSource;
 
   final FirebaseFirestore _firestore;
   final String _uid;
@@ -154,10 +148,6 @@ class FirestoreLearnerProfileRepository {
   final String Function(DateTime at) _newChangeId;
   final AppLogger _logger;
   final ParentSessionActorSource _parentActorSource;
-  final bool _allowMissingParentActor;
-
-  static String? _missingSession() => null;
-  static String? _missingProfile() => null;
 
   CollectionReference<Map<String, dynamic>> get _profiles =>
       _firestore.collection('users').doc(_uid).collection('learner_profiles');
@@ -326,7 +316,6 @@ class FirestoreLearnerProfileRepository {
     required DateTime createdAt,
     String avatar = '',
     LearnerSettings? seed,
-    bool allowMissingParentActor = false,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
     final entity = LearnerProfileEntity(
@@ -354,22 +343,28 @@ class FirestoreLearnerProfileRepository {
       actor: _parentActorSource.actor(
         uid: _authUid,
         targetProfileId: profileId,
-        // The first profile's seed is the one parent-owned write that can
-        // precede a profile-bound lease. All subsequent settings writes use
-        // the strict source, including seedLegacySettings below.
-        allowMissing: _allowMissingParentActor || allowMissingParentActor,
       ),
     );
-    final batch = _firestore.batch()
-      ..set(_doc(profileId), {
-        ...entity.toFirestore(),
-        ...toFirestoreMap(merge.toMergePatch(entryId)),
-      }, SetOptions(merge: true))
-      ..set(
-        _doc(profileId).collection(kChangeLogCollection).doc(entryId),
-        toFirestoreMap(entry.toStorage()),
-      );
-    await batch.commit();
+    // Seeded writes are the profile-creation boundary. A merge here would
+    // let a caller route an existing profile through the bootstrap path and
+    // overwrite its settings while presenting a fresh seed actor. Read and
+    // create both documents in one transaction so the profile must be absent
+    // at commit time and the settings/change_log pair remains atomic.
+    await _firestore.runTransaction<void>((tx) async {
+      final existing = await tx.get(_doc(profileId));
+      if (existing.exists) {
+        throw StateError('Profile $profileId already exists');
+      }
+      tx
+        ..set(_doc(profileId), {
+          ...entity.toFirestore(),
+          ...toFirestoreMap(merge.toMergePatch(entryId)),
+        })
+        ..set(
+          _doc(profileId).collection(kChangeLogCollection).doc(entryId),
+          toFirestoreMap(entry.toStorage()),
+        );
+    });
     return entity.copyWith(
       settings: LearnerSettings(
         profileId: profileId,
@@ -414,7 +409,6 @@ class FirestoreLearnerProfileRepository {
         actor: _parentActorSource.actor(
           uid: _authUid,
           targetProfileId: profileId,
-          allowMissing: _allowMissingParentActor,
         ),
       );
       tx

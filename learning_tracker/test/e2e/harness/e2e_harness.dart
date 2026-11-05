@@ -114,6 +114,7 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show ActiveProfileDocId, activeProfileDocIdProvider;
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -637,6 +638,10 @@ class E2EHarness {
     final profileRepository = FirestoreLearnerProfileRepository(
       firestore: _firestore,
       uid: _identity?._resolvedAccountId ?? 'e2e-signed-out',
+      parentActorSource: ParentSessionActorSource(
+        sessionId: () => 'a' * 64,
+        profileId: () => null,
+      ),
     );
 
     _pinGuard = PinGuard(

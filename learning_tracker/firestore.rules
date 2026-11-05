@@ -276,6 +276,9 @@ service cloud.firestore {
           && d.after is map
           && isClientTime(d.at)
           && isOwnerActor(d.actor, uid, profileId)
+          // Learner settings are parent-owned even though child actors remain
+          // valid for learning-event and other child-mode writes.
+          && (d.entity != 'learnerSettings' || d.actor.role == 'parent')
           && (isAbsentOrNull(d, 'original_at') || d.original_at is timestamp);
     }
 
@@ -679,7 +682,10 @@ service cloud.firestore {
         // `FirestoreGatewayImpl._stripInternalKeys` before any write, so
         // whitelists here are never tripped by internal keys.
 
-        // settings — curriculum preference snapshots (open-ended bag).
+        // settings — curriculum preference snapshots (open-ended bag). These
+        // are non-sensitive curriculum preferences, not parent-only data; the
+        // parent-session gate therefore belongs to governed parent-owned
+        // collections and learner settings, not this snapshot bag.
         match /settings/{settingId} {
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid);

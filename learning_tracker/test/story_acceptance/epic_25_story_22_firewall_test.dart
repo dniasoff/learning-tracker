@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_track_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:test/test.dart';
 
 import '../helpers/firestore_fixtures.dart';
@@ -41,6 +42,10 @@ void main() {
         final profile = await FirestoreLearnerProfileRepository(
           firestore: firestore,
           uid: _uid,
+          parentActorSource: ParentSessionActorSource(
+            sessionId: () => 'a' * 64,
+            profileId: () => null,
+          ),
         ).getProfile(_profileId);
         final track = await FirestoreCurriculumTrackRepository(
           firestore: firestore,

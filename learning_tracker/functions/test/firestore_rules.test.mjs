@@ -91,6 +91,7 @@ const TUTOR = 'tutor-uid';
 const STRANGER = 'stranger-uid';
 const PROFILE = '5';
 const PARENT_SESSION_ID = 'a'.repeat(64);
+const NEW_PROFILE_SESSION_ID = 'b'.repeat(64);
 
 // Subcollection path prefixes
 const LP = `users/${OWNER}/learner_profiles/${PROFILE}`;
@@ -1867,6 +1868,101 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
       changeEntry('learnerSettings', 'new_profile', changeId),
     );
     await assertSucceeds(batch.commit());
+  });
+
+  test('claimed cutover matrix: creation needs a lease, and the seed is create-only', async () => {
+    const profileId = 'claimed_new_profile';
+    const path = `users/${OWNER}/learner_profiles/${profileId}`;
+    const changeId = nextUlid();
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}/parent_sessions/${NEW_PROFILE_SESSION_ID}`), {
+        profile_id: profileId,
+        created_at: Timestamp.fromMillis(Date.now() - 60_000),
+        expires_at: Timestamp.fromMillis(Date.now() + 30 * 60_000),
+        revoked: false,
+      });
+    });
+
+    const db = cutoverOwner();
+    const create = writeBatch(db);
+    create.set(doc(db, path), {
+      display_name: 'Claimed New',
+      mode: 'child',
+      ...SETTINGS,
+      last_change_id: changeId,
+    });
+    create.set(
+      doc(db, `${path}/change_log/${changeId}`),
+      changeEntry('learnerSettings', profileId, changeId, {
+        actor: { ...SESSION_OWNER_ACTOR, session_id: NEW_PROFILE_SESSION_ID },
+      }),
+    );
+    await assertSucceeds(create.commit());
+
+    const existingMerge = writeBatch(db);
+    const existingChangeId = nextUlid();
+    existingMerge.set(doc(db, PROFILE_PATH), {
+      ...SETTINGS,
+      last_change_id: existingChangeId,
+    }, { merge: true });
+    existingMerge.set(
+      doc(db, `${PROFILE_PATH}/change_log/${existingChangeId}`),
+      changeEntry('learnerSettings', PROFILE, existingChangeId, {
+        actor: SESSION_OWNER_ACTOR,
+      }),
+    );
+    // A valid parent lease may update an existing profile through the normal
+    // governed settings path; the repository's creation transaction is what
+    // prevents the bootstrap method from reaching this merge path.
+    await assertSucceeds(existingMerge.commit());
+
+    const childChangeId = nextUlid();
+    const childMerge = writeBatch(db);
+    childMerge.set(doc(db, PROFILE_PATH), {
+      ...SETTINGS,
+      last_change_id: childChangeId,
+    }, { merge: true });
+    childMerge.set(
+      doc(db, `${PROFILE_PATH}/change_log/${childChangeId}`),
+      changeEntry('learnerSettings', PROFILE, childChangeId, {
+        actor: { ...OWNER_ACTOR, role: 'child' },
+      }),
+    );
+    await assertFails(childMerge.commit());
+
+    const noSessionChangeId = nextUlid();
+    const noSessionMerge = writeBatch(db);
+    noSessionMerge.set(doc(db, PROFILE_PATH), {
+      ...SETTINGS,
+      last_change_id: noSessionChangeId,
+    }, { merge: true });
+    noSessionMerge.set(
+      doc(db, `${PROFILE_PATH}/change_log/${noSessionChangeId}`),
+      changeEntry('learnerSettings', PROFILE, noSessionChangeId),
+    );
+    await assertFails(noSessionMerge.commit());
+  });
+
+  test('claimed cutover matrix: settings bag is non-sensitive; scopes, points, and log need parent lease', async () => {
+    const db = cutoverOwner();
+    await assertSucceeds(setDoc(doc(db, `${LP}/settings/cutover`), PAYLOADS.settings));
+    await assertSucceeds(governedWrite(db, `${LP}/curriculum_scopes/cutover`, {
+      curriculum_id: 'c1',
+    }, 'mainTrackScope', 'c1', { entry: { actor: SESSION_OWNER_ACTOR } }));
+
+    const pointsId = nextUlid();
+    await assertSucceeds(setDoc(doc(db, `${POINTS}/${pointsId}`), {
+      ...PAYLOADS.points_ledger,
+      actor: SESSION_OWNER_ACTOR,
+    }));
+
+    const changeId = nextUlid();
+    await assertSucceeds(setDoc(
+      doc(db, `${LP}/change_log/${changeId}`),
+      changeEntry('learnerSettings', PROFILE, changeId, {
+        actor: SESSION_OWNER_ACTOR,
+      }),
+    ));
   });
 
   test('a pre-1.0.74 profile with no settings is seeded by the owner in one transaction (stuck-lock hotfix)', async () => {
