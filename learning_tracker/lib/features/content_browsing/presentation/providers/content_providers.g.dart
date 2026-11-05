@@ -158,7 +158,7 @@ final class CurriculumContentProvider
   }
 }
 
-String _$curriculumContentHash() => r'b9700b7cebfed94be143af59090f0666d28121b7';
+String _$curriculumContentHash() => r'7554e97113630608d1193a5d44bc6cbb3c802060';
 
 /// Provides all content items for a specific curriculum (family provider).
 
@@ -358,7 +358,7 @@ final class CurriculumHierarchyConfigProvider
 }
 
 String _$curriculumHierarchyConfigHash() =>
-    r'f1e4bec4a97cda68d4f291280cff6fbeb0c42297';
+    r'201a211b28d388636a8e3bc4989735d1242c8c86';
 
 /// Provides the hierarchy configuration for a specific curriculum.
 
@@ -470,7 +470,7 @@ final class FilteredContentProvider
   }
 }
 
-String _$filteredContentHash() => r'7048fbc2d1817b1cdfd70140f6285148970752d2';
+String _$filteredContentHash() => r'4bccd28ba53611743a2cd8731e26db6260f9e68c';
 
 /// Provides filtered content by hierarchy level.
 
@@ -585,7 +585,7 @@ final class ContentSearchProvider
   }
 }
 
-String _$contentSearchHash() => r'c78291d29165579a3dcd2db26df7f1906b002a3d';
+String _$contentSearchHash() => r'4f9090f31de7111afea99f9ecbd150c285fe4a30';
 
 /// Provides search results for a curriculum.
 
@@ -683,7 +683,7 @@ final class ContentByRefProvider
   }
 }
 
-String _$contentByRefHash() => r'a8ee8749041e1da2b4f8d827d775fa130f0161c2';
+String _$contentByRefHash() => r'49a095820357194b579d62bffff770e8a47715ad';
 
 /// Provides a specific content item by its sefariaRef.
 

@@ -4,6 +4,7 @@
   "description": "Firebase Cloud Functions for Learning Tracker",
   "main": "lib/index.js",
   "scripts": {
+    "prebuild": "node tools/generate_hidden_content_manifest.mjs",
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",

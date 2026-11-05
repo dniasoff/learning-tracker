@@ -77,7 +77,7 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
 
   Future<void> _loadContent() async {
     try {
-      final repo = ref.read(contentRepositoryProvider);
+      final repo = await ref.read(visibleContentRepositoryProvider.future);
       final config = await repo.getHierarchyConfig(widget.curriculumId);
       final items = await repo.getContentForCurriculum(widget.curriculumId);
 

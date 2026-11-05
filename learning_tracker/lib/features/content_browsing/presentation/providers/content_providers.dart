@@ -1,8 +1,16 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/core/providers/account_functions_provider.dart';
+import 'package:learning_tracker/core/providers/active_account_firebase_provider.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/content_repository_impl.dart';
+import 'package:learning_tracker/features/content_browsing/data/repositories/firestore_hidden_content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/domain/profile_visible_content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'content_providers.g.dart';
@@ -25,13 +33,91 @@ ContentRepository contentRepository(Ref ref) {
   return ContentRepositoryImpl();
 }
 
+/// Repository for the active profile's hidden node refs. The owner uid
+/// switches to the parent namespace when a tutor is viewing a talmid.
+final hiddenContentRepositoryProvider =
+    FutureProvider<FirestoreHiddenContentRepository?>((ref) async {
+      final profileId = ref.watch(activeProfileIdProvider);
+      if (profileId == null) {
+        return null;
+      }
+      final handles = await ref.watch(activeAccountFirebaseProvider.future);
+      if (handles == null) {
+        return null;
+      }
+      final ownerUid =
+          ref.watch(activeTutoredProfileSelectionProvider)?.ownerUid ??
+          handles.uid;
+      return FirestoreHiddenContentRepository(
+        firestore: handles.firestore,
+        ownerUid: ownerUid,
+        profileId: profileId,
+        resolveFunctions: ref.watch(accountFunctionsProvider),
+      );
+    });
+
+/// Live hidden node refs for the active profile.
+final hiddenContentRefsProvider = StreamProvider<Set<String>>((ref) async* {
+  final repository = await ref.watch(hiddenContentRepositoryProvider.future);
+  if (repository == null) {
+    yield const {};
+    return;
+  }
+  yield* repository.watchHiddenRefs();
+});
+
+/// Hidden refs for an explicitly addressed learner scope. Tutor roster rows
+/// use this family rather than the active-profile stream: several talmidim
+/// can be visible at once, and each row must receive its own policy.
+final hiddenContentRefsForScopeProvider = FutureProvider.autoDispose
+    .family<Set<String>, LearnerScope>((ref, scope) async {
+      final handles = await ref.watch(activeAccountFirebaseProvider.future);
+      if (handles == null) return const {};
+      final repository = FirestoreHiddenContentRepository(
+        firestore: handles.firestore,
+        ownerUid: scope.ownerUid,
+        profileId: scope.profileId,
+        resolveFunctions: ref.watch(accountFunctionsProvider),
+      );
+      return repository.getHiddenRefs();
+    });
+
+/// The profile-keyed visibility seam above the raw, process-cached repository.
+/// Consumers that need content should resolve this provider rather than the
+/// raw repository so a profile switch cannot reuse another child's view.
+///
+/// A separate scope family below serves tutor roster rows whose target is not
+/// the active profile.
+final visibleContentRepositoryProvider = FutureProvider<ContentRepository>((
+  ref,
+) async {
+  final hidden = await ref.watch(hiddenContentRefsProvider.future);
+  return ProfileVisibleContentRepository(
+    ref.watch(contentRepositoryProvider),
+    hidden,
+  );
+});
+
+/// Profile-keyed visibility for a target learner, including tutor roster
+/// targets that are not the currently active profile.
+final visibleContentRepositoryForScopeProvider = FutureProvider.autoDispose
+    .family<ContentRepository, LearnerScope>((ref, scope) async {
+      final hidden = await ref.watch(
+        hiddenContentRefsForScopeProvider(scope).future,
+      );
+      return ProfileVisibleContentRepository(
+        ref.watch(contentRepositoryProvider),
+        hidden,
+      );
+    });
+
 /// Provides all content items for a specific curriculum (family provider).
 @riverpod
 Future<List<ContentItem>> curriculumContent(
   Ref ref,
   CurriculumId curriculumId,
 ) async {
-  final repository = ref.watch(contentRepositoryProvider);
+  final repository = await ref.watch(visibleContentRepositoryProvider.future);
   return repository.getContentForCurriculum(curriculumId);
 }
 
@@ -62,7 +148,7 @@ Future<CurriculumHierarchyConfig> curriculumHierarchyConfig(
   Ref ref,
   CurriculumId curriculumId,
 ) async {
-  final repository = ref.watch(contentRepositoryProvider);
+  final repository = await ref.watch(visibleContentRepositoryProvider.future);
   return repository.getHierarchyConfig(curriculumId);
 }
 
@@ -76,7 +162,7 @@ Future<List<ContentItem>> filteredContent(
   String? level3,
   String? level4,
 }) async {
-  final repository = ref.watch(contentRepositoryProvider);
+  final repository = await ref.watch(visibleContentRepositoryProvider.future);
   return repository.filterByLevel(
     curriculumId: curriculumId,
     level1: level1,
@@ -93,7 +179,7 @@ Future<List<ContentItem>> contentSearch(
   required CurriculumId curriculumId,
   required String query,
 }) async {
-  final repository = ref.watch(contentRepositoryProvider);
+  final repository = await ref.watch(visibleContentRepositoryProvider.future);
   return repository.search(curriculumId: curriculumId, query: query);
 }
 
@@ -104,7 +190,7 @@ Future<ContentItem?> contentByRef(
   required CurriculumId curriculumId,
   required String sefariaRef,
 }) async {
-  final repository = ref.watch(contentRepositoryProvider);
+  final repository = await ref.watch(visibleContentRepositoryProvider.future);
   return repository.getContentByRef(
     curriculumId: curriculumId,
     sefariaRef: sefariaRef,

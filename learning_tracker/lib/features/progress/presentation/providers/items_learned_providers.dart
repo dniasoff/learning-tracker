@@ -145,7 +145,7 @@ final itemsLearnedDataProvider = FutureProvider.autoDispose
       return computeItemsLearnedSummary(
         state: state,
         corpus: corpus,
-        repo: ref.watch(contentRepositoryProvider),
+        repo: await ref.watch(visibleContentRepositoryProvider.future),
         curriculum: curriculumId,
       );
     });
@@ -174,7 +174,7 @@ final lifetimeViewDataProvider = FutureProvider.autoDispose
       return computeLifetimeViewSummary(
         state: state,
         corpus: corpus,
-        repo: ref.watch(contentRepositoryProvider),
+        repo: await ref.watch(visibleContentRepositoryProvider.future),
         curriculum: curriculumId,
       );
     });

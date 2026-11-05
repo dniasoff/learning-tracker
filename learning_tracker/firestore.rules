@@ -374,9 +374,22 @@ service cloud.firestore {
     // Profile doc write: ordinary owner write unless it touches the settings
     // keys, in which case the AD-38 owner rule (entity_id = profileId).
     function isLearnerProfileOwnerWrite(uid, profileId) {
-      return !touchesLearnerSettings()
+      return !touchesHiddenContent()
+          && (!touchesLearnerSettings()
           || (isValidLearnerSettings(request.resource.data)
-              && isGovernedOwnerWrite(uid, profileId, 'learnerSettings', profileId));
+              && isGovernedOwnerWrite(uid, profileId, 'learnerSettings', profileId)));
+    }
+
+    // Hidden-content policy is server-written only. The owner UID is shared
+    // by parent and child sessions, so client rules cannot safely distinguish
+    // PIN-elevated parent mode from child mode. The callable owns this field.
+    // TODO(7vx): if the server-issued parent session is ever accepted by a
+    // client owner branch, bind it to this profile before allowing any write.
+    function touchesHiddenContent() {
+      return (resource == null
+                ? request.resource.data.keys().toSet()
+                : request.resource.data.diff(resource.data).affectedKeys())
+          .hasAny(['hidden_content_refs']);
     }
 
     // ── Global default-deny ────────────────────────────────────────────────

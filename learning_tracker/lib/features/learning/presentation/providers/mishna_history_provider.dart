@@ -26,9 +26,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/profile_history_log_source.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_gate.dart';
@@ -73,9 +76,55 @@ final mishnaHistoryViewerProvider = Provider.autoDispose<MishnaHistoryViewer>((
       : MishnaHistoryViewer.parent;
 });
 
+/// The visible content index for one learner scope, keyed by curriculum.
+///
+/// This is deliberately scope-keyed: a tutor's active profile and a tutor
+/// roster target can have different hidden-content policies.
+final visibleHistoryRefsForScopeProvider = FutureProvider.autoDispose
+    .family<Map<String, Set<String>>, LearnerScope>((ref, scope) async {
+      final repository = await ref.watch(
+        visibleContentRepositoryForScopeProvider(scope).future,
+      );
+      final refs = <String, Set<String>>{};
+      for (final curriculum in CurriculumId.all) {
+        refs[curriculum.storageKey] = {
+          for (final item in await repository.getContentForCurriculum(
+            curriculum,
+          ))
+            item.sefariaRef,
+        };
+      }
+      return refs;
+    });
+
+/// Whether the history route's leaf is in the addressed learner's visible
+/// index. A false result is a neutral unavailable state, not an error.
+final mishnaHistoryLeafVisibleProvider = FutureProvider.autoDispose
+    .family<bool, MishnaHistoryArgs>((ref, args) async {
+      final scope = await ref.watch(activeLearnerScopeProvider.future);
+      if (scope == null) throw const NoActiveLearnerException();
+      final visible = await ref.watch(
+        visibleHistoryRefsForScopeProvider(scope).future,
+      );
+      return visible[args.curriculumId]?.contains(args.leafRef) == true;
+    });
+
 /// The [MishnaHistory] of [MishnaHistoryArgs] for the active learner.
 final mishnaHistoryProvider = Provider.autoDispose
     .family<AsyncValue<MishnaHistory>, MishnaHistoryArgs>((ref, args) {
+      final leafVisible = ref.watch(mishnaHistoryLeafVisibleProvider(args));
+      if (leafVisible case AsyncError(:final error, :final stackTrace)) {
+        return AsyncError<MishnaHistory>(error, stackTrace);
+      }
+      if (!leafVisible.hasValue) return const AsyncLoading<MishnaHistory>();
+      if (!leafVisible.requireValue) {
+        return AsyncData(
+          MishnaHistory.unavailable(
+            curriculumId: args.curriculumId,
+            leafRef: args.leafRef,
+          ),
+        );
+      }
       final scope = ref.watch(activeLearnerScopeProvider);
       if (scope case AsyncError(:final error, :final stackTrace)) {
         return AsyncError<MishnaHistory>(error, stackTrace);
@@ -89,9 +138,14 @@ final mishnaHistoryProvider = Provider.autoDispose
         );
       }
 
+      final visible = ref.watch(visibleHistoryRefsForScopeProvider(active));
+      if (visible case AsyncError(:final error, :final stackTrace)) {
+        return AsyncError<MishnaHistory>(error, stackTrace);
+      }
+      if (!visible.hasValue) return const AsyncLoading<MishnaHistory>();
       final log = ref.watch(profileHistoryLogProvider(active));
       final state = ref.watch(learnerStateProvider(active));
-      final corpora = ref.watch(corporaProvider);
+      final corpora = ref.watch(corporaForScopeProvider(active));
       for (final input in <AsyncValue<Object?>>[log, state, corpora]) {
         if (input case AsyncError(:final error, :final stackTrace)) {
           return AsyncError<MishnaHistory>(error, stackTrace);
@@ -104,7 +158,7 @@ final mishnaHistoryProvider = Provider.autoDispose
         MishnaHistory.project(
           curriculumId: args.curriculumId,
           leafRef: args.leafRef,
-          log: log.requireValue,
+          log: log.requireValue.filterToVisibleContent(visible.requireValue),
           state: state.requireValue,
           corpus: corpora.requireValue[args.curriculumId],
         ),
@@ -166,8 +220,10 @@ void retryMishnaHistory(WidgetRef ref) {
     ..invalidate(activeLearnerScopeProvider)
     ..invalidate(learnerLockSettingsProvider)
     ..invalidate(profileHistoryLogProvider)
+    ..invalidate(mishnaHistoryLeafVisibleProvider)
+    ..invalidate(visibleHistoryRefsForScopeProvider)
     ..invalidate(learnerStateProvider)
-    ..invalidate(corporaProvider);
+    ..invalidate(corporaForScopeProvider);
 }
 
 /// A correction the user asked for.

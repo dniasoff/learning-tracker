@@ -22,8 +22,10 @@ final trackSedarimOrderProvider =
       curriculumId,
     ) async {
       final allItems = await ref
-          .watch(contentRepositoryProvider)
-          .getContentForCurriculum(curriculumId);
+          .watch(visibleContentRepositoryProvider.future)
+          .then(
+            (repository) => repository.getContentForCurriculum(curriculumId),
+          );
       return ref
           .watch(trackLearningOrderRepositoryProvider)
           .getSedarimOrder(curriculumId, allItems);
@@ -35,8 +37,10 @@ final trackMasechtosOrderProvider =
       curriculumId,
     ) async {
       final allItems = await ref
-          .watch(contentRepositoryProvider)
-          .getContentForCurriculum(curriculumId);
+          .watch(visibleContentRepositoryProvider.future)
+          .then(
+            (repository) => repository.getContentForCurriculum(curriculumId),
+          );
       return ref
           .watch(trackLearningOrderRepositoryProvider)
           .getMasechtosOrder(curriculumId, allItems);

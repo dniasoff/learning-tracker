@@ -174,6 +174,21 @@ final class MishnaHistory {
   }) : items = List.unmodifiable(items),
        placeChoices = List.unmodifiable(placeChoices);
 
+  /// A neutral result for a ref that is not in the learner's visible index.
+  /// The screen uses the visibility gate to render the unavailable state;
+  /// keeping this result empty also makes direct provider consumers fail
+  /// closed rather than projecting raw history rows.
+  factory MishnaHistory.unavailable({
+    required String curriculumId,
+    required LeafRef leafRef,
+  }) => MishnaHistory(
+    curriculumId: curriculumId,
+    leafRef: leafRef,
+    learnt: false,
+    eventCount: 0,
+    items: const [],
+  );
+
   /// Projects the history of [leafRef] in [curriculumId].
   ///
   /// [corpus] (the unscoped ContentIndex tree) lets a Before-tracking node

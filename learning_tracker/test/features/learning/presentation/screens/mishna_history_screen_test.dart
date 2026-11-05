@@ -158,6 +158,26 @@ void main() {
       expect(footer, findsOneWidget);
     });
 
+    testWidgets('a hidden deep link shows only the neutral unavailable state', (
+      tester,
+    ) async {
+      ports.events.seed(ports.scope, [historyLearn(1)]);
+      await _pump(tester, [
+        ...historyOverrides(
+          ports,
+          state: _learntState(),
+          visibleRefs: {historySibling},
+        ),
+      ]);
+
+      expect(find.byKey(const Key('mishnaHistoryUnavailable')), findsOneWidget);
+      expect(find.text('Text not available'), findsOneWidget);
+      expect(find.text('B'), findsNothing);
+      expect(find.byKey(const Key('mishnaHistoryOpenText')), findsNothing);
+      expect(find.byKey(const Key('mishnaHistoryLearntState')), findsNothing);
+      expect(_row(1), findsNothing);
+    });
+
     testWidgets('a Before tracking event shows the badge instead of a date', (
       tester,
     ) async {

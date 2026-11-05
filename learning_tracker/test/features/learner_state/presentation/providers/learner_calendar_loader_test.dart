@@ -111,6 +111,34 @@ void main() {
     expect(called, isFalse);
   });
 
+  test(
+    'hidden calendar refs are skipped without catch-up or substitution',
+    () async {
+      final calendars = await loadLearnerCalendars(
+        intent: LearnerIntent(
+          settings: c0Settings,
+          mainTracks: {engineCurriculum: _calendarIntent()},
+          goals: const {},
+        ),
+        settingsHistory: c0SettingsHistory(),
+        nowUtc: now,
+        corpora: {engineCurriculum: mishnayosCorpus()},
+        entriesForRange: (_, _, _) async => [
+          _entry('Mishnah Berakhot 1:1-2', DateTime.utc(2026, 9, 1)),
+        ],
+        // The visible-content provider has already removed 1:2 for this child.
+        itemsFor: (_) async => [items.first],
+      );
+
+      expect(calendars['mishna_yomit'], const [
+        CalendarAssignment(
+          '2026-09-01',
+          NodeEntry(level: 'mishnah', ref: 'Mishnah Berakhot 1:1'),
+        ),
+      ]);
+    },
+  );
+
   test('a missing tracking start loads from today', () async {
     DateTime? from;
     await loadLearnerCalendars(

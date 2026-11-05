@@ -154,8 +154,7 @@ class ParentSettingsScreen extends ConsumerWidget {
     // Build the main edit tiles, hiding those locked by tutor permissions.
     // If all three tiles are hidden the panel is omitted entirely to avoid
     // an empty card.
-    final showEditPanel =
-        canEditTracks || canEditGoals || canEditPoints || canEditRewards;
+    const showEditPanel = true;
 
     return Scaffold(
       backgroundColor: _pageBg(context),
@@ -198,6 +197,19 @@ class ParentSettingsScreen extends ConsumerWidget {
               // avatar switcher in the bottom nav is the canonical path (DEC-11).
               child: Column(
                 children: [
+                  _ManageRow(
+                    iconBackground: const Color(0xFFF3E8FF),
+                    icon: Icons.visibility_off_outlined,
+                    iconColor: const Color(0xFF7C3AED),
+                    title: 'Hidden content',
+                    subtitle: 'Choose content this child cannot see',
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _chevronMuted,
+                      size: 26,
+                    ),
+                    onTap: () => context.pushRoute(const HiddenContentRoute()),
+                  ),
                   // AD-53: canEditLearning gates "Manage Tracks" for tutors.
                   if (canEditTracks) ...[
                     _ManageRow(

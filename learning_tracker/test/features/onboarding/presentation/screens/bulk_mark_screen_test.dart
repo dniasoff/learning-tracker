@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/features/content_browsing/domain/profile_visible_content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -32,6 +33,9 @@ void main() {
       await tester.pumpWidget(
         pumpApp(
           overrides: [
+            hiddenContentRefsProvider.overrideWith(
+              (ref) => Stream.value(const <String>{}),
+            ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value([]),
             ),
@@ -52,6 +56,9 @@ void main() {
       await tester.pumpWidget(
         pumpApp(
           overrides: [
+            hiddenContentRefsProvider.overrideWith(
+              (ref) => Stream.value(const <String>{}),
+            ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value([]),
             ),
@@ -84,6 +91,9 @@ void main() {
       await tester.pumpWidget(
         pumpApp(
           overrides: [
+            hiddenContentRefsProvider.overrideWith(
+              (ref) => Stream.value(const <String>{}),
+            ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value([]),
             ),
@@ -171,7 +181,13 @@ void main() {
         await tester.pumpWidget(
           pumpApp(
             overrides: [
+              hiddenContentRefsProvider.overrideWith(
+                (ref) => Stream.value(const <String>{}),
+              ),
               contentRepositoryProvider.overrideWithValue(contentRepo),
+              visibleContentRepositoryProvider.overrideWith(
+                (ref) async => contentRepo,
+              ),
               curriculumContentProvider.overrideWith(
                 (ref, curriculumId) => Future.value(allItems),
               ),
@@ -206,6 +222,53 @@ void main() {
       },
     );
 
+    testWidgets('does not render hidden content in the selection tree', (
+      tester,
+    ) async {
+      final contentRepo = _MockContentRepository();
+      const visible = ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Visible Book',
+        displayNameHe: 'Visible Book',
+        displayNameEn: 'Visible Book',
+        sefariaRef: 'Mishnah Berakhot 1:1',
+        sortOrder: 1,
+        isLeaf: false,
+      );
+      const hidden = ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Hidden Book',
+        displayNameHe: 'Hidden Book',
+        displayNameEn: 'Hidden Book',
+        sefariaRef: 'Mishnah Berakhot 1:2',
+        sortOrder: 2,
+        isLeaf: false,
+      );
+      when(
+        () => contentRepo.getContentForCurriculum(any()),
+      ).thenAnswer((_) async => [visible, hidden]);
+
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [
+            contentRepositoryProvider.overrideWithValue(contentRepo),
+            visibleContentRepositoryProvider.overrideWith(
+              (ref) async => ProfileVisibleContentRepository(contentRepo, {
+                hidden.sefariaRef,
+              }),
+            ),
+            contentSearchProvider.overrideWith((ref, args) => Future.value([])),
+            activeProfileIdProvider.overrideWithValue(_profileId),
+          ],
+          child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Visible Book'), findsOneWidget);
+      expect(find.text('Hidden Book'), findsNothing);
+    });
+
     // Hebrew locale: the AppBar title and selection heading must be localized
     // (no leftover hardcoded English "Mark Prior Completions" / "Select content
     // you've already completed").
@@ -216,6 +279,9 @@ void main() {
         pumpApp(
           locale: const Locale('he'),
           overrides: [
+            hiddenContentRefsProvider.overrideWith(
+              (ref) => Stream.value(const <String>{}),
+            ),
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value([]),
             ),

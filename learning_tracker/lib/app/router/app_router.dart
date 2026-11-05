@@ -14,6 +14,7 @@ import 'package:learning_tracker/features/change_history/presentation/screens/ch
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_search_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/screens/hidden_content_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
@@ -287,6 +288,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/parent-mode/settings',
       page: ParentSettingsRoute.page,
+      guards: [authGuard, childModeGuard, pinGuard],
+    ),
+    AutoRoute(
+      path: '/parent-mode/hidden-content',
+      page: HiddenContentRoute.page,
       guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(

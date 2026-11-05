@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -33,6 +34,11 @@ Future<TextCacheRepository> textCacheRepository(Ref ref) async {
 /// Provider for fetching text by Sefaria reference.
 @riverpod
 Future<TextContent?> textContent(Ref ref, String sefariaRef) async {
+  // The text cache is process-wide, but visibility is profile-scoped. Resolve
+  // the filtered index first so a direct /text/:sefariaRef link cannot fetch a
+  // hidden ref merely because the raw SQLite cache contains its text.
+  final visibleIndex = await ref.watch(contentIndexProvider.future);
+  if (visibleIndex.lookup(sefariaRef) == null) return null;
   final repository = await ref.watch(textCacheRepositoryProvider.future);
   return repository.getText(sefariaRef);
 }

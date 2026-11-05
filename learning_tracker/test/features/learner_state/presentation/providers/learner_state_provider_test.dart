@@ -41,9 +41,15 @@ final class _Sources {
     corporaProvider.overrideWith(
       (ref) async => <String, Corpus>{engineCurriculum: mishnayosCorpus()},
     ),
+    corporaForScopeProvider(c0Scope()).overrideWith(
+      (ref) async => <String, Corpus>{engineCurriculum: mishnayosCorpus()},
+    ),
     learnerCalendarLoaderProvider.overrideWithValue(
       calendars ?? (intent, settings, now) async => const {},
     ),
+    learnerCalendarLoaderForScopeProvider(
+      c0Scope(),
+    ).overrideWithValue(calendars ?? (intent, settings, now) async => const {}),
     localDayClockProvider.overrideWithValue(FakeLocalDayClock(engineAt(10000))),
     learnerStateDayTickProvider.overrideWithValue(const Stream.empty()),
   ];

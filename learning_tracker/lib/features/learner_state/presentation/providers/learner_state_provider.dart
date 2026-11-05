@@ -54,6 +54,28 @@ final corporaProvider = FutureProvider<Map<String, Corpus>>((ref) async {
   return Map.unmodifiable(out);
 }, retry: (retryCount, error) => null);
 
+/// Corpus map for one explicitly addressed learner. The active-profile
+/// [corporaProvider] cannot serve a tutor roster: a visible row may belong to
+/// a different child than the active profile, so its hidden-content policy
+/// must be read from [scope].
+final corporaForScopeProvider = FutureProvider.autoDispose
+    .family<Map<String, Corpus>, LearnerScope>((ref, scope) async {
+      final repository = await ref.watch(
+        visibleContentRepositoryForScopeProvider(scope).future,
+      );
+      final out = <String, Corpus>{};
+      for (final curriculum in CurriculumId.all) {
+        final items = await repository.getContentForCurriculum(curriculum);
+        final config = await repository.getHierarchyConfig(curriculum);
+        out[curriculum.storageKey] = contentIndexCorpus(
+          curriculumId: curriculum.storageKey,
+          items: items,
+          levelLabels: config.levelLabels,
+        );
+      }
+      return Map.unmodifiable(out);
+    });
+
 /// The calendar input loader [learnerStateProvider] passes to the
 /// composition (AD-35: calendars are loaded by the provider from
 /// `CalendarProgramService` and passed in as data). Overridden in tests.
@@ -78,6 +100,35 @@ final learnerCalendarLoaderProvider = Provider<LearnerCalendarLoader>((ref) {
     );
   };
 });
+
+/// Calendar loader for an explicitly addressed learner. Tutor roster rows may
+/// target a child other than the active profile, so both the corpus and the
+/// content lookup must use that target's visibility policy.
+final learnerCalendarLoaderForScopeProvider = Provider.autoDispose
+    .family<LearnerCalendarLoader, LearnerScope>((ref, scope) {
+      return (intent, settingsHistory, nowUtc) async {
+        if (!intent.mainTracks.values.any(followsCalendarProgram)) {
+          return const {};
+        }
+        final service = await ref.read(calendarProgramServiceProvider.future);
+        final corpora = await ref.read(corporaForScopeProvider(scope).future);
+        final repository = await ref.read(
+          visibleContentRepositoryForScopeProvider(scope).future,
+        );
+        return loadLearnerCalendars(
+          intent: intent,
+          settingsHistory: settingsHistory,
+          nowUtc: nowUtc,
+          corpora: corpora,
+          entriesForRange: service.getEntriesForRange,
+          itemsFor: (curriculumId) async {
+            final curriculum = CurriculumId.fromStorageKey(curriculumId);
+            if (curriculum == null) return const [];
+            return repository.getContentForCurriculum(curriculum);
+          },
+        );
+      };
+    });
 
 /// Fires at each local midnight while watched, so "today" in the engine
 /// (AD-41) moves on without an input change.
@@ -121,7 +172,7 @@ final learnerStateProvider = StreamProvider.autoDispose
           intent == null) {
         return; // not ready: loading
       }
-      final corpora = await ref.watch(corporaProvider.future);
+      final corpora = await ref.watch(corporaForScopeProvider(scope).future);
       final clock = ref.watch(localDayClockProvider);
       yield* composeLearnerState(
         events: events.watchAll(scope),
@@ -129,7 +180,7 @@ final learnerStateProvider = StreamProvider.autoDispose
         intentHistory: changeLog.watchIntentHistory(scope),
         intent: intent.watch(scope),
         corpora: corpora,
-        loadCalendars: ref.watch(learnerCalendarLoaderProvider),
+        loadCalendars: ref.watch(learnerCalendarLoaderForScopeProvider(scope)),
         nowUtc: clock.nowUtc,
         recompute: ref.watch(learnerStateDayTickProvider),
         engine: ref.watch(learnerStateEngineProvider),
