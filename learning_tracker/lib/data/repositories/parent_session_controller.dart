@@ -37,6 +37,7 @@ final class ParentSessionController {
     Future<ParentSessionBinding> Function()? resolveBinding,
     Future<void> Function(String sessionId)? persistSessionId,
     Future<void> Function()? clearPersistedSessionId,
+    void Function(ParentSessionLockState state)? onLockStateChanged,
   }) : _client = client,
        _currentSessionId = currentSessionId,
        _setSessionId = setSessionId,
@@ -47,7 +48,8 @@ final class ParentSessionController {
        _enableNetwork = enableNetwork,
        _resolveBinding = resolveBinding,
        _persistSessionId = persistSessionId,
-       _clearPersistedSessionId = clearPersistedSessionId;
+       _clearPersistedSessionId = clearPersistedSessionId,
+       _onLockStateChanged = onLockStateChanged;
 
   final ParentSessionClient _client;
   final String? Function() _currentSessionId;
@@ -60,6 +62,7 @@ final class ParentSessionController {
   final Future<ParentSessionBinding> Function()? _resolveBinding;
   final Future<void> Function(String sessionId)? _persistSessionId;
   final Future<void> Function()? _clearPersistedSessionId;
+  final void Function(ParentSessionLockState state)? _onLockStateChanged;
 
   ParentSessionBinding? _sessionBinding;
   Future<void>? _lockFuture;
@@ -70,6 +73,11 @@ final class ParentSessionController {
   ParentSessionLockState _lockState = ParentSessionLockState.unlocked;
 
   ParentSessionLockState get lockState => _lockState;
+
+  void _setLockState(ParentSessionLockState value) {
+    _lockState = value;
+    _onLockStateChanged?.call(value);
+  }
 
   Future<ParentSessionBinding> _binding() async {
     final resolved = await _resolveBinding?.call();
@@ -101,7 +109,7 @@ final class ParentSessionController {
     _networkDisabled = false;
     _sessionRevoked = false;
     _persistenceCleared = false;
-    _lockState = ParentSessionLockState.unlocked;
+    _setLockState(ParentSessionLockState.unlocked);
     _setSessionId(lease.sessionId);
     _setSessionProfileId?.call(profileId);
     return lease;
@@ -120,17 +128,26 @@ final class ParentSessionController {
     });
   }
 
+  /// Reclaims a persisted lease after process death. The session is placed in
+  /// the same lock state machine as an in-process lock, so a failed revoke
+  /// leaves a retryable [ParentSessionLockState.lockFailed] state instead of
+  /// permanently wedging startup offline.
+  Future<void> recoverPersistedSession(String sessionId) async {
+    if (_currentSessionId() == null) _setSessionId(sessionId);
+    await lock();
+  }
+
   Future<void> _runLock() async {
     final sessionId = _pendingSessionId ?? _currentSessionId();
     _pendingSessionId = sessionId;
     _clearSessionId();
     _clearSessionProfileId?.call();
     if (sessionId == null && _sessionBinding == null) {
-      _lockState = ParentSessionLockState.locked;
+      _setLockState(ParentSessionLockState.locked);
       return;
     }
 
-    _lockState = ParentSessionLockState.locking;
+    _setLockState(ParentSessionLockState.locking);
     final binding = _sessionBinding ?? await _binding();
     _sessionBinding = binding;
     try {
@@ -152,9 +169,9 @@ final class ParentSessionController {
       }
       _pendingSessionId = null;
       _sessionBinding = null;
-      _lockState = ParentSessionLockState.locked;
+      _setLockState(ParentSessionLockState.locked);
     } catch (_) {
-      _lockState = ParentSessionLockState.lockFailed;
+      _setLockState(ParentSessionLockState.lockFailed);
       rethrow;
     }
   }

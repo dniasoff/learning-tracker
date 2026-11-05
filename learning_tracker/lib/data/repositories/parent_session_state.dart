@@ -1,5 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/data/repositories/parent_session_controller.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
+
+final parentSessionLockStateProvider =
+    NotifierProvider<ParentSessionLockStateNotifier, ParentSessionLockState>(
+      ParentSessionLockStateNotifier.new,
+    );
+
+final class ParentSessionLockStateNotifier
+    extends Notifier<ParentSessionLockState> {
+  @override
+  ParentSessionLockState build() => ParentSessionLockState.unlocked;
+
+  void set(ParentSessionLockState value) => state = value;
+}
 
 /// The in-memory proof shared by every parent actor factory.
 final parentSessionIdProvider =

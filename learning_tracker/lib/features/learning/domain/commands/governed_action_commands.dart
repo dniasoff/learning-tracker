@@ -702,6 +702,9 @@ final class DefaultGovernedLearningCommands
       actorRole: _actor.role,
       entries: entries,
       revertsActionId: revertsActionId,
+      parentSessionId: _actor.role == ActorRole.parent
+          ? _actor.sessionId
+          : null,
     );
     final GovernedWriteReceipt receipt;
     try {

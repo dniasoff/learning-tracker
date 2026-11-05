@@ -92,6 +92,8 @@ final parentSessionControllerProvider = Provider<ParentSessionController>((
     clearSessionProfileId: () =>
         ref.read(parentSessionProfileIdProvider.notifier).clear(),
     resolveBinding: binding,
+    onLockStateChanged: (state) =>
+        ref.read(parentSessionLockStateProvider.notifier).set(state),
     disableNetwork: () async {},
     enableNetwork: () async {},
   );
@@ -106,8 +108,11 @@ final parentSessionStartupProvider = FutureProvider<void>((ref) async {
   final sessionId = await persistence.read(handles.uid);
   if (sessionId == null) return;
 
-  await handles.firestore.disableNetwork();
-  await _clientForApp(handles.app).revoke(sessionId);
-  await persistence.clear(handles.uid);
-  await handles.firestore.enableNetwork();
+  final controller = ref.read(parentSessionControllerProvider);
+  try {
+    await controller.recoverPersistedSession(sessionId);
+  } catch (_) {
+    // Keep startup moving with the network disabled. The controller exposes
+    // lockFailed and retains the lease for an explicit retry from the UI.
+  }
 });

@@ -138,6 +138,41 @@ void main() {
     expect(controller.lockState, ParentSessionLockState.locked);
   });
 
+  test(
+    'persisted session recovery is retryable after a process-death revoke failure',
+    () async {
+      String? sessionId;
+      var shouldFail = true;
+      final states = <ParentSessionLockState>[];
+      final controller = ParentSessionController(
+        client: ParentSessionClient((name, data) async {
+          if (name == 'revokeParentSession' && shouldFail) {
+            throw StateError('startup revoke failed');
+          }
+          return <String, Object?>{};
+        }),
+        currentSessionId: () => sessionId,
+        setSessionId: (value) => sessionId = value,
+        clearSessionId: () => sessionId = null,
+        disableNetwork: () async {},
+        enableNetwork: () async {},
+        onLockStateChanged: states.add,
+      );
+
+      await expectLater(
+        controller.recoverPersistedSession('a' * 64),
+        throwsStateError,
+      );
+      expect(controller.lockState, ParentSessionLockState.lockFailed);
+      expect(states, contains(ParentSessionLockState.lockFailed));
+
+      shouldFail = false;
+      await controller.retryLock();
+      expect(controller.lockState, ParentSessionLockState.locked);
+      expect(sessionId, isNull);
+    },
+  );
+
   test('lock uses the account binding captured at authenticate time', () async {
     final leaseId = 'f' * 64;
     String? sessionId;

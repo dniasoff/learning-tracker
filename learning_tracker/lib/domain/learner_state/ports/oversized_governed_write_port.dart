@@ -40,6 +40,7 @@ final class OversizedGovernedWrite {
     required this.actorRole,
     required this.entries,
     this.revertsActionId,
+    this.parentSessionId,
   });
 
   /// The action ULID.
@@ -53,6 +54,9 @@ final class OversizedGovernedWrite {
 
   /// The action this one undoes, if any.
   final String? revertsActionId;
+
+  /// The server-issued lease for an owner parent write, when available.
+  final String? parentSessionId;
 
   @override
   String toString() =>

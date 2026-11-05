@@ -84,6 +84,8 @@ final class CallableOversizedGovernedWritePort
     'profileId': scope.profileId,
     'actorRole': request.actorRole.storage,
     'actionId': request.actionId,
+    if (request.parentSessionId != null)
+      'parentSessionId': request.parentSessionId,
     if (request.revertsActionId != null)
       'revertsActionId': request.revertsActionId,
     'entries': [
