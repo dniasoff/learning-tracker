@@ -67,12 +67,18 @@ class ContentRepositoryImpl
           (c) => c.storageKey == source,
         );
         final sourceItems = await getContentForCurriculum(sourceId);
+        // Capture the offset before consuming the lazy map. Reading
+        // `allItems.length` inside the mapper makes it grow for every item,
+        // which overlaps the source sort ranges and interleaves Chumash with
+        // Nach in Tanach. The resulting pre-order corpus loses parents and
+        // produces incomplete section counts (notably Prophets).
+        final sourceOffset = allItems.length;
         allItems.addAll(
           sourceItems.map(
             (item) => strategy.remap(
               item: item,
               source: source,
-              offset: allItems.length,
+              offset: sourceOffset,
             ),
           ),
         );
