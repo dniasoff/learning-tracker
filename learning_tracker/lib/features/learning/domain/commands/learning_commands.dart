@@ -1048,7 +1048,16 @@ final class DefaultLearningCommands implements LearningCommands {
           chunkWrites(units),
         );
         if (outcome.rejectedChunks > 0) {
-          await _compensateCatchUp(planned, saved: outcome.eventIds);
+          final compensated = await _compensateCatchUp(
+            planned,
+            saved: outcome.eventIds,
+          );
+          if (!compensated) {
+            return CaptureResult.success(
+              eventIds: outcome.eventIds,
+              queued: outcome.queued,
+            );
+          }
           return const CaptureResult.rejected(CaptureRejection.notSaved);
         }
         if (outcome.queued) {
@@ -1092,17 +1101,17 @@ final class DefaultLearningCommands implements LearningCommands {
   /// the action's first event id), so no subset stays counted and the
   /// card returns while its window is open. A void the server then
   /// rejects is an ordinary pending failure with its own retry.
-  Future<void> _compensateCatchUp(
+  Future<bool> _compensateCatchUp(
     List<String> planned, {
     required List<String> saved,
   }) async {
     _dispatcher.discard(planned);
-    if (await _authorizationFailure() != null) return;
+    if (await _authorizationFailure() != null) return false;
     final targets = [
       for (final id in planned)
         if (saved.contains(id)) id,
     ];
-    if (targets.isEmpty) return;
+    if (targets.isEmpty) return true;
     final stamp = CommandStamp(
       actor: _actor,
       nowUtc: _clock().toUtc(),
@@ -1124,6 +1133,7 @@ final class DefaultLearningCommands implements LearningCommands {
       // Not accepted locally: nothing more to do here; the engine still
       // sees only what was written.
     }
+    return true;
   }
 
   /// The event failures, then the governed and backup import failures

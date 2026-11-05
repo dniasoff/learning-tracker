@@ -202,6 +202,7 @@ final class CommandsBackupLearningPort implements BackupLearningPort {
           liveActor: () => _liveActor(scope),
           backupReplay: BackupImportReplay(
             scope: scope,
+            actor: actor,
             changeLog: _changeLog,
             subTracks: _subTracks,
             reader: _reader,

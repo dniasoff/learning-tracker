@@ -15,6 +15,7 @@ import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/learning/domain/commands/backup_import_replay.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_event_plans.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_failure_reporter.dart';
 
 import '../../../../helpers/learner_state/backup_replay_harness.dart';
@@ -497,6 +498,24 @@ void main() {
     expect(h.log, isEmpty);
   });
 
+  test('initial replay refuses a stale actor before its first write', () async {
+    final h = BackupReplayHarness(liveActor: () async => null);
+    final result = await h.replay.replay(
+      _fixture(),
+      stamp: CommandStamp(
+        actor: parentActor,
+        nowUtc: h.now,
+        newUlid: (_) => engineUlid(90000),
+      ),
+      amount: (_, _) async => 1,
+    );
+    expect(
+      result.result,
+      const CaptureResult.rejected(CaptureRejection.notSaved),
+    );
+    expect(h.log, isEmpty);
+  });
+
   group('AC-4: AD-54 chunks and "not saved — retry"', () {
     BackupReplayInput large() => BackupReplayInput(
       events: [
@@ -566,6 +585,7 @@ void main() {
         const CaptureResult.rejected(CaptureRejection.notSaved),
       );
       expect(h.writePort.attempts, hasLength(attempts));
+      expect(await h.commands.watchPendingFailures().first, [failure]);
     });
 
     test('a rejected governed batch is "not saved — retry" too', () async {

@@ -209,6 +209,18 @@ final class BackupReplayHarness {
     reads = FakeLearningCommandReads(
       history: settingsHistory ?? c0SettingsHistory(),
     );
+    replay = BackupImportReplay(
+      scope: this.scope,
+      actor: parentActor,
+      changeLog: changeLog,
+      subTracks: subTrackPort,
+      reader: store,
+      writePort: writePort,
+      records: records,
+      failureReporter: failureReporter,
+      ackWait: ackWait,
+      liveActor: () => this.liveActor(),
+    );
     commands = DefaultLearningCommands(
       scope: this.scope,
       actor: parentActor,
@@ -221,23 +233,14 @@ final class BackupReplayHarness {
       newUlid: (_) => engineUlid(_next++),
       liveActor: () => this.liveActor(),
       ackWait: ackWait,
-      backupReplay: BackupImportReplay(
-        scope: this.scope,
-        changeLog: changeLog,
-        subTracks: subTrackPort,
-        reader: store,
-        writePort: writePort,
-        records: records,
-        failureReporter: failureReporter,
-        ackWait: ackWait,
-        liveActor: () => this.liveActor(),
-      ),
+      backupReplay: replay,
     );
   }
 
   int _next;
 
   late Future<Actor?> Function() liveActor;
+  late final BackupImportReplay replay;
 
   /// The destination scope.
   final LearnerScope scope;

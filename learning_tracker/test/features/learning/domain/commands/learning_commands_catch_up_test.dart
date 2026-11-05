@@ -285,6 +285,22 @@ void main() {
     );
 
     test(
+      'authorization loss during compensation reports an explicit partial',
+      () async {
+        var checks = 0;
+        final h = CatchUpCommandHarness(
+          liveActor: () async => ++checks == 1 ? catchUpParent : null,
+        )..port.rejectAttempts.add(1);
+        final result = await h.commands.recordCatchUp(
+          catchUpAllAction(_mainLeaves(300)),
+        );
+        expect(result, isA<CaptureSuccess>());
+        expect((result as CaptureSuccess).eventIds, isNotEmpty);
+        expect(h.log().counted.learns, isNotEmpty);
+      },
+    );
+
+    test(
       'a rejected first chunk of a multi-chunk plan counts nothing',
       () async {
         final h = CatchUpCommandHarness()..port.rejectAttempts.add(0);

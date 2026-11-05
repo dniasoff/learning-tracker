@@ -727,6 +727,7 @@ final class BackupImportReplay {
   /// Creates the replay.
   BackupImportReplay({
     required LearnerScope scope,
+    required Actor actor,
     required ChangeLogRepository changeLog,
     required SubTrackRepository subTracks,
     required GovernedDocReader reader,
@@ -736,6 +737,7 @@ final class BackupImportReplay {
     LearningFailureReporter? failureReporter,
     this.ackWait = defaultLearningAckWait,
   }) : _scope = scope,
+       _actor = actor,
        _changeLog = changeLog,
        _subTracks = subTracks,
        _reader = reader,
@@ -756,6 +758,7 @@ final class BackupImportReplay {
   final Duration ackWait;
 
   final LearnerScope _scope;
+  final Actor _actor;
   final ChangeLogRepository _changeLog;
   final SubTrackRepository _subTracks;
   final GovernedDocReader _reader;
@@ -765,6 +768,14 @@ final class BackupImportReplay {
   final LearningWriteDispatcher _events;
 
   static const _kind = LearningCommandKind.backupImport;
+
+  Future<bool> _actorIsCurrent() async {
+    try {
+      return await _liveActor() == _actor;
+    } on Object {
+      return false;
+    }
+  }
 
   /// Plans and writes [input] at [stamp] (the caller has passed the
   /// capture gate). [amount] is the AD-50 award amount; [afterEvents]
@@ -797,6 +808,11 @@ final class BackupImportReplay {
     if (plan.isEmpty) {
       return const BackupReplayResult(result: CaptureResult.success());
     }
+    if (!await _actorIsCurrent()) {
+      return const BackupReplayResult(
+        result: CaptureResult.rejected(CaptureRejection.notSaved),
+      );
+    }
 
     final steps = <BackupReplayStep>[];
     final savedChanges = <String>[];
@@ -811,6 +827,7 @@ final class BackupImportReplay {
     final unsettled = <Future<void>>[];
     var queued = false;
     var attempted = 0;
+    var authorizationFailed = false;
     String? actionId;
 
     Future<void> runUnits(
@@ -821,6 +838,10 @@ final class BackupImportReplay {
       steps.add(step);
       actionId ??= units.first.actionId;
       for (final unit in units) {
+        if (authorizationFailed || !await _actorIsCurrent()) {
+          authorizationFailed = true;
+          return;
+        }
         attempted++;
         unitIds.add(unit.id);
         final pending = unit.send();
@@ -848,18 +869,60 @@ final class BackupImportReplay {
     await runUnits(BackupReplayStep.learnerSettings, [
       for (final b in plan.settings) _governedUnit(b),
     ]);
+    if (authorizationFailed) {
+      return _partialReplayResult(
+        plan: plan,
+        steps: steps,
+        savedChanges: savedChanges,
+        eventIds: const [],
+        queued: queued,
+        actionId: actionId,
+        attempted: attempted,
+        unsettled: unsettled,
+        unitIds: unitIds,
+        chunkIds: chunkIds,
+      );
+    }
     await runUnits(BackupReplayStep.governed, [
       for (final b in plan.governed) _governedUnit(b),
     ]);
+    if (authorizationFailed) {
+      return _partialReplayResult(
+        plan: plan,
+        steps: steps,
+        savedChanges: savedChanges,
+        eventIds: const [],
+        queued: queued,
+        actionId: actionId,
+        attempted: attempted,
+        unsettled: unsettled,
+        unitIds: unitIds,
+        chunkIds: chunkIds,
+      );
+    }
     await runUnits(BackupReplayStep.subTracks, [
       for (final (create, tombstone) in plan.subTracks)
         _subTrackUnit(create, tombstone),
     ]);
+    if (authorizationFailed) {
+      return _partialReplayResult(
+        plan: plan,
+        steps: steps,
+        savedChanges: savedChanges,
+        eventIds: const [],
+        queued: queued,
+        actionId: actionId,
+        attempted: attempted,
+        unsettled: unsettled,
+        unitIds: unitIds,
+        chunkIds: chunkIds,
+      );
+    }
 
     final eventIds = <String>[];
     final failedChunks = <String>[];
     final chunks = chunkWrites([...plan.learns, ...plan.voids]);
-    if (chunks.isNotEmpty) {
+    if (chunks.isNotEmpty && await _actorIsCurrent()) {
       if (plan.learns.isNotEmpty) steps.add(BackupReplayStep.learnEvents);
       if (plan.voids.isNotEmpty) steps.add(BackupReplayStep.voidEvents);
       attempted += chunks.length;
@@ -885,6 +948,8 @@ final class BackupImportReplay {
         // event step was accepted locally.
         failedChunks.addAll(chunks.map((c) => c.events.first.id));
       }
+    } else if (chunks.isNotEmpty) {
+      authorizationFailed = true;
     }
 
     await runUnits(BackupReplayStep.records, [
@@ -901,6 +966,21 @@ final class BackupImportReplay {
           actionId,
         ),
     ]);
+
+    if (authorizationFailed) {
+      return _partialReplayResult(
+        plan: plan,
+        steps: steps,
+        savedChanges: savedChanges,
+        eventIds: eventIds,
+        queued: queued,
+        actionId: actionId,
+        attempted: attempted,
+        unsettled: unsettled,
+        unitIds: unitIds,
+        chunkIds: chunkIds,
+      );
+    }
 
     final failedEventIds = failedChunks.toSet();
     final failedUnitIds = failedUnits.toSet();
@@ -924,6 +1004,44 @@ final class BackupImportReplay {
     return BackupReplayResult(
       result: result,
       notSaved: notSaved,
+      liveNotSaved: () => [
+        for (final f in _events.pendingFailures)
+          if (chunkIds.contains(f.id)) f,
+        for (final f in _failures.pendingFailures)
+          if (unitIds.contains(f.id)) f,
+      ],
+      isSettled: () => isSettled,
+      settled: settled,
+      subTrackIds: Map.unmodifiable(plan.subTrackIds),
+      eventIds: Map.unmodifiable(plan.eventIds),
+      steps: List.unmodifiable(steps),
+    );
+  }
+
+  BackupReplayResult _partialReplayResult({
+    required BackupReplayPlan plan,
+    required List<BackupReplayStep> steps,
+    required List<String> savedChanges,
+    required List<String> eventIds,
+    required bool queued,
+    required String? actionId,
+    required int attempted,
+    required List<Future<void>> unsettled,
+    required Set<String> unitIds,
+    required Set<String> chunkIds,
+  }) {
+    var isSettled = unsettled.isEmpty;
+    final settled = Future.wait(unsettled).then((_) => isSettled = true);
+    return BackupReplayResult(
+      result: attempted == 0
+          ? const CaptureResult.rejected(CaptureRejection.notSaved)
+          : CaptureResult.success(
+              eventIds: eventIds,
+              changeIds: savedChanges,
+              actionId: actionId,
+              queued: queued,
+            ),
+      notSaved: [..._events.pendingFailures, ..._failures.pendingFailures],
       liveNotSaved: () => [
         for (final f in _events.pendingFailures)
           if (chunkIds.contains(f.id)) f,
