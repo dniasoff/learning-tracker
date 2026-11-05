@@ -62,3 +62,6 @@ export {
 
 // Story 4.7 (DNI-515): parent push when a tutor changes the goal or main track.
 export { onChangeLogCreated } from "./notifications";
+
+// Per-child content visibility policy (server-only writes; tutor grant checked).
+export { setProfileHiddenContent } from "./hidden_content";

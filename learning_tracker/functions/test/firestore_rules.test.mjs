@@ -368,6 +368,32 @@ describe('learner_profiles/{profileId} document — owner write, tutor read, str
       setDoc(doc(tutor(), `users/${OWNER}/learner_profiles/${PROFILE}`), { name: 'Hacked' }),
     );
   });
+  test('owner direct create or update of hidden_content_refs is denied', async () => {
+    const profilePath = `users/${OWNER}/learner_profiles/${PROFILE}`;
+    await assertFails(
+      setDoc(doc(owner(), profilePath), {
+        name: 'Test Profile',
+        hidden_content_refs: [{ level: 'masechta', ref: 'niddah' }],
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(owner(), profilePath), {
+        hidden_content_refs: [{ level: 'masechta', ref: 'niddah' }],
+      }),
+    );
+  });
+  test.skip('TODO(7vx): add rules coverage for the future server-issued parent-session binding', async () => {
+    // Keep the list server-only. Once 7vx defines the signed session claim,
+    // assert that a session for this profile cannot authorize a direct client
+    // write; hidden-content updates continue to go through the callable.
+  });
+  test('tutor with active access cannot directly write hidden_content_refs', async () => {
+    await assertFails(
+      updateDoc(doc(tutor(), `users/${OWNER}/learner_profiles/${PROFILE}`), {
+        hidden_content_refs: [{ level: 'masechta', ref: 'niddah' }],
+      }),
+    );
+  });
   test('stranger and anon are denied', async () => {
     await assertFails(getDoc(doc(stranger(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
     await assertFails(getDoc(doc(anon(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
