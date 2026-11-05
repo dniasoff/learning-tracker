@@ -636,9 +636,8 @@ final class DashboardStreakCurriculumProvider
 String _$dashboardStreakCurriculumHash() =>
     r'c1354b8aeab9ffa092c237057b707f2eb9af27bc';
 
-/// The streak of the curriculum in view (DNI-479, AD-40): that
-/// curriculum's `LearnerState` streak. `LearnerState` has no profile-wide
-/// streak; switching curricula switches the streak.
+/// The overall streak of the active learner. The calendar intentionally uses
+/// [dashboardStreakCurriculum] because its dots are curriculum-specific.
 ///
 /// Zero with no active learner, no active track, or a curriculum the
 /// engine does not evaluate. A learner-state error is an error (never a
@@ -648,9 +647,8 @@ String _$dashboardStreakCurriculumHash() =>
 @ProviderFor(dashboardStreak)
 final dashboardStreakProvider = DashboardStreakProvider._();
 
-/// The streak of the curriculum in view (DNI-479, AD-40): that
-/// curriculum's `LearnerState` streak. `LearnerState` has no profile-wide
-/// streak; switching curricula switches the streak.
+/// The overall streak of the active learner. The calendar intentionally uses
+/// [dashboardStreakCurriculum] because its dots are curriculum-specific.
 ///
 /// Zero with no active learner, no active track, or a curriculum the
 /// engine does not evaluate. A learner-state error is an error (never a
@@ -667,9 +665,8 @@ final class DashboardStreakProvider
     with
         $FutureModifier<({int currentStreak, int maxStreak})>,
         $StreamProvider<({int currentStreak, int maxStreak})> {
-  /// The streak of the curriculum in view (DNI-479, AD-40): that
-  /// curriculum's `LearnerState` streak. `LearnerState` has no profile-wide
-  /// streak; switching curricula switches the streak.
+  /// The overall streak of the active learner. The calendar intentionally uses
+  /// [dashboardStreakCurriculum] because its dots are curriculum-specific.
   ///
   /// Zero with no active learner, no active track, or a curriculum the
   /// engine does not evaluate. A learner-state error is an error (never a
@@ -701,7 +698,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'92742efaf18e857241a576b0290ca7a7a5166c4a';
+String _$dashboardStreakHash() => r'ea2bb7f16cdd8ea7683f155bcae12651d246bb7b';
 
 /// The days of the last 30 with counted learning in the curriculum in view
 /// (DNI-479), for the gamification streak calendar.
@@ -991,14 +988,14 @@ final class DashboardChildNextRewardProvider
 String _$dashboardChildNextRewardHash() =>
     r'491c0d5c208a3958d96738f600d7b25c76f7ccb7';
 
-/// Streak recovery info for the curriculum in view. The grace-period
+/// Streak recovery info for the overall learner streak. The grace-period
 /// feature was dropped (W3.20), so `wasRecovered` is always false; the
 /// current streak is [dashboardStreak]'s.
 
 @ProviderFor(dashboardStreakRecovery)
 final dashboardStreakRecoveryProvider = DashboardStreakRecoveryProvider._();
 
-/// Streak recovery info for the curriculum in view. The grace-period
+/// Streak recovery info for the overall learner streak. The grace-period
 /// feature was dropped (W3.20), so `wasRecovered` is always false; the
 /// current streak is [dashboardStreak]'s.
 
@@ -1012,7 +1009,7 @@ final class DashboardStreakRecoveryProvider
     with
         $FutureModifier<StreakRecoveryInfo>,
         $FutureProvider<StreakRecoveryInfo> {
-  /// Streak recovery info for the curriculum in view. The grace-period
+  /// Streak recovery info for the overall learner streak. The grace-period
   /// feature was dropped (W3.20), so `wasRecovered` is always false; the
   /// current streak is [dashboardStreak]'s.
   DashboardStreakRecoveryProvider._()

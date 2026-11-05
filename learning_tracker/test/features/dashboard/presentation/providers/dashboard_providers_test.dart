@@ -541,9 +541,10 @@ void main() {
     });
   });
 
-  group('dashboardStreakProvider (DNI-479: the curriculum in view)', () {
-    // AD-40: LearnerState has no profile-wide streak; each curriculum has
-    // its own. Mishnayos and Bavli are both active tracks here.
+  group('dashboardStreakProvider (overall active learner streak)', () {
+    // LearnerState stores each curriculum's streak independently, while the
+    // dashboard headline is profile-wide. Mishnayos and Bavli are both active
+    // tracks here.
     final state = fakeLearnerState(
       curricula: {
         CurriculumId.mishnayos.storageKey: FakeCurriculumState(
@@ -584,34 +585,37 @@ void main() {
       return container;
     }
 
-    test('shows the first active track until one is put in view', () async {
+    test('shows the strongest curriculum instead of the first track', () async {
       final container = await streakContainer();
-      final first = await container.read(
-        dashboardStreakCurriculumProvider.future,
-      );
       final value = await container.read(dashboardStreakProvider.future);
-      final expected = first == CurriculumId.mishnayos ? (4, 9) : (1, 2);
-      expect((value.currentStreak, value.maxStreak), expected);
+      expect((value.currentStreak, value.maxStreak), (4, 9));
     });
 
-    test('switching the curriculum in view switches the streak', () async {
-      final container = await streakContainer();
-      await container.read(dashboardStreakProvider.future);
+    test(
+      'a Mishnayos streak is not hidden by a zero first curriculum',
+      () async {
+        final container = await streakContainer(
+          learner: fakeLearnerState(
+            curricula: {
+              CurriculumId.mishnayos.storageKey: FakeCurriculumState(
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                streak: const CurriculumStreak(current: 2, best: 2),
+              ),
+              CurriculumId.bavli.storageKey: FakeCurriculumState(
+                curriculumId: CurriculumId.bavli.storageKey,
+                streak: const CurriculumStreak(current: 0, best: 0),
+              ),
+            },
+          ),
+        );
+        container
+            .read(dashboardCurriculumInViewProvider.notifier)
+            .show(CurriculumId.bavli);
 
-      container
-          .read(dashboardCurriculumInViewProvider.notifier)
-          .show(CurriculumId.bavli);
-      var value = await container.read(dashboardStreakProvider.future);
-      expect(value.currentStreak, 1);
-      expect(value.maxStreak, 2);
-
-      container
-          .read(dashboardCurriculumInViewProvider.notifier)
-          .show(CurriculumId.mishnayos);
-      value = await container.read(dashboardStreakProvider.future);
-      expect(value.currentStreak, 4);
-      expect(value.maxStreak, 9);
-    });
+        final value = await container.read(dashboardStreakProvider.future);
+        expect((value.currentStreak, value.maxStreak), (2, 2));
+      },
+    );
 
     test('a curriculum in view that is no longer active falls back', () async {
       final container = await streakContainer();

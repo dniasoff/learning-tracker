@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/data/repositories/firestore_reward_settings_repository.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_profile_program_reader_adapter.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/next_reward_selector.dart';
 import 'package:learning_tracker/features/gamification/gamification.dart';
@@ -194,9 +195,34 @@ Future<CurriculumId?> dashboardStreakCurriculum(Ref ref) async {
   return curriculumInView(selected, [for (final t in tracks) t.curriculumId]);
 }
 
-/// The streak of the curriculum in view (DNI-479, AD-40): that
-/// curriculum's `LearnerState` streak. `LearnerState` has no profile-wide
-/// streak; switching curricula switches the streak.
+/// The overall streak shown by dashboard/learn surfaces.
+///
+/// `LearnerState` stores a streak for each evaluated curriculum. The headline
+/// is profile-wide, so it must not silently become zero just because the first
+/// active curriculum has no streak while another active curriculum does. The
+/// strongest current run and the strongest personal best are the stable
+/// profile-level summaries; the calendar remains scoped to the curriculum in
+/// view through [dashboardStreakCurriculum].
+({int currentStreak, int maxStreak}) overallDashboardStreak(
+  LearnerState? state,
+) {
+  var currentStreak = 0;
+  var maxStreak = 0;
+  final curricula = state?.curricula.values;
+  if (curricula == null) {
+    return (currentStreak: 0, maxStreak: 0);
+  }
+  for (final curriculum in curricula) {
+    final streak = curriculum.streak;
+    if (streak == null) continue;
+    if (streak.current > currentStreak) currentStreak = streak.current;
+    if (streak.best > maxStreak) maxStreak = streak.best;
+  }
+  return (currentStreak: currentStreak, maxStreak: maxStreak);
+}
+
+/// The overall streak of the active learner. The calendar intentionally uses
+/// [dashboardStreakCurriculum] because its dots are curriculum-specific.
 ///
 /// Zero with no active learner, no active track, or a curriculum the
 /// engine does not evaluate. A learner-state error is an error (never a
@@ -205,11 +231,7 @@ Future<CurriculumId?> dashboardStreakCurriculum(Ref ref) async {
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
   final state = await watchActiveLearnerState(ref);
-  final curriculum = await ref.watch(dashboardStreakCurriculumProvider.future);
-  final streak = curriculum == null
-      ? null
-      : state?[curriculum.storageKey]?.streak;
-  yield (currentStreak: streak?.current ?? 0, maxStreak: streak?.best ?? 0);
+  yield overallDashboardStreak(state);
 }
 
 /// The days of the last 30 with counted learning in the curriculum in view
@@ -353,7 +375,7 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   );
 }
 
-/// Streak recovery info for the curriculum in view. The grace-period
+/// Streak recovery info for the overall learner streak. The grace-period
 /// feature was dropped (W3.20), so `wasRecovered` is always false; the
 /// current streak is [dashboardStreak]'s.
 @riverpod
