@@ -65,3 +65,6 @@ export { onChangeLogCreated } from "./notifications";
 
 // Per-child content visibility policy (server-only writes; tutor grant checked).
 export { setProfileHiddenContent } from "./hidden_content";
+
+// Parent PIN authority and short-lived server sessions (7vx).
+export { setParentPin, createParentSession, revokeParentSession } from "./parent_sessions";

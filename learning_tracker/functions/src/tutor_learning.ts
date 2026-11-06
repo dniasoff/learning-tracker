@@ -145,6 +145,7 @@ interface Target {
   ownerUid: string;
   profileId: string;
   actionId: string | undefined;
+  parentSessionId: unknown;
 }
 
 /**
@@ -153,7 +154,7 @@ interface Target {
  * (a missing or foreign grant is `permission-denied` there, AD-53).
  */
 function parseTarget(data: Record<string, unknown>, allowed: readonly string[]): Target {
-  const known = new Set(["grantId", "ownerUid", "profileId", "actionId", ...allowed]);
+  const known = new Set(["grantId", "ownerUid", "profileId", "actionId", "parentSessionId", ...allowed]);
   for (const k of Object.keys(data)) {
     if (!known.has(k)) bad(`Unexpected request field: ${k}`);
   }
@@ -167,6 +168,7 @@ function parseTarget(data: Record<string, unknown>, allowed: readonly string[]):
     ownerUid: data.ownerUid as string,
     profileId: data.profileId as string,
     actionId: (data.actionId as string | null | undefined) ?? undefined,
+    parentSessionId: data.parentSessionId,
   };
 }
 
@@ -241,6 +243,7 @@ export const tutorRecordLearning = onCall(CALL_OPTS, (request) => runGoverned(LO
     ownerUid: target.ownerUid,
     profileId: target.profileId,
     grantId: target.grantId as string | null | undefined,
+    parentSessionId: target.parentSessionId,
     actionId: target.actionId ?? events[0].id,
     auditAction: "learning_recorded",
     events,
@@ -349,6 +352,7 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
       ownerUid: target.ownerUid,
       profileId: target.profileId,
       grantId: target.grantId as string | null | undefined,
+      parentSessionId: target.parentSessionId,
       actionId: target.actionId ?? voidId,
       auditAction: "learning_voided",
       plan,
@@ -382,6 +386,7 @@ export const tutorVoidLearning = onCall(CALL_OPTS, (request) => runGoverned(LOG_
     ownerUid: target.ownerUid,
     profileId: target.profileId,
     grantId: target.grantId as string | null | undefined,
+    parentSessionId: target.parentSessionId,
     actionId: target.actionId ?? voidId,
     auditAction: "learning_replaced",
     plan,
@@ -585,6 +590,7 @@ export const tutorUnlearn = onCall(CALL_OPTS, (request) => runGoverned(LOG_ENTIT
     ownerUid: target.ownerUid,
     profileId: target.profileId,
     grantId: target.grantId as string | null | undefined,
+    parentSessionId: target.parentSessionId,
     actionId: target.actionId,
     auditAction: "learning_unlearned",
     plan: unlearnPlan(plan.curriculumId, plan.leafSet, plan.leafEventIds, plan.nodeReissues),
@@ -662,6 +668,7 @@ export const tutorUpsertSubTrack = onCall(CALL_OPTS, (request) => runGoverned(SU
     ownerUid: target.ownerUid,
     profileId: target.profileId,
     grantId: target.grantId as string | null | undefined,
+    parentSessionId: target.parentSessionId,
     actionId,
     auditAction: AUDIT_ACTION[op],
     entries: [{

@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -180,6 +181,10 @@ Future<void> showSignOutConfirmation(
   final registry = ref.read(deviceRegistryProvider);
 
   try {
+    // Revoke while the old account is still active. The controller has also
+    // captured that account's handles, so teardown cannot target the next one.
+    await ref.read(parentSessionControllerProvider).lock();
+    router.pinGuard.lock();
     // T-37: this used to also wipe local tutored-profile mirror data
     // (TutoredMirrorWipeService.wipeAllMirrors) before signing out. That
     // service's Drift backing was archived along with the rest of the local
@@ -198,8 +203,6 @@ Future<void> showSignOutConfirmation(
     // that no longer carries request.auth.
     ref.read(activeAccountIdProvider.notifier).set(null);
     ref.read(authStateProvider.notifier).signOut();
-    router.pinGuard.lock();
-
     final accounts = await registry.getAllAccounts();
     // Use root AppRouter — context.router inside a tab's StackRouter cannot
     // navigate to root-level routes (SignInRoute, AccountPickerRoute). Both

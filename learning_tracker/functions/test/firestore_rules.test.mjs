@@ -90,6 +90,8 @@ const OWNER = 'owner-uid';
 const TUTOR = 'tutor-uid';
 const STRANGER = 'stranger-uid';
 const PROFILE = '5';
+const PARENT_SESSION_ID = 'a'.repeat(64);
+const NEW_PROFILE_SESSION_ID = 'b'.repeat(64);
 
 // Subcollection path prefixes
 const LP = `users/${OWNER}/learner_profiles/${PROFILE}`;
@@ -115,6 +117,7 @@ function nextUlid() {
 
 // The client-asserted actor every owner write carries (AD-46).
 const OWNER_ACTOR = { uid: OWNER, role: 'parent', display_name: 'Abba' };
+const SESSION_OWNER_ACTOR = { ...OWNER_ACTOR, session_id: PARENT_SESSION_ID };
 
 // A canonical AD-52 change_log entry for one governed entity.
 function changeEntry(entity, entityId, changeId, overrides = {}) {
@@ -192,10 +195,19 @@ beforeEach(async () => {
     await setDoc(doc(db, `users/${OWNER}/learner_profiles/${PROFILE}`), {
       name: 'Test Profile',
     });
+    await setDoc(doc(db, `users/${OWNER}/parent_sessions/${PARENT_SESSION_ID}`), {
+      profile_id: PROFILE,
+      created_at: Timestamp.fromMillis(Date.now() - 60_000),
+      expires_at: Timestamp.fromMillis(Date.now() + 30 * 60_000),
+      revoked: false,
+    });
   });
 });
 
 const owner = () => env.authenticatedContext(OWNER).firestore();
+const cutoverOwner = () => env.authenticatedContext(OWNER, {
+  parent_session_enforced: true,
+}).firestore();
 const tutor = () => env.authenticatedContext(TUTOR).firestore();
 const stranger = () => env.authenticatedContext(STRANGER).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
@@ -382,10 +394,13 @@ describe('learner_profiles/{profileId} document — owner write, tutor read, str
       }),
     );
   });
-  test.skip('TODO(7vx): add rules coverage for the future server-issued parent-session binding', async () => {
-    // Keep the list server-only. Once 7vx defines the signed session claim,
-    // assert that a session for this profile cannot authorize a direct client
-    // write; hidden-content updates continue to go through the callable.
+  test('parent session records stay server-only; they do not authorize direct profile writes', async () => {
+    const sessionPath = `users/${OWNER}/parent_sessions/${PARENT_SESSION_ID}`;
+    await assertFails(getDoc(doc(cutoverOwner(), sessionPath)));
+    await assertFails(setDoc(doc(cutoverOwner(), sessionPath), {
+      profile_id: PROFILE,
+      revoked: false,
+    }));
   });
   test('tutor with active access cannot directly write hidden_content_refs', async () => {
     await assertFails(
@@ -400,6 +415,98 @@ describe('learner_profiles/{profileId} document — owner write, tutor read, str
   });
   test('delete is denied even for owner', async () => {
     await assertFails(deleteDoc(doc(owner(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
+  });
+});
+
+describe('7vx — parent-session cutover and revoke TOCTOU', () => {
+  test('cutover rejects a parent actor without a live session', async () => {
+    await assertFails(setDoc(
+      doc(cutoverOwner(), `${EVENTS}/${nextUlid()}`),
+      learnEvent({ actor: OWNER_ACTOR }),
+    ));
+    await assertSucceeds(setDoc(
+      doc(cutoverOwner(), `${EVENTS}/${nextUlid()}`),
+      learnEvent({ actor: SESSION_OWNER_ACTOR }),
+    ));
+  });
+
+  test('child-role writes remain unchanged during the parent cutover', async () => {
+    await assertSucceeds(setDoc(
+      doc(cutoverOwner(), `${EVENTS}/${nextUlid()}`),
+      learnEvent({ actor: { uid: OWNER, role: 'child', display_name: 'Moishy' } }),
+    ));
+  });
+
+  test('cutover blocks child-shaped points writes without a live parent actor', async () => {
+    await assertFails(setDoc(
+      doc(cutoverOwner(), `${POINTS}/${nextUlid()}`),
+      { points: 10 },
+    ));
+    await assertFails(setDoc(
+      doc(cutoverOwner(), `${POINTS}/${nextUlid()}`),
+      { points: 10, actor: OWNER_ACTOR },
+    ));
+    await assertSucceeds(setDoc(
+      doc(cutoverOwner(), `${POINTS}/${nextUlid()}`),
+      { points: 10, actor: SESSION_OWNER_ACTOR },
+    ));
+  });
+
+  test('a session bound to another profile cannot authorize this profile', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `users/${OWNER}/parent_sessions/${PARENT_SESSION_ID}`), {
+        profile_id: 'different-profile',
+      });
+    });
+    await assertFails(setDoc(
+      doc(cutoverOwner(), `${EVENTS}/${nextUlid()}`),
+      learnEvent({ actor: SESSION_OWNER_ACTOR }),
+    ));
+  });
+
+  test('revoked and expired sessions reject parent events', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `users/${OWNER}/parent_sessions/${PARENT_SESSION_ID}`), {
+        revoked: true,
+      });
+    });
+    await assertFails(setDoc(
+      doc(cutoverOwner(), `${EVENTS}/${nextUlid()}`),
+      learnEvent({ actor: SESSION_OWNER_ACTOR }),
+    ));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `users/${OWNER}/parent_sessions/${PARENT_SESSION_ID}`), {
+        revoked: false,
+        expires_at: Timestamp.fromMillis(Date.now() - 1),
+      });
+    });
+    await assertFails(setDoc(
+      doc(cutoverOwner(), `${EVENTS}/${nextUlid()}`),
+      learnEvent({ actor: SESSION_OWNER_ACTOR }),
+    ));
+  });
+
+  test('revoke between batch construction and commit rejects the whole governed write', async () => {
+    const id = nextUlid();
+    const changeId = nextUlid();
+    const db = cutoverOwner();
+    const batch = writeBatch(db);
+    batch.set(doc(db, `${SUB_TRACKS}/${id}`), {
+      ...subTrack(),
+      last_change_id: changeId,
+    });
+    batch.set(
+      doc(db, `${CHANGE_LOG}/${changeId}`),
+      changeEntry('subTrack', id, changeId, { actor: SESSION_OWNER_ACTOR }),
+    );
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `users/${OWNER}/parent_sessions/${PARENT_SESSION_ID}`), {
+        revoked: true,
+      });
+    });
+    await assertFails(batch.commit());
+    assert.equal((await getDoc(doc(db, `${SUB_TRACKS}/${id}`))).exists(), false);
+    assert.equal((await getDoc(doc(db, `${CHANGE_LOG}/${changeId}`))).exists(), false);
   });
 });
 
@@ -1761,6 +1868,101 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
       changeEntry('learnerSettings', 'new_profile', changeId),
     );
     await assertSucceeds(batch.commit());
+  });
+
+  test('claimed cutover matrix: creation needs a lease, and the seed is create-only', async () => {
+    const profileId = 'claimed_new_profile';
+    const path = `users/${OWNER}/learner_profiles/${profileId}`;
+    const changeId = nextUlid();
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}/parent_sessions/${NEW_PROFILE_SESSION_ID}`), {
+        profile_id: profileId,
+        created_at: Timestamp.fromMillis(Date.now() - 60_000),
+        expires_at: Timestamp.fromMillis(Date.now() + 30 * 60_000),
+        revoked: false,
+      });
+    });
+
+    const db = cutoverOwner();
+    const create = writeBatch(db);
+    create.set(doc(db, path), {
+      display_name: 'Claimed New',
+      mode: 'child',
+      ...SETTINGS,
+      last_change_id: changeId,
+    });
+    create.set(
+      doc(db, `${path}/change_log/${changeId}`),
+      changeEntry('learnerSettings', profileId, changeId, {
+        actor: { ...SESSION_OWNER_ACTOR, session_id: NEW_PROFILE_SESSION_ID },
+      }),
+    );
+    await assertSucceeds(create.commit());
+
+    const existingMerge = writeBatch(db);
+    const existingChangeId = nextUlid();
+    existingMerge.set(doc(db, PROFILE_PATH), {
+      ...SETTINGS,
+      last_change_id: existingChangeId,
+    }, { merge: true });
+    existingMerge.set(
+      doc(db, `${PROFILE_PATH}/change_log/${existingChangeId}`),
+      changeEntry('learnerSettings', PROFILE, existingChangeId, {
+        actor: SESSION_OWNER_ACTOR,
+      }),
+    );
+    // A valid parent lease may update an existing profile through the normal
+    // governed settings path; the repository's creation transaction is what
+    // prevents the bootstrap method from reaching this merge path.
+    await assertSucceeds(existingMerge.commit());
+
+    const childChangeId = nextUlid();
+    const childMerge = writeBatch(db);
+    childMerge.set(doc(db, PROFILE_PATH), {
+      ...SETTINGS,
+      last_change_id: childChangeId,
+    }, { merge: true });
+    childMerge.set(
+      doc(db, `${PROFILE_PATH}/change_log/${childChangeId}`),
+      changeEntry('learnerSettings', PROFILE, childChangeId, {
+        actor: { ...OWNER_ACTOR, role: 'child' },
+      }),
+    );
+    await assertFails(childMerge.commit());
+
+    const noSessionChangeId = nextUlid();
+    const noSessionMerge = writeBatch(db);
+    noSessionMerge.set(doc(db, PROFILE_PATH), {
+      ...SETTINGS,
+      last_change_id: noSessionChangeId,
+    }, { merge: true });
+    noSessionMerge.set(
+      doc(db, `${PROFILE_PATH}/change_log/${noSessionChangeId}`),
+      changeEntry('learnerSettings', PROFILE, noSessionChangeId),
+    );
+    await assertFails(noSessionMerge.commit());
+  });
+
+  test('claimed cutover matrix: settings bag is non-sensitive; scopes, points, and log need parent lease', async () => {
+    const db = cutoverOwner();
+    await assertSucceeds(setDoc(doc(db, `${LP}/settings/cutover`), PAYLOADS.settings));
+    await assertSucceeds(governedWrite(db, `${LP}/curriculum_scopes/cutover`, {
+      curriculum_id: 'c1',
+    }, 'mainTrackScope', 'c1', { entry: { actor: SESSION_OWNER_ACTOR } }));
+
+    const pointsId = nextUlid();
+    await assertSucceeds(setDoc(doc(db, `${POINTS}/${pointsId}`), {
+      ...PAYLOADS.points_ledger,
+      actor: SESSION_OWNER_ACTOR,
+    }));
+
+    const changeId = nextUlid();
+    await assertSucceeds(setDoc(
+      doc(db, `${LP}/change_log/${changeId}`),
+      changeEntry('learnerSettings', PROFILE, changeId, {
+        actor: SESSION_OWNER_ACTOR,
+      }),
+    ));
   });
 
   test('a pre-1.0.74 profile with no settings is seeded by the owner in one transaction (stuck-lock hotfix)', async () => {

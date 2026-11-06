@@ -15,6 +15,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
@@ -24,6 +25,8 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_account_repository.dart';
+import 'package:learning_tracker/data/repositories/parent_session_client.dart';
+import 'package:learning_tracker/data/repositories/parent_session_controller.dart';
 import 'package:learning_tracker/features/account/domain/models/account_auth_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -31,6 +34,8 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
+    show parentSessionControllerProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -108,7 +113,10 @@ void main() {
     await registry.close();
   });
 
-  Widget buildApp({InternetConnectionChecker? connectivity}) => ProviderScope(
+  Widget buildApp({
+    InternetConnectionChecker? connectivity,
+    List<Override> extra = const [],
+  }) => ProviderScope(
     overrides: [
       deviceRegistryProvider.overrideWithValue(registry),
       authRepositoryProvider.overrideWithValue(auth),
@@ -120,6 +128,7 @@ void main() {
       ),
       if (connectivity != null)
         internetConnectionCheckerProvider.overrideWithValue(connectivity),
+      ...extra,
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -138,6 +147,21 @@ void main() {
     ),
   );
 
+  ParentSessionController trackingController(List<String> events) {
+    var sessionId = 'test-session';
+    return ParentSessionController(
+      client: ParentSessionClient((name, data) async {
+        events.add(name);
+        return {};
+      }),
+      currentSessionId: () => sessionId,
+      setSessionId: (value) => sessionId = value,
+      clearSessionId: () => sessionId = '',
+      disableNetwork: () async => events.add('disableNetwork'),
+      enableNetwork: () async => events.add('enableNetwork'),
+    );
+  }
+
   testWidgets(
     'tapping a saved account switches to AppShell without signing out (DEC-34)',
     (tester) async {
@@ -153,7 +177,16 @@ void main() {
         () => auth.reloadCurrentUser(),
       ).thenAnswer((_) async => auth.currentUser);
 
-      await tester.pumpWidget(buildApp());
+      final events = <String>[];
+      await tester.pumpWidget(
+        buildApp(
+          extra: [
+            parentSessionControllerProvider.overrideWithValue(
+              trackingController(events),
+            ),
+          ],
+        ),
+      );
       await tester.pump(); // resolve the getAllAccounts() FutureBuilder
       await tester.pump(const Duration(milliseconds: 200));
 
@@ -169,6 +202,11 @@ void main() {
       // credential sign-in happened.
       verify(() => auth.ensureAnonymousSession('acc-local')).called(1);
       verifyNever(() => auth.pickGoogleAccount());
+      expect(events, [
+        'disableNetwork',
+        'revokeParentSession',
+        'enableNetwork',
+      ]);
 
       // It reloads into the app shell — not the sign-in screen.
       final replaced = verify(() => router.replaceAll(captureAny())).captured;

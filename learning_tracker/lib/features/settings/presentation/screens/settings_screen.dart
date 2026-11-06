@@ -19,9 +19,11 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
 import 'package:learning_tracker/features/settings/data/repositories/firestore_diagnostic_log_repository_impl.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -631,6 +633,31 @@ class _ParentalControlsSectionState
     }
   }
 
+  /// The local PIN hash is not sufficient to enroll a server PIN hash. The
+  /// signed-in account must have a recent Firebase reauthentication first.
+  Future<bool> _reauthenticateForPin() async {
+    final user = widget.user;
+    if (user == null) return false;
+    final service = ref.read(accountManagementServiceProvider);
+    if (user.providers.contains('password') && user.email != null) {
+      return await showReauthenticateDialog(
+            context: context,
+            email: user.email!,
+            service: service,
+          ) ==
+          true;
+    }
+    if (user.providers.contains('google.com')) {
+      try {
+        await service.reauthenticateWithGoogle();
+        return true;
+      } on Exception {
+        return false;
+      }
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading || !widget.isChildProfile) {
@@ -708,10 +735,23 @@ class _ParentalControlsSectionState
                 if (profileId == null) return;
                 final bool ok;
                 if (_hasPin) {
+                  if (!await _reauthenticateForPin() || !context.mounted) {
+                    return;
+                  }
                   ok = await showParentPinChangeDialog(
                     context,
                     profileId: profileId,
                     pinService: pinService,
+                    onPinSaved: (pin) async {
+                      try {
+                        await ref
+                            .read(parentSessionClientProvider)
+                            .setPin(profileId: profileId, pin: pin);
+                        return true;
+                      } on Exception {
+                        return false;
+                      }
+                    },
                   );
                 } else {
                   ok =

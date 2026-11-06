@@ -4,6 +4,7 @@ import { logger } from "firebase-functions/v1";
 import { HttpsError } from "firebase-functions/v2/https";
 
 import { db } from "./shared";
+import { assertActiveParentSessionInTransaction } from "./parent_session_validation";
 import {
   calendarProgramSetViolations,
   civilDateIn,
@@ -356,6 +357,8 @@ export interface GovernedWriteRequest {
   grantId?: string | null;
   /** Owner callers: asserted role, parent (default) or child. */
   actorRole?: unknown;
+  /** Server-issued lease for owner parent writes during claim rollout. */
+  parentSessionId?: unknown;
   /** The client ULID (Story 1.8 action id). Server-generated when omitted. */
   actionId?: string | null;
   revertsActionId?: string | null;
@@ -694,6 +697,7 @@ function hasCalendarProgram(state: Record<string, unknown> | null): boolean {
 
 interface AuthLike {
   uid: string;
+  token?: Record<string, unknown>;
 }
 
 async function resolveActor(
@@ -705,6 +709,14 @@ async function resolveActor(
     const role = req.actorRole ?? "parent";
     if (role !== "parent" && role !== "child") {
       reject("invalid-argument", "actorRole must be parent or child");
+    }
+    if (role === "parent" && auth.token?.parent_session_enforced === true) {
+      await assertActiveParentSessionInTransaction(
+        txn,
+        auth.uid,
+        req.profileId,
+        req.parentSessionId,
+      );
     }
     const account = await txn.get(db.collection("users").doc(auth.uid));
     const displayName = account.exists ? account.get("display_name") : undefined;
@@ -1402,6 +1414,7 @@ export function removeTrackPlan(curriculumId: string): (ctx: PlanContext) => Pro
 export interface GovernedActionWire {
   profileId: string;
   actorRole?: "parent" | "child";
+  parentSessionId?: string;
   actionId?: string;
   revertsActionId?: string;
   entries: Array<{
@@ -1419,7 +1432,9 @@ export interface GovernedActionWire {
  */
 export function decodeGovernedActionWire(data: unknown): GovernedActionWire {
   if (!isPlainObject(data)) reject("invalid-argument", "request must be an object");
-  const allowed = new Set(["profileId", "actorRole", "actionId", "revertsActionId", "entries", "ownerUid"]);
+  const allowed = new Set([
+    "profileId", "actorRole", "parentSessionId", "actionId", "revertsActionId", "entries", "ownerUid",
+  ]);
   for (const k of Object.keys(data)) {
     if (!allowed.has(k)) reject("invalid-argument", `Unexpected request field: ${k}`);
   }

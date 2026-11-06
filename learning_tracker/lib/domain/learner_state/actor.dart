@@ -28,13 +28,14 @@ enum ActorRole {
   };
 }
 
-/// `{uid, role, display_name}`.
+/// `{uid, role, display_name, session_id?}`.
 final class Actor {
   /// Creates an actor.
   const Actor({
     required this.uid,
     required this.role,
     required this.displayName,
+    this.sessionId,
   });
 
   /// Strict decode: exactly the three keys, valid role.
@@ -44,6 +45,7 @@ final class Actor {
       uid: r.requiredString(kUid),
       role: r.requiredEnum(kRole, ActorRole.byStorage),
       displayName: r.required<String>(kDisplayName),
+      sessionId: r.optional<String>(kSessionId),
     );
   }
 
@@ -58,8 +60,16 @@ final class Actor {
   /// Storage key `display_name`.
   static const kDisplayName = 'display_name';
 
+  /// Server-issued parent-session proof. Absent for child and tutor actors.
+  static const kSessionId = 'session_id';
+
   /// The AD-52 key set — the only keys [toStorage] ever emits.
-  static const Set<String> storageKeys = {kUid, kRole, kDisplayName};
+  static const Set<String> storageKeys = {
+    kUid,
+    kRole,
+    kDisplayName,
+    kSessionId,
+  };
 
   /// Firebase uid of the writer.
   final String uid;
@@ -70,10 +80,18 @@ final class Actor {
   /// Display name at write time (may be empty, never null).
   final String displayName;
 
+  /// The server-issued parent session id, when this is a parent actor.
+  final String? sessionId;
+
   /// Encodes exactly [storageKeys].
   Map<String, Object?> toStorage() {
     if (uid.isEmpty) throw const StorageFormatException(_type, kUid, 'empty');
-    return {kUid: uid, kRole: role.storage, kDisplayName: displayName};
+    return {
+      kUid: uid,
+      kRole: role.storage,
+      kDisplayName: displayName,
+      if (sessionId != null) kSessionId: sessionId,
+    };
   }
 
   @override
@@ -81,11 +99,12 @@ final class Actor {
       other is Actor &&
       other.uid == uid &&
       other.role == role &&
-      other.displayName == displayName;
+      other.displayName == displayName &&
+      other.sessionId == sessionId;
 
   @override
-  int get hashCode => Object.hash(uid, role, displayName);
+  int get hashCode => Object.hash(uid, role, displayName, sessionId);
 
   @override
-  String toString() => 'Actor($uid, ${role.storage})';
+  String toString() => 'Actor($uid, ${role.storage}, $sessionId)';
 }

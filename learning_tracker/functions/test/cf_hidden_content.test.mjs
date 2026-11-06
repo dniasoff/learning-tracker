@@ -44,6 +44,39 @@ describe('setProfileHiddenContent', () => {
     });
   });
 
+  test('an ungated legacy session id is ignored', async () => {
+    const result = await call(fns.setProfileHiddenContent, {
+      ownerUid: PARENT,
+      profileId: PROFILE,
+      hiddenRefs,
+      parentSessionId: 'expired-or-malformed',
+    }, parentAuth);
+
+    assert.equal(result.success, true);
+    assert.deepEqual((await profileRef().get()).get('hidden_content_refs'), hiddenRefs);
+  });
+
+  test('the rollout claim requires an active well-formed session id', async () => {
+    const enforcedAuth = { uid: PARENT, token: { parent_session_enforced: true } };
+    await expectHttpsError(
+      call(fns.setProfileHiddenContent, {
+        ownerUid: PARENT,
+        profileId: PROFILE,
+        hiddenRefs,
+        parentSessionId: 'expired-or-malformed',
+      }, enforcedAuth),
+      'invalid-argument',
+    );
+    await expectHttpsError(
+      call(fns.setProfileHiddenContent, {
+        ownerUid: PARENT,
+        profileId: PROFILE,
+        hiddenRefs,
+      }, enforcedAuth),
+      'permission-denied',
+    );
+  });
+
   test('tutor with matching active grant can replace the list', async () => {
     await seedActiveGrant({});
     const result = await call(fns.setProfileHiddenContent, {

@@ -18,6 +18,7 @@ import 'package:learning_tracker/data/firestore/write_ack.dart';
 import 'package:learning_tracker/data/repositories/firestore_sub_track_repository.dart'
     show kChangeLogCollection;
 import 'package:learning_tracker/data/repositories/learner_state_firestore_values.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
@@ -124,11 +125,13 @@ class FirestoreLearnerProfileRepository {
     String? authUid,
     String Function(DateTime at)? newChangeId,
     AppLogger? logger,
+    required ParentSessionActorSource parentActorSource,
   }) : _firestore = firestore,
        _uid = uid,
        _authUid = authUid ?? uid,
        _newChangeId = newChangeId ?? newUlid,
-       _logger = logger ?? AppLogger.instance;
+       _logger = logger ?? AppLogger.instance,
+       _parentActorSource = parentActorSource;
 
   final FirebaseFirestore _firestore;
   final String _uid;
@@ -144,6 +147,7 @@ class FirestoreLearnerProfileRepository {
   /// Mints the seed entry's ULID (tests pin it).
   final String Function(DateTime at) _newChangeId;
   final AppLogger _logger;
+  final ParentSessionActorSource _parentActorSource;
 
   CollectionReference<Map<String, dynamic>> get _profiles =>
       _firestore.collection('users').doc(_uid).collection('learner_profiles');
@@ -336,18 +340,31 @@ class FirestoreLearnerProfileRepository {
       settings: seed,
       entryId: entryId,
       at: now,
-      actor: Actor(uid: _authUid, role: ActorRole.parent, displayName: ''),
+      actor: _parentActorSource.actor(
+        uid: _authUid,
+        targetProfileId: profileId,
+      ),
     );
-    final batch = _firestore.batch()
-      ..set(_doc(profileId), {
-        ...entity.toFirestore(),
-        ...toFirestoreMap(merge.toMergePatch(entryId)),
-      }, SetOptions(merge: true))
-      ..set(
-        _doc(profileId).collection(kChangeLogCollection).doc(entryId),
-        toFirestoreMap(entry.toStorage()),
-      );
-    await batch.commit();
+    // Seeded writes are the profile-creation boundary. A merge here would
+    // let a caller route an existing profile through the bootstrap path and
+    // overwrite its settings while presenting a fresh seed actor. Read and
+    // create both documents in one transaction so the profile must be absent
+    // at commit time and the settings/change_log pair remains atomic.
+    await _firestore.runTransaction<void>((tx) async {
+      final existing = await tx.get(_doc(profileId));
+      if (existing.exists) {
+        throw StateError('Profile $profileId already exists');
+      }
+      tx
+        ..set(_doc(profileId), {
+          ...entity.toFirestore(),
+          ...toFirestoreMap(merge.toMergePatch(entryId)),
+        })
+        ..set(
+          _doc(profileId).collection(kChangeLogCollection).doc(entryId),
+          toFirestoreMap(entry.toStorage()),
+        );
+    });
     return entity.copyWith(
       settings: LearnerSettings(
         profileId: profileId,
@@ -389,7 +406,10 @@ class FirestoreLearnerProfileRepository {
         settings: seed,
         entryId: entryId,
         at: now,
-        actor: Actor(uid: _authUid, role: ActorRole.parent, displayName: ''),
+        actor: _parentActorSource.actor(
+          uid: _authUid,
+          targetProfileId: profileId,
+        ),
       );
       tx
         // Field-level update of the (existing) doc: only the settings keys

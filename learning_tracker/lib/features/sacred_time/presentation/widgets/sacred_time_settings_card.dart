@@ -488,6 +488,16 @@ Future<bool> _verifySacredTimeParentPin(
     context,
     profileId: activeProfileId,
     pinService: ref.read(pinServiceProvider),
+    onVerificationSucceeded: (pin) async {
+      try {
+        await ref
+            .read(parentSessionControllerProvider)
+            .authenticate(profileId: activeProfileId, pin: pin);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    },
     subtitle: l10n.pinDialogSubtitleLocationAccess,
   );
 }

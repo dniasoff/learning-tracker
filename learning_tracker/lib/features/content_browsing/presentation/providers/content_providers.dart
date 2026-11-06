@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/content_browsing/data/repositories/con
 import 'package:learning_tracker/features/content_browsing/domain/profile_visible_content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -53,6 +54,9 @@ final hiddenContentRepositoryProvider =
         ownerUid: ownerUid,
         profileId: profileId,
         resolveFunctions: ref.watch(accountFunctionsProvider),
+        parentSessionId: ownerUid == handles.uid
+            ? ref.watch(parentSessionIdProvider)
+            : null,
       );
     });
 

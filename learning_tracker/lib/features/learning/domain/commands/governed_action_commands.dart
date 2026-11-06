@@ -107,6 +107,9 @@ const Actor unknownChangeActor = Actor(
   uid: '',
   role: ActorRole.parent,
   displayName: '',
+  // This sentinel is never written; it still carries the field so every
+  // production parent-shaped Actor has an explicit session proof slot.
+  sessionId: 'unknown',
 );
 
 /// One governed doc as the writer sees it: null when absent.
@@ -699,6 +702,9 @@ final class DefaultGovernedLearningCommands
       actorRole: _actor.role,
       entries: entries,
       revertsActionId: revertsActionId,
+      parentSessionId: _actor.role == ActorRole.parent
+          ? _actor.sessionId
+          : null,
     );
     final GovernedWriteReceipt receipt;
     try {

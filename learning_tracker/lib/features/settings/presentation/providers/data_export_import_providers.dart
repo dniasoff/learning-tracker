@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/data/repositories/backup_firestore_gateway.dart';
-import 'package:learning_tracker/domain/learner_state/actor.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/settings/data/repositories/backup_learning_sources.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
@@ -58,10 +58,12 @@ final backupLearningPortProvider = FutureProvider<BackupLearningPort?>((
       points == null) {
     return null;
   }
+  final actorSource = ref.read(parentSessionActorSourceProvider);
+  final actor = actorSource.actor(uid: authUid);
   return CommandsBackupLearningPort(
     ownerUid: session.uid,
     // Backup restore lives in the parent settings area: an owner write.
-    actor: Actor(uid: authUid, role: ActorRole.parent, displayName: ''),
+    actor: actor,
     subTracks: subTracks,
     changeLog: changeLog,
     reader: reader,
@@ -74,11 +76,11 @@ final backupLearningPortProvider = FutureProvider<BackupLearningPort?>((
     clock: ref.watch(learningCommandClockProvider),
     newUlid: newUlid,
     gate: ref.watch(captureGateProvider),
-    liveActor: (_) async {
+    liveActor: (scope) async {
       if (ref.read(activeTutoredProfileSelectionProvider) != null) return null;
       final uid = await ref.read(activeAuthUidProvider.future);
       if (uid == null || uid != session.uid) return null;
-      return Actor(uid: uid, role: ActorRole.parent, displayName: '');
+      return actorSource.actor(uid: uid, targetProfileId: scope.profileId);
     },
   );
 }, retry: (retryCount, error) => null);

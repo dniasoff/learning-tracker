@@ -11,6 +11,7 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider;
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -31,6 +32,11 @@ AccountFirebaseHandles _handles(FakeFirebaseFirestore firestore) {
   );
 }
 
+final _testParentActorSource = ParentSessionActorSource(
+  sessionId: () => 'a' * 64,
+  profileId: () => null,
+);
+
 void main() {
   // The old T-49 timing matrix gated activation writes performed around the
   // Drift insert and sync-resolution awaits. The current adapter's
@@ -46,6 +52,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           creatingDeviceSettingsOverride(),
+          parentSessionActorSourceProvider.overrideWithValue(
+            _testParentActorSource,
+          ),
           activeAccountFirebaseProvider.overrideWith(
             (ref) async => _handles(firestore),
           ),
@@ -81,6 +90,9 @@ void main() {
     );
     final container = ProviderContainer(
       overrides: [
+        parentSessionActorSourceProvider.overrideWithValue(
+          _testParentActorSource,
+        ),
         activeAccountFirebaseProvider.overrideWith(
           (ref) async => AccountFirebaseHandles(
             app: _MockFirebaseApp(),

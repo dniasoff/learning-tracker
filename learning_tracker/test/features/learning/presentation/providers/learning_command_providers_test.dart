@@ -199,6 +199,12 @@ void main() {
       ),
       activeLearnerScopeProvider.overrideWith((ref) async => c0Scope()),
       activeAuthUidProvider.overrideWith((ref) async => 'auth-uid'),
+      parentSessionActorSourceProvider.overrideWithValue(
+        ParentSessionActorSource(
+          sessionId: () => 'test-parent-session',
+          profileId: () => profileUlid,
+        ),
+      ),
       learningWritePortProvider.overrideWith((ref) async => port),
       changeLogRepositoryProvider.overrideWith((ref) async => changeLog),
       governedDocReaderProvider.overrideWith((ref) async => changeLog),

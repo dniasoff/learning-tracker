@@ -11,6 +11,7 @@ import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/creating_device_settings_source.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -52,6 +53,12 @@ ProviderContainer _container(
   return ProviderContainer(
     overrides: [
       creatingDeviceSettingsOverride(device),
+      parentSessionActorSourceProvider.overrideWithValue(
+        ParentSessionActorSource(
+          sessionId: () => 'a' * 64,
+          profileId: () => null,
+        ),
+      ),
       activeAccountFirebaseProvider.overrideWith(
         (ref) async => _handles(firestore, uid),
       ),
@@ -233,6 +240,10 @@ void main() {
             return FirestoreLearnerProfileRepository(
               firestore: firestore,
               uid: uid,
+              parentActorSource: ParentSessionActorSource(
+                sessionId: () => 'a' * 64,
+                profileId: () => null,
+              ),
             );
           }),
         ],

@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/pin_flow_controller.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/pin_flow_error_text.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 export 'package:learning_tracker/features/profiles/presentation/providers/pin_flow_controller.dart'
@@ -370,10 +373,59 @@ class _SetupScaffold extends StatelessWidget {
 /// Route for setting up a parent PIN for the first time (or after a wipe).
 /// Path: /parent-mode/pin-setup
 @RoutePage(name: 'PinFlowSetupRoute')
-class PinFlowSetupScreen extends StatelessWidget {
+class PinFlowSetupScreen extends ConsumerStatefulWidget {
   const PinFlowSetupScreen({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      const PinFlowScreen(mode: PinFlowMode.setup);
+  ConsumerState<PinFlowSetupScreen> createState() => _PinFlowSetupScreenState();
+}
+
+class _PinFlowSetupScreenState extends ConsumerState<PinFlowSetupScreen> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(_reauthenticate);
+  }
+
+  Future<void> _reauthenticate() async {
+    final user = ref.read(authRepositoryProvider).currentUser;
+    // Test harnesses and the signed-out setup preview have no account to
+    // reauthenticate. Production account flows always have a current user.
+    if (user == null || user.providers.isEmpty) {
+      if (mounted) setState(() => _ready = true);
+      return;
+    }
+
+    var ok = false;
+    final service = ref.read(accountManagementServiceProvider);
+    if (user.providers.contains('password') && user.email != null) {
+      ok =
+          await showReauthenticateDialog(
+            context: context,
+            email: user.email!,
+            service: service,
+          ) ==
+          true;
+    } else if (user.providers.contains('google.com')) {
+      try {
+        await service.reauthenticateWithGoogle();
+        ok = true;
+      } on Exception {
+        ok = false;
+      }
+    }
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _ready = true);
+    } else {
+      Navigator.of(context).pop(false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => _ready
+      ? const PinFlowScreen(mode: PinFlowMode.setup)
+      : const Scaffold(body: Center(child: CircularProgressIndicator()));
 }

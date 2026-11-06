@@ -4,6 +4,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db, CALL_OPTS } from "./shared";
 import { isKnownHiddenContentRef } from "./hidden_content_manifest";
+import { assertActiveParentSessionInTransaction } from "./parent_session_validation";
 import { ULID_RE } from "./write_with_change_log";
 
 const REQUEST_KEYS = new Set(["ownerUid", "profileId", "hiddenRefs", "grantId", "parentSessionId"]);
@@ -48,7 +49,8 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
   }
   const hiddenRefs = validateHiddenRefs(data.hiddenRefs);
-  if (data.parentSessionId !== undefined &&
+  const parentSessionRequired = request.auth?.token?.parent_session_enforced === true;
+  if (parentSessionRequired && data.parentSessionId !== undefined &&
     (typeof data.parentSessionId !== "string" || !data.parentSessionId)) {
     throw new HttpsError("invalid-argument", "parentSessionId must be a non-empty string");
   }
@@ -57,8 +59,12 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
   if (isTutorCall && (typeof grantId !== "string" || !grantId)) {
     throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
   }
-  // TODO(7vx): require a server-issued parent session bound to profileId before
-  // accepting the owner path; parent PIN state is currently device-local.
+  const parentSessionId = data.parentSessionId;
+  if (!isTutorCall && parentSessionRequired) {
+    if (typeof parentSessionId !== "string" || !parentSessionId) {
+      throw new HttpsError("permission-denied", "A server-issued parent session is required");
+    }
+  }
   if (!isTutorCall && callerUid !== ownerUid) {
     throw new HttpsError("permission-denied", "Only the profile owner can edit hidden content");
   }
@@ -68,6 +74,14 @@ export const setProfileHiddenContent = onCall(CALL_OPTS, async (request) => {
   let tutorGrant: FirebaseFirestore.DocumentData | undefined;
 
   await db.runTransaction(async (txn) => {
+    if (!isTutorCall && parentSessionRequired) {
+      await assertActiveParentSessionInTransaction(
+        txn,
+        ownerUid,
+        profileId,
+        parentSessionId as string,
+      );
+    }
     if (isTutorCall) {
       const grantRef = db.collection("tutor_grants").doc(grantId as string);
       const grantSnap = await txn.get(grantRef);

@@ -22,6 +22,7 @@ import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -100,6 +101,10 @@ Future<AppRouter> _createAuthenticatedRouter({
   final profileRepository = FirestoreLearnerProfileRepository(
     firestore: firestore,
     uid: 'uid-1',
+    parentActorSource: ParentSessionActorSource(
+      sessionId: () => 'a' * 64,
+      profileId: () => null,
+    ),
   );
 
   return AppRouter(
@@ -143,6 +148,10 @@ Future<AppRouter> _createUnauthenticatedRouter() async {
   final profileRepository = FirestoreLearnerProfileRepository(
     firestore: firestore,
     uid: 'uid-1',
+    parentActorSource: ParentSessionActorSource(
+      sessionId: () => 'a' * 64,
+      profileId: () => null,
+    ),
   );
 
   return AppRouter(
