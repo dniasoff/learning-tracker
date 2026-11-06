@@ -385,7 +385,7 @@ jobs:
   perf:
     name: perf (non-blocking)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60  # perf benchmarks take >30m on hosted runners; a timeout cancels the whole CI run and closes the deploy gate
     continue-on-error: true
 
     steps:
