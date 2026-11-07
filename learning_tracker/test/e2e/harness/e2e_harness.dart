@@ -96,6 +96,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
+import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
+import 'package:learning_tracker/app/router/router_provider.dart'
+    show routerProvider;
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart'
@@ -104,8 +107,10 @@ import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/profile_selection_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -135,6 +140,8 @@ import 'package:learning_tracker/features/profiles/data/repositories/creating_de
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
+    show parentPinAuthenticatedProfileIdProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
@@ -276,6 +283,16 @@ class _FixedSelectedProfile extends SelectedProfileId {
   String? build() => _id;
 }
 
+class _NoActiveProfile extends ActiveProfileId {
+  @override
+  String? build() => null;
+}
+
+class _NoSelectedProfile extends SelectedProfileId {
+  @override
+  String? build() => null;
+}
+
 // ── E2EIdentity ─────────────────────────────────────────────────────────────
 
 /// Describes the authenticated identity the harness should boot into.
@@ -381,6 +398,7 @@ class E2EHarness {
 
   late FakeFirebaseFirestore _firestore;
   late ContentDatabase _contentDb;
+  late ProviderContainer _providerContainer;
   late AppRouter _router;
   late PinGuard _pinGuard;
 
@@ -397,6 +415,8 @@ class E2EHarness {
     String path = '/',
     List<Override> extraOverrides = const [],
     Locale locale = const Locale('en'),
+    bool selectInitialProfile = true,
+    bool mountPersistentSwitcher = false,
   }) async {
     SharedPreferences.setMockInitialValues({'onboarding_complete': true});
 
@@ -405,7 +425,7 @@ class E2EHarness {
       await _seedIdentity(identity);
     }
 
-    _router = _buildRouter();
+    _router = _buildRouter(selectInitialProfile: selectInitialProfile);
 
     final hasDashboardCurriculaOverride = extraOverrides.any(
       (override) => override.origin == dashboardActiveCurriculaProvider,
@@ -419,16 +439,23 @@ class E2EHarness {
         overrides: [
           ..._buildOverrides(
             identity,
+            selectInitialProfile: selectInitialProfile,
             includeDashboardCurriculaOverride: !hasDashboardCurriculaOverride,
             includeSacredWindowOverride: !hasSacredWindowOverride,
           ),
           ...extraOverrides,
         ],
-        child: _buildMaterialApp(
-          path == '/'
-              ? _router.config()
-              : _router.config(deepLinkBuilder: (_) => DeepLink.path(path)),
-          locale,
+        child: Builder(
+          builder: (context) {
+            _providerContainer = ProviderScope.containerOf(context);
+            return _buildMaterialApp(
+              path == '/'
+                  ? _router.config()
+                  : _router.config(deepLinkBuilder: (_) => DeepLink.path(path)),
+              locale: locale,
+              mountPersistentSwitcher: mountPersistentSwitcher,
+            );
+          },
         ),
       ),
     );
@@ -634,8 +661,9 @@ class E2EHarness {
     identity._resolvedAccountId = identity._seedAccountId;
   }
 
-  AppRouter _buildRouter() {
+  AppRouter _buildRouter({required bool selectInitialProfile}) {
     final profileId = _identity?._resolvedProfileId;
+    final selectedProfileId = selectInitialProfile ? profileId : null;
     final profileRepository = FirestoreLearnerProfileRepository(
       firestore: _firestore,
       uid: _identity?._resolvedAccountId ?? 'e2e-signed-out',
@@ -650,23 +678,37 @@ class E2EHarness {
       promptForPin: () async => false,
       getScope: () => profileId != null ? PinScope.parent(profileId) : null,
       pinSetupRoute: () => const PinFlowSetupRoute(),
+      onSessionLocked: () => _providerContainer
+          .read(parentPinAuthenticatedProfileIdProvider.notifier)
+          .clear(),
     );
     return AppRouter(
       authGuard: AuthGuard(),
       profileGuard: ProfileGuard(
         getProfiles: () => profileRepository.watchProfiles().first,
-        getSelectedProfileId: () => profileId,
+        getSelectedProfileId: () => selectedProfileId,
         setSelectedProfileId: (_) {},
         isTutoredSession: () => false,
         profilePickerRoute: () => const ProfilePickerRoute(),
       ),
       childModeGuard: ChildModeGuard(
         getProfileById: (id) => profileRepository.getProfile(id),
-        getSelectedProfileId: () => profileId,
+        getSelectedProfileId: () => selectedProfileId,
+      ),
+      profileSelectionGuard: ProfileSelectionGuard(
+        getProfileById: (id) => profileRepository.getProfile(id),
+        getSelectedProfileId: () => selectedProfileId,
+      ),
+      parentSessionGuard: ParentSessionGuard(
+        isParentSession: () async {
+          if (selectedProfileId == null) return false;
+          final profile = await profileRepository.getProfile(selectedProfileId);
+          return profile?.mode == ProfileMode.adult;
+        },
       ),
       pinGuard: _pinGuard,
       sacredTimeLocationGuard: SacredTimeLocationGuard(
-        getSelectedProfileId: () => profileId,
+        getSelectedProfileId: () => selectedProfileId,
         getProfileById: (id) => profileRepository.getProfile(id),
         hasProfilePin: (_) async => false,
         consumeAccess: (_) => false,
@@ -677,6 +719,7 @@ class E2EHarness {
 
   List<Override> _buildOverrides(
     E2EIdentity? identity, {
+    bool selectInitialProfile = true,
     bool includeDashboardCurriculaOverride = true,
     bool includeSacredWindowOverride = true,
   }) {
@@ -736,6 +779,7 @@ class E2EHarness {
 
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),
+      routerProvider.overrideWithValue(_router),
       authRepositoryProvider.overrideWithValue(
         _StubAuthRepository(identity: identity, accountId: accountId),
       ),
@@ -788,11 +832,15 @@ class E2EHarness {
           (ref) => Stream.value(seededProfiles),
         ),
       ],
-      if (profileId != null) ...[
+      if (profileId != null && selectInitialProfile) ...[
         activeProfileIdProvider.overrideWith(() => _FixedProfileId(profileId)),
         selectedProfileIdProvider.overrideWith(
           () => _FixedSelectedProfile(profileId),
         ),
+      ],
+      if (profileId != null && !selectInitialProfile) ...[
+        activeProfileIdProvider.overrideWith(() => _NoActiveProfile()),
+        selectedProfileIdProvider.overrideWith(() => _NoSelectedProfile()),
       ],
 
       // ── PIN (no secure storage) ────────────────────────────────────────────
@@ -848,9 +896,10 @@ class E2EHarness {
   }
 
   MaterialApp _buildMaterialApp(
-    RouterConfig<Object> routerConfig, [
+    RouterConfig<Object> routerConfig, {
     Locale locale = const Locale('en'),
-  ]) {
+    bool mountPersistentSwitcher = false,
+  }) {
     return MaterialApp.router(
       // Wire the root messenger key so SnackBar / MaterialBanner assertions
       // that target rootScaffoldMessengerKey (e.g. UpgradeToCloud banner)
@@ -868,6 +917,11 @@ class E2EHarness {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: mountPersistentSwitcher
+          ? (context, child) => PersistentSwitcherScaffold(
+              child: child ?? const SizedBox.shrink(),
+            )
+          : null,
     );
   }
 }

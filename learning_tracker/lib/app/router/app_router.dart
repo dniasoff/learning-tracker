@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/guards/own_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/profile_selection_guard.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
 import 'package:learning_tracker/features/account/presentation/screens/sign_in_screen.dart';
@@ -67,6 +68,7 @@ part 'app_router.gr.dart';
 class AppRouter extends RootStackRouter {
   final AutoRouteGuard authGuard;
   final ProfileGuard profileGuard;
+  final ProfileSelectionGuard profileSelectionGuard;
   final ChildModeGuard childModeGuard;
   final PinGuard pinGuard;
 
@@ -92,6 +94,7 @@ class AppRouter extends RootStackRouter {
   AppRouter({
     required this.authGuard,
     required this.profileGuard,
+    ProfileSelectionGuard? profileSelectionGuard,
     required this.childModeGuard,
     required this.pinGuard,
     required this.sacredTimeLocationGuard,
@@ -99,7 +102,9 @@ class AppRouter extends RootStackRouter {
     OwnSessionGuard? ownSessionGuard,
     ParentSessionGuard? subTrackEditorGuard,
     super.navigatorKey,
-  }) : parentSessionGuard = parentSessionGuard ?? ParentSessionGuard.denyAll(),
+  }) : profileSelectionGuard =
+           profileSelectionGuard ?? ProfileSelectionGuard.denyAll(),
+       parentSessionGuard = parentSessionGuard ?? ParentSessionGuard.denyAll(),
        ownSessionGuard = ownSessionGuard ?? OwnSessionGuard.denyAll(),
        subTrackEditorGuard =
            subTrackEditorGuard ??
@@ -142,14 +147,10 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/manage-learners',
       page: ManageLearnersRoute.page,
-      // R-PR10 NOTE: ManageLearners edits/deletes profiles. childModeGuard is
-      // the WRONG guard here — it ALLOWS child-mode and BLOCKS adults (it gates
-      // parent-mode-supervising-a-child routes), so adding it silently broke the
-      // adult "Manage Profiles" tile (which is itself `!isChildProfile`-gated in
-      // Settings). Reverted to authGuard. The tile is the only in-app entry and
-      // is already adult-only; a true adult-only/anti-child route guard for
-      // deep-link hardening is tracked as a future item, not this guard.
-      guards: [authGuard],
+      // Profile editing is an account-level parent action. Require an active
+      // profile and a parent session (which prompts for the PIN when needed);
+      // childModeGuard is unsuitable because it admits child mode directly.
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
 
     // App shell with bottom navigation (auth required)
@@ -158,9 +159,22 @@ class AppRouter extends RootStackRouter {
       page: AppShellRoute.page,
       guards: [authGuard, profileGuard],
       children: [
-        AutoRoute(path: 'dashboard', page: DashboardRoute.page, initial: true),
-        AutoRoute(path: 'learn', page: LearningRoute.page),
-        AutoRoute(path: 'progress', page: ProgressRoute.page),
+        AutoRoute(
+          path: 'dashboard',
+          page: DashboardRoute.page,
+          initial: true,
+          guards: [profileSelectionGuard],
+        ),
+        AutoRoute(
+          path: 'learn',
+          page: LearningRoute.page,
+          guards: [profileSelectionGuard],
+        ),
+        AutoRoute(
+          path: 'progress',
+          page: ProgressRoute.page,
+          guards: [profileSelectionGuard],
+        ),
         AutoRoute(path: 'settings', page: SettingsRoute.page),
       ],
     ),
@@ -278,7 +292,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/notifications',
       page: NotificationsRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, profileSelectionGuard],
     ),
     AutoRoute(
       path: '/sacred-time/city',
@@ -331,17 +345,17 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/study-days/:curriculumId',
       page: StudyDayConfigRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
     AutoRoute(
       path: '/settings/tracks',
       page: TrackManagementHubRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
     AutoRoute(
       path: '/settings/tracks/detail',
       page: TrackDetailRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
 
     // Sub-tracks (Epic 2). One route per story; every sub-track write
@@ -391,7 +405,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/tutor/my-grants',
       page: ManageGrantsRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
     // Story 4.3 (DNI-511): My talmidim, the tutor's active roster with each
     // learner's standing. Incoming invite and grant management above stays
@@ -400,7 +414,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/tutor/talmidim',
       page: MyTalmidimRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
     AutoRoute(
       path: '/tutor/audit-log',

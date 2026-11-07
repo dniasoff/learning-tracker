@@ -34,11 +34,19 @@ class ProfileGuard extends AutoRouteGuard {
   /// `app/router/` (AUD-core-navigation-01).
   final PageRouteInfo Function() _profilePickerRoute;
 
+  /// Whether the most recent allowed shell navigation explicitly requested
+  /// Settings while no profile was active. The shell uses this to preserve
+  /// the user's deliberate no-profile state.
+  bool _settingsWithoutSelectionAllowed = false;
+
+  bool get settingsWithoutSelectionAllowed => _settingsWithoutSelectionAllowed;
+
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,
     StackRouter router,
   ) async {
+    _settingsWithoutSelectionAllowed = false;
     // Fail-safe wrapper (no-lockout invariant): the profile read can throw —
     // a network hiccup, a disposed provider lambda. ProfileGuard is not a
     // security gate (the shell handles the no-profile state by jumping to
@@ -114,6 +122,23 @@ class ProfileGuard extends AutoRouteGuard {
         fields: {'profileId': profile.profileId},
       );
       _setSelectedProfileId(profile.profileId);
+      resolver.next();
+      return;
+    }
+
+    // Settings is the account-level landing surface for a signed-in user who
+    // deliberately has not activated a learner profile. A typed
+    // SettingsRoute push is represented by the AppShellRoute match with a
+    // SettingsRoute child, so let that navigation through while continuing to
+    // send Dashboard/Learning/Progress entries to the picker.
+    final requestedSettings =
+        resolver.route.children?.any(
+          (child) => child.name == 'SettingsRoute',
+        ) ??
+        false;
+    if (requestedSettings) {
+      _settingsWithoutSelectionAllowed = true;
+      _log.info(event: 'profile_guard_settings_without_selection_allow');
       resolver.next();
       return;
     }

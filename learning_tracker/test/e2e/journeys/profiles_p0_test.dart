@@ -39,10 +39,27 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:flutter/material.dart' show Key, ListView, TextField;
+import 'package:flutter/material.dart' show Key, ListView, Navigator, TextField;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/app/router/app_shell.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant.dart'
+    show TutorGrantDoc, TutorGrantState;
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart'
+    show TutorGrant;
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart'
+    show TutorPermissions;
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
+    show incomingTutorGrantsProvider;
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
+    show pendingTutorInvitesProvider;
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../../helpers/firestore_fixtures.dart';
 import '../harness/e2e_harness.dart';
@@ -56,12 +73,14 @@ Future<void> _seedSecondProfile(
   required String accountId,
   String displayName = 'Profile B',
   String profileId = '01J6Q2H4A8M7K3P9R5T6V8WXX',
+  ProfileMode mode = ProfileMode.adult,
 }) async {
   await seedProfile(
     h.firestore,
     uid: accountId,
     profileId: profileId,
     displayName: displayName,
+    mode: mode,
   );
 }
 
@@ -310,6 +329,145 @@ void main() {
           expect(profileB!['mode'], 'adult');
         },
       );
+    },
+  );
+
+  testWidgets(
+    'with profiles but no active selection, picker header has no mode badge and Skip to Settings opens Settings',
+    (tester) async {
+      final identity = E2EIdentity.localBorn(
+        email: 'settings-no-profile@test.com',
+        displayName: 'Josh',
+        profileMode: 'adult',
+      );
+      final h = E2EHarness(tester, identity: identity);
+      addTearDown(h.dispose);
+      final now = DateTime.utc(2026, 11, 7);
+      final activeGrants = List.generate(
+        6,
+        (index) => TutorGrant.fromDoc(
+          TutorGrantDoc(
+            grantId: 'active-grant-$index',
+            parentUid: 'parent-$index',
+            childProfileId: 'child-$index',
+            tutorEmail: identity.email,
+            state: TutorGrantState.active,
+            invitedAt: now,
+            updatedAt: now,
+            acceptedAt: now,
+            childName: 'Talmid $index',
+          ),
+          permissions: TutorPermissions.defaults(),
+        ),
+      );
+      final pendingInvite = TutorGrant.fromDoc(
+        TutorGrantDoc(
+          grantId: 'pending-invite',
+          parentUid: 'pending-parent',
+          childProfileId: 'pending-child',
+          tutorEmail: identity.email,
+          state: TutorGrantState.pending,
+          invitedAt: now,
+          updatedAt: now,
+          childName: 'Invited Talmid',
+        ),
+      );
+
+      await h.pumpApp(
+        path: '/profile-picker',
+        selectInitialProfile: false,
+        mountPersistentSwitcher: true,
+        extraOverrides: [
+          ...h.dashboardSilenceOverrides,
+          incomingTutorGrantsProvider.overrideWith(
+            (ref) => Future.value(activeGrants),
+          ),
+          pendingTutorInvitesProvider.overrideWith(
+            (ref) => Future.value([pendingInvite]),
+          ),
+        ],
+      );
+      await _seedSecondProfile(
+        h,
+        accountId: identity.accountId,
+        displayName: 'Yisroel Meir',
+        mode: ProfileMode.child,
+      );
+      ProviderScope.containerOf(
+        tester.element(find.byType(ProfilePickerScreen)),
+      ).invalidate(profileListProvider);
+      await h.pump(const Duration(milliseconds: 500));
+
+      h.expectOnScreen('Who is learning?', routeName: 'ProfilePickerScreen');
+      h.expectOnScreen('Josh');
+      h.expectOnScreen('Yisroel Meir');
+      expect(
+        ProviderScope.containerOf(
+          tester.element(find.byType(ProfilePickerScreen)),
+        ).read(selectedProfileIdProvider),
+        isNull,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ProfileSwitcherBar),
+          matching: find.text('ADULT MODE'),
+        ),
+        findsNothing,
+        reason: 'the account header must not imply an active adult profile',
+      );
+
+      await tester.ensureVisible(find.text('Skip to Settings'));
+      await h.tapText('Skip to Settings');
+      await h.pump(const Duration(milliseconds: 500));
+
+      expect(h.router.topRoute.name, 'SettingsRoute');
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(
+        ProviderScope.containerOf(
+          tester.element(find.byType(SettingsScreen)),
+        ).read(selectedProfileIdProvider),
+        isNull,
+        reason:
+            'opening account-level Settings must preserve no selection; '
+            'top=${h.router.topRoute.name}, path=${h.router.currentPath}',
+      );
+      final settingsContext = tester.element(find.byType(SettingsScreen));
+      final l10n = AppLocalizations.of(settingsContext)!;
+      expect(find.text(l10n.manageTracks), findsNothing);
+      expect(find.text(l10n.manageProfiles), findsNothing);
+      expect(find.text(l10n.parentSettingsTitle), findsNothing);
+      expect(find.text(l10n.notificationSettings), findsNothing);
+      expect(find.text(l10n.acceptInviteAccept), findsNothing);
+      expect(find.byKey(const Key('settingsMyTalmidim')), findsNothing);
+      expect(find.text(l10n.settingsTutoringViewAll(2)), findsNothing);
+
+      await tester.tap(find.byType(UserProfileHeaderCard));
+      await h.pump();
+      await h.pump(const Duration(milliseconds: 300));
+      expect(find.text(l10n.deleteAccountTitle), findsNothing);
+      expect(find.text(l10n.signOut), findsNothing);
+      Navigator.of(tester.element(find.byType(SettingsScreen))).pop();
+      await h.pump();
+
+      unawaited(h.router.push<Object?>(const ManageLearnersRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
+
+      unawaited(h.router.push<Object?>(TrackManagementHubRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
+
+      unawaited(h.router.push<Object?>(const ParentSettingsRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
+
+      unawaited(h.router.push<Object?>(const ManageGrantsRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
+
+      unawaited(h.router.push<Object?>(const MyTalmidimRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
     },
   );
 

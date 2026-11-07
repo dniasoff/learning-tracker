@@ -193,7 +193,10 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     // a once-per-signed-in-session effect; it resets on sign-out so a later
     // sign-in re-triggers it.
     final isSignedIn = ref.watch(authStateProvider.select((s) => s.isSignedIn));
-    if (isSignedIn && !_autoSelectRan) {
+    final isSettingsWithoutSelection =
+        ref.read(routerProvider).profileGuard.settingsWithoutSelectionAllowed &&
+        ref.read(selectedProfileIdProvider) == null;
+    if (isSignedIn && !_autoSelectRan && !isSettingsWithoutSelection) {
       _autoSelectRan = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
