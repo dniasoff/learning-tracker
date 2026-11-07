@@ -34,11 +34,19 @@ class ProfileGuard extends AutoRouteGuard {
   /// `app/router/` (AUD-core-navigation-01).
   final PageRouteInfo Function() _profilePickerRoute;
 
+  /// Whether the most recent allowed shell navigation explicitly requested
+  /// Settings while no profile was active. The shell uses this to preserve
+  /// the user's deliberate no-profile state.
+  bool _settingsWithoutSelectionAllowed = false;
+
+  bool get settingsWithoutSelectionAllowed => _settingsWithoutSelectionAllowed;
+
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,
     StackRouter router,
   ) async {
+    _settingsWithoutSelectionAllowed = false;
     // Fail-safe wrapper (no-lockout invariant): the profile read can throw —
     // a network hiccup, a disposed provider lambda. ProfileGuard is not a
     // security gate (the shell handles the no-profile state by jumping to
@@ -129,6 +137,7 @@ class ProfileGuard extends AutoRouteGuard {
         ) ??
         false;
     if (requestedSettings) {
+      _settingsWithoutSelectionAllowed = true;
       _log.info(event: 'profile_guard_settings_without_selection_allow');
       resolver.next();
       return;

@@ -59,6 +59,7 @@ class SettingsScreen extends ConsumerWidget {
     final activeProfile = profilesAsync.asData?.value
         .where((p) => p.profileId == activeProfileId)
         .firstOrNull;
+    final hasActiveProfile = activeProfile != null;
     final isChildProfile = activeProfile?.mode == ProfileMode.child;
     // T-37: Sacred Time's location actions are a DEVICE-scoped setting (DEC-26),
     // escalated by whoever is holding the device — so its Parent-PIN
@@ -194,7 +195,7 @@ class SettingsScreen extends ConsumerWidget {
             // Tutored sessions reach tracks via the parent-management hub tile
             // above, so the standalone Manage Tracks / Manage Profiles card is
             // own-profile (non-tutored) only.
-            if (!isTutoredSession && !isChildProfile) ...[
+            if (hasActiveProfile && !isTutoredSession && !isChildProfile) ...[
               _SurfaceCard(
                 child: Column(
                   children: [
@@ -233,7 +234,9 @@ class SettingsScreen extends ConsumerWidget {
                   _tileDivider(theme),
                   _NikudTile(theme: theme),
                   // Hidden for tutors: bulk lifetime marking goes through CF (S4).
-                  if (!isChildProfile && !isTutoredSession) ...[
+                  if (hasActiveProfile &&
+                      !isChildProfile &&
+                      !isTutoredSession) ...[
                     _tileDivider(theme),
                     PreferenceListTile.withIcon(
                       icon: Icons.menu_book_rounded,
@@ -252,25 +255,26 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _SurfaceCard(
-              child: PreferenceListTile.withIcon(
-                icon: Icons.notifications_active_outlined,
-                iconColor: context.colors.brandCoralDeep,
-                iconBackground: theme.colorScheme.errorContainer,
-                title: l10n.notificationSettings,
-                subtitle: l10n.notificationSettingsSubtitle,
-                onTap: () => context.pushRoute(const NotificationsRoute()),
+            if (hasActiveProfile)
+              _SurfaceCard(
+                child: PreferenceListTile.withIcon(
+                  icon: Icons.notifications_active_outlined,
+                  iconColor: context.colors.brandCoralDeep,
+                  iconBackground: theme.colorScheme.errorContainer,
+                  title: l10n.notificationSettings,
+                  subtitle: l10n.notificationSettingsSubtitle,
+                  onTap: () => context.pushRoute(const NotificationsRoute()),
+                ),
               ),
-            ),
             // T3.gating: backup/sync controls are write-path in tutored sessions.
-            if (!isChildProfile && !isTutoredSession) ...[
+            if (hasActiveProfile && !isChildProfile && !isTutoredSession) ...[
               const SizedBox(height: 16),
               const BackupSyncSection(),
             ],
             const SizedBox(height: 24),
             // T3.gating: parental controls and account management are hidden in
             // tutored sessions — the tutor is viewing the child's context only.
-            if (!isTutoredSession) ...[
+            if (hasActiveProfile && !isTutoredSession) ...[
               _ParentalControlsSection(
                 user: user,
                 isChildProfile: isChildProfile,

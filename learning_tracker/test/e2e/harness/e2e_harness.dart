@@ -97,6 +97,8 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
 import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
+import 'package:learning_tracker/app/router/router_provider.dart'
+    show routerProvider;
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart'
@@ -105,8 +107,10 @@ import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
+import 'package:learning_tracker/core/navigation/guards/profile_selection_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -418,7 +422,7 @@ class E2EHarness {
       await _seedIdentity(identity);
     }
 
-    _router = _buildRouter();
+    _router = _buildRouter(selectInitialProfile: selectInitialProfile);
 
     final hasDashboardCurriculaOverride = extraOverrides.any(
       (override) => override.origin == dashboardActiveCurriculaProvider,
@@ -649,8 +653,9 @@ class E2EHarness {
     identity._resolvedAccountId = identity._seedAccountId;
   }
 
-  AppRouter _buildRouter() {
+  AppRouter _buildRouter({required bool selectInitialProfile}) {
     final profileId = _identity?._resolvedProfileId;
+    final selectedProfileId = selectInitialProfile ? profileId : null;
     final profileRepository = FirestoreLearnerProfileRepository(
       firestore: _firestore,
       uid: _identity?._resolvedAccountId ?? 'e2e-signed-out',
@@ -670,18 +675,29 @@ class E2EHarness {
       authGuard: AuthGuard(),
       profileGuard: ProfileGuard(
         getProfiles: () => profileRepository.watchProfiles().first,
-        getSelectedProfileId: () => profileId,
+        getSelectedProfileId: () => selectedProfileId,
         setSelectedProfileId: (_) {},
         isTutoredSession: () => false,
         profilePickerRoute: () => const ProfilePickerRoute(),
       ),
       childModeGuard: ChildModeGuard(
         getProfileById: (id) => profileRepository.getProfile(id),
-        getSelectedProfileId: () => profileId,
+        getSelectedProfileId: () => selectedProfileId,
+      ),
+      profileSelectionGuard: ProfileSelectionGuard(
+        getProfileById: (id) => profileRepository.getProfile(id),
+        getSelectedProfileId: () => selectedProfileId,
+      ),
+      parentSessionGuard: ParentSessionGuard(
+        isParentSession: () async {
+          if (selectedProfileId == null) return false;
+          final profile = await profileRepository.getProfile(selectedProfileId);
+          return profile?.mode == ProfileMode.adult;
+        },
       ),
       pinGuard: _pinGuard,
       sacredTimeLocationGuard: SacredTimeLocationGuard(
-        getSelectedProfileId: () => profileId,
+        getSelectedProfileId: () => selectedProfileId,
         getProfileById: (id) => profileRepository.getProfile(id),
         hasProfilePin: (_) async => false,
         consumeAccess: (_) => false,
@@ -752,6 +768,7 @@ class E2EHarness {
 
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),
+      routerProvider.overrideWithValue(_router),
       authRepositoryProvider.overrideWithValue(
         _StubAuthRepository(identity: identity, accountId: accountId),
       ),

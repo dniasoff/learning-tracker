@@ -39,7 +39,7 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:flutter/material.dart' show Key, ListView, TextField;
+import 'package:flutter/material.dart' show Key, ListView, Navigator, TextField;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -48,6 +48,8 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../../helpers/firestore_fixtures.dart';
 import '../harness/e2e_harness.dart';
@@ -376,6 +378,40 @@ void main() {
 
       expect(h.router.topRoute.name, 'SettingsRoute');
       expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(
+        ProviderScope.containerOf(
+          tester.element(find.byType(SettingsScreen)),
+        ).read(selectedProfileIdProvider),
+        isNull,
+        reason:
+            'opening account-level Settings must preserve no selection; '
+            'top=${h.router.topRoute.name}, path=${h.router.currentPath}',
+      );
+      final settingsContext = tester.element(find.byType(SettingsScreen));
+      final l10n = AppLocalizations.of(settingsContext)!;
+      expect(find.text(l10n.manageTracks), findsNothing);
+      expect(find.text(l10n.manageProfiles), findsNothing);
+      expect(find.text(l10n.parentSettingsTitle), findsNothing);
+      expect(find.text(l10n.notificationSettings), findsNothing);
+
+      await tester.tap(find.byType(UserProfileHeaderCard));
+      await h.pump();
+      await h.pump(const Duration(milliseconds: 300));
+      expect(find.text(l10n.deleteAccountTitle), findsNothing);
+      Navigator.of(tester.element(find.byType(SettingsScreen))).pop();
+      await h.pump();
+
+      unawaited(h.router.push<Object?>(const ManageLearnersRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
+
+      unawaited(h.router.push<Object?>(TrackManagementHubRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
+
+      unawaited(h.router.push<Object?>(const ParentSettingsRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
     },
   );
 

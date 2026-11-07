@@ -61,6 +61,7 @@ class _AccountActionsSheet extends ConsumerWidget {
     final activeProfile = profilesAsync.asData?.value
         .where((p) => p.profileId == activeProfileId)
         .firstOrNull;
+    final hasActiveProfile = activeProfile != null;
     final isChildProfile = activeProfile?.mode == ProfileMode.child;
 
     final parentAuthedProfileId = ref.watch(
@@ -74,9 +75,10 @@ class _AccountActionsSheet extends ConsumerWidget {
         user != null && user.providers.contains('password');
     // Delete is for non-child authenticated users (cloud or local-born). A
     // tutor-only adult has no own profile row, so isChildProfile is false here.
-    final showDelete = !isChildProfile && user != null;
+    final showDelete = hasActiveProfile && !isChildProfile && user != null;
     final showSignOut = !isChildProfile;
-    final showAddAccount = !isChildProfile || inParentMode;
+    final showAddAccount =
+        hasActiveProfile && (!isChildProfile || inParentMode);
 
     void closeThen(Future<void> Function() action) {
       Navigator.of(context).pop();
@@ -128,43 +130,44 @@ class _AccountActionsSheet extends ConsumerWidget {
                 ),
               ),
               // Switch account — pick or add another login on this device.
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: context.colors.brandBlueSoft,
-                  child: Icon(
-                    Icons.swap_horiz_rounded,
-                    color: context.colors.brandBlueDeep,
+              if (hasActiveProfile)
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: context.colors.brandBlueSoft,
+                    child: Icon(
+                      Icons.swap_horiz_rounded,
+                      color: context.colors.brandBlueDeep,
+                    ),
                   ),
-                ),
-                title: Text(
-                  l10n.switchAccount,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: accountEmail.isEmpty
-                    ? null
-                    : Text(
-                        accountEmail,
-                        style: TextStyle(
-                          color: context.colors.brandInkMuted,
-                          fontSize: 12,
+                  title: Text(
+                    l10n.switchAccount,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: accountEmail.isEmpty
+                      ? null
+                      : Text(
+                          accountEmail,
+                          style: TextStyle(
+                            color: context.colors.brandInkMuted,
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: context.colors.inkMidGrey,
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.colors.inkMidGrey,
+                  ),
+                  onTap: () => closeThen(() async {
+                    // Use the ROOT router (not pageContext.pushRoute). AccountPicker
+                    // is a root-level route; pageContext lives inside the Settings
+                    // tab whose nested StackRouter cannot navigate to root routes —
+                    // pushing via the tab router silently no-ops.
+                    await pageRef
+                        .read(routerProvider)
+                        .push(const AccountPickerRoute());
+                  }),
                 ),
-                onTap: () => closeThen(() async {
-                  // Use the ROOT router (not pageContext.pushRoute). AccountPicker
-                  // is a root-level route; pageContext lives inside the Settings
-                  // tab whose nested StackRouter cannot navigate to root routes —
-                  // pushing via the tab router silently no-ops.
-                  await pageRef
-                      .read(routerProvider)
-                      .push(const AccountPickerRoute());
-                }),
-              ),
               if (showAddAccount)
                 ListTile(
                   leading: CircleAvatar(
@@ -191,7 +194,7 @@ class _AccountActionsSheet extends ConsumerWidget {
                     await pageRef.read(routerProvider).push(SignupRoute());
                   }),
                 ),
-              if (hasPasswordProvider)
+              if (hasActiveProfile && hasPasswordProvider)
                 ListTile(
                   leading: CircleAvatar(
                     backgroundColor: theme.colorScheme.secondaryContainer,
