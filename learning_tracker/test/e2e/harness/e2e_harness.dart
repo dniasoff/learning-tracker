@@ -140,6 +140,8 @@ import 'package:learning_tracker/features/profiles/data/repositories/creating_de
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
+    show parentPinAuthenticatedProfileIdProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_editor_session.dart';
@@ -396,6 +398,7 @@ class E2EHarness {
 
   late FakeFirebaseFirestore _firestore;
   late ContentDatabase _contentDb;
+  late ProviderContainer _providerContainer;
   late AppRouter _router;
   late PinGuard _pinGuard;
 
@@ -442,12 +445,17 @@ class E2EHarness {
           ),
           ...extraOverrides,
         ],
-        child: _buildMaterialApp(
-          path == '/'
-              ? _router.config()
-              : _router.config(deepLinkBuilder: (_) => DeepLink.path(path)),
-          locale: locale,
-          mountPersistentSwitcher: mountPersistentSwitcher,
+        child: Builder(
+          builder: (context) {
+            _providerContainer = ProviderScope.containerOf(context);
+            return _buildMaterialApp(
+              path == '/'
+                  ? _router.config()
+                  : _router.config(deepLinkBuilder: (_) => DeepLink.path(path)),
+              locale: locale,
+              mountPersistentSwitcher: mountPersistentSwitcher,
+            );
+          },
         ),
       ),
     );
@@ -670,6 +678,9 @@ class E2EHarness {
       promptForPin: () async => false,
       getScope: () => profileId != null ? PinScope.parent(profileId) : null,
       pinSetupRoute: () => const PinFlowSetupRoute(),
+      onSessionLocked: () => _providerContainer
+          .read(parentPinAuthenticatedProfileIdProvider.notifier)
+          .clear(),
     );
     return AppRouter(
       authGuard: AuthGuard(),

@@ -312,14 +312,13 @@ void main() {
         'change name → Drift row updated; new name reflects in list', (
       tester,
     ) async {
-      // ManageLearnersRoute has guards [authGuard, childModeGuard].
-      // childModeGuard.onNavigation allows navigation only when the active
-      // profile mode is 'child' (design: parent-mode context managing a child).
-      // Use a child profile so the guard passes.
+      // ManageLearnersRoute requires an active profile and parent session.
+      // The harness treats an active adult profile as an authenticated parent
+      // session, which is the account-owner path exercised by this journey.
       final identity = E2EIdentity.localBorn(
-        email: 'child709@test.com',
+        email: 'adult709@test.com',
         displayName: 'Alice',
-        profileMode: 'child',
+        profileMode: 'adult',
       );
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
@@ -393,21 +392,20 @@ void main() {
     // So the non-last dialog ("Delete Profile?") appears even though
     // profileListStreamProvider only emits Profile A.
     //
-    // R-PR10: ManageLearnersRoute uses childModeGuard which passes when the
-    // active profile is child mode (parent-mode context design intent).
-    // The harness's profileListStreamProvider override cannot be replaced in
+    // ManageLearnersRoute requires an active profile and parent session.
+    // These journeys use an adult profile, which the harness models as an
+    // authenticated parent session. The profileListStreamProvider override cannot be replaced in
     // extraOverrides (double-override assertion); Profile B is seeded into
     // the DB AFTER pumpApp so the DB count is 2 when the delete runs.
     testWidgets(
       'ManageLearnersScreen; DB seeded with 2 profiles; delete visible profile '
       '(non-last per DB count) → non-last dialog; Drift count drops to 1',
       (tester) async {
-        // childModeGuard requires a child active profile — use child mode so
-        // the guard passes.
+        // An active adult profile satisfies the parent-session route guard.
         final identity = E2EIdentity.localBorn(
-          email: 'child710@test.com',
+          email: 'adult710@test.com',
           displayName: 'Profile A',
-          profileMode: 'child',
+          profileMode: 'adult',
         );
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
@@ -437,8 +435,7 @@ void main() {
           displayName: 'Profile B',
         );
 
-        // Navigate to ManageLearnersScreen — childModeGuard allows because
-        // the active profile is a child profile.
+        // Navigate to ManageLearnersScreen under the active adult session.
         await navigateTo(h, const ManageLearnersRoute());
         await h.pump(const Duration(milliseconds: 400));
         await h.pump();
@@ -498,12 +495,11 @@ void main() {
       'ManageLearnersScreen with 1 profile; delete attempt shows last-profile '
       'warning dialog; confirming still removes the row (R-PR1)',
       (tester) async {
-        // childModeGuard requires a child active profile — use child mode so
-        // the guard passes (same design intent as E2E-709/710).
+        // An active adult profile satisfies the parent-session route guard.
         final identity = E2EIdentity.localBorn(
-          email: 'child711@test.com',
+          email: 'adult711@test.com',
           displayName: 'Solo Profile',
-          profileMode: 'child',
+          profileMode: 'adult',
         );
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
@@ -526,7 +522,7 @@ void main() {
           ],
         );
 
-        // childModeGuard allows because the active profile is a child profile.
+        // The active adult profile satisfies the parent-session route guard.
         await navigateTo(h, const ManageLearnersRoute());
         await h.pump(const Duration(milliseconds: 400));
         await h.pump();
