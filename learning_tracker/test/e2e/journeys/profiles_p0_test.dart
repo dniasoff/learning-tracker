@@ -40,9 +40,14 @@ library;
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart' show Key, ListView, TextField;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/app/router/app_shell.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 
 import '../../helpers/firestore_fixtures.dart';
 import '../harness/e2e_harness.dart';
@@ -56,12 +61,14 @@ Future<void> _seedSecondProfile(
   required String accountId,
   String displayName = 'Profile B',
   String profileId = '01J6Q2H4A8M7K3P9R5T6V8WXX',
+  ProfileMode mode = ProfileMode.adult,
 }) async {
   await seedProfile(
     h.firestore,
     uid: accountId,
     profileId: profileId,
     displayName: displayName,
+    mode: mode,
   );
 }
 
@@ -310,6 +317,65 @@ void main() {
           expect(profileB!['mode'], 'adult');
         },
       );
+    },
+  );
+
+  testWidgets(
+    'with profiles but no active selection, picker header has no mode badge and Skip to Settings opens Settings',
+    (tester) async {
+      final identity = E2EIdentity.localBorn(
+        email: 'settings-no-profile@test.com',
+        displayName: 'Josh',
+        profileMode: 'adult',
+      );
+      final h = E2EHarness(tester, identity: identity);
+      addTearDown(h.dispose);
+
+      await h.pumpApp(
+        path: '/profile-picker',
+        selectInitialProfile: false,
+        mountPersistentSwitcher: true,
+        extraOverrides: [
+          ...h.dashboardSilenceOverrides,
+          incomingGrantsEmptyOverride(),
+          pendingInvitesEmptyOverride(),
+        ],
+      );
+      await _seedSecondProfile(
+        h,
+        accountId: identity.accountId,
+        displayName: 'Yisroel Meir',
+        mode: ProfileMode.child,
+      );
+      ProviderScope.containerOf(
+        tester.element(find.byType(ProfilePickerScreen)),
+      ).invalidate(profileListProvider);
+      await h.pump(const Duration(milliseconds: 500));
+
+      h.expectOnScreen('Who is learning?', routeName: 'ProfilePickerScreen');
+      h.expectOnScreen('Josh');
+      h.expectOnScreen('Yisroel Meir');
+      expect(
+        ProviderScope.containerOf(
+          tester.element(find.byType(ProfilePickerScreen)),
+        ).read(selectedProfileIdProvider),
+        isNull,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ProfileSwitcherBar),
+          matching: find.text('ADULT MODE'),
+        ),
+        findsNothing,
+        reason: 'the account header must not imply an active adult profile',
+      );
+
+      await tester.ensureVisible(find.text('Skip to Settings'));
+      await h.tapText('Skip to Settings');
+      await h.pump(const Duration(milliseconds: 500));
+
+      expect(h.router.topRoute.name, 'SettingsRoute');
+      expect(find.byType(SettingsScreen), findsOneWidget);
     },
   );
 
