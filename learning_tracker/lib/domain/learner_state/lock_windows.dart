@@ -11,10 +11,8 @@
 /// A run of consecutive civil days D1..Dn on which `JewishCalendar`
 /// (`inIsrael` from the settings) gives `isAssurBemelacha()` is ONE lock,
 /// so yom tov chained into Shabbos stays one lock. With a location the lock
-/// is `[candle-lighting(D1 − 1) − 10 min, tzeis(Dn) + 10 min]`
-/// (`lock_constants.dart`). Candle-lighting is the `kosher_dart` standard
-/// zman (its default offset before sea-level sunset); tzeis is the
-/// `kosher_dart` default (8.5° below the horizon).
+/// is `[sunset(D1 − 1) − configured candle-lighting minutes, configured
+/// tzeis(Dn)]`. Unknown-zone/no-coordinate fallbacks remain fixed.
 ///
 /// ## No location: no lock
 ///
@@ -51,7 +49,6 @@ import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
-import 'package:learning_tracker/domain/learner_state/lock_constants.dart';
 
 /// A closed UTC interval `[startUtc, endUtc]`.
 base class UtcInterval {
@@ -296,8 +293,9 @@ Iterable<(DateTime, DateTime)> _windowsFor(
     latitude,
     longitude,
     erev,
-  )?.subtract(lockStartBeforeCandleLighting);
-  final end = _tzeis(latitude, longitude, lastDay)?.add(lockEndAfterTzeis);
+    settings.candleLightingMinutes,
+  );
+  final end = _tzeis(latitude, longitude, lastDay, settings.tzeisMinhag);
   if (start != null && end != null && start.isBefore(end)) {
     return (start, end);
   }
@@ -306,10 +304,14 @@ Iterable<(DateTime, DateTime)> _windowsFor(
   return (s, e);
 }
 
-/// Candle-lighting on civil [day] at the location: the kosher_dart
-/// standard offset before sea-level sunset, or null when the sun does not
-/// set.
-DateTime? _candleLighting(double latitude, double longitude, DateTime day) {
+/// Candle-lighting on civil [day] at the selected offset before sea-level
+/// sunset, or null when the sun does not set.
+DateTime? _candleLighting(
+  double latitude,
+  double longitude,
+  DateTime day,
+  int minutesBeforeSunset,
+) {
   final calendar = _calendar(latitude, longitude, day);
   final sunset = _instant(
     day,
@@ -317,21 +319,33 @@ DateTime? _candleLighting(double latitude, double longitude, DateTime day) {
     longitude,
   );
   if (sunset == null) return null;
-  final offsetMinutes = calendar.getCandleLightingOffset();
-  return sunset.subtract(
-    Duration(
-      microseconds: (offsetMinutes * Duration.microsecondsPerMinute).round(),
-    ),
-  );
+  return sunset.subtract(Duration(minutes: minutesBeforeSunset));
 }
 
-/// Tzeis (8.5°, the kosher_dart default) on civil [day] at the location,
-/// or null when the sun never gets that low.
-DateTime? _tzeis(double latitude, double longitude, DateTime day) {
+/// The selected tzeis minhag on civil [day] at the location, or null when
+/// its zman cannot be computed.
+DateTime? _tzeis(
+  double latitude,
+  double longitude,
+  DateTime day,
+  String minhag,
+) {
   final calendar = _calendar(latitude, longitude, day);
+  final sunset = _instant(
+    day,
+    calendar.getUTCSeaLevelSunset(_geometricZenith),
+    longitude,
+  );
+  if (minhag == 'minutes_72') {
+    return sunset?.add(const Duration(minutes: 72));
+  }
   return _instant(
     day,
-    calendar.getUTCSunset(ZmanimCalendar.ZENITH_8_POINT_5),
+    calendar.getUTCSunset(
+      minhag == 'rabbeinu_tam'
+          ? ZmanimCalendar.ZENITH_16_POINT_1
+          : ZmanimCalendar.ZENITH_8_POINT_5,
+    ),
     longitude,
   );
 }

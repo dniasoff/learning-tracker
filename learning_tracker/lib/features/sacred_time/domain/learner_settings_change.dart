@@ -1,8 +1,9 @@
 /// The governed `learnerSettings` change a Sacred Time settings edit
 /// writes (AD-37, AD-38; DNI-481 AC-3).
 ///
-/// A learner's location, IANA `time_zone` and Israel / chutz la'aretz flag
-/// are fields of `learner_profiles/{profileId}` and change only through
+/// A learner's location, IANA `time_zone`, Israel / chutz la'aretz flag,
+/// tzeis minhag, and candle-lighting offset are fields of
+/// `learner_profiles/{profileId}` and change only through
 /// `LearningCommands.applyGovernedChange` (DNI-470), which logs one
 /// `learnerSettings` change-log entry per edit. The settings history built
 /// from those entries keeps every past lock window on the settings in force
@@ -26,6 +27,10 @@ final class LearnerSettingsEdit {
     this.longitude,
     this.timeZone,
     this.inIsrael,
+    this.tzeisMinhag,
+    this.candleLightingMinutes,
+    this.locationSource,
+    this.locationFixedAt,
   });
 
   /// The new latitude in degrees.
@@ -40,12 +45,21 @@ final class LearnerSettingsEdit {
   /// The new Israel (one-day yom tov) flag.
   final bool? inIsrael;
 
+  final String? tzeisMinhag;
+  final int? candleLightingMinutes;
+  final String? locationSource;
+  final DateTime? locationFixedAt;
+
   /// Whether the edit changes nothing.
   bool get isEmpty =>
       latitude == null &&
       longitude == null &&
       timeZone == null &&
-      inIsrael == null;
+      inIsrael == null &&
+      tzeisMinhag == null &&
+      candleLightingMinutes == null &&
+      locationSource == null &&
+      locationFixedAt == null;
 
   @override
   bool operator ==(Object other) =>
@@ -53,10 +67,23 @@ final class LearnerSettingsEdit {
       other.latitude == latitude &&
       other.longitude == longitude &&
       other.timeZone == timeZone &&
-      other.inIsrael == inIsrael;
+      other.inIsrael == inIsrael &&
+      other.tzeisMinhag == tzeisMinhag &&
+      other.candleLightingMinutes == candleLightingMinutes &&
+      other.locationSource == locationSource &&
+      other.locationFixedAt == locationFixedAt;
 
   @override
-  int get hashCode => Object.hash(latitude, longitude, timeZone, inIsrael);
+  int get hashCode => Object.hash(
+    latitude,
+    longitude,
+    timeZone,
+    inIsrael,
+    tzeisMinhag,
+    candleLightingMinutes,
+    locationSource,
+    locationFixedAt,
+  );
 
   @override
   String toString() =>
@@ -98,6 +125,12 @@ GovernedAction learnerSettingsAction(
       timeZone: edit.timeZone ?? 'UTC',
       latitude: latitude,
       longitude: longitude,
+      tzeisMinhag: edit.tzeisMinhag ?? LearnerSettings.defaultTzeisMinhag,
+      candleLightingMinutes:
+          edit.candleLightingMinutes ??
+          LearnerSettings.defaultCandleLightingMinutes,
+      locationSource: edit.locationSource,
+      locationFixedAt: edit.locationFixedAt,
     ).toStorage();
   } on StorageFormatException catch (e) {
     throw ArgumentError.value(edit, 'edit', e.toString());
@@ -116,6 +149,15 @@ GovernedAction learnerSettingsAction(
             if (longitude != null) LearnerSettings.kLongitude: longitude,
             if (edit.timeZone != null) LearnerSettings.kTimeZone: edit.timeZone,
             if (edit.inIsrael != null) LearnerSettings.kInIsrael: edit.inIsrael,
+            if (edit.tzeisMinhag != null)
+              LearnerSettings.kTzeisMinhag: edit.tzeisMinhag,
+            if (edit.candleLightingMinutes != null)
+              LearnerSettings.kCandleLightingMinutes:
+                  edit.candleLightingMinutes,
+            if (edit.locationSource != null)
+              LearnerSettings.kLocationSource: edit.locationSource,
+            if (edit.locationFixedAt != null)
+              LearnerSettings.kLocationFixedAt: edit.locationFixedAt!.toUtc(),
           },
         ),
       ],

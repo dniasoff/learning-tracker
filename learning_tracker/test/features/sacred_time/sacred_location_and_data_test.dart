@@ -209,6 +209,7 @@ class _FakeGeolocatorPlatform extends Fake
     implements GeolocatorPlatform {
   final _GeoScenario scenario;
   final Position? position;
+  int permissionRequests = 0;
 
   _FakeGeolocatorPlatform(this.scenario, {this.position});
 
@@ -240,6 +241,7 @@ class _FakeGeolocatorPlatform extends Fake
 
   @override
   Future<LocationPermission> requestPermission() async {
+    permissionRequests++;
     switch (scenario) {
       case _GeoScenario.permissionDenied:
         return LocationPermission.denied;
@@ -590,6 +592,20 @@ void main() {
         expect(result, isA<LocationFetchPermissionDenied>());
         final denied = result as LocationFetchPermissionDenied;
         expect(denied.permanentlyDenied, isFalse);
+      },
+    );
+
+    test(
+      'automatic refresh never requests denied location permission',
+      () async {
+        final platform = _FakeGeolocatorPlatform(_GeoScenario.permissionDenied);
+        GeolocatorPlatform.instance = platform;
+
+        final result = await const LocationService()
+            .detectCurrentWithoutPermissionRequests();
+
+        expect(result, isA<LocationFetchPermissionDenied>());
+        expect(platform.permissionRequests, 0);
       },
     );
 

@@ -44,6 +44,20 @@ void main() {
       expect(action.changes.single.docs.single.fields, {'in_israel': false});
     });
 
+    test('zmanim preferences are governed profile settings', () {
+      final action = learnerSettingsAction(
+        profileUlid,
+        const LearnerSettingsEdit(
+          tzeisMinhag: 'rabbeinu_tam',
+          candleLightingMinutes: 30,
+        ),
+      );
+      expect(action.changes.single.docs.single.fields, {
+        'tzeis_minhag': 'rabbeinu_tam',
+        'candle_lighting_minutes': 30,
+      });
+    });
+
     test('coordinates are rounded to 3 decimal places (PV-7)', () {
       expect(roundLearnerCoordinate(40.08214), 40.082);
       expect(roundLearnerCoordinate(-74.20975), -74.21);

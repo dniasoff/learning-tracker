@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart' as geo;
 import 'package:geolocator/geolocator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -24,13 +25,24 @@ class LocationService {
 
   /// Request a fresh GPS fix and reverse-geocode the country code.
   /// Caller is responsible for persisting the returned [SacredLocation].
-  Future<LocationFetchResult> detectCurrent() async {
+  Future<LocationFetchResult> detectCurrent() =>
+      _detectCurrent(requestPermission: true, requestFullAccuracy: true);
+
+  /// Refreshes a previously authorized location without showing any OS prompt.
+  /// Used by automatic refreshes; a missing permission simply skips the fix.
+  Future<LocationFetchResult> detectCurrentWithoutPermissionRequests() =>
+      _detectCurrent(requestPermission: false, requestFullAccuracy: false);
+
+  Future<LocationFetchResult> _detectCurrent({
+    required bool requestPermission,
+    required bool requestFullAccuracy,
+  }) async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       return const LocationFetchServiceDisabled();
     }
 
     var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
+    if (permission == LocationPermission.denied && requestPermission) {
       permission = await Geolocator.requestPermission();
     }
     if (permission == LocationPermission.deniedForever) {
@@ -41,9 +53,17 @@ class LocationService {
     }
 
     try {
+      if (requestFullAccuracy &&
+          defaultTargetPlatform == TargetPlatform.iOS &&
+          await Geolocator.getLocationAccuracy() ==
+              LocationAccuracyStatus.reduced) {
+        await Geolocator.requestTemporaryFullAccuracy(
+          purposeKey: 'SacredTimePreciseLocation',
+        );
+      }
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
+          accuracy: LocationAccuracy.bestForNavigation,
           timeLimit: Duration(seconds: 15),
         ),
       );

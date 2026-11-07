@@ -82,4 +82,30 @@ void main() {
       throwsA(isA<StorageFormatException>()),
     );
   });
+
+  test('new Sacred Time settings round-trip with legacy defaults', () {
+    final fixedAt = DateTime.utc(2026, 11, 6, 12);
+    final configured = LearnerSettings(
+      profileId: profileUlid,
+      timeZone: 'Europe/London',
+      latitude: 51.5074,
+      longitude: -0.1278,
+      tzeisMinhag: 'rabbeinu_tam',
+      candleLightingMinutes: 30,
+      locationSource: 'detected',
+      locationFixedAt: fixedAt,
+    );
+    expect(
+      LearnerSettings.fromProfileDoc(profileUlid, configured.toStorage()),
+      configured,
+    );
+    final legacy = LearnerSettings.fromProfileDoc(profileUlid, {
+      'time_zone': 'Europe/London',
+    });
+    expect(legacy.tzeisMinhag, LearnerSettings.defaultTzeisMinhag);
+    expect(
+      legacy.candleLightingMinutes,
+      LearnerSettings.defaultCandleLightingMinutes,
+    );
+  });
 }

@@ -718,4 +718,41 @@ void main() {
       expect(access.consume(_child), isFalse);
     });
   });
+
+  testWidgets('zmanim preference controls are hidden in child mode', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          selectedProfileIdProvider.overrideWith(() => _Selected(_child)),
+          profileListStreamProvider.overrideWith(
+            (ref) => Stream.value(_account),
+          ),
+          activeLearnerSettingsProvider.overrideWithValue(
+            const AsyncData(
+              LearnerSettings(profileId: _child, timeZone: 'UTC'),
+            ),
+          ),
+          learnerSettingsEditorProvider.overrideWithValue(
+            LearnerSettingsEditor(
+              commands: () async => null,
+              scope: () async => null,
+              locationService: const _FakeLocationService(),
+              deviceTimeZone: () async => null,
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: SacredTimeSettingsCard()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nightfall calculation'), findsNothing);
+    expect(find.text('Candle lighting before sunset (minutes)'), findsNothing);
+  });
 }

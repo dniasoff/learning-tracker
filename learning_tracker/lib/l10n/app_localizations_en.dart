@@ -3740,7 +3740,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'App is silenced and locked during $term and Yom Tov. Times computed locally from your location with a 15-minute cushion.';
+    return 'App is silenced and locked during $term and Yom Tov. Times use your location and selected candle-lighting and nightfall customs.';
   }
 
   @override
@@ -7591,6 +7591,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get sacredTimeSettingsUnavailable =>
       'Sacred Time settings can be changed only for your own learners.';
+
+  @override
+  String get sacredTimeTzeisMinhag => 'Nightfall calculation';
+
+  @override
+  String get sacredTimeTzeis85 => '8.5° after sunset';
+
+  @override
+  String get sacredTimeTzeis72Minutes => '72 minutes after sunset';
+
+  @override
+  String get sacredTimeTzeisRabbeinuTam => 'Rabbeinu Tam (16.1°)';
+
+  @override
+  String get sacredTimeCandleLighting =>
+      'Candle lighting before sunset (minutes)';
 
   @override
   String erevBannerBeginsAt(String term, String time) {

@@ -1,7 +1,9 @@
 // Mirror test for `lib/domain/learner_state/lock_windows.dart`
 // (C0 DNI-524 AC-6; DNI-466 AC-2, AC-3, AC-5 and the edge rows).
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kosher_dart/kosher_dart.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/lock_constants.dart';
@@ -70,7 +72,7 @@ void main() {
     final lakewoodH = constantHistory(lakewood);
     final jerusalemH = constantHistory(jerusalem);
 
-    test('a Shabbos lock is [candle-lighting − 10 min, tzeis + 10 min]', () {
+    test('a Shabbos lock starts at candle-lighting and ends at tzeis', () {
       final lock = _single(lakewoodH, DateTime.utc(2026, 3, 28, 12));
       _near(
         lock.startUtc,
@@ -90,6 +92,54 @@ void main() {
       );
       expect(lockedDays(lock, lakewoodH), {'2026-03-28'});
     });
+
+    test(
+      'London 2026-11-07 uses each selected tzeis and candle offset exactly',
+      () {
+        const latitude = 51.5074;
+        const longitude = -0.1278;
+        final friday = _day(2026, 11, 6);
+        final saturday = _day(2026, 11, 7);
+        final candle18 = kosherCandleLighting(latitude, longitude, friday)!;
+        final saturdayCalendar = ZmanimCalendar.intGeolocation(
+          GeoLocation.setLocation('London', latitude, longitude, saturday),
+        )..setCalendar(saturday);
+        DateTime utcInstant(double utcHours) => DateTime.utc(2026, 11, 7).add(
+          Duration(
+            microseconds: (utcHours * Duration.microsecondsPerHour).round(),
+          ),
+        );
+        final tzeis8_5 = utcInstant(
+          saturdayCalendar.getUTCSunset(ZmanimCalendar.ZENITH_8_POINT_5),
+        );
+        final rabbeinuTam = utcInstant(
+          saturdayCalendar.getUTCSunset(ZmanimCalendar.ZENITH_16_POINT_1),
+        );
+        final sunset = utcInstant(saturdayCalendar.getUTCSeaLevelSunset(90));
+
+        for (final offset in [18, 20, 22, 30, 40]) {
+          for (final minhag in ['degrees_8_5', 'minutes_72', 'rabbeinu_tam']) {
+            final settings = LearnerSettings(
+              profileId: lakewood.profileId,
+              timeZone: 'Europe/London',
+              latitude: latitude,
+              longitude: longitude,
+              candleLightingMinutes: offset,
+              tzeisMinhag: minhag,
+            );
+            final history = constantHistory(settings);
+            final lock = _single(history, DateTime.utc(2026, 11, 7, 12));
+            _near(lock.startUtc, candle18.add(Duration(minutes: 18 - offset)));
+            final expectedEnd = switch (minhag) {
+              'degrees_8_5' => tzeis8_5,
+              'minutes_72' => sunset.add(const Duration(minutes: 72)),
+              _ => rabbeinuTam,
+            };
+            _near(lock.endUtc, expectedEnd);
+          }
+        }
+      },
+    );
 
     test('civil days are iterated in the learner zone', () {
       // Auckland: the Friday-evening lock opens on Friday morning UTC.

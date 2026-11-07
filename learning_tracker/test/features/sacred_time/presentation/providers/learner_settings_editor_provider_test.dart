@@ -39,12 +39,27 @@ class _Commands extends Fake implements LearningCommands {
 }
 
 class _Location extends LocationService {
-  const _Location(this.result);
+  _Location(this.result, {this.permissionGranted = true});
 
   final LocationFetchResult result;
+  final bool permissionGranted;
+  int interactiveDetects = 0;
+  int silentDetects = 0;
 
   @override
-  Future<LocationFetchResult> detectCurrent() async => result;
+  Future<bool> hasPermission() async => permissionGranted;
+
+  @override
+  Future<LocationFetchResult> detectCurrent() async {
+    interactiveDetects++;
+    return result;
+  }
+
+  @override
+  Future<LocationFetchResult> detectCurrentWithoutPermissionRequests() async {
+    silentDetects++;
+    return result;
+  }
 }
 
 LearnerSettingsEditor _editor({
@@ -97,7 +112,7 @@ void main() {
       final failing = LearnerSettingsEditor(
         commands: () async => throw StateError('not ready'),
         scope: () async => _scope,
-        locationService: const _Location(LocationFetchServiceDisabled()),
+        locationService: const LocationService(),
         deviceTimeZone: () async => null,
       );
       expect(await failing.apply(edit), LearnerSettingsEditOutcome.unavailable);
@@ -144,6 +159,7 @@ void main() {
         'longitude': 35.214,
         'time_zone': 'Asia/Jerusalem',
         'in_israel': true,
+        'location_source': 'manual_city',
       });
     });
 
@@ -186,6 +202,8 @@ void main() {
         'longitude': -74.21,
         'time_zone': 'America/New_York',
         'in_israel': false,
+        'location_source': 'detected',
+        'location_fixed_at': DateTime.utc(2026, 9),
       });
     });
 
@@ -194,9 +212,115 @@ void main() {
       await _editor(commands: commands, scope: _scope, detect: _fix()).detect();
       expect(
         commands.applied.single.changes.single.docs.single.fields.keys,
-        unorderedEquals(['latitude', 'longitude']),
+        unorderedEquals([
+          'latitude',
+          'longitude',
+          'location_source',
+          'location_fixed_at',
+        ]),
       );
     });
+
+    test('automatic refresh uses the silent location path and persists only '
+        'while the captured profile is still stale', () async {
+      final commands = _Commands();
+      final location = _Location(_fix(country: 'US'));
+      final editor = LearnerSettingsEditor(
+        commands: () async => commands,
+        scope: () async => _scope,
+        locationService: location,
+        deviceTimeZone: () async => 'America/New_York',
+      );
+
+      final result = await editor.refreshDetectedLocation(
+        expectedProfileId: profileUlid,
+        mayPersist: () => true,
+      );
+
+      expect(result?.outcome, LearnerSettingsEditOutcome.saved);
+      expect(location.silentDetects, 1);
+      expect(location.interactiveDetects, 0);
+      expect(commands.applied.single.changes.single.docs.single.fields, {
+        'latitude': 40.082,
+        'longitude': -74.21,
+        'time_zone': 'America/New_York',
+        'in_israel': false,
+        'location_source': 'detected',
+        'location_fixed_at': DateTime.utc(2026, 9),
+      });
+    });
+
+    test(
+      'automatic refresh skips GPS when permission is not already granted',
+      () async {
+        final commands = _Commands();
+        final location = _Location(
+          _fix(country: 'US'),
+          permissionGranted: false,
+        );
+        final editor = LearnerSettingsEditor(
+          commands: () async => commands,
+          scope: () async => _scope,
+          locationService: location,
+          deviceTimeZone: () async => 'America/New_York',
+        );
+
+        final result = await editor.refreshDetectedLocation(
+          expectedProfileId: profileUlid,
+          mayPersist: () => true,
+        );
+
+        expect(result, isNull);
+        expect(location.silentDetects, 0);
+        expect(location.interactiveDetects, 0);
+        expect(commands.applied, isEmpty);
+      },
+    );
+
+    test(
+      'automatic refresh drops a fix after the profile changes during GPS',
+      () async {
+        final commands = _Commands();
+        var resolves = 0;
+        final otherProfile = LearnerScope(
+          ownerUid: 'owner-uid',
+          profileId: '01J00000000000000000000002',
+        );
+        final editor = LearnerSettingsEditor(
+          commands: () async => commands,
+          scope: () async => resolves++ == 0 ? _scope : otherProfile,
+          locationService: _Location(_fix(country: 'US')),
+          deviceTimeZone: () async => 'America/New_York',
+        );
+
+        await editor.refreshDetectedLocation(
+          expectedProfileId: profileUlid,
+          mayPersist: () => true,
+        );
+
+        expect(commands.applied, isEmpty);
+      },
+    );
+
+    test(
+      'automatic refresh rechecks staleness before the governed write',
+      () async {
+        final commands = _Commands();
+        final editor = _editor(
+          commands: commands,
+          scope: _scope,
+          detect: _fix(country: 'US'),
+          deviceZone: 'America/New_York',
+        );
+
+        await editor.refreshDetectedLocation(
+          expectedProfileId: profileUlid,
+          mayPersist: () => false,
+        );
+
+        expect(commands.applied, isEmpty);
+      },
+    );
   });
 
   group('activeLearnerSettingsProvider', () {

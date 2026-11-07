@@ -11,9 +11,12 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/domain/location_refresh_policy.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/legacy_learner_settings_seed_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/learner_location_prompt.dart';
@@ -37,6 +40,7 @@ class LearningTrackerApp extends ConsumerStatefulWidget {
 class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     with WidgetsBindingObserver {
   late final RouterConfig<Object> _routerConfig;
+  bool _refreshingDetectedLocation = false;
 
   @override
   void initState() {
@@ -67,6 +71,61 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     // a BuildContext — also track a runtime device-language change.
     ref.invalidate(currentAppLocaleProvider);
     super.didChangeLocales(locales);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshDetectedLocationIfStale());
+    }
+    super.didChangeAppLifecycleState(state);
+  }
+
+  Future<void> _refreshDetectedLocationIfStale() async {
+    if (_refreshingDetectedLocation) return;
+    final scope = ref.read(activeLearnerScopeProvider).asData?.value;
+    final settings = ref.read(activeLearnerSettingsProvider).asData?.value;
+    final now = DateTime.now().toUtc();
+    if (scope == null ||
+        settings == null ||
+        settings.profileId != scope.profileId ||
+        !shouldRefreshDetectedLocation(settings, now)) {
+      return;
+    }
+    final profileId = scope.profileId;
+    _refreshingDetectedLocation = true;
+    try {
+      // The editor binds the fix to this profile before starting GPS and
+      // checks the live settings again before its governed write. This path
+      // never requests location or full-accuracy permission.
+      await ref
+          .read(learnerSettingsEditorProvider)
+          .refreshDetectedLocation(
+            expectedProfileId: profileId,
+            mayPersist: () {
+              if (!mounted) return false;
+              final currentScope = ref
+                  .read(activeLearnerScopeProvider)
+                  .asData
+                  ?.value;
+              final currentSettings = ref
+                  .read(activeLearnerSettingsProvider)
+                  .asData
+                  ?.value;
+              return currentScope?.profileId == profileId &&
+                  currentSettings?.profileId == profileId &&
+                  currentSettings != null &&
+                  shouldRefreshDetectedLocation(
+                    currentSettings,
+                    DateTime.now().toUtc(),
+                  );
+            },
+          );
+    } on Object {
+      // Resume is best-effort; a later resume retries without blocking app use.
+    } finally {
+      _refreshingDetectedLocation = false;
+    }
   }
 
   /// The after-lock location prompt's action (DNI-481 AC-2): the existing
@@ -116,7 +175,6 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode ==
         ProfileMode.child;
-
     return MaterialApp.router(
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       onGenerateTitle: (context) =>
