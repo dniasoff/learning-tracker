@@ -118,6 +118,22 @@ class ProfileGuard extends AutoRouteGuard {
       return;
     }
 
+    // Settings is the account-level landing surface for a signed-in user who
+    // deliberately has not activated a learner profile. A typed
+    // SettingsRoute push is represented by the AppShellRoute match with a
+    // SettingsRoute child, so let that navigation through while continuing to
+    // send Dashboard/Learning/Progress entries to the picker.
+    final requestedSettings =
+        resolver.route.children?.any(
+          (child) => child.name == 'SettingsRoute',
+        ) ??
+        false;
+    if (requestedSettings) {
+      _log.info(event: 'profile_guard_settings_without_selection_allow');
+      resolver.next();
+      return;
+    }
+
     // 2+ profiles, none selected → redirect to picker
     _log.info(
       event: 'profile_guard_multiple_profiles_redirecting',

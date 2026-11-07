@@ -96,6 +96,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/app/router/guards/sacred_time_location_guard.dart';
+import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart'
@@ -275,6 +276,16 @@ class _FixedSelectedProfile extends SelectedProfileId {
   String? build() => _id;
 }
 
+class _NoActiveProfile extends ActiveProfileId {
+  @override
+  String? build() => null;
+}
+
+class _NoSelectedProfile extends SelectedProfileId {
+  @override
+  String? build() => null;
+}
+
 // ── E2EIdentity ─────────────────────────────────────────────────────────────
 
 /// Describes the authenticated identity the harness should boot into.
@@ -396,6 +407,8 @@ class E2EHarness {
     String path = '/',
     List<Override> extraOverrides = const [],
     Locale locale = const Locale('en'),
+    bool selectInitialProfile = true,
+    bool mountPersistentSwitcher = false,
   }) async {
     SharedPreferences.setMockInitialValues({'onboarding_complete': true});
 
@@ -418,6 +431,7 @@ class E2EHarness {
         overrides: [
           ..._buildOverrides(
             identity,
+            selectInitialProfile: selectInitialProfile,
             includeDashboardCurriculaOverride: !hasDashboardCurriculaOverride,
             includeSacredWindowOverride: !hasSacredWindowOverride,
           ),
@@ -427,7 +441,8 @@ class E2EHarness {
           path == '/'
               ? _router.config()
               : _router.config(deepLinkBuilder: (_) => DeepLink.path(path)),
-          locale,
+          locale: locale,
+          mountPersistentSwitcher: mountPersistentSwitcher,
         ),
       ),
     );
@@ -676,6 +691,7 @@ class E2EHarness {
 
   List<Override> _buildOverrides(
     E2EIdentity? identity, {
+    bool selectInitialProfile = true,
     bool includeDashboardCurriculaOverride = true,
     bool includeSacredWindowOverride = true,
   }) {
@@ -778,11 +794,15 @@ class E2EHarness {
           (ref) => Stream.value(seededProfiles),
         ),
       ],
-      if (profileId != null) ...[
+      if (profileId != null && selectInitialProfile) ...[
         activeProfileIdProvider.overrideWith(() => _FixedProfileId(profileId)),
         selectedProfileIdProvider.overrideWith(
           () => _FixedSelectedProfile(profileId),
         ),
+      ],
+      if (profileId != null && !selectInitialProfile) ...[
+        activeProfileIdProvider.overrideWith(() => _NoActiveProfile()),
+        selectedProfileIdProvider.overrideWith(() => _NoSelectedProfile()),
       ],
 
       // ── PIN (no secure storage) ────────────────────────────────────────────
@@ -838,9 +858,10 @@ class E2EHarness {
   }
 
   MaterialApp _buildMaterialApp(
-    RouterConfig<Object> routerConfig, [
+    RouterConfig<Object> routerConfig, {
     Locale locale = const Locale('en'),
-  ]) {
+    bool mountPersistentSwitcher = false,
+  }) {
     return MaterialApp.router(
       // Wire the root messenger key so SnackBar / MaterialBanner assertions
       // that target rootScaffoldMessengerKey (e.g. UpgradeToCloud banner)
@@ -858,6 +879,11 @@ class E2EHarness {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: mountPersistentSwitcher
+          ? (context, child) => PersistentSwitcherScaffold(
+              child: child ?? const SizedBox.shrink(),
+            )
+          : null,
     );
   }
 }
