@@ -19,6 +19,10 @@ final class LearnerSettings {
     this.latitude,
     this.longitude,
     this.inIsrael,
+    this.tzeisMinhag = defaultTzeisMinhag,
+    this.candleLightingMinutes = defaultCandleLightingMinutes,
+    this.locationSource,
+    this.locationFixedAt,
     this.lastChangeId,
   });
 
@@ -37,6 +41,12 @@ final class LearnerSettings {
       longitude: r.optionalNumber(kLongitude),
       timeZone: r.requiredString(kTimeZone),
       inIsrael: r.optional<bool>(kInIsrael),
+      tzeisMinhag: r.optional<String>(kTzeisMinhag) ?? defaultTzeisMinhag,
+      candleLightingMinutes:
+          r.optional<int>(kCandleLightingMinutes) ??
+          defaultCandleLightingMinutes,
+      locationSource: r.optional<String>(kLocationSource),
+      locationFixedAt: r.optionalInstant(kLocationFixedAt),
       lastChangeId: r.optionalUlid(kLastChangeId),
     );
     return settings.._validate();
@@ -55,6 +65,12 @@ final class LearnerSettings {
 
   /// Storage key `in_israel`.
   static const kInIsrael = 'in_israel';
+  static const kTzeisMinhag = 'tzeis_minhag';
+  static const kCandleLightingMinutes = 'candle_lighting_minutes';
+  static const kLocationSource = 'location_source';
+  static const kLocationFixedAt = 'location_fixed_at';
+  static const defaultTzeisMinhag = 'degrees_8_5';
+  static const defaultCandleLightingMinutes = 18;
 
   /// Storage key `last_change_id`.
   static const kLastChangeId = 'last_change_id';
@@ -65,6 +81,10 @@ final class LearnerSettings {
     kLongitude,
     kTimeZone,
     kInIsrael,
+    kTzeisMinhag,
+    kCandleLightingMinutes,
+    kLocationSource,
+    kLocationFixedAt,
     kLastChangeId,
   };
 
@@ -91,6 +111,18 @@ final class LearnerSettings {
   /// Whether the learner keeps one-day yom tov; null when never set.
   final bool? inIsrael;
 
+  /// Tzeis preset: degrees_8_5, minutes_72, or rabbeinu_tam.
+  final String tzeisMinhag;
+
+  /// Minutes before sunset for candle lighting (18/20/22/30/40).
+  final int candleLightingMinutes;
+
+  /// detected, manual_city, or manual_coords; absent on legacy documents.
+  final String? locationSource;
+
+  /// UTC time of the latest detected fix.
+  final DateTime? locationFixedAt;
+
   /// Last governed change, or null for a profile with no entry yet.
   final String? lastChangeId;
 
@@ -105,6 +137,11 @@ final class LearnerSettings {
       if (longitude != null) kLongitude: longitude,
       kTimeZone: timeZone,
       if (inIsrael != null) kInIsrael: inIsrael,
+      if (tzeisMinhag != defaultTzeisMinhag) kTzeisMinhag: tzeisMinhag,
+      if (candleLightingMinutes != defaultCandleLightingMinutes)
+        kCandleLightingMinutes: candleLightingMinutes,
+      if (locationSource != null) kLocationSource: locationSource,
+      if (locationFixedAt != null) kLocationFixedAt: locationFixedAt!.toUtc(),
       if (lastChangeId != null) kLastChangeId: lastChangeId,
     };
   }
@@ -130,6 +167,20 @@ final class LearnerSettings {
     }
     final change = lastChangeId;
     if (change != null && !isUlid(change)) _fail(kLastChangeId, 'not a ULID');
+    if (!{'degrees_8_5', 'minutes_72', 'rabbeinu_tam'}.contains(tzeisMinhag)) {
+      _fail(kTzeisMinhag, 'unsupported minhag');
+    }
+    if (![18, 20, 22, 30, 40].contains(candleLightingMinutes)) {
+      _fail(kCandleLightingMinutes, 'unsupported offset');
+    }
+    if (locationSource != null &&
+        !{
+          'detected',
+          'manual_city',
+          'manual_coords',
+        }.contains(locationSource)) {
+      _fail(kLocationSource, 'unsupported location source');
+    }
   }
 
   @override
@@ -140,6 +191,10 @@ final class LearnerSettings {
       other.longitude == longitude &&
       other.timeZone == timeZone &&
       other.inIsrael == inIsrael &&
+      other.tzeisMinhag == tzeisMinhag &&
+      other.candleLightingMinutes == candleLightingMinutes &&
+      other.locationSource == locationSource &&
+      other.locationFixedAt == locationFixedAt &&
       other.lastChangeId == lastChangeId;
 
   @override
@@ -149,6 +204,10 @@ final class LearnerSettings {
     longitude,
     timeZone,
     inIsrael,
+    tzeisMinhag,
+    candleLightingMinutes,
+    locationSource,
+    locationFixedAt,
     lastChangeId,
   );
 

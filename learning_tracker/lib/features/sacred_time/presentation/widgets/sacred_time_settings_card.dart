@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
+import 'package:learning_tracker/features/sacred_time/domain/learner_settings_change.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_settings_editor_provider.dart';
@@ -177,6 +178,15 @@ class SacredTimeSettingsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final settings = ref.watch(activeLearnerSettingsProvider);
+    final holderId = ref.watch(selectedProfileIdProvider);
+    final holderProfiles = ref.watch(profileListStreamProvider).asData?.value;
+    final holder = holderProfiles
+        ?.where((p) => p.profileId == holderId)
+        .firstOrNull;
+    final holderIsParentMode =
+        holder?.mode == ProfileMode.adult ||
+        (holder?.mode == ProfileMode.child &&
+            ref.watch(parentSessionProfileIdProvider) == holderId);
     // Fail closed: the actions are live only on a settled guard value.
     final guard = pinGuard;
     final guardResolved = guard is AsyncData<bool> && !guard.isLoading;
@@ -231,12 +241,111 @@ class SacredTimeSettingsCard extends ConsumerWidget {
                   pinGuardRequired: pinGuardRequired,
                   activeProfileId: activeProfileId,
                 ),
+                if (holderIsParentMode && settings.asData?.value != null) ...[
+                  const Divider(height: 28),
+                  _ZmanimSettings(
+                    settings: settings.asData!.value!,
+                    enabled: guardResolved,
+                    pinGuardRequired: pinGuardRequired,
+                    activeProfileId: activeProfileId,
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+class _ZmanimSettings extends ConsumerWidget {
+  const _ZmanimSettings({
+    required this.settings,
+    required this.enabled,
+    required this.pinGuardRequired,
+    required this.activeProfileId,
+  });
+
+  final LearnerSettings settings;
+  final bool enabled;
+  final bool pinGuardRequired;
+  final String? activeProfileId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          initialValue: settings.tzeisMinhag,
+          decoration: InputDecoration(labelText: l10n.sacredTimeTzeisMinhag),
+          items: [
+            DropdownMenuItem(
+              value: 'degrees_8_5',
+              child: Text(l10n.sacredTimeTzeis85),
+            ),
+            DropdownMenuItem(
+              value: 'minutes_72',
+              child: Text(l10n.sacredTimeTzeis72Minutes),
+            ),
+            DropdownMenuItem(
+              value: 'rabbeinu_tam',
+              child: Text(l10n.sacredTimeTzeisRabbeinuTam),
+            ),
+          ],
+          onChanged: enabled
+              ? (value) {
+                  if (value != null)
+                    _save(
+                      ref,
+                      context,
+                      LearnerSettingsEdit(tzeisMinhag: value),
+                    );
+                }
+              : null,
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<int>(
+          initialValue: settings.candleLightingMinutes,
+          decoration: InputDecoration(labelText: l10n.sacredTimeCandleLighting),
+          items: [18, 20, 22, 30, 40]
+              .map(
+                (minutes) =>
+                    DropdownMenuItem(value: minutes, child: Text('$minutes')),
+              )
+              .toList(),
+          onChanged: enabled
+              ? (value) {
+                  if (value != null)
+                    _save(
+                      ref,
+                      context,
+                      LearnerSettingsEdit(candleLightingMinutes: value),
+                    );
+                }
+              : null,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _save(
+    WidgetRef ref,
+    BuildContext context,
+    LearnerSettingsEdit edit,
+  ) async {
+    if (pinGuardRequired &&
+        !await _verifySacredTimeParentPin(context, ref, activeProfileId))
+      return;
+    final outcome = await ref.read(learnerSettingsEditorProvider).apply(edit);
+    if (!context.mounted) return;
+    final message = _editOutcomeMessage(outcome, AppLocalizations.of(context)!);
+    if (message != null)
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

@@ -1995,7 +1995,7 @@
   "textReaderTextUnavailableTitle": "הטקסט אינו זמין",
   "textReaderCheckConnection": "בדקו את חיבור האינטרנט ונסו שוב.",
   "textReaderFailedToLoad": "טעינת הטקסט נכשלה",
-  "sacredTimeCardDescription": "האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.",
+  "sacredTimeCardDescription": "האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים לפי המיקום ומנהגי הדלקת הנרות וצאת הכוכבים שבחרתם.",
   "sacredTimeShabbosModeLabel": "מצב שבת",
   "sacredTimeAlwaysOn": "תמיד פעיל",
   "sacredTimeNoLocation": "לא הוגדר מיקום",
@@ -4206,6 +4206,11 @@
   "sacredTimeLocationPromptMessageNamed": "המיקום של {name} לא מוגדר. הגדירו אותו כדי שזמני הנעילה ב{term} וביום טוב יתאימו לאזור שלהם.",
   "sacredTimeSettingsNotSaved": "לא ניתן היה לשמור את הגדרות שבת ויום טוב של הלומד. נסו שוב.",
   "sacredTimeSettingsUnavailable": "ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.",
+  "sacredTimeTzeisMinhag": "חישוב צאת הכוכבים",
+  "sacredTimeTzeis85": "8.5° אחרי השקיעה",
+  "sacredTimeTzeis72Minutes": "72 דקות אחרי השקיעה",
+  "sacredTimeTzeisRabbeinuTam": "רבנו תם (16.1°)",
+  "sacredTimeCandleLighting": "הדלקת נרות לפני השקיעה (דקות)",
   "erevBannerBeginsAt": "כניסת {term} בשעה {time} — רשמו מה שאפשר לפני כן.",
   "@erevBannerBeginsAt": {
     "placeholders": {

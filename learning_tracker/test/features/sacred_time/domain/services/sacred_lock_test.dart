@@ -103,7 +103,7 @@ void main() {
       expect(w.endUtc, lakewoodLock.endUtc);
       expect(w.kind, SacredWindowKind.shabbos);
       expect(w.profileId, lakewood.profileId);
-      // Only Lakewood is still locked after Jerusalem's tzeis + 10.
+      // Only Lakewood is still locked after Jerusalem's selected tzeis.
       final afterJerusalem = lockWindows(
         jerusalemH,
         shabbos,

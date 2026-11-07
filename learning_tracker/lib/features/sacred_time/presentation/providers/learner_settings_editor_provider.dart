@@ -143,6 +143,7 @@ final class LearnerSettingsEditor {
       longitude: city.longitude,
       timeZone: _knownZone(city.timezone),
       inIsrael: city.countryCode == 'IL',
+      locationSource: 'manual_city',
     ),
   );
 
@@ -159,6 +160,8 @@ final class LearnerSettingsEditor {
         longitude: fetch.location.longitude,
         timeZone: _knownZone(await _deviceTimeZone()),
         inIsrael: country == null ? null : country == 'IL',
+        locationSource: 'detected',
+        locationFixedAt: fetch.location.fixedAt,
       ),
     );
     return (fetch: fetch, outcome: outcome);

@@ -21,9 +21,9 @@ Iterable<(String, String)> _sources(Directory root) sync* {
 }
 
 void main() {
-  test('the margins are exactly 10 minutes each', () {
-    expect(lockStartBeforeCandleLighting, const Duration(minutes: 10));
-    expect(lockEndAfterTzeis, const Duration(minutes: 10));
+  test('legacy margin compatibility values are zero', () {
+    expect(lockStartBeforeCandleLighting, Duration.zero);
+    expect(lockEndAfterTzeis, Duration.zero);
   });
 
   test('lock_constants.dart is the only definition of a lock margin', () {
@@ -43,7 +43,7 @@ void main() {
     ]);
   });
 
-  test('the domain lock rules use the constants and no 18/15 offset', () {
+  test('the domain lock rules use configured offsets', () {
     final domain = Directory('${_lib().path}/domain');
     final legacy = RegExp(
       'candleOffsetMin|cushionMin|setCandleLightingOffset|'
@@ -58,12 +58,7 @@ void main() {
     final rules = File(
       '${domain.path}/learner_state/lock_windows.dart',
     ).readAsStringSync();
-    expect(rules, contains('lockStartBeforeCandleLighting'));
-    expect(rules, contains('lockEndAfterTzeis'));
-    expect(
-      RegExp(r'Duration\(minutes:').hasMatch(rules),
-      isFalse,
-      reason: 'lock_windows.dart must not define its own minute offset',
-    );
+    expect(rules, contains('settings.candleLightingMinutes'));
+    expect(rules, contains('settings.tzeisMinhag'));
   });
 }

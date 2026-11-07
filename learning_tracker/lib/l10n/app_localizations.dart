@@ -6343,7 +6343,7 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeCardDescription.
   ///
   /// In en, this message translates to:
-  /// **'App is silenced and locked during {term} and Yom Tov. Times computed locally from your location with a 15-minute cushion.'**
+  /// **'App is silenced and locked during {term} and Yom Tov. Times use your location and selected candle-lighting and nightfall customs.'**
   String sacredTimeCardDescription(String term);
 
   /// No description provided for @sacredTimeShabbosModeLabel.
@@ -12335,6 +12335,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sacred Time settings can be changed only for your own learners.'**
   String get sacredTimeSettingsUnavailable;
+
+  /// No description provided for @sacredTimeTzeisMinhag.
+  ///
+  /// In en, this message translates to:
+  /// **'Nightfall calculation'**
+  String get sacredTimeTzeisMinhag;
+
+  /// No description provided for @sacredTimeTzeis85.
+  ///
+  /// In en, this message translates to:
+  /// **'8.5° after sunset'**
+  String get sacredTimeTzeis85;
+
+  /// No description provided for @sacredTimeTzeis72Minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'72 minutes after sunset'**
+  String get sacredTimeTzeis72Minutes;
+
+  /// No description provided for @sacredTimeTzeisRabbeinuTam.
+  ///
+  /// In en, this message translates to:
+  /// **'Rabbeinu Tam (16.1°)'**
+  String get sacredTimeTzeisRabbeinuTam;
+
+  /// No description provided for @sacredTimeCandleLighting.
+  ///
+  /// In en, this message translates to:
+  /// **'Candle lighting before sunset (minutes)'**
+  String get sacredTimeCandleLighting;
 
   /// Erev banner line on the Learn tab (DNI-504, A-2): {term} is the lock's Shabbos/Yom Tov label per the Hebrew Terms setting, {time} the lock start (learner-local) from lockWindows. DRAFT copy, pending zc4.
   ///

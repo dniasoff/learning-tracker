@@ -3694,7 +3694,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
+    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים לפי המיקום ומנהגי הדלקת הנרות וצאת הכוכבים שבחרתם.';
   }
 
   @override
@@ -7510,6 +7510,21 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get sacredTimeSettingsUnavailable =>
       'ניתן לשנות את הגדרות שבת ויום טוב רק ללומדים שלכם.';
+
+  @override
+  String get sacredTimeTzeisMinhag => 'חישוב צאת הכוכבים';
+
+  @override
+  String get sacredTimeTzeis85 => '8.5° אחרי השקיעה';
+
+  @override
+  String get sacredTimeTzeis72Minutes => '72 דקות אחרי השקיעה';
+
+  @override
+  String get sacredTimeTzeisRabbeinuTam => 'רבנו תם (16.1°)';
+
+  @override
+  String get sacredTimeCandleLighting => 'הדלקת נרות לפני השקיעה (דקות)';
 
   @override
   String erevBannerBeginsAt(String term, String time) {

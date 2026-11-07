@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart' as geo;
 import 'package:geolocator/geolocator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -41,9 +42,16 @@ class LocationService {
     }
 
     try {
+      if (defaultTargetPlatform == TargetPlatform.iOS &&
+          await Geolocator.getLocationAccuracy() ==
+              LocationAccuracyStatus.reduced) {
+        await Geolocator.requestTemporaryFullAccuracy(
+          purposeKey: 'SacredTimePreciseLocation',
+        );
+      }
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
+          accuracy: LocationAccuracy.bestForNavigation,
           timeLimit: Duration(seconds: 15),
         ),
       );
