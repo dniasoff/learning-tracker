@@ -356,11 +356,13 @@ void main() {
         expect(commands.applied, [
           learnerSettingsAction(
             _learnerId,
-            const LearnerSettingsEdit(
+            LearnerSettingsEdit(
               latitude: 31.76,
               longitude: 35.21,
               timeZone: 'Asia/Jerusalem',
               inIsrael: true,
+              locationSource: 'detected',
+              locationFixedAt: DateTime.utc(2026, 6, 1),
             ),
           ),
         ]);

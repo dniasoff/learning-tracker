@@ -12,7 +12,6 @@ import 'package:learning_tracker/core/navigation/guards/own_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
-import 'package:learning_tracker/core/navigation/guards/profile_selection_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/features/notifications/data/fcm_parent_push_service.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';

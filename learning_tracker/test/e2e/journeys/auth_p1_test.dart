@@ -42,8 +42,6 @@ library;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/app/router/router_provider.dart'
-    show routerProvider;
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart'
     show DeviceAccountsCompanion, DeviceRegistryDatabase;
 import 'package:learning_tracker/core/providers/registry_provider.dart'
@@ -344,12 +342,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          extraOverrides: [
-            ..._settingsSilences(h),
-            // Wire the harness router into routerProvider so AccountActionsSheet's
-            // closeThen() reads the correct (mounted) router instance.
-            routerProvider.overrideWith((ref) => h.router),
-          ],
+          extraOverrides: [..._settingsSilences(h)],
         );
 
         // Navigate to Settings tab.
@@ -383,10 +376,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          extraOverrides: [
-            ..._settingsSilences(h),
-            routerProvider.overrideWith((ref) => h.router),
-          ],
+          extraOverrides: [..._settingsSilences(h)],
         );
 
         // Navigate to Settings.

@@ -30,6 +30,11 @@ class MockStackRouter extends Mock implements StackRouter {}
 // verify() matcher captures them without a registerFallbackValue error.
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
+class _FakeRouteMatch extends Fake implements RouteMatch<dynamic> {
+  @override
+  List<RouteMatch<dynamic>>? get children => const [];
+}
+
 final _epoch = DateTime.utc(2026, 1, 1);
 
 LearnerProfileEntity _ownProfile(String profileId) {
@@ -54,6 +59,7 @@ void main() {
     resolver = MockNavigationResolver();
     router = MockStackRouter();
     when(() => resolver.isResolved).thenReturn(false);
+    when(() => resolver.route).thenReturn(_FakeRouteMatch());
     when(() => router.replace(any())).thenAnswer((_) async => null);
   });
 

@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
@@ -85,7 +86,7 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     if (_refreshingDetectedLocation) return;
     final scope = ref.read(activeLearnerScopeProvider).asData?.value;
     final settings = ref.read(activeLearnerSettingsProvider).asData?.value;
-    final now = DateTime.now().toUtc();
+    final now = ref.read(localDayClockProvider).nowUtc();
     if (scope == null ||
         settings == null ||
         settings.profileId != scope.profileId ||
@@ -117,7 +118,7 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
                   currentSettings != null &&
                   shouldRefreshDetectedLocation(
                     currentSettings,
-                    DateTime.now().toUtc(),
+                    ref.read(localDayClockProvider).nowUtc(),
                   );
             },
           );

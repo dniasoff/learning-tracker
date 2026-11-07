@@ -51,8 +51,6 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
     show ParentSettingsRoute;
-import 'package:learning_tracker/app/router/router_provider.dart'
-    show routerProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart'
@@ -519,14 +517,8 @@ void main() {
     //   2. Tap "Sign Out" → sheet closes, showSignOutConfirmation dialog opens.
     //   3. Confirm → authStateProvider.signOut() fires; router navigates away.
     //
-    // R-ST6: AccountActionsSheet's closeThen() reads ref.read(routerProvider)
-    // from the caller's (Settings page) ref after the sheet pops. The harness
-    // builds its own AppRouter; without overriding routerProvider, closeThen
-    // would build a second AppRouter via the production provider — that router
-    // is not mounted and navigation would silently no-op. The override uses
-    // overrideWith (not overrideWithValue) so h.router is evaluated lazily
-    // when the provider is first read, after _router has been initialized by
-    // pumpApp.
+    // R-ST6: AccountActionsSheet's closeThen() reads the routerProvider that
+    // E2EHarness already overrides with its mounted AppRouter.
     //
     // accountManagementServiceProvider calls Firebase signOut; _StubAuthRepository
     // signOut() is a no-op (Future.value(null)) so Firebase is never touched.
@@ -548,10 +540,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          extraOverrides: [
-            ..._settingsSilences(h),
-            routerProvider.overrideWith((ref) => h.router),
-          ],
+          extraOverrides: [..._settingsSilences(h)],
         );
 
         await _goToSettings(h);
@@ -618,10 +607,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          extraOverrides: [
-            ..._settingsSilences(h),
-            routerProvider.overrideWith((ref) => h.router),
-          ],
+          extraOverrides: [..._settingsSilences(h)],
         );
 
         await _goToSettings(h);

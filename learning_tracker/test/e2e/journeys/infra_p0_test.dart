@@ -292,6 +292,7 @@ void main() {
               latitude: 31.76,
               longitude: 35.21,
               inIsrael: true,
+              locationSource: 'manual_city',
             ),
           ),
         ]);
