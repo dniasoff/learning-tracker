@@ -49,6 +49,16 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant.dart'
+    show TutorGrantDoc, TutorGrantState;
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart'
+    show TutorGrant;
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart'
+    show TutorPermissions;
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
+    show incomingTutorGrantsProvider;
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
+    show pendingTutorInvitesProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../../helpers/firestore_fixtures.dart';
@@ -332,6 +342,36 @@ void main() {
       );
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
+      final now = DateTime.utc(2026, 11, 7);
+      final activeGrants = List.generate(
+        6,
+        (index) => TutorGrant.fromDoc(
+          TutorGrantDoc(
+            grantId: 'active-grant-$index',
+            parentUid: 'parent-$index',
+            childProfileId: 'child-$index',
+            tutorEmail: identity.email,
+            state: TutorGrantState.active,
+            invitedAt: now,
+            updatedAt: now,
+            acceptedAt: now,
+            childName: 'Talmid $index',
+          ),
+          permissions: TutorPermissions.defaults(),
+        ),
+      );
+      final pendingInvite = TutorGrant.fromDoc(
+        TutorGrantDoc(
+          grantId: 'pending-invite',
+          parentUid: 'pending-parent',
+          childProfileId: 'pending-child',
+          tutorEmail: identity.email,
+          state: TutorGrantState.pending,
+          invitedAt: now,
+          updatedAt: now,
+          childName: 'Invited Talmid',
+        ),
+      );
 
       await h.pumpApp(
         path: '/profile-picker',
@@ -339,8 +379,12 @@ void main() {
         mountPersistentSwitcher: true,
         extraOverrides: [
           ...h.dashboardSilenceOverrides,
-          incomingGrantsEmptyOverride(),
-          pendingInvitesEmptyOverride(),
+          incomingTutorGrantsProvider.overrideWith(
+            (ref) => Future.value(activeGrants),
+          ),
+          pendingTutorInvitesProvider.overrideWith(
+            (ref) => Future.value([pendingInvite]),
+          ),
         ],
       );
       await _seedSecondProfile(
@@ -393,11 +437,15 @@ void main() {
       expect(find.text(l10n.manageProfiles), findsNothing);
       expect(find.text(l10n.parentSettingsTitle), findsNothing);
       expect(find.text(l10n.notificationSettings), findsNothing);
+      expect(find.text(l10n.acceptInviteAccept), findsNothing);
+      expect(find.byKey(const Key('settingsMyTalmidim')), findsNothing);
+      expect(find.text(l10n.settingsTutoringViewAll(2)), findsNothing);
 
       await tester.tap(find.byType(UserProfileHeaderCard));
       await h.pump();
       await h.pump(const Duration(milliseconds: 300));
       expect(find.text(l10n.deleteAccountTitle), findsNothing);
+      expect(find.text(l10n.signOut), findsNothing);
       Navigator.of(tester.element(find.byType(SettingsScreen))).pop();
       await h.pump();
 
@@ -410,6 +458,14 @@ void main() {
       expect(h.router.topRoute.name, 'SettingsRoute');
 
       unawaited(h.router.push<Object?>(const ParentSettingsRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
+
+      unawaited(h.router.push<Object?>(const ManageGrantsRoute()));
+      await h.pump(const Duration(milliseconds: 300));
+      expect(h.router.topRoute.name, 'SettingsRoute');
+
+      unawaited(h.router.push<Object?>(const MyTalmidimRoute()));
       await h.pump(const Duration(milliseconds: 300));
       expect(h.router.topRoute.name, 'SettingsRoute');
     },

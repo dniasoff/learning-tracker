@@ -106,7 +106,8 @@ class SettingsScreen extends ConsumerWidget {
             // ── Pending tutor invitations ──────────────────────────────────────
             // Shown automatically when a parent has sent an invite addressed to
             // this account's email — no link sharing required.
-            if (!isTutoredSession) const _PendingInvitesSection(),
+            if (hasActiveProfile && !isTutoredSession)
+              const _PendingInvitesSection(),
             const SizedBox(height: 24),
             // ── DEVICE section (D2/WS4.settings) ──────────────────────────────
             // Device-scoped settings: applies to this physical device, shared by

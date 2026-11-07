@@ -76,7 +76,7 @@ class _AccountActionsSheet extends ConsumerWidget {
     // Delete is for non-child authenticated users (cloud or local-born). A
     // tutor-only adult has no own profile row, so isChildProfile is false here.
     final showDelete = hasActiveProfile && !isChildProfile && user != null;
-    final showSignOut = !isChildProfile;
+    final showSignOut = hasActiveProfile && !isChildProfile;
     final showAddAccount =
         hasActiveProfile && (!isChildProfile || inParentMode);
 

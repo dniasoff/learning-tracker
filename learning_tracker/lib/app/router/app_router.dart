@@ -405,7 +405,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/tutor/my-grants',
       page: ManageGrantsRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
     // Story 4.3 (DNI-511): My talmidim, the tutor's active roster with each
     // learner's standing. Incoming invite and grant management above stays
@@ -414,7 +414,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/tutor/talmidim',
       page: MyTalmidimRoute.page,
-      guards: [authGuard],
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
     AutoRoute(
       path: '/tutor/audit-log',
