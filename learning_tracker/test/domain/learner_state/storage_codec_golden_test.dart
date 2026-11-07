@@ -36,7 +36,7 @@ const Map<String, Set<String>> _schemaTable = {
     'recorded_at',
     'actor',
   },
-  'Actor': {'uid', 'role', 'display_name'},
+  'Actor': {'uid', 'role', 'display_name', 'session_id'},
   'NodeEntry': {'level', 'ref'},
   'SubTrack': {
     'curriculum_id',

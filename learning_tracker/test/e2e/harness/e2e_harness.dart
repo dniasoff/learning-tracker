@@ -114,7 +114,8 @@ import 'package:learning_tracker/data/firestore/active_account_providers.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show ActiveProfileDocId, activeProfileDocIdProvider;
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
-import 'package:learning_tracker/data/repositories/parent_session_state.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart'
+    show ParentSessionActorSource, parentSessionActorSourceProvider;
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -754,6 +755,15 @@ class E2EHarness {
         ),
         activeProfileDocIdProvider.overrideWith(
           () => _FixedActiveProfileDocId(profileId),
+        ),
+        // Profile-create and other governed actor writes require a server
+        // parent-session proof. This harness uses fake Firestore, so supply a
+        // deterministic test lease at the provider boundary.
+        parentSessionActorSourceProvider.overrideWithValue(
+          ParentSessionActorSource(
+            sessionId: () => 'a' * 64,
+            profileId: () => null,
+          ),
         ),
         // Owner governed writes (DNI-476) through the real governed
         // commands on the same fake Firestore.

@@ -25,10 +25,10 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
-    show selectedProfileIdProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
     show parentSessionControllerProvider;
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
+    show selectedProfileIdProvider;
 import 'package:learning_tracker/features/tutoring/tutoring.dart'
     show activeTutoredProfileSelectionProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';

@@ -607,7 +607,6 @@ void main() {
         seed: jerusalem,
       );
 
-      const profilePath = 'users/$_uid/learner_profiles/$profileUlid';
       // The creation transaction is intentionally not a merge. Its read
       // guards this path against routing an existing profile through the
       // bootstrap seed.
@@ -805,34 +804,37 @@ void main() {
       });
     });
 
-    test('seeded creation rejects an existing profile instead of merging it', () async {
-      final fs = FakeFirebaseFirestore();
-      final doc = fs.doc('users/$_uid/learner_profiles/$profileUlid');
-      await doc.set({
-        'display_name': 'Original',
-        'mode': 'adult',
-        'created_at': _createdAt.toIso8601String(),
-        'updated_at': _createdAt.toIso8601String(),
-        'time_zone': 'UTC',
-        'in_israel': false,
-        'last_change_id': ulidA,
-      });
+    test(
+      'seeded creation rejects an existing profile instead of merging it',
+      () async {
+        final fs = FakeFirebaseFirestore();
+        final doc = fs.doc('users/$_uid/learner_profiles/$profileUlid');
+        await doc.set({
+          'display_name': 'Original',
+          'mode': 'adult',
+          'created_at': _createdAt.toIso8601String(),
+          'updated_at': _createdAt.toIso8601String(),
+          'time_zone': 'UTC',
+          'in_israel': false,
+          'last_change_id': ulidA,
+        });
 
-      await expectLater(
-        seededRepo(fs).ensureProfile(
-          profileId: profileUlid,
-          displayName: 'Attacker merge',
-          mode: ProfileMode.child,
-          createdAt: _createdAt,
-          seed: jerusalem,
-        ),
-        throwsA(isA<StateError>()),
-      );
-      final data = (await doc.get()).data()!;
-      expect(data['display_name'], 'Original');
-      expect(data['time_zone'], 'UTC');
-      expect((await doc.collection('change_log').get()).docs, isEmpty);
-    });
+        await expectLater(
+          seededRepo(fs).ensureProfile(
+            profileId: profileUlid,
+            displayName: 'Attacker merge',
+            mode: ProfileMode.child,
+            createdAt: _createdAt,
+            seed: jerusalem,
+          ),
+          throwsA(isA<StateError>()),
+        );
+        final data = (await doc.get()).data()!;
+        expect(data['display_name'], 'Original');
+        expect(data['time_zone'], 'UTC');
+        expect((await doc.collection('change_log').get()).docs, isEmpty);
+      },
+    );
 
     test('the profile codec never emits a settings key', () {
       final entity = LearnerProfileEntity(

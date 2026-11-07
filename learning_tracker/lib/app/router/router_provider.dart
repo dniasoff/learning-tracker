@@ -76,6 +76,7 @@ final routerProvider = Provider<AppRouter>((ref) {
 
     final context = navigatorKey.currentContext;
     if (context == null) return false;
+    if (!context.mounted) return false;
     return showParentPinVerificationDialog(
       context,
       profileId: profile.profileId,

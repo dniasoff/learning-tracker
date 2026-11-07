@@ -32,6 +32,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart'
+    show ParentSessionActorSource, parentSessionActorSourceProvider;
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/goals.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
@@ -205,6 +207,11 @@ List<Override> _productionCommandSources({
       createdAt: t2,
       updatedAt: t2,
     ),
+  ),
+  // The command actor must carry a parent-session proof even though this
+  // test keeps every persistence port in memory.
+  parentSessionActorSourceProvider.overrideWithValue(
+    ParentSessionActorSource(sessionId: () => 'a' * 64, profileId: () => null),
   ),
   learningWritePortProvider.overrideWith(
     (ref) async => InMemoryLearningWritePort(),

@@ -88,7 +88,6 @@ import 'package:learning_tracker/data/repositories/firestore_curriculum_track_re
 import 'package:learning_tracker/data/repositories/firestore_diagnostic_log_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
-import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/data/repositories/firestore_point_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_points_ledger_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_profile_program_repository.dart';
@@ -97,6 +96,7 @@ import 'package:learning_tracker/data/repositories/firestore_stage_definition_re
 import 'package:learning_tracker/data/repositories/firestore_study_day_config_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_track_learning_order_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_tutor_audit_log_repository.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 // Direct import, not the tutoring barrel: this file lives outside
 // lib/features/** and lib/domain/**, so it is outside audit check 102's

@@ -36,8 +36,6 @@ void main() {
 
     expect(calls, hasLength(1));
     expect(calls.single.$1, 'revokeParentSession');
-    expect(calls.single.$2, <String, Object?>{
-      'parentSessionId': 'a' * 64,
-    });
+    expect(calls.single.$2, <String, Object?>{'parentSessionId': 'a' * 64});
   });
 }
