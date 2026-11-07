@@ -25,6 +25,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
@@ -34,7 +35,7 @@ import 'package:learning_tracker/features/account/domain/services/account_manage
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-// ignore_for_file: directives_ordering
+import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show profileListStreamProvider;
@@ -71,6 +72,18 @@ class _StubAuthStateNotifier extends AuthStateNotifier {
 class _ActiveProfileIdOverride extends ActiveProfileId {
   @override
   String? build() => '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+}
+
+LearnerProfileEntity _adultProfileFixture() {
+  final fixedNow = DateTime.utc(2026, 1, 1);
+  return LearnerProfileEntity(
+    profileId: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    displayName: 'Adult',
+    mode: ProfileMode.adult,
+    avatar: '',
+    createdAt: fixedNow,
+    updatedAt: fixedNow,
+  );
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,7 +146,9 @@ Widget _buildApp({
       deviceRegistryProvider.overrideWithValue(registry),
       authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
       activeProfileIdProvider.overrideWith(() => _ActiveProfileIdOverride()),
-      profileListStreamProvider.overrideWith((ref) => Stream.value(const [])),
+      profileListStreamProvider.overrideWith(
+        (ref) => Stream.value([_adultProfileFixture()]),
+      ),
       ...extra,
     ],
     child: const _SheetHost(),

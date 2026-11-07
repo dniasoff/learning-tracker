@@ -283,6 +283,18 @@ const _profileUid = 'darkmode-settings-test-uid';
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 const _childProfileId = '01J6Q2H4A8M7K3P9R5T6V8WXY8';
 
+LearnerProfileEntity _adultProfileFixture() {
+  final fixedNow = DateTime.utc(2026, 1, 1);
+  return LearnerProfileEntity(
+    profileId: _profileId,
+    displayName: 'Adult',
+    mode: ProfileMode.adult,
+    avatar: '',
+    createdAt: fixedNow,
+    updatedAt: fixedNow,
+  );
+}
+
 /// A pending tutor-grant fixture (Finding 3 — renders as a `_TutorGrantTile`
 /// with `isPending: true`, the `statusWarningSoft` background).
 TutorGrant _pendingGrantFixture() {
@@ -1042,6 +1054,11 @@ void main() {
               pendingTutorInvitesProvider.overrideWith(
                 (ref) => Future.value([_pendingGrantFixture()]),
               ),
+              activeProfileIdProvider.overrideWithValue(_profileId),
+              selectedProfileIdProvider.overrideWithValue(_profileId),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value([_adultProfileFixture()]),
+              ),
             ],
           ),
         );
@@ -1090,6 +1107,11 @@ void main() {
               ),
               pendingTutorInvitesProvider.overrideWith(
                 (ref) => Future.value([_pendingGrantFixture()]),
+              ),
+              activeProfileIdProvider.overrideWithValue(_profileId),
+              selectedProfileIdProvider.overrideWithValue(_profileId),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value([_adultProfileFixture()]),
               ),
             ],
           ),
