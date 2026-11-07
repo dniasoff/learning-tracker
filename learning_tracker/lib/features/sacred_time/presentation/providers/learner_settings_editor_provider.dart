@@ -167,6 +167,55 @@ final class LearnerSettingsEditor {
     return (fetch: fetch, outcome: outcome);
   }
 
+  /// Refreshes a detected location for the profile captured before the GPS
+  /// request. Automatic refreshes do not request either location or full
+  /// accuracy permission, and [mayPersist] is rechecked after the fix.
+  Future<LearnerLocationDetectResult?> refreshDetectedLocation({
+    required String expectedProfileId,
+    required bool Function() mayPersist,
+  }) async {
+    final initialTarget = await _resolve();
+    if (initialTarget == null || initialTarget.profileId != expectedProfileId) {
+      return null;
+    }
+    if (!await _locationService.hasPermission()) return null;
+
+    final fetch = await _locationService
+        .detectCurrentWithoutPermissionRequests();
+    if (fetch is! LocationFetchSuccess) return (fetch: fetch, outcome: null);
+
+    final zone = _knownZone(await _deviceTimeZone());
+    final currentTarget = await _resolve();
+    if (currentTarget == null ||
+        currentTarget.profileId != expectedProfileId ||
+        !mayPersist()) {
+      return null;
+    }
+
+    final country = fetch.location.countryCode;
+    final result = await currentTarget.apply(
+      learnerSettingsAction(
+        expectedProfileId,
+        LearnerSettingsEdit(
+          latitude: fetch.location.latitude,
+          longitude: fetch.location.longitude,
+          timeZone: zone,
+          inIsrael: country == null ? null : country == 'IL',
+          locationSource: 'detected',
+          locationFixedAt: fetch.location.fixedAt,
+        ),
+      ),
+    );
+    final outcome = switch (result) {
+      CaptureSuccess() => LearnerSettingsEditOutcome.saved,
+      CaptureLocked() => LearnerSettingsEditOutcome.locked,
+      CaptureChildLimit() ||
+      CaptureOnlineRequired() ||
+      CaptureRejected() => LearnerSettingsEditOutcome.notSaved,
+    };
+    return (fetch: fetch, outcome: outcome);
+  }
+
   /// Sets the learner's Israel (one-day yom tov) flag.
   Future<LearnerSettingsEditOutcome> setInIsrael(bool value) =>
       apply(LearnerSettingsEdit(inIsrael: value));

@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -82,16 +83,44 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
 
   Future<void> _refreshDetectedLocationIfStale() async {
     if (_refreshingDetectedLocation) return;
+    final scope = ref.read(activeLearnerScopeProvider).asData?.value;
     final settings = ref.read(activeLearnerSettingsProvider).asData?.value;
-    if (settings == null ||
-        !shouldRefreshDetectedLocation(settings, DateTime.now().toUtc())) {
+    final now = DateTime.now().toUtc();
+    if (scope == null ||
+        settings == null ||
+        settings.profileId != scope.profileId ||
+        !shouldRefreshDetectedLocation(settings, now)) {
       return;
     }
+    final profileId = scope.profileId;
     _refreshingDetectedLocation = true;
     try {
-      // A failed fetch leaves the existing governed coordinates untouched;
-      // manually selected cities are excluded by the source check above.
-      await ref.read(learnerSettingsEditorProvider).detect();
+      // The editor binds the fix to this profile before starting GPS and
+      // checks the live settings again before its governed write. This path
+      // never requests location or full-accuracy permission.
+      await ref
+          .read(learnerSettingsEditorProvider)
+          .refreshDetectedLocation(
+            expectedProfileId: profileId,
+            mayPersist: () {
+              if (!mounted) return false;
+              final currentScope = ref
+                  .read(activeLearnerScopeProvider)
+                  .asData
+                  ?.value;
+              final currentSettings = ref
+                  .read(activeLearnerSettingsProvider)
+                  .asData
+                  ?.value;
+              return currentScope?.profileId == profileId &&
+                  currentSettings?.profileId == profileId &&
+                  currentSettings != null &&
+                  shouldRefreshDetectedLocation(
+                    currentSettings,
+                    DateTime.now().toUtc(),
+                  );
+            },
+          );
     } on Object {
       // Resume is best-effort; a later resume retries without blocking app use.
     } finally {
@@ -146,11 +175,6 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.mode ==
         ProfileMode.child;
-    final activeSettings = ref.watch(activeLearnerSettingsProvider);
-    if (activeSettings.hasValue && activeSettings.value != null) {
-      unawaited(_refreshDetectedLocationIfStale());
-    }
-
     return MaterialApp.router(
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       onGenerateTitle: (context) =>
