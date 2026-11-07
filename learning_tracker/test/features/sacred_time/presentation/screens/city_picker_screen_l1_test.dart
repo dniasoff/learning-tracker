@@ -528,6 +528,7 @@ void main() {
               latitude: _cityJerusalem.latitude,
               longitude: _cityJerusalem.longitude,
               inIsrael: true,
+              locationSource: 'manual_city',
             ),
           ),
         ]);
