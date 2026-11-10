@@ -12,6 +12,7 @@
 // --test-concurrency=1 serialises the files so each can clearFirestore() freely.
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import admin from 'firebase-admin';
 import functionsTestInit from 'firebase-functions-test';
 
@@ -45,7 +46,12 @@ export const parentAuth = { uid: PARENT, token: {} };
 export const strangerAuth = { uid: STRANGER, token: {} };
 
 /** Root collections every CF touches. Cleared (incl. subcollections) per test. */
-const ROOT_COLLECTIONS = ['tutor_grants', 'users', 'tutor_active_access'];
+const ROOT_COLLECTIONS = [
+  'tutor_grants', 'users', 'tutor_active_access', 'social_profiles',
+  'social_parent_controls', 'social_follow_requests', 'social_follows',
+  'social_blocks', 'social_rate_limits', 'school_memberships',
+  'social_audit_logs', 'social_search_cursors',
+];
 
 /**
  * Wipe all emulator data (call in beforeEach). Uses the Admin SDK's awaited
@@ -168,6 +174,39 @@ export async function seedProfile(fields = {}) {
     time_zone: 'Asia/Jerusalem',
     ...fields,
   });
+}
+
+export function socialProfileDocId(uid, profileId) {
+  return createHash('sha256').update(`${uid}\0${profileId}`).digest('hex');
+}
+
+export function socialProfileId(uid, profileId) {
+  return createHash('sha256').update(`test-social-id\0${uid}\0${profileId}`).digest('base64url');
+}
+
+export async function seedSocialProfile(uid, profileId, mode = 'adult', fields = {}) {
+  await db.collection('users').doc(uid).collection('learner_profiles').doc(profileId)
+    .set({ display_name: `${uid} learner`, mode, ...fields });
+  await db.collection('social_profiles').doc(socialProfileDocId(uid, profileId)).set({
+    owner_uid: uid,
+    profile_id: profileId,
+    social_profile_id: socialProfileId(uid, profileId),
+    mode,
+    display_name: `${uid} learner`,
+    display_name_search: `${uid} learner`,
+    avatar_id: 0,
+    paused: false,
+  });
+}
+
+export async function seedParentSession(uid, profileId, sessionId = 'a'.repeat(64)) {
+  await db.collection('users').doc(uid).collection('parent_sessions').doc(sessionId).set({
+    profile_id: profileId,
+    created_at: admin.firestore.Timestamp.fromMillis(Date.now() - 60_000),
+    expires_at: admin.firestore.Timestamp.fromMillis(Date.now() + 30 * 60_000),
+    revoked: false,
+  });
+  return sessionId;
 }
 
 /** Seed an active grant carrying the AD-53 `can_edit_learning` permission. */

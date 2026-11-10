@@ -167,7 +167,132 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "school_memberships",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "profile_id", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "school_memberships",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "school_id", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_follow_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "from_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "from_profile_id", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_follow_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "to_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "to_profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_follows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "from_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "from_profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_follows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "to_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "to_profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_follows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "from_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "from_profile_id", "order": "ASCENDING" },
+        { "fieldPath": "to_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "to_profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_follow_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "from_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "from_profile_id", "order": "ASCENDING" },
+        { "fieldPath": "to_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "to_profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_parent_controls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_profiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_blocks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "left_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "left_profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_blocks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "right_owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "right_profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_audit_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "social_search_cursors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "profile_id", "order": "ASCENDING" }
+      ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "social_search_cursors",
+      "fieldPath": "expires_at",
+      "ttl": true,
+      "indexes": []
+    }
+  ]
 }

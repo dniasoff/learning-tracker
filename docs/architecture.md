@@ -235,7 +235,7 @@ lib/features/<feature>/
 
 ## Feature Dependency Graph
 
-> **AUD-docs-15 regenerated 2026-10-03** (1.28 cutover release; adds the `learner_state` feature) by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from a real grep of `import 'package:learning_tracker/features/...'` across every file. The full cross-feature import graph is dense — **99 edges among 15 nodes** — so this diagram keeps only "significant" dependencies (an edge survives if ≥6 distinct files make that import) plus, for any node that would otherwise be edge-less at that threshold, its single heaviest real edge. Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node here — every feature module imports `core/` (databases, navigation, shared services); that edge is universal, not differentiating. `sync` dropped out as a node in this revision — `lib/features/sync/` was deleted wholesale in the Firestore-native rewrite (Phase 3 P3-5).
+> **AUD-docs-15 regenerated 2026-11-10** by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from imports of `package:learning_tracker/features/...` across every file. The current graph has **18 nodes and 122 cross-feature edges**; this diagram keeps imports used by at least 6 distinct files plus the heaviest real edge for any node that would otherwise be edge-less. Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node because every feature module imports it; that edge is universal, not differentiating.
 
 ```mermaid
 graph TD
@@ -253,27 +253,27 @@ graph TD
     sacred_time["sacred_time"]
     scheduler["scheduler"]
     settings["settings"]
+    social["social"]
     sub_tracks["sub_tracks"]
     tracks["tracks"]
     tutoring["tutoring"]
 
-    content_browsing --> learning
+    change_history --> learning
+    content_browsing --> tutoring
     dashboard --> scheduler
     dashboard --> tracks
     gamification --> learning
-    learner_state --> content_browsing
+    learning --> scheduler
+    learning --> sub_tracks
+    learning --> tutoring
     notifications --> learner_state
-    onboarding --> tracks
     profiles --> tutoring
-    progress --> content_browsing
-    progress --> learning
-    progress --> profiles
-    progress --> tracks
     sacred_time --> profiles
-    scheduler --> tracks
     settings --> account
-    tracks --> learning
+    sub_tracks --> learner_state
     sub_tracks --> learning
+    sub_tracks --> profiles
+    sub_tracks --> tutoring
     tracks --> onboarding
     tracks --> scheduler
     tracks --> settings

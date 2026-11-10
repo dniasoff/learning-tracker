@@ -13,8 +13,8 @@
 
 The application uses a **nested, user-scoped** layout. Everything a user owns
 lives beneath `users/{uid}`, and per-learner data lives beneath
-`users/{uid}/learner_profiles/{profileId}`. Two top-level collections support
-the cross-user tutor-access feature (W3.38 / V2-R3).
+`users/{uid}/learner_profiles/{profileId}`. Top-level collections support
+cross-account tutor and social relationships.
 
 ```
 users/{uid}                                         — account user-profile doc
@@ -26,15 +26,23 @@ users/{uid}/learner_profiles/{profileId}/<collection>/...
 tutor_grants/{grantId}                              — M:N tutor permission graph
 tutor_grants/{grantId}/audit_log/{entryId}          — tutor action audit trail
 tutor_active_access/{accessId}                      — O(1) active-grant lookup index
+
+social_profiles/{profileKey}                        — private profile-scoped social identity
+social_parent_controls/{profileKey}                 — parent-owned child school allow-list
+social_follow_requests/{requestKey}                  — directional, recipient-approved requests
+social_follows/{edgeKey}                             — accepted directional follows
+social_blocks/{pairKey}                              — pairwise block state
+social_audit_logs/{entryId}                          — parent social-control audit events
+social_search_cursors/{cursorId}                     — short-lived opaque school-search cursors
+school_memberships/{membershipId}                    — server-owned read-model interface (school bead)
 ```
 
 Ownership of the nested layout is enforced structurally: the security rules
 gate every path on `isOwner(uid)` against the `users/{uid}` segment, so no
 document body needs to be read to authorize a request. Doc IDs are *not*
-uid-prefixed in this layout — the path itself encodes ownership. The two
-top-level collections are keyed differently (see
-[Tutor-access collections](#tutor-access-collections-top-level)) since they
-are shared across the parent's and tutor's uids.
+uid-prefixed in this layout — the path itself encodes ownership. The top-level
+tutor and social collections are keyed by grant, profile, pair, or directional
+edge identity because they are shared across account uids.
 
 The canonical rules and indexes live at:
 
@@ -84,6 +92,29 @@ A malicious client forging `tutor_grants.state == 'active'` directly is the
 primary attack vector these `allow create/update/delete: if false` rules
 close — see coding-standards.md SR-5 for the corresponding cross-user-access
 threat model.
+
+## Social graph collections (top-level)
+
+The ay8 follow-request implementation stores relationships separately from
+tutor grants. Every write is callable-only. Social profile cards are private
+to their owner in this bead; follower progress/profile projection belongs to
+the later community bead.
+
+| Collection | Key and fields | Client access |
+|---|---|---|
+| `social_profiles/{profileKey}` | SHA-256 of `(owner_uid, profile_id)`; chosen display name, bounded avatar index, mode and pause state | Owner `get`; no client writes or list |
+| `social_parent_controls/{profileKey}` | Same profile key; parent-managed `allowed_school_ids` and pause state | Callable-only reads/writes, requiring a live parent session |
+| `social_follow_requests/{requestKey}` | SHA-256 of directional `(from owner/profile, to owner/profile)`; state and server timestamps | Callable-only reads/writes; responses expose opaque social profile ids |
+| `social_follows/{edgeKey}` | Same directional key; one accepted edge per direction | Callable-only reads/writes |
+| `social_blocks/{pairKey}` | SHA-256 of the sorted profile pair; blocker endpoint and server timestamp | Callable-only reads/writes |
+| `social_audit_logs/{entryId}` | Parent account/profile, action and server time; no names or learning data | Server-only reads/writes |
+| `social_search_cursors/{cursorId}` | Short-lived, caller/school/query-bound cursor state; expires after 15 minutes | Callable-only reads/writes; TTL cleanup |
+| `school_memberships/{membershipId}` | Interface consumed by ay8: `owner_uid`, `profile_id`, `school_id`, `state: active` | Admin SDK only in ay8; school bead supplies membership lifecycle and rules |
+
+The school-membership collection is only a read-model contract here. ay8 does
+not create schools, memberships, invites, or staff access. Until the school
+bead populates active membership records, school search and child allow-list
+updates fail closed.
 
 ---
 

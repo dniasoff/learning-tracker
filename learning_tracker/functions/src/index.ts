@@ -71,3 +71,17 @@ export { translatePhrases } from "./phrase_translations";
 
 // Parent PIN authority and short-lived server sessions (7vx).
 export { setParentPin, createParentSession, revokeParentSession } from "./parent_sessions";
+
+// Profile-scoped social graph and parent-controlled child follow requests.
+export {
+  upsertSocialProfile,
+  setChildSocialControls,
+  getChildSocialControls,
+  sendFollowRequest,
+  reviewFollowRequest,
+  removeFollow,
+  blockSocialProfile,
+  unblockSocialProfile,
+  searchSchoolMembers,
+  listSocialConnections,
+} from "./social_graph";
