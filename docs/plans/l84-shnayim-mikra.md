@@ -18,7 +18,7 @@ Do not model the three readings as ordinary stage/review events for Chumash. Use
 3. **Parsha by parsha.** Read the full assigned parsha twice, then its selected third reading once, and mark the three passes. Keep a visible outline and allow marking an aliyah or the whole pass complete. This is a larger session and should warn that pass completion is whole-unit, not inferred from opening the text.
 4. **Daily aliyah pacing (optional pace setting).** Split the current parsha across Sunday–Friday: assign aliyot 1–5 to Sunday–Thursday and aliyot 6–7 together on Friday. Each day's item is a due subtask of this week's parsha; the user may do more than one in a day. Track three readings per aliyah according to the chosen reading mode.
 
-Expose **mode** (pasuk / aliyah / whole-parsha) and **pace** (self-paced / daily aliyah) as settings on the one Shnayim Mikra curriculum, not as separate list entries. Offer **Onkelos / Rashi** as the third-reading source setting, with Onkelos as the default and clear labeling that Rashi is an alternative minhag/custom. Keep the selected source consistent across the three-reading workflow. Preserve the user's settings when changing pace or source. Do not offer Rashi in the first implementation until source licensing/content coverage and a reliable selectable Sefaria ref mapping are verified.
+Expose **mode** (pasuk / aliyah / whole-parsha) and **pace** (self-paced / daily aliyah) as settings on the one Shnayim Mikra curriculum, not as separate list entries. Offer **Onkelos / Rashi** as the third-reading source setting, with Onkelos as the default and clear labeling that Rashi is an alternative minhag/custom. Keep the selected source consistent across the three-reading workflow. Preserve the user's settings when changing pace or source. Release 1 includes both Onkelos and Rashi, as confirmed by the user. Store Rashi per comment ref, show an explicit “No Rashi on this pasuk” state for verses without comments, and never fabricate or silently substitute commentary.
 
 ### Curriculum/list placement
 
@@ -32,7 +32,7 @@ Add the curriculum to `CurriculumId`, the canonical curriculum order/default con
 
 The inspected app already has an offline calendar pattern: `calendar_cycles` maps `program_key + date_key` to refs, `LocalCalendarEngine` reads it, and the content seed is built locally. There is **no weekly parsha program in the runtime calendar registry**. Add a dedicated program key (or two region-keyed variants) to the seed/lookup path, keyed by Shabbos date, and cache the result in content.db so the current and near-future cycle work offline. If kosher_dart cannot produce the required region/Yom-Tov behavior reliably, use an explicit tested parsha calendar seed generated from an authoritative source rather than a runtime network dependency.
 
-Persist the learner's Israel/diaspora choice with curriculum configuration; do not infer it from device locale or location. Ask once during setup, allow editing later, and recalculate only future assignments when changed. Keep the active week's assignment stable if the setting is changed midweek, or explicitly migrate it as a user-confirmed reset.
+Use the learner's existing Shabbat location `in_israel` flag as the initial region, and make it editable in settings. Do not prompt during setup or infer from app/device locale. Recalculate only future assignments when changed; keep the active week's assignment stable.
 
 ### Yom Tov and paired portions
 
@@ -40,23 +40,21 @@ A Shabbos with a festival reading is not a regular weekly parsha. Do not display
 
 ### Deadline
 
-Recommended first version: deadline is **before the assigned Shabbos begins** in the learner's chosen home time zone, using the existing date-only due/overdue pipeline for the displayed date and not requiring candle-lighting-time location data. Mark overdue after Shabbos begins and keep the prior parsha available as catch-up without rolling it into this week's completion. A no-parsha/festival week should not create a false overdue item. Give the app one explicit weekly deadline rule rather than a separate rolling/deadline ScheduleSpec for every pasuk. Existing `ScheduleSpec` governs review-stage timing; it is not a weekly calendar assignment contract.
-
-Whether the user wants a grace window until Simchas Torah, or a grace window after the current Shabbos, needs a product decision; see open questions.
+Deadline is **before the assigned Shabbos begins**. After that, keep the unfinished parsha overdue and available for catch-up through Simchas Torah, while surfacing the new week's assignment independently; unfinished work does not block the new week. A no-parsha/festival week should not create a false overdue item. Give the app one explicit weekly deadline rule rather than a separate rolling/deadline `ScheduleSpec` for every pasuk. Existing `ScheduleSpec` governs review-stage timing; it is not a weekly calendar assignment contract.
 
 ## 3. Text data, references, and offline availability
 
 ### Sources
 
 - Use existing Hebrew Chumash leaves from the shipped Sefaria-derived curriculum hierarchy/text seed. Canonical atomic refs are chapter/verse refs such as `Genesis 1:1`; ensure a helper converts that representation to the dot form used by the current Chumash text cache (the current `text_cache` seed uses refs like `Genesis 1.1`).
-- Fetch/cache the third reading from Sefaria's text source at seed-build time, not on device. The expected Sefaria refs are `Onkelos Genesis 1:1` for Onkelos and `Rashi on Genesis 1:1` for Rashi; validate actual canonical refs and Hebrew/English version availability against the local Mongo dump / source data. Store the Aramaic Onkelos text in the Hebrew-script field and an English rendering only if the selected Sefaria version provides it. Apply the existing Sefaria text cleaning/HTML decoding rules.
+- Fetch/cache both third-reading sources at seed-build time, not on device. Verified live Sefaria v3 refs are `Onkelos Genesis 1:1` (Hebrew-script Aramaic) and `Rashi on Genesis 1:1:1` (the first comment on that verse). The public-domain Hebrew Onkelos versions cover all five books. The Hebrew Rashi endpoint supplies comment-level refs, including multiple comments on some pesukim and no comment on many others. Store Hebrew text and an English rendering only if the selected version supplies one; run both through existing Sefaria cleaning/HTML decoding. **Local-source limitation:** the documented Mongo dump and generated `book_text_cache.json` are absent in both the story worktree and main checkout. These figures were checked against Sefaria's live v3 Texts API; repeat coverage/version checks against the local dump in the seed-build bead before implementation.
 - Runtime reader is offline-first. Include required Onkelos text in `assets/db/content.db.xz` and generated gzip asset through the normal seed pipeline; never fetch per pasuk during ordinary reading. If any version cannot be bundled, identify that limitation before launch instead of silently depending on network. Optional online refresh is a future product decision.
 
 ### Shape and size
 
 `text_cache` currently stores one row per ref with Hebrew and English text; `TextCacheRepository` resolves exact refs, child verses, then `daily_content`. It has no commentary/reading-role column. Prefer a dedicated table such as `parallel_text` with primary key `(source_key, sefaria_ref)`, Hebrew-script text and optional English text, rather than overloading `text_cache` with a fake Chumash curriculum key. Alternatively, after a spike, extend text_cache to support language/version keys if that benefits other parallel-text features too.
 
-There are about 5,845 Chumash pesukim in the current Sefaria fetcher. Bundling one Onkelos row per pasuk means roughly 5.8K new records; supporting Rashi too means another roughly 5.8K. The compressed size is not measured yet. Before committing seed data, report the actual incremental compressed/uncompressed database size for Hebrew-only Onkelos and for Onkelos plus Rashi, and choose the supported scope against the APK budget. Seed from the documented local Sefaria Mongo pipeline, extend its deterministic extract/validation, and bump the content DB schema/seed metadata as required.
+The checked-in Chumash ref manifest and hierarchy contain **5,846** pesukim (the `ChumashFetcher` comment saying 5,845 is stale). The live Sefaria v3 scan returned non-empty Onkelos text for all 5,846 refs. Rashi coverage returned 7,816 Hebrew comments across 5,669 verse positions: 3,900 pesukim have at least one comment, 2,098 have multiple comments, 1,769 returned positions have no comment, and 177 manifest pesukim have no returned Rashi position (1,946 total with no Rashi in this scan). Use an explicit “No Rashi on this pasuk” state; treat the Rashi reading step as not applicable so the learner can still complete that pasuk/aliyah/parsha. Do not fabricate a comment or substitute Onkelos. Both selected Hebrew editions report Public Domain in the live API; Numbers Rashi resolves to its corrected-vocalization edition. Seed two source-keyed text sets; preserve individual Rashi comment refs. The local seed source is unavailable here, so the measurements below are a reproducible live-payload simulation in a copy of the shipped content DB, not a local-Mongo seed build. See measured DB deltas below.
 
 ## 4. Reader, learning-list, progress, streak, and points
 
@@ -99,7 +97,7 @@ No full test suite is proposed for a story lane. Add targeted tests only:
 Create/sequence these implementation beads after this planning bead is accepted; dependencies follow true code dependencies, not artificial serial ordering:
 
 1. **Calendar/data spike:** prove kosher_dart's Israel/diaspora/Yom-Tov behavior against fixtures, reconcile current Chumash parsha/aliyah asset discrepancies, validate Sefaria refs/version availability, and measure incremental DB size. No app UI.
-2. **Content model and seed:** canonical Chumash aliyah/parsha mapping plus parallel-text source key; content DB schema, deterministic Onkelos seed and offline lookup. Rashi is either included after the spike proves feasible or left disabled with a documented follow-up.
+2. **Content model and seed:** canonical Chumash aliyah/parsha mapping plus a source-keyed parallel-text table; content DB schema, deterministic Onkelos and Rashi seed, and offline lookup. Store each Rashi comment separately and expose absent-comment positions explicitly.
 3. **Curriculum and governed settings:** curriculum ID/picker/defaults; mode/source/pace/region persistence and backward-compatible defaults; child/tutor configuration boundaries.
 4. **Weekly assignment and learning-list projection:** region-specific parsha cycle, weekly due/overdue/catch-up projection, Yom Tov handling, one learning-list card.
 5. **Reader and completion model:** three pass workflows, unit completion/resume, event model/codec/rules/sync/void semantics, points and streak integration.
@@ -107,8 +105,32 @@ Create/sequence these implementation beads after this planning bead is accepted;
 
 Bead 1 is a gating fact-finding deliverable; beads 2–6 can be split/parallelized once its interfaces are agreed. Keep each implementation bead narrow enough for one review round where possible; do not include a full-suite run on every bead.
 
-## Open questions for the user
+## Decisions confirmed by user
 
-1. **Which region should be the initial default: Israel or diaspora, with the learner able to change it later?**
-2. **Should Rashi be offered alongside Onkelos in the first release, or should the first release support Onkelos only and add Rashi after content coverage is verified?**
-3. **Should the deadline be before this week's Shabbos, or should an unfinished parsha stay in grace/catch-up through Simchas Torah?**
+1. **Region:** Use the learner's existing Shabbat location `in_israel` value; make it editable in settings. No setup question.
+2. **Reading source:** Release 1 offers both Onkelos and Rashi; the learner chooses one as the third reading.
+3. **Deadline:** Due before Shabbos. Remain overdue and available for catch-up through Simchas Torah; the next week's assignment is not blocked.
+
+## Phase 1 calendar and content spike findings
+
+### Calendar fixture
+
+- `kosher_dart 2.0.20` exposes `JewishCalendar.getParshah()` and a mutable `inIsrael` flag; the method returns `Parsha.NONE` on festival Shabbosos with no weekly reading. This is a viable candidate for calculating the upcoming Shabbos assignment from the learner's existing region flag.
+- Added `learning_tracker/test/fixtures/calendar/parsha_cycle_5787_5788.json` from Hebcal's REST calendar output for years 5787 and 5788 (`yt=H`, `i=on/off`; CC BY 4.0) and `learning_tracker/test/features/scheduler/domain/services/parsha_cycle_fixture_test.dart`. The fixture has 212 Shabbat/region rows, 56 weekly parsha forms (including doubles), and festival Vezot aliyot for Israel and diaspora.
+- Cases include festival readings, the 5787 Shavuot split (Nasso / no weekly parsha, then Beha'alotcha / Nasso), diaspora Chukat-Balak, reunion at Pinchas, and 5788 double portions. The aliyah fixture covers 405 boundaries and maps continuously across all 5,846 Chumash refs when festival Vezot is included. A local Python consistency check found no missing ref endpoints or enum names.
+- The targeted Flutter test could not run here: the requested `TMPDIR=/home/daniel/scratch/subtracks/tmp systemd-run --user --scope -p MemoryMax=6G flutter test ...` wrapper reports `Failed to find executable flutter`, and neither `flutter` nor `dart` is installed on this runner. The committed test still needs execution on a Flutter-enabled host.
+
+### Sefaria coverage and source constraint
+
+- The local Sefaria Mongo dump at `/home/daniel/repos/sefaria_dump/dump` and generated `book_text_cache.json` are absent in both the story worktree and main checkout. I validated against Sefaria's live versioned texts API as a fallback; repeat this scan against the local Mongo seed source before implementing the seed builder. API references and semantics: [Texts v3](https://developers.sefaria.org/reference/get-v3-texts) and [Sefaria text references](https://developers.sefaria.org/docs/text-references).
+- The checked-in manifest has 5,846 Chumash verse refs. The selected Hebrew Public Domain Onkelos editions returned non-empty text for all 5,846. The selected Public Domain Hebrew Rashi editions returned 7,816 comment strings over 5,669 positioned pesukim: 3,900 pesukim have comments, 2,098 have multiple comments, and 1,946 have none or no position. Rashi refs are comment-grained (for example, `Rashi on Genesis 1:1:1`); Onkelos refs are verse-grained (for example, `Onkelos Genesis 1:1`).
+- The content DB simulation appended a source-keyed `parallel_text` table to a copy of the shipped 453,431,296-byte raw DB. It stored Onkelos as 5,846 rows (1,282,345 UTF-8 text bytes) and Rashi as 7,816 comment rows (combined Hebrew text 3,730,191 UTF-8 bytes). The measured xz sizes below use the repository's `xz -9 --extreme` setting. These are live-API payload measurements, before seed cleaning and with no English text, rather than a local-Mongo build.
+
+### Measured DB size deltas
+
+| Seed additions | Rows | Raw DB delta | xz `-9 --extreme` delta | Resulting raw DB | Resulting xz |
+|---|---:|---:|---:|---:|---:|
+| Onkelos only | 5,846 | 1,830,912 B (1.75 MiB) | 260,780 B (255 KiB) | 455,262,208 B | 64,341,256 B |
+| Onkelos + Rashi | 13,662 | 5,185,536 B (4.94 MiB) | 805,600 B (787 KiB) | 458,616,832 B | 64,886,076 B |
+
+The baseline shipped DB is 453,431,296 raw bytes / 64,080,476 xz bytes. The simulation creates `parallel_text(source_key, sefaria_ref, hebrew_text, english_text)` with a composite primary key, inserts only the chosen Hebrew Public Domain text, and compresses the complete resulting DB with the same `xz -9 --extreme` options as the seed builder. Actual local-seed figures may differ after text cleaning and because the local source dump was unavailable.
