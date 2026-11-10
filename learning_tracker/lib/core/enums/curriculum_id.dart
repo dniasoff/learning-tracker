@@ -55,6 +55,15 @@ enum CurriculumId {
   /// [fromStorageKey] being the single seam for storageKey resolution.
   static List<CurriculumId> get all => values;
 
+  /// Curricula currently available to start or browse in the learner UI.
+  /// Keep unreleased IDs in [values] so storage, codecs, and migrations can
+  /// recognize them before their complete learning flow ships.
+  static List<CurriculumId> get userSelectable =>
+      List.unmodifiable(values.where((curriculum) => curriculum.isReleased));
+
+  /// Whether the curriculum's complete learner-facing flow has shipped.
+  bool get isReleased => this != CurriculumId.shnayimMikra;
+
   /// Display name in English.
   String get displayNameEn => switch (this) {
     CurriculumId.mishnayos => 'Mishnayos',

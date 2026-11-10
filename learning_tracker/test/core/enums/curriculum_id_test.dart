@@ -34,4 +34,16 @@ void main() {
       expect(CurriculumId.fromStorageKey('mishnayos'), CurriculumId.mishnayos);
     });
   });
+
+  test('unreleased Shnayim Mikra remains decodable from a stored track', () {
+    expect(
+      CurriculumId.fromStorageKey('shnayim_mikra'),
+      CurriculumId.shnayimMikra,
+    );
+    expect(CurriculumId.shnayimMikra.isReleased, isFalse);
+    expect(
+      CurriculumId.userSelectable,
+      isNot(contains(CurriculumId.shnayimMikra)),
+    );
+  });
 }

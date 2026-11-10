@@ -37,7 +37,7 @@ class CurriculumPickerStep extends StatelessWidget {
       CurriculumId.nach,
       CurriculumId.mishnaBerurah,
     ];
-    final remaining = CurriculumId.values
+    final remaining = CurriculumId.userSelectable
         .where((curriculum) => !featured.contains(curriculum))
         .toList();
 

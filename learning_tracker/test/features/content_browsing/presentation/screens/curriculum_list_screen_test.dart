@@ -102,6 +102,7 @@ void main() {
       expect(find.text(CurriculumId.tanach.displayNameHe), findsWidgets);
       expect(find.text(CurriculumId.chumash.displayNameHe), findsNothing);
       expect(find.text(CurriculumId.nach.displayNameHe), findsNothing);
+      expect(find.text(CurriculumId.shnayimMikra.displayNameHe), findsNothing);
     });
 
     testWidgets('displays item counts for each curriculum', (tester) async {

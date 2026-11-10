@@ -93,7 +93,7 @@ class CurriculumListScreen extends ConsumerWidget {
           // Chumash and Nach are source curricula for the composite Tanach
           // Browse tree. Keep their IDs and all non-Browse entry points intact;
           // this list presents the single user-facing Tanach root only.
-          ...CurriculumId.values
+          ...CurriculumId.userSelectable
               .where(
                 (curriculum) =>
                     curriculum != CurriculumId.chumash &&

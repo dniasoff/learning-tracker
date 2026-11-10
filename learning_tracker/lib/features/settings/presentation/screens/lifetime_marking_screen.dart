@@ -34,6 +34,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final summariesAsync = ref.watch(lifetimeSummariesProvider);
+    final curricula = CurriculumId.userSelectable;
 
     return Scaffold(
       backgroundColor: context.colors.brandCreamCard,
@@ -93,16 +94,16 @@ class LifetimeMarkingScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              for (var i = 0; i < CurriculumId.values.length; i++) ...[
+              for (var i = 0; i < curricula.length; i++) ...[
                 if (i > 0) const SizedBox(height: 10),
                 _LifetimeLibraryCategoryCard(
-                  curriculum: CurriculumId.values[i],
+                  curriculum: curricula[i],
                   summariesAsync: summariesAsync,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => LifetimeCurriculumMarkingScreen(
-                          curriculumId: CurriculumId.values[i].storageKey,
+                          curriculumId: curricula[i].storageKey,
                         ),
                       ),
                     );
