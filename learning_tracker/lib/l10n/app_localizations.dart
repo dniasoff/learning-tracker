@@ -12635,6 +12635,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t save the sub-track. Try again.'**
   String get subTrackLifecycleSaveFailed;
+
+  /// No description provided for @textReaderTranslationLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation language'**
+  String get textReaderTranslationLanguage;
+
+  /// No description provided for @textReaderTranslationLanguageDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation language'**
+  String get textReaderTranslationLanguageDialogTitle;
+
+  /// No description provided for @textReaderSearchLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'Search languages'**
+  String get textReaderSearchLanguages;
+
+  /// No description provided for @textReaderSefariaEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'Sefaria English'**
+  String get textReaderSefariaEnglish;
+
+  /// No description provided for @textReaderOfflineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get textReaderOfflineLabel;
+
+  /// No description provided for @textReaderClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get textReaderClose;
+
+  /// No description provided for @textReaderLoadingTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading translation…'**
+  String get textReaderLoadingTranslation;
+
+  /// No description provided for @textReaderTranslationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation unavailable offline or right now'**
+  String get textReaderTranslationUnavailable;
+
+  /// No description provided for @textReaderMachineTranslated.
+  ///
+  /// In en, this message translates to:
+  /// **'Machine translated'**
+  String get textReaderMachineTranslated;
+
+  /// No description provided for @textReaderRetryTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to retry'**
+  String get textReaderRetryTranslation;
 }
 
 class _AppLocalizationsDelegate

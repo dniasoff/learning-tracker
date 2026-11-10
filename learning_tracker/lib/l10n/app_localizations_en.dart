@@ -7777,4 +7777,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get subTrackLifecycleSaveFailed =>
       'Couldn\'t save the sub-track. Try again.';
+
+  @override
+  String get textReaderTranslationLanguage => 'Translation language';
+
+  @override
+  String get textReaderTranslationLanguageDialogTitle => 'Translation language';
+
+  @override
+  String get textReaderSearchLanguages => 'Search languages';
+
+  @override
+  String get textReaderSefariaEnglish => 'Sefaria English';
+
+  @override
+  String get textReaderOfflineLabel => 'Offline';
+
+  @override
+  String get textReaderClose => 'Close';
+
+  @override
+  String get textReaderLoadingTranslation => 'Loading translation…';
+
+  @override
+  String get textReaderTranslationUnavailable =>
+      'Translation unavailable offline or right now';
+
+  @override
+  String get textReaderMachineTranslated => 'Machine translated';
+
+  @override
+  String get textReaderRetryTranslation => 'Tap to retry';
 }

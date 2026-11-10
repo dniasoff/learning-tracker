@@ -6482,5 +6482,15 @@
   "subTrackLifecycleSaveFailed": "Couldn't save the sub-track. Try again.",
   "@subTrackLifecycleSaveFailed": {
     "description": "Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4."
-  }
+  },
+  "textReaderTranslationLanguage": "Translation language",
+  "textReaderTranslationLanguageDialogTitle": "Translation language",
+  "textReaderSearchLanguages": "Search languages",
+  "textReaderSefariaEnglish": "Sefaria English",
+  "textReaderOfflineLabel": "Offline",
+  "textReaderClose": "Close",
+  "textReaderLoadingTranslation": "Loading translation…",
+  "textReaderTranslationUnavailable": "Translation unavailable offline or right now",
+  "textReaderMachineTranslated": "Machine translated",
+  "textReaderRetryTranslation": "Tap to retry"
 }

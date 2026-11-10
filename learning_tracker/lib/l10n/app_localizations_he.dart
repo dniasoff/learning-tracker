@@ -7693,4 +7693,35 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get subTrackLifecycleSaveFailed =>
       'לא ניתן היה לשמור את מסלול המשנה. נסו שוב.';
+
+  @override
+  String get textReaderTranslationLanguage => 'שפת התרגום';
+
+  @override
+  String get textReaderTranslationLanguageDialogTitle => 'שפת התרגום';
+
+  @override
+  String get textReaderSearchLanguages => 'חיפוש שפות';
+
+  @override
+  String get textReaderSefariaEnglish => 'אנגלית של ספריא';
+
+  @override
+  String get textReaderOfflineLabel => 'לא מקוון';
+
+  @override
+  String get textReaderClose => 'סגירה';
+
+  @override
+  String get textReaderLoadingTranslation => 'התרגום בטעינה…';
+
+  @override
+  String get textReaderTranslationUnavailable =>
+      'התרגום אינו זמין במצב לא מקוון או כרגע';
+
+  @override
+  String get textReaderMachineTranslated => 'תרגום מכונה';
+
+  @override
+  String get textReaderRetryTranslation => 'הקשה כדי לנסות שוב';
 }

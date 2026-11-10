@@ -182,7 +182,9 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
             IconButton(
               key: const Key('text_display_language_picker'),
               icon: const Icon(Icons.language),
-              tooltip: 'Translation language',
+              tooltip: AppLocalizations.of(
+                context,
+              )!.textReaderTranslationLanguage,
               onPressed: () => _showTranslationLanguagePicker(
                 context,
                 ref,
@@ -237,6 +239,7 @@ Future<void> _showTranslationLanguagePicker(
   String selected,
 ) async {
   final isHebrew = Localizations.localeOf(context).languageCode == 'he';
+  final l10n = AppLocalizations.of(context)!;
   var query = '';
   await showDialog<void>(
     context: context,
@@ -250,7 +253,7 @@ Future<void> _showTranslationLanguagePicker(
             return search.contains(query.toLowerCase());
           });
           return AlertDialog(
-            title: Text(isHebrew ? 'שפת התרגום' : 'Translation language'),
+            title: Text(l10n.textReaderTranslationLanguageDialogTitle),
             content: SizedBox(
               width: 420,
               child: Column(
@@ -260,7 +263,7 @@ Future<void> _showTranslationLanguagePicker(
                     key: const Key('text_display_language_search'),
                     autofocus: true,
                     decoration: InputDecoration(
-                      hintText: isHebrew ? 'חיפוש שפה' : 'Search languages',
+                      hintText: l10n.textReaderSearchLanguages,
                       prefixIcon: const Icon(Icons.search),
                     ),
                     onChanged: (value) => setDialogState(() => query = value),
@@ -272,10 +275,8 @@ Future<void> _showTranslationLanguagePicker(
                       children: [
                         ListTile(
                           key: const Key('reader_language_sefaria'),
-                          title: Text(
-                            isHebrew ? 'אנגלית של ספריא' : 'Sefaria English',
-                          ),
-                          subtitle: Text(isHebrew ? 'לא מקוון' : 'Offline'),
+                          title: Text(l10n.textReaderSefariaEnglish),
+                          subtitle: Text(l10n.textReaderOfflineLabel),
                           trailing: selected == 'sefaria'
                               ? const Icon(Icons.check)
                               : null,
@@ -313,7 +314,7 @@ Future<void> _showTranslationLanguagePicker(
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text(isHebrew ? 'סגירה' : 'Close'),
+                child: Text(l10n.textReaderClose),
               ),
             ],
           );
@@ -650,6 +651,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
         PhraseTranslationKey(segment.sefariaRef, language),
       ),
     );
+    final l10n = AppLocalizations.of(context)!;
     final values = <_SegmentGloss>[];
     if (async.hasValue) {
       for (final phrase in async.requireValue) {
@@ -670,9 +672,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
       }
       values.add(
         _SegmentGloss(
-          text: Localizations.localeOf(context).languageCode == 'he'
-              ? 'תרגום מכונה'
-              : 'Machine translated',
+          text: l10n.textReaderMachineTranslated,
           direction: TextDirection.ltr,
           style: style.copyWith(
             fontSize: style.fontSize! * .75,
@@ -685,9 +685,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
     if (async.isLoading) {
       values.add(
         _SegmentGloss(
-          text: Localizations.localeOf(context).languageCode == 'he'
-              ? 'טוען תרגום…'
-              : 'Loading translation…',
+          text: l10n.textReaderLoadingTranslation,
           direction: TextDirection.ltr,
           style: style,
         ),
@@ -695,9 +693,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
     } else {
       values.add(
         _SegmentGloss(
-          text: Localizations.localeOf(context).languageCode == 'he'
-              ? 'התרגום אינו זמין במצב לא מקוון או כרגע'
-              : 'Translation unavailable offline or right now',
+          text: l10n.textReaderTranslationUnavailable,
           direction: TextDirection.ltr,
           style: style.copyWith(color: Theme.of(context).colorScheme.error),
         ),
@@ -712,9 +708,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
         );
       values.add(
         _SegmentGloss(
-          text: Localizations.localeOf(context).languageCode == 'he'
-              ? 'הקשה כדי לנסות שוב'
-              : 'Tap to retry',
+          text: l10n.textReaderRetryTranslation,
           direction: TextDirection.ltr,
           style: style.copyWith(decoration: TextDecoration.underline),
           onTap: () => ref.invalidate(
