@@ -8,8 +8,8 @@ import 'package:learning_tracker/core/database/content/daos/seed_metadata_dao.da
 import 'package:learning_tracker/core/database/content/daos/text_cache_dao.dart';
 import 'package:learning_tracker/core/database/tables/calendar_cycles.dart';
 import 'package:learning_tracker/core/database/tables/daily_content.dart';
-import 'package:learning_tracker/core/database/tables/parsha_aliyot.dart';
 import 'package:learning_tracker/core/database/tables/parallel_text.dart';
+import 'package:learning_tracker/core/database/tables/parsha_aliyot.dart';
 import 'package:learning_tracker/core/database/tables/seed_metadata.dart';
 import 'package:learning_tracker/core/database/tables/text_cache.dart';
 import 'package:learning_tracker/core/logging/logger.dart';

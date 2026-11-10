@@ -101,7 +101,10 @@ void main() {
         final endIndex = indexByRef[end];
         expect(startIndex, isNotNull, reason: '${parsha['name']}: $start');
         expect(endIndex, isNotNull, reason: '${parsha['name']}: $end');
-        expect(startIndex!, lessThanOrEqualTo(endIndex!));
+        if (startIndex == null || endIndex == null) {
+          fail('${parsha['name']} range endpoints must exist in the manifest');
+        }
+        expect(startIndex, lessThanOrEqualTo(endIndex));
         if (previousEnd != null) {
           expect(
             startIndex,
@@ -111,10 +114,7 @@ void main() {
         }
         previousEnd = endIndex;
         covered.addAll(
-          List<int>.generate(
-            endIndex! - startIndex! + 1,
-            (i) => startIndex! + i,
-          ),
+          List<int>.generate(endIndex - startIndex + 1, (i) => startIndex + i),
         );
       }
     }
@@ -136,7 +136,12 @@ void main() {
         final endIndex = indexByRef[end];
         expect(startIndex, isNotNull, reason: '${reading['occasion']}: $start');
         expect(endIndex, isNotNull, reason: '${reading['occasion']}: $end');
-        expect(startIndex!, lessThanOrEqualTo(endIndex!));
+        if (startIndex == null || endIndex == null) {
+          fail(
+            '${reading['occasion']} range endpoints must exist in the manifest',
+          );
+        }
+        expect(startIndex, lessThanOrEqualTo(endIndex));
         if (previousEnd != null) {
           expect(
             startIndex,
@@ -146,10 +151,7 @@ void main() {
         }
         previousEnd = endIndex;
         covered.addAll(
-          List<int>.generate(
-            endIndex! - startIndex! + 1,
-            (i) => startIndex! + i,
-          ),
+          List<int>.generate(endIndex - startIndex + 1, (i) => startIndex + i),
         );
       }
     }

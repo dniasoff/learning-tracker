@@ -102,28 +102,28 @@ void main() {
   test(
     'aliyah lookup resolves kosher_dart keys and region-specific readings',
     () async {
-    await database.customInsert(
-      'INSERT INTO parsha_aliyot VALUES (?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable.withString('NOACH'),
-        Variable.withString('Noach'),
-        Variable.withString('any'),
-        Variable.withInt(1),
-        Variable.withString('Genesis 6:9'),
-        Variable.withString('Genesis 6:22'),
-      ],
-    );
-    await database.customInsert(
-      'INSERT INTO parsha_aliyot VALUES (?, ?, ?, ?, ?, ?)',
-      variables: [
-        Variable.withString('VEZOT_HABERACHA'),
-        Variable.withString('Vezot Haberachah'),
-        Variable.withString('israel'),
-        Variable.withInt(7),
-        Variable.withString('Deuteronomy 34:1'),
-        Variable.withString('Deuteronomy 34:12'),
-      ],
-    );
+      await database.customInsert(
+        'INSERT INTO parsha_aliyot VALUES (?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable.withString('NOACH'),
+          Variable.withString('Noach'),
+          Variable.withString('any'),
+          Variable.withInt(1),
+          Variable.withString('Genesis 6:9'),
+          Variable.withString('Genesis 6:22'),
+        ],
+      );
+      await database.customInsert(
+        'INSERT INTO parsha_aliyot VALUES (?, ?, ?, ?, ?, ?)',
+        variables: [
+          Variable.withString('VEZOT_HABERACHA'),
+          Variable.withString('Vezot Haberachah'),
+          Variable.withString('israel'),
+          Variable.withInt(7),
+          Variable.withString('Deuteronomy 34:1'),
+          Variable.withString('Deuteronomy 34:12'),
+        ],
+      );
 
       final repository = ParshaAliyahRepository(database);
       expect(
