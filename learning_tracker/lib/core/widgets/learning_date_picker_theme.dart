@@ -91,12 +91,29 @@ Future<DateTime?> showLearningAppDatePicker({
   required DateTime initialDate,
   required DateTime firstDate,
   required DateTime lastDate,
+  String? helpText,
+  DatePickerEntryMode initialEntryMode = DatePickerEntryMode.calendar,
 }) {
+  final appLocale = Localizations.localeOf(context);
+  final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+  // The app currently supports language-only locales (en/he), while the
+  // system locale may carry a regional date order such as en_GB. Keep the
+  // resolved app language, but retain the device region when it matches.
+  final pickerLocale = appLocale.countryCode?.isNotEmpty == true
+      ? appLocale
+      : deviceLocale.languageCode == appLocale.languageCode &&
+            deviceLocale.countryCode?.isNotEmpty == true
+      ? deviceLocale
+      : appLocale;
   return showDatePicker(
     context: context,
     initialDate: initialDate,
     firstDate: firstDate,
     lastDate: lastDate,
+    helpText: helpText,
+    initialEntryMode: initialEntryMode,
+    locale: pickerLocale,
+    keyboardType: TextInputType.text,
     builder: learningDatePickerThemeBuilder,
   );
 }

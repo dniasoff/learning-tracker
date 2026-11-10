@@ -25,6 +25,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/domain/models/mishna_history_item.dart';
@@ -833,11 +834,12 @@ Future<String?> _pickDate(
     final d = DateTime(p[0], p[1], p[2]);
     if (!d.isAfter(today)) initial = d;
   }
-  final picked = await showDatePicker(
+  final picked = await showLearningAppDatePicker(
     context: context,
     initialDate: initial,
     firstDate: DateTime(1900),
     lastDate: today,
+    initialEntryMode: DatePickerEntryMode.input,
   );
   if (picked == null) return null;
   String two(int v) => v.toString().padLeft(2, '0');

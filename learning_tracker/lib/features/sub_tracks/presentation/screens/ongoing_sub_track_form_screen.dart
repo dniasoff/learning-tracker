@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -285,7 +286,7 @@ class _OngoingSubTrackFormScreenState
     required ValueChanged<CivilDate> onPicked,
   }) async {
     final initial = parseCivilDay(current ?? today);
-    final picked = await showDatePicker(
+    final picked = await showLearningAppDatePicker(
       context: context,
       initialDate: DateTime(initial.year, initial.month, initial.day),
       firstDate: DateTime(2000),
