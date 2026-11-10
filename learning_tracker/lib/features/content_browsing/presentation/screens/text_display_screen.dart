@@ -338,7 +338,11 @@ class _TextContentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final segments = textContent.segments
-        .where((s) => s.hebrewText.isNotEmpty || s.englishText.isNotEmpty)
+        .where(
+          (s) =>
+              s.hebrewText.isNotEmpty ||
+              (showTranslation && s.englishText.isNotEmpty),
+        )
         .toList(growable: false);
     final showSegmentNumbers =
         segments.length > 1 && segments.any((s) => s.number != null);
@@ -366,9 +370,9 @@ class _TextContentView extends StatelessWidget {
       slivers: [
         if (hasContent)
           SliverPadding(
-            // The label floats 12px above the card. This keeps its original
-            // 8px screen inset while preserving the card's body padding.
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
+            // Preserve the original card inset; the floating section label
+            // remains positioned independently above the card edge.
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
             sliver: SliverList.builder(
               itemCount: segments.length,
               itemBuilder: (context, index) => _ReaderSegmentCard(

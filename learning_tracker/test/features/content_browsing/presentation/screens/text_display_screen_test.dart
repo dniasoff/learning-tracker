@@ -1332,6 +1332,55 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
+  testWidgets('turning translation off omits English-only segment rows', (
+    tester,
+  ) async {
+    final content = TextContent(
+      sefariaRef: _kRef,
+      segments: [
+        TextSegment(
+          sefariaRef: '$_kRef:1',
+          hebrewText: 'Source one',
+          englishText: 'Gloss one',
+          number: 1,
+        ),
+        TextSegment(
+          sefariaRef: '$_kRef:2',
+          hebrewText: '',
+          englishText: 'English-only child',
+          number: 2,
+        ),
+        TextSegment(
+          sefariaRef: '$_kRef:3',
+          hebrewText: 'Source three',
+          englishText: 'Gloss three',
+          number: 3,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _buildApp(router: router, textState: AsyncData(content)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byKey(const Key('text_display_translation_toggle')));
+    await tester.pump();
+
+    expect(find.textContaining('Source one'), findsOneWidget);
+    expect(find.textContaining('Source three'), findsOneWidget);
+    expect(find.textContaining('English-only child'), findsNothing);
+    expect(find.byKey(const ValueKey('reader_segment_$_kRef:2')), findsNothing);
+    final rowFinder = find.byWidgetPredicate((widget) {
+      final key = widget.key;
+      return key is ValueKey<String> && key.value.startsWith('reader_segment_');
+    });
+    expect(tester.widgetList(rowFinder), hasLength(2));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
   testWidgets('500-segment passage builds only nearby sliver rows', (
     tester,
   ) async {
