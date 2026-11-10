@@ -7762,6 +7762,12 @@ abstract class AppLocalizations {
   /// **'Sub-tracks · {count} active'**
   String subTrackHubHeader(int count);
 
+  /// No description provided for @trackSubTrackCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sub-tracks'**
+  String trackSubTrackCount(int count);
+
   /// Manage tracks hub: helper under the Sub-tracks header (DNI-495 AC-1).
   ///
   /// In en, this message translates to:
@@ -12071,18 +12077,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Include this source on the catch-up card after shabbos'**
   String get ongoingSubTrackShabbosHelper;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'You can have up to 5 ongoing sub-tracks. {count} in use.'**
-  String ongoingSubTrackLimitLine(int count);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'You already have 5 ongoing sub-tracks.'**
-  String get ongoingSubTrackLimitReached;
 
   /// DNI-496 ongoing sub-track form
   ///

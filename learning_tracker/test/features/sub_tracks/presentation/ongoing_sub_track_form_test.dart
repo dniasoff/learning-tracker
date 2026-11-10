@@ -1,6 +1,6 @@
 // DNI-496 (Story 2.5): the ongoing sub-track create/edit form — fields and
 // defaults (AC-1), the weeks prefill (AC-2), optional dates (AC-3), future
-// start (AC-4, form side), the five-track limit (AC-5, form side), edits
+// start (AC-4, form side), unbounded ongoing tracks, edits
 // (AC-6), failure recovery, dark, tablet, large text and RTL (AC-7) and the
 // edge table. Commands are the C0 fakes (DNI-524).
 import 'package:flutter/material.dart';
@@ -278,10 +278,7 @@ void main() {
       expect(find.text('End date (optional)'), findsOneWidget);
       expect(find.text('Learns on shabbos / yom tov'), findsOneWidget);
       expect(_switchValue(tester, 'ongoingSubTrackShabbos'), isFalse);
-      expect(
-        find.text('You can have up to 5 ongoing sub-tracks. 2 in use.'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('up to 5'), findsNothing);
       expect(find.text('Save sub-track'), findsOneWidget);
     });
 
@@ -290,29 +287,6 @@ void main() {
       expect(find.textContaining('Academic year'), findsNothing);
       expect(find.textContaining('Start month'), findsNothing);
       expect(find.textContaining('End month'), findsNothing);
-    });
-
-    testWidgets('usage line counts 0, 4 and excludes ended and expired', (
-      tester,
-    ) async {
-      await _open(tester);
-      expect(
-        find.text('You can have up to 5 ongoing sub-tracks. 0 in use.'),
-        findsOneWidget,
-      );
-      await tester.pumpWidget(const SizedBox());
-      await _open(
-        tester,
-        tracks: [
-          for (var i = 1; i <= 4; i++) _track(i),
-          _track(10, ended: true),
-          _track(11, end: '2026-09-01'),
-        ],
-      );
-      expect(
-        find.text('You can have up to 5 ongoing sub-tracks. 4 in use.'),
-        findsOneWidget,
-      );
     });
   });
 
@@ -596,23 +570,6 @@ void main() {
       expect(_lastDraft().windowStart, '2026-09-08');
     });
 
-    testWidgets('the limit is recounted on the new day', (tester) async {
-      // Five in use on 7 Sep; one window ends that day, so on 8 Sep only
-      // four count and a create is allowed.
-      await _open(
-        tester,
-        tracks: [
-          for (var i = 1; i <= 4; i++) _track(i),
-          _track(5, end: _today),
-        ],
-      );
-      await tester.enterText(_field('ongoingSubTrackName'), 'Fifth');
-      _clock.setNow(DateTime.utc(2026, 9, 8, 0, 30));
-      await _save(tester);
-      expect(_field('ongoingSubTrackLimitReached'), findsNothing);
-      expect(_lastDraft().windowStart, '2026-09-08');
-    });
-
     testWidgets('a chosen end on the old today now blocks save inline', (
       tester,
     ) async {
@@ -657,31 +614,40 @@ void main() {
     });
   });
 
-  group('AC-5: the limit on the form', () {
-    testWidgets('a create at five in use is refused with no write', (
+  group('AC-5: ongoing sub-tracks are unbounded', () {
+    testWidgets('sixth and seventh ongoing creates are submitted', (
       tester,
     ) async {
       await _open(tester, tracks: [for (var i = 1; i <= 5; i++) _track(i)]);
       await tester.enterText(_field('ongoingSubTrackName'), 'Sixth');
       await _save(tester);
-      expect(_commands.calls.where((c) => c.name == 'createSubTrack'), isEmpty);
-      expect(_field('ongoingSubTrackLimitReached'), findsOneWidget);
+      expect(_lastDraft().name, 'Sixth');
+      await tester.pumpWidget(const SizedBox());
+      await _open(tester, tracks: [for (var i = 1; i <= 6; i++) _track(i)]);
+      await tester.enterText(_field('ongoingSubTrackName'), 'Seventh');
+      await _save(tester);
+      expect(_lastDraft().name, 'Seventh');
+      expect(
+        _commands.calls.where((c) => c.name == 'createSubTrack'),
+        hasLength(2),
+      );
     });
 
-    testWidgets('a command-side ongoing_limit shows the limit message', (
-      tester,
-    ) async {
-      _commands.nextResult = const CaptureResult.rejected(
-        CaptureRejection.invalid,
-        violations: [SubTrackViolation(SubTrackLimit.ongoingLimit)],
-      );
-      await _open(tester, tracks: [for (var i = 1; i <= 4; i++) _track(i)]);
-      await tester.enterText(_field('ongoingSubTrackName'), 'Fifth');
-      await _save(tester);
-      expect(_field('ongoingSubTrackLimitReached'), findsOneWidget);
-      expect(_closed, isFalse);
-      expect(_fieldText(tester, 'ongoingSubTrackName'), 'Fifth');
-    });
+    testWidgets(
+      'a legacy command-side ongoing_limit is shown as save failure',
+      (tester) async {
+        _commands.nextResult = const CaptureResult.rejected(
+          CaptureRejection.invalid,
+          violations: [SubTrackViolation(SubTrackLimit.ongoingLimit)],
+        );
+        await _open(tester, tracks: [for (var i = 1; i <= 4; i++) _track(i)]);
+        await tester.enterText(_field('ongoingSubTrackName'), 'Fifth');
+        await _save(tester);
+        expect(_field('ongoingSubTrackLimitReached'), findsNothing);
+        expect(_closed, isFalse);
+        expect(_fieldText(tester, 'ongoingSubTrackName'), 'Fifth');
+      },
+    );
 
     testWidgets('editing one of five is not a create', (tester) async {
       final tracks = [for (var i = 1; i <= 5; i++) _track(i)];

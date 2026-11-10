@@ -21,7 +21,9 @@ void main() {
       for (final l in SubTrackLimit.values)
         // Cross-curriculum ground needs the ContentIndex corpus: Dart only
         // (sub_track_validation_test.dart).
-        if (l != SubTrackLimit.crossCurriculumGround) l.code,
+        if (l != SubTrackLimit.crossCurriculumGround &&
+            l != SubTrackLimit.ongoingLimit)
+          l.code,
     });
   });
 

@@ -4557,6 +4557,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String trackSubTrackCount(int count) {
+    return '$count תתי-מסלולים';
+  }
+
+  @override
   String get subTrackHubHelper =>
       'לימוד שמתקיים מחוץ לבית — בית ספר, רב, חברותא.';
 
@@ -7330,14 +7335,6 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get ongoingSubTrackShabbosHelper =>
       'לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת';
-
-  @override
-  String ongoingSubTrackLimitLine(int count) {
-    return 'אפשר עד 5 תתי-מסלולים קבועים. $count בשימוש.';
-  }
-
-  @override
-  String get ongoingSubTrackLimitReached => 'כבר יש 5 תתי-מסלולים קבועים.';
 
   @override
   String get ongoingSubTrackSave => 'שמירת תת-המסלול';

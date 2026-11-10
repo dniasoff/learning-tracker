@@ -17,7 +17,6 @@ import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/node_entry.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -173,26 +172,25 @@ void main() {
       expect(h.invoker.calls, isEmpty);
     });
 
-    test('an AD-45 violation is refused with its violations before any call '
-        '(the same answer the owner form gets)', () async {
-      final h = _harness(
-        subTracks: [
-          for (var i = 0; i < 5; i++) _rebbe(id: '01JT7T0SV0RRRRRRRRRRRRRRR$i'),
-        ],
-      );
+    test(
+      'a sixth ongoing sub-track is created without a count limit',
+      () async {
+        final h = _harness(
+          subTracks: [
+            for (var i = 0; i < 5; i++)
+              _rebbe(id: '01JT7T0SV0RRRRRRRRRRRRRRR$i'),
+          ],
+        );
 
-      final result = await h.commands.createSubTrack(
-        _rebbeDraft,
-        subTrackId: _rebbeId,
-      );
+        final result = await h.commands.createSubTrack(
+          _rebbeDraft,
+          subTrackId: _rebbeId,
+        );
 
-      expect(result, isA<CaptureRejected>());
-      expect(
-        (result as CaptureRejected).violations.map((v) => v.limit),
-        contains(SubTrackLimit.ongoingLimit),
-      );
-      expect(h.invoker.calls, isEmpty);
-    });
+        expect(result, isA<CaptureSuccess>());
+        expect(h.invoker.calls, hasLength(1));
+      },
+    );
 
     test('an unreadable sub-track list answers onlineRequired and calls '
         'nothing', () async {

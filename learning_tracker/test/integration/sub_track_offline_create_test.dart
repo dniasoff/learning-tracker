@@ -45,7 +45,6 @@ import 'package:learning_tracker/domain/learner_state/ports/learning_command_rea
 import 'package:learning_tracker/domain/learner_state/ports/learning_write_port.dart';
 import 'package:learning_tracker/domain/learner_state/ports/sub_track_repository.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
-import 'package:learning_tracker/domain/learner_state/sub_track_validator.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_command_sources.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -254,81 +253,79 @@ void main() {
 
   tearDown(() => intent.dispose());
 
-  test('two offline fifth creates both sync; the engine tolerates six; '
-      'a sixth on one device is rejected with no write', () async {
-    final a = _Device(scope, intent);
-    final b = _Device(scope, intent);
-    addTearDown(a.dispose);
-    addTearDown(b.dispose);
-    final four = [for (var i = 1; i <= 4; i++) _ongoing(i * 2, 'Rebbe $i')];
-    a.repo.seed(scope, four);
-    b.repo.seed(scope, four);
-    a.repo.offline = true;
-    b.repo.offline = true;
+  test(
+    'offline sixth and seventh creates both sync and the engine accepts them',
+    () async {
+      final a = _Device(scope, intent);
+      final b = _Device(scope, intent);
+      addTearDown(a.dispose);
+      addTearDown(b.dispose);
+      final four = [for (var i = 1; i <= 4; i++) _ongoing(i * 2, 'Rebbe $i')];
+      a.repo.seed(scope, four);
+      b.repo.seed(scope, four);
+      a.repo.offline = true;
+      b.repo.offline = true;
 
-    final fromA = await a.commands.createSubTrack(_formDraft('Chavrusa A'));
-    final fromB = await b.commands.createSubTrack(_formDraft('Chavrusa B'));
-    expect((fromA as CaptureSuccess).queued, isTrue);
-    expect((fromB as CaptureSuccess).queued, isTrue);
+      final fromA = await a.commands.createSubTrack(_formDraft('Chavrusa A'));
+      final fromB = await b.commands.createSubTrack(_formDraft('Chavrusa B'));
+      expect((fromA as CaptureSuccess).queued, isTrue);
+      expect((fromB as CaptureSuccess).queued, isTrue);
 
-    // Device A now holds five locally: a sixth is refused before any write.
-    final sixth = await a.commands.createSubTrack(_formDraft('Sixth'));
-    expect(sixth, isA<CaptureRejected>());
-    expect(
-      (sixth as CaptureRejected).violations.map((v) => v.limit),
-      contains(SubTrackLimit.ongoingLimit),
-    );
-    expect(a.repo.calls, hasLength(1), reason: 'no batch for the sixth');
-    expect(a.repo.heldCount, 1);
-    expect(a.repo.tracksOf(scope), hasLength(5));
+      // Device A can add any number of ongoing sub-tracks while offline.
+      final sixth = await a.commands.createSubTrack(_formDraft('Sixth'));
+      final seventh = await a.commands.createSubTrack(_formDraft('Seventh'));
+      expect((sixth as CaptureSuccess).queued, isTrue);
+      expect((seventh as CaptureSuccess).queued, isTrue);
+      expect(a.repo.heldCount, 3);
+      expect(a.repo.tracksOf(scope), hasLength(7));
 
-    // Reconnect: both queued creates land; each device then reads both.
-    a.repo.settleHeld();
-    b.repo.settleHeld();
-    await _drain();
-    final server = {
-      for (final t in [...a.repo.tracksOf(scope), ...b.repo.tracksOf(scope)])
-        t.id: t,
-    }.values.toList();
-    a.repo.seed(scope, server);
-    expect(server, hasLength(6));
-    expect(
-      ongoingSubTracksInUse(
-        server,
-        curriculumId: engineCurriculum,
-        today: _today,
-      ),
-      6,
-    );
+      // Reconnect: both queued creates land; each device then reads both.
+      a.repo.settleHeld();
+      b.repo.settleHeld();
+      await _drain();
+      final server = {
+        for (final t in [...a.repo.tracksOf(scope), ...b.repo.tracksOf(scope)])
+          t.id: t,
+      }.values.toList();
+      a.repo.seed(scope, server);
+      expect(server, hasLength(8));
+      expect(
+        ongoingSubTracksInUse(
+          server,
+          curriculumId: engineCurriculum,
+          today: _today,
+        ),
+        8,
+      );
 
-    // The engine accepts the excess without error (AD-45).
-    final state = const LearnerStateEngine().run(
-      engineInputs(
-        subTracks: server,
-        goals: {
-          engineCurriculum: const CurriculumGoals(
-            deadline: DeadlineGoal(
-              curriculumId: engineCurriculum,
-              targetDate: '2026-12-31',
+      // The engine accepts the excess without error (AD-45).
+      final state = const LearnerStateEngine().run(
+        engineInputs(
+          subTracks: server,
+          goals: {
+            engineCurriculum: const CurriculumGoals(
+              deadline: DeadlineGoal(
+                curriculumId: engineCurriculum,
+                targetDate: '2026-12-31',
+              ),
             ),
-          ),
-        },
-      ),
-    )[engineCurriculum]!;
-    expect(state.subTracks.keys, containsAll([for (final t in server) t.id]));
-    expect(state.validationErrors, isEmpty);
+          },
+        ),
+      )[engineCurriculum]!;
+      expect(state.subTracks.keys, containsAll([for (final t in server) t.id]));
+      expect(state.validationErrors, isEmpty);
 
-    // The cap still governs new creates; editing one of the six is not a
-    // create and is accepted.
-    a.repo.offline = false;
-    final seventh = await a.commands.createSubTrack(_formDraft('Seventh'));
-    expect(seventh, isA<CaptureRejected>());
-    final edit = await a.commands.editSubTrack(
-      four.first.id,
-      const SubTrackEdit(name: 'Rebbe 1 (renamed)'),
-    );
-    expect(edit, isA<CaptureSuccess>());
-  });
+      // An online eighth create and an edit of an existing row are accepted.
+      a.repo.offline = false;
+      final eighth = await a.commands.createSubTrack(_formDraft('Eighth'));
+      expect(eighth, isA<CaptureSuccess>());
+      final edit = await a.commands.editSubTrack(
+        four.first.id,
+        const SubTrackEdit(name: 'Rebbe 1 (renamed)'),
+      );
+      expect(edit, isA<CaptureSuccess>());
+    },
+  );
 
   test('a queued create refused for good rolls back alone; unrelated '
       'queued edits survive; retry re-sends it', () async {
@@ -521,10 +518,6 @@ void main() {
     );
     await tester.tap(find.text('Add sub-track'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('You can have up to 5 ongoing sub-tracks. 1 in use.'),
-      findsOneWidget,
-    );
     await tester.tap(find.text('Ongoing'));
     await tester.pumpAndSettle();
     await tester.enterText(key('ongoingSubTrackName'), 'Night seder');

@@ -187,7 +187,6 @@ class SubTrackHubSection extends ConsumerWidget {
                                 curriculumId: curriculumId,
                               ),
                             ),
-                      ongoingInUse: ongoingRead?.ongoingInUse(),
                     ),
               icon: const Icon(Icons.add),
               label: Text(l10n.subTrackHubAdd),
@@ -203,6 +202,51 @@ class SubTrackHubSection extends ConsumerWidget {
             onOpen: (track) => openSubTrackDetail(context, ref, track.id),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Compact count shown in the Manage Tracks card when it has active
+/// sub-tracks. The full controls live on the track detail screen.
+class SubTrackCountLabel extends ConsumerWidget {
+  const SubTrackCountLabel({
+    required this.curriculumId,
+    required this.programEnrollmentKnown,
+    required this.followsCalendarProgram,
+    super.key,
+  });
+
+  final String curriculumId;
+  final bool programEnrollmentKnown;
+  final bool followsCalendarProgram;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(subTrackEditorSessionProvider);
+    if (session.value != true ||
+        !programEnrollmentKnown ||
+        followsCalendarProgram) {
+      return const SizedBox.shrink();
+    }
+    final tracks = ref.watch(learnerSubTracksProvider);
+    final all = tracks.value;
+    if (all == null || tracks.hasError) return const SizedBox.shrink();
+    final count = groupSubTracksByLifecycle(
+      all,
+      ref.watch(subTrackLifecycleTodayProvider),
+      curriculumId: curriculumId,
+    ).active.length;
+    if (count == 0) return const SizedBox.shrink();
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: context.colors.brandInkMuted,
+      fontWeight: FontWeight.w700,
+    );
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(top: 6),
+      child: Text(
+        AppLocalizations.of(context)!.trackSubTrackCount(count),
+        style: style,
       ),
     );
   }

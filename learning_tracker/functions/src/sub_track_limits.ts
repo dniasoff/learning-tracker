@@ -12,7 +12,6 @@
 //   it is not ended and its window has not passed (window_end null or
 //   >= today, inclusive civil dates, AD-41): exactly "onHome or
 //   future-start" (AD-34).
-//     ≤ 5 counting ongoing sub-tracks;
 //     ≤ 1 counting school-year sub-track per academic_year;
 //     no two counting school-year windows overlapping (inclusive bounds).
 // - Only NEW violations reject a write: a violation the stored row already
@@ -25,9 +24,6 @@
 //   cross-curriculum ground check needs the ContentIndex and is Dart-only.
 //
 // Pure functions over plain AD-52 storage records — no Firestore access.
-
-/** The AD-45 cap on counting ongoing sub-tracks per profile and curriculum. */
-export const MAX_ONGOING_SUB_TRACKS = 5;
 
 /** Stable wire codes, identical to Dart `SubTrackLimit.code`. */
 export type SubTrackLimitCode =
@@ -114,7 +110,8 @@ function limitViolations(
   const counting = peers.filter((p) => countsTowardSubTrackLimits(p.data, today) && p.data.type === track.type);
   const add = (v: SubTrackViolation) => out.set(violationKey(v), v);
   if (track.type === "ongoing") {
-    if (counting.length + 1 > MAX_ONGOING_SUB_TRACKS) add({ code: "ongoing_limit" });
+    // Ongoing sub-tracks are unbounded. Keep the legacy code in the type
+    // union for compatibility, but never emit it.
   } else if (track.type === "school_year") {
     for (const p of counting) {
       if (p.data.academic_year === track.academic_year) {

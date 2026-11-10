@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -59,12 +60,10 @@ class LearningTrackCard extends ConsumerWidget {
     // in English, Hebrew script when the toggle is on (or in Hebrew locale).
     final chazaraTerm = domainTermLabels(ref).chazara;
 
-    final hasProgramEnrollment =
-        ref
-            .watch(dashboardHasProgramEnrollmentProvider(curriculum))
-            .asData
-            ?.value ??
-        false;
+    final programEnrollmentAsync = ref.watch(
+      dashboardHasProgramEnrollmentProvider(curriculum),
+    );
+    final hasProgramEnrollment = programEnrollmentAsync.asData?.value ?? false;
 
     final curriculumBarColor = context.colors.curriculumFor(curriculum);
 
@@ -206,6 +205,12 @@ class LearningTrackCard extends ConsumerWidget {
                             const SizedBox(height: 10),
                           const SizedBox(height: 8),
                         ],
+                        SubTrackCountLabel(
+                          curriculumId: track.curriculumId.storageKey,
+                          programEnrollmentKnown:
+                              programEnrollmentAsync.hasValue,
+                          followsCalendarProgram: hasProgramEnrollment,
+                        ),
                       ],
                     ],
                   ),

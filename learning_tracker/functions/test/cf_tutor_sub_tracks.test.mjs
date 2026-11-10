@@ -452,15 +452,12 @@ describe('AC-3 — AD-52 whitelist and AD-45 limits', () => {
     assert.equal((await subTrackDoc()).end_reason, 'ended');
   });
 
-  test('a sixth active ongoing sub-track on the curriculum → failed-precondition (ongoing_limit)', async () => {
+  test('a sixth active ongoing sub-track on the curriculum is accepted', async () => {
     for (let i = 0; i < 5; i++) await seedSubTrack(ulid(200 + i), { ...ONGOING, name: `Ongoing ${i}` });
-    await assert.rejects(create(), (err) => {
-      assert.equal(err.code, 'failed-precondition');
-      assert.deepEqual(err.details?.sub_track_violations, ['ongoing_limit']);
-      return true;
-    });
-    assert.equal(await subTrackDoc(), null);
-    assert.deepEqual(await changeLog(), []);
+    const result = await create();
+    assert.deepEqual(result.change_ids, [SUB]);
+    assert.equal((await subTrackDoc())?.type, 'ongoing');
+    assert.deepEqual((await changeLog()).map((entry) => entry.id), [SUB]);
   });
 
   test('any sub-track on a calendar-program curriculum → failed-precondition', async () => {

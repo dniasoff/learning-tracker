@@ -4615,6 +4615,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String trackSubTrackCount(int count) {
+    return '$count sub-tracks';
+  }
+
+  @override
   String get subTrackHubHelper =>
       'Learning that happens outside home — school, a rebbe, a chavrusa.';
 
@@ -7409,15 +7414,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ongoingSubTrackShabbosHelper =>
       'Include this source on the catch-up card after shabbos';
-
-  @override
-  String ongoingSubTrackLimitLine(int count) {
-    return 'You can have up to 5 ongoing sub-tracks. $count in use.';
-  }
-
-  @override
-  String get ongoingSubTrackLimitReached =>
-      'You already have 5 ongoing sub-tracks.';
 
   @override
   String get ongoingSubTrackSave => 'Save sub-track';

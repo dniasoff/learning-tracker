@@ -21,6 +21,7 @@ import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/curriculum_track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart'
     show ScopeEntry;
@@ -281,57 +282,62 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TrackInfoCard(
-            track: track,
-            goal: goal,
-            learnerState: learnerState,
-            useHebrewCalendar: useHebrewCalendar,
-          ),
-          const SizedBox(height: 16),
-          _buildHeaderCard(
-            context,
-            theme,
-            l10n,
-            track,
-            accent,
-            icon,
-            activatedDate,
-            hasProgramEnrollment,
-            cycleFraction,
-            cyclePercentDisplay,
-            curriculumBarColor,
-            chazaraTerm,
-            trackProgressLabel: l10n.trackProgress,
-            trackProgressDisplay: trackProgressDisplay,
-            lifetimeLabel: l10n.lifetimeLabel,
-            lifetimeDisplay: lifetimeDisplay,
-            completionError: completionAsync.error,
-            completionLoading: completionAsync.isLoading,
-            dualMetricsError: dualMetricsError,
-            dualMetricsLoading: dualMetricsAsync.isLoading,
-            trackHasChazara: trackHasChazara,
-            locale: locale,
-            goal: goal,
-            goalPaceUnitNoun: goalPaceUnitNoun,
-            // Pass the count in the goal's PACE unit (daf for a daf-paced track),
-            // so "Items remaining" matches the Est. finish basis. Lifetime
-            // aggregates stay in amudim elsewhere — this is track-scoped only.
-            itemsRemaining: remainingInPaceUnit,
-            estimatedFinish: estimatedFinish,
-            useHebrewCalendar: useHebrewCalendar,
-          ),
-          const SizedBox(height: 20),
-          _buildActionsCard(
-            context,
-            theme,
-            track,
-            curriculum,
-            hasProgramEnrollment: hasProgramEnrollment,
-          ),
-        ],
+      body: SubTrackListDetailLayout(
+        list: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TrackInfoCard(
+              track: track,
+              goal: goal,
+              learnerState: learnerState,
+              useHebrewCalendar: useHebrewCalendar,
+            ),
+            const SizedBox(height: 16),
+            _buildHeaderCard(
+              context,
+              theme,
+              l10n,
+              track,
+              accent,
+              icon,
+              activatedDate,
+              hasProgramEnrollment,
+              cycleFraction,
+              cyclePercentDisplay,
+              curriculumBarColor,
+              chazaraTerm,
+              trackProgressLabel: l10n.trackProgress,
+              trackProgressDisplay: trackProgressDisplay,
+              lifetimeLabel: l10n.lifetimeLabel,
+              lifetimeDisplay: lifetimeDisplay,
+              completionError: completionAsync.error,
+              completionLoading: completionAsync.isLoading,
+              dualMetricsError: dualMetricsError,
+              dualMetricsLoading: dualMetricsAsync.isLoading,
+              trackHasChazara: trackHasChazara,
+              locale: locale,
+              goal: goal,
+              goalPaceUnitNoun: goalPaceUnitNoun,
+              // Pass the count in the goal's PACE unit (daf for a daf-paced track),
+              // so "Items remaining" matches the Est. finish basis. Lifetime
+              // aggregates stay in amudim elsewhere — this is track-scoped only.
+              itemsRemaining: remainingInPaceUnit,
+              estimatedFinish: estimatedFinish,
+              useHebrewCalendar: useHebrewCalendar,
+            ),
+            const SizedBox(height: 20),
+            _buildActionsCard(
+              context,
+              theme,
+              track,
+              curriculum,
+              hasProgramEnrollment: hasProgramEnrollment,
+            ),
+            const SizedBox(height: 20),
+            const SubTrackSyncRejectionListener(),
+            SubTrackHubSection(curriculumId: curriculum.storageKey),
+          ],
+        ),
       ),
     );
   }
