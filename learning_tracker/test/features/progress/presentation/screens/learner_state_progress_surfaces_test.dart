@@ -63,43 +63,44 @@ Widget _app(LearnerState state, Widget child) => pumpApp(
 Finder _semantics(Pattern pattern) => find.bySemanticsLabel(pattern);
 
 void main() {
-  test('Tanach lifetime summaries union Chumash and Nach progress once', () async {
-    final repo = _MockContentRepository();
-    when(
-      () => repo.getContentForCurriculum(CurriculumId.tanach),
-    ).thenAnswer((_) async => progressContent());
-    final sharedRef = 'Mishnah Berakhot 1:1';
-    final additionalRef = 'Mishnah Berakhot 1:2';
-    final state = fakeLearnerState(
-      curricula: {
-        'chumash': FakeCurriculumState(learntLeaves: {sharedRef}),
-        'nach': FakeCurriculumState(
-          learntLeaves: {sharedRef, additionalRef},
-        ),
-      },
-      countedLearns: [
-        engineLearn(1, sharedRef, curriculumId: 'chumash'),
-        engineLearn(2, sharedRef, curriculumId: 'nach'),
-        engineLearn(3, additionalRef, curriculumId: 'nach'),
-      ],
-    );
+  test(
+    'Tanach lifetime summaries union Chumash and Nach progress once',
+    () async {
+      final repo = _MockContentRepository();
+      when(
+        () => repo.getContentForCurriculum(CurriculumId.tanach),
+      ).thenAnswer((_) async => progressContent());
+      const sharedRef = 'Mishnah Berakhot 1:1';
+      const additionalRef = 'Mishnah Berakhot 1:2';
+      final state = fakeLearnerState(
+        curricula: {
+          'chumash': FakeCurriculumState(learntLeaves: {sharedRef}),
+          'nach': FakeCurriculumState(learntLeaves: {sharedRef, additionalRef}),
+        },
+        countedLearns: [
+          engineLearn(1, sharedRef, curriculumId: 'chumash'),
+          engineLearn(2, sharedRef, curriculumId: 'nach'),
+          engineLearn(3, additionalRef, curriculumId: 'nach'),
+        ],
+      );
 
-    final allSources = await computeLifetimeViewSummary(
-      state: state,
-      corpus: progressCorpus(),
-      repo: repo,
-      curriculum: CurriculumId.tanach,
-    );
-    final trackOnly = await computeItemsLearnedSummary(
-      state: state,
-      corpus: progressCorpus(),
-      repo: repo,
-      curriculum: CurriculumId.tanach,
-    );
+      final allSources = await computeLifetimeViewSummary(
+        state: state,
+        corpus: progressCorpus(),
+        repo: repo,
+        curriculum: CurriculumId.tanach,
+      );
+      final trackOnly = await computeItemsLearnedSummary(
+        state: state,
+        corpus: progressCorpus(),
+        repo: repo,
+        curriculum: CurriculumId.tanach,
+      );
 
-    expect(allSources!.learnedLeafCount, 2);
-    expect(trackOnly!.learnedLeafCount, 2);
-  });
+      expect(allSources!.learnedLeafCount, 2);
+      expect(trackOnly!.learnedLeafCount, 2);
+    },
+  );
 
   group('curriculum progress screen', () {
     testWidgets('repeats leave the distinct count unchanged; nodes carry '
