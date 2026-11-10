@@ -377,4 +377,23 @@ describe('social graph callable state', () => {
     assert.equal((await db.collection('social_follow_requests').get()).size, 0);
     assert.equal((await db.collection('social_profiles').where('owner_uid', '==', parentAuth.uid).get()).size, 0);
   });
+
+  test('account data deletion removes all of its social edges and profile cards', async () => {
+    await seedAdultPair();
+    const sent = await call(fns.sendFollowRequest, {
+      fromProfileId: CHILD,
+      toSocialProfileId: socialProfileId(strangerAuth.uid, OTHER),
+    }, parentAuth);
+    await call(fns.reviewFollowRequest, {
+      requestId: sent.requestId,
+      profileId: OTHER,
+      decision: 'accept',
+    }, strangerAuth);
+
+    await call(fns.deleteAccountData, {}, parentAuth);
+
+    assert.equal((await db.collection('social_follows').get()).size, 0);
+    assert.equal((await db.collection('social_follow_requests').get()).size, 0);
+    assert.equal((await db.collection('social_profiles').where('owner_uid', '==', parentAuth.uid).get()).size, 0);
+  });
 });
