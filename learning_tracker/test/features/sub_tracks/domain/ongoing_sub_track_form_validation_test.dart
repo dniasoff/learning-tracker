@@ -315,50 +315,19 @@ void main() {
       );
     });
 
-    test('a create is allowed below five and refused at five', () {
-      expect(kMaxOngoingSubTracks, 5);
-      expect(ongoingCreateAllowed(0), isTrue);
-      expect(ongoingCreateAllowed(4), isTrue);
-      expect(ongoingCreateAllowed(5), isFalse);
-      expect(ongoingCreateAllowed(6), isFalse);
-    });
-
-    test('agrees with the shared AD-45 validator on the fifth and sixth', () {
-      final four = [for (var i = 1; i <= 4; i++) _track(i)];
-      final five = [...four, _track(5)];
-      expect(
-        subTrackLimitViolations(
-          candidate: _track(20),
-          prior: null,
-          siblings: four,
-          today: _today,
-          calendarProgramId: null,
-        ),
-        isEmpty,
-      );
-      expect(
-        ongoingCreateAllowed(
-          ongoingSubTracksInUse(four, curriculumId: _curriculum, today: _today),
-        ),
-        isTrue,
-      );
+    test('seven ongoing siblings produce no legacy limit violation', () {
+      final seven = [for (var i = 1; i <= 7; i++) _track(i)];
       expect(
         subTrackViolationCodes(
           subTrackLimitViolations(
             candidate: _track(20),
             prior: null,
-            siblings: five,
+            siblings: seven,
             today: _today,
             calendarProgramId: null,
           ),
         ),
-        ['ongoing_limit'],
-      );
-      expect(
-        ongoingCreateAllowed(
-          ongoingSubTracksInUse(five, curriculumId: _curriculum, today: _today),
-        ),
-        isFalse,
+        isEmpty,
       );
     });
   });
@@ -373,11 +342,11 @@ void main() {
       return out;
     }
 
-    // Every ongoing create whose new row would count: the form's disabled
-    // state must match the validator's ongoing_limit verdict exactly.
+    // Every fixture create may still be rejected for other rules, but the
+    // retired ongoing count limit is never produced.
     final cases = [
       for (final c in loadSubTrackLimitCases())
-        if (c.file == 'ongoing_limit.json' &&
+        if (c.file == 'ongoing_unbounded.json' &&
             (c.json['op']! as Map<String, Object?>)['kind'] == 'create')
           c,
     ];
@@ -399,23 +368,7 @@ void main() {
             !countsTowardSubTrackLimits(candidate, today)) {
           return; // the form never creates a non-counting ongoing row
         }
-        final existing = [
-          for (final e
-              in (c.json['existing']! as List<Object?>)
-                  .cast<Map<String, Object?>>())
-            subTrackFromFixtureRow(
-              e['id']! as String,
-              merge(base, e['doc']! as Map<String, Object?>),
-            ),
-        ];
-        final allowed = ongoingCreateAllowed(
-          ongoingSubTracksInUse(
-            existing,
-            curriculumId: candidate.curriculumId,
-            today: today,
-          ),
-        );
-        expect(allowed, !runSubTrackLimitCase(c).contains('ongoing_limit'));
+        expect(runSubTrackLimitCase(c), isNot(contains('ongoing_limit')));
       });
     }
   });

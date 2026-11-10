@@ -3667,6 +3667,12 @@
     }
   },
   "subTrackHubHeader": "Sub-tracks · {count} active",
+  "trackSubTrackCount": "{count} sub-tracks",
+  "@trackSubTrackCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "@subTrackHubHeader": {
     "description": "Manage tracks hub: Sub-tracks group header with the number of non-ended sub-tracks (DNI-495 AC-1, screens.md #04).",
     "placeholders": {
@@ -6011,19 +6017,6 @@
   },
   "ongoingSubTrackShabbosHelper": "Include this source on the catch-up card after shabbos",
   "@ongoingSubTrackShabbosHelper": {
-    "description": "DNI-496 ongoing sub-track form"
-  },
-  "ongoingSubTrackLimitLine": "You can have up to 5 ongoing sub-tracks. {count} in use.",
-  "@ongoingSubTrackLimitLine": {
-    "description": "DNI-496 ongoing sub-track form",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "ongoingSubTrackLimitReached": "You already have 5 ongoing sub-tracks.",
-  "@ongoingSubTrackLimitReached": {
     "description": "DNI-496 ongoing sub-track form"
   },
   "ongoingSubTrackSave": "Save sub-track",

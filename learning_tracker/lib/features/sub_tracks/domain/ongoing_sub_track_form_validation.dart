@@ -249,12 +249,8 @@ int ongoingSubTracksInUse(
     )
     .length;
 
-/// Whether another ongoing sub-track may be created beside [inUse] counting
-/// ones (AD-45 cap [kMaxOngoingSubTracks]).
-bool ongoingCreateAllowed(int inUse) => inUse < kMaxOngoingSubTracks;
-
 /// The form field a command-side AD-45 [limit] belongs to, or null when it
-/// is not a field error (for example the ongoing cap).
+/// is not a field error (including the legacy ongoing-limit code).
 OngoingFormField? ongoingFieldForViolation(SubTrackLimit limit) =>
     switch (limit) {
       SubTrackLimit.windowReversed => OngoingFormField.end,

@@ -1,5 +1,5 @@
 {
-  "description": "AD-45: at most 5 non-ended ongoing sub-tracks that are onHome or future-start, per profile and curriculum.",
+  "description": "AD-45: ongoing sub-tracks have no count limit.",
   "base": {
     "curriculum_id": "shas",
     "name": "Ongoing",
@@ -18,7 +18,7 @@
   },
   "cases": [
     {
-      "name": "4 counting + create ongoing \u2192 accepted (exactly 5)",
+      "name": "4 counting + create ongoing → accepted (exactly 5)",
       "today": "2026-10-01",
       "curriculum_id": "shas",
       "program_id": null,
@@ -56,7 +56,7 @@
       "expect": []
     },
     {
-      "name": "5 counting + create ongoing \u2192 rejected (6)",
+      "name": "5 counting + create ongoing → accepted (6)",
       "today": "2026-10-01",
       "curriculum_id": "shas",
       "program_id": null,
@@ -97,9 +97,7 @@
         "id": "01JFIXTURE0000000000000033",
         "fields": {}
       },
-      "expect": [
-        "ongoing_limit"
-      ]
+      "expect": []
     },
     {
       "name": "future-start sub-tracks count",
@@ -144,9 +142,7 @@
         "id": "01JFIXTURE0000000000000033",
         "fields": {}
       },
-      "expect": [
-        "ongoing_limit"
-      ]
+      "expect": []
     },
     {
       "name": "a future-start create counts itself",
@@ -192,9 +188,7 @@
           "window_start": "2027-01-01"
         }
       },
-      "expect": [
-        "ongoing_limit"
-      ]
+      "expect": []
     },
     {
       "name": "ended sub-tracks do not count",
@@ -330,9 +324,7 @@
         "id": "01JFIXTURE0000000000000033",
         "fields": {}
       },
-      "expect": [
-        "ongoing_limit"
-      ]
+      "expect": []
     },
     {
       "name": "another curriculum's sub-tracks do not count",
@@ -384,7 +376,7 @@
       "expect": []
     },
     {
-      "name": "school-year sub-tracks do not count toward the ongoing cap",
+      "name": "school-year sub-tracks do not create ongoing violations",
       "today": "2026-10-01",
       "curriculum_id": "shas",
       "program_id": null,
@@ -526,7 +518,7 @@
       "expect": []
     },
     {
-      "name": "editing one of 5 counting (name only) \u2192 accepted",
+      "name": "editing one of 5 counting (name only) → accepted",
       "today": "2026-10-01",
       "curriculum_id": "shas",
       "program_id": null,
@@ -677,7 +669,7 @@
       "expect": []
     },
     {
-      "name": "re-opening a passed window over the cap \u2192 rejected",
+      "name": "re-opening a passed window is accepted without a count limit",
       "today": "2026-10-01",
       "curriculum_id": "shas",
       "program_id": null,
@@ -727,12 +719,10 @@
           "window_end": null
         }
       },
-      "expect": [
-        "ongoing_limit"
-      ]
+      "expect": []
     },
     {
-      "name": "turning a school-year sub-track ongoing over the cap \u2192 rejected",
+      "name": "turning a school-year sub-track ongoing is accepted without a count limit",
       "today": "2026-10-01",
       "curriculum_id": "shas",
       "program_id": null,
@@ -786,9 +776,7 @@
           "academic_year": null
         }
       },
-      "expect": [
-        "ongoing_limit"
-      ]
+      "expect": []
     }
   ]
 }

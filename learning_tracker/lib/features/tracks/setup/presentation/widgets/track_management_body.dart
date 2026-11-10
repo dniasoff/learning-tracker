@@ -61,11 +61,8 @@ class TrackManagementBody extends ConsumerStatefulWidget {
 class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
   late bool _addingTrack = widget.startAdding;
 
-  /// Story 2.6 (DNI-497, AC-8): from 840dp a selected sub-track's detail
-  /// sits beside the hub, which keeps its selection.
   @override
-  Widget build(BuildContext context) =>
-      SubTrackListDetailLayout(list: _buildHub(context));
+  Widget build(BuildContext context) => _buildHub(context);
 
   Widget _buildHub(BuildContext context) {
     // Tutors cannot add, archive or delete tracks because these actions
@@ -153,8 +150,6 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
               bottom: 96,
             ),
             children: [
-              // DNI-495: reports a sub-track change refused at sync.
-              const SubTrackSyncRejectionListener(),
               // DNI-499 (AD-54): End, Delete and Add next year still waiting
               // for the server, or refused with a retry.
               const SubTrackLifecycleSyncPanel(),
@@ -172,9 +167,6 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
                         : () => _showDeleteDialog(track),
                   ),
                 ),
-                // DNI-495: the parent-only Sub-tracks group under each
-                // main-track card (absent on calendar-program curricula).
-                SubTrackHubSection(curriculumId: track.curriculumId.storageKey),
               ],
             ],
           );

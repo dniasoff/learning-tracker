@@ -2440,6 +2440,12 @@
     }
   },
   "subTrackHubHeader": "תתי-מסלולים · {count} פעילים",
+  "trackSubTrackCount": "{count} תתי-מסלולים",
+  "@trackSubTrackCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "@subTrackHubHeader": {
     "placeholders": {
       "count": {
@@ -4089,8 +4095,6 @@
   "ongoingSubTrackClearDate": "ניקוי התאריך",
   "ongoingSubTrackShabbosLabel": "לומדים בשבת / יום טוב",
   "ongoingSubTrackShabbosHelper": "לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת",
-  "ongoingSubTrackLimitLine": "אפשר עד 5 תתי-מסלולים קבועים. {count} בשימוש.",
-  "ongoingSubTrackLimitReached": "כבר יש 5 תתי-מסלולים קבועים.",
   "ongoingSubTrackSave": "שמירת תת-המסלול",
   "ongoingSubTrackNameRequired": "יש להזין שם",
   "ongoingSubTrackPositiveNumber": "יש להזין מספר גדול מ-0",

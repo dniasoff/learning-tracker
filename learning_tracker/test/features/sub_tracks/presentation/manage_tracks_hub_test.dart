@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
@@ -22,6 +24,8 @@ import 'package:learning_tracker/features/learning/domain/commands/capture_resul
 import 'package:learning_tracker/features/learning/domain/commands/sub_track_commands.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_track_management_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
 import 'package:mocktail/mocktail.dart';
@@ -29,6 +33,11 @@ import 'package:mocktail/mocktail.dart';
 import '../../../helpers/pump_app.dart';
 import '../../../helpers/sub_tracks/sub_track_harness.dart';
 import '../../../helpers/sub_tracks/sub_track_router.dart';
+
+final class _FalseUseHebrewDate extends UseHebrewDate {
+  @override
+  bool build() => false;
+}
 
 class _Router extends Mock implements StackRouter {}
 
@@ -59,6 +68,7 @@ Future<_Router> _pumpHub(
   bool parentSession = true,
   bool subTrackRepository = true,
   bool parentMode = false,
+  bool detailScreen = false,
   List<Override> extra = const [],
   Locale locale = const Locale('en'),
   ThemeData? theme,
@@ -78,6 +88,7 @@ Future<_Router> _pumpHub(
           subTrackRepository: subTrackRepository,
         ),
         ...subTrackHubCardOverrides(),
+        useHebrewDateProvider.overrideWith(() => _FalseUseHebrewDate()),
         ...extra,
       ],
       retry: (_, _) => null,
@@ -92,13 +103,26 @@ Future<_Router> _pumpHub(
       child: StackRouterScope(
         controller: router,
         stateHash: 0,
-        child: parentMode
+        child: detailScreen
+            ? const TrackDetailScreen(
+                track: CurriculumTrackEntity(
+                  curriculumId: CurriculumId.mishnayos,
+                  state: 'active',
+                ),
+              )
+            : parentMode
             ? const ParentTrackManagementScreen()
             : const TrackManagementBody(showBackButton: true),
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (detailScreen) {
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+  } else {
+    await tester.pumpAndSettle();
+  }
   return router;
 }
 
@@ -112,7 +136,7 @@ void main() {
   tearDown(() async => h.dispose());
 
   group('AC-1 Sub-tracks group', () {
-    testWidgets('lists non-ended sub-tracks under the main-track card', (
+    testWidgets('lists non-ended sub-tracks in the track detail', (
       tester,
     ) async {
       h = SubTrackHarness(
@@ -127,7 +151,7 @@ void main() {
           ),
         ],
       );
-      await _pumpHub(tester, h);
+      await _pumpHub(tester, h, detailScreen: true);
 
       expect(find.text('Sub-tracks · 2 active'), findsOneWidget);
       expect(
@@ -142,17 +166,14 @@ void main() {
       expect(find.text('Ongoing · 5/week'), findsOneWidget);
       expect(find.text('Old school'), findsNothing);
       expect(find.text('Add sub-track'), findsOneWidget);
-      expect(
-        tester.getTopLeft(find.byType(LearningTrackCard)).dy,
-        lessThan(tester.getTopLeft(find.text('Sub-tracks · 2 active')).dy),
-      );
+      expect(find.byType(LearningTrackCard), findsNothing);
     });
 
     testWidgets('with no sub-tracks: only the header and Add sub-track', (
       tester,
     ) async {
       h = SubTrackHarness();
-      await _pumpHub(tester, h);
+      await _pumpHub(tester, h, detailScreen: true);
       expect(find.text('Sub-tracks · 0 active'), findsOneWidget);
       expect(find.text('Add sub-track'), findsOneWidget);
       expect(
@@ -170,15 +191,16 @@ void main() {
       await _pumpHub(
         tester,
         h,
+        detailScreen: true,
         subTrackRepository: false,
         extra: [subTrackRepositoryProvider.overrideWith((ref) async => flaky)],
       );
       expect(find.byType(AppErrorView), findsOneWidget);
-      expect(find.byType(LearningTrackCard), findsOneWidget);
       expect(find.text('Add sub-track'), findsNothing);
 
       await tester.tap(find.text('Retry'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(AppErrorView), findsNothing);
       expect(find.text('Sub-tracks · 1 active'), findsOneWidget);
     });
@@ -192,7 +214,7 @@ void main() {
       testWidgets('on a phone, tapping a $label row pushes its sub-track '
           'detail and selects it', (tester) async {
         h = SubTrackHarness(seed: [stored]);
-        final router = await _pumpHub(tester, h);
+        final router = await _pumpHub(tester, h, detailScreen: true);
         final row = find.byKey(const ValueKey('subTrackHubRow:$_a'));
         expect(find.byIcon(Icons.chevron_right), findsOneWidget);
         await tester.tap(row);
@@ -216,7 +238,12 @@ void main() {
           storedOngoing(_b, name: 'Rebbe'),
         ],
       );
-      final router = await _pumpHub(tester, h, size: const Size(1100, 1600));
+      final router = await _pumpHub(
+        tester,
+        h,
+        detailScreen: true,
+        size: const Size(1100, 1600),
+      );
       final pane = find.byKey(const ValueKey('subTrackSplitDetail'));
       expect(pane, findsNothing);
       ListTile tile(String id) =>
@@ -239,13 +266,15 @@ void main() {
 
     testWidgets('Add sub-track offers School year and Ongoing', (tester) async {
       h = SubTrackHarness();
-      final router = await _pumpHub(tester, h);
+      final router = await _pumpHub(tester, h, detailScreen: true);
       await tester.tap(find.text('Add sub-track'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('School year'), findsOneWidget);
       expect(find.text('Ongoing'), findsOneWidget);
       await tester.tap(find.text('School year'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       final pushed =
           verify(() => router.push<Object?>(captureAny())).captured.single
               as SchoolYearSubTrackFormRoute;
@@ -253,9 +282,11 @@ void main() {
       expect(pushed.args!.subTrackId, isNull);
     });
 
-    testWidgets('parent mode shows the same group', (tester) async {
+    testWidgets('a parent session sees the same group in track detail', (
+      tester,
+    ) async {
       h = SubTrackHarness(seed: [storedSchoolYear(_a)]);
-      await _pumpHub(tester, h, parentMode: true);
+      await _pumpHub(tester, h, detailScreen: true);
       expect(find.text('Sub-tracks · 1 active'), findsOneWidget);
       expect(find.text('Add sub-track'), findsOneWidget);
     });
@@ -264,8 +295,8 @@ void main() {
   group('AC-2 calendar program', () {
     testWidgets('hides the group and Add sub-track', (tester) async {
       h = SubTrackHarness(calendarProgramId: 'daf_yomi');
-      await _pumpHub(tester, h);
-      expect(find.byType(LearningTrackCard), findsOneWidget);
+      await _pumpHub(tester, h, detailScreen: true);
+      expect(find.byType(TrackDetailScreen), findsOneWidget);
       expect(find.textContaining('Sub-tracks'), findsNothing);
       expect(find.text('Add sub-track'), findsNothing);
     });
@@ -276,12 +307,35 @@ void main() {
       tester,
     ) async {
       h = SubTrackHarness(seed: [storedSchoolYear(_a)]);
-      await _pumpHub(tester, h, parentSession: false);
-      expect(find.byType(LearningTrackCard), findsOneWidget);
+      await _pumpHub(tester, h, parentSession: false, detailScreen: true);
+      expect(find.byType(TrackDetailScreen), findsOneWidget);
       expect(find.textContaining('Sub-tracks'), findsNothing);
       expect(find.byType(SubTrackHubRow), findsNothing);
       expect(find.text('Add sub-track'), findsNothing);
     });
+  });
+
+  testWidgets('the list has no sibling group; Add is available in detail', (
+    tester,
+  ) async {
+    h = SubTrackHarness(seed: [storedSchoolYear(_a)]);
+    await _pumpHub(tester, h);
+    expect(find.byType(LearningTrackCard), findsOneWidget);
+    expect(find.byType(SubTrackHubSection), findsNothing);
+    expect(find.text('Add sub-track'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(SubTrackCountLabel), findsOneWidget);
+    expect(find.text('1 sub-tracks'), findsOneWidget);
+
+    await _pumpHub(tester, h, parentMode: true);
+    expect(find.byType(LearningTrackCard), findsOneWidget);
+    expect(find.byType(SubTrackHubSection), findsNothing);
+    expect(find.text('Add sub-track'), findsNothing);
+    expect(find.text('1 sub-tracks'), findsOneWidget);
+
+    await _pumpHub(tester, h, detailScreen: true);
+    expect(find.byType(SubTrackHubSection), findsOneWidget);
+    expect(find.text('Add sub-track'), findsOneWidget);
   });
 
   group('AC-7 hub side', () {
@@ -301,14 +355,15 @@ void main() {
     testWidgets('an offline create shows its row at once and the target '
         'recomputes', (tester) async {
       h = SubTrackHarness(deadline: '2028-06-01')..repo.offline = true;
-      await _pumpHub(tester, h);
+      await _pumpHub(tester, h, detailScreen: true);
       expect(find.text('Sub-tracks · 0 active'), findsOneWidget);
 
       late CaptureResult result;
       await tester.runAsync(() async {
         result = await h.commands.createSubTrack(draft());
       });
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(
         result,
         isA<CaptureSuccess>().having((s) => s.queued, 'queued', true),
@@ -325,16 +380,18 @@ void main() {
       h = SubTrackHarness()
         ..repo.offline = true
         ..repo.failNextWith(const PermanentWriteRejection('permission-denied'));
-      await _pumpHub(tester, h);
+      await _pumpHub(tester, h, detailScreen: true);
       await tester.runAsync(() => h.commands.createSubTrack(draft()));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Cheder'), findsOneWidget);
 
       await tester.runAsync(() async {
         h.repo.settleHeld();
         await Future<void>.delayed(const Duration(milliseconds: 10));
       });
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Cheder'), findsNothing);
       expect(find.text('Sub-tracks · 0 active'), findsOneWidget);
       expect(find.text("Your change couldn't be saved."), findsOneWidget);
@@ -344,7 +401,7 @@ void main() {
   group('AC-10 styling and layouts', () {
     testWidgets('rows are flat cards with a 1px outline', (tester) async {
       h = SubTrackHarness(seed: [storedSchoolYear(_a)]);
-      await _pumpHub(tester, h);
+      await _pumpHub(tester, h, detailScreen: true);
       final card = tester.widget<Card>(
         find.descendant(
           of: find.byType(SubTrackHubRow),
@@ -368,6 +425,7 @@ void main() {
       await _pumpHub(
         tester,
         h,
+        detailScreen: true,
         theme: AppTheme.themeFor(brightness: Brightness.dark),
         locale: const Locale('he'),
       );
