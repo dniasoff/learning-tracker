@@ -615,7 +615,7 @@ class _BrowseSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        ...CurriculumId.values.map(
+        ...CurriculumId.userSelectable.map(
           (curriculum) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: _CurriculumBrowseCard(curriculum: curriculum),

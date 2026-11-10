@@ -278,8 +278,8 @@ void main() {
           tree: const [],
         );
 
-    // Chumash is first in app order, so it is what the report would pick
-    // on its own.
+    // Chumash is first in storage order, but it is not a user-facing
+    // Lifetime curriculum. The Lifetime entry chooses from browsable rows.
     final both = [
       fullReport(),
       homeOnlyReport(
@@ -331,27 +331,32 @@ void main() {
       );
     });
 
-    testWidgets('collapsing the card falls back to the first one listed', (
-      tester,
-    ) async {
-      final h = _Harness(
-        _Session.adult,
-        lifetime: [
-          listed(CurriculumId.chumash),
-          listed(CurriculumId.mishnayos),
-        ],
-        reports: both,
-      );
-      await h.pump(tester, '/progress/lifetime');
-      await tester.tap(find.text('Mishnayos'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Mishnayos'));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'collapsing the card falls back to the first user-selectable curriculum',
+      (tester) async {
+        final h = _Harness(
+          _Session.adult,
+          lifetime: [
+            listed(CurriculumId.chumash),
+            listed(CurriculumId.mishnayos),
+          ],
+          reports: both,
+        );
+        await h.pump(tester, '/progress/lifetime');
+        await tester.tap(find.text('Mishnayos'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Mishnayos'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(_entry);
-      await tester.pumpAndSettle();
-      expect(find.bySemanticsLabel('Distinct · 25 Pesukim'), findsOneWidget);
-    });
+        await tester.tap(_entry);
+        await tester.pumpAndSettle();
+        expect(
+          find.bySemanticsLabel('Distinct · 1,204 Mishnayos'),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Distinct · 25 Pesukim'), findsNothing);
+      },
+    );
   });
 
   testWidgets('locking the parent PIN on the report leaves for Lifetime and '

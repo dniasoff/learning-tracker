@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -51,8 +52,20 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
   required ContentRepository repo,
   required CurriculumId curriculum,
 }) async {
-  final activity = leafActivityOf(state, corpus);
-  final learnt = state[curriculum.storageKey]?.learntLeaves ?? const {};
+  final subsetIds = [
+    for (final subset in subsetsOf(curriculum)) subset.storageKey,
+  ];
+  final activity = leafActivityOf(
+    state,
+    corpus,
+    curricula: {curriculum.storageKey, ...subsetIds},
+  );
+  final learnt = learntLeavesFor(
+    state,
+    curriculum.storageKey,
+    subsetIds: subsetIds,
+    corpus: corpus,
+  );
   final tracked = {
     for (final MapEntry(:key, :value) in activity.entries)
       if (value.trackedEvents > 0 && learnt.contains(key)) key,
@@ -76,14 +89,26 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
   required ContentRepository repo,
   required CurriculumId curriculum,
 }) async {
-  final learnt = state[curriculum.storageKey]?.learntLeaves ?? const {};
+  final subsetIds = [
+    for (final subset in subsetsOf(curriculum)) subset.storageKey,
+  ];
+  final learnt = learntLeavesFor(
+    state,
+    curriculum.storageKey,
+    subsetIds: subsetIds,
+    corpus: corpus,
+  );
   if (learnt.isEmpty) return null;
   return _summary(
     repo: repo,
     curriculum: curriculum,
     learnt: learnt,
     provenance: LifetimeTreeBuilder.provenanceFromActivity(
-      leafActivityOf(state, corpus),
+      leafActivityOf(
+        state,
+        corpus,
+        curricula: {curriculum.storageKey, ...subsetIds},
+      ),
     ),
   );
 }

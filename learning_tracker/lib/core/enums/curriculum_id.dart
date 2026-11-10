@@ -54,6 +54,15 @@ enum CurriculumId {
   /// [fromStorageKey] being the single seam for storageKey resolution.
   static List<CurriculumId> get all => values;
 
+  /// Curricula users can choose or browse as roots. Chumash and Nach remain
+  /// storage curricula and remain available through Tanach's composite tree.
+  static List<CurriculumId> get userSelectable =>
+      values.where((curriculum) => curriculum.isBrowsable).toList();
+
+  /// Whether this curriculum should be presented as a standalone user-facing
+  /// choice or browse root.
+  bool get isBrowsable => this != chumash && this != nach;
+
   /// Display name in English.
   String get displayNameEn => switch (this) {
     CurriculumId.mishnayos => 'Mishnayos',
