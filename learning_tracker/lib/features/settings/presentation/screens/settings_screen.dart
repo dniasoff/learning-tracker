@@ -316,6 +316,18 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             const SizedBox(height: 24),
+            const SizedBox(height: 10),
+            _SurfaceCard(
+              child: PreferenceListTile.withIcon(
+                icon: Icons.info_outline_rounded,
+                iconColor: context.colors.brandBlueBright,
+                iconBackground: context.colors.brandBlueSoft,
+                title: l10n.aboutTitle,
+                subtitle: l10n.aboutDescription,
+                onTap: () => context.pushRoute(const AboutRoute()),
+              ),
+            ),
+            const SizedBox(height: 24),
             FutureBuilder<PackageInfo>(
               future: PackageInfo.fromPlatform(),
               builder: (context, snapshot) {

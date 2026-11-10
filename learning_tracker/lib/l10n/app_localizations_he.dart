@@ -12,6 +12,40 @@ class AppLocalizationsHe extends AppLocalizations {
   String get appTitle => 'מעקב לימוד תורה';
 
   @override
+  String get aboutTitle => 'מידע על האפליקציה';
+
+  @override
+  String get aboutDescription => 'תכננו ועקבו אחר לימוד התורה שלכם.';
+
+  @override
+  String get aboutCreatedBy => 'נוצר על ידי';
+
+  @override
+  String get aboutContactUs => 'יצירת קשר';
+
+  @override
+  String get aboutEmail => 'דוא״ל';
+
+  @override
+  String get aboutPhone => 'טלפון';
+
+  @override
+  String get aboutWhatsApp => 'וואטסאפ';
+
+  @override
+  String get aboutWebsite => 'אתר';
+
+  @override
+  String aboutVersion(String version) {
+    return 'גרסה $version';
+  }
+
+  @override
+  String aboutVersionWithBuild(String version, String buildNumber) {
+    return 'גרסה $version (בנייה $buildNumber)';
+  }
+
+  @override
   String get dashboard => 'לוח בקרה';
 
   @override

@@ -104,6 +104,66 @@ abstract class AppLocalizations {
   /// **'Torah Learning Tracker'**
   String get appTitle;
 
+  /// No description provided for @aboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get aboutTitle;
+
+  /// No description provided for @aboutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan and track your Torah learning.'**
+  String get aboutDescription;
+
+  /// No description provided for @aboutCreatedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Created by'**
+  String get aboutCreatedBy;
+
+  /// No description provided for @aboutContactUs.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact us'**
+  String get aboutContactUs;
+
+  /// No description provided for @aboutEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get aboutEmail;
+
+  /// No description provided for @aboutPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get aboutPhone;
+
+  /// No description provided for @aboutWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get aboutWhatsApp;
+
+  /// No description provided for @aboutWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get aboutWebsite;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String aboutVersion(String version);
+
+  /// No description provided for @aboutVersionWithBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} (build {buildNumber})'**
+  String aboutVersionWithBuild(String version, String buildNumber);
+
   /// No description provided for @dashboard.
   ///
   /// In en, this message translates to:

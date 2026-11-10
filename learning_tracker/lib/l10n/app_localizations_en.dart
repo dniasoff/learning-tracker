@@ -12,6 +12,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Torah Learning Tracker';
 
   @override
+  String get aboutTitle => 'About';
+
+  @override
+  String get aboutDescription => 'Plan and track your Torah learning.';
+
+  @override
+  String get aboutCreatedBy => 'Created by';
+
+  @override
+  String get aboutContactUs => 'Contact us';
+
+  @override
+  String get aboutEmail => 'Email';
+
+  @override
+  String get aboutPhone => 'Phone';
+
+  @override
+  String get aboutWhatsApp => 'WhatsApp';
+
+  @override
+  String get aboutWebsite => 'Website';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String aboutVersionWithBuild(String version, String buildNumber) {
+    return 'Version $version (build $buildNumber)';
+  }
+
+  @override
   String get dashboard => 'Dashboard';
 
   @override
