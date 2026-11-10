@@ -256,6 +256,57 @@ final class TextDisplayPreferenceProvider
 String _$textDisplayPreferenceHash() =>
     r'edc7eb2168517732087c61fb3b867f0769032924';
 
+@ProviderFor(translationVisibilityPreference)
+final translationVisibilityPreferenceProvider =
+    TranslationVisibilityPreferenceProvider._();
+
+final class TranslationVisibilityPreferenceProvider
+    extends
+        $FunctionalProvider<
+          TranslationVisibilityPreference,
+          TranslationVisibilityPreference,
+          TranslationVisibilityPreference
+        >
+    with $Provider<TranslationVisibilityPreference> {
+  TranslationVisibilityPreferenceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'translationVisibilityPreferenceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$translationVisibilityPreferenceHash();
+
+  @$internal
+  @override
+  $ProviderElement<TranslationVisibilityPreference> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  TranslationVisibilityPreference create(Ref ref) {
+    return translationVisibilityPreference(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TranslationVisibilityPreference value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TranslationVisibilityPreference>(
+        value,
+      ),
+    );
+  }
+}
+
+String _$translationVisibilityPreferenceHash() =>
+    r'7e89741b48a408eeb9d1f73831086988f544df8e';
+
 /// Long-lived store for the per-(profile, curriculum) siyum-granularity
 /// preference. Keyed by [CurriculumId] because the value is per-curriculum;
 /// the underlying broadcast stream survives route changes so the journey and
@@ -527,6 +578,69 @@ final class ShowNikudPrefProvider
 String _$showNikudPrefHash() => r'e2ed1aaad5730da9f022a576f48829c3c62dddb9';
 
 abstract class _$ShowNikudPref extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<bool, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<bool, bool>,
+              bool,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Whether the active profile wants English glosses shown inline in the reader.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+
+@ProviderFor(ShowReaderTranslation)
+final showReaderTranslationProvider = ShowReaderTranslationProvider._();
+
+/// Whether the active profile wants English glosses shown inline in the reader.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+final class ShowReaderTranslationProvider
+    extends $NotifierProvider<ShowReaderTranslation, bool> {
+  /// Whether the active profile wants English glosses shown inline in the reader.
+  // keepAlive: mirrors a persisted preference; must survive widget unmounts.
+  ShowReaderTranslationProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'showReaderTranslationProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$showReaderTranslationHash();
+
+  @$internal
+  @override
+  ShowReaderTranslation create() => ShowReaderTranslation();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$showReaderTranslationHash() =>
+    r'c29f61349e4038b8f8ebdd8e001bced5634c4dd9';
+
+/// Whether the active profile wants English glosses shown inline in the reader.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+
+abstract class _$ShowReaderTranslation extends $Notifier<bool> {
   bool build();
   @$mustCallSuper
   @override

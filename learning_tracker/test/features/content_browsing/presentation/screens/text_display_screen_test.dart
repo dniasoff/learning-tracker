@@ -41,6 +41,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -49,6 +50,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/screens/
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -56,6 +58,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -115,6 +118,8 @@ Widget _buildApp({
   ({String? prev, String? next})? adjacentRefs,
   Locale locale = const Locale('en'),
   bool disableRetry = false,
+  bool useRealTranslationPreference = false,
+  String? profileId,
 }) {
   final tasks = dailyTasks ?? [_task(ref: _kRef), _task(ref: _kRef2)];
   final adj = adjacentRefs ?? (prev: null, next: null);
@@ -150,6 +155,14 @@ Widget _buildApp({
       textContentProvider(_kRef).overrideWith(textBuilder),
       fontSizeProvider.overrideWith(() => _FakeFontSizeNotifier()),
       showNikudProvider.overrideWith(() => _FakeShowNikudNotifier()),
+      if (!useRealTranslationPreference)
+        showReaderTranslationProvider.overrideWith(
+          () => _FakeShowReaderTranslation(),
+        ),
+      if (profileId != null)
+        selectedProfileIdProvider.overrideWith(
+          () => _FakeSelectedProfileId(profileId),
+        ),
       renderedDisplayForRefProvider(_kRef).overrideWith((ref) async => _kRef),
       contentIndexProvider.overrideWith((ref) async => _fakeContentIndex(adj)),
       // `curriculumLabelText` (invoked once contentIndexProvider resolves a
@@ -240,6 +253,20 @@ class _FakeShowNikudNotifier extends ShowNikud {
   bool build() => true;
 }
 
+class _FakeShowReaderTranslation extends ShowReaderTranslation {
+  @override
+  bool build() => true;
+}
+
+class _FakeSelectedProfileId extends SelectedProfileId {
+  _FakeSelectedProfileId(this._profileId);
+
+  final String _profileId;
+
+  @override
+  String? build() => _profileId;
+}
+
 class _FakeCompletionCommitted extends CompletionCommitted {
   @override
   int build() => 0;
@@ -274,6 +301,7 @@ void main() {
   });
 
   setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     router = _MockStackRouter();
     when(() => router.maybePop<Object?>()).thenAnswer((_) async => true);
     when(() => router.replace<Object?>(any())).thenAnswer((_) async => null);
@@ -408,21 +436,21 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets(
-    'data — English section card with l10n "English Translation" label',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildApp(router: router, textState: AsyncData(_content())),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+  testWidgets('data — inline English gloss renders under its Hebrew segment', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(router: router, textState: AsyncData(_content())),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('English Translation'), findsOneWidget);
+    expect(find.text('From when may one recite'), findsOneWidget);
+    expect(find.text('English Translation'), findsNothing);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
   testWidgets('data — Hebrew text is rendered', (tester) async {
     const heText = 'מֵאֵימָתַי קוֹרִין';
@@ -458,34 +486,53 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets(
-    'data — Hebrew content renders above English content (reading order)',
-    (tester) async {
-      const heText = 'מֵאֵימָתַי קוֹרִין אֶת שְׁמַע';
-      const enText = 'From when may one recite the Shema';
-      await tester.pumpWidget(
-        _buildApp(
-          router: router,
-          textState: AsyncData(_content(hebrew: heText, english: enText)),
+  testWidgets('data — each English gloss follows its matching Hebrew segment', (
+    tester,
+  ) async {
+    final multiContent = TextContent(
+      sefariaRef: _kRef,
+      segments: [
+        TextSegment(
+          sefariaRef: '$_kRef:1',
+          hebrewText: 'עברית ראשונה',
+          englishText: 'First gloss',
+          number: 1,
         ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+        TextSegment(
+          sefariaRef: '$_kRef:2',
+          hebrewText: 'עברית שנייה',
+          englishText: '',
+          number: 2,
+        ),
+        TextSegment(
+          sefariaRef: '$_kRef:3',
+          hebrewText: 'עברית שלישית',
+          englishText: 'Third gloss',
+          number: 3,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      _buildApp(router: router, textState: AsyncData(multiContent)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    final firstHe = tester.getTopLeft(find.textContaining('עברית ראשונה'));
+    final firstEn = tester.getTopLeft(find.textContaining('First gloss'));
+    final secondHe = tester.getTopLeft(find.textContaining('עברית שנייה'));
+    final thirdHe = tester.getTopLeft(find.textContaining('עברית שלישית'));
+    final thirdEn = tester.getTopLeft(find.textContaining('Third gloss'));
+    expect(firstHe.dy, lessThan(firstEn.dy));
+    expect(firstEn.dy, lessThan(secondHe.dy));
+    expect(find.text('Second gloss'), findsNothing);
+    expect(secondHe.dy, lessThan(thirdHe.dy));
+    expect(thirdHe.dy, lessThan(thirdEn.dy));
 
-      final hebrewPos = tester.getTopLeft(find.textContaining(heText).first);
-      final englishPos = tester.getTopLeft(find.textContaining(enText).first);
-      expect(
-        hebrewPos.dy,
-        lessThan(englishPos.dy),
-        reason: 'Hebrew section must render above the English section',
-      );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
-
-  testWidgets('data — divider icon (menu_book_rounded) rendered', (
+  testWidgets('translation toggle is accessible and hides inline glosses', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -494,7 +541,58 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.byIcon(Icons.menu_book_rounded), findsOneWidget);
+    expect(
+      find.byKey(const Key('text_display_translation_toggle')),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Hide translation'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('text_display_translation_toggle')));
+    await tester.pump();
+    expect(find.text('From when may one recite'), findsNothing);
+    expect(find.byTooltip('Show translation'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('translation choice persists when reader is reopened', (
+    tester,
+  ) async {
+    const profileId = 'learner-a';
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        textState: AsyncData(_content()),
+        useRealTranslationPreference: true,
+        profileId: profileId,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byKey(const Key('text_display_translation_toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      prefs.getBool(ProfileScopedPreferenceKeys.textShowTranslation(profileId)),
+      isFalse,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        textState: AsyncData(_content()),
+        useRealTranslationPreference: true,
+        profileId: profileId,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('From when may one recite'), findsNothing);
+    expect(find.byTooltip('Show translation'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -552,7 +650,7 @@ void main() {
 
   // ── Hebrew-only content ─────────────────────────────────────────────────────
 
-  testWidgets('Hebrew-only — Hebrew section shown, English section absent', (
+  testWidgets('Hebrew-only — Hebrew shown and translation toggle absent', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -566,6 +664,10 @@ void main() {
 
     expect(find.text('Hebrew Text'), findsOneWidget);
     expect(find.text('English Translation'), findsNothing);
+    expect(
+      find.byKey(const Key('text_display_translation_toggle')),
+      findsNothing,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -1137,7 +1239,7 @@ void main() {
       // Verse numbers rendered via _VerseNumberBadge — look for gematriya
       // markers or Arabic numerals in badge containers.
       expect(find.text('Hebrew Text'), findsOneWidget);
-      expect(find.text('English Translation'), findsOneWidget);
+      expect(find.text('English Translation'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

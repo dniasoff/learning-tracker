@@ -10,6 +10,7 @@ class ProfileScopedPreferenceKeys {
   static const legacyUseHebrewCalendarKey = 'use_hebrew_calendar';
   static const legacyFontSizeKey = 'text_display_font_size';
   static const legacyShowNikudKey = 'text_display_show_nikud';
+  static const legacyShowTranslationKey = 'text_display_show_translation';
   static const legacyLearningOrderKey = 'learning_order_parent_controls';
   static const legacyHebrewTermsScriptKey = 'hebrew_terms_script';
 
@@ -23,6 +24,9 @@ class ProfileScopedPreferenceKeys {
 
   static String textShowNikud(String profileId) =>
       'text_display_show_nikud_p$profileId';
+
+  static String textShowTranslation(String profileId) =>
+      'text_display_show_translation_p$profileId';
 
   static String learningOrderParentControls(String profileId) =>
       'learning_order_parent_controls_p$profileId';

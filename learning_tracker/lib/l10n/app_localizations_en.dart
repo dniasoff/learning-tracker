@@ -3657,6 +3657,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get textReaderEnglishTab => 'English Translation';
 
   @override
+  String get textReaderShowTranslation => 'Show translation';
+
+  @override
+  String get textReaderHideTranslation => 'Hide translation';
+
+  @override
   String get totalPointsLabel => 'Total Points';
 
   @override

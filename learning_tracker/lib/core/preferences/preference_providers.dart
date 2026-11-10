@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart
 import 'package:learning_tracker/core/preferences/siyum_granularity_preference.dart';
 import 'package:learning_tracker/core/preferences/text_display_preference.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
+import 'package:learning_tracker/core/preferences/translation_visibility_preference.dart';
 import 'package:learning_tracker/core/preferences/transliteration_variant_preference.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -57,6 +58,14 @@ TransliterationVariantPreference transliterationVariantPreference(Ref ref) {
 @Riverpod(keepAlive: true)
 TextDisplayPreference textDisplayPreference(Ref ref) {
   final pref = TextDisplayPreference();
+  ref.onDispose(pref.dispose);
+  return pref;
+}
+
+// keepAlive: profile-scoped store; lives for the app session.
+@Riverpod(keepAlive: true)
+TranslationVisibilityPreference translationVisibilityPreference(Ref ref) {
+  final pref = TranslationVisibilityPreference();
   ref.onDispose(pref.dispose);
   return pref;
 }
@@ -265,6 +274,39 @@ class ShowNikudPref extends _$ShowNikudPref
     // AUD-core-preferences-04 (EH-2): see UseHebrewTerms.set.
     await guardedPersist(
       event: 'show_nikud_persist_failed',
+      write: () => _writeAndPersist(pref, profileId, value),
+      onFailure: () => state = previous,
+    );
+  }
+}
+
+/// Whether the active profile wants English glosses shown inline in the reader.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
+@Riverpod(keepAlive: true)
+class ShowReaderTranslation extends _$ShowReaderTranslation
+    with _SentinelGuardedPreference<bool> {
+  @override
+  bool build() {
+    final profileId = ref.watch(selectedProfileIdProvider);
+    if (sentinelBlocksRebind(profileId)) return state;
+    final pref = ref.watch(translationVisibilityPreferenceProvider);
+    _bindObserver(ref, pref, profileId ?? kNoProfilePreferenceSentinel, (
+      value,
+    ) {
+      if (value != state) state = value;
+    });
+    return pref.defaultValue;
+  }
+
+  Future<void> set(bool value) async {
+    if (value == state) return;
+    final profileId =
+        ref.read(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+    final pref = ref.read(translationVisibilityPreferenceProvider);
+    final previous = state;
+    state = value;
+    await guardedPersist(
+      event: 'reader_translation_visibility_persist_failed',
       write: () => _writeAndPersist(pref, profileId, value),
       onFailure: () => state = previous,
     );

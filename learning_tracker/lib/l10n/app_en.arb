@@ -2963,6 +2963,8 @@
   "textReaderTooltipNext": "Next",
   "textReaderHebrewTab": "Hebrew Text",
   "textReaderEnglishTab": "English Translation",
+  "textReaderShowTranslation": "Show translation",
+  "textReaderHideTranslation": "Hide translation",
   "totalPointsLabel": "Total Points",
   "resetToDefaultOrder": "Reset to Default Order",
   "resetToDefaultOrderDialogTitle": "Reset to Default Order",
