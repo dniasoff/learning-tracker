@@ -2024,15 +2024,16 @@
   "textReaderTextUnavailableTitle": "הטקסט אינו זמין",
   "textReaderCheckConnection": "בדקו את חיבור האינטרנט ונסו שוב.",
   "textReaderFailedToLoad": "טעינת הטקסט נכשלה",
-  "sacredTimeCardDescription": "האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים לפי המיקום ומנהגי הדלקת הנרות וצאת הכוכבים שבחרתם.",
+  "sacredTimeCardDescription": "האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים לפי המיקום ובהתאם למנהג הזמנים שבחרתם.",
   "sacredTimeShabbosModeLabel": "מצב שבת",
   "sacredTimeAlwaysOn": "תמיד פעיל",
   "sacredTimeNoLocation": "לא הוגדר מיקום",
   "sacredTimeSourceDetected": "זוהה אוטומטית",
   "sacredTimeSourceManualCity": "נבחר מרשימת ערים",
   "sacredTimeSourceManualCoords": "קואורדינטות ידניות",
-  "sacredTimeInIsraelTitle": "אני בישראל",
-  "sacredTimeInIsraelSubtitle": "חג של יום אחד כאשר מופעל. נקבע אוטומטית כשמזהים או בוחרים עיר; שנו אם אתם מבקרים.",
+  "sacredTimeYomTovDays": "ימים טובים",
+  "sacredTimeYomTovOneDay": "יום אחד (מנהג ארץ ישראל)",
+  "sacredTimeYomTovTwoDays": "יומיים (מנהג חוץ לארץ)",
   "sacredTimeLocationUpdated": "המיקום עודכן.",
   "sacredTimeLocationPermissionPermanentlyDenied": "הרשאת המיקום נדחתה לצמיתות. פתחו את הגדרות המערכת כדי לאפשר.",
   "sacredTimeLocationPermissionDenied": "הרשאת המיקום נדחתה.",
@@ -2440,6 +2441,12 @@
     }
   },
   "subTrackHubHeader": "תתי-מסלולים · {count} פעילים",
+  "trackSubTrackCount": "{count} תתי-מסלולים",
+  "@trackSubTrackCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "@subTrackHubHeader": {
     "placeholders": {
       "count": {
@@ -2856,6 +2863,22 @@
   },
   "reviewScheduleScheduledByProgram": "מתוזמן על ידי התוכנית",
   "chazaraCustomCycle": "מחזור מותאם אישית",
+  "chazaraQuickFillLabel": "מילוי מהיר",
+  "chazaraQuickFillLearnOnly": "לימוד בלבד",
+  "chazaraQuickFillOneDay": "1",
+  "chazaraQuickFillWeek": "1+7",
+  "chazaraQuickFillMonth": "1+7+30",
+  "chazaraPlanEditorTitle": "מרווחי חזרה",
+  "chazaraPlanEditorHint": "הזן את מספר הימים בין הלימוד לכל חזרה.",
+  "chazaraIntervalFieldLabel": "מרווח חזרה {number}",
+  "@chazaraIntervalFieldLabel": { "placeholders": { "number": { "type": "int" } } },
+  "chazaraDaysUnit": "ימים",
+  "chazaraRemoveIntervalLabel": "הסר מרווח חזרה {number}",
+  "@chazaraRemoveIntervalLabel": { "placeholders": { "number": { "type": "int" } } },
+  "chazaraAddInterval": "הוסף מרווח",
+  "chazaraIntervalPositiveError": "הזן מספר שלם וחיובי של ימים.",
+  "chazaraIntervalWholeNumberError": "הזן מספר שלם של ימים.",
+  "chazaraIntervalIncreasingError": "כל מרווח חייב להיות גדול מהמרווח שלפניו.",
   "chazaraSessionsCount": "{count} סבבים",
   "@chazaraSessionsCount": {
     "placeholders": {
@@ -4089,8 +4112,6 @@
   "ongoingSubTrackClearDate": "ניקוי התאריך",
   "ongoingSubTrackShabbosLabel": "לומדים בשבת / יום טוב",
   "ongoingSubTrackShabbosHelper": "לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת",
-  "ongoingSubTrackLimitLine": "אפשר עד 5 תתי-מסלולים קבועים. {count} בשימוש.",
-  "ongoingSubTrackLimitReached": "כבר יש 5 תתי-מסלולים קבועים.",
   "ongoingSubTrackSave": "שמירת תת-המסלול",
   "ongoingSubTrackNameRequired": "יש להזין שם",
   "ongoingSubTrackPositiveNumber": "יש להזין מספר גדול מ-0",
@@ -4332,6 +4353,11 @@
   "shnayimMikraReaderNoUnits": "לא נמצאו חלקי קריאה לפרשה זו.",
   "shnayimMikraNoDailyAliyahToday": "קצב עלייה יומית מתקיים מיום ראשון עד יום שישי.",
   "shnayimMikraReaderWeekComplete": "הקריאות של {portion} הושלמו.",
+  "shnayimMikraTodayAliyahDone": "העלייה של היום הושלמה. נותרו {remaining} עליות השבוע.",
+  "@shnayimMikraTodayAliyahDone": {
+    "description": "Daily aliyah pacing completion message while the parsha still has unfinished aliyot.",
+    "placeholders": { "remaining": { "type": "int" } }
+  },
   "@shnayimMikraReaderWeekComplete": {
     "description": "Completion message after all assigned Shnayim Mikra reading units are marked complete.",
     "placeholders": { "portion": { "type": "String" } }
@@ -4368,5 +4394,15 @@
       "current": { "type": "int" },
       "total": { "type": "int" }
     }
-  }
+  },
+  "textReaderTranslationLanguage": "שפת התרגום",
+  "textReaderTranslationLanguageDialogTitle": "שפת התרגום",
+  "textReaderSearchLanguages": "חיפוש שפות",
+  "textReaderSefariaEnglish": "אנגלית של ספריא",
+  "textReaderOfflineLabel": "לא מקוון",
+  "textReaderClose": "סגירה",
+  "textReaderLoadingTranslation": "התרגום בטעינה…",
+  "textReaderTranslationUnavailable": "התרגום אינו זמין במצב לא מקוון או כרגע",
+  "textReaderMachineTranslated": "תרגום מכונה",
+  "textReaderRetryTranslation": "הקשה כדי לנסות שוב"
 }

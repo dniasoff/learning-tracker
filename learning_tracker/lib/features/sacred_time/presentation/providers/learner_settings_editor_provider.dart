@@ -84,6 +84,7 @@ final class LearnerSettingsEditor {
     required Future<LearnerScope?> Function() scope,
     required LocationService locationService,
     required DeviceTimeZoneReader deviceTimeZone,
+    this.settingsForProfile,
   }) : _resolve = (() async {
          final c = await commands();
          final s = await scope();
@@ -101,6 +102,7 @@ final class LearnerSettingsEditor {
     required String profileId,
     required LocationService locationService,
     required DeviceTimeZoneReader deviceTimeZone,
+    this.settingsForProfile,
   }) : _resolve = (() async {
          final g = await governed();
          if (g == null) return null;
@@ -113,6 +115,10 @@ final class LearnerSettingsEditor {
   final LocationService _locationService;
   final DeviceTimeZoneReader _deviceTimeZone;
 
+  /// Reads current governed settings so location can seed the minhag only
+  /// while it is still unset.
+  final Future<LearnerSettings?> Function(String profileId)? settingsForProfile;
+
   /// Writes [edit] onto the active learner as one governed change.
   Future<LearnerSettingsEditOutcome> apply(LearnerSettingsEdit edit) async {
     final _SettingsTarget? target;
@@ -122,6 +128,13 @@ final class LearnerSettingsEditor {
       return LearnerSettingsEditOutcome.unavailable;
     }
     if (target == null) return LearnerSettingsEditOutcome.unavailable;
+    return _applyTo(target, edit);
+  }
+
+  Future<LearnerSettingsEditOutcome> _applyTo(
+    _SettingsTarget target,
+    LearnerSettingsEdit edit,
+  ) async {
     final result = await target.apply(
       learnerSettingsAction(target.profileId, edit),
     );
@@ -134,36 +147,58 @@ final class LearnerSettingsEditor {
     };
   }
 
-  /// Sets the learner's location, zone and Israel flag from [city]: its
-  /// coordinates, its IANA zone when the tz database knows it (else the
-  /// zone is left as it is), and Israel iff the city is in Israel.
-  Future<LearnerSettingsEditOutcome> chooseCity(City city) => apply(
-    LearnerSettingsEdit(
-      latitude: city.latitude,
-      longitude: city.longitude,
-      timeZone: _knownZone(city.timezone),
-      inIsrael: city.countryCode == 'IL',
-      locationSource: 'manual_city',
-    ),
-  );
+  /// Sets the learner's location and zone from [city]. The location seeds
+  /// the Yom Tov minhag only if it has never been set.
+  Future<LearnerSettingsEditOutcome> chooseCity(City city) async {
+    final target = await _resolve();
+    final settings = target == null || settingsForProfile == null
+        ? null
+        : await settingsForProfile!(target.profileId);
+    final days = _locationYomTovDays(
+      settings,
+      city.countryCode == 'IL' ? 1 : 2,
+    );
+    return target == null
+        ? LearnerSettingsEditOutcome.unavailable
+        : _applyTo(
+            target,
+            LearnerSettingsEdit(
+              latitude: city.latitude,
+              longitude: city.longitude,
+              timeZone: _knownZone(city.timezone),
+              yomTovDays: days,
+              locationSource: 'manual_city',
+            ),
+          );
+  }
 
   /// Detects the device's location and, on a fix, sets the learner's
-  /// location, the device's zone (when the tz database knows it) and the
-  /// Israel flag from the fix's country (unchanged when unknown).
+  /// location and the device's zone (when the tz database knows it). The
+  /// country seeds the minhag only if it has never been set.
   Future<LearnerLocationDetectResult> detect() async {
     final fetch = await _locationService.detectCurrent();
     if (fetch is! LocationFetchSuccess) return (fetch: fetch, outcome: null);
     final country = fetch.location.countryCode;
-    final outcome = await apply(
-      LearnerSettingsEdit(
-        latitude: fetch.location.latitude,
-        longitude: fetch.location.longitude,
-        timeZone: _knownZone(await _deviceTimeZone()),
-        inIsrael: country == null ? null : country == 'IL',
-        locationSource: 'detected',
-        locationFixedAt: fetch.location.fixedAt,
-      ),
-    );
+    final target = await _resolve();
+    final settings = target == null
+        ? null
+        : await settingsForProfile?.call(target.profileId);
+    final days = country == null
+        ? _migrateLegacyYomTovDays(settings)
+        : _locationYomTovDays(settings, country == 'IL' ? 1 : 2);
+    final outcome = target == null
+        ? LearnerSettingsEditOutcome.unavailable
+        : await _applyTo(
+            target,
+            LearnerSettingsEdit(
+              latitude: fetch.location.latitude,
+              longitude: fetch.location.longitude,
+              timeZone: _knownZone(await _deviceTimeZone()),
+              yomTovDays: days,
+              locationSource: 'detected',
+              locationFixedAt: fetch.location.fixedAt,
+            ),
+          );
     return (fetch: fetch, outcome: outcome);
   }
 
@@ -193,6 +228,10 @@ final class LearnerSettingsEditor {
     }
 
     final country = fetch.location.countryCode;
+    final settings = await settingsForProfile?.call(expectedProfileId);
+    final days = country == null
+        ? _migrateLegacyYomTovDays(settings)
+        : _locationYomTovDays(settings, country == 'IL' ? 1 : 2);
     final result = await currentTarget.apply(
       learnerSettingsAction(
         expectedProfileId,
@@ -200,7 +239,7 @@ final class LearnerSettingsEditor {
           latitude: fetch.location.latitude,
           longitude: fetch.location.longitude,
           timeZone: zone,
-          inIsrael: country == null ? null : country == 'IL',
+          yomTovDays: days,
           locationSource: 'detected',
           locationFixedAt: fetch.location.fixedAt,
         ),
@@ -216,9 +255,31 @@ final class LearnerSettingsEditor {
     return (fetch: fetch, outcome: outcome);
   }
 
-  /// Sets the learner's Israel (one-day yom tov) flag.
+  /// Sets the learner's one-day Eretz Yisrael minhag.
   Future<LearnerSettingsEditOutcome> setInIsrael(bool value) =>
-      apply(LearnerSettingsEdit(inIsrael: value));
+      setYomTovDays(value ? 1 : 2);
+
+  /// Sets and mirrors the explicit one- or two-day Yom Tov minhag.
+  Future<LearnerSettingsEditOutcome> setYomTovDays(int days) =>
+      apply(LearnerSettingsEdit(yomTovDays: days));
+
+  static int? _migrateLegacyYomTovDays(LearnerSettings? settings) {
+    if (settings == null || settings.yomTovDays != null) return null;
+    final legacy = settings.inIsrael;
+    return legacy == null
+        ? null
+        : legacy
+        ? 1
+        : 2;
+  }
+
+  static int? _locationYomTovDays(
+    LearnerSettings? settings,
+    int locationDefault,
+  ) {
+    if (settings?.yomTovDays != null) return null;
+    return _migrateLegacyYomTovDays(settings) ?? locationDefault;
+  }
 
   static String? _knownZone(String? id) {
     if (id == null || id.isEmpty) return null;
@@ -233,6 +294,12 @@ final learnerSettingsEditorProvider = Provider<LearnerSettingsEditor>(
     scope: () => ref.read(activeLearnerScopeProvider.future),
     locationService: ref.watch(locationServiceProvider),
     deviceTimeZone: ref.watch(deviceTimeZoneReaderProvider),
+    settingsForProfile: (profileId) async {
+      final scope = await ref.read(activeLearnerScopeProvider.future);
+      if (scope == null || scope.profileId != profileId) return null;
+      final history = await ref.read(learnerLockSettingsProvider(scope).future);
+      return history.spans.last.settings;
+    },
   ),
 );
 
@@ -261,5 +328,12 @@ final lockLocationEditorProvider = Provider.autoDispose
         profileId: profileId,
         locationService: ref.watch(locationServiceProvider),
         deviceTimeZone: ref.watch(deviceTimeZoneReaderProvider),
+        settingsForProfile: (id) async {
+          if (scope == null || scope.profileId != id) return null;
+          final history = await ref.read(
+            learnerLockSettingsProvider(scope).future,
+          );
+          return history.spans.last.settings;
+        },
       );
     });

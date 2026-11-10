@@ -44,6 +44,17 @@ void main() {
       expect(action.changes.single.docs.single.fields, {'in_israel': false});
     });
 
+    test('Yom Tov days writes the canonical value and legacy mirror', () {
+      final action = learnerSettingsAction(
+        profileUlid,
+        const LearnerSettingsEdit(yomTovDays: 1),
+      );
+      expect(action.changes.single.docs.single.fields, {
+        'yom_tov_days': 1,
+        'in_israel': true,
+      });
+    });
+
     test('zmanim preferences are governed profile settings', () {
       final action = learnerSettingsAction(
         profileUlid,

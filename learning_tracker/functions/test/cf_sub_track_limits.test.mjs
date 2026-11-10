@@ -71,7 +71,6 @@ describe('AD-45 shared fixtures (TypeScript validator)', () => {
       'duplicate_ground',
       'non_positive_rate',
       'non_positive_weeks',
-      'ongoing_limit',
       'school_year_duplicate_academic_year',
       'school_year_window_overlap',
       'window_reversed',

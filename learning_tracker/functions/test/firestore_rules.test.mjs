@@ -212,6 +212,26 @@ const tutor = () => env.authenticatedContext(TUTOR).firestore();
 const stranger = () => env.authenticatedContext(STRANGER).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
 
+describe('phrase translation cache rules', () => {
+  const path = 'phrase_translations/test-translation';
+
+  test('signed-in users can read shared translations, but clients cannot write them', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), path), { phrases: [{ source: 'שלום', translation: 'hello' }] });
+    });
+    await assertSucceeds(getDoc(doc(owner(), path)));
+    await assertSucceeds(getDocs(query(collection(tutor(), 'phrase_translations'), limit(5))));
+    await assertFails(getDoc(doc(anon(), path)));
+    await assertFails(setDoc(doc(owner(), 'phrase_translations/client-write'), { phrases: [] }));
+  });
+
+  test('rate-limit counters are inaccessible to all clients', async () => {
+    const path = 'phrase_translation_rate_limits/owner-uid_2026-11-10';
+    await assertFails(getDoc(doc(owner(), path)));
+    await assertFails(setDoc(doc(owner(), path), { count: 1 }));
+  });
+});
+
 // ── Helper: assert the standard owner-write / tutor-read / stranger-deny matrix.
 // `path` is the full Firestore path to the document being tested.
 // `validDoc` is a valid payload for owner create/update.
@@ -1439,6 +1459,10 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
       date_state: 'catch_up', source: nextUlid(), stage: null,
     })));
     await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
+      curriculum_id: 'shnayim_mikra', ref: 'Genesis 1:1',
+      source: 'shnayim_mikra_pass_2', stage: null,
+    })));
+    await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
       date_state: 'before_tracking', learned_on: '2019-05-01', ref: 'Berakhot',
       level: 'masechta', stage: null, original_recorded_at: pastTs,
     })));
@@ -1505,6 +1529,7 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
     await bad(learnEvent({ learned_on: '2019-5-1' }));
     await bad(learnEvent({ learned_on: 20190501 }));
     await bad(learnEvent({ source: 'sub-track-1' }));
+    await bad(learnEvent({ source: 'shnayim_mikra_pass_1' }));
     await bad(learnEvent({ stage: 2, source: nextUlid() })); // stage is main-only
     await bad(learnEvent({ stage: '2' }));
     await bad(learnEvent({ ref: '' }));
@@ -1836,6 +1861,7 @@ describe('DNI-471 AC-2 — each governed collection maps to its AD-38 entity', (
 describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch', () => {
   const PROFILE_PATH = `users/${OWNER}/learner_profiles/${PROFILE}`;
   const SETTINGS = { latitude: 31.77, longitude: 35.21, time_zone: 'Asia/Jerusalem', in_israel: true,
+    yom_tov_days: 1,
     tzeis_minhag: 'degrees_8_5', candle_lighting_minutes: 18,
     shnayim_mikra_mode: 'pasuk', shnayim_mikra_pace: 'self',
     shnayim_mikra_source: 'onkelos',
@@ -1857,6 +1883,7 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, SETTINGS, 'learnerSettings', PROFILE));
     // Field-level change of one setting.
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, { in_israel: false }, 'learnerSettings', PROFILE));
+    await assertSucceeds(governedWrite(owner(), PROFILE_PATH, { yom_tov_days: 2, in_israel: false }, 'learnerSettings', PROFILE));
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
       shnayim_mikra_mode: 'aliyah', shnayim_mikra_pace: 'daily_aliyah',
       shnayim_mikra_source: 'rashi',
@@ -2018,6 +2045,8 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
     await bad({ ...SETTINGS, latitude: 91 });
     await bad({ ...SETTINGS, longitude: '35.21' });
     await bad({ ...SETTINGS, in_israel: 'yes' });
+    await bad({ ...SETTINGS, yom_tov_days: 3 });
+    await bad({ ...SETTINGS, yom_tov_days: '2' });
     await bad({ ...SETTINGS, tzeis_minhag: 'unknown' });
     await bad({ ...SETTINGS, candle_lighting_minutes: 19 });
     await bad({ ...SETTINGS, location_source: 'gps' });

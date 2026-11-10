@@ -4,8 +4,8 @@
 //   • Renders current track name, goal section and study-days section.
 //   • Save → confirm dialog → service.editTrack() call verified via mocktail.
 //   • Confirm dialog cancel path (no save call).
-//   • ChazaraInlineSetup: presets shown; custom cycle enforces min 1 / max 5
-//     rounds.
+//   • ChazaraInlineSetup: quick-fill chips populate typed, validated review
+//     intervals; add/remove and legacy plan round-trips are covered.
 //   • Chazara UI rendered ONLY when track has chazara enabled (Rule 8).
 //   • A no-chazara track shows NO chazara / review controls at all.
 //   • No "track type" / "Personal" / "Standard" / "Custom" label anywhere.
@@ -50,7 +50,6 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/sched
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_edit_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_edit_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
-import 'package:learning_tracker/features/tracks/setup/presentation/steps/chazara_widgets.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_chazara.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -802,6 +801,34 @@ void main() {
       await _tearDown(tester);
     });
 
+    testWidgets('Edit Track opens the shared editable review plan', (
+      tester,
+    ) async {
+      _setTallViewport(tester);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _seedGoal(db);
+      await _seedChazaraStages(db);
+
+      await tester.pumpWidget(
+        _buildApp(
+          track: _track(),
+          db: db,
+          mockService: mockService,
+          hasChazara: true,
+        ),
+      );
+      await _pump(tester);
+      await tester.tap(find.text('Change').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Review intervals'), findsOneWidget);
+      expect(find.text('Learn only'), findsOneWidget);
+      expect(find.byType(TextField), findsWidgets);
+
+      await _tearDown(tester);
+    });
+
     testWidgets('track WITHOUT chazara stages shows NO Review section', (
       tester,
     ) async {
@@ -858,10 +885,12 @@ void main() {
     );
   });
 
-  // ── Group: ChazaraInlineSetup — preset selection ─────────────────────────
+  // ── Group: ChazaraInlineSetup — editable review plan ────────────────────
 
-  group('ChazaraInlineSetup — preset selection', () {
-    testWidgets('all 4 built-in presets are visible', (tester) async {
+  group('ChazaraInlineSetup — editable review plan', () {
+    testWidgets('quick-fill chips populate the editable interval list', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildChazaraApp(
           curriculumId: CurriculumId.mishnayos,
@@ -871,302 +900,180 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('Learn Only'), findsOneWidget);
-      expect(find.text('1 day'), findsOneWidget);
-      expect(find.text('1 + 7 days'), findsOneWidget);
-      expect(find.text('1 + 7 + 30 days'), findsOneWidget);
-
-      await _tearDown(tester);
-    });
-
-    testWidgets('Custom Cycle section is visible', (tester) async {
-      await tester.pumpWidget(
-        _buildChazaraApp(
-          curriculumId: CurriculumId.mishnayos,
-          onComplete: (_) {},
+      expect(find.text('Learn only'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ChoiceChip).at(1),
+          matching: find.text('1'),
         ),
+        findsOneWidget,
       );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-
-      expect(find.text('Custom Cycle'), findsOneWidget);
-
+      expect(find.text('1+7'), findsOneWidget);
+      expect(find.text('1+7+30'), findsOneWidget);
+      expect(find.byType(TextField), findsNWidgets(2));
+      expect(
+        tester.widget<TextField>(find.byType(TextField).at(0)).controller!.text,
+        '1',
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text,
+        '7',
+      );
+      expect(find.text('Custom Cycle'), findsNothing);
       await _tearDown(tester);
     });
 
-    testWidgets('initialDelays pre-selects the matching preset', (
+    testWidgets('typing, adding and removing intervals saves the edited plan', (
       tester,
     ) async {
       LearningProcessWizardResult? result;
       await tester.pumpWidget(
         _buildChazaraApp(
           curriculumId: CurriculumId.mishnayos,
-          initialDelays: [1, 7], // matches "1 + 7 days" preset
+          initialDelays: [2, 5],
           onComplete: (r) => result = r,
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
-
-      // Confirm the pre-selected preset so we can inspect the result.
-      final continueBtn = find.byType(FilledButton);
-      expect(continueBtn, findsOneWidget);
-      await tester.tap(continueBtn);
+      await tester.enterText(find.byType(TextField).at(0), '3');
+      await tester.tap(find.text('Add interval'));
       await tester.pump();
-
-      expect(result, isNotNull);
-      expect(result!.wizardResult.choice, WizardChoice.custom);
-      expect(
-        result!.wizardResult.customRounds?.map((r) => r.delayDays).toList(),
-        [1, 7],
-      );
-
-      await _tearDown(tester);
-    });
-  });
-
-  // ── Group: ChazaraInlineSetup — custom cycle min/max ────────────────────
-
-  group('ChazaraInlineSetup — custom cycle min 1 / max 5 rounds', () {
-    testWidgets('Add round chip visible when custom rounds < 5', (
-      tester,
-    ) async {
-      // Start with 1 custom round (initialDelays doesn't match any preset).
-      // presets: [], [1], [1,7], [1,7,30] — so [3] triggers custom mode.
-      await tester.pumpWidget(
-        _buildChazaraApp(
-          curriculumId: CurriculumId.mishnayos,
-          initialDelays: [3], // not a preset → custom mode, 1 round
-          onComplete: (_) {},
-        ),
-      );
+      expect(find.byType(TextField), findsNWidgets(3));
+      await tester.enterText(find.byType(TextField).at(2), '30');
+      await tester.tap(find.byTooltip('Remove review interval 2'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-
-      // The AddRoundChip renders Icons.add (not Icons.add_rounded).
-      // It must be present when _customDelays.length < 5.
-      expect(find.byIcon(Icons.add), findsWidgets);
-
-      await _tearDown(tester);
-    });
-
-    testWidgets('Add round chip hidden when custom rounds == 5', (
-      tester,
-    ) async {
-      // 5 custom rounds → no add chip.
-      await tester.pumpWidget(
-        _buildChazaraApp(
-          curriculumId: CurriculumId.mishnayos,
-          initialDelays: [1, 2, 4, 8, 16], // 5 rounds
-          onComplete: (_) {},
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-
-      // Precondition: all 5 rounds actually rendered (otherwise the absence
-      // check below would be vacuous — it could pass because setup failed,
-      // not because the max-5 guard fired).
-      expect(find.byType(CustomDayEditorChip), findsNWidgets(5));
-
-      // With 5 rounds in custom mode, the add-round chip must be hidden.
-      // Implementation check: the source code uses:
-      //   if (_customDelays.length < 5) AddRoundChip(...)
-      // With 5 rounds the chip is not in the widget tree at all.
-      //
-      // Find the AddRoundChip widget itself rather than its internal
-      // Icons.add — that icon is ambiguous with the per-round "+1 day"
-      // TinyCircleButton inside every CustomDayEditorChip (also Icons.add),
-      // so an icon-only finder would always find something regardless of
-      // whether the add-round chip is present.
-      expect(find.byType(AddRoundChip), findsNothing);
-
-      await _tearDown(tester);
-    });
-
-    testWidgets('adding rounds via add chip increments round count', (
-      tester,
-    ) async {
-      // Start with a single custom round; add one more.
-      int? capturedRoundCount;
-      await tester.pumpWidget(
-        _buildChazaraApp(
-          curriculumId: CurriculumId.mishnayos,
-          initialDelays: [3], // not a preset → forces custom mode, 1 round
-          onComplete: (r) {
-            capturedRoundCount = r?.wizardResult.customRounds?.length;
-          },
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-
-      // Precondition: exactly 1 custom round rendered before the tap.
-      expect(find.byType(CustomDayEditorChip), findsNWidgets(1));
-
-      // Tap the add-round chip. Find the AddRoundChip widget itself rather
-      // than its internal Icons.add — that icon is ambiguous with the
-      // per-round "+1 day" TinyCircleButton (also Icons.add), so an
-      // icon-only finder would tap the wrong control if AddRoundChip
-      // happened not to be present.
-      final addChip = find.byType(AddRoundChip);
-      expect(
-        addChip,
-        findsOneWidget,
-        reason: 'Custom mode with 1 round must show the add-round chip',
-      );
-      await tester.tap(addChip);
-      await tester.pump();
-
-      // Round count must have gone from 1 to 2 in the widget tree.
-      expect(find.byType(CustomDayEditorChip), findsNWidgets(2));
-
-      // Confirm and capture.
       await tester.tap(find.byType(FilledButton));
       await tester.pump();
-
-      // Real assertion: adding one round to a single-round custom cycle
-      // must produce exactly 2 custom rounds (not merely "at least 1",
-      // which would pass even if the add chip did nothing).
-      expect(
-        capturedRoundCount,
-        2,
-        reason: 'Adding a round from 1 must produce exactly 2 custom rounds',
-      );
-
+      expect(result!.wizardResult.customRounds!.map((r) => r.delayDays), [
+        3,
+        30,
+      ]);
       await _tearDown(tester);
     });
 
-    testWidgets('single round: remove button absent (min 1 round enforced)', (
+    testWidgets('an existing custom cycle round-trips with identical delays', (
       tester,
     ) async {
-      // Start in custom mode with exactly 1 round.
+      LearningProcessWizardResult? result;
       await tester.pumpWidget(
         _buildChazaraApp(
           curriculumId: CurriculumId.mishnayos,
-          initialDelays: [3], // custom (not a preset)
-          onComplete: (_) {},
+          initialDelays: [2, 9, 40],
+          onComplete: (r) => result = r,
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      expect(result!.wizardResult.customRounds!.map((r) => r.delayDays), [
+        2,
+        9,
+        40,
+      ]);
+      await _tearDown(tester);
+    });
 
-      // Precondition: exactly 1 custom round rendered.
-      expect(find.byType(CustomDayEditorChip), findsNWidgets(1));
-
-      // The implementation sets:
-      //   onRemove: _customDelays.length > 1 ? () => ... : null
-      // and CustomDayEditorChip only builds the "Remove" control at all when
-      // onRemove is non-null (`if (onRemove != null) [...TextButton...]`) —
-      // it renders as a TextButton (labelled via l10n.actionRemove), not an
-      // IconButton with a close/cancel icon. With exactly 1 round, onRemove
-      // is null, so the TextButton must be entirely absent from the tree.
-      expect(
-        find.byType(TextButton),
-        findsNothing,
-        reason: 'min-1 enforcement: no remove control when rounds == 1',
+    testWidgets('review plans can exceed the old five-session UI cap', (
+      tester,
+    ) async {
+      LearningProcessWizardResult? result;
+      const delays = [1, 2, 3, 4, 5, 6];
+      await tester.pumpWidget(
+        _buildChazaraApp(
+          curriculumId: CurriculumId.mishnayos,
+          initialDelays: delays,
+          onComplete: (r) => result = r,
+        ),
       );
-
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byType(TextField), findsNWidgets(6));
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      expect(
+        result!.wizardResult.customRounds!.map((r) => r.delayDays),
+        delays,
+      );
       await _tearDown(tester);
     });
 
     testWidgets(
-      'AUD-tracks-10 (AX-3): per-round day +/- TinyCircleButton controls '
-      'expose non-empty, button-role Semantics labels',
+      'preset rounds preserve stored delays and invalid plans show errors',
       (tester) async {
-        final handle = tester.ensureSemantics();
+        LearningProcessWizardResult? result;
+        await tester.pumpWidget(
+          _buildChazaraApp(
+            curriculumId: CurriculumId.mishnayos,
+            onComplete: (r) => result = r,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.tap(find.text('1+7+30'));
+        await tester.pump();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        expect(result!.wizardResult.customRounds!.map((r) => r.delayDays), [
+          1,
+          7,
+          30,
+        ]);
+        await _tearDown(tester);
 
         await tester.pumpWidget(
           _buildChazaraApp(
             curriculumId: CurriculumId.mishnayos,
-            initialDelays: [3], // not a preset → custom mode, 1 round
+            initialDelays: [1, 7],
             onComplete: (_) {},
           ),
         );
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 200));
-
-        expect(find.byType(CustomDayEditorChip), findsNWidgets(1));
-
-        // Scope to descendants of the chip — Icons.add is otherwise
-        // ambiguous with the sibling AddRoundChip (also Icons.add; see the
-        // comments on the two tests above).
-        final chip = find.byType(CustomDayEditorChip);
-        final decreaseIcon = find.descendant(
-          of: chip,
-          matching: find.byIcon(Icons.remove),
-        );
-        final increaseIcon = find.descendant(
-          of: chip,
-          matching: find.byIcon(Icons.add),
-        );
-        expect(decreaseIcon, findsOneWidget);
-        expect(increaseIcon, findsOneWidget);
-
-        // AC2 (literal): a widget test finds a Semantics node with a button
-        // role and non-empty label at each control's location.
-        final decreaseSemantics = tester.getSemantics(decreaseIcon);
-        final increaseSemantics = tester.getSemantics(increaseIcon);
-
+        await tester.enterText(find.byType(TextField).at(0), '8');
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
         expect(
-          decreaseSemantics,
-          matchesSemantics(label: 'Decrease review day count', isButton: true),
-          reason:
-              'AUD-tracks-10: the per-round "decrease day" TinyCircleButton '
-              'must expose a non-empty, button-role Semantics label',
+          find.text('Each interval must be greater than the one before it.'),
+          findsOneWidget,
         );
-        expect(
-          increaseSemantics,
-          matchesSemantics(label: 'Increase review day count', isButton: true),
-          reason:
-              'AUD-tracks-10: the per-round "increase day" TinyCircleButton '
-              'must expose a non-empty, button-role Semantics label',
-        );
-        expect(
-          decreaseSemantics.label,
-          isNot(equals(increaseSemantics.label)),
-          reason: 'AUD-tracks-10: increase/decrease must carry distinct labels',
-        );
-
-        handle.dispose();
         await _tearDown(tester);
       },
     );
 
-    testWidgets('Learn Only preset produces noReview wizard result', (
+    testWidgets('stored intervals above the input limit round-trip unchanged', (
       tester,
     ) async {
       LearningProcessWizardResult? result;
+      const delays = [10000, 1000000];
       await tester.pumpWidget(
         _buildChazaraApp(
           curriculumId: CurriculumId.mishnayos,
+          initialDelays: delays,
           onComplete: (r) => result = r,
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
-
-      // Tap "Learn Only" preset.
-      await tester.tap(find.text('Learn Only'));
-      await tester.pump();
-
-      // Confirm.
+      expect(
+        tester.widget<TextField>(find.byType(TextField).at(0)).controller!.text,
+        '10000',
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text,
+        '1000000',
+      );
       await tester.tap(find.byType(FilledButton));
       await tester.pump();
-
-      expect(result, isNotNull);
       expect(
-        result!.wizardResult.choice,
-        WizardChoice.noReview,
-        reason: 'Learn Only preset must produce WizardChoice.noReview result',
+        result!.wizardResult.customRounds!.map((round) => round.delayDays),
+        delays,
       );
-
       await _tearDown(tester);
     });
 
-    testWidgets('1+7+30 preset produces 3 custom rounds with correct delays', (
-      tester,
-    ) async {
+    testWidgets('Learn only quick-fill emits no review', (tester) async {
       LearningProcessWizardResult? result;
       await tester.pumpWidget(
         _buildChazaraApp(
@@ -1176,24 +1083,15 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
-
-      await tester.tap(find.text('1 + 7 + 30 days'));
+      await tester.tap(find.text('Learn only'));
       await tester.pump();
-
+      expect(find.byType(TextField), findsNothing);
       await tester.tap(find.byType(FilledButton));
       await tester.pump();
-
-      expect(result, isNotNull);
-      final delays = result!.wizardResult.customRounds
-          ?.map((r) => r.delayDays)
-          .toList();
-      expect(delays, [1, 7, 30]);
-
+      expect(result!.wizardResult.choice, WizardChoice.noReview);
       await _tearDown(tester);
     });
   });
-
-  // ── Group: RTL render ────────────────────────────────────────────────────
 
   group('EditTrackScreen — RTL locale renders without errors', () {
     testWidgets('Hebrew locale: screen mounts and shows AppBar title', (

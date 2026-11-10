@@ -3780,7 +3780,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'App is silenced and locked during $term and Yom Tov. Times use your location and selected candle-lighting and nightfall customs.';
+    return 'App is silenced and locked during $term and Yom Tov. Times are computed from your location using your chosen zmanim minhag.';
   }
 
   @override
@@ -3804,11 +3804,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sacredTimeSourceManualCoords => 'Manual coordinates';
 
   @override
-  String get sacredTimeInIsraelTitle => 'I am in Israel';
+  String get sacredTimeYomTovDays => 'Yom Tov days';
 
   @override
-  String get sacredTimeInIsraelSubtitle =>
-      'One-day chag if on. Auto-set when you detect or choose a city, flip if you are visiting.';
+  String get sacredTimeYomTovOneDay => '1 day (Eretz Yisrael minhag)';
+
+  @override
+  String get sacredTimeYomTovTwoDays => '2 days (chutz la\'aretz minhag)';
 
   @override
   String get sacredTimeLocationUpdated => 'Location updated.';
@@ -4655,6 +4657,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String trackSubTrackCount(int count) {
+    return '$count sub-tracks';
+  }
+
+  @override
   String get subTrackHubHelper =>
       'Learning that happens outside home — school, a rebbe, a chavrusa.';
 
@@ -5227,6 +5234,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chazaraCustomCycle => 'Custom Cycle';
+
+  @override
+  String get chazaraQuickFillLabel => 'Quick fill';
+
+  @override
+  String get chazaraQuickFillLearnOnly => 'Learn only';
+
+  @override
+  String get chazaraQuickFillOneDay => '1';
+
+  @override
+  String get chazaraQuickFillWeek => '1+7';
+
+  @override
+  String get chazaraQuickFillMonth => '1+7+30';
+
+  @override
+  String get chazaraPlanEditorTitle => 'Review intervals';
+
+  @override
+  String get chazaraPlanEditorHint =>
+      'Enter the number of days between learning and each review.';
+
+  @override
+  String chazaraIntervalFieldLabel(int number) {
+    return 'Review interval $number';
+  }
+
+  @override
+  String get chazaraDaysUnit => 'days';
+
+  @override
+  String chazaraRemoveIntervalLabel(int number) {
+    return 'Remove review interval $number';
+  }
+
+  @override
+  String get chazaraAddInterval => 'Add interval';
+
+  @override
+  String get chazaraIntervalPositiveError =>
+      'Enter a positive whole number of days.';
+
+  @override
+  String get chazaraIntervalWholeNumberError => 'Enter a whole number of days.';
+
+  @override
+  String get chazaraIntervalIncreasingError =>
+      'Each interval must be greater than the one before it.';
 
   @override
   String chazaraSessionsCount(int count) {
@@ -7451,15 +7507,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Include this source on the catch-up card after shabbos';
 
   @override
-  String ongoingSubTrackLimitLine(int count) {
-    return 'You can have up to 5 ongoing sub-tracks. $count in use.';
-  }
-
-  @override
-  String get ongoingSubTrackLimitReached =>
-      'You already have 5 ongoing sub-tracks.';
-
-  @override
   String get ongoingSubTrackSave => 'Save sub-track';
 
   @override
@@ -7842,6 +7889,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String shnayimMikraTodayAliyahDone(int remaining) {
+    return 'Today\'s aliyah is done. $remaining aliyot remain this week.';
+  }
+
+  @override
   String shnayimMikraUnitProgress(int current, int total) {
     return 'Section $current of $total';
   }
@@ -7882,4 +7934,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String shnayimMikraProgressVerses(int current, int total) {
     return '$current of $total pesukim complete';
   }
+
+  @override
+  String get textReaderTranslationLanguage => 'Translation language';
+
+  @override
+  String get textReaderTranslationLanguageDialogTitle => 'Translation language';
+
+  @override
+  String get textReaderSearchLanguages => 'Search languages';
+
+  @override
+  String get textReaderSefariaEnglish => 'Sefaria English';
+
+  @override
+  String get textReaderOfflineLabel => 'Offline';
+
+  @override
+  String get textReaderClose => 'Close';
+
+  @override
+  String get textReaderLoadingTranslation => 'Loading translation…';
+
+  @override
+  String get textReaderTranslationUnavailable =>
+      'Translation unavailable offline or right now';
+
+  @override
+  String get textReaderMachineTranslated => 'Machine translated';
+
+  @override
+  String get textReaderRetryTranslation => 'Tap to retry';
 }

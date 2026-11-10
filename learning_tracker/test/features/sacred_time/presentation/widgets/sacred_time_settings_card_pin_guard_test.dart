@@ -123,7 +123,7 @@ ButtonStyleButton _button(WidgetTester tester, String label) =>
       ),
     );
 
-/// Asserts the card's three settings actions are disabled and that tapping
+/// Asserts the card's location actions and child minhag control are disabled and that tapping
 /// them neither prompts, nor runs the action, nor navigates.
 Future<void> _expectActionsLockedShut(
   WidgetTester tester, {
@@ -131,11 +131,21 @@ Future<void> _expectActionsLockedShut(
 }) async {
   expect(_button(tester, 'Detect').onPressed, isNull);
   expect(_button(tester, 'Choose city').onPressed, isNull);
-  expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+  expect(
+    tester
+        .widget<DropdownButtonFormField<bool>>(
+          find.byType(DropdownButtonFormField<bool>),
+        )
+        .onChanged,
+    isNull,
+  );
 
   await tester.tap(find.text('Detect'), warnIfMissed: false);
   await tester.tap(find.text('Choose city'), warnIfMissed: false);
-  await tester.tap(find.byType(Switch), warnIfMissed: false);
+  await tester.tap(
+    find.byType(DropdownButtonFormField<bool>),
+    warnIfMissed: false,
+  );
   await tester.pump();
   await tester.pump(const Duration(seconds: 1));
 
@@ -209,17 +219,16 @@ void main() {
     );
 
     testWidgets(
-      'DNI-481: the Israel switch (a learner setting) shows the Parent PIN '
-      'dialog when pinGuardRequired=true',
+      'Yom Tov minhag remains locked in child mode even when a PIN is configured',
       (tester) async {
         await tester.pumpWidget(_buildCard(pinGuardRequired: true));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(Switch));
+        await tester.tap(find.byType(DropdownButtonFormField<bool>));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text('Enter Parent PIN'), findsOneWidget);
+        expect(find.text('Enter Parent PIN'), findsNothing);
       },
     );
 

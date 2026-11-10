@@ -205,6 +205,25 @@ final class LearningEvent {
   /// `source` value for the main track (otherwise a sub-track ULID).
   static const sourceMain = 'main';
 
+  /// Shnayim Mikra pass markers. These are durable and voidable event-log
+  /// entries, but the learner-state counter excludes them from learning,
+  /// points and streaks. Only final unit completion uses [sourceMain].
+  static const sourceShnayimMikraPass1 = 'shnayim_mikra_pass_1';
+  static const sourceShnayimMikraPass2 = 'shnayim_mikra_pass_2';
+  static const sourceShnayimMikraPass3 = 'shnayim_mikra_pass_3';
+
+  /// Every Shnayim Mikra pass marker source in reading order.
+  static const shnayimMikraPassSources = [
+    sourceShnayimMikraPass1,
+    sourceShnayimMikraPass2,
+    sourceShnayimMikraPass3,
+  ];
+
+  /// Whether this is a workflow-progress marker instead of a learning event.
+  bool get isShnayimMikraPass =>
+      curriculumId == 'shnayim_mikra' &&
+      shnayimMikraPassSources.contains(source);
+
   /// The full AD-52 `learning_events` key set (the rules' `hasOnly`).
   static const Set<String> storageKeys = {
     kKind,
@@ -337,8 +356,14 @@ final class LearningEvent {
       if (ref == null || ref!.isEmpty) _fail(kRef, 'required for learn');
       final src = source;
       if (src == null) _fail(kSource, 'required for learn');
-      if (src != sourceMain && !isUlid(src)) {
+      if (src != sourceMain &&
+          !isUlid(src) &&
+          !shnayimMikraPassSources.contains(src)) {
         _fail(kSource, 'must be main or a sub-track ULID');
+      }
+      if (shnayimMikraPassSources.contains(src) &&
+          curriculumId != 'shnayim_mikra') {
+        _fail(kSource, 'Shnayim Mikra pass sources require shnayim_mikra');
       }
       final state = dateState;
       if (state == null) _fail(kDateState, 'required for learn');

@@ -61,96 +61,27 @@ void main() {
     expect(find.byType(SubTrackTypeChooser), findsNothing);
   });
 
-  // DNI-496 (Story 2.5) AC-5: the five-ongoing limit state (UX-DR-36,
-  // UX-DR-103, UX-DR-158).
-  var ongoingOpened = 0;
-  Future<void> openWith(WidgetTester tester, int inUse) async {
-    ongoingOpened = 0;
+  testWidgets('Ongoing stays enabled without an in-use caption', (
+    tester,
+  ) async {
+    var opened = false;
     await tester.pumpWidget(
       pumpApp(
         child: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () => SubTrackTypeChooser.show(
-                context,
-                onSchoolYear: () {},
-                onOngoing: () => ongoingOpened++,
-                ongoingInUse: inUse,
-              ),
-              child: const Text('add'),
-            ),
+          body: SubTrackTypeChooser(
+            onSchoolYear: () {},
+            onOngoing: () => opened = true,
           ),
         ),
       ),
     );
-    await tester.tap(find.text('add'));
-    await tester.pumpAndSettle();
-  }
-
-  Finder ongoingTile() =>
-      find.ancestor(of: find.text('Ongoing'), matching: find.byType(ListTile));
-
-  for (final n in [0, 4]) {
-    testWidgets('$n in use: Ongoing is enabled with the usage line', (
-      tester,
-    ) async {
-      await openWith(tester, n);
-      expect(
-        find.text('You can have up to 5 ongoing sub-tracks. $n in use.'),
-        findsOneWidget,
-      );
-      expect(tester.widget<ListTile>(ongoingTile()).enabled, isTrue);
-    });
-  }
-
-  testWidgets('5 in use: Ongoing stays visible, disabled and announced', (
-    tester,
-  ) async {
-    final semantics = tester.ensureSemantics();
-    await openWith(tester, 5);
-    await tester.tap(find.text('Ongoing'), warnIfMissed: false);
-    await tester.pumpAndSettle();
-    expect(ongoingOpened, 0, reason: 'a disabled Ongoing cannot be chosen');
-    expect(find.byType(SubTrackTypeChooser), findsOneWidget);
-    expect(
-      find.text('You can have up to 5 ongoing sub-tracks. 5 in use.'),
-      findsOneWidget,
-    );
-    final tile = ongoingTile();
-    expect(tester.widget<ListTile>(tile).enabled, isFalse);
-    final opacity = tester.widget<Opacity>(
-      find.ancestor(of: tile, matching: find.byType(Opacity)).first,
-    );
-    expect(opacity.opacity, 0.4);
-    expect(tester.getSize(tile).height, greaterThanOrEqualTo(48));
-    expect(
-      tester.getSemantics(tile).getSemanticsData().flagsCollection.isEnabled,
-      Tristate.isFalse,
-    );
-    // School year stays available at the ongoing cap.
-    expect(
-      tester
-          .widget<ListTile>(
-            find.ancestor(
-              of: find.text('School year'),
-              matching: find.byType(ListTile),
-            ),
-          )
-          .enabled,
-      isTrue,
-    );
-    semantics.dispose();
-  });
-
-  testWidgets('no count given: no usage line', (tester) async {
-    await tester.pumpWidget(
-      pumpApp(
-        child: Scaffold(
-          body: SubTrackTypeChooser(onSchoolYear: () {}, onOngoing: () {}),
-        ),
-      ),
-    );
     expect(find.textContaining('ongoing sub-tracks'), findsNothing);
-    expect(tester.widget<ListTile>(ongoingTile()).enabled, isTrue);
+    final ongoing = find.ancestor(
+      of: find.text('Ongoing'),
+      matching: find.byType(ListTile),
+    );
+    expect(tester.widget<ListTile>(ongoing).enabled, isTrue);
+    await tester.tap(find.text('Ongoing'));
+    expect(opened, isTrue);
   });
 }

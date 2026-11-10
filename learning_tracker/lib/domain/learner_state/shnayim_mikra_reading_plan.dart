@@ -1,3 +1,5 @@
+import 'package:learning_tracker/domain/learner_state/counted_events.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
 
 /// One unit that receives all three readings before it is marked complete.
@@ -63,4 +65,41 @@ List<ShnayimMikraReadingUnit<T>> buildShnayimMikraReadingUnits<T>({
           items: [verse],
         ),
   ];
+}
+
+/// Number of aliyot that still contain at least one unfinished verse.
+int remainingShnayimMikraAliyot<T>(
+  List<List<T>> aliyot,
+  Set<String> completedVerseRefs,
+  String Function(T item) verseRefOf,
+) => aliyot
+    .where(
+      (aliyah) => aliyah.any(
+        (verse) => !completedVerseRefs.contains(verseRefOf(verse)),
+      ),
+    )
+    .length;
+
+/// The first pass not yet complete for [refs], after applying event voids.
+/// The result is suitable for resuming a reader on another device.
+int completedShnayimMikraPassCount({
+  required List<String> refs,
+  required List<LearningEvent> events,
+}) {
+  final counted = countEvents(events);
+  final byId = {for (final event in events) event.id: event};
+  var passes = 0;
+  for (final source in LearningEvent.shnayimMikraPassSources) {
+    final recorded = {
+      for (final event in byId.values)
+        if (event.isLearn &&
+            event.source == source &&
+            !counted.voidedIds.contains(event.id) &&
+            !counted.lockIgnoredIds.contains(event.id))
+          event.ref!,
+    };
+    if (!refs.every(recorded.contains)) break;
+    passes++;
+  }
+  return passes;
 }

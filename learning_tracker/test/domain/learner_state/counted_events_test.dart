@@ -2,6 +2,7 @@
 // T1/T2: the counted-event boundary, void normalization, lock hook).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/counted_events.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 
 import '../../helpers/learner_state/engine_fixtures.dart';
 
@@ -22,6 +23,21 @@ void main() {
     expect(counted.countedIds, {engineUlid(1), engineUlid(2), engineUlid(3)});
     expect(counted.voidedIds, isEmpty);
     expect(counted.lockIgnoredIds, isEmpty);
+  });
+
+  test('Shnayim Mikra pass markers remain voidable but never count', () {
+    final pass = engineLearn(
+      11,
+      'Genesis 1:1',
+      curriculumId: 'shnayim_mikra',
+      source: LearningEvent.sourceShnayimMikraPass2,
+    );
+    final counted = countEvents([pass]);
+    expect(counted.learns, isEmpty);
+    expect(counted.voidedIds, isEmpty);
+    final undone = countEvents([pass, engineVoid(12, 11)]);
+    expect(undone.learns, isEmpty);
+    expect(undone.voidedIds, {engineUlid(11)});
   });
 
   test('a void cancels its learn target; duplicate voids equal one', () {

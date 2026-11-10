@@ -246,13 +246,14 @@ void main() {
       expect(repo.calls, isEmpty, reason: 'nothing is written');
     }
 
-    test('a sixth counting ongoing sub-track names ongoing_limit', () async {
+    test('sixth and later counting ongoing sub-tracks are accepted', () async {
       repo.seed(scope, [
         for (final id in [ulidA, ulidB, ulidC, ulidD, ulidE]) _stored(id),
       ]);
-      await expectRejected(commands.createSubTrack(_draft()), [
-        SubTrackLimit.ongoingLimit,
-      ]);
+      expect(await commands.createSubTrack(_draft()), isA<CaptureSuccess>());
+      expect(await commands.createSubTrack(_draft()), isA<CaptureSuccess>());
+      expect(repo.calls, hasLength(2));
+      expect(repo.tracksOf(scope), hasLength(7));
     });
 
     test('ended and passed-window sub-tracks do not count', () async {

@@ -12,8 +12,8 @@
 ///   preferences are deleted). The AD-36 fail-closed lock fallback applies
 ///   until a parent sets the learner's location through a governed change,
 ///   and the after-lock prompt asks for it (AC-2).
-/// - `in_israel` seeds `false` (diaspora: two-day yom tov, the fail-closed
-///   superset of the Israel days) until set through a governed change.
+/// - `in_israel` stays unset until the first location is known. That first
+///   location seeds the minhag once; later location changes leave it alone.
 ///
 /// Afterwards every reader goes through `learnerLockSettingsProvider`
 /// (AD-37).
@@ -31,7 +31,7 @@ final class CreatingDeviceSettings {
   /// Creates the reading.
   const CreatingDeviceSettings({
     required this.timeZone,
-    required this.inIsrael,
+    this.inIsrael,
     this.latitude,
     this.longitude,
   });
@@ -48,7 +48,7 @@ final class CreatingDeviceSettings {
   final double? longitude;
 
   /// The seed in-Israel flag.
-  final bool inIsrael;
+  final bool? inIsrael;
 
   /// The seed [LearnerSettings] of new profile [profileId].
   ///
@@ -107,7 +107,7 @@ final class PlatformCreatingDeviceSettingsSource
     } on Object {
       zone = null; // unreadable: creation is blocked by seedFor
     }
-    return CreatingDeviceSettings(timeZone: zone, inIsrael: false);
+    return CreatingDeviceSettings(timeZone: zone);
   }
 }
 

@@ -11,7 +11,6 @@
 ///   counts toward a limit only while it is not ended and its window has
 ///   not passed (`window_end` is null or `>= today`, inclusive, AD-41). That
 ///   is exactly "`onHome` or future-start" (AD-34 predicates).
-///   - at most [kMaxOngoingSubTracks] counting `ongoing` sub-tracks;
 ///   - at most one counting `school_year` sub-track per `academic_year`;
 ///   - no two counting `school_year` windows overlapping (inclusive bounds:
 ///     windows that touch on one day overlap).
@@ -35,13 +34,10 @@ import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 
-/// The AD-45 cap on counting ongoing sub-tracks per profile and curriculum.
-const kMaxOngoingSubTracks = 5;
-
 /// Every rule a sub-track write can violate. [code] is the stable wire code
 /// shared with `functions/src/sub_track_limits.ts` and the fixtures.
 enum SubTrackLimit {
-  /// More than [kMaxOngoingSubTracks] counting ongoing sub-tracks.
+  /// Legacy stored violation code; new validation never produces it.
   ongoingLimit('ongoing_limit'),
 
   /// A second counting school-year sub-track for one `academic_year`.
@@ -229,9 +225,7 @@ Set<SubTrackViolation> _limitViolations(
   final out = <SubTrackViolation>{};
   switch (track.type) {
     case SubTrackType.ongoing:
-      if (counting.length + 1 > kMaxOngoingSubTracks) {
-        out.add(const SubTrackViolation(SubTrackLimit.ongoingLimit));
-      }
+      break;
     case SubTrackType.schoolYear:
       for (final p in counting) {
         if (p.academicYear == track.academicYear) {

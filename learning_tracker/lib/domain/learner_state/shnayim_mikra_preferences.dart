@@ -47,11 +47,19 @@ enum ShnayimMikraParshaSchedule {
       this == ShnayimMikraParshaSchedule.eretzYisrael;
 }
 
-/// Temporary bridge from the existing one-day/two-day Yom Tov location flag.
-/// Call when creating the Shnayim Mikra track and persist the returned value;
-/// schedule reads must not call this again after the learner changes location.
-ShnayimMikraParshaSchedule shnayimMikraScheduleFromLegacyYomTovFlag(
-  bool? inIsrael,
-) => inIsrael == true
-    ? ShnayimMikraParshaSchedule.eretzYisrael
-    : ShnayimMikraParshaSchedule.chutzLaaretz;
+/// Converts the explicit Yom Tov minhag to the Shnayim Mikra parsha schedule.
+/// The persisted `yom_tov_days` choice is authoritative. `legacyInIsrael` is
+/// only a compatibility fallback for profiles that have not received that
+/// setting yet. Call during track creation and persist the result; schedule
+/// reads must not call this again after the learner changes location.
+ShnayimMikraParshaSchedule shnayimMikraScheduleFromLegacyYomTovFlag({
+  required int? yomTovDays,
+  required bool? legacyInIsrael,
+}) => switch (yomTovDays) {
+  1 => ShnayimMikraParshaSchedule.eretzYisrael,
+  2 => ShnayimMikraParshaSchedule.chutzLaaretz,
+  _ =>
+    legacyInIsrael == true
+        ? ShnayimMikraParshaSchedule.eretzYisrael
+        : ShnayimMikraParshaSchedule.chutzLaaretz,
+};

@@ -6415,7 +6415,7 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeCardDescription.
   ///
   /// In en, this message translates to:
-  /// **'App is silenced and locked during {term} and Yom Tov. Times use your location and selected candle-lighting and nightfall customs.'**
+  /// **'App is silenced and locked during {term} and Yom Tov. Times are computed from your location using your chosen zmanim minhag.'**
   String sacredTimeCardDescription(String term);
 
   /// No description provided for @sacredTimeShabbosModeLabel.
@@ -6454,17 +6454,23 @@ abstract class AppLocalizations {
   /// **'Manual coordinates'**
   String get sacredTimeSourceManualCoords;
 
-  /// No description provided for @sacredTimeInIsraelTitle.
+  /// No description provided for @sacredTimeYomTovDays.
   ///
   /// In en, this message translates to:
-  /// **'I am in Israel'**
-  String get sacredTimeInIsraelTitle;
+  /// **'Yom Tov days'**
+  String get sacredTimeYomTovDays;
 
-  /// No description provided for @sacredTimeInIsraelSubtitle.
+  /// No description provided for @sacredTimeYomTovOneDay.
   ///
   /// In en, this message translates to:
-  /// **'One-day chag if on. Auto-set when you detect or choose a city, flip if you are visiting.'**
-  String get sacredTimeInIsraelSubtitle;
+  /// **'1 day (Eretz Yisrael minhag)'**
+  String get sacredTimeYomTovOneDay;
+
+  /// No description provided for @sacredTimeYomTovTwoDays.
+  ///
+  /// In en, this message translates to:
+  /// **'2 days (chutz la\'aretz minhag)'**
+  String get sacredTimeYomTovTwoDays;
 
   /// No description provided for @sacredTimeLocationUpdated.
   ///
@@ -7834,6 +7840,12 @@ abstract class AppLocalizations {
   /// **'Sub-tracks · {count} active'**
   String subTrackHubHeader(int count);
 
+  /// No description provided for @trackSubTrackCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} sub-tracks'**
+  String trackSubTrackCount(int count);
+
   /// Manage tracks hub: helper under the Sub-tracks header (DNI-495 AC-1).
   ///
   /// In en, this message translates to:
@@ -8736,6 +8748,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom Cycle'**
   String get chazaraCustomCycle;
+
+  /// No description provided for @chazaraQuickFillLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick fill'**
+  String get chazaraQuickFillLabel;
+
+  /// No description provided for @chazaraQuickFillLearnOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn only'**
+  String get chazaraQuickFillLearnOnly;
+
+  /// No description provided for @chazaraQuickFillOneDay.
+  ///
+  /// In en, this message translates to:
+  /// **'1'**
+  String get chazaraQuickFillOneDay;
+
+  /// No description provided for @chazaraQuickFillWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'1+7'**
+  String get chazaraQuickFillWeek;
+
+  /// No description provided for @chazaraQuickFillMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'1+7+30'**
+  String get chazaraQuickFillMonth;
+
+  /// No description provided for @chazaraPlanEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review intervals'**
+  String get chazaraPlanEditorTitle;
+
+  /// No description provided for @chazaraPlanEditorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the number of days between learning and each review.'**
+  String get chazaraPlanEditorHint;
+
+  /// No description provided for @chazaraIntervalFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Review interval {number}'**
+  String chazaraIntervalFieldLabel(int number);
+
+  /// No description provided for @chazaraDaysUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get chazaraDaysUnit;
+
+  /// No description provided for @chazaraRemoveIntervalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove review interval {number}'**
+  String chazaraRemoveIntervalLabel(int number);
+
+  /// No description provided for @chazaraAddInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Add interval'**
+  String get chazaraAddInterval;
+
+  /// No description provided for @chazaraIntervalPositiveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive whole number of days.'**
+  String get chazaraIntervalPositiveError;
+
+  /// No description provided for @chazaraIntervalWholeNumberError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a whole number of days.'**
+  String get chazaraIntervalWholeNumberError;
+
+  /// No description provided for @chazaraIntervalIncreasingError.
+  ///
+  /// In en, this message translates to:
+  /// **'Each interval must be greater than the one before it.'**
+  String get chazaraIntervalIncreasingError;
 
   /// No description provided for @chazaraSessionsCount.
   ///
@@ -12147,18 +12243,6 @@ abstract class AppLocalizations {
   /// DNI-496 ongoing sub-track form
   ///
   /// In en, this message translates to:
-  /// **'You can have up to 5 ongoing sub-tracks. {count} in use.'**
-  String ongoingSubTrackLimitLine(int count);
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
-  /// **'You already have 5 ongoing sub-tracks.'**
-  String get ongoingSubTrackLimitReached;
-
-  /// DNI-496 ongoing sub-track form
-  ///
-  /// In en, this message translates to:
   /// **'Save sub-track'**
   String get ongoingSubTrackSave;
 
@@ -12750,6 +12834,12 @@ abstract class AppLocalizations {
   /// **'All readings for {portion} are complete.'**
   String shnayimMikraReaderWeekComplete(String portion);
 
+  /// Daily aliyah pacing completion message while the parsha still has unfinished aliyot.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s aliyah is done. {remaining} aliyot remain this week.'**
+  String shnayimMikraTodayAliyahDone(int remaining);
+
   /// Progress through the current parsha, aliyah, or pasuk task list.
   ///
   /// In en, this message translates to:
@@ -12815,6 +12905,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{current} of {total} pesukim complete'**
   String shnayimMikraProgressVerses(int current, int total);
+
+  /// No description provided for @textReaderTranslationLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation language'**
+  String get textReaderTranslationLanguage;
+
+  /// No description provided for @textReaderTranslationLanguageDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation language'**
+  String get textReaderTranslationLanguageDialogTitle;
+
+  /// No description provided for @textReaderSearchLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'Search languages'**
+  String get textReaderSearchLanguages;
+
+  /// No description provided for @textReaderSefariaEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'Sefaria English'**
+  String get textReaderSefariaEnglish;
+
+  /// No description provided for @textReaderOfflineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get textReaderOfflineLabel;
+
+  /// No description provided for @textReaderClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get textReaderClose;
+
+  /// No description provided for @textReaderLoadingTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading translation…'**
+  String get textReaderLoadingTranslation;
+
+  /// No description provided for @textReaderTranslationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation unavailable offline or right now'**
+  String get textReaderTranslationUnavailable;
+
+  /// No description provided for @textReaderMachineTranslated.
+  ///
+  /// In en, this message translates to:
+  /// **'Machine translated'**
+  String get textReaderMachineTranslated;
+
+  /// No description provided for @textReaderRetryTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to retry'**
+  String get textReaderRetryTranslation;
 }
 
 class _AppLocalizationsDelegate

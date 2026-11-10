@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_reading_plan.dart';
+
+import '../../helpers/learner_state/engine_fixtures.dart';
 
 void main() {
   const aliyot = [
@@ -16,6 +19,91 @@ void main() {
     'Genesis 3:2',
   ];
   const aliyahLabels = ['aliyah 1', 'aliyah 2', 'aliyah 3'];
+
+  test('daily completion counts remaining aliyot Sunday through Friday', () {
+    const sevenAliyot = [
+      ['a'],
+      ['b'],
+      ['c'],
+      ['d'],
+      ['e'],
+      ['f'],
+      ['g'],
+    ];
+    const sevenLabels = ['1', '2', '3', '4', '5', '6', '7'];
+    for (
+      var weekday = DateTime.sunday;
+      weekday <= DateTime.thursday;
+      weekday++
+    ) {
+      final today = buildShnayimMikraReadingUnits(
+        mode: ShnayimMikraMode.aliyah,
+        pace: ShnayimMikraPace.dailyAliyah,
+        weekday: weekday,
+        aliyahLabels: sevenLabels,
+        verseLabels: sevenLabels,
+        aliyot: sevenAliyot,
+      );
+      expect(
+        remainingShnayimMikraAliyot(
+          sevenAliyot,
+          today.single.items.toSet(),
+          (verse) => verse,
+        ),
+        6,
+      );
+    }
+    expect(
+      remainingShnayimMikraAliyot(sevenAliyot, {
+        'a',
+        'b',
+        'c',
+        'd',
+        'e',
+        'f',
+        'g',
+      }, (verse) => verse),
+      0,
+    );
+  });
+
+  test('reader resumes after two persisted passes and undo rewinds a pass', () {
+    final refs = ['Genesis 1:1', 'Genesis 1:2'];
+    final passEvents = [
+      engineLearn(
+        21,
+        refs[0],
+        curriculumId: 'shnayim_mikra',
+        source: LearningEvent.sourceShnayimMikraPass1,
+      ),
+      engineLearn(
+        22,
+        refs[1],
+        curriculumId: 'shnayim_mikra',
+        source: LearningEvent.sourceShnayimMikraPass1,
+      ),
+      engineLearn(
+        23,
+        refs[0],
+        curriculumId: 'shnayim_mikra',
+        source: LearningEvent.sourceShnayimMikraPass2,
+      ),
+      engineLearn(
+        24,
+        refs[1],
+        curriculumId: 'shnayim_mikra',
+        source: LearningEvent.sourceShnayimMikraPass2,
+      ),
+    ];
+    expect(completedShnayimMikraPassCount(refs: refs, events: passEvents), 2);
+    expect(
+      completedShnayimMikraPassCount(
+        refs: refs,
+        events: [...passEvents, engineVoid(25, 24)],
+      ),
+      1,
+    );
+  });
 
   test('pasuk mode completes each pasuk with three ordered readings', () {
     final units = buildShnayimMikraReadingUnits(

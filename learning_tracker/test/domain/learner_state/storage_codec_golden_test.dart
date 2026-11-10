@@ -69,6 +69,7 @@ const Map<String, Set<String>> _schemaTable = {
     'longitude',
     'time_zone',
     'in_israel',
+    'yom_tov_days',
     'tzeis_minhag',
     'candle_lighting_minutes',
     'location_source',
@@ -139,6 +140,7 @@ Map<String, Object?> _settingsGolden() => {
   'longitude': 35.235,
   'time_zone': 'Asia/Jerusalem',
   'in_israel': true,
+  'yom_tov_days': 1,
   'last_change_id': ulidC,
 };
 

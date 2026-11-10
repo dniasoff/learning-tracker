@@ -24,16 +24,25 @@ final shnayimMikraScheduleProjectionProvider =
         settings.timeZone,
       ).wallTimeOf(nowUtc);
       final projection = ShnayimMikraWeeklyAssignment.project(
-        now: DateTime(
+        now: DateTime.utc(
           nowAtLearnerLocation.year,
           nowAtLearnerLocation.month,
           nowAtLearnerLocation.day,
           nowAtLearnerLocation.hour,
+          nowAtLearnerLocation.minute,
+          nowAtLearnerLocation.second,
+          nowAtLearnerLocation.millisecond,
+          nowAtLearnerLocation.microsecond,
         ),
         inIsrael:
             (settings.shnayimMikraParshaSchedule ??
-                    shnayimMikraScheduleFromLegacyYomTovFlag(settings.inIsrael))
+                    shnayimMikraScheduleFromLegacyYomTovFlag(
+                      yomTovDays: settings.yomTovDays,
+                      legacyInIsrael: settings.inIsrael,
+                    ))
                 .usesEretzYisraelCalendar,
+        dueAtForShabbos: (shabbosDate) =>
+            shnayimMikraDueAtForShabbos(shabbosDate, history),
       );
       if (projection.catchUp.isEmpty) return projection;
       final learnerState = await ref.watch(learnerStateProvider(scope).future);

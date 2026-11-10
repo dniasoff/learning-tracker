@@ -3049,7 +3049,7 @@
   "textReaderTextUnavailableTitle": "Text not available",
   "textReaderCheckConnection": "Check your internet connection and try again.",
   "textReaderFailedToLoad": "Failed to load text",
-  "sacredTimeCardDescription": "App is silenced and locked during {term} and Yom Tov. Times use your location and selected candle-lighting and nightfall customs.",
+  "sacredTimeCardDescription": "App is silenced and locked during {term} and Yom Tov. Times are computed from your location using your chosen zmanim minhag.",
   "@sacredTimeCardDescription": {
     "placeholders": {
       "term": {
@@ -3070,8 +3070,9 @@
   "sacredTimeSourceDetected": "Detected automatically",
   "sacredTimeSourceManualCity": "Chosen from city list",
   "sacredTimeSourceManualCoords": "Manual coordinates",
-  "sacredTimeInIsraelTitle": "I am in Israel",
-  "sacredTimeInIsraelSubtitle": "One-day chag if on. Auto-set when you detect or choose a city, flip if you are visiting.",
+  "sacredTimeYomTovDays": "Yom Tov days",
+  "sacredTimeYomTovOneDay": "1 day (Eretz Yisrael minhag)",
+  "sacredTimeYomTovTwoDays": "2 days (chutz la'aretz minhag)",
   "sacredTimeLocationUpdated": "Location updated.",
   "sacredTimeLocationPermissionPermanentlyDenied": "Location permission permanently denied. Open system settings to allow.",
   "sacredTimeLocationPermissionDenied": "Location permission denied.",
@@ -3667,6 +3668,12 @@
     }
   },
   "subTrackHubHeader": "Sub-tracks · {count} active",
+  "trackSubTrackCount": "{count} sub-tracks",
+  "@trackSubTrackCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "@subTrackHubHeader": {
     "description": "Manage tracks hub: Sub-tracks group header with the number of non-ended sub-tracks (DNI-495 AC-1, screens.md #04).",
     "placeholders": {
@@ -4207,6 +4214,22 @@
   },
   "reviewScheduleScheduledByProgram": "Scheduled by program",
   "chazaraCustomCycle": "Custom Cycle",
+  "chazaraQuickFillLabel": "Quick fill",
+  "chazaraQuickFillLearnOnly": "Learn only",
+  "chazaraQuickFillOneDay": "1",
+  "chazaraQuickFillWeek": "1+7",
+  "chazaraQuickFillMonth": "1+7+30",
+  "chazaraPlanEditorTitle": "Review intervals",
+  "chazaraPlanEditorHint": "Enter the number of days between learning and each review.",
+  "chazaraIntervalFieldLabel": "Review interval {number}",
+  "@chazaraIntervalFieldLabel": { "placeholders": { "number": { "type": "int" } } },
+  "chazaraDaysUnit": "days",
+  "chazaraRemoveIntervalLabel": "Remove review interval {number}",
+  "@chazaraRemoveIntervalLabel": { "placeholders": { "number": { "type": "int" } } },
+  "chazaraAddInterval": "Add interval",
+  "chazaraIntervalPositiveError": "Enter a positive whole number of days.",
+  "chazaraIntervalWholeNumberError": "Enter a whole number of days.",
+  "chazaraIntervalIncreasingError": "Each interval must be greater than the one before it.",
   "chazaraSessionsCount": "{count} Sessions",
   "@chazaraSessionsCount": {
     "placeholders": {
@@ -6013,19 +6036,6 @@
   "@ongoingSubTrackShabbosHelper": {
     "description": "DNI-496 ongoing sub-track form"
   },
-  "ongoingSubTrackLimitLine": "You can have up to 5 ongoing sub-tracks. {count} in use.",
-  "@ongoingSubTrackLimitLine": {
-    "description": "DNI-496 ongoing sub-track form",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "ongoingSubTrackLimitReached": "You already have 5 ongoing sub-tracks.",
-  "@ongoingSubTrackLimitReached": {
-    "description": "DNI-496 ongoing sub-track form"
-  },
   "ongoingSubTrackSave": "Save sub-track",
   "@ongoingSubTrackSave": {
     "description": "DNI-496 ongoing sub-track form"
@@ -6502,6 +6512,11 @@
   "shnayimMikraReaderNoUnits": "No reading sections are available for this parsha.",
   "shnayimMikraNoDailyAliyahToday": "Daily aliyah pacing runs Sunday through Friday.",
   "shnayimMikraReaderWeekComplete": "All readings for {portion} are complete.",
+  "shnayimMikraTodayAliyahDone": "Today's aliyah is done. {remaining} aliyot remain this week.",
+  "@shnayimMikraTodayAliyahDone": {
+    "description": "Daily aliyah pacing completion message while the parsha still has unfinished aliyot.",
+    "placeholders": { "remaining": { "type": "int" } }
+  },
   "@shnayimMikraReaderWeekComplete": {
     "description": "Completion message after all assigned Shnayim Mikra reading units are marked complete.",
     "placeholders": { "portion": { "type": "String" } }
@@ -6538,5 +6553,15 @@
       "current": { "type": "int" },
       "total": { "type": "int" }
     }
-  }
+  },
+  "textReaderTranslationLanguage": "Translation language",
+  "textReaderTranslationLanguageDialogTitle": "Translation language",
+  "textReaderSearchLanguages": "Search languages",
+  "textReaderSefariaEnglish": "Sefaria English",
+  "textReaderOfflineLabel": "Offline",
+  "textReaderClose": "Close",
+  "textReaderLoadingTranslation": "Loading translation…",
+  "textReaderTranslationUnavailable": "Translation unavailable offline or right now",
+  "textReaderMachineTranslated": "Machine translated",
+  "textReaderRetryTranslation": "Tap to retry"
 }

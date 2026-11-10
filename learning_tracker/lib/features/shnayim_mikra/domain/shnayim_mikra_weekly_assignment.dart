@@ -1,4 +1,38 @@
 import 'package:kosher_dart/kosher_dart.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+
+/// Learner-local instant when this Shabbos assignment becomes overdue.
+/// Uses the lock window's candle-lighting bound when location is available;
+/// otherwise it is the final microsecond of Friday.
+DateTime shnayimMikraDueAtForShabbos(
+  DateTime shabbosDate,
+  LearnerSettingsHistory history,
+) {
+  final settings = history.current;
+  final zone = LearnerZone.of(settings.timeZone);
+  if (!settings.hasLocation) {
+    return DateTime.utc(
+      shabbosDate.year,
+      shabbosDate.month,
+      shabbosDate.day,
+    ).subtract(const Duration(microseconds: 1));
+  }
+  final noon = zone.at(shabbosDate, hour: 12);
+  final window = lockWindows(
+    history,
+    noon,
+    noon,
+  ).where((candidate) => candidate.contains(noon));
+  return window.isEmpty
+      ? DateTime.utc(
+          shabbosDate.year,
+          shabbosDate.month,
+          shabbosDate.day,
+        ).subtract(const Duration(microseconds: 1))
+      : zone.wallTimeOf(window.first.startUtc);
+}
 
 /// A single upcoming regular weekly sedra and its Shabbos deadline.
 ///
@@ -10,6 +44,7 @@ final class ShnayimMikraWeeklyAssignment {
     required this.portionKey,
     required this.shabbosDate,
     required this.dueDate,
+    required this.dueAt,
     required this.catchUpThrough,
     required this.inIsrael,
   });
@@ -17,6 +52,9 @@ final class ShnayimMikraWeeklyAssignment {
   final String portionKey;
   final DateTime shabbosDate;
   final DateTime dueDate;
+
+  /// Learner-local wall time when the assignment becomes overdue.
+  final DateTime dueAt;
   final DateTime catchUpThrough;
   final bool inIsrael;
 
@@ -28,13 +66,18 @@ final class ShnayimMikraWeeklyAssignment {
   static ShnayimMikraWeeklyAssignment resolve({
     required DateTime now,
     required bool inIsrael,
+    DateTime Function(DateTime shabbosDate)? dueAtForShabbos,
   }) {
     var candidate = DateTime(now.year, now.month, now.day);
     final daysUntilSaturday = (DateTime.saturday - candidate.weekday + 7) % 7;
     candidate = candidate.add(Duration(days: daysUntilSaturday));
 
     while (true) {
-      final assignment = forShabbos(candidate, inIsrael: inIsrael);
+      final assignment = forShabbos(
+        candidate,
+        inIsrael: inIsrael,
+        dueAt: dueAtForShabbos?.call(candidate),
+      );
       if (assignment != null) return assignment;
       candidate = candidate.add(const Duration(days: 7));
     }
@@ -45,6 +88,7 @@ final class ShnayimMikraWeeklyAssignment {
   static ShnayimMikraWeeklyAssignment? forShabbos(
     DateTime shabbosDate, {
     required bool inIsrael,
+    DateTime? dueAt,
   }) {
     final date = DateTime(shabbosDate.year, shabbosDate.month, shabbosDate.day);
     final calendar = JewishCalendar.fromDateTime(date)..inIsrael = inIsrael;
@@ -52,11 +96,19 @@ final class ShnayimMikraWeeklyAssignment {
     if (parsha == Parsha.NONE) return null;
 
     final dueDate = date.subtract(const Duration(days: 1));
+    final dueWallTime =
+        dueAt ??
+        DateTime.utc(
+          date.year,
+          date.month,
+          date.day,
+        ).subtract(const Duration(microseconds: 1));
     final catchUpThrough = _nextSimchasTorah(dueDate, inIsrael);
     return ShnayimMikraWeeklyAssignment(
       portionKey: parsha.name,
       shabbosDate: date,
       dueDate: dueDate,
+      dueAt: dueWallTime,
       catchUpThrough: catchUpThrough,
       inIsrael: inIsrael,
     );
@@ -65,9 +117,14 @@ final class ShnayimMikraWeeklyAssignment {
   static ShnayimMikraScheduleProjection project({
     required DateTime now,
     required bool inIsrael,
+    DateTime Function(DateTime shabbosDate)? dueAtForShabbos,
     Set<String> completedAssignmentKeys = const {},
   }) {
-    final current = resolve(now: now, inIsrael: inIsrael);
+    final current = resolve(
+      now: now,
+      inIsrael: inIsrael,
+      dueAtForShabbos: dueAtForShabbos,
+    );
     final today = _day(now);
     final firstSearchDate = today.subtract(const Duration(days: 400));
     var candidate = firstSearchDate.add(
@@ -75,7 +132,11 @@ final class ShnayimMikraWeeklyAssignment {
     );
     final catchUp = <ShnayimMikraWeeklyAssignment>[];
     while (!candidate.isAfter(_day(current.shabbosDate))) {
-      final assignment = forShabbos(candidate, inIsrael: inIsrael);
+      final assignment = forShabbos(
+        candidate,
+        inIsrael: inIsrael,
+        dueAt: dueAtForShabbos?.call(candidate),
+      );
       if (assignment != null &&
           assignment.key != current.key &&
           assignment.isCatchUpAvailableOn(now) &&
@@ -92,7 +153,7 @@ final class ShnayimMikraWeeklyAssignment {
 
   String get key => '${_dateKey(shabbosDate)}:$portionKey';
 
-  bool isOverdueOn(DateTime date) => _day(date).isAfter(_day(dueDate));
+  bool isOverdueOn(DateTime date) => !date.isBefore(dueAt);
 
   /// The unfinished assignment remains available through Simchas Torah,
   /// inclusive. A later assignment can still be resolved independently.

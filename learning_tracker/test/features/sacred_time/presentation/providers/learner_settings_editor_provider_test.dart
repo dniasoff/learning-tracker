@@ -134,13 +134,13 @@ void main() {
       for (final MapEntry(key: result, value: outcome) in cases.entries) {
         final commands = _Commands(result);
         expect(
-          await _editor(commands: commands, scope: _scope).setInIsrael(false),
+          await _editor(commands: commands, scope: _scope).setYomTovDays(2),
           outcome,
         );
         expect(commands.applied, [
           learnerSettingsAction(
             profileUlid,
-            const LearnerSettingsEdit(inIsrael: false),
+            const LearnerSettingsEdit(yomTovDays: 2),
           ),
         ]);
       }
@@ -158,9 +158,79 @@ void main() {
         'latitude': 31.768,
         'longitude': 35.214,
         'time_zone': 'Asia/Jerusalem',
+        'yom_tov_days': 1,
         'in_israel': true,
         'location_source': 'manual_city',
       });
+    });
+
+    test(
+      'first location seeds minhag once and later moves preserve it',
+      () async {
+        final commands = _Commands();
+        var current = const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'UTC',
+        );
+        final editor = LearnerSettingsEditor(
+          commands: () async => commands,
+          scope: () async => _scope,
+          locationService: const LocationService(),
+          deviceTimeZone: () async => null,
+          settingsForProfile: (_) async => current,
+        );
+
+        await editor.chooseCity(
+          _city(timezone: 'Europe/London', country: 'GB'),
+        );
+        expect(
+          commands
+              .applied
+              .single
+              .changes
+              .single
+              .docs
+              .single
+              .fields['yom_tov_days'],
+          2,
+        );
+
+        current = const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'Europe/London',
+          inIsrael: true,
+        );
+        await editor.chooseCity(
+          _city(timezone: 'Europe/London', country: 'GB'),
+        );
+        expect(
+          commands.applied.last.changes.single.docs.single.fields,
+          containsPair('yom_tov_days', 1),
+        );
+      },
+    );
+
+    test('location changes do not overwrite an existing minhag', () async {
+      final commands = _Commands();
+      final editor = LearnerSettingsEditor(
+        commands: () async => commands,
+        scope: () async => _scope,
+        locationService: const LocationService(),
+        deviceTimeZone: () async => null,
+        settingsForProfile: (_) async => const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'Europe/London',
+          yomTovDays: 1,
+        ),
+      );
+
+      await editor.chooseCity(_city(timezone: 'Europe/London', country: 'GB'));
+      expect(
+        commands.applied.single.changes.single.docs.single.fields.containsKey(
+          'yom_tov_days',
+        ),
+        isFalse,
+      );
     });
 
     test('an unknown or missing city zone leaves the zone as it is', () async {
@@ -201,6 +271,7 @@ void main() {
         'latitude': 40.082,
         'longitude': -74.21,
         'time_zone': 'America/New_York',
+        'yom_tov_days': 2,
         'in_israel': false,
         'location_source': 'detected',
         'location_fixed_at': DateTime.utc(2026, 9),
@@ -219,6 +290,26 @@ void main() {
           'location_fixed_at',
         ]),
       );
+    });
+
+    test('a location fix never changes a canonical minhag', () async {
+      final commands = _Commands();
+      final editor = LearnerSettingsEditor(
+        commands: () async => commands,
+        scope: () async => _scope,
+        locationService: _Location(_fix(country: 'IL')),
+        deviceTimeZone: () async => 'Asia/Jerusalem',
+        settingsForProfile: (_) async => const LearnerSettings(
+          profileId: profileUlid,
+          timeZone: 'Europe/London',
+          yomTovDays: 2,
+        ),
+      );
+
+      await editor.detect();
+      final fields = commands.applied.single.changes.single.docs.single.fields;
+      expect(fields.containsKey('yom_tov_days'), isFalse);
+      expect(fields.containsKey('in_israel'), isFalse);
     });
 
     test('automatic refresh uses the silent location path and persists only '
@@ -244,6 +335,7 @@ void main() {
         'latitude': 40.082,
         'longitude': -74.21,
         'time_zone': 'America/New_York',
+        'yom_tov_days': 2,
         'in_israel': false,
         'location_source': 'detected',
         'location_fixed_at': DateTime.utc(2026, 9),

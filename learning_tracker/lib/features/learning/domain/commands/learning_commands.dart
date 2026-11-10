@@ -510,8 +510,12 @@ final class DefaultLearningCommands implements LearningCommands {
         _reads.corpus(curriculumId),
       ).wait.timeout(_recordedWait);
       return {
-        for (final e in log.counted.learns)
+        for (final e in log.byId.values)
           if (e.curriculumId == curriculumId &&
+              !log.counted.voidedIds.contains(e.id) &&
+              !log.counted.lockIgnoredIds.contains(e.id) &&
+              e.isLearn &&
+              (source != LearningEvent.sourceMain || !e.isShnayimMikraPass) &&
               (source == LearningEvent.sourceMain || e.source == source))
             ...?(corpus == null
                 ? (e.level == null && e.ref != null ? [e.ref!] : null)
@@ -523,7 +527,9 @@ final class DefaultLearningCommands implements LearningCommands {
   }
 
   static bool _validSource(String source) =>
-      source == LearningEvent.sourceMain || isUlid(source);
+      source == LearningEvent.sourceMain ||
+      isUlid(source) ||
+      LearningEvent.shnayimMikraPassSources.contains(source);
 
   /// Whether [source] may name a learn event of [curriculumId]: `main`, or
   /// a live sub-track of that curriculum in this scope when a
@@ -531,6 +537,9 @@ final class DefaultLearningCommands implements LearningCommands {
   /// out fails closed.
   Future<bool> _sourceAllowed(String curriculumId, String source) async {
     final check = _sourceCheck;
+    if (LearningEvent.shnayimMikraPassSources.contains(source)) {
+      return curriculumId == 'shnayim_mikra';
+    }
     if (source == LearningEvent.sourceMain || check == null) return true;
     try {
       return await check(curriculumId, source);

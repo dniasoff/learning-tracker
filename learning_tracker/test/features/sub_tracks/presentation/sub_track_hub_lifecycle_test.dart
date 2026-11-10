@@ -1,4 +1,4 @@
-/// Story 2.8 (DNI-499) AC-5 / AC-6 on Settings → Manage tracks: DNI-495's
+/// Story 2.8 (DNI-499) AC-5 / AC-6 on the track detail: DNI-495's
 /// Sub-tracks group lists the sub-tracks active on the learner's civil
 /// today; tombstoned and elapsed-window ones move to the collapsed, muted
 /// *Ended sub-tracks ({n})* group at its foot, whose rows open the
@@ -9,10 +9,13 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/domain/learner_state/predicates.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/sub_track_hub_section.dart';
-import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/curriculum_track.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/learner_state_fixtures.dart';
@@ -21,6 +24,11 @@ import '../../../helpers/sub_tracks/sub_track_harness.dart';
 import '../../../helpers/sub_tracks/sub_track_router.dart';
 
 class _Router extends Mock implements StackRouter {}
+
+final class _FalseUseHebrewDate extends UseHebrewDate {
+  @override
+  bool build() => false;
+}
 
 String _id(int n) => '01JHARN00000000000000000${n.toString().padLeft(2, '0')}';
 
@@ -57,16 +65,27 @@ Future<_Router> _pumpHub(WidgetTester tester, SubTrackHarness h) async {
   when(() => router.push<Object?>(any())).thenAnswer((_) async => null);
   await tester.pumpWidget(
     pumpApp(
-      overrides: [...h.overrides(), ...subTrackHubCardOverrides()],
+      overrides: [
+        ...h.overrides(),
+        ...subTrackHubCardOverrides(),
+        useHebrewDateProvider.overrideWith(() => _FalseUseHebrewDate()),
+      ],
       retry: (_, _) => null,
       child: StackRouterScope(
         controller: router,
         stateHash: 0,
-        child: const TrackManagementBody(showBackButton: true),
+        child: const TrackDetailScreen(
+          track: CurriculumTrackEntity(
+            curriculumId: CurriculumId.mishnayos,
+            state: 'active',
+          ),
+        ),
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 2));
+  await tester.pump();
   return router;
 }
 
@@ -111,7 +130,7 @@ void main() {
     expect(find.textContaining('Completed'), findsNothing);
 
     await tester.tap(find.text('Ended sub-tracks (3)'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     for (final n in [3, 4, 5]) {
       expect(_endedRow(n), findsOneWidget);
     }
@@ -126,7 +145,7 @@ void main() {
     h = SubTrackHarness(seed: _tracks());
     await _pumpHub(tester, h);
     await tester.tap(find.text('Ended sub-tracks (3)'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     final active = tester.widget<Text>(
       find.descendant(of: _row(2), matching: find.text('Rebbe')),
     );
@@ -142,13 +161,15 @@ void main() {
     h = SubTrackHarness(seed: _tracks());
     final router = await _pumpHub(tester, h);
     await tester.tap(find.text('Ended sub-tracks (3)'));
-    await tester.pumpAndSettle();
-    await tester.tap(_endedRow(5));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(_endedRow(3));
     await tester.pump();
     final pushed =
         verify(() => router.push<Object?>(captureAny())).captured.single
             as SubTrackDetailRoute;
-    expect(pushed.args!.subTrackId, _id(5));
+    expect(pushed.args!.subTrackId, _id(3));
   });
 
   // The window ends 31 Jul 2027 (inclusive): active through that day, ended

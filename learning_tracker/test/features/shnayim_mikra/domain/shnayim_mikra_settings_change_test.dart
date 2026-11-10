@@ -116,15 +116,38 @@ void main() {
     'new track schedule is initialized once from the legacy Yom Tov flag',
     () {
       expect(
-        initialShnayimMikraSettings(legacyInIsrael: true).parshaSchedule,
+        initialShnayimMikraSettings(
+          yomTovDays: null,
+          legacyInIsrael: true,
+        ).parshaSchedule,
         ShnayimMikraParshaSchedule.eretzYisrael,
       );
       expect(
-        initialShnayimMikraSettings(legacyInIsrael: false).parshaSchedule,
+        initialShnayimMikraSettings(
+          yomTovDays: null,
+          legacyInIsrael: false,
+        ).parshaSchedule,
         ShnayimMikraParshaSchedule.chutzLaaretz,
       );
       expect(
-        initialShnayimMikraSettings(legacyInIsrael: null).parshaSchedule,
+        initialShnayimMikraSettings(
+          yomTovDays: null,
+          legacyInIsrael: null,
+        ).parshaSchedule,
+        ShnayimMikraParshaSchedule.chutzLaaretz,
+      );
+      expect(
+        initialShnayimMikraSettings(
+          yomTovDays: 1,
+          legacyInIsrael: false,
+        ).parshaSchedule,
+        ShnayimMikraParshaSchedule.eretzYisrael,
+      );
+      expect(
+        initialShnayimMikraSettings(
+          yomTovDays: 2,
+          legacyInIsrael: true,
+        ).parshaSchedule,
         ShnayimMikraParshaSchedule.chutzLaaretz,
       );
     },

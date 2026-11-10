@@ -3,6 +3,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kosher_dart/kosher_dart.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/shnayim_mikra/domain/shnayim_mikra_weekly_assignment.dart';
 
 void main() {
@@ -92,6 +96,52 @@ void main() {
           ),
           isFalse,
         );
+      },
+    );
+
+    test(
+      'deadline is the London lock start, with no-location Friday fallback',
+      () {
+        const profileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+        final shabbos = DateTime(2027, 6, 19);
+        final london = LearnerSettingsHistory.constant(
+          const LearnerSettings(
+            profileId: profileId,
+            timeZone: 'Europe/London',
+            latitude: 51.5072,
+            longitude: -0.1276,
+            candleLightingMinutes: 30,
+            yomTovDays: 2,
+          ),
+        );
+        final noon = LearnerZone.of('Europe/London').at(shabbos, hour: 12);
+        final lock = lockWindows(london, noon, noon).single;
+        final dueAt = shnayimMikraDueAtForShabbos(shabbos, london);
+        expect(
+          dueAt,
+          LearnerZone.of('Europe/London').wallTimeOf(lock.startUtc),
+        );
+        final assignment = ShnayimMikraWeeklyAssignment.forShabbos(
+          shabbos,
+          inIsrael: false,
+          dueAt: dueAt,
+        )!;
+        expect(
+          assignment.isOverdueOn(
+            dueAt.subtract(const Duration(microseconds: 1)),
+          ),
+          isFalse,
+        );
+        expect(assignment.isOverdueOn(dueAt), isTrue);
+
+        final noLocation = LearnerSettingsHistory.constant(
+          const LearnerSettings(
+            profileId: profileId,
+            timeZone: 'Europe/London',
+          ),
+        );
+        final fallback = shnayimMikraDueAtForShabbos(shabbos, noLocation);
+        expect(fallback, DateTime.utc(2027, 6, 18, 23, 59, 59, 999, 999));
       },
     );
   });

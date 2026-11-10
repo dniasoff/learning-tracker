@@ -66,5 +66,8 @@ export { onChangeLogCreated } from "./notifications";
 // Per-child content visibility policy (server-only writes; tutor grant checked).
 export { setProfileHiddenContent } from "./hidden_content";
 
+// Server generated, cached phrase-by-phrase translations for the reader.
+export { translatePhrases } from "./phrase_translations";
+
 // Parent PIN authority and short-lived server sessions (7vx).
 export { setParentPin, createParentSession, revokeParentSession } from "./parent_sessions";

@@ -118,8 +118,8 @@ final class OngoingSubTrackContext {
     return null;
   }
 
-  /// Ongoing sub-tracks counting toward the AD-45 cap, optionally leaving
-  /// out the one being edited ([excludingId]).
+  /// Active ongoing sub-track count on this curriculum, optionally leaving
+  /// out the one being edited ([excludingId]). This count does not gate writes.
   int ongoingInUse({String? excludingId}) => ongoingSubTracksInUse(
     subTracks,
     curriculumId: curriculumId,

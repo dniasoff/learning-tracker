@@ -63,7 +63,7 @@ abstract class LearnerProfileEntity with _$LearnerProfileEntity {
     required DateTime updatedAt,
 
     /// The AD-37 governed `learnerSettings` fields of this profile doc
-    /// (`latitude`, `longitude`, `time_zone`, `in_israel`,
+    /// (`latitude`, `longitude`, `time_zone`, `yom_tov_days`, `in_israel`,
     /// `last_change_id`), or null when the doc carries none or they do not
     /// decode. **Read-only here**: [toFirestore] never emits them. They are
     /// written only by a governed `learnerSettings` write (the creation

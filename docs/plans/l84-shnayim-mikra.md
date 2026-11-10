@@ -32,7 +32,7 @@ Add the curriculum to `CurriculumId`, the canonical curriculum order/default con
 
 The inspected app already has an offline calendar pattern: `calendar_cycles` maps `program_key + date_key` to refs, `LocalCalendarEngine` reads it, and the content seed is built locally. There is **no weekly parsha program in the runtime calendar registry**. Add a dedicated program key (or two region-keyed variants) to the seed/lookup path, keyed by Shabbos date, and cache the result in content.db so the current and near-future cycle work offline. If kosher_dart cannot produce the required region/Yom-Tov behavior reliably, use an explicit tested parsha calendar seed generated from an authoritative source rather than a runtime network dependency.
 
-Use the learner's existing Shabbat location `in_israel` flag as the initial region, and make it editable in settings. Do not prompt during setup or infer from app/device locale. Recalculate only future assignments when changed; keep the active week's assignment stable.
+Use the Shnayim Mikra track's own Eretz Yisrael / Chutz la'aretz parsha minhag. Initialize it from the learner's explicit `yom_tov_days` setting (1 / 2); fall back to legacy `in_israel` only for profiles without that setting. Do not change it when location changes.
 
 ### Yom Tov and paired portions
 
@@ -40,7 +40,7 @@ A Shabbos with a festival reading is not a regular weekly parsha. Do not display
 
 ### Deadline
 
-Deadline is **before the assigned Shabbos begins**. After that, keep the unfinished parsha overdue and available for catch-up through Simchas Torah, while surfacing the new week's assignment independently; unfinished work does not block the new week. A no-parsha/festival week should not create a false overdue item. Give the app one explicit weekly deadline rule rather than a separate rolling/deadline `ScheduleSpec` for every pasuk. Existing `ScheduleSpec` governs review-stage timing; it is not a weekly calendar assignment contract.
+Deadline is **before Shabbos begins**. With coordinates, use the start instant of the same Sacred-Time lock window (candle lighting using the learner's configured minhag); without a location, fall back to the final instant of Friday in the learner's local calendar. Flip overdue/catch-up at that exact instant. Afterward, keep unfinished work available through Simchas Torah while surfacing the new week's assignment independently; unfinished work does not block the new week. A no-parsha/festival week should not create a false overdue item. Give the app one explicit weekly deadline rule rather than a separate rolling/deadline `ScheduleSpec` for every pasuk. Existing `ScheduleSpec` governs review-stage timing; it is not a weekly calendar assignment contract.
 
 ## 3. Text data, references, and offline availability
 
@@ -68,7 +68,7 @@ Show weekly progress as completed substeps and completed pesukim/aliyot (for exa
 
 The home learning list should show one Shnayim Mikra card with the assigned parsha, regional calendar label where useful, due status, and progress. Daily aliyah pace may display today's aliyah and “x of 6/7 aliyot this week” while still rolling up to the one weekly parsha. Keep the previous assignment available as overdue/catch-up and show the next assignment only as preview, not as due work.
 
-Emit completion events through the existing learner-state write path, attributed to the Shnayim Mikra curriculum and existing child/tutor actor/source rules. Events must distinguish verse/aliyah/parsha unit and pass/source so repeats are idempotent across devices and can be reversed correctly; current `LearningEvent` has `curriculum_id`, `ref`, `level`, `stage`, but no explicit pass/source role beyond its general event source. Decide and document a stable event-ref or explicit event-subtype contract in the first model bead. Do not record three indistinguishable completions against the same Sefaria ref, and do not let a completion count toward ordinary Chumash.
+Emit completion events through the existing learner-state write path, attributed to the Shnayim Mikra curriculum and existing child/tutor actor/source rules. Persist each pass as its own idempotent, voidable pass-source event so readers on another device resume at the same pass; exclude pass markers from counted learning, points, streaks, and Chumash. Award points and streak credit only when the unit completion is captured. Never count Shnayim Mikra's Chumash pesukim as ordinary Chumash completion unless the learner separately records that curriculum.
 
 Award points once per completed meaningful unit using existing point configuration/ledger flow, not once per rendered segment or scroll. Proposed unit: one pasuk (after all 3 reads) in pasuk mode, one aliyah (after its 3 passes) in aliyah/daily-aliyah mode, and one parsha (after its 3 passes) in parsha mode; total credit should be normalized so choosing finer-grained mode doesn't multiply points. Streak should count one day with Shnayim Mikra progress according to existing per-curriculum streak semantics, not each pass as a separate streak. If the current streak contract only counts top-level learn events, use one qualifying completion event per day and treat finer events as supporting detail.
 
@@ -131,7 +131,7 @@ Bead 1 is a gating fact-finding deliverable; beads 2–6 can be split/paralleliz
 
 ## Phase 4 weekly assignment and learning-list projection findings
 
-- Added `ShnayimMikraWeeklyAssignment` using `kosher_dart`'s `JewishCalendar.getParshah()` and the governed learner `in_israel` setting. It skips `Parsha.NONE` festival Shabbosos, keeps paired portions as one enum/key, and selects the next regular Shabbos assignment.
+- Added `ShnayimMikraWeeklyAssignment` using `kosher_dart`'s `JewishCalendar.getParshah()` and the governed Shnayim Mikra track minhag. It skips `Parsha.NONE` festival Shabbosos, keeps paired portions as one enum/key, and selects the next regular Shabbos assignment.
 - Each assignment has a stable `YYYY-MM-DD:PARSHA_ENUM` key, a Friday civil due date, and a region-correct Simchas Torah catch-up limit. The assignment is overdue starting Shabbos and remains eligible through Simchas Torah inclusive. Projection keeps available previous assignments separate from the next week's assignment.
 - Added an active-learner schedule provider that derives date/time from `LearnerZone` using the learner's stored IANA time zone. The week itself follows the explicit Shnayim Mikra minhag schedule; location is used only as the temporary creation default and is not read again once the value is stored. The learning screen now includes a weekly assignment slot for an active Shnayim Mikra track.
 - Phase 4's slot currently presents assignment and catch-up count; reader navigation, completion-derived progress and localized strings are delivered in the following phases. The completion keys are already accepted by the projection so phase 5 can remove completed assignments from catch-up.
@@ -148,13 +148,13 @@ Bead 1 is a gating fact-finding deliverable; beads 2–6 can be split/paralleliz
 ## Phase 6 settings and release findings
 
 - The release gate is removed only after the three-pass reader, weekly assignment card, and settings flow are present. Shnayim Mikra appears in learning-track selection, while Browse remains limited to curricula with standalone content trees; Shnayim Mikra reuses Chumash text through its dedicated workflow.
-- Adding a new Shnayim Mikra track appends its initial parsha minhag to the same governed activation action. It reads the legacy one-day/two-day proxy once (`in_israel == true` → Eretz Yisrael; otherwise Chutz la'aretz); existing values are preserved on re-add, and later location changes do not update the stored preference.
+- Adding a new Shnayim Mikra track appends its initial parsha minhag to the same governed activation action. It reads `yom_tov_days` once (`1` → Eretz Yisrael, `2` → Chutz la'aretz), falls back to legacy `in_israel` only when the explicit field is absent, and preserves an already stored value on re-add. Later location or Yom Tov setting changes do not rewrite this per-track choice.
 - The learning-list settings control is shown for adult profiles and for child profiles after the parent PIN is authenticated. It is hidden during a tutored session. The governed learnerSettings writer and Firestore parent-only rule remain the authorization boundary. The settings dialog edits mode, pace, third-reading source, and Eretz Yisrael/Chutz la'aretz schedule; mode/source/schedule labels are localized in English and Hebrew.
 - Focused release coverage verifies CurriculumId selection/decoding, the activation action's initial schedule patch, and the parent/child/tutor editor-visibility rule. No full test suite is run.
 
 ## Decisions confirmed by user
 
-1. **Parsha schedule:** Store an independent Shnayim Mikra minhag setting, Eretz Yisrael or Chutz la'aretz, editable in that track's parent settings. Initialize it once from the learner's existing Yom Tov minhag proxy (`in_israel`: one day → Eretz Yisrael, two days → Chutz la'aretz) behind `shnayimMikraScheduleFromLegacyYomTovFlag`; never change it when location changes. A separate lane will replace the proxy with an explicit one-day/two-day minhag setting. No setup question.
+1. **Parsha schedule:** Store an independent Shnayim Mikra minhag setting, Eretz Yisrael or Chutz la'aretz, editable in that track's parent settings. Initialize it once from explicit `yom_tov_days` (1 → Eretz Yisrael, 2 → Chutz la'aretz), using legacy `in_israel` only when the explicit setting is absent; never change it when location or Yom Tov days change. No setup question.
 2. **Reading source:** Release 1 offers both Onkelos and Rashi; the learner chooses one as the third reading.
 3. **Deadline:** Due before Shabbos. Remain overdue and available for catch-up through Simchas Torah; the next week's assignment is not blocked.
 

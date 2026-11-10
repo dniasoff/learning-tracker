@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -121,7 +122,6 @@ class _OngoingSubTrackFormScreenState
   Map<OngoingFormField, OngoingFormError> _commandErrors = const {};
   bool _submitted = false;
   bool _saving = false;
-  bool _limitBlocked = false;
 
   /// The learner this form writes for: the first scope the write gate
   /// granted. Null until then.
@@ -286,7 +286,7 @@ class _OngoingSubTrackFormScreenState
     required ValueChanged<CivilDate> onPicked,
   }) async {
     final initial = parseCivilDay(current ?? today);
-    final picked = await showDatePicker(
+    final picked = await showLearningAppDatePicker(
       context: context,
       initialDate: DateTime(initial.year, initial.month, initial.day),
       firstDate: DateTime(2000),
@@ -332,10 +332,6 @@ class _OngoingSubTrackFormScreenState
     final existing = _isEdit ? _editable(data) : null;
     if (_isEdit && existing == null) {
       _close();
-      return;
-    }
-    if (existing == null && !ongoingCreateAllowed(data.ongoingInUse())) {
-      setState(() => _limitBlocked = true);
       return;
     }
     if (existing != null &&
@@ -418,9 +414,7 @@ class _OngoingSubTrackFormScreenState
     OngoingSubTrackContext data,
   ) {
     final errors = <OngoingFormField, OngoingFormError>{};
-    var limit = false;
     for (final v in violations) {
-      if (v.limit == SubTrackLimit.ongoingLimit) limit = true;
       final field = ongoingFieldForViolation(v.limit);
       if (field != null) {
         errors[field] = field == OngoingFormField.end
@@ -430,9 +424,8 @@ class _OngoingSubTrackFormScreenState
     }
     setState(() {
       _commandErrors = errors;
-      _limitBlocked = limit;
     });
-    if (errors.isEmpty && !limit) _showSaveFailed(data);
+    if (errors.isEmpty) _showSaveFailed(data);
   }
 
   void _showSaveFailed(OngoingSubTrackContext data) {
@@ -587,8 +580,6 @@ class _OngoingSubTrackFormScreenState
   ) {
     final validation = _validate(data.today);
     final unit = _leafUnit();
-    final theme = Theme.of(context);
-    final inUse = data.ongoingInUse();
     final blocked = ref.watch(subTrackWritesBlockedProvider);
     return ListView(
       padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 32),
@@ -704,20 +695,6 @@ class _OngoingSubTrackFormScreenState
           onChanged: (on) => setState(() => _shabbos = on),
         ),
         const SizedBox(height: 12),
-        _InfoNote(
-          key: const ValueKey('ongoingSubTrackLimitLine'),
-          text: l10n.ongoingSubTrackLimitLine(inUse),
-        ),
-        if (_limitBlocked) ...[
-          const SizedBox(height: 8),
-          Text(
-            l10n.ongoingSubTrackLimitReached,
-            key: const ValueKey('ongoingSubTrackLimitReached'),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.error,
-            ),
-          ),
-        ],
         const SizedBox(height: 24),
         // Story 4.2 (AC-4, AC-5, AC-6): progress and held while saving;
         // visible but disabled, with one note, while a tutor may not write.
@@ -883,41 +860,6 @@ class _DateField extends StatelessWidget {
                 : DateFormat.yMMMd(locale).format(parseCivilDay(date)),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// The info note under the form (UX-DR-31).
-class _InfoNote extends StatelessWidget {
-  const _InfoNote({super.key, required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsetsDirectional.all(12),
-      decoration: BoxDecoration(
-        color: context.colors.brandBlueSoft,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.colors.brandOutline),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, size: 20, color: context.colors.brandBlue),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: context.colors.brandInk,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

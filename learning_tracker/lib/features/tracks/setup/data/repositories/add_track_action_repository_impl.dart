@@ -128,6 +128,7 @@ final class FirestoreAddTrackActionRepository
       settingsSubscription.close();
       if (settingsHistory.current.shnayimMikraParshaSchedule == null) {
         final initialSettings = initialShnayimMikraSettings(
+          yomTovDays: settingsHistory.current.yomTovDays,
           legacyInIsrael: settingsHistory.current.inIsrael,
         );
         changes.add(

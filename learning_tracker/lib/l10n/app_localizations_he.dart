@@ -3734,7 +3734,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים לפי המיקום ומנהגי הדלקת הנרות וצאת הכוכבים שבחרתם.';
+    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים לפי המיקום ובהתאם למנהג הזמנים שבחרתם.';
   }
 
   @override
@@ -3758,11 +3758,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sacredTimeSourceManualCoords => 'קואורדינטות ידניות';
 
   @override
-  String get sacredTimeInIsraelTitle => 'אני בישראל';
+  String get sacredTimeYomTovDays => 'ימים טובים';
 
   @override
-  String get sacredTimeInIsraelSubtitle =>
-      'חג של יום אחד כאשר מופעל. נקבע אוטומטית כשמזהים או בוחרים עיר; שנו אם אתם מבקרים.';
+  String get sacredTimeYomTovOneDay => 'יום אחד (מנהג ארץ ישראל)';
+
+  @override
+  String get sacredTimeYomTovTwoDays => 'יומיים (מנהג חוץ לארץ)';
 
   @override
   String get sacredTimeLocationUpdated => 'המיקום עודכן.';
@@ -4597,6 +4599,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String trackSubTrackCount(int count) {
+    return '$count תתי-מסלולים';
+  }
+
+  @override
   String get subTrackHubHelper =>
       'לימוד שמתקיים מחוץ לבית — בית ספר, רב, חברותא.';
 
@@ -5166,6 +5173,53 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chazaraCustomCycle => 'מחזור מותאם אישית';
+
+  @override
+  String get chazaraQuickFillLabel => 'מילוי מהיר';
+
+  @override
+  String get chazaraQuickFillLearnOnly => 'לימוד בלבד';
+
+  @override
+  String get chazaraQuickFillOneDay => '1';
+
+  @override
+  String get chazaraQuickFillWeek => '1+7';
+
+  @override
+  String get chazaraQuickFillMonth => '1+7+30';
+
+  @override
+  String get chazaraPlanEditorTitle => 'מרווחי חזרה';
+
+  @override
+  String get chazaraPlanEditorHint => 'הזן את מספר הימים בין הלימוד לכל חזרה.';
+
+  @override
+  String chazaraIntervalFieldLabel(int number) {
+    return 'מרווח חזרה $number';
+  }
+
+  @override
+  String get chazaraDaysUnit => 'ימים';
+
+  @override
+  String chazaraRemoveIntervalLabel(int number) {
+    return 'הסר מרווח חזרה $number';
+  }
+
+  @override
+  String get chazaraAddInterval => 'הוסף מרווח';
+
+  @override
+  String get chazaraIntervalPositiveError => 'הזן מספר שלם וחיובי של ימים.';
+
+  @override
+  String get chazaraIntervalWholeNumberError => 'הזן מספר שלם של ימים.';
+
+  @override
+  String get chazaraIntervalIncreasingError =>
+      'כל מרווח חייב להיות גדול מהמרווח שלפניו.';
 
   @override
   String chazaraSessionsCount(int count) {
@@ -7372,14 +7426,6 @@ class AppLocalizationsHe extends AppLocalizations {
       'לכלול את המקור הזה בכרטיס ההשלמה אחרי שבת';
 
   @override
-  String ongoingSubTrackLimitLine(int count) {
-    return 'אפשר עד 5 תתי-מסלולים קבועים. $count בשימוש.';
-  }
-
-  @override
-  String get ongoingSubTrackLimitReached => 'כבר יש 5 תתי-מסלולים קבועים.';
-
-  @override
   String get ongoingSubTrackSave => 'שמירת תת-המסלול';
 
   @override
@@ -7757,6 +7803,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String shnayimMikraTodayAliyahDone(int remaining) {
+    return 'העלייה של היום הושלמה. נותרו $remaining עליות השבוע.';
+  }
+
+  @override
   String shnayimMikraUnitProgress(int current, int total) {
     return 'חלק $current מתוך $total';
   }
@@ -7796,4 +7847,35 @@ class AppLocalizationsHe extends AppLocalizations {
   String shnayimMikraProgressVerses(int current, int total) {
     return '$current מתוך $total פסוקים הושלמו';
   }
+
+  @override
+  String get textReaderTranslationLanguage => 'שפת התרגום';
+
+  @override
+  String get textReaderTranslationLanguageDialogTitle => 'שפת התרגום';
+
+  @override
+  String get textReaderSearchLanguages => 'חיפוש שפות';
+
+  @override
+  String get textReaderSefariaEnglish => 'אנגלית של ספריא';
+
+  @override
+  String get textReaderOfflineLabel => 'לא מקוון';
+
+  @override
+  String get textReaderClose => 'סגירה';
+
+  @override
+  String get textReaderLoadingTranslation => 'התרגום בטעינה…';
+
+  @override
+  String get textReaderTranslationUnavailable =>
+      'התרגום אינו זמין במצב לא מקוון או כרגע';
+
+  @override
+  String get textReaderMachineTranslated => 'תרגום מכונה';
+
+  @override
+  String get textReaderRetryTranslation => 'הקשה כדי לנסות שוב';
 }

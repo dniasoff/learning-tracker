@@ -996,14 +996,17 @@ describe('writeWithChangeLog — sub-track create claim, replay and AD-45 (DNI-4
     assert.equal((await subTracks().doc(id).get()).data().name, 'Night seder');
   });
 
-  test('a sixth counting ongoing sub-track → failed-precondition ongoing_limit, nothing written', async () => {
+  test('a sixth and seventh counting ongoing sub-track are accepted', async () => {
     await seedTracks(5);
-    await expectViolation(
-      call(fns.ownerOversizedGovernedWrite, subTrackAction(ulid(1), ulid(500), track()), parentAuth),
-      'failed-precondition', ['ongoing_limit'],
-    );
-    assert.equal((await subTracks().doc(ulid(500)).get()).exists, false);
-    assert.deepEqual(await changeLog(), []);
+    const sixth = await call(fns.ownerOversizedGovernedWrite,
+      subTrackAction(ulid(1), ulid(500), track()), parentAuth);
+    const seventh = await call(fns.ownerOversizedGovernedWrite,
+      subTrackAction(ulid(2), ulid(501), track()), parentAuth);
+    assert.deepEqual(sixth.change_ids, [ulid(1)]);
+    assert.deepEqual(seventh.change_ids, [ulid(2)]);
+    assert.equal((await subTracks().doc(ulid(500)).get()).exists, true);
+    assert.equal((await subTracks().doc(ulid(501)).get()).exists, true);
+    assert.deepEqual((await changeLog()).map((entry) => entry.id), [ulid(1), ulid(2)]);
   });
 
   test('ended and passed-window sub-tracks do not count toward the cap', async () => {

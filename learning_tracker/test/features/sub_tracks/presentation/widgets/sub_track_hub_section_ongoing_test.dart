@@ -1,7 +1,7 @@
 // DNI-496 (Story 2.5) through the Story 2.4 (DNI-495) Manage tracks hub:
 // Add sub-track → Ongoing opens the ongoing form (AC-1), the chooser's
-// five-ongoing limit counted on the learner's civil today (AC-5, UX-DR-82,
-// UX-DR-103), a future-start row reads "Starts {date}" (AC-4, UX-DR-89) and
+// Ongoing remains available at any sibling count, a future-start row reads
+// "Starts {date}" (AC-4, UX-DR-89) and
 // an ongoing row opens its edit form (AC-6).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -88,63 +88,27 @@ void main() {
     await _pump(tester);
     await tester.tap(find.text('Add sub-track'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('You can have up to 5 ongoing sub-tracks. 0 in use.'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('up to 5'), findsNothing);
     await tester.tap(find.text('Ongoing'));
     await tester.pumpAndSettle();
     expect(find.text('Ongoing sub-track'), findsOneWidget);
     expect(find.byKey(const ValueKey('ongoingSubTrackName')), findsOneWidget);
   });
 
-  testWidgets('five counting ongoing sub-tracks disable Ongoing', (
-    tester,
-  ) async {
+  testWidgets('six ongoing sub-tracks leave Ongoing enabled', (tester) async {
     final semantics = tester.ensureSemantics();
     await _pump(
       tester,
-      seed: [
-        for (var i = 1; i <= 4; i++) _ongoing(i, name: 'Rebbe $i'),
-        // A future start counts (AD-45).
-        _ongoing(5, name: 'Later', start: '2026-11-01'),
-      ],
+      seed: [for (var i = 1; i <= 6; i++) _ongoing(i, name: 'Rebbe $i')],
     );
     await tester.tap(find.text('Add sub-track'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('You can have up to 5 ongoing sub-tracks. 5 in use.'),
-      findsOneWidget,
-    );
-    expect(tester.widget<ListTile>(_ongoingOption()).enabled, isFalse);
-    expect(
-      tester.getSemantics(_ongoingOption()),
-      isSemantics(hasEnabledState: true, isEnabled: false),
-    );
-    await tester.tap(find.text('Ongoing'), warnIfMissed: false);
-    await tester.pumpAndSettle();
-    expect(find.text('Ongoing sub-track'), findsNothing);
-    semantics.dispose();
-  });
-
-  testWidgets('ended and expired-window sub-tracks do not count (UX-DR-82)', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      seed: [
-        for (var i = 1; i <= 4; i++) _ongoing(i, name: 'Rebbe $i'),
-        _ongoing(5, name: 'Ended', ended: true),
-        _ongoing(6, name: 'Expired', end: '2026-10-01'),
-      ],
-    );
-    await tester.tap(find.text('Add sub-track'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text('You can have up to 5 ongoing sub-tracks. 4 in use.'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('ongoing sub-tracks'), findsNothing);
     expect(tester.widget<ListTile>(_ongoingOption()).enabled, isTrue);
+    await tester.tap(find.text('Ongoing'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ongoing sub-track'), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets('AC-4: a future-start ongoing row reads "Starts {date}"', (

@@ -70,9 +70,13 @@ final class ShnayimMikraWeeklySlot extends ConsumerWidget {
                 refs.where(learned.contains).length,
                 refs.length,
               );
-        final dueDate = MaterialLocalizations.of(
-          context,
-        ).formatMediumDate(current.dueDate);
+        final materialL10n = MaterialLocalizations.of(context);
+        final dueDate = materialL10n.formatMediumDate(
+          DateTime(current.dueAt.year, current.dueAt.month, current.dueAt.day),
+        );
+        final dueTime = materialL10n.formatTimeOfDay(
+          TimeOfDay(hour: current.dueAt.hour, minute: current.dueAt.minute),
+        );
         return Card(
           color: context.colors.brandCreamCard,
           child: Column(
@@ -87,7 +91,7 @@ final class ShnayimMikraWeeklySlot extends ConsumerWidget {
                 title: Text('${l10n.shnayimMikraReaderTitle} · $title'),
                 subtitle: Text(
                   [
-                    l10n.shnayimMikraDueBeforeShabbos(dueDate),
+                    l10n.shnayimMikraDueBeforeShabbos('$dueDate $dueTime'),
                     if (progress != null) progress,
                   ].join(' · '),
                   style: theme.textTheme.bodySmall,
@@ -143,7 +147,10 @@ final class ShnayimMikraWeeklySlot extends ConsumerWidget {
     var source = current.shnayimMikraSource;
     var schedule =
         current.shnayimMikraParshaSchedule ??
-        shnayimMikraScheduleFromLegacyYomTovFlag(current.inIsrael);
+        shnayimMikraScheduleFromLegacyYomTovFlag(
+          yomTovDays: current.yomTovDays,
+          legacyInIsrael: current.inIsrael,
+        );
     final edit = await showDialog<ShnayimMikraSettingsEdit>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(

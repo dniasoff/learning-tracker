@@ -42,11 +42,14 @@ class SegmentWithGlosses extends StatelessWidget {
           if (gloss.text.isNotEmpty)
             Padding(
               padding: const EdgeInsetsDirectional.only(top: 2),
-              child: _SegmentTextLine(
-                text: gloss.text,
-                direction: gloss.direction,
-                style: gloss.style,
-                marker: gloss.marker,
+              child: GestureDetector(
+                onTap: gloss.onTap,
+                child: _SegmentTextLine(
+                  text: gloss.text,
+                  direction: gloss.direction,
+                  style: gloss.style,
+                  marker: gloss.marker,
+                ),
               ),
             ),
       ],
@@ -61,12 +64,14 @@ class SegmentGloss {
     required this.direction,
     required this.style,
     this.marker,
+    this.onTap,
   });
 
   final String text;
   final TextDirection direction;
   final TextStyle style;
   final String? marker;
+  final VoidCallback? onTap;
 }
 
 class _SegmentTextLine extends StatelessWidget {

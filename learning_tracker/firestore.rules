@@ -79,6 +79,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Phrase translations are generated and written only by the callable.
+    // Any signed-in reader may reuse the shared cached translation.
+    match /phrase_translations/{translationId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if false;
+    }
+
+    match /phrase_translation_rate_limits/{limitId} {
+      allow read, write: if false;
+    }
+
     // ── Shared helpers ─────────────────────────────────────────────────────
 
     function isSignedIn() {
@@ -245,7 +256,9 @@ service cloud.firestore {
           && d.keys().hasAll(['curriculum_id', 'ref', 'source', 'date_state', 'learned_on'])
           && isBoundedString(d.curriculum_id, 100)
           && isBoundedString(d.ref, 500)
-          && (d.source == 'main' || isUlid(d.source))
+          && (d.source == 'main' || isUlid(d.source)
+                || (d.curriculum_id == 'shnayim_mikra'
+                    && d.source in ['shnayim_mikra_pass_1', 'shnayim_mikra_pass_2', 'shnayim_mikra_pass_3']))
           && d.date_state in ['dated', 'catch_up', 'before_tracking']
           && (isDateString(d.learned_on)
                 || (d.learned_on == null && d.date_state == 'before_tracking'))
@@ -406,6 +419,7 @@ service cloud.firestore {
                 : request.resource.data.diff(resource.data).affectedKeys())
           .hasAny([
             'latitude', 'longitude', 'time_zone', 'in_israel', 'tzeis_minhag',
+            'yom_tov_days',
             'candle_lighting_minutes', 'location_source', 'location_fixed_at',
             'shnayim_mikra_mode', 'shnayim_mikra_pace',
             'shnayim_mikra_source', 'shnayim_mikra_parsha_schedule',
@@ -418,6 +432,7 @@ service cloud.firestore {
           && (isAbsentOrNull(d, 'latitude') || (d.latitude is number && d.latitude >= -90 && d.latitude <= 90))
           && (isAbsentOrNull(d, 'longitude') || (d.longitude is number && d.longitude >= -180 && d.longitude <= 180))
           && (isAbsentOrNull(d, 'in_israel') || d.in_israel is bool)
+          && (isAbsentOrNull(d, 'yom_tov_days') || (d.yom_tov_days is int && d.yom_tov_days in [1, 2]))
           && (isAbsentOrNull(d, 'tzeis_minhag') || d.tzeis_minhag in ['degrees_8_5', 'minutes_72', 'rabbeinu_tam'])
           && (isAbsentOrNull(d, 'candle_lighting_minutes') || d.candle_lighting_minutes in [18, 20, 22, 30, 40])
           && (isAbsentOrNull(d, 'location_source') || d.location_source in ['detected', 'manual_city', 'manual_coords'])

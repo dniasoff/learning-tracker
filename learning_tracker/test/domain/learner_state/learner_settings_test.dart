@@ -24,7 +24,51 @@ void main() {
       'time_zone': 'Etc/GMT+5',
       'in_israel': false,
     });
+    expect(settings.keepsTwoDaysYomTov, isTrue);
   });
+
+  test('legacy in_israel remains the one/two-day minhag source', () {
+    final oneDay = LearnerSettings.fromProfileDoc(profileUlid, {
+      'time_zone': 'Europe/London',
+      'in_israel': true,
+    });
+    final twoDays = LearnerSettings.fromProfileDoc(profileUlid, {
+      'time_zone': 'Asia/Jerusalem',
+      'in_israel': false,
+    });
+    expect(oneDay.keepsTwoDaysYomTov, isFalse);
+    expect(twoDays.keepsTwoDaysYomTov, isTrue);
+    expect(oneDay.toStorage()['in_israel'], isTrue);
+    expect(twoDays.toStorage()['in_israel'], isFalse);
+  });
+
+  test(
+    'canonical Yom Tov days wins and mirrors the legacy field on storage',
+    () {
+      final setting = LearnerSettings.fromProfileDoc(profileUlid, {
+        'time_zone': 'Europe/London',
+        'in_israel': false,
+        'yom_tov_days': 1,
+      });
+      expect(setting.keepsTwoDaysYomTov, isFalse);
+      expect(setting.inIsrael, isTrue);
+      expect(setting.toStorage(), {
+        'time_zone': 'Europe/London',
+        'yom_tov_days': 1,
+        'in_israel': true,
+      });
+
+      for (final invalid in [0, 3]) {
+        expect(
+          () => LearnerSettings.fromProfileDoc(profileUlid, {
+            'time_zone': 'UTC',
+            'yom_tov_days': invalid,
+          }),
+          throwsA(isA<StorageFormatException>()),
+        );
+      }
+    },
+  );
 
   test('time_zone is required and IANA-shaped', () {
     expect(

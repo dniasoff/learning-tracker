@@ -245,12 +245,13 @@ const FIELD_SPECS: Readonly<Record<string, Readonly<Record<string, Check>>>> = {
     ended_at: ENDED_AT,
   },
   learner_profiles: {
-    // Location may be unknown; the IANA time_zone and in_israel are required
-    // once written (AD-37 / AD-41) and can never be cleared.
+    // Location may be unknown; time_zone is required once seeded. The legacy
+    // in_israel flag is mirrored with canonical yom_tov_days.
     latitude: nullable((v) => num(v) && Math.abs(v as number) <= 90),
     longitude: nullable((v) => num(v) && Math.abs(v as number) <= 180),
     time_zone: str(64),
     in_israel: bool,
+    yom_tov_days: intIn(1, 2),
   },
 };
 
@@ -269,7 +270,13 @@ const EVENT_LEARN_FIELDS: Readonly<Record<string, Check>> = {
   curriculum_id: CURRICULUM_ID,
   ref: str(500),
   level: either(str(64), int),
-  source: (v) => v === "main" || (typeof v === "string" && ULID_RE.test(v)),
+  source: (v) => v === "main" || (typeof v === "string" && (
+    ULID_RE.test(v) || [
+      "shnayim_mikra_pass_1",
+      "shnayim_mikra_pass_2",
+      "shnayim_mikra_pass_3",
+    ].includes(v)
+  )),
   date_state: oneOf("dated", "catch_up", "before_tracking"),
   // AD-40 / AD-52: a civil date, required on dated and catch_up events (the
   // streak and projection count on it); null/absent only on before_tracking.
@@ -569,6 +576,10 @@ function validateEvents(raw: unknown): LearningEventIntent[] {
         if (fields[req] === undefined) reject("invalid-argument", `learn event requires ${req}`);
       }
       const beforeTracking = fields.date_state === "before_tracking";
+      if (typeof fields.source === "string" && fields.source.startsWith("shnayim_mikra_pass_") &&
+        fields.curriculum_id !== "shnayim_mikra") {
+        reject("invalid-argument", "Shnayim Mikra pass sources require shnayim_mikra");
+      }
       if (!beforeTracking && fields.level !== undefined) {
         reject("invalid-argument", "level is only allowed on before_tracking events");
       }

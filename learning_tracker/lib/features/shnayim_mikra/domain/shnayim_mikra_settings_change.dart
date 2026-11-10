@@ -36,12 +36,16 @@ bool canEditShnayimMikraSettings({
     (profileMode == ProfileMode.adult || parentPinProfileId == profileId);
 
 /// Creates the initial persisted Shnayim Mikra preferences for a new track.
-/// Keep the legacy Yom Tov flag conversion at this seam so the later explicit
-/// minhag setting can replace it without changing schedule consumers.
+/// Prefer the explicit Yom Tov days minhag; use the old `in_israel` value only
+/// for profiles whose explicit minhag has not been initialized yet.
 ShnayimMikraSettingsEdit initialShnayimMikraSettings({
+  required int? yomTovDays,
   required bool? legacyInIsrael,
 }) => ShnayimMikraSettingsEdit(
-  parshaSchedule: shnayimMikraScheduleFromLegacyYomTovFlag(legacyInIsrael),
+  parshaSchedule: shnayimMikraScheduleFromLegacyYomTovFlag(
+    yomTovDays: yomTovDays,
+    legacyInIsrael: legacyInIsrael,
+  ),
 );
 
 /// Creates the single governed learner-settings write for Shnayim Mikra.

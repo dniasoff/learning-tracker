@@ -77,7 +77,7 @@ void main() {
       for (final l in SubTrackLimit.values) {
         expect(SubTrackLimit.byCode[l.code], l);
       }
-      expect(kMaxOngoingSubTracks, 5);
+      expect(SubTrackLimit.byCode['ongoing_limit'], SubTrackLimit.ongoingLimit);
     });
 
     test('violations compare by limit and subject', () {
@@ -237,11 +237,12 @@ void main() {
     });
   });
 
-  group('subTrackLimitViolations: ongoing limit', () {
+  group('subTrackLimitViolations: ongoing sub-tracks are unbounded', () {
     final five = [for (var i = 1; i <= 5; i++) _track(i)];
 
-    test('the sixth counting ongoing sub-track is rejected', () {
-      expect(_limits(_track(6), siblings: five), ['ongoing_limit']);
+    test('a sixth and later counting ongoing sub-track are accepted', () {
+      expect(_limits(_track(6), siblings: five), isEmpty);
+      expect(_limits(_track(7), siblings: [...five, _track(6)]), isEmpty);
     });
 
     test('the fifth is accepted', () {
@@ -261,7 +262,7 @@ void main() {
       expect(_limits(_track(6), siblings: siblings), isEmpty);
     });
 
-    test('school-year tracks do not count toward the ongoing limit', () {
+    test('school-year tracks do not affect ongoing validation', () {
       final siblings = [
         for (var i = 1; i <= 5; i++)
           _school(
@@ -279,7 +280,7 @@ void main() {
     });
 
     test(
-      'an already-over-limit row can still be edited (only new violations reject)',
+      'ongoing edits and creates are accepted regardless of sibling count',
       () {
         final six = [for (var i = 1; i <= 6; i++) _track(i)];
         final edited = _track(6, ratePerWeek: 3);
@@ -287,10 +288,7 @@ void main() {
           _limits(edited, prior: six.last, siblings: six.take(5).toList()),
           isEmpty,
         );
-        // The same row as a create is rejected.
-        expect(_limits(edited, siblings: six.take(5).toList()), [
-          'ongoing_limit',
-        ]);
+        expect(_limits(edited, siblings: six.take(5).toList()), isEmpty);
       },
     );
 

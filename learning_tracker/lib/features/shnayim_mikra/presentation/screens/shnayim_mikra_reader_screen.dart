@@ -6,6 +6,8 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_reading_plan.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/segment_with_glosses.dart';
@@ -31,9 +33,7 @@ final class ShnayimMikraReaderScreen extends ConsumerStatefulWidget {
 class _ShnayimMikraReaderScreenState
     extends ConsumerState<ShnayimMikraReaderScreen> {
   int _taskIndex = 0;
-  int _passIndex = 0;
   bool _saving = false;
-  Set<String>? _completedAtOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -51,12 +51,12 @@ class _ShnayimMikraReaderScreenState
     if (learnerState == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    _completedAtOpen ??= Set.unmodifiable(
-      learnerState
-              .curricula[CurriculumId.shnayimMikra.storageKey]
-              ?.learntLeaves ??
-          const <String>{},
-    );
+    final completed =
+        learnerState
+            .curricula[CurriculumId.shnayimMikra.storageKey]
+            ?.learntLeaves ??
+        const <String>{};
+    final eventsAsync = ref.watch(shnayimMikraReaderEventsProvider(scope));
     final source = settings.shnayimMikraSource;
     final learnerWallTime = LearnerZone.of(
       settings.timeZone,
@@ -86,26 +86,70 @@ class _ShnayimMikraReaderScreenState
             settings.shnayimMikraMode,
             settings.shnayimMikraPace,
             learnerWallTime.weekday,
-            _completedAtOpen!,
+            completed,
           );
           if (tasks.isEmpty) {
+            final allVerses = aliyot.expand((aliyah) => aliyah.verses);
+            final allDone = allVerses.every(
+              (verse) => completed.contains(verse.text.sefariaRef),
+            );
+            final remainingAliyot = remainingShnayimMikraAliyot(
+              [for (final aliyah in aliyot) aliyah.verses],
+              completed,
+              (verse) => verse.text.sefariaRef,
+            );
             return Center(
-              child: Text(
-                settings.shnayimMikraPace == ShnayimMikraPace.dailyAliyah &&
-                        learnerWallTime.weekday == DateTime.saturday
-                    ? l10n.shnayimMikraNoDailyAliyahToday
-                    : l10n.shnayimMikraReaderNoUnits,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    settings.shnayimMikraPace == ShnayimMikraPace.dailyAliyah &&
+                            learnerWallTime.weekday == DateTime.saturday
+                        ? l10n.shnayimMikraNoDailyAliyahToday
+                        : settings.shnayimMikraPace ==
+                                  ShnayimMikraPace.dailyAliyah &&
+                              !allDone
+                        ? l10n.shnayimMikraTodayAliyahDone(remainingAliyot)
+                        : allDone
+                        ? l10n.shnayimMikraReaderWeekComplete(portionName)
+                        : l10n.shnayimMikraReaderNoUnits,
+                  ),
+                  if (allDone) ...[
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        MaterialLocalizations.of(context).backButtonTooltip,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             );
           }
-          if (_taskIndex >= tasks.length) {
+          final taskIndex = _taskIndex.clamp(0, tasks.length);
+          if (taskIndex >= tasks.length) {
+            final isDaily =
+                settings.shnayimMikraPace == ShnayimMikraPace.dailyAliyah;
+            final allDone = aliyot
+                .expand((aliyah) => aliyah.verses)
+                .every((verse) => completed.contains(verse.text.sefariaRef));
+            final remainingAliyot = remainingShnayimMikraAliyot(
+              [for (final aliyah in aliyot) aliyah.verses],
+              completed,
+              (verse) => verse.text.sefariaRef,
+            );
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.check_circle_outline, size: 48),
                   const SizedBox(height: 12),
-                  Text(l10n.shnayimMikraReaderWeekComplete(portionName)),
+                  Text(
+                    isDaily && !allDone
+                        ? l10n.shnayimMikraTodayAliyahDone(remainingAliyot)
+                        : l10n.shnayimMikraReaderWeekComplete(portionName),
+                  ),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -117,8 +161,15 @@ class _ShnayimMikraReaderScreenState
               ),
             );
           }
-          final task = tasks[_taskIndex];
-          final passLabel = switch (_passIndex) {
+          final task = tasks[taskIndex];
+          final persistedPass = eventsAsync.asData?.value == null
+              ? 0
+              : completedShnayimMikraPassCount(
+                  refs: [for (final verse in task.items) verse.text.sefariaRef],
+                  events: eventsAsync.asData!.value,
+                );
+          final passIndex = eventsAsync.hasValue ? persistedPass : 0;
+          final passLabel = switch (passIndex) {
             0 => l10n.shnayimMikraFirstReading,
             1 => l10n.shnayimMikraSecondReading,
             _ =>
@@ -147,7 +198,7 @@ class _ShnayimMikraReaderScreenState
                     ),
                     const SizedBox(height: 4),
                     LinearProgressIndicator(
-                      value: (_taskIndex + (_passIndex / 3)) / tasks.length,
+                      value: (_taskIndex + (passIndex / 3)) / tasks.length,
                       color: context.colors.curriculumFor(
                         CurriculumId.shnayimMikra,
                       ),
@@ -162,7 +213,7 @@ class _ShnayimMikraReaderScreenState
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final verse = task.items[index];
-                    final glosses = _passIndex < 2
+                    final glosses = passIndex < 2
                         ? const <SegmentGloss>[]
                         : verse.parallel.isEmpty
                         ? [
@@ -207,7 +258,7 @@ class _ShnayimMikraReaderScreenState
                     child: FilledButton(
                       onPressed: _saving
                           ? null
-                          : () => _completePass(task, l10n),
+                          : () => _completePass(task, passIndex, l10n),
                       child: _saving
                           ? const CircularProgressIndicator()
                           : Text(l10n.shnayimMikraMarkReadingComplete),
@@ -262,16 +313,31 @@ class _ShnayimMikraReaderScreenState
 
   Future<void> _completePass(
     ShnayimMikraReadingUnit<ShnayimMikraVerseReading> task,
+    int passIndex,
     AppLocalizations l10n,
   ) async {
-    if (_passIndex < 2) {
-      setState(() => _passIndex++);
-      return;
-    }
     setState(() => _saving = true);
     try {
       final commands = await ref.read(learningCommandsProvider.future);
       if (commands == null) throw StateError('Learning commands unavailable');
+      if (passIndex < 3) {
+        final source = LearningEvent.shnayimMikraPassSources[passIndex];
+        final markerResult = await commands.capture(
+          curriculumId: CurriculumId.shnayimMikra.storageKey,
+          refs: [for (final verse in task.items) verse.text.sefariaRef],
+          source: source,
+          dateState: DateState.dated,
+          skipRecorded: true,
+        );
+        if (markerResult is! CaptureSuccess) {
+          throw StateError(l10n.shnayimMikraReaderSaveFailed);
+        }
+        if (passIndex < 2) {
+          if (!mounted) return;
+          setState(() => _saving = false);
+          return;
+        }
+      }
       final result = await commands.capture(
         curriculumId: CurriculumId.shnayimMikra.storageKey,
         refs: [for (final verse in task.items) verse.text.sefariaRef],
@@ -284,8 +350,7 @@ class _ShnayimMikraReaderScreenState
       }
       if (!mounted) return;
       setState(() {
-        _taskIndex++;
-        _passIndex = 0;
+        _taskIndex = 0;
         _saving = false;
       });
     } on Object {
@@ -302,3 +367,18 @@ class _ShnayimMikraReaderScreenState
       .map((word) => '${word[0]}${word.substring(1).toLowerCase()}')
       .join('–');
 }
+
+final shnayimMikraReaderEventsProvider = StreamProvider.autoDispose
+    .family<List<LearningEvent>, LearnerScope>((ref, scope) async* {
+      final repository = await ref.watch(
+        learningEventRepositoryProvider.future,
+      );
+      if (repository == null) return;
+      await for (final read in repository.watchAll(scope)) {
+        if (read is CompleteReadReady<LearningEvent>) {
+          if (!read.isClean)
+            throw StateError('Learning event log is unreadable');
+          yield read.items;
+        }
+      }
+    }, retry: (retryCount, error) => null);
