@@ -1,5 +1,7 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
@@ -23,6 +25,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../helpers/pump_app.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
+
+class _MockStackRouter extends Mock implements StackRouter {}
+
+class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 class _FixedActiveProfileDocId extends ActiveProfileDocId {
   _FixedActiveProfileDocId(this._id);
@@ -63,6 +69,7 @@ void main() {
       buildNumber: '1',
       buildSignature: '',
     );
+    registerFallbackValue(_FakePageRouteInfo());
   });
 
   late MockAuthRepository mockAuth;
@@ -83,6 +90,7 @@ void main() {
   Widget createTestWidget({
     List<CurriculumId> initialActive = const [],
     bool tutoredSession = false,
+    StackRouter? router,
   }) {
     // SettingsScreen no longer reads the deleted Drift activation service;
     // retain this parameter because the test cases intentionally document
@@ -96,6 +104,13 @@ void main() {
       createdAt: DateTime(2024),
       updatedAt: DateTime(2024),
     );
+    final screen = router == null
+        ? const SettingsScreen()
+        : StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: const SettingsScreen(),
+          );
     return pumpApp(
       overrides: [
         authRepositoryProvider.overrideWithValue(mockAuth),
@@ -126,7 +141,7 @@ void main() {
           tutoredSession ? const TutorPermissions() : null,
         ),
       ],
-      child: const SettingsScreen(),
+      child: screen,
     );
   }
 
@@ -137,6 +152,33 @@ void main() {
   }
 
   group('SettingsScreen Widget Tests', () {
+    testWidgets('About tile opens the About auto_route screen', (tester) async {
+      final router = _MockStackRouter();
+      when(
+        () => router.push<Object?>(
+          any<PageRouteInfo>(),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(createTestWidget(router: router));
+      await pumpUntilSettled(tester);
+      await tester.scrollUntilVisible(
+        find.text('About'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('About'));
+      await tester.pump();
+
+      verify(
+        () => router.push<Object?>(
+          any(that: isA<AboutRoute>()),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).called(1);
+    });
+
     // WS4.settings (D2): Settings are grouped by scope (Device / Profile).
     // The old TRACKS/LEARNING feature-grouped headers are replaced.
     testWidgets(

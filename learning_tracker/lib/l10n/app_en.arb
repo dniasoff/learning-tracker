@@ -1,6 +1,33 @@
 {
   "@@locale": "en",
   "appTitle": "Torah Learning Tracker",
+  "aboutTitle": "About",
+  "aboutDescription": "Plan and track your Torah learning.",
+  "aboutCreatedBy": "Created by",
+  "aboutContactUs": "Contact us",
+  "aboutEmail": "Email",
+  "aboutPhone": "Phone",
+  "aboutWhatsApp": "WhatsApp",
+  "aboutWebsite": "Website",
+  "aboutVersion": "Version {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutVersionWithBuild": "Version {version} (build {buildNumber})",
+  "@aboutVersionWithBuild": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
   "dashboard": "Dashboard",
   "learn": "Learn",
   "progress": "Progress",

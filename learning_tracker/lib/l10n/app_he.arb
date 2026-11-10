@@ -1,6 +1,33 @@
 {
   "@@locale": "he",
   "appTitle": "מעקב לימוד תורה",
+  "aboutTitle": "מידע על האפליקציה",
+  "aboutDescription": "תכננו ועקבו אחר לימוד התורה שלכם.",
+  "aboutCreatedBy": "נוצר על ידי",
+  "aboutContactUs": "יצירת קשר",
+  "aboutEmail": "דוא״ל",
+  "aboutPhone": "טלפון",
+  "aboutWhatsApp": "וואטסאפ",
+  "aboutWebsite": "אתר",
+  "aboutVersion": "גרסה {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutVersionWithBuild": "גרסה {version} (בנייה {buildNumber})",
+  "@aboutVersionWithBuild": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
   "dashboard": "לוח בקרה",
   "learn": "לימוד",
   "progress": "התקדמות",

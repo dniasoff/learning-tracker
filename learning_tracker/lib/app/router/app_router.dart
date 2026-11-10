@@ -42,6 +42,7 @@ import 'package:learning_tracker/features/progress/presentation/screens/recent_a
 import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/about_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
@@ -175,6 +176,8 @@ class AppRouter extends RootStackRouter {
           guards: [profileSelectionGuard],
         ),
         AutoRoute(path: 'settings', page: SettingsRoute.page),
+        // Public app information is available to every profile mode.
+        AutoRoute(path: 'about', page: AboutRoute.page),
       ],
     ),
 
