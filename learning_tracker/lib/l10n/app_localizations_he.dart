@@ -7702,4 +7702,67 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get shnayimMikraScheduleChutzLaaretz => 'חוץ לארץ';
+
+  @override
+  String get shnayimMikraAliyah => 'עלייה';
+
+  @override
+  String get shnayimMikraReaderTitle => 'שניים מקרא';
+
+  @override
+  String get shnayimMikraReaderLoadFailed =>
+      'לא ניתן לטעון את טקסט התורה הלא מקוון.';
+
+  @override
+  String get shnayimMikraReaderNoUnits => 'לא נמצאו חלקי קריאה לפרשה זו.';
+
+  @override
+  String get shnayimMikraNoDailyAliyahToday =>
+      'קצב עלייה יומית מתקיים מיום ראשון עד יום שישי.';
+
+  @override
+  String shnayimMikraReaderWeekComplete(String portion) {
+    return 'הקריאות של $portion הושלמו.';
+  }
+
+  @override
+  String shnayimMikraUnitProgress(int current, int total) {
+    return 'חלק $current מתוך $total';
+  }
+
+  @override
+  String get shnayimMikraFirstReading => 'קריאה ראשונה';
+
+  @override
+  String get shnayimMikraSecondReading => 'קריאה שנייה';
+
+  @override
+  String get shnayimMikraOnkelosReading => 'אונקלוס';
+
+  @override
+  String get shnayimMikraRashiReading => 'רש״י';
+
+  @override
+  String get shnayimMikraNoRashi => 'אין פירוש רש״י על פסוק זה';
+
+  @override
+  String get shnayimMikraMarkReadingComplete => 'סימון הקריאה כהושלמה';
+
+  @override
+  String get shnayimMikraReaderSaveFailed => 'שמירת ההתקדמות נכשלה. נסו שוב.';
+
+  @override
+  String shnayimMikraDueBeforeShabbos(String date) {
+    return 'להשלמה לפני שבת · $date';
+  }
+
+  @override
+  String shnayimMikraCatchUp(String portion) {
+    return 'באיחור · $portion';
+  }
+
+  @override
+  String shnayimMikraProgressVerses(int current, int total) {
+    return '$current מתוך $total פסוקים הושלמו';
+  }
 }

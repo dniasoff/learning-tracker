@@ -16,6 +16,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderBase;
 import 'package:learning_tracker/core/content/content_index_corpus.dart';
+import 'package:learning_tracker/core/content/shnayim_mikra_corpus.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -41,15 +42,22 @@ final learnerStateEngineProvider = Provider<LearnerStateEngine>(
 final corporaProvider = FutureProvider<Map<String, Corpus>>((ref) async {
   final out = <String, Corpus>{};
   for (final curriculum in CurriculumId.all) {
-    final items = await ref.watch(curriculumContentProvider(curriculum).future);
+    final contentCurriculum = curriculum == CurriculumId.shnayimMikra
+        ? CurriculumId.chumash
+        : curriculum;
+    final sourceItems = await ref.watch(
+      curriculumContentProvider(contentCurriculum).future,
+    );
     final config = await ref.watch(
-      curriculumHierarchyConfigProvider(curriculum).future,
+      curriculumHierarchyConfigProvider(contentCurriculum).future,
     );
-    out[curriculum.storageKey] = contentIndexCorpus(
-      curriculumId: curriculum.storageKey,
-      items: items,
-      levelLabels: config.levelLabels,
-    );
+    out[curriculum.storageKey] = curriculum == CurriculumId.shnayimMikra
+        ? shnayimMikraCorpusFromChumash(sourceItems)
+        : contentIndexCorpus(
+            curriculumId: curriculum.storageKey,
+            items: sourceItems,
+            levelLabels: config.levelLabels,
+          );
   }
   return Map.unmodifiable(out);
 }, retry: (retryCount, error) => null);
@@ -65,13 +73,20 @@ final corporaForScopeProvider = FutureProvider.autoDispose
       );
       final out = <String, Corpus>{};
       for (final curriculum in CurriculumId.all) {
-        final items = await repository.getContentForCurriculum(curriculum);
-        final config = await repository.getHierarchyConfig(curriculum);
-        out[curriculum.storageKey] = contentIndexCorpus(
-          curriculumId: curriculum.storageKey,
-          items: items,
-          levelLabels: config.levelLabels,
+        final contentCurriculum = curriculum == CurriculumId.shnayimMikra
+            ? CurriculumId.chumash
+            : curriculum;
+        final sourceItems = await repository.getContentForCurriculum(
+          contentCurriculum,
         );
+        final config = await repository.getHierarchyConfig(contentCurriculum);
+        out[curriculum.storageKey] = curriculum == CurriculumId.shnayimMikra
+            ? shnayimMikraCorpusFromChumash(sourceItems)
+            : contentIndexCorpus(
+                curriculumId: curriculum.storageKey,
+                items: sourceItems,
+                levelLabels: config.levelLabels,
+              );
       }
       return Map.unmodifiable(out);
     });

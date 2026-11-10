@@ -7786,4 +7786,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shnayimMikraScheduleChutzLaaretz => 'Chutz la\'aretz';
+
+  @override
+  String get shnayimMikraAliyah => 'Aliyah';
+
+  @override
+  String get shnayimMikraReaderTitle => 'Shnayim Mikra';
+
+  @override
+  String get shnayimMikraReaderLoadFailed =>
+      'The offline Torah text could not be loaded.';
+
+  @override
+  String get shnayimMikraReaderNoUnits =>
+      'No reading sections are available for this parsha.';
+
+  @override
+  String get shnayimMikraNoDailyAliyahToday =>
+      'Daily aliyah pacing runs Sunday through Friday.';
+
+  @override
+  String shnayimMikraReaderWeekComplete(String portion) {
+    return 'All readings for $portion are complete.';
+  }
+
+  @override
+  String shnayimMikraUnitProgress(int current, int total) {
+    return 'Section $current of $total';
+  }
+
+  @override
+  String get shnayimMikraFirstReading => 'First reading';
+
+  @override
+  String get shnayimMikraSecondReading => 'Second reading';
+
+  @override
+  String get shnayimMikraOnkelosReading => 'Onkelos';
+
+  @override
+  String get shnayimMikraRashiReading => 'Rashi';
+
+  @override
+  String get shnayimMikraNoRashi => 'No Rashi comment on this pasuk';
+
+  @override
+  String get shnayimMikraMarkReadingComplete => 'Mark this reading complete';
+
+  @override
+  String get shnayimMikraReaderSaveFailed =>
+      'Could not save progress. Try again.';
+
+  @override
+  String shnayimMikraDueBeforeShabbos(String date) {
+    return 'Due before Shabbos · $date';
+  }
+
+  @override
+  String shnayimMikraCatchUp(String portion) {
+    return 'Overdue · $portion';
+  }
+
+  @override
+  String shnayimMikraProgressVerses(int current, int total) {
+    return '$current of $total pesukim complete';
+  }
 }

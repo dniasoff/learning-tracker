@@ -6485,5 +6485,48 @@
   },
   "shnayimMikraParshaSchedule": "Parsha schedule",
   "shnayimMikraScheduleEretzYisrael": "Eretz Yisrael",
-  "shnayimMikraScheduleChutzLaaretz": "Chutz la'aretz"
+  "shnayimMikraScheduleChutzLaaretz": "Chutz la'aretz",
+  "shnayimMikraAliyah": "Aliyah",
+  "shnayimMikraReaderTitle": "Shnayim Mikra",
+  "shnayimMikraReaderLoadFailed": "The offline Torah text could not be loaded.",
+  "shnayimMikraReaderNoUnits": "No reading sections are available for this parsha.",
+  "shnayimMikraNoDailyAliyahToday": "Daily aliyah pacing runs Sunday through Friday.",
+  "shnayimMikraReaderWeekComplete": "All readings for {portion} are complete.",
+  "@shnayimMikraReaderWeekComplete": {
+    "description": "Completion message after all assigned Shnayim Mikra reading units are marked complete.",
+    "placeholders": { "portion": { "type": "String" } }
+  },
+  "shnayimMikraUnitProgress": "Section {current} of {total}",
+  "@shnayimMikraUnitProgress": {
+    "description": "Progress through the current parsha, aliyah, or pasuk task list.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "shnayimMikraFirstReading": "First reading",
+  "shnayimMikraSecondReading": "Second reading",
+  "shnayimMikraOnkelosReading": "Onkelos",
+  "shnayimMikraRashiReading": "Rashi",
+  "shnayimMikraNoRashi": "No Rashi comment on this pasuk",
+  "shnayimMikraMarkReadingComplete": "Mark this reading complete",
+  "shnayimMikraReaderSaveFailed": "Could not save progress. Try again.",
+  "shnayimMikraDueBeforeShabbos": "Due before Shabbos · {date}",
+  "@shnayimMikraDueBeforeShabbos": {
+    "description": "Due date line for the current weekly Shnayim Mikra assignment.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "shnayimMikraCatchUp": "Overdue · {portion}",
+  "@shnayimMikraCatchUp": {
+    "description": "Label for an unfinished prior weekly parsha available for catch-up.",
+    "placeholders": { "portion": { "type": "String" } }
+  },
+  "shnayimMikraProgressVerses": "{current} of {total} pesukim complete",
+  "@shnayimMikraProgressVerses": {
+    "description": "Number of verses completed in the current weekly Shnayim Mikra assignment.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }
