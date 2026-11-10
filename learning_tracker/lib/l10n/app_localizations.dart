@@ -8821,12 +8821,6 @@ abstract class AppLocalizations {
   /// **'Enter a whole number of days.'**
   String get chazaraIntervalWholeNumberError;
 
-  /// No description provided for @chazaraIntervalMaximumError.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter no more than {maximum} days.'**
-  String chazaraIntervalMaximumError(int maximum);
-
   /// No description provided for @chazaraIntervalIncreasingError.
   ///
   /// In en, this message translates to:

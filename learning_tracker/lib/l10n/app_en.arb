@@ -4228,8 +4228,6 @@
   "chazaraAddInterval": "Add interval",
   "chazaraIntervalPositiveError": "Enter a positive whole number of days.",
   "chazaraIntervalWholeNumberError": "Enter a whole number of days.",
-  "chazaraIntervalMaximumError": "Enter no more than {maximum} days.",
-  "@chazaraIntervalMaximumError": { "placeholders": { "maximum": { "type": "int" } } },
   "chazaraIntervalIncreasingError": "Each interval must be greater than the one before it.",
   "chazaraSessionsCount": "{count} Sessions",
   "@chazaraSessionsCount": {

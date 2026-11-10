@@ -5279,11 +5279,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chazaraIntervalWholeNumberError => 'Enter a whole number of days.';
 
   @override
-  String chazaraIntervalMaximumError(int maximum) {
-    return 'Enter no more than $maximum days.';
-  }
-
-  @override
   String get chazaraIntervalIncreasingError =>
       'Each interval must be greater than the one before it.';
 

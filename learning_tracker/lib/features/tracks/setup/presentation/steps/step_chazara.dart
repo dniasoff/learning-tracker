@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -38,8 +39,6 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
     [1, 7],
     [1, 7, 30],
   ];
-  static const _maxDelayDays = 3650;
-
   late List<TextEditingController> _controllers;
   bool _showValidation = false;
 
@@ -53,7 +52,7 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
       final value = values[i];
       if (!RegExp(r'^\d+$').hasMatch(value)) return null;
       final parsed = int.tryParse(value);
-      if (parsed == null || parsed < 1 || parsed > _maxDelayDays) return null;
+      if (parsed == null || parsed < 1) return null;
       if (delays.isNotEmpty && parsed <= delays.last) return null;
       delays.add(parsed);
     }
@@ -103,8 +102,6 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
     }
     final parsed = int.tryParse(value);
     if (parsed == null || parsed < 1) return l10n.chazaraIntervalPositiveError;
-    if (parsed > _maxDelayDays)
-      return l10n.chazaraIntervalMaximumError(_maxDelayDays);
     if (index > 0) {
       final previous = int.tryParse(_controllers[index - 1].text);
       if (previous != null && parsed <= previous) {
@@ -231,6 +228,9 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                           child: TextField(
                             controller: _controllers[i],
                             keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(5),
+                            ],
                             textInputAction: i == _controllers.length - 1
                                 ? TextInputAction.done
                                 : TextInputAction.next,

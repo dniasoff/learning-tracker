@@ -1038,13 +1038,40 @@ void main() {
           find.text('Each interval must be greater than the one before it.'),
           findsOneWidget,
         );
-        await tester.enterText(find.byType(TextField).at(1), '3651');
-        await tester.tap(find.byType(FilledButton));
-        await tester.pump();
-        expect(find.text('Enter no more than 3650 days.'), findsOneWidget);
         await _tearDown(tester);
       },
     );
+
+    testWidgets('stored intervals above the input limit round-trip unchanged', (
+      tester,
+    ) async {
+      LearningProcessWizardResult? result;
+      const delays = [10000, 1000000];
+      await tester.pumpWidget(
+        _buildChazaraApp(
+          curriculumId: CurriculumId.mishnayos,
+          initialDelays: delays,
+          onComplete: (r) => result = r,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(
+        tester.widget<TextField>(find.byType(TextField).at(0)).controller!.text,
+        '10000',
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text,
+        '1000000',
+      );
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      expect(
+        result!.wizardResult.customRounds!.map((round) => round.delayDays),
+        delays,
+      );
+      await _tearDown(tester);
+    });
 
     testWidgets('Learn only quick-fill emits no review', (tester) async {
       LearningProcessWizardResult? result;

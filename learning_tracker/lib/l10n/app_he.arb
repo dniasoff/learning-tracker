@@ -2877,8 +2877,6 @@
   "chazaraAddInterval": "הוסף מרווח",
   "chazaraIntervalPositiveError": "הזן מספר שלם וחיובי של ימים.",
   "chazaraIntervalWholeNumberError": "הזן מספר שלם של ימים.",
-  "chazaraIntervalMaximumError": "הזן עד {maximum} ימים.",
-  "@chazaraIntervalMaximumError": { "placeholders": { "maximum": { "type": "int" } } },
   "chazaraIntervalIncreasingError": "כל מרווח חייב להיות גדול מהמרווח שלפניו.",
   "chazaraSessionsCount": "{count} סבבים",
   "@chazaraSessionsCount": {

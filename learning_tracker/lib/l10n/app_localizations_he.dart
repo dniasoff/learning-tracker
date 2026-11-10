@@ -5216,11 +5216,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get chazaraIntervalWholeNumberError => 'הזן מספר שלם של ימים.';
 
   @override
-  String chazaraIntervalMaximumError(int maximum) {
-    return 'הזן עד $maximum ימים.';
-  }
-
-  @override
   String get chazaraIntervalIncreasingError =>
       'כל מרווח חייב להיות גדול מהמרווח שלפניו.';
 
