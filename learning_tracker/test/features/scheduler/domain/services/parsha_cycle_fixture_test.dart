@@ -39,37 +39,38 @@ void main() {
       }
     });
 
-    test('fixture exercises festival Shabbat, divergence, reunion, and doubles', () {
-      final actual = {
-        for (final value in rows)
-          (
-            (value as Map<String, dynamic>)['date'] as String,
-            value['israel'] as bool,
-          ): value['expected'] as String,
-      };
+    test(
+      'fixture exercises festival Shabbat, divergence, reunion, and doubles',
+      () {
+        final actual = {
+          for (final value in rows)
+            (
+              (value as Map<String, dynamic>)['date'] as String,
+              value['israel'] as bool,
+            ): value['expected'] as String,
+        };
 
-      expect(actual[('2027-04-24', true)], 'NONE');
-      expect(actual[('2027-04-24', false)], 'NONE');
-      expect(actual[('2027-06-12', true)], 'NASSO');
-      expect(actual[('2027-06-12', false)], 'NONE');
-      expect(actual[('2027-06-19', true)], 'BEHAALOSCHA');
-      expect(actual[('2027-06-19', false)], 'NASSO');
-      expect(actual[('2027-07-17', true)], 'BALAK');
-      expect(actual[('2027-07-17', false)], 'CHUKAS_BALAK');
-      expect(actual[('2027-07-24', true)], 'PINCHAS');
-      expect(actual[('2027-07-24', false)], 'PINCHAS');
-      expect(actual[('2027-10-02', true)], 'NONE');
-      expect(actual[('2027-10-02', false)], 'NONE');
-      expect(actual[('2028-03-25', true)], 'VAYAKHEL_PEKUDEI');
-      expect(actual[('2028-03-25', false)], 'VAYAKHEL_PEKUDEI');
-    });
+        expect(actual[('2027-04-24', true)], 'NONE');
+        expect(actual[('2027-04-24', false)], 'NONE');
+        expect(actual[('2027-06-12', true)], 'NASSO');
+        expect(actual[('2027-06-12', false)], 'NONE');
+        expect(actual[('2027-06-19', true)], 'BEHAALOSCHA');
+        expect(actual[('2027-06-19', false)], 'NASSO');
+        expect(actual[('2027-07-17', true)], 'BALAK');
+        expect(actual[('2027-07-17', false)], 'CHUKAS_BALAK');
+        expect(actual[('2027-07-24', true)], 'PINCHAS');
+        expect(actual[('2027-07-24', false)], 'PINCHAS');
+        expect(actual[('2027-10-02', true)], 'NONE');
+        expect(actual[('2027-10-02', false)], 'NONE');
+        expect(actual[('2028-03-25', true)], 'VAYAKHEL_PEKUDEI');
+        expect(actual[('2028-03-25', false)], 'VAYAKHEL_PEKUDEI');
+      },
+    );
   });
 
   test('all fixture aliyot resolve to contiguous Chumash verse ranges', () {
     final manifest =
-        jsonDecode(
-              File('tool/data/curriculum_books.json').readAsStringSync(),
-            )
+        jsonDecode(File('tool/data/curriculum_books.json').readAsStringSync())
             as Map<String, dynamic>;
     final chumash = manifest['chumash'] as Map<String, dynamic>;
     const torahOrder = [
@@ -100,7 +101,7 @@ void main() {
         final endIndex = indexByRef[end];
         expect(startIndex, isNotNull, reason: '${parsha['name']}: $start');
         expect(endIndex, isNotNull, reason: '${parsha['name']}: $end');
-        expect(startIndex, lessThanOrEqualTo(endIndex));
+        expect(startIndex!, lessThanOrEqualTo(endIndex!));
         if (previousEnd != null) {
           expect(
             startIndex,
@@ -135,7 +136,7 @@ void main() {
         final endIndex = indexByRef[end];
         expect(startIndex, isNotNull, reason: '${reading['occasion']}: $start');
         expect(endIndex, isNotNull, reason: '${reading['occasion']}: $end');
-        expect(startIndex, lessThanOrEqualTo(endIndex));
+        expect(startIndex!, lessThanOrEqualTo(endIndex!));
         if (previousEnd != null) {
           expect(
             startIndex,
