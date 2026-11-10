@@ -370,7 +370,7 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 
 lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-guardrails-17
 	@echo "Running packages/custom_lints unit tests..."
-	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
+	@(cd ../packages/custom_lints && dart pub get && dart test --concurrency=1) 1>&2
 
 audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
@@ -478,12 +478,12 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	echo "15/15 — No cross-feature deep imports (must use barrel) (W1.13) [warn-only: pre-existing violations pending Wave-2 fix]"; \
 	if grep -rn "package:learning_tracker/features/" lib/features/ --include="*.dart" \
 	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
-	    | awk -F: '{ content = $$0; sub(/^[^:]*:[^:]*:/, "", content); if (match($$1, /features\/([^\/]+)\//, a) && match(content, /features\/([^\/]+)\//, b)) { if (a[1] != b[1]) { barrel = "features/" b[1] "/" b[1] ".dart"; if (index(content, barrel) == 0) print } } }' \
+	    | awk -F: '{ split($$1, sourcePath, "features/"); split(sourcePath[2], sourceParts, "/"); sourceFeature = sourceParts[1]; content = $$0; sub(/^[^:]*:[^:]*:/, "", content); split(content, importPath, "features/"); split(importPath[2], importParts, "/"); importFeature = importParts[1]; if (sourceFeature != "" && importFeature != "" && sourceFeature != importFeature) { barrel = "features/" importFeature "/" importFeature ".dart"; if (index(content, barrel) == 0) print } }' \
 	    | grep -q .; then \
 	  echo "  WARN: the following files use cross-feature deep imports — fix by switching to barrel:"; \
 	  grep -rn "package:learning_tracker/features/" lib/features/ --include="*.dart" \
 	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" \
-	    | awk -F: '{ content = $$0; sub(/^[^:]*:[^:]*:/, "", content); if (match($$1, /features\/([^\/]+)\//, a) && match(content, /features\/([^\/]+)\//, b)) { if (a[1] != b[1]) { barrel = "features/" b[1] "/" b[1] ".dart"; if (index(content, barrel) == 0) print } } }'; \
+	    | awk -F: '{ split($$1, sourcePath, "features/"); split(sourcePath[2], sourceParts, "/"); sourceFeature = sourceParts[1]; content = $$0; sub(/^[^:]*:[^:]*:/, "", content); split(content, importPath, "features/"); split(importPath[2], importParts, "/"); importFeature = importParts[1]; if (sourceFeature != "" && importFeature != "" && sourceFeature != importFeature) { barrel = "features/" importFeature "/" importFeature ".dart"; if (index(content, barrel) == 0) print } }'; \
 	fi; \
 	echo "16/17 — No raw profile.mode string comparisons (use ProfileMode enum) (W5.10)"; \
 	if grep -rn "\.mode == '" lib/ --include="*.dart" \

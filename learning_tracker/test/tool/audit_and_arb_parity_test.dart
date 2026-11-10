@@ -365,12 +365,17 @@ void main() {
     // and exempts imports that route through the target feature's own
     // barrel (`features/<f>/<f>.dart`).
     const awkProgram =
-        '{ content = \$0; sub(/^[^:]*:[^:]*:/, "", content); '
-        'if (match(\$1, /features\\/([^\\/]+)\\//, a) && '
-        'match(content, /features\\/([^\\/]+)\\//, b)) { '
-        'if (a[1] != b[1]) { '
-        'barrel = "features/" b[1] "/" b[1] ".dart"; '
-        'if (index(content, barrel) == 0) print } } }';
+        '{ split(\$1, sourcePath, "features/"); '
+        'split(sourcePath[2], sourceParts, "/"); '
+        'sourceFeature = sourceParts[1]; content = \$0; '
+        'sub(/^[^:]*:[^:]*:/, "", content); '
+        'split(content, importPath, "features/"); '
+        'split(importPath[2], importParts, "/"); '
+        'importFeature = importParts[1]; '
+        'if (sourceFeature != "" && importFeature != "" && '
+        'sourceFeature != importFeature) { '
+        'barrel = "features/" importFeature "/" importFeature ".dart"; '
+        'if (index(content, barrel) == 0) print } }';
 
     Future<String> runAwk(String inputLine) async {
       final result = await Process.run('bash', [
@@ -529,7 +534,7 @@ void main() {
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit` twice; see the longer rationale on the 25/26 test
       // above.
-    }, timeout: const Timeout(Duration(minutes: 10)));
+    }, timeout: const Timeout(Duration(minutes: 15)));
   });
 
   group('make audit SM-7 check — AUD-sync-05', () {

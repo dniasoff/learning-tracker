@@ -77,10 +77,10 @@
 @Tags(['epic_27', 'security'])
 library;
 
-import 'dart:io';
-
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/firestore_fake.dart';
 
 void main() {
   group(
@@ -155,56 +155,22 @@ service cloud.firestore {
         );
       });
 
-      test('grounded in the real project rules: users/{uid} (the simplest '
-          'rule in firestore.rules — a single isOwner(uid) call, no '
-          'request.resource.data at all) still denies the true owner under '
-          'strictRules', () async {
-        final rules = _loadProjectRules();
-        final auth = Stream<Map<String, dynamic>?>.value({'uid': 'owner_1'});
-        final fake = FakeFirebaseFirestore(
-          securityRules: rules,
-          authObject: auth,
+      test('the strict helper fails closed for the real rules, which use '
+          'custom functions the fake cannot evaluate', () async {
+        final fake = createFakeFirestore(
+          authenticatedUid: 'owner_1',
+          strictRules: true,
         );
 
-        // `users/{uid}` is gated by `allow create, update: if isOwner(uid);`
-        // ONLY — no request.resource.data reference anywhere in that rule.
-        // If the "functions" limitation only covered request.resource /
-        // resource (as a narrow reading of firestore_fake.dart's header
-        // might suggest), the true owner would succeed here. They do not —
-        // confirming the limitation is total for this rules file, not
-        // partial.
+        // Strict fake mode detects the unsupported custom functions and uses
+        // deny-all rules. Real owner writes are verified by the emulator.
         await expectLater(
           () => fake.collection('users').doc('owner_1').set({
             'displayName': 'Alice',
           }),
           throwsA(anything),
-          reason:
-              'users/{uid} is gated ONLY by isOwner(uid) — no '
-              'request.resource.data reference — yet the fake still denies '
-              'the true owner, because isOwner() is a custom function. '
-              'This is why no positive ("owner CAN") assertion appears '
-              'anywhere in this repo built on createFakeFirestore('
-              'strictRules: true) against a real matched collection: it is '
-              'not possible with the currently-pinned dependency version. '
-              'See functions/test/firestore_rules.test.mjs for the real, '
-              'dynamically-verified matrix (24/24 paths, run via '
-              '`make test-rules`, wired into `make ci`).',
         );
       });
     },
-  );
-}
-
-/// Reads the project's real `firestore.rules`, mirroring
-/// `test/helpers/firestore_fake.dart`'s own loader (tests may run from the
-/// repo root or from `learning_tracker/`).
-String _loadProjectRules() {
-  for (final path in const ['../firestore.rules', 'firestore.rules']) {
-    final file = File(path);
-    if (file.existsSync()) return file.readAsStringSync();
-  }
-  throw StateError(
-    'firestore.rules not found. Run tests from learning_tracker/ or the '
-    'repo root.',
   );
 }
