@@ -27,6 +27,15 @@ void main() {
       // Verify at least the first few visible curricula render
       expect(find.text(CurriculumId.mishnayos.displayNameHe), findsWidgets);
       expect(find.text(CurriculumId.bavli.displayNameHe), findsWidgets);
+      await tester.scrollUntilVisible(
+        find.text(CurriculumId.shnayimMikra.displayNameHe),
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(
+        find.text(CurriculumId.shnayimMikra.displayNameHe),
+        findsOneWidget,
+      );
       expect(find.text(CurriculumId.tanach.displayNameHe), findsOneWidget);
       expect(find.text(CurriculumId.chumash.displayNameHe), findsNothing);
       expect(find.text(CurriculumId.nach.displayNameHe), findsNothing);

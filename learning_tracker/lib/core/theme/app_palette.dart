@@ -1595,6 +1595,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     CurriculumId.yerushalmi => curriculumYerushalmi,
     CurriculumId.mishnaBerurah => curriculumMishnaBerurah,
     CurriculumId.chumash => curriculumChumash,
+    CurriculumId.shnayimMikra => curriculumChumash,
     CurriculumId.mishnehTorah => curriculumMussar,
     CurriculumId.tanach => curriculumNach,
     CurriculumId.nach => curriculumNach,

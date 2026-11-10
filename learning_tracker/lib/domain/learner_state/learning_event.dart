@@ -57,11 +57,12 @@ enum DateState {
 
 /// One `learning_events/{ulid}` document.
 ///
-/// Construct with [LearningEvent.learn] or [LearningEvent.voidOf]. The
-/// constructors do not validate; [toStorage] and [LearningEvent.fromStorage]
-/// both run the full AD-52 / AD-31 field-combination check and throw
-/// [StorageFormatException] on any violation, so an invalid event can be
-/// neither written nor read.
+/// Construct with [LearningEvent.learn] or [LearningEvent.voidOf]. The learn
+/// constructor immediately requires Shnayim Mikra cycle metadata and the
+/// pass-three commentary source; [toStorage] and [LearningEvent.fromStorage]
+/// also run the full AD-52 / AD-31 field-combination check and throw
+/// [StorageFormatException] on any violation, so malformed data cannot be
+/// written or read.
 final class LearningEvent {
   /// A `learn` event.
   LearningEvent.learn({
@@ -75,12 +76,16 @@ final class LearningEvent {
     required this.actor,
     this.level,
     this.stage,
+    this.assignmentKey,
+    this.commentarySource,
     DateTime? originalRecordedAt,
     this.targetId,
     this.revertsActionId,
   }) : kind = LearningEventKind.learn,
        _recordedAt = recordedAt.toUtc(),
-       _originalRecordedAt = originalRecordedAt?.toUtc();
+       _originalRecordedAt = originalRecordedAt?.toUtc() {
+    _validateShnayimMikraRequiredFields();
+  }
 
   /// A `void` event cancelling [targetId].
   LearningEvent.voidOf({
@@ -97,6 +102,8 @@ final class LearningEvent {
     this.learnedOn,
     this.level,
     this.stage,
+    this.assignmentKey,
+    this.commentarySource,
   }) : kind = LearningEventKind.void_,
        _recordedAt = recordedAt.toUtc(),
        _originalRecordedAt = originalRecordedAt?.toUtc();
@@ -111,6 +118,8 @@ final class LearningEvent {
     required this.dateState,
     required this.learnedOn,
     required this.stage,
+    required this.assignmentKey,
+    required this.commentarySource,
     required this.targetId,
     required this.revertsActionId,
     required DateTime? originalRecordedAt,
@@ -143,6 +152,8 @@ final class LearningEvent {
           ? r.requiredNullable<String>(kLearnedOn)
           : r.optional<String>(kLearnedOn),
       stage: r.optional<int>(kStage),
+      assignmentKey: r.optional<String>(kAssignmentKey),
+      commentarySource: r.optional<String>(kCommentarySource),
       targetId: r.optional<String>(kTargetId),
       revertsActionId: r.optional<String>(kRevertsActionId),
       originalRecordedAt: r.optionalInstant(kOriginalRecordedAt),
@@ -187,6 +198,12 @@ final class LearningEvent {
   /// Storage key `stage`.
   static const kStage = 'stage';
 
+  /// Stable Shnayim Mikra parsha cycle key (`assignment_key`).
+  static const kAssignmentKey = 'assignment_key';
+
+  /// The commentary used on a third-pass marker (`commentary_source`).
+  static const kCommentarySource = 'commentary_source';
+
   /// Storage key `target_id`.
   static const kTargetId = 'target_id';
 
@@ -205,6 +222,25 @@ final class LearningEvent {
   /// `source` value for the main track (otherwise a sub-track ULID).
   static const sourceMain = 'main';
 
+  /// Shnayim Mikra pass markers. These are durable and voidable event-log
+  /// entries, but the learner-state counter excludes them from learning,
+  /// points and streaks. Only final unit completion uses [sourceMain].
+  static const sourceShnayimMikraPass1 = 'shnayim_mikra_pass_1';
+  static const sourceShnayimMikraPass2 = 'shnayim_mikra_pass_2';
+  static const sourceShnayimMikraPass3 = 'shnayim_mikra_pass_3';
+
+  /// Every Shnayim Mikra pass marker source in reading order.
+  static const shnayimMikraPassSources = [
+    sourceShnayimMikraPass1,
+    sourceShnayimMikraPass2,
+    sourceShnayimMikraPass3,
+  ];
+
+  /// Whether this is a workflow-progress marker instead of a learning event.
+  bool get isShnayimMikraPass =>
+      curriculumId == 'shnayim_mikra' &&
+      shnayimMikraPassSources.contains(source);
+
   /// The full AD-52 `learning_events` key set (the rules' `hasOnly`).
   static const Set<String> storageKeys = {
     kKind,
@@ -215,6 +251,8 @@ final class LearningEvent {
     kDateState,
     kLearnedOn,
     kStage,
+    kAssignmentKey,
+    kCommentarySource,
     kTargetId,
     kRevertsActionId,
     kOriginalRecordedAt,
@@ -231,6 +269,8 @@ final class LearningEvent {
     kDateState,
     kLearnedOn,
     kStage,
+    kAssignmentKey,
+    kCommentarySource,
   };
 
   /// The client ULID, also the document id (AD-31, parent AD-5).
@@ -259,6 +299,12 @@ final class LearningEvent {
 
   /// Stage order, `source == main` only.
   final int? stage;
+
+  /// Shnayim Mikra cycle identifier, shared by pass and completion events.
+  final String? assignmentKey;
+
+  /// `onkelos` or `rashi`, recorded on the third-pass marker.
+  final String? commentarySource;
 
   /// ULID of the learn event a void cancels (void only).
   final String? targetId;
@@ -297,6 +343,8 @@ final class LearningEvent {
         kDateState: dateState!.storage,
         kLearnedOn: learnedOn,
         if (stage != null) kStage: stage,
+        if (assignmentKey != null) kAssignmentKey: assignmentKey,
+        if (commentarySource != null) kCommentarySource: commentarySource,
       },
       if (targetId != null) kTargetId: targetId,
       if (revertsActionId != null) kRevertsActionId: revertsActionId,
@@ -322,6 +370,8 @@ final class LearningEvent {
       if (dateState != null) _fail(kDateState, 'learn-only');
       if (learnedOn != null) _fail(kLearnedOn, 'learn-only');
       if (stage != null) _fail(kStage, 'learn-only');
+      if (assignmentKey != null) _fail(kAssignmentKey, 'learn-only');
+      if (commentarySource != null) _fail(kCommentarySource, 'learn-only');
       final reverts = revertsActionId;
       if (reverts != null && !isUlid(reverts)) {
         _fail(kRevertsActionId, 'not a ULID');
@@ -337,8 +387,30 @@ final class LearningEvent {
       if (ref == null || ref!.isEmpty) _fail(kRef, 'required for learn');
       final src = source;
       if (src == null) _fail(kSource, 'required for learn');
-      if (src != sourceMain && !isUlid(src)) {
+      if (src != sourceMain &&
+          !isUlid(src) &&
+          !shnayimMikraPassSources.contains(src)) {
         _fail(kSource, 'must be main or a sub-track ULID');
+      }
+      if (shnayimMikraPassSources.contains(src) &&
+          curriculumId != 'shnayim_mikra') {
+        _fail(kSource, 'Shnayim Mikra pass sources require shnayim_mikra');
+      }
+      if (assignmentKey != null &&
+          (curriculumId != 'shnayim_mikra' ||
+              !_validAssignmentKey(assignmentKey!))) {
+        _fail(kAssignmentKey, 'invalid Shnayim Mikra assignment key');
+      }
+      if (curriculumId == 'shnayim_mikra' && assignmentKey == null) {
+        _fail(kAssignmentKey, 'required for Shnayim Mikra learn');
+      }
+      if (commentarySource != null &&
+          (src != sourceShnayimMikraPass3 ||
+              !const ['onkelos', 'rashi'].contains(commentarySource))) {
+        _fail(kCommentarySource, 'only on a pass-3 marker with a known source');
+      }
+      if (src == sourceShnayimMikraPass3 && commentarySource == null) {
+        _fail(kCommentarySource, 'required for a pass-3 marker');
       }
       final state = dateState;
       if (state == null) _fail(kDateState, 'required for learn');
@@ -363,6 +435,18 @@ final class LearningEvent {
     }
   }
 
+  static bool _validAssignmentKey(String key) =>
+      RegExp(r'^\d{4}-\d{2}-\d{2}:[A-Z_]+:(israel|diaspora)$').hasMatch(key);
+
+  void _validateShnayimMikraRequiredFields() {
+    if (curriculumId == 'shnayim_mikra' && assignmentKey == null) {
+      _fail(kAssignmentKey, 'required for Shnayim Mikra learn');
+    }
+    if (source == sourceShnayimMikraPass3 && commentarySource == null) {
+      _fail(kCommentarySource, 'required for a pass-3 marker');
+    }
+  }
+
   @override
   bool operator ==(Object other) =>
       other is LearningEvent &&
@@ -375,6 +459,8 @@ final class LearningEvent {
       other.dateState == dateState &&
       other.learnedOn == learnedOn &&
       other.stage == stage &&
+      other.assignmentKey == assignmentKey &&
+      other.commentarySource == commentarySource &&
       other.targetId == targetId &&
       other.revertsActionId == revertsActionId &&
       other._originalRecordedAt == _originalRecordedAt &&
@@ -392,6 +478,8 @@ final class LearningEvent {
     dateState,
     learnedOn,
     stage,
+    assignmentKey,
+    commentarySource,
     targetId,
     revertsActionId,
     _originalRecordedAt,

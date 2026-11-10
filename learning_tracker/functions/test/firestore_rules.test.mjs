@@ -1575,6 +1575,22 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
       date_state: 'catch_up', source: nextUlid(), stage: null,
     })));
     await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
+      curriculum_id: 'shnayim_mikra', ref: 'Genesis 1:1',
+      source: 'main', stage: null,
+      assignment_key: '2026-10-03:BERESHIT:israel',
+    })));
+    await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
+      curriculum_id: 'shnayim_mikra', ref: 'Genesis 1:1',
+      source: 'shnayim_mikra_pass_2', stage: null,
+      assignment_key: '2026-10-03:BERESHIT:israel',
+    })));
+    await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
+      curriculum_id: 'shnayim_mikra', ref: 'Genesis 1:1',
+      source: 'shnayim_mikra_pass_3', stage: null,
+      assignment_key: '2026-10-03:BERESHIT:israel',
+      commentary_source: 'rashi',
+    })));
+    await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
       date_state: 'before_tracking', learned_on: '2019-05-01', ref: 'Berakhot',
       level: 'masechta', stage: null, original_recorded_at: pastTs,
     })));
@@ -1641,6 +1657,15 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
     await bad(learnEvent({ learned_on: '2019-5-1' }));
     await bad(learnEvent({ learned_on: 20190501 }));
     await bad(learnEvent({ source: 'sub-track-1' }));
+    await bad(learnEvent({ source: 'shnayim_mikra_pass_1' }));
+    await bad(learnEvent({ curriculum_id: 'shnayim_mikra' })); // main completion requires assignment_key
+    await bad(learnEvent({
+      curriculum_id: 'shnayim_mikra', source: 'shnayim_mikra_pass_1', stage: null,
+    })); // every pass requires assignment_key
+    await bad(learnEvent({
+      curriculum_id: 'shnayim_mikra', source: 'shnayim_mikra_pass_3', stage: null,
+      assignment_key: '2026-10-03:BERESHIT:israel',
+    })); // pass 3 requires commentary_source
     await bad(learnEvent({ stage: 2, source: nextUlid() })); // stage is main-only
     await bad(learnEvent({ stage: '2' }));
     await bad(learnEvent({ ref: '' }));
@@ -1971,8 +1996,12 @@ describe('DNI-471 AC-2 — each governed collection maps to its AD-38 entity', (
 
 describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch', () => {
   const PROFILE_PATH = `users/${OWNER}/learner_profiles/${PROFILE}`;
-  const SETTINGS = { latitude: 31.77, longitude: 35.21, time_zone: 'Asia/Jerusalem', in_israel: true, yom_tov_days: 1,
-    tzeis_minhag: 'degrees_8_5', candle_lighting_minutes: 18 };
+  const SETTINGS = { latitude: 31.77, longitude: 35.21, time_zone: 'Asia/Jerusalem', in_israel: true,
+    yom_tov_days: 1,
+    tzeis_minhag: 'degrees_8_5', candle_lighting_minutes: 18,
+    shnayim_mikra_mode: 'pasuk', shnayim_mikra_pace: 'self',
+    shnayim_mikra_source: 'onkelos',
+    shnayim_mikra_parsha_schedule: 'eretz_yisrael' };
 
   test('non-settings profile fields keep their plain owner field-level write', async () => {
     await assertSucceeds(setDoc(doc(owner(), PROFILE_PATH), { display_name: 'Moishy' }, { merge: true }));
@@ -1991,6 +2020,11 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
     // Field-level change of one setting.
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, { in_israel: false }, 'learnerSettings', PROFILE));
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, { yom_tov_days: 2, in_israel: false }, 'learnerSettings', PROFILE));
+    await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
+      shnayim_mikra_mode: 'aliyah', shnayim_mikra_pace: 'daily_aliyah',
+      shnayim_mikra_source: 'rashi',
+      shnayim_mikra_parsha_schedule: 'chutz_laaretz',
+    }, 'learnerSettings', PROFILE));
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
       location_source: 'detected',
       location_fixed_at: Timestamp.fromDate(new Date('2026-11-06T12:00:00Z')),
@@ -2152,6 +2186,10 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
     await bad({ ...SETTINGS, tzeis_minhag: 'unknown' });
     await bad({ ...SETTINGS, candle_lighting_minutes: 19 });
     await bad({ ...SETTINGS, location_source: 'gps' });
+    await bad({ ...SETTINGS, shnayim_mikra_mode: 'weekly' });
+    await bad({ ...SETTINGS, shnayim_mikra_pace: 'daily_parsha' });
+    await bad({ ...SETTINGS, shnayim_mikra_source: 'targum' });
+    await bad({ ...SETTINGS, shnayim_mikra_parsha_schedule: 'worldwide' });
     // A null location (no location → fail-closed fallback, AD-36) is valid.
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
       ...SETTINGS, latitude: null, longitude: null,

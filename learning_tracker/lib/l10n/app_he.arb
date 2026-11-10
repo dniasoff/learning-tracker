@@ -4335,6 +4335,67 @@
   "subTrackLifecyclePositiveNumber": "יש להזין מספר גדול מ-0",
   "subTrackLifecycleWindowReversed": "חודש הסיום לפני חודש ההתחלה",
   "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב.",
+  "shnayimMikraParshaSchedule": "מנהג פרשת השבוע",
+  "shnayimMikraScheduleEretzYisrael": "ארץ ישראל",
+  "shnayimMikraScheduleChutzLaaretz": "חוץ לארץ",
+  "shnayimMikraSettingsTitle": "הגדרות שניים מקרא",
+  "shnayimMikraModeLabel": "סדר הקריאה",
+  "shnayimMikraModePasuk": "פסוק אחר פסוק",
+  "shnayimMikraModeAliyah": "עלייה אחר עלייה",
+  "shnayimMikraModeParsha": "פרשה אחר פרשה",
+  "shnayimMikraPaceLabel": "קצב",
+  "shnayimMikraPaceSelf": "בקצב אישי",
+  "shnayimMikraPaceDailyAliyah": "עלייה יומית, מיום ראשון עד שישי",
+  "shnayimMikraSourceLabel": "קריאה שלישית",
+  "shnayimMikraSettingsSaveFailed": "שמירת הגדרות שניים מקרא נכשלה. נסו שוב.",
+  "shnayimMikraAliyah": "עלייה",
+  "shnayimMikraReaderTitle": "שניים מקרא",
+  "shnayimMikraReaderLoadFailed": "לא ניתן לטעון את טקסט התורה הלא מקוון.",
+  "shnayimMikraReaderNoUnits": "לא נמצאו חלקי קריאה לפרשה זו.",
+  "shnayimMikraNoDailyAliyahToday": "קצב עלייה יומית מתקיים מיום ראשון עד יום שישי.",
+  "shnayimMikraReaderWeekComplete": "הקריאות של {portion} הושלמו.",
+  "shnayimMikraTodayAliyahDone": "העלייה של היום הושלמה. נותרו {remaining} עליות השבוע.",
+  "@shnayimMikraTodayAliyahDone": {
+    "description": "Daily aliyah pacing completion message while the parsha still has unfinished aliyot.",
+    "placeholders": { "remaining": { "type": "int" } }
+  },
+  "@shnayimMikraReaderWeekComplete": {
+    "description": "Completion message after all assigned Shnayim Mikra reading units are marked complete.",
+    "placeholders": { "portion": { "type": "String" } }
+  },
+  "shnayimMikraUnitProgress": "חלק {current} מתוך {total}",
+  "@shnayimMikraUnitProgress": {
+    "description": "Progress through the current parsha, aliyah, or pasuk task list.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "shnayimMikraFirstReading": "קריאה ראשונה",
+  "shnayimMikraSecondReading": "קריאה שנייה",
+  "shnayimMikraOnkelosReading": "אונקלוס",
+  "shnayimMikraRashiReading": "רש״י",
+  "shnayimMikraNoRashi": "אין פירוש רש״י על פסוק זה",
+  "shnayimMikraMarkReadingComplete": "סימון הקריאה כהושלמה",
+  "shnayimMikraReaderSaveFailed": "שמירת ההתקדמות נכשלה. נסו שוב.",
+  "shnayimMikraDueBeforeShabbos": "להשלמה לפני שבת · {date}",
+  "@shnayimMikraDueBeforeShabbos": {
+    "description": "Due date line for the current weekly Shnayim Mikra assignment.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "shnayimMikraCatchUp": "באיחור · {portion}",
+  "@shnayimMikraCatchUp": {
+    "description": "Label for an unfinished prior weekly parsha available for catch-up.",
+    "placeholders": { "portion": { "type": "String" } }
+  },
+  "shnayimMikraProgressVerses": "{current} מתוך {total} פסוקים הושלמו",
+  "@shnayimMikraProgressVerses": {
+    "description": "Number of verses completed in the current weekly Shnayim Mikra assignment.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "textReaderTranslationLanguage": "שפת התרגום",
   "textReaderTranslationLanguageDialogTitle": "שפת התרגום",
   "textReaderSearchLanguages": "חיפוש שפות",

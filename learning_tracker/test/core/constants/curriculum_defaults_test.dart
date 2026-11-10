@@ -66,6 +66,15 @@ void main() {
       }
     });
 
+    test('Shnayim Mikra is represented by a single parsha level', () {
+      expect(CurriculumLabels.depth(CurriculumId.shnayimMikra), 1);
+      expect(CurriculumLabels.labelsEn(CurriculumId.shnayimMikra), ['Parsha']);
+      expect(
+        CurriculumDefaults.defaultDailyTargets[CurriculumId.shnayimMikra],
+        1,
+      );
+    });
+
     test('Mishnayos has 4-level hierarchy', () {
       expect(CurriculumLabels.depth(CurriculumId.mishnayos), 4);
       expect(CurriculumLabels.labelsEn(CurriculumId.mishnayos), [

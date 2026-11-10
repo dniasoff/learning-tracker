@@ -6494,6 +6494,67 @@
   "@subTrackLifecycleSaveFailed": {
     "description": "Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4."
   },
+  "shnayimMikraParshaSchedule": "Parsha schedule",
+  "shnayimMikraScheduleEretzYisrael": "Eretz Yisrael",
+  "shnayimMikraScheduleChutzLaaretz": "Chutz la'aretz",
+  "shnayimMikraSettingsTitle": "Shnayim Mikra settings",
+  "shnayimMikraModeLabel": "Reading order",
+  "shnayimMikraModePasuk": "Pasuk by pasuk",
+  "shnayimMikraModeAliyah": "Aliyah by aliyah",
+  "shnayimMikraModeParsha": "Parsha by parsha",
+  "shnayimMikraPaceLabel": "Pacing",
+  "shnayimMikraPaceSelf": "Self-paced",
+  "shnayimMikraPaceDailyAliyah": "Daily aliyah, Sunday–Friday",
+  "shnayimMikraSourceLabel": "Third reading",
+  "shnayimMikraSettingsSaveFailed": "Could not save Shnayim Mikra settings. Try again.",
+  "shnayimMikraAliyah": "Aliyah",
+  "shnayimMikraReaderTitle": "Shnayim Mikra",
+  "shnayimMikraReaderLoadFailed": "The offline Torah text could not be loaded.",
+  "shnayimMikraReaderNoUnits": "No reading sections are available for this parsha.",
+  "shnayimMikraNoDailyAliyahToday": "Daily aliyah pacing runs Sunday through Friday.",
+  "shnayimMikraReaderWeekComplete": "All readings for {portion} are complete.",
+  "shnayimMikraTodayAliyahDone": "Today's aliyah is done. {remaining} aliyot remain this week.",
+  "@shnayimMikraTodayAliyahDone": {
+    "description": "Daily aliyah pacing completion message while the parsha still has unfinished aliyot.",
+    "placeholders": { "remaining": { "type": "int" } }
+  },
+  "@shnayimMikraReaderWeekComplete": {
+    "description": "Completion message after all assigned Shnayim Mikra reading units are marked complete.",
+    "placeholders": { "portion": { "type": "String" } }
+  },
+  "shnayimMikraUnitProgress": "Section {current} of {total}",
+  "@shnayimMikraUnitProgress": {
+    "description": "Progress through the current parsha, aliyah, or pasuk task list.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "shnayimMikraFirstReading": "First reading",
+  "shnayimMikraSecondReading": "Second reading",
+  "shnayimMikraOnkelosReading": "Onkelos",
+  "shnayimMikraRashiReading": "Rashi",
+  "shnayimMikraNoRashi": "No Rashi comment on this pasuk",
+  "shnayimMikraMarkReadingComplete": "Mark this reading complete",
+  "shnayimMikraReaderSaveFailed": "Could not save progress. Try again.",
+  "shnayimMikraDueBeforeShabbos": "Due before Shabbos · {date}",
+  "@shnayimMikraDueBeforeShabbos": {
+    "description": "Due date line for the current weekly Shnayim Mikra assignment.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "shnayimMikraCatchUp": "Overdue · {portion}",
+  "@shnayimMikraCatchUp": {
+    "description": "Label for an unfinished prior weekly parsha available for catch-up.",
+    "placeholders": { "portion": { "type": "String" } }
+  },
+  "shnayimMikraProgressVerses": "{current} of {total} pesukim complete",
+  "@shnayimMikraProgressVerses": {
+    "description": "Number of verses completed in the current weekly Shnayim Mikra assignment.",
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "textReaderTranslationLanguage": "Translation language",
   "textReaderTranslationLanguageDialogTitle": "Translation language",
   "textReaderSearchLanguages": "Search languages",

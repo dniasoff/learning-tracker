@@ -142,14 +142,22 @@ void main() {
     },
   );
 
-  test('bounded hidden-leaf loading completes for every curriculum', () async {
-    final repository = ProfileVisibleContentRepository(
-      _DiskContentRepository(),
-      {'Mishnah Niddah'},
-    );
-    for (final curriculum in CurriculumId.values) {
-      final leaves = await repository.loadLeavesTransient(curriculum);
-      expect(leaves.every((item) => item.isLeaf), isTrue);
-    }
-  });
+  test(
+    'bounded hidden-leaf loading completes for every content curriculum',
+    () async {
+      final repository = ProfileVisibleContentRepository(
+        _DiskContentRepository(),
+        {'Mishnah Niddah'},
+      );
+      for (final curriculum in CurriculumId.contentCurricula) {
+        final leaves = await repository.loadLeavesTransient(curriculum);
+        expect(leaves.every((item) => item.isLeaf), isTrue);
+      }
+      expect(
+        await repository.loadLeavesTransient(CurriculumId.shnayimMikra),
+        isEmpty,
+        reason: 'workflow-only curricula have no hidden-content hierarchy',
+      );
+    },
+  );
 }

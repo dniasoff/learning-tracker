@@ -2,12 +2,28 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/domain/learner_state/main_track_intent.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
 import '../../helpers/learner_state_fixtures.dart';
 
 void main() {
+  test('stored Shnayim Mikra track remains decodable while unreleased', () {
+    final intent = MainTrackIntent.fromStorageDocs('shnayim_mikra', {
+      'curriculum_tracks/shnayim_mikra': {
+        'state': 'active',
+        'curriculum_id': 'shnayim_mikra',
+      },
+    });
+
+    expect(intent.curriculumId, 'shnayim_mikra');
+    expect(
+      CurriculumId.fromStorageKey(intent.curriculumId),
+      CurriculumId.shnayimMikra,
+    );
+  });
+
   MainTrack track({
     MainTrackState state = MainTrackState.active,
     DateTime? endedAt,

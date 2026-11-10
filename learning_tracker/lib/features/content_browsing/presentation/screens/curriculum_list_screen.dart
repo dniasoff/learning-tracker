@@ -90,7 +90,9 @@ class CurriculumListScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
 
-          ...CurriculumId.userSelectable.map(
+          // This catalog requires a standalone content tree. Shnayim Mikra is
+          // still selectable in learning flows and uses Chumash internally.
+          ...CurriculumId.userBrowsable.map(
             (curriculum) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _CurriculumCard(curriculum: curriculum),

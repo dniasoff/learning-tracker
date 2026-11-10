@@ -13,13 +13,12 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
-import 'package:learning_tracker/core/utils/gematriya.dart';
-import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/reader_phrase_translation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/widgets/segment_with_glosses.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
@@ -594,14 +593,14 @@ class _ReaderSegmentCard extends ConsumerWidget {
           bottom: isLast ? borderSide : BorderSide.none,
         ),
       ),
-      child: _SegmentWithGlosses(
+      child: SegmentWithGlosses(
         segment: segment,
         glosses:
             showTranslation &&
                 translationLanguage == 'sefaria' &&
                 segment.englishText.isNotEmpty
             ? [
-                _SegmentGloss(
+                SegmentGloss(
                   text: segment.englishText,
                   direction: TextDirection.ltr,
                   style: glossStyle,
@@ -639,7 +638,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
     );
   }
 
-  List<_SegmentGloss> _aiGlosses(
+  List<SegmentGloss> _aiGlosses(
     BuildContext context,
     WidgetRef ref,
     TextSegment segment,
@@ -649,18 +648,18 @@ class _ReaderSegmentCard extends ConsumerWidget {
     final key = PhraseTranslationKey(segment.sefariaRef, language);
     final async = ref.watch(phraseTranslationProvider(key));
     final l10n = AppLocalizations.of(context)!;
-    final values = <_SegmentGloss>[];
+    final values = <SegmentGloss>[];
     if (async.hasValue) {
       for (final phrase in async.requireValue) {
         values.add(
-          _SegmentGloss(
+          SegmentGloss(
             text: phrase.source,
             direction: TextDirection.rtl,
             style: style.copyWith(fontSize: style.fontSize! * .92),
           ),
         );
         values.add(
-          _SegmentGloss(
+          SegmentGloss(
             text: phrase.translation,
             direction: TextDirection.ltr,
             style: style,
@@ -668,7 +667,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
         );
       }
       values.add(
-        _SegmentGloss(
+        SegmentGloss(
           text: l10n.textReaderMachineTranslated,
           direction: TextDirection.ltr,
           style: style.copyWith(
@@ -681,7 +680,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
     }
     if (async.isLoading) {
       values.add(
-        _SegmentGloss(
+        SegmentGloss(
           text: l10n.textReaderLoadingTranslation,
           direction: TextDirection.ltr,
           style: style,
@@ -689,7 +688,7 @@ class _ReaderSegmentCard extends ConsumerWidget {
       );
     } else {
       values.add(
-        _SegmentGloss(
+        SegmentGloss(
           text: l10n.textReaderTranslationUnavailable,
           direction: TextDirection.ltr,
           style: style.copyWith(color: Theme.of(context).colorScheme.error),
@@ -697,14 +696,14 @@ class _ReaderSegmentCard extends ConsumerWidget {
       );
       if (segment.englishText.isNotEmpty)
         values.add(
-          _SegmentGloss(
+          SegmentGloss(
             text: segment.englishText,
             direction: TextDirection.ltr,
             style: style,
           ),
         );
       values.add(
-        _SegmentGloss(
+        SegmentGloss(
           text: l10n.textReaderRetryTranslation,
           direction: TextDirection.ltr,
           style: style.copyWith(decoration: TextDecoration.underline),
@@ -715,147 +714,13 @@ class _ReaderSegmentCard extends ConsumerWidget {
     }
     if (segment.englishText.isNotEmpty && async.isLoading)
       values.add(
-        _SegmentGloss(
+        SegmentGloss(
           text: segment.englishText,
           direction: TextDirection.ltr,
           style: style,
         ),
       );
     return values;
-  }
-}
-
-/// One Hebrew unit followed by its zero or more translated glosses.
-/// Additional sources (AI phrase glosses, Targum) can be added to [glosses].
-class _SegmentWithGlosses extends StatelessWidget {
-  const _SegmentWithGlosses({
-    required this.segment,
-    required this.glosses,
-    required this.showNumber,
-    required this.showNikud,
-    required this.hebrewStyle,
-  });
-
-  final TextSegment segment;
-  final List<_SegmentGloss> glosses;
-  final bool showNumber;
-  final bool showNikud;
-  final TextStyle hebrewStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    var hebrew = segment.hebrewText;
-    if (!showNikud) hebrew = HebrewUtils.stripNikud(hebrew);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (hebrew.isNotEmpty)
-          _SegmentTextLine(
-            text: hebrew,
-            direction: TextDirection.rtl,
-            style: hebrewStyle,
-            marker: showNumber && segment.number != null
-                ? Gematriya.forNumber(segment.number!)
-                : null,
-          ),
-        for (final gloss in glosses)
-          if (gloss.text.isNotEmpty)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(top: 2),
-              child: _SegmentTextLine(
-                text: gloss.text,
-                direction: gloss.direction,
-                style: gloss.style,
-                marker: gloss.marker,
-                onTap: gloss.onTap,
-              ),
-            ),
-      ],
-    );
-  }
-}
-
-class _SegmentGloss {
-  const _SegmentGloss({
-    required this.text,
-    required this.direction,
-    required this.style,
-    this.marker,
-    this.onTap,
-  });
-
-  final String text;
-  final TextDirection direction;
-  final TextStyle style;
-  final String? marker;
-  final VoidCallback? onTap;
-}
-
-class _SegmentTextLine extends StatelessWidget {
-  const _SegmentTextLine({
-    required this.text,
-    required this.direction,
-    required this.style,
-    this.marker,
-    this.onTap,
-  });
-
-  final String text;
-  final TextDirection direction;
-  final TextStyle style;
-  final String? marker;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final spans = <InlineSpan>[];
-    if (marker != null) {
-      spans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: Padding(
-            padding: direction == TextDirection.rtl
-                ? const EdgeInsetsDirectional.only(start: 6)
-                : const EdgeInsetsDirectional.only(end: 6),
-            child: _VerseNumberBadge(marker: marker!),
-          ),
-        ),
-      );
-    }
-    spans.add(TextSpan(text: text, style: style));
-    final line = Text.rich(
-      TextSpan(children: spans, style: style),
-      textDirection: direction,
-      textAlign: TextAlign.start,
-    );
-    return onTap == null ? line : InkWell(onTap: onTap, child: line);
-  }
-}
-
-class _VerseNumberBadge extends StatelessWidget {
-  const _VerseNumberBadge({required this.marker});
-
-  final String marker;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-      decoration: BoxDecoration(
-        color: context.colors.brandBlueSoft.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        marker,
-        style: TextStyle(
-          color: context.colors.brandBlueDeep,
-          fontWeight: FontWeight.w800,
-          fontSize: 13,
-          height: 1.0,
-        ),
-      ),
-    );
   }
 }
 

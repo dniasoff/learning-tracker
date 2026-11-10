@@ -147,8 +147,22 @@ ResolvedReplacement? resolveReplacement(
     dateState: state,
     learnedOn: learnedOn,
     stage: stage,
+    assignmentKey: t.assignmentKey,
+    commentarySource: t.commentarySource,
     redate: redate,
   );
+}
+
+/// The cycle-aware subset used by the Shnayim Mikra reader.
+abstract interface class ShnayimMikraLearningCommands {
+  Future<CaptureResult> captureShnayimMikra({
+    required String assignmentKey,
+    required List<LeafRef> refs,
+    required String source,
+    required DateState dateState,
+    String? commentarySource,
+    bool skipRecorded = true,
+  });
 }
 
 /// Every learning write: events (AD-31) and governed changes (AD-38).
@@ -341,7 +355,8 @@ final class _CaptureAnalyticsContext {
   final int taps;
 }
 
-final class DefaultLearningCommands implements LearningCommands {
+final class DefaultLearningCommands
+    implements LearningCommands, ShnayimMikraLearningCommands {
   /// Creates the commands.
   DefaultLearningCommands({
     required LearnerScope scope,
@@ -503,6 +518,8 @@ final class DefaultLearningCommands implements LearningCommands {
     String source,
     CommandStamp stamp,
     LearnerSettingsHistory history,
+    String? assignmentKey,
+    String? commentarySource,
   ) async {
     try {
       final (log, corpus) = await (
@@ -510,8 +527,15 @@ final class DefaultLearningCommands implements LearningCommands {
         _reads.corpus(curriculumId),
       ).wait.timeout(_recordedWait);
       return {
-        for (final e in log.counted.learns)
+        for (final e in log.byId.values)
           if (e.curriculumId == curriculumId &&
+              !log.counted.voidedIds.contains(e.id) &&
+              !log.counted.lockIgnoredIds.contains(e.id) &&
+              e.isLearn &&
+              (assignmentKey == null || e.assignmentKey == assignmentKey) &&
+              (source != LearningEvent.sourceShnayimMikraPass3 ||
+                  e.commentarySource == commentarySource) &&
+              (source != LearningEvent.sourceMain || !e.isShnayimMikraPass) &&
               (source == LearningEvent.sourceMain || e.source == source))
             ...?(corpus == null
                 ? (e.level == null && e.ref != null ? [e.ref!] : null)
@@ -523,7 +547,9 @@ final class DefaultLearningCommands implements LearningCommands {
   }
 
   static bool _validSource(String source) =>
-      source == LearningEvent.sourceMain || isUlid(source);
+      source == LearningEvent.sourceMain ||
+      isUlid(source) ||
+      LearningEvent.shnayimMikraPassSources.contains(source);
 
   /// Whether [source] may name a learn event of [curriculumId]: `main`, or
   /// a live sub-track of that curriculum in this scope when a
@@ -531,6 +557,9 @@ final class DefaultLearningCommands implements LearningCommands {
   /// out fails closed.
   Future<bool> _sourceAllowed(String curriculumId, String source) async {
     final check = _sourceCheck;
+    if (LearningEvent.shnayimMikraPassSources.contains(source)) {
+      return curriculumId == 'shnayim_mikra';
+    }
     if (source == LearningEvent.sourceMain || check == null) return true;
     try {
       return await check(curriculumId, source);
@@ -538,6 +567,24 @@ final class DefaultLearningCommands implements LearningCommands {
       return false;
     }
   }
+
+  @override
+  Future<CaptureResult> captureShnayimMikra({
+    required String assignmentKey,
+    required List<LeafRef> refs,
+    required String source,
+    required DateState dateState,
+    String? commentarySource,
+    bool skipRecorded = true,
+  }) => capture(
+    curriculumId: 'shnayim_mikra',
+    refs: refs,
+    source: source,
+    dateState: dateState,
+    skipRecorded: skipRecorded,
+    assignmentKey: assignmentKey,
+    commentarySource: commentarySource,
+  );
 
   @override
   Future<CaptureResult> capture({
@@ -552,12 +599,30 @@ final class DefaultLearningCommands implements LearningCommands {
     CaptureGesture gesture = CaptureGesture.plusOne,
     int taps = 1,
     int skippedCount = 0,
+    String? assignmentKey,
+    String? commentarySource,
   }) {
     Future<CaptureResult> run() => _gated((stamp, history) async {
       if (curriculumId.isEmpty ||
           !_validSource(source) ||
           taps < 0 ||
           skippedCount < 0) {
+        return _invalid;
+      }
+      if (assignmentKey != null && curriculumId != 'shnayim_mikra') {
+        return _invalid;
+      }
+      if (LearningEvent.shnayimMikraPassSources.contains(source) &&
+          assignmentKey == null) {
+        return _invalid;
+      }
+      if (commentarySource != null &&
+          (source != LearningEvent.sourceShnayimMikraPass3 ||
+              !const ['onkelos', 'rashi'].contains(commentarySource))) {
+        return _invalid;
+      }
+      if (source == LearningEvent.sourceShnayimMikraPass3 &&
+          commentarySource == null) {
         return _invalid;
       }
       if (!await _sourceAllowed(curriculumId, source)) return _invalid;
@@ -579,6 +644,8 @@ final class DefaultLearningCommands implements LearningCommands {
           source,
           stamp,
           history,
+          assignmentKey,
+          commentarySource,
         );
         if (recorded != null && recorded.isNotEmpty) {
           alreadyRecorded = [
@@ -616,6 +683,8 @@ final class DefaultLearningCommands implements LearningCommands {
           learnedOn: day,
           stage: stage,
           amount: amount,
+          assignmentKey: assignmentKey,
+          commentarySource: commentarySource,
         );
         _validate(units);
       } on StorageFormatException {

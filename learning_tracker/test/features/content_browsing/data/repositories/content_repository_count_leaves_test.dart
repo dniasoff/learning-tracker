@@ -7,8 +7,8 @@
 /// hierarchy — the driver of the R8 out-of-memory kill. `countLeavesForCurriculum`
 /// returns the SAME number without retaining the materialized list.
 ///
-/// This test pins the invariant on the REAL bundled assets for EVERY
-/// [CurriculumId]:
+/// This test pins the invariant on the REAL bundled assets for every
+/// content-bearing [CurriculumId]:
 ///
 ///   countLeavesForCurriculum(c)
 ///     == getContentForCurriculum(c).where((i) => i.isLeaf).length
@@ -43,7 +43,7 @@ void main() {
     'countLeavesForCurriculum == getContentForCurriculum(c).where(isLeaf).length '
     'for every CurriculumId (cold + warm paths)',
     () async {
-      for (final c in CurriculumId.values) {
+      for (final c in CurriculumId.contentCurricula) {
         // COLD path: fresh repo so the count parses the asset transiently
         // (nothing cached yet) — the memory-critical path.
         final repo = _DiskContentRepository();
@@ -82,7 +82,7 @@ void main() {
 
       final unionRefs = <String>{};
       var countSum = 0;
-      for (final c in CurriculumId.values) {
+      for (final c in CurriculumId.contentCurricula) {
         final items = await repo.getContentForCurriculum(c);
         unionRefs.addAll(items.where((i) => i.isLeaf).map((i) => i.sefariaRef));
         countSum += await repo.countLeavesForCurriculum(c);
@@ -105,6 +105,18 @@ void main() {
       // The gap is exactly why routing the denominator through countLeaves+sum
       // would break the total.
       expect(countSum - unionRefs.length, 23362);
+    },
+  );
+
+  test(
+    'workflow-only Shnayim Mikra has no standalone hierarchy leaves',
+    () async {
+      final repo = _DiskContentRepository();
+      expect(await repo.countLeavesForCurriculum(CurriculumId.shnayimMikra), 0);
+      expect(
+        await repo.getContentForCurriculum(CurriculumId.shnayimMikra),
+        isEmpty,
+      );
     },
   );
 }

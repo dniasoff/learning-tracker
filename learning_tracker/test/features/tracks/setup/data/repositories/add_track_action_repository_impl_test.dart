@@ -16,15 +16,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/data/firestore/account_firebase.dart';
 import 'package:learning_tracker/data/firestore/active_account_providers.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart'
+    show activeLearnerScopeProvider;
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show activeProfileDocIdProvider, firestoreCurriculumTrackRepositoryProvider;
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/add_track_action_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/add_track_action_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/add_track_providers.dart'
+    show addTrackActivationChangesProvider;
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -70,8 +78,21 @@ void main() {
   setUp(() {
     firestore = createFakeFirestore(authenticatedUid: _uid);
     writer = FirestoreGovernedWriter(firestore, uid: _uid);
+    final scope = LearnerScope(ownerUid: _uid, profileId: _profileId);
     container = ProviderContainer(
       overrides: [
+        activeLearnerScopeProvider.overrideWith((ref) async => scope),
+        learnerLockSettingsProvider(scope).overrideWith(
+          (ref) => Stream.value(
+            LearnerSettingsHistory.constant(
+              const LearnerSettings(
+                profileId: _profileId,
+                timeZone: 'UTC',
+                inIsrael: true,
+              ),
+            ),
+          ),
+        ),
         activeAccountFirebaseProvider.overrideWith(
           (ref) async => AccountFirebaseHandles(
             app: _MockFirebaseApp(),
@@ -90,6 +111,7 @@ void main() {
         (ref) => FirestoreAddTrackActionRepository(
           ref: ref,
           clock: () => governedTestNow,
+          activationChanges: container.read(addTrackActivationChangesProvider),
         ),
       ),
     );
@@ -142,6 +164,45 @@ void main() {
         expect(doc?['last_change_id'], e.id, reason: key.key);
       }
     }
+  });
+
+  test('new Shnayim Mikra track initializes its parsha minhag once', () async {
+    const id = CurriculumId.shnayimMikra;
+    await firestore.doc('users/$_uid/learner_profiles/$_profileId').set({
+      'time_zone': 'UTC',
+      'in_israel': true,
+    });
+    final actionId = (await repo.applyAddTrack(
+      const AddTrackPlan(
+        curriculumId: id,
+        stages: [
+          StageDefinition(
+            curriculumId: id,
+            stageOrder: 1,
+            stageName: 'Three readings',
+            delayDays: 0,
+            isDefault: false,
+          ),
+        ],
+        studyDays: _allDays,
+      ),
+    )).actionId!;
+
+    final entries = await entriesOf(actionId);
+    expect(
+      entries.map((entry) => entry.entity),
+      contains(GovernedEntity.learnerSettings),
+    );
+    expect(
+      writer.actions.single.changes
+          .firstWhere(
+            (change) => change.entity == GovernedEntity.learnerSettings,
+          )
+          .docs
+          .single
+          .fields[LearnerSettings.kShnayimMikraParshaSchedule],
+      'eretz_yisrael',
+    );
   });
 
   test(

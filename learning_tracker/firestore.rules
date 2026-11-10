@@ -223,7 +223,8 @@ service cloud.firestore {
       return isUlid(eventId)
           && d.keys().hasOnly([
                'kind', 'curriculum_id', 'ref', 'level', 'source', 'date_state',
-               'learned_on', 'stage', 'target_id', 'reverts_action_id',
+               'learned_on', 'stage', 'assignment_key', 'commentary_source',
+               'target_id', 'reverts_action_id',
                'original_recorded_at', 'recorded_at', 'actor'
              ])
           && d.keys().hasAll(['kind', 'recorded_at', 'actor'])
@@ -256,7 +257,24 @@ service cloud.firestore {
           && d.keys().hasAll(['curriculum_id', 'ref', 'source', 'date_state', 'learned_on'])
           && isBoundedString(d.curriculum_id, 100)
           && isBoundedString(d.ref, 500)
-          && (d.source == 'main' || isUlid(d.source))
+          && (d.source == 'main' || isUlid(d.source)
+                || (d.curriculum_id == 'shnayim_mikra'
+                    && d.source in ['shnayim_mikra_pass_1', 'shnayim_mikra_pass_2', 'shnayim_mikra_pass_3']))
+          && (d.curriculum_id == 'shnayim_mikra'
+                ? (d.keys().hasAll(['assignment_key'])
+                    && isBoundedString(d.assignment_key, 120)
+                    && d.assignment_key.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}:[A-Z_]+:(israel|diaspora)$'))
+                : isAbsentOrNull(d, 'assignment_key'))
+          && (isAbsentOrNull(d, 'commentary_source')
+                || (d.source == 'shnayim_mikra_pass_3'
+                    && d.commentary_source in ['onkelos', 'rashi']))
+          && (d.source != 'shnayim_mikra_pass_3'
+                || (d.keys().hasAll(['assignment_key', 'commentary_source'])
+                    && d.commentary_source in ['onkelos', 'rashi']))
+          && (d.source != 'shnayim_mikra_pass_1'
+                && d.source != 'shnayim_mikra_pass_2'
+                && d.source != 'shnayim_mikra_pass_3'
+                || d.keys().hasAll(['assignment_key']))
           && d.date_state in ['dated', 'catch_up', 'before_tracking']
           && (isDateString(d.learned_on)
                 || (d.learned_on == null && d.date_state == 'before_tracking'))
@@ -415,7 +433,14 @@ service cloud.firestore {
       return (resource == null
                 ? request.resource.data.keys().toSet()
                 : request.resource.data.diff(resource.data).affectedKeys())
-          .hasAny(['latitude', 'longitude', 'time_zone', 'in_israel', 'yom_tov_days', 'tzeis_minhag', 'candle_lighting_minutes', 'location_source', 'location_fixed_at', 'last_change_id']);
+          .hasAny([
+            'latitude', 'longitude', 'time_zone', 'in_israel', 'tzeis_minhag',
+            'yom_tov_days',
+            'candle_lighting_minutes', 'location_source', 'location_fixed_at',
+            'shnayim_mikra_mode', 'shnayim_mikra_pace',
+            'shnayim_mikra_source', 'shnayim_mikra_parsha_schedule',
+            'last_change_id'
+          ]);
     }
 
     function isValidLearnerSettings(d) {
@@ -427,7 +452,11 @@ service cloud.firestore {
           && (isAbsentOrNull(d, 'tzeis_minhag') || d.tzeis_minhag in ['degrees_8_5', 'minutes_72', 'rabbeinu_tam'])
           && (isAbsentOrNull(d, 'candle_lighting_minutes') || d.candle_lighting_minutes in [18, 20, 22, 30, 40])
           && (isAbsentOrNull(d, 'location_source') || d.location_source in ['detected', 'manual_city', 'manual_coords'])
-          && (isAbsentOrNull(d, 'location_fixed_at') || d.location_fixed_at is timestamp);
+          && (isAbsentOrNull(d, 'location_fixed_at') || d.location_fixed_at is timestamp)
+          && (isAbsentOrNull(d, 'shnayim_mikra_mode') || d.shnayim_mikra_mode in ['pasuk', 'aliyah', 'parsha'])
+          && (isAbsentOrNull(d, 'shnayim_mikra_pace') || d.shnayim_mikra_pace in ['self', 'daily_aliyah'])
+          && (isAbsentOrNull(d, 'shnayim_mikra_source') || d.shnayim_mikra_source in ['onkelos', 'rashi'])
+          && (isAbsentOrNull(d, 'shnayim_mikra_parsha_schedule') || d.shnayim_mikra_parsha_schedule in ['eretz_yisrael', 'chutz_laaretz']);
     }
 
     // Profile doc write: ordinary owner write unless it touches the settings

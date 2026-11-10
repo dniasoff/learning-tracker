@@ -34,6 +34,7 @@ class LifetimeMarkingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final summariesAsync = ref.watch(lifetimeSummariesProvider);
+    final curricula = CurriculumId.userSelectable;
 
     return Scaffold(
       backgroundColor: context.colors.brandCreamCard,
@@ -93,17 +94,16 @@ class LifetimeMarkingScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              for (var i = 0; i < CurriculumId.userSelectable.length; i++) ...[
+              for (var i = 0; i < curricula.length; i++) ...[
                 if (i > 0) const SizedBox(height: 10),
                 _LifetimeLibraryCategoryCard(
-                  curriculum: CurriculumId.userSelectable[i],
+                  curriculum: curricula[i],
                   summariesAsync: summariesAsync,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => LifetimeCurriculumMarkingScreen(
-                          curriculumId:
-                              CurriculumId.userSelectable[i].storageKey,
+                          curriculumId: curricula[i].storageKey,
                         ),
                       ),
                     );
@@ -125,6 +125,7 @@ IconData _curriculumIcon(CurriculumId id) {
     CurriculumId.yerushalmi => Icons.library_books_outlined,
     CurriculumId.mishnaBerurah => Icons.rule_folder_outlined,
     CurriculumId.chumash => Icons.menu_book_outlined,
+    CurriculumId.shnayimMikra => Icons.menu_book_outlined,
     CurriculumId.mishnehTorah => Icons.import_contacts_outlined,
     CurriculumId.tanach => Icons.article_outlined,
     CurriculumId.nach => Icons.record_voice_over_outlined,

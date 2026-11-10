@@ -105,9 +105,8 @@ void main() {
       },
     );
 
-    test('ContentRepository loads content for all curricula', () async {
-      // Verify all 7 curricula can be loaded
-      for (final curriculum in CurriculumId.values) {
+    test('ContentRepository loads content for all content curricula', () async {
+      for (final curriculum in CurriculumId.contentCurricula) {
         final items = await repository.getContentForCurriculum(curriculum);
         expect(
           items,
@@ -120,6 +119,23 @@ void main() {
         expect(config.levelLabels, isNotEmpty);
       }
     });
+
+    test(
+      'Shnayim Mikra is workflow-only and has no browse hierarchy',
+      () async {
+        final items = await repository.getContentForCurriculum(
+          CurriculumId.shnayimMikra,
+        );
+        final config = await repository.getHierarchyConfig(
+          CurriculumId.shnayimMikra,
+        );
+
+        expect(items, isEmpty);
+        expect(config.curriculumId, CurriculumId.shnayimMikra.storageKey);
+        expect(config.levelLabels, isEmpty);
+        expect(config.totalItems, 0);
+      },
+    );
 
     test(
       'filterByLevel with multiple level constraints returns correct items',

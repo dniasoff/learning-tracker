@@ -20,6 +20,7 @@ enum CurriculumId {
   mishnayos('mishnayos'),
   bavli('bavli'),
   yerushalmi('yerushalmi'),
+  shnayimMikra('shnayim_mikra'),
   mishnehTorah('mishneh_torah'),
   mishnaBerurah('mishna_berurah'),
   mussar('mussar');
@@ -54,14 +55,41 @@ enum CurriculumId {
   /// [fromStorageKey] being the single seam for storageKey resolution.
   static List<CurriculumId> get all => values;
 
-  /// Curricula users can choose or browse as roots. Chumash and Nach remain
-  /// storage curricula and remain available through Tanach's composite tree.
-  static List<CurriculumId> get userSelectable =>
-      values.where((curriculum) => curriculum.isBrowsable).toList();
+  /// Curricula backed by a standalone Sefaria hierarchy asset. Shnayim Mikra
+  /// is a learning workflow over Chumash verses and aliyah ranges; it has no
+  /// independent fetcher or browse hierarchy.
+  static List<CurriculumId> get contentCurricula => List.unmodifiable(
+    values.where((curriculum) => curriculum.hasContentTree),
+  );
+
+  bool get hasContentTree => this != CurriculumId.shnayimMikra;
+
+  /// Curricula currently available to start or browse in the learner UI.
+  /// Keep unreleased IDs and Chumash/Nach source curricula in [values] so
+  /// storage, codecs, and migrations can still recognize them.
+  static List<CurriculumId> get userSelectable => List.unmodifiable(
+    values.where(
+      (curriculum) =>
+          curriculum.isReleased &&
+          curriculum != CurriculumId.chumash &&
+          curriculum != CurriculumId.nach,
+    ),
+  );
+
+  /// Curricula with standalone trees available in the Browse catalog.
+  /// Workflow curricula such as Shnayim Mikra remain learnable without
+  /// pretending to have a second, independent Chumash hierarchy.
+  static List<CurriculumId> get userBrowsable => List.unmodifiable(
+    userSelectable.where((curriculum) => curriculum.hasContentTree),
+  );
+
+  /// Whether the curriculum's complete learner-facing flow has shipped.
+  bool get isReleased => true;
 
   /// Whether this curriculum should be presented as a standalone user-facing
   /// choice or browse root.
-  bool get isBrowsable => this != chumash && this != nach;
+  bool get isBrowsable =>
+      isReleased && this != CurriculumId.chumash && this != CurriculumId.nach;
 
   /// Display name in English.
   String get displayNameEn => switch (this) {
@@ -70,6 +98,7 @@ enum CurriculumId {
     CurriculumId.yerushalmi => 'Talmud Yerushalmi',
     CurriculumId.mishnaBerurah => 'Mishna Berurah',
     CurriculumId.chumash => 'Chumash',
+    CurriculumId.shnayimMikra => 'Shnayim Mikra',
     CurriculumId.mishnehTorah => 'Mishneh Torah',
     CurriculumId.tanach => 'Tanach',
     CurriculumId.nach => 'Nach',
@@ -86,6 +115,8 @@ enum CurriculumId {
     CurriculumId.mishnaBerurah =>
       '\u05DE\u05E9\u05E0\u05D4 \u05D1\u05E8\u05D5\u05E8\u05D4',
     CurriculumId.chumash => '\u05D7\u05D5\u05DE\u05E9',
+    CurriculumId.shnayimMikra =>
+      '\u05E9\u05E0\u05D9\u05D9\u05DD \u05DE\u05E7\u05E8\u05D0',
     CurriculumId.mishnehTorah =>
       '\u05DE\u05E9\u05E0\u05D4 \u05EA\u05D5\u05E8\u05D4',
     CurriculumId.tanach => '\u05EA\u05E0"\u05DA',

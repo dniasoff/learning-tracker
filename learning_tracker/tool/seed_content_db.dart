@@ -11,6 +11,7 @@
 ///   --text-only          Run only the text-fetch phase
 ///   --calendar-only      Run only the calendar-fetch phase
 ///   --programs-only      Run only programs + test-dates phase
+///   --shnayim-mikra-only Populate only the bundled parallel reading tables
 ///   --curriculum <name>  Restrict text-fetch phase to one curriculum
 ///   --resume / --no-resume  Resume from existing rows (default: on)
 ///   --output <path>      Output directory (default: build/)
@@ -71,7 +72,7 @@ class _Args {
   final bool sizeReport;
 }
 
-enum _Mode { build, validateOnly, textOnly }
+enum _Mode { build, validateOnly, textOnly, shnayimMikraOnly }
 
 _Args _parseArgs(List<String> args) {
   var mode = _Mode.build;
@@ -91,6 +92,8 @@ _Args _parseArgs(List<String> args) {
         mode = _Mode.validateOnly;
       case '--text-only':
         mode = _Mode.textOnly;
+      case '--shnayim-mikra-only':
+        mode = _Mode.shnayimMikraOnly;
       case '--calendar-only':
         print('Warning: --calendar-only is deprecated');
       case '--programs-only':
@@ -179,6 +182,25 @@ Future<void> main(List<String> rawArgs) async {
       print('  inserted $textCacheCount text_cache rows');
     } else {
       textCacheCount = await _countRows(db, 'text_cache');
+    }
+
+    var parallelTextCount = 0;
+    var parshaAliyahCount = 0;
+    if (args.mode == _Mode.build ||
+        args.mode == _Mode.textOnly ||
+        args.mode == _Mode.shnayimMikraOnly) {
+      print('Phase 3b: Seeding offline Shnayim Mikra text and aliyot...');
+      await db.customStatement('DELETE FROM parallel_text');
+      await db.customStatement('DELETE FROM parsha_aliyot');
+      final counts = await _populateShnayimMikra(db);
+      parallelTextCount = counts.parallelText;
+      parshaAliyahCount = counts.aliyot;
+      print(
+        '  parallel_text=$parallelTextCount, parsha_aliyot=$parshaAliyahCount',
+      );
+    } else {
+      parallelTextCount = await _countRows(db, 'parallel_text');
+      parshaAliyahCount = await _countRows(db, 'parsha_aliyot');
     }
 
     // Phase 4: Calendar cycles (local computation, no APIs)
@@ -292,6 +314,8 @@ Future<void> main(List<String> rawArgs) async {
       contentHash: contentHash,
       textCacheCount: textCacheCount,
       calendarCycleCount: calendarCycleCount,
+      parallelTextCount: parallelTextCount,
+      parshaAliyahCount: parshaAliyahCount,
     );
 
     await db.customStatement('VACUUM');
@@ -551,6 +575,38 @@ Future<String> _computeContentHash(ContentDatabase db) async {
       ..write(r.read<String>('sefaria_ref'))
       ..write('\n');
   }
+  final parallel = await db
+      .customSelect(
+        'SELECT source_key, sefaria_ref FROM parallel_text '
+        'ORDER BY source_key, sefaria_ref',
+      )
+      .get();
+  for (final r in parallel) {
+    buffer
+      ..write(r.read<String>('source_key'))
+      ..write(':')
+      ..write(r.read<String>('sefaria_ref'))
+      ..write('\n');
+  }
+  final aliyot = await db
+      .customSelect(
+        'SELECT portion_key, region, aliyah_number, start_ref, end_ref '
+        'FROM parsha_aliyot ORDER BY portion_key, region, aliyah_number',
+      )
+      .get();
+  for (final r in aliyot) {
+    buffer
+      ..write(r.read<String>('portion_key'))
+      ..write(':')
+      ..write(r.read<String>('region'))
+      ..write(':')
+      ..write(r.read<int>('aliyah_number'))
+      ..write(':')
+      ..write(r.read<String>('start_ref'))
+      ..write(':')
+      ..write(r.read<String>('end_ref'))
+      ..write('\n');
+  }
   return sha256.convert(utf8.encode(buffer.toString())).toString();
 }
 
@@ -610,6 +666,197 @@ Future<int> _mergeBookTextCache(ContentDatabase db) async {
     });
   }
   return added;
+}
+
+/// Loads the checked-in, version-pinned Sefaria payload and weekly aliyah
+/// boundaries. The payload is a build input, so seed creation makes no network
+/// requests and produces stable refs and text for a given source revision.
+Future<({int parallelText, int aliyot})> _populateShnayimMikra(
+  ContentDatabase db,
+) async {
+  final seedFile = File('tool/data/shnayim_mikra_seed.json');
+  if (!seedFile.existsSync()) {
+    throw StateError('Missing required seed input: ${seedFile.path}');
+  }
+  final data = jsonDecode(seedFile.readAsStringSync()) as Map<String, dynamic>;
+  final versions = data['versionsByBook'] as Map<String, dynamic>;
+  final inputRows = (data['rows'] as List<dynamic>)
+      .cast<Map<String, dynamic>>();
+  final manifest =
+      jsonDecode(File('tool/data/curriculum_books.json').readAsStringSync())
+          as Map<String, dynamic>;
+  final chumash = manifest['chumash'] as Map<String, dynamic>;
+  final expectedOnkelosRefs = <String>{
+    for (final refs in chumash.values)
+      ...(refs as List<dynamic>).cast<String>(),
+  };
+  final actualOnkelosRefs = <String>{};
+  final preparedRows =
+      <
+        ({
+          String source,
+          String ref,
+          String text,
+          String version,
+          String license,
+        })
+      >[];
+
+  for (final row in inputRows) {
+    final source = row['source'] as String;
+    final verseRef = row['ref'] as String;
+    final parts = verseRef.split(' ');
+    if (parts.length != 2) {
+      throw FormatException('Unexpected Shnayim Mikra ref: $verseRef');
+    }
+    final book = parts.first;
+    final bookVersions = versions[book] as Map<String, dynamic>?;
+    final sourceVersion = bookVersions?[source] as Map<String, dynamic>?;
+    if (sourceVersion == null || sourceVersion['license'] != 'Public Domain') {
+      throw FormatException('Missing Public Domain version for $book/$source');
+    }
+    final versionTitle = sourceVersion['version'] as String;
+    final text = HebrewUtils.cleanSefariaText(row['he'] as String).trim();
+    if (text.isEmpty) {
+      throw FormatException('Empty text in Shnayim Mikra seed for $verseRef');
+    }
+    if (source == 'onkelos') {
+      if (!expectedOnkelosRefs.contains(verseRef) ||
+          !actualOnkelosRefs.add(verseRef)) {
+        throw FormatException('Unexpected or duplicate Onkelos ref: $verseRef');
+      }
+    } else if (source != 'rashi') {
+      throw FormatException('Unexpected Shnayim Mikra source: $source');
+    }
+    preparedRows.add((
+      source: source,
+      ref: source == 'onkelos' ? 'Onkelos $verseRef' : 'Rashi on $verseRef',
+      text: text,
+      version: versionTitle,
+      license: sourceVersion['license'] as String,
+    ));
+  }
+  if (actualOnkelosRefs.length != expectedOnkelosRefs.length ||
+      !actualOnkelosRefs.containsAll(expectedOnkelosRefs)) {
+    throw StateError(
+      'Onkelos seed coverage ${actualOnkelosRefs.length}/'
+      '${expectedOnkelosRefs.length} does not match the Chumash manifest',
+    );
+  }
+  if (preparedRows.where((row) => row.source == 'rashi').length != 7816) {
+    throw StateError('Rashi seed expected 7,816 comment refs');
+  }
+  preparedRows.sort((a, b) {
+    final sourceOrder = a.source.compareTo(b.source);
+    return sourceOrder != 0 ? sourceOrder : a.ref.compareTo(b.ref);
+  });
+
+  const batchSize = 500;
+  for (var i = 0; i < preparedRows.length; i += batchSize) {
+    final end = (i + batchSize).clamp(0, preparedRows.length);
+    await db.transaction(() async {
+      for (var j = i; j < end; j++) {
+        final row = preparedRows[j];
+        await db.customInsert(
+          'INSERT OR REPLACE INTO parallel_text '
+          '(source_key, sefaria_ref, hebrew_text, english_text, version_title, '
+          'license) VALUES (?, ?, ?, ?, ?, ?)',
+          variables: [
+            Variable.withString(row.source),
+            Variable.withString(row.ref),
+            Variable.withString(row.text),
+            const Variable(''),
+            Variable.withString(row.version),
+            Variable.withString(row.license),
+          ],
+        );
+      }
+    });
+  }
+
+  final preparedAliyot =
+      <
+        ({
+          String portion,
+          String name,
+          String region,
+          int number,
+          String start,
+          String end,
+        })
+      >[];
+  for (final portion
+      in (data['aliyot'] as List<dynamic>).cast<Map<String, dynamic>>()) {
+    final ranges = (portion['aliyot'] as List<dynamic>).cast<String>();
+    for (var i = 0; i < ranges.length; i++) {
+      final (start, end) = _aliyahRangeEndpoints(ranges[i]);
+      preparedAliyot.add((
+        portion: portion['enum'] as String,
+        name: portion['name'] as String,
+        region: 'any',
+        number: i + 1,
+        start: start,
+        end: end,
+      ));
+    }
+  }
+  for (final reading
+      in (data['festivalAliyot'] as List<dynamic>)
+          .cast<Map<String, dynamic>>()) {
+    final ranges = (reading['aliyot'] as List<dynamic>).cast<String>();
+    for (var i = 0; i < ranges.length; i++) {
+      final (start, end) = _aliyahRangeEndpoints(ranges[i]);
+      preparedAliyot.add((
+        portion: 'VEZOT_HABERACHA',
+        name: reading['name'] as String,
+        region: reading['israel'] == true ? 'israel' : 'diaspora',
+        number: i + 1,
+        start: start,
+        end: end,
+      ));
+    }
+  }
+  preparedAliyot.sort((a, b) {
+    final portionOrder = a.portion.compareTo(b.portion);
+    if (portionOrder != 0) return portionOrder;
+    final regionOrder = a.region.compareTo(b.region);
+    return regionOrder != 0 ? regionOrder : a.number.compareTo(b.number);
+  });
+  for (var i = 0; i < preparedAliyot.length; i += batchSize) {
+    final end = (i + batchSize).clamp(0, preparedAliyot.length);
+    await db.transaction(() async {
+      for (var j = i; j < end; j++) {
+        final row = preparedAliyot[j];
+        await db.customInsert(
+          'INSERT OR REPLACE INTO parsha_aliyot '
+          '(portion_key, portion_name, region, aliyah_number, start_ref, '
+          'end_ref) VALUES (?, ?, ?, ?, ?, ?)',
+          variables: [
+            Variable.withString(row.portion),
+            Variable.withString(row.name),
+            Variable.withString(row.region),
+            Variable.withInt(row.number),
+            Variable.withString(row.start),
+            Variable.withString(row.end),
+          ],
+        );
+      }
+    });
+  }
+  return (parallelText: preparedRows.length, aliyot: preparedAliyot.length);
+}
+
+(String, String) _aliyahRangeEndpoints(String range) {
+  final parts = range.split('-');
+  if (parts.isEmpty || parts.length > 2) {
+    throw FormatException('Invalid aliyah range: $range');
+  }
+  final start = parts.first.trim();
+  var end = parts.last.trim();
+  if (parts.length == 2 && !end.contains(' ')) {
+    end = '${start.substring(0, start.lastIndexOf(' '))} $end';
+  }
+  return (start, end);
 }
 
 /// Loads the JSON produced by tool/text_extract/main.py and writes one
@@ -694,27 +941,33 @@ Future<void> _writeSeedMetadata(
   required String contentHash,
   required int textCacheCount,
   required int calendarCycleCount,
+  required int parallelTextCount,
+  required int parshaAliyahCount,
 }) async {
   await db.customStatement('DELETE FROM seed_metadata');
   final buildId = 'seed-$version-${DateTime.now().millisecondsSinceEpoch}';
   await db.customInsert(
     'INSERT INTO seed_metadata '
     '(version, built_at, build_id, text_cache_count, calendar_cycle_count, '
+    'parallel_text_count, parsha_aliyah_count, '
     'content_hash, min_app_version) '
-    'VALUES (?, ?, ?, ?, ?, ?, ?)',
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     variables: [
       Variable.withInt(version),
       Variable.withString(DateTime.now().toUtc().toIso8601String()),
       Variable.withString(buildId),
       Variable.withInt(textCacheCount),
       Variable.withInt(calendarCycleCount),
+      Variable.withInt(parallelTextCount),
+      Variable.withInt(parshaAliyahCount),
       Variable.withString(contentHash),
       Variable.withString('1.0.0'),
     ],
   );
   print(
     '  SeedMetadata: v$version, hash=${contentHash.substring(0, 12)}…, '
-    'text=$textCacheCount, cycles=$calendarCycleCount',
+    'text=$textCacheCount, cycles=$calendarCycleCount, '
+    'parallel=$parallelTextCount, aliyot=$parshaAliyahCount',
   );
 }
 
@@ -731,7 +984,13 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
   final db = ContentDatabase(NativeDatabase(file));
   try {
     // Verify schema against the Drift class by probing each table.
-    final expectedTables = ['text_cache', 'calendar_cycles', 'seed_metadata'];
+    final expectedTables = [
+      'text_cache',
+      'calendar_cycles',
+      'seed_metadata',
+      'parallel_text',
+      'parsha_aliyot',
+    ];
     for (final t in expectedTables) {
       final info = await db.customSelect('PRAGMA table_info($t)').get();
       if (info.isEmpty) {
@@ -745,7 +1004,12 @@ Future<void> _validateExisting(String dbPath, _Args args) async {
         .customSelect('PRAGMA table_info(seed_metadata)')
         .get();
     final metaColNames = metaColumns.map((r) => r.read<String>('name')).toSet();
-    for (final col in ['content_hash', 'min_app_version']) {
+    for (final col in [
+      'content_hash',
+      'min_app_version',
+      'parallel_text_count',
+      'parsha_aliyah_count',
+    ]) {
       if (!metaColNames.contains(col)) {
         stderr.writeln('❌ Missing column seed_metadata.$col');
         exit(1);

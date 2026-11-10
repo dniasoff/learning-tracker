@@ -58,6 +58,16 @@ class ContentRepositoryImpl
   ) async {
     final key = curriculumId.storageKey;
 
+    if (!curriculumId.hasContentTree) {
+      _contentCache[key] = const [];
+      _configCache[key] = CurriculumHierarchyConfig(
+        curriculumId: key,
+        levelLabels: const [],
+        totalItems: 0,
+      );
+      return _contentCache[key]!;
+    }
+
     if (_contentCache.containsKey(key)) {
       return _contentCache[key]!;
     }
@@ -151,6 +161,8 @@ class ContentRepositoryImpl
   Future<int> countLeavesForCurriculum(CurriculumId curriculumId) async {
     final key = curriculumId.storageKey;
 
+    if (!curriculumId.hasContentTree) return 0;
+
     // Already materialized → count from the cache (identical, no re-parse and
     // no new allocation).
     final cached = _contentCache[key];
@@ -224,6 +236,8 @@ class ContentRepositoryImpl
     CurriculumId curriculumId,
   ) async {
     final key = curriculumId.storageKey;
+
+    if (!curriculumId.hasContentTree) return const [];
 
     // Already materialized (by some other caller) → read straight from the
     // cache; nothing new is retained.
@@ -300,6 +314,7 @@ class ContentRepositoryImpl
     CurriculumId curriculumId,
     Set<String> hiddenRefs,
   ) async {
+    if (!curriculumId.hasContentTree) return const [];
     if (hiddenRefs.isEmpty) return loadLeavesTransient(curriculumId);
 
     final key = curriculumId.storageKey;

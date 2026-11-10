@@ -8,6 +8,8 @@ import 'package:learning_tracker/core/database/content/daos/seed_metadata_dao.da
 import 'package:learning_tracker/core/database/content/daos/text_cache_dao.dart';
 import 'package:learning_tracker/core/database/tables/calendar_cycles.dart';
 import 'package:learning_tracker/core/database/tables/daily_content.dart';
+import 'package:learning_tracker/core/database/tables/parallel_text.dart';
+import 'package:learning_tracker/core/database/tables/parsha_aliyot.dart';
 import 'package:learning_tracker/core/database/tables/seed_metadata.dart';
 import 'package:learning_tracker/core/database/tables/text_cache.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -26,7 +28,14 @@ part 'content_database.g.dart';
 /// Learning programs and test dates are computed at runtime — see
 /// [LearningProgramRepository] and [generateTestDateSeeds].
 @DriftDatabase(
-  tables: [TextCache, CalendarCycles, DailyContent, SeedMetadata],
+  tables: [
+    TextCache,
+    CalendarCycles,
+    DailyContent,
+    SeedMetadata,
+    ParallelText,
+    ParshaAliyot,
+  ],
   daos: [
     ContentTextCacheDao,
     CalendarCycleDao,
@@ -58,7 +67,7 @@ class ContentDatabase extends _$ContentDatabase {
   /// [SeedManager] can compare against the on-device DB without instantiating
   /// Drift (which would otherwise trigger migrations against a read-only
   /// seed).
-  static const int expectedSchemaVersion = 5;
+  static const int expectedSchemaVersion = 6;
 
   @override
   int get schemaVersion => expectedSchemaVersion;
@@ -157,6 +166,39 @@ class ContentDatabase extends _$ContentDatabase {
               stackTrace: st,
             );
           }
+        }
+        if (from < 6) {
+          // v6: offline Shnayim Mikra translations/comments and aliyah
+          // boundaries. Existing installs are upgraded in place; seed
+          // replacement still supplies the fully populated immutable copy.
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS parallel_text ('
+            'source_key TEXT NOT NULL, '
+            'sefaria_ref TEXT NOT NULL, '
+            'hebrew_text TEXT NOT NULL, '
+            "english_text TEXT NOT NULL DEFAULT '', "
+            'version_title TEXT NOT NULL, '
+            'license TEXT NOT NULL, '
+            'PRIMARY KEY (source_key, sefaria_ref))',
+          );
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS parsha_aliyot ('
+            'portion_key TEXT NOT NULL, '
+            'portion_name TEXT NOT NULL, '
+            "region TEXT NOT NULL DEFAULT 'any', "
+            'aliyah_number INTEGER NOT NULL, '
+            'start_ref TEXT NOT NULL, '
+            'end_ref TEXT NOT NULL, '
+            'PRIMARY KEY (portion_key, region, aliyah_number))',
+          );
+          await customStatement(
+            'ALTER TABLE seed_metadata ADD COLUMN '
+            'parallel_text_count INTEGER NOT NULL DEFAULT 0',
+          );
+          await customStatement(
+            'ALTER TABLE seed_metadata ADD COLUMN '
+            'parsha_aliyah_count INTEGER NOT NULL DEFAULT 0',
+          );
         }
       },
     );

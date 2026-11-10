@@ -90,8 +90,13 @@ CountedEvents countEvents(
     for (final e in live)
       if (e.isVoid && liveLearnIds.contains(e.targetId)) e.targetId!,
   };
-  final learns = live.where((e) => e.isLearn && !voided.contains(e.id)).toList()
-    ..sort(compareEventsByEffectiveAt);
+  final learns =
+      live
+          .where(
+            (e) => e.isLearn && !voided.contains(e.id) && !e.isShnayimMikraPass,
+          )
+          .toList()
+        ..sort(compareEventsByEffectiveAt);
   return CountedEvents(
     learns: learns,
     voidedIds: voided,

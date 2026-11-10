@@ -167,6 +167,8 @@ final class TutorLearnEvent {
     this.learnedOn,
     this.level,
     this.stage,
+    this.assignmentKey,
+    this.commentarySource,
     this.source = LearningEvent.sourceMain,
   }) : assert(
          dateState != DateState.catchUp,
@@ -199,6 +201,10 @@ final class TutorLearnEvent {
   /// The review stage of a main-track event.
   final int? stage;
 
+  final String? assignmentKey;
+
+  final String? commentarySource;
+
   /// `main`, or the ULID of the sub-track the event is learning on.
   final String source;
 
@@ -215,6 +221,8 @@ final class TutorLearnEvent {
       'learned_on': dateState == DateState.beforeTracking ? null : learnedOn,
       if (level != null) 'level': level,
       if (stage != null) 'stage': stage,
+      if (assignmentKey != null) 'assignment_key': assignmentKey,
+      if (commentarySource != null) 'commentary_source': commentarySource,
     },
   };
 }

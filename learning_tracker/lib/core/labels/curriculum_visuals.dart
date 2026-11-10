@@ -22,6 +22,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 IconData curriculumIcon(CurriculumId id) {
   switch (id) {
     case CurriculumId.chumash:
+    case CurriculumId.shnayimMikra:
     case CurriculumId.nach:
     case CurriculumId.tanach:
       return Icons.menu_book_outlined;

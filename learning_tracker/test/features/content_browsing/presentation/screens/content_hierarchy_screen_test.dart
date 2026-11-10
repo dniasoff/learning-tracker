@@ -343,9 +343,9 @@ void main() {
     );
 
     testWidgets(
-      'the shared hierarchy list scrolls back to its root for every curriculum',
+      'the shared hierarchy list scrolls back to its root for every content curriculum',
       (tester) async {
-        for (final curriculum in CurriculumId.values) {
+        for (final curriculum in CurriculumId.contentCurricula) {
           final items = [
             for (var index = 0; index < 8; index++)
               ContentItem(

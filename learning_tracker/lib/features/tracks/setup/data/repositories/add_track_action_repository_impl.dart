@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
@@ -34,6 +35,15 @@ final class AddTrackNotReadyException implements Exception {
       'AddTrackNotReadyException: no active account or learner profile yet';
 }
 
+/// Extra governed changes composed by the provider for a newly activated
+/// track, such as initializing feature-owned settings in the same action.
+typedef AddTrackActivationChanges =
+    Future<List<GovernedEntityChange>> Function(CurriculumId curriculumId);
+
+Future<List<GovernedEntityChange>> _noActivationChanges(
+  CurriculumId curriculumId,
+) async => const [];
+
 /// See the library doc comment.
 final class FirestoreAddTrackActionRepository
     implements AddTrackActionRepository {
@@ -41,11 +51,14 @@ final class FirestoreAddTrackActionRepository
   FirestoreAddTrackActionRepository({
     required Ref ref,
     DateTime Function()? clock,
+    AddTrackActivationChanges activationChanges = _noActivationChanges,
   }) : _ref = ref,
-       _clock = clock ?? (() => ref.read(localDayClockProvider).nowUtc());
+       _clock = clock ?? (() => ref.read(localDayClockProvider).nowUtc()),
+       _activationChanges = activationChanges;
 
   final Ref _ref;
   final DateTime Function() _clock;
+  final AddTrackActivationChanges _activationChanges;
 
   @override
   Future<AddTrackOutcome> applyAddTrack(AddTrackPlan plan) async {
@@ -108,6 +121,8 @@ final class FirestoreAddTrackActionRepository
         goals: goals,
       );
     }
+
+    changes.addAll(await _activationChanges(curriculumId));
 
     final writer = _ref.read(ownerGovernedWriterProvider);
     final success = await applyOwnerAction(writer, GovernedAction(changes));

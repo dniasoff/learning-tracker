@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/actor.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
+import 'package:learning_tracker/domain/learner_state/counted_events.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
@@ -395,6 +396,71 @@ void main() {
   });
 
   group('AC-2: capture', () {
+    test(
+      'Shnayim Mikra passes persist idempotently, sync, and can be undone',
+      () async {
+        final firstDevice = _Harness();
+        const cycle = '2026-10-03:BERESHIT:israel';
+        Future<CaptureResult> markPass(DefaultLearningCommands commands) =>
+            commands.captureShnayimMikra(
+              assignmentKey: cycle,
+              refs: const ['Genesis 1:1'],
+              source: LearningEvent.sourceShnayimMikraPass2,
+              dateState: DateState.dated,
+              skipRecorded: true,
+            );
+
+        await markPass(firstDevice.commands);
+        expect(firstDevice.written, hasLength(1));
+        expect(firstDevice.awards, isEmpty);
+        firstDevice.sync();
+
+        final secondDevice = _Harness(events: firstDevice.fakeReads.eventLog);
+        final duplicate = await markPass(secondDevice.commands);
+        expect(duplicate, isA<CaptureSuccess>());
+        expect(secondDevice.written, isEmpty);
+        expect(secondDevice.awards, isEmpty);
+
+        final target = firstDevice.written.single;
+        await firstDevice.commands.voidEvent(target.id);
+        firstDevice.sync();
+        final counted = countEvents(firstDevice.fakeReads.eventLog);
+        expect(counted.voidedIds, contains(target.id));
+        expect(counted.learns, isEmpty);
+      },
+    );
+
+    test(
+      'unit points deduplicate within a cycle and can be earned next year',
+      () async {
+        final h = _Harness();
+        Future<CaptureResult> complete(String cycle) =>
+            h.commands.captureShnayimMikra(
+              assignmentKey: cycle,
+              refs: const ['Genesis 1:1'],
+              source: LearningEvent.sourceMain,
+              dateState: DateState.dated,
+              skipRecorded: true,
+            );
+        const cycle5787 = '2026-10-03:BERESHIT:israel';
+        const cycle5788 = '2027-10-02:BERESHIT:israel';
+
+        await complete(cycle5787);
+        h.sync();
+        await complete(cycle5787);
+        expect(h.written, hasLength(1));
+        expect(h.awards, hasLength(1));
+
+        await complete(cycle5788);
+        expect(h.written, hasLength(2));
+        expect(h.awards, hasLength(2));
+        expect(h.written.map((event) => event.assignmentKey), [
+          cycle5787,
+          cycle5788,
+        ]);
+      },
+    );
+
     test('dated main: one learn per leaf, civil-today default, pts_ pair at '
         'created_at = recorded_at with the first-stage amount', () async {
       final h = _Harness();

@@ -1066,6 +1066,30 @@ class $SeedMetadataTable extends SeedMetadata
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _parallelTextCountMeta = const VerificationMeta(
+    'parallelTextCount',
+  );
+  @override
+  late final GeneratedColumn<int> parallelTextCount = GeneratedColumn<int>(
+    'parallel_text_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _parshaAliyahCountMeta = const VerificationMeta(
+    'parshaAliyahCount',
+  );
+  @override
+  late final GeneratedColumn<int> parshaAliyahCount = GeneratedColumn<int>(
+    'parsha_aliyah_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _contentHashMeta = const VerificationMeta(
     'contentHash',
   );
@@ -1096,6 +1120,8 @@ class $SeedMetadataTable extends SeedMetadata
     buildId,
     textCacheCount,
     calendarCycleCount,
+    parallelTextCount,
+    parshaAliyahCount,
     contentHash,
     minAppVersion,
   ];
@@ -1155,6 +1181,24 @@ class $SeedMetadataTable extends SeedMetadata
     } else if (isInserting) {
       context.missing(_calendarCycleCountMeta);
     }
+    if (data.containsKey('parallel_text_count')) {
+      context.handle(
+        _parallelTextCountMeta,
+        parallelTextCount.isAcceptableOrUnknown(
+          data['parallel_text_count']!,
+          _parallelTextCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('parsha_aliyah_count')) {
+      context.handle(
+        _parshaAliyahCountMeta,
+        parshaAliyahCount.isAcceptableOrUnknown(
+          data['parsha_aliyah_count']!,
+          _parshaAliyahCountMeta,
+        ),
+      );
+    }
     if (data.containsKey('content_hash')) {
       context.handle(
         _contentHashMeta,
@@ -1202,6 +1246,14 @@ class $SeedMetadataTable extends SeedMetadata
         DriftSqlType.int,
         data['${effectivePrefix}calendar_cycle_count'],
       )!,
+      parallelTextCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parallel_text_count'],
+      )!,
+      parshaAliyahCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parsha_aliyah_count'],
+      )!,
       contentHash: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}content_hash'],
@@ -1236,6 +1288,12 @@ class SeedMetadataData extends DataClass
   /// Number of CalendarCycles rows in this seed
   final int calendarCycleCount;
 
+  /// Number of bundled Onkelos and Rashi text rows.
+  final int parallelTextCount;
+
+  /// Number of bundled weekly and festival aliyah boundary rows.
+  final int parshaAliyahCount;
+
   /// SHA-256 hash of all content (refs + calendar keys) for integrity checks.
   /// Null when not computed by the seed build pipeline.
   final String? contentHash;
@@ -1248,6 +1306,8 @@ class SeedMetadataData extends DataClass
     required this.buildId,
     required this.textCacheCount,
     required this.calendarCycleCount,
+    required this.parallelTextCount,
+    required this.parshaAliyahCount,
     this.contentHash,
     required this.minAppVersion,
   });
@@ -1259,6 +1319,8 @@ class SeedMetadataData extends DataClass
     map['build_id'] = Variable<String>(buildId);
     map['text_cache_count'] = Variable<int>(textCacheCount);
     map['calendar_cycle_count'] = Variable<int>(calendarCycleCount);
+    map['parallel_text_count'] = Variable<int>(parallelTextCount);
+    map['parsha_aliyah_count'] = Variable<int>(parshaAliyahCount);
     if (!nullToAbsent || contentHash != null) {
       map['content_hash'] = Variable<String>(contentHash);
     }
@@ -1273,6 +1335,8 @@ class SeedMetadataData extends DataClass
       buildId: Value(buildId),
       textCacheCount: Value(textCacheCount),
       calendarCycleCount: Value(calendarCycleCount),
+      parallelTextCount: Value(parallelTextCount),
+      parshaAliyahCount: Value(parshaAliyahCount),
       contentHash: contentHash == null && nullToAbsent
           ? const Value.absent()
           : Value(contentHash),
@@ -1291,6 +1355,8 @@ class SeedMetadataData extends DataClass
       buildId: serializer.fromJson<String>(json['buildId']),
       textCacheCount: serializer.fromJson<int>(json['textCacheCount']),
       calendarCycleCount: serializer.fromJson<int>(json['calendarCycleCount']),
+      parallelTextCount: serializer.fromJson<int>(json['parallelTextCount']),
+      parshaAliyahCount: serializer.fromJson<int>(json['parshaAliyahCount']),
       contentHash: serializer.fromJson<String?>(json['contentHash']),
       minAppVersion: serializer.fromJson<String>(json['minAppVersion']),
     );
@@ -1304,6 +1370,8 @@ class SeedMetadataData extends DataClass
       'buildId': serializer.toJson<String>(buildId),
       'textCacheCount': serializer.toJson<int>(textCacheCount),
       'calendarCycleCount': serializer.toJson<int>(calendarCycleCount),
+      'parallelTextCount': serializer.toJson<int>(parallelTextCount),
+      'parshaAliyahCount': serializer.toJson<int>(parshaAliyahCount),
       'contentHash': serializer.toJson<String?>(contentHash),
       'minAppVersion': serializer.toJson<String>(minAppVersion),
     };
@@ -1315,6 +1383,8 @@ class SeedMetadataData extends DataClass
     String? buildId,
     int? textCacheCount,
     int? calendarCycleCount,
+    int? parallelTextCount,
+    int? parshaAliyahCount,
     Value<String?> contentHash = const Value.absent(),
     String? minAppVersion,
   }) => SeedMetadataData(
@@ -1323,6 +1393,8 @@ class SeedMetadataData extends DataClass
     buildId: buildId ?? this.buildId,
     textCacheCount: textCacheCount ?? this.textCacheCount,
     calendarCycleCount: calendarCycleCount ?? this.calendarCycleCount,
+    parallelTextCount: parallelTextCount ?? this.parallelTextCount,
+    parshaAliyahCount: parshaAliyahCount ?? this.parshaAliyahCount,
     contentHash: contentHash.present ? contentHash.value : this.contentHash,
     minAppVersion: minAppVersion ?? this.minAppVersion,
   );
@@ -1337,6 +1409,12 @@ class SeedMetadataData extends DataClass
       calendarCycleCount: data.calendarCycleCount.present
           ? data.calendarCycleCount.value
           : this.calendarCycleCount,
+      parallelTextCount: data.parallelTextCount.present
+          ? data.parallelTextCount.value
+          : this.parallelTextCount,
+      parshaAliyahCount: data.parshaAliyahCount.present
+          ? data.parshaAliyahCount.value
+          : this.parshaAliyahCount,
       contentHash: data.contentHash.present
           ? data.contentHash.value
           : this.contentHash,
@@ -1354,6 +1432,8 @@ class SeedMetadataData extends DataClass
           ..write('buildId: $buildId, ')
           ..write('textCacheCount: $textCacheCount, ')
           ..write('calendarCycleCount: $calendarCycleCount, ')
+          ..write('parallelTextCount: $parallelTextCount, ')
+          ..write('parshaAliyahCount: $parshaAliyahCount, ')
           ..write('contentHash: $contentHash, ')
           ..write('minAppVersion: $minAppVersion')
           ..write(')'))
@@ -1367,6 +1447,8 @@ class SeedMetadataData extends DataClass
     buildId,
     textCacheCount,
     calendarCycleCount,
+    parallelTextCount,
+    parshaAliyahCount,
     contentHash,
     minAppVersion,
   );
@@ -1379,6 +1461,8 @@ class SeedMetadataData extends DataClass
           other.buildId == this.buildId &&
           other.textCacheCount == this.textCacheCount &&
           other.calendarCycleCount == this.calendarCycleCount &&
+          other.parallelTextCount == this.parallelTextCount &&
+          other.parshaAliyahCount == this.parshaAliyahCount &&
           other.contentHash == this.contentHash &&
           other.minAppVersion == this.minAppVersion);
 }
@@ -1389,6 +1473,8 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
   final Value<String> buildId;
   final Value<int> textCacheCount;
   final Value<int> calendarCycleCount;
+  final Value<int> parallelTextCount;
+  final Value<int> parshaAliyahCount;
   final Value<String?> contentHash;
   final Value<String> minAppVersion;
   const SeedMetadataCompanion({
@@ -1397,6 +1483,8 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
     this.buildId = const Value.absent(),
     this.textCacheCount = const Value.absent(),
     this.calendarCycleCount = const Value.absent(),
+    this.parallelTextCount = const Value.absent(),
+    this.parshaAliyahCount = const Value.absent(),
     this.contentHash = const Value.absent(),
     this.minAppVersion = const Value.absent(),
   });
@@ -1406,6 +1494,8 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
     required String buildId,
     required int textCacheCount,
     required int calendarCycleCount,
+    this.parallelTextCount = const Value.absent(),
+    this.parshaAliyahCount = const Value.absent(),
     this.contentHash = const Value.absent(),
     this.minAppVersion = const Value.absent(),
   }) : builtAt = Value(builtAt),
@@ -1418,6 +1508,8 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
     Expression<String>? buildId,
     Expression<int>? textCacheCount,
     Expression<int>? calendarCycleCount,
+    Expression<int>? parallelTextCount,
+    Expression<int>? parshaAliyahCount,
     Expression<String>? contentHash,
     Expression<String>? minAppVersion,
   }) {
@@ -1428,6 +1520,8 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
       if (textCacheCount != null) 'text_cache_count': textCacheCount,
       if (calendarCycleCount != null)
         'calendar_cycle_count': calendarCycleCount,
+      if (parallelTextCount != null) 'parallel_text_count': parallelTextCount,
+      if (parshaAliyahCount != null) 'parsha_aliyah_count': parshaAliyahCount,
       if (contentHash != null) 'content_hash': contentHash,
       if (minAppVersion != null) 'min_app_version': minAppVersion,
     });
@@ -1439,6 +1533,8 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
     Value<String>? buildId,
     Value<int>? textCacheCount,
     Value<int>? calendarCycleCount,
+    Value<int>? parallelTextCount,
+    Value<int>? parshaAliyahCount,
     Value<String?>? contentHash,
     Value<String>? minAppVersion,
   }) {
@@ -1448,6 +1544,8 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
       buildId: buildId ?? this.buildId,
       textCacheCount: textCacheCount ?? this.textCacheCount,
       calendarCycleCount: calendarCycleCount ?? this.calendarCycleCount,
+      parallelTextCount: parallelTextCount ?? this.parallelTextCount,
+      parshaAliyahCount: parshaAliyahCount ?? this.parshaAliyahCount,
       contentHash: contentHash ?? this.contentHash,
       minAppVersion: minAppVersion ?? this.minAppVersion,
     );
@@ -1471,6 +1569,12 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
     if (calendarCycleCount.present) {
       map['calendar_cycle_count'] = Variable<int>(calendarCycleCount.value);
     }
+    if (parallelTextCount.present) {
+      map['parallel_text_count'] = Variable<int>(parallelTextCount.value);
+    }
+    if (parshaAliyahCount.present) {
+      map['parsha_aliyah_count'] = Variable<int>(parshaAliyahCount.value);
+    }
     if (contentHash.present) {
       map['content_hash'] = Variable<String>(contentHash.value);
     }
@@ -1488,8 +1592,872 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
           ..write('buildId: $buildId, ')
           ..write('textCacheCount: $textCacheCount, ')
           ..write('calendarCycleCount: $calendarCycleCount, ')
+          ..write('parallelTextCount: $parallelTextCount, ')
+          ..write('parshaAliyahCount: $parshaAliyahCount, ')
           ..write('contentHash: $contentHash, ')
           ..write('minAppVersion: $minAppVersion')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ParallelTextTable extends ParallelText
+    with TableInfo<$ParallelTextTable, ParallelTextData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ParallelTextTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sourceKeyMeta = const VerificationMeta(
+    'sourceKey',
+  );
+  @override
+  late final GeneratedColumn<String> sourceKey = GeneratedColumn<String>(
+    'source_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sefariaRefMeta = const VerificationMeta(
+    'sefariaRef',
+  );
+  @override
+  late final GeneratedColumn<String> sefariaRef = GeneratedColumn<String>(
+    'sefaria_ref',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hebrewTextMeta = const VerificationMeta(
+    'hebrewText',
+  );
+  @override
+  late final GeneratedColumn<String> hebrewText = GeneratedColumn<String>(
+    'hebrew_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _englishTextMeta = const VerificationMeta(
+    'englishText',
+  );
+  @override
+  late final GeneratedColumn<String> englishText = GeneratedColumn<String>(
+    'english_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _versionTitleMeta = const VerificationMeta(
+    'versionTitle',
+  );
+  @override
+  late final GeneratedColumn<String> versionTitle = GeneratedColumn<String>(
+    'version_title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _licenseMeta = const VerificationMeta(
+    'license',
+  );
+  @override
+  late final GeneratedColumn<String> license = GeneratedColumn<String>(
+    'license',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    sourceKey,
+    sefariaRef,
+    hebrewText,
+    englishText,
+    versionTitle,
+    license,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'parallel_text';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ParallelTextData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('source_key')) {
+      context.handle(
+        _sourceKeyMeta,
+        sourceKey.isAcceptableOrUnknown(data['source_key']!, _sourceKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceKeyMeta);
+    }
+    if (data.containsKey('sefaria_ref')) {
+      context.handle(
+        _sefariaRefMeta,
+        sefariaRef.isAcceptableOrUnknown(data['sefaria_ref']!, _sefariaRefMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sefariaRefMeta);
+    }
+    if (data.containsKey('hebrew_text')) {
+      context.handle(
+        _hebrewTextMeta,
+        hebrewText.isAcceptableOrUnknown(data['hebrew_text']!, _hebrewTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hebrewTextMeta);
+    }
+    if (data.containsKey('english_text')) {
+      context.handle(
+        _englishTextMeta,
+        englishText.isAcceptableOrUnknown(
+          data['english_text']!,
+          _englishTextMeta,
+        ),
+      );
+    }
+    if (data.containsKey('version_title')) {
+      context.handle(
+        _versionTitleMeta,
+        versionTitle.isAcceptableOrUnknown(
+          data['version_title']!,
+          _versionTitleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_versionTitleMeta);
+    }
+    if (data.containsKey('license')) {
+      context.handle(
+        _licenseMeta,
+        license.isAcceptableOrUnknown(data['license']!, _licenseMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_licenseMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {sourceKey, sefariaRef};
+  @override
+  ParallelTextData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ParallelTextData(
+      sourceKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_key'],
+      )!,
+      sefariaRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sefaria_ref'],
+      )!,
+      hebrewText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hebrew_text'],
+      )!,
+      englishText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}english_text'],
+      )!,
+      versionTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}version_title'],
+      )!,
+      license: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}license'],
+      )!,
+    );
+  }
+
+  @override
+  $ParallelTextTable createAlias(String alias) {
+    return $ParallelTextTable(attachedDatabase, alias);
+  }
+}
+
+class ParallelTextData extends DataClass
+    implements Insertable<ParallelTextData> {
+  final String sourceKey;
+  final String sefariaRef;
+  final String hebrewText;
+  final String englishText;
+  final String versionTitle;
+  final String license;
+  const ParallelTextData({
+    required this.sourceKey,
+    required this.sefariaRef,
+    required this.hebrewText,
+    required this.englishText,
+    required this.versionTitle,
+    required this.license,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['source_key'] = Variable<String>(sourceKey);
+    map['sefaria_ref'] = Variable<String>(sefariaRef);
+    map['hebrew_text'] = Variable<String>(hebrewText);
+    map['english_text'] = Variable<String>(englishText);
+    map['version_title'] = Variable<String>(versionTitle);
+    map['license'] = Variable<String>(license);
+    return map;
+  }
+
+  ParallelTextCompanion toCompanion(bool nullToAbsent) {
+    return ParallelTextCompanion(
+      sourceKey: Value(sourceKey),
+      sefariaRef: Value(sefariaRef),
+      hebrewText: Value(hebrewText),
+      englishText: Value(englishText),
+      versionTitle: Value(versionTitle),
+      license: Value(license),
+    );
+  }
+
+  factory ParallelTextData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ParallelTextData(
+      sourceKey: serializer.fromJson<String>(json['sourceKey']),
+      sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
+      hebrewText: serializer.fromJson<String>(json['hebrewText']),
+      englishText: serializer.fromJson<String>(json['englishText']),
+      versionTitle: serializer.fromJson<String>(json['versionTitle']),
+      license: serializer.fromJson<String>(json['license']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'sourceKey': serializer.toJson<String>(sourceKey),
+      'sefariaRef': serializer.toJson<String>(sefariaRef),
+      'hebrewText': serializer.toJson<String>(hebrewText),
+      'englishText': serializer.toJson<String>(englishText),
+      'versionTitle': serializer.toJson<String>(versionTitle),
+      'license': serializer.toJson<String>(license),
+    };
+  }
+
+  ParallelTextData copyWith({
+    String? sourceKey,
+    String? sefariaRef,
+    String? hebrewText,
+    String? englishText,
+    String? versionTitle,
+    String? license,
+  }) => ParallelTextData(
+    sourceKey: sourceKey ?? this.sourceKey,
+    sefariaRef: sefariaRef ?? this.sefariaRef,
+    hebrewText: hebrewText ?? this.hebrewText,
+    englishText: englishText ?? this.englishText,
+    versionTitle: versionTitle ?? this.versionTitle,
+    license: license ?? this.license,
+  );
+  ParallelTextData copyWithCompanion(ParallelTextCompanion data) {
+    return ParallelTextData(
+      sourceKey: data.sourceKey.present ? data.sourceKey.value : this.sourceKey,
+      sefariaRef: data.sefariaRef.present
+          ? data.sefariaRef.value
+          : this.sefariaRef,
+      hebrewText: data.hebrewText.present
+          ? data.hebrewText.value
+          : this.hebrewText,
+      englishText: data.englishText.present
+          ? data.englishText.value
+          : this.englishText,
+      versionTitle: data.versionTitle.present
+          ? data.versionTitle.value
+          : this.versionTitle,
+      license: data.license.present ? data.license.value : this.license,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParallelTextData(')
+          ..write('sourceKey: $sourceKey, ')
+          ..write('sefariaRef: $sefariaRef, ')
+          ..write('hebrewText: $hebrewText, ')
+          ..write('englishText: $englishText, ')
+          ..write('versionTitle: $versionTitle, ')
+          ..write('license: $license')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    sourceKey,
+    sefariaRef,
+    hebrewText,
+    englishText,
+    versionTitle,
+    license,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ParallelTextData &&
+          other.sourceKey == this.sourceKey &&
+          other.sefariaRef == this.sefariaRef &&
+          other.hebrewText == this.hebrewText &&
+          other.englishText == this.englishText &&
+          other.versionTitle == this.versionTitle &&
+          other.license == this.license);
+}
+
+class ParallelTextCompanion extends UpdateCompanion<ParallelTextData> {
+  final Value<String> sourceKey;
+  final Value<String> sefariaRef;
+  final Value<String> hebrewText;
+  final Value<String> englishText;
+  final Value<String> versionTitle;
+  final Value<String> license;
+  final Value<int> rowid;
+  const ParallelTextCompanion({
+    this.sourceKey = const Value.absent(),
+    this.sefariaRef = const Value.absent(),
+    this.hebrewText = const Value.absent(),
+    this.englishText = const Value.absent(),
+    this.versionTitle = const Value.absent(),
+    this.license = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ParallelTextCompanion.insert({
+    required String sourceKey,
+    required String sefariaRef,
+    required String hebrewText,
+    this.englishText = const Value.absent(),
+    required String versionTitle,
+    required String license,
+    this.rowid = const Value.absent(),
+  }) : sourceKey = Value(sourceKey),
+       sefariaRef = Value(sefariaRef),
+       hebrewText = Value(hebrewText),
+       versionTitle = Value(versionTitle),
+       license = Value(license);
+  static Insertable<ParallelTextData> custom({
+    Expression<String>? sourceKey,
+    Expression<String>? sefariaRef,
+    Expression<String>? hebrewText,
+    Expression<String>? englishText,
+    Expression<String>? versionTitle,
+    Expression<String>? license,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (sourceKey != null) 'source_key': sourceKey,
+      if (sefariaRef != null) 'sefaria_ref': sefariaRef,
+      if (hebrewText != null) 'hebrew_text': hebrewText,
+      if (englishText != null) 'english_text': englishText,
+      if (versionTitle != null) 'version_title': versionTitle,
+      if (license != null) 'license': license,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ParallelTextCompanion copyWith({
+    Value<String>? sourceKey,
+    Value<String>? sefariaRef,
+    Value<String>? hebrewText,
+    Value<String>? englishText,
+    Value<String>? versionTitle,
+    Value<String>? license,
+    Value<int>? rowid,
+  }) {
+    return ParallelTextCompanion(
+      sourceKey: sourceKey ?? this.sourceKey,
+      sefariaRef: sefariaRef ?? this.sefariaRef,
+      hebrewText: hebrewText ?? this.hebrewText,
+      englishText: englishText ?? this.englishText,
+      versionTitle: versionTitle ?? this.versionTitle,
+      license: license ?? this.license,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (sourceKey.present) {
+      map['source_key'] = Variable<String>(sourceKey.value);
+    }
+    if (sefariaRef.present) {
+      map['sefaria_ref'] = Variable<String>(sefariaRef.value);
+    }
+    if (hebrewText.present) {
+      map['hebrew_text'] = Variable<String>(hebrewText.value);
+    }
+    if (englishText.present) {
+      map['english_text'] = Variable<String>(englishText.value);
+    }
+    if (versionTitle.present) {
+      map['version_title'] = Variable<String>(versionTitle.value);
+    }
+    if (license.present) {
+      map['license'] = Variable<String>(license.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParallelTextCompanion(')
+          ..write('sourceKey: $sourceKey, ')
+          ..write('sefariaRef: $sefariaRef, ')
+          ..write('hebrewText: $hebrewText, ')
+          ..write('englishText: $englishText, ')
+          ..write('versionTitle: $versionTitle, ')
+          ..write('license: $license, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ParshaAliyotTable extends ParshaAliyot
+    with TableInfo<$ParshaAliyotTable, ParshaAliyotData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ParshaAliyotTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _portionKeyMeta = const VerificationMeta(
+    'portionKey',
+  );
+  @override
+  late final GeneratedColumn<String> portionKey = GeneratedColumn<String>(
+    'portion_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _portionNameMeta = const VerificationMeta(
+    'portionName',
+  );
+  @override
+  late final GeneratedColumn<String> portionName = GeneratedColumn<String>(
+    'portion_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _regionMeta = const VerificationMeta('region');
+  @override
+  late final GeneratedColumn<String> region = GeneratedColumn<String>(
+    'region',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('any'),
+  );
+  static const VerificationMeta _aliyahNumberMeta = const VerificationMeta(
+    'aliyahNumber',
+  );
+  @override
+  late final GeneratedColumn<int> aliyahNumber = GeneratedColumn<int>(
+    'aliyah_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startRefMeta = const VerificationMeta(
+    'startRef',
+  );
+  @override
+  late final GeneratedColumn<String> startRef = GeneratedColumn<String>(
+    'start_ref',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endRefMeta = const VerificationMeta('endRef');
+  @override
+  late final GeneratedColumn<String> endRef = GeneratedColumn<String>(
+    'end_ref',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    portionKey,
+    portionName,
+    region,
+    aliyahNumber,
+    startRef,
+    endRef,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'parsha_aliyot';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ParshaAliyotData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('portion_key')) {
+      context.handle(
+        _portionKeyMeta,
+        portionKey.isAcceptableOrUnknown(data['portion_key']!, _portionKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_portionKeyMeta);
+    }
+    if (data.containsKey('portion_name')) {
+      context.handle(
+        _portionNameMeta,
+        portionName.isAcceptableOrUnknown(
+          data['portion_name']!,
+          _portionNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_portionNameMeta);
+    }
+    if (data.containsKey('region')) {
+      context.handle(
+        _regionMeta,
+        region.isAcceptableOrUnknown(data['region']!, _regionMeta),
+      );
+    }
+    if (data.containsKey('aliyah_number')) {
+      context.handle(
+        _aliyahNumberMeta,
+        aliyahNumber.isAcceptableOrUnknown(
+          data['aliyah_number']!,
+          _aliyahNumberMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_aliyahNumberMeta);
+    }
+    if (data.containsKey('start_ref')) {
+      context.handle(
+        _startRefMeta,
+        startRef.isAcceptableOrUnknown(data['start_ref']!, _startRefMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startRefMeta);
+    }
+    if (data.containsKey('end_ref')) {
+      context.handle(
+        _endRefMeta,
+        endRef.isAcceptableOrUnknown(data['end_ref']!, _endRefMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endRefMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {portionKey, region, aliyahNumber};
+  @override
+  ParshaAliyotData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ParshaAliyotData(
+      portionKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}portion_key'],
+      )!,
+      portionName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}portion_name'],
+      )!,
+      region: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}region'],
+      )!,
+      aliyahNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}aliyah_number'],
+      )!,
+      startRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}start_ref'],
+      )!,
+      endRef: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}end_ref'],
+      )!,
+    );
+  }
+
+  @override
+  $ParshaAliyotTable createAlias(String alias) {
+    return $ParshaAliyotTable(attachedDatabase, alias);
+  }
+}
+
+class ParshaAliyotData extends DataClass
+    implements Insertable<ParshaAliyotData> {
+  final String portionKey;
+  final String portionName;
+  final String region;
+  final int aliyahNumber;
+  final String startRef;
+  final String endRef;
+  const ParshaAliyotData({
+    required this.portionKey,
+    required this.portionName,
+    required this.region,
+    required this.aliyahNumber,
+    required this.startRef,
+    required this.endRef,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['portion_key'] = Variable<String>(portionKey);
+    map['portion_name'] = Variable<String>(portionName);
+    map['region'] = Variable<String>(region);
+    map['aliyah_number'] = Variable<int>(aliyahNumber);
+    map['start_ref'] = Variable<String>(startRef);
+    map['end_ref'] = Variable<String>(endRef);
+    return map;
+  }
+
+  ParshaAliyotCompanion toCompanion(bool nullToAbsent) {
+    return ParshaAliyotCompanion(
+      portionKey: Value(portionKey),
+      portionName: Value(portionName),
+      region: Value(region),
+      aliyahNumber: Value(aliyahNumber),
+      startRef: Value(startRef),
+      endRef: Value(endRef),
+    );
+  }
+
+  factory ParshaAliyotData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ParshaAliyotData(
+      portionKey: serializer.fromJson<String>(json['portionKey']),
+      portionName: serializer.fromJson<String>(json['portionName']),
+      region: serializer.fromJson<String>(json['region']),
+      aliyahNumber: serializer.fromJson<int>(json['aliyahNumber']),
+      startRef: serializer.fromJson<String>(json['startRef']),
+      endRef: serializer.fromJson<String>(json['endRef']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'portionKey': serializer.toJson<String>(portionKey),
+      'portionName': serializer.toJson<String>(portionName),
+      'region': serializer.toJson<String>(region),
+      'aliyahNumber': serializer.toJson<int>(aliyahNumber),
+      'startRef': serializer.toJson<String>(startRef),
+      'endRef': serializer.toJson<String>(endRef),
+    };
+  }
+
+  ParshaAliyotData copyWith({
+    String? portionKey,
+    String? portionName,
+    String? region,
+    int? aliyahNumber,
+    String? startRef,
+    String? endRef,
+  }) => ParshaAliyotData(
+    portionKey: portionKey ?? this.portionKey,
+    portionName: portionName ?? this.portionName,
+    region: region ?? this.region,
+    aliyahNumber: aliyahNumber ?? this.aliyahNumber,
+    startRef: startRef ?? this.startRef,
+    endRef: endRef ?? this.endRef,
+  );
+  ParshaAliyotData copyWithCompanion(ParshaAliyotCompanion data) {
+    return ParshaAliyotData(
+      portionKey: data.portionKey.present
+          ? data.portionKey.value
+          : this.portionKey,
+      portionName: data.portionName.present
+          ? data.portionName.value
+          : this.portionName,
+      region: data.region.present ? data.region.value : this.region,
+      aliyahNumber: data.aliyahNumber.present
+          ? data.aliyahNumber.value
+          : this.aliyahNumber,
+      startRef: data.startRef.present ? data.startRef.value : this.startRef,
+      endRef: data.endRef.present ? data.endRef.value : this.endRef,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParshaAliyotData(')
+          ..write('portionKey: $portionKey, ')
+          ..write('portionName: $portionName, ')
+          ..write('region: $region, ')
+          ..write('aliyahNumber: $aliyahNumber, ')
+          ..write('startRef: $startRef, ')
+          ..write('endRef: $endRef')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    portionKey,
+    portionName,
+    region,
+    aliyahNumber,
+    startRef,
+    endRef,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ParshaAliyotData &&
+          other.portionKey == this.portionKey &&
+          other.portionName == this.portionName &&
+          other.region == this.region &&
+          other.aliyahNumber == this.aliyahNumber &&
+          other.startRef == this.startRef &&
+          other.endRef == this.endRef);
+}
+
+class ParshaAliyotCompanion extends UpdateCompanion<ParshaAliyotData> {
+  final Value<String> portionKey;
+  final Value<String> portionName;
+  final Value<String> region;
+  final Value<int> aliyahNumber;
+  final Value<String> startRef;
+  final Value<String> endRef;
+  final Value<int> rowid;
+  const ParshaAliyotCompanion({
+    this.portionKey = const Value.absent(),
+    this.portionName = const Value.absent(),
+    this.region = const Value.absent(),
+    this.aliyahNumber = const Value.absent(),
+    this.startRef = const Value.absent(),
+    this.endRef = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ParshaAliyotCompanion.insert({
+    required String portionKey,
+    required String portionName,
+    this.region = const Value.absent(),
+    required int aliyahNumber,
+    required String startRef,
+    required String endRef,
+    this.rowid = const Value.absent(),
+  }) : portionKey = Value(portionKey),
+       portionName = Value(portionName),
+       aliyahNumber = Value(aliyahNumber),
+       startRef = Value(startRef),
+       endRef = Value(endRef);
+  static Insertable<ParshaAliyotData> custom({
+    Expression<String>? portionKey,
+    Expression<String>? portionName,
+    Expression<String>? region,
+    Expression<int>? aliyahNumber,
+    Expression<String>? startRef,
+    Expression<String>? endRef,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (portionKey != null) 'portion_key': portionKey,
+      if (portionName != null) 'portion_name': portionName,
+      if (region != null) 'region': region,
+      if (aliyahNumber != null) 'aliyah_number': aliyahNumber,
+      if (startRef != null) 'start_ref': startRef,
+      if (endRef != null) 'end_ref': endRef,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ParshaAliyotCompanion copyWith({
+    Value<String>? portionKey,
+    Value<String>? portionName,
+    Value<String>? region,
+    Value<int>? aliyahNumber,
+    Value<String>? startRef,
+    Value<String>? endRef,
+    Value<int>? rowid,
+  }) {
+    return ParshaAliyotCompanion(
+      portionKey: portionKey ?? this.portionKey,
+      portionName: portionName ?? this.portionName,
+      region: region ?? this.region,
+      aliyahNumber: aliyahNumber ?? this.aliyahNumber,
+      startRef: startRef ?? this.startRef,
+      endRef: endRef ?? this.endRef,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (portionKey.present) {
+      map['portion_key'] = Variable<String>(portionKey.value);
+    }
+    if (portionName.present) {
+      map['portion_name'] = Variable<String>(portionName.value);
+    }
+    if (region.present) {
+      map['region'] = Variable<String>(region.value);
+    }
+    if (aliyahNumber.present) {
+      map['aliyah_number'] = Variable<int>(aliyahNumber.value);
+    }
+    if (startRef.present) {
+      map['start_ref'] = Variable<String>(startRef.value);
+    }
+    if (endRef.present) {
+      map['end_ref'] = Variable<String>(endRef.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParshaAliyotCompanion(')
+          ..write('portionKey: $portionKey, ')
+          ..write('portionName: $portionName, ')
+          ..write('region: $region, ')
+          ..write('aliyahNumber: $aliyahNumber, ')
+          ..write('startRef: $startRef, ')
+          ..write('endRef: $endRef, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -1502,6 +2470,8 @@ abstract class _$ContentDatabase extends GeneratedDatabase {
   late final $CalendarCyclesTable calendarCycles = $CalendarCyclesTable(this);
   late final $DailyContentTable dailyContent = $DailyContentTable(this);
   late final $SeedMetadataTable seedMetadata = $SeedMetadataTable(this);
+  late final $ParallelTextTable parallelText = $ParallelTextTable(this);
+  late final $ParshaAliyotTable parshaAliyot = $ParshaAliyotTable(this);
   late final ContentTextCacheDao contentTextCacheDao = ContentTextCacheDao(
     this as ContentDatabase,
   );
@@ -1523,6 +2493,8 @@ abstract class _$ContentDatabase extends GeneratedDatabase {
     calendarCycles,
     dailyContent,
     seedMetadata,
+    parallelText,
+    parshaAliyot,
   ];
 }
 
@@ -2108,6 +3080,8 @@ typedef $$SeedMetadataTableCreateCompanionBuilder =
       required String buildId,
       required int textCacheCount,
       required int calendarCycleCount,
+      Value<int> parallelTextCount,
+      Value<int> parshaAliyahCount,
       Value<String?> contentHash,
       Value<String> minAppVersion,
     });
@@ -2118,6 +3092,8 @@ typedef $$SeedMetadataTableUpdateCompanionBuilder =
       Value<String> buildId,
       Value<int> textCacheCount,
       Value<int> calendarCycleCount,
+      Value<int> parallelTextCount,
+      Value<int> parshaAliyahCount,
       Value<String?> contentHash,
       Value<String> minAppVersion,
     });
@@ -2153,6 +3129,16 @@ class $$SeedMetadataTableFilterComposer
 
   ColumnFilters<int> get calendarCycleCount => $composableBuilder(
     column: $table.calendarCycleCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get parallelTextCount => $composableBuilder(
+    column: $table.parallelTextCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get parshaAliyahCount => $composableBuilder(
+    column: $table.parshaAliyahCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2201,6 +3187,16 @@ class $$SeedMetadataTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get parallelTextCount => $composableBuilder(
+    column: $table.parallelTextCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get parshaAliyahCount => $composableBuilder(
+    column: $table.parshaAliyahCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get contentHash => $composableBuilder(
     column: $table.contentHash,
     builder: (column) => ColumnOrderings(column),
@@ -2237,6 +3233,16 @@ class $$SeedMetadataTableAnnotationComposer
 
   GeneratedColumn<int> get calendarCycleCount => $composableBuilder(
     column: $table.calendarCycleCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get parallelTextCount => $composableBuilder(
+    column: $table.parallelTextCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get parshaAliyahCount => $composableBuilder(
+    column: $table.parshaAliyahCount,
     builder: (column) => column,
   );
 
@@ -2293,6 +3299,8 @@ class $$SeedMetadataTableTableManager
                 Value<String> buildId = const Value.absent(),
                 Value<int> textCacheCount = const Value.absent(),
                 Value<int> calendarCycleCount = const Value.absent(),
+                Value<int> parallelTextCount = const Value.absent(),
+                Value<int> parshaAliyahCount = const Value.absent(),
                 Value<String?> contentHash = const Value.absent(),
                 Value<String> minAppVersion = const Value.absent(),
               }) => SeedMetadataCompanion(
@@ -2301,6 +3309,8 @@ class $$SeedMetadataTableTableManager
                 buildId: buildId,
                 textCacheCount: textCacheCount,
                 calendarCycleCount: calendarCycleCount,
+                parallelTextCount: parallelTextCount,
+                parshaAliyahCount: parshaAliyahCount,
                 contentHash: contentHash,
                 minAppVersion: minAppVersion,
               ),
@@ -2311,6 +3321,8 @@ class $$SeedMetadataTableTableManager
                 required String buildId,
                 required int textCacheCount,
                 required int calendarCycleCount,
+                Value<int> parallelTextCount = const Value.absent(),
+                Value<int> parshaAliyahCount = const Value.absent(),
                 Value<String?> contentHash = const Value.absent(),
                 Value<String> minAppVersion = const Value.absent(),
               }) => SeedMetadataCompanion.insert(
@@ -2319,6 +3331,8 @@ class $$SeedMetadataTableTableManager
                 buildId: buildId,
                 textCacheCount: textCacheCount,
                 calendarCycleCount: calendarCycleCount,
+                parallelTextCount: parallelTextCount,
+                parshaAliyahCount: parshaAliyahCount,
                 contentHash: contentHash,
                 minAppVersion: minAppVersion,
               ),
@@ -2347,6 +3361,470 @@ typedef $$SeedMetadataTableProcessedTableManager =
       SeedMetadataData,
       PrefetchHooks Function()
     >;
+typedef $$ParallelTextTableCreateCompanionBuilder =
+    ParallelTextCompanion Function({
+      required String sourceKey,
+      required String sefariaRef,
+      required String hebrewText,
+      Value<String> englishText,
+      required String versionTitle,
+      required String license,
+      Value<int> rowid,
+    });
+typedef $$ParallelTextTableUpdateCompanionBuilder =
+    ParallelTextCompanion Function({
+      Value<String> sourceKey,
+      Value<String> sefariaRef,
+      Value<String> hebrewText,
+      Value<String> englishText,
+      Value<String> versionTitle,
+      Value<String> license,
+      Value<int> rowid,
+    });
+
+class $$ParallelTextTableFilterComposer
+    extends Composer<_$ContentDatabase, $ParallelTextTable> {
+  $$ParallelTextTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get sourceKey => $composableBuilder(
+    column: $table.sourceKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sefariaRef => $composableBuilder(
+    column: $table.sefariaRef,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hebrewText => $composableBuilder(
+    column: $table.hebrewText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get englishText => $composableBuilder(
+    column: $table.englishText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get versionTitle => $composableBuilder(
+    column: $table.versionTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get license => $composableBuilder(
+    column: $table.license,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ParallelTextTableOrderingComposer
+    extends Composer<_$ContentDatabase, $ParallelTextTable> {
+  $$ParallelTextTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get sourceKey => $composableBuilder(
+    column: $table.sourceKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sefariaRef => $composableBuilder(
+    column: $table.sefariaRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hebrewText => $composableBuilder(
+    column: $table.hebrewText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get englishText => $composableBuilder(
+    column: $table.englishText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get versionTitle => $composableBuilder(
+    column: $table.versionTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get license => $composableBuilder(
+    column: $table.license,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ParallelTextTableAnnotationComposer
+    extends Composer<_$ContentDatabase, $ParallelTextTable> {
+  $$ParallelTextTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get sourceKey =>
+      $composableBuilder(column: $table.sourceKey, builder: (column) => column);
+
+  GeneratedColumn<String> get sefariaRef => $composableBuilder(
+    column: $table.sefariaRef,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hebrewText => $composableBuilder(
+    column: $table.hebrewText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get englishText => $composableBuilder(
+    column: $table.englishText,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get versionTitle => $composableBuilder(
+    column: $table.versionTitle,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get license =>
+      $composableBuilder(column: $table.license, builder: (column) => column);
+}
+
+class $$ParallelTextTableTableManager
+    extends
+        RootTableManager<
+          _$ContentDatabase,
+          $ParallelTextTable,
+          ParallelTextData,
+          $$ParallelTextTableFilterComposer,
+          $$ParallelTextTableOrderingComposer,
+          $$ParallelTextTableAnnotationComposer,
+          $$ParallelTextTableCreateCompanionBuilder,
+          $$ParallelTextTableUpdateCompanionBuilder,
+          (
+            ParallelTextData,
+            BaseReferences<
+              _$ContentDatabase,
+              $ParallelTextTable,
+              ParallelTextData
+            >,
+          ),
+          ParallelTextData,
+          PrefetchHooks Function()
+        > {
+  $$ParallelTextTableTableManager(
+    _$ContentDatabase db,
+    $ParallelTextTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ParallelTextTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ParallelTextTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ParallelTextTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> sourceKey = const Value.absent(),
+                Value<String> sefariaRef = const Value.absent(),
+                Value<String> hebrewText = const Value.absent(),
+                Value<String> englishText = const Value.absent(),
+                Value<String> versionTitle = const Value.absent(),
+                Value<String> license = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ParallelTextCompanion(
+                sourceKey: sourceKey,
+                sefariaRef: sefariaRef,
+                hebrewText: hebrewText,
+                englishText: englishText,
+                versionTitle: versionTitle,
+                license: license,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String sourceKey,
+                required String sefariaRef,
+                required String hebrewText,
+                Value<String> englishText = const Value.absent(),
+                required String versionTitle,
+                required String license,
+                Value<int> rowid = const Value.absent(),
+              }) => ParallelTextCompanion.insert(
+                sourceKey: sourceKey,
+                sefariaRef: sefariaRef,
+                hebrewText: hebrewText,
+                englishText: englishText,
+                versionTitle: versionTitle,
+                license: license,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ParallelTextTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ContentDatabase,
+      $ParallelTextTable,
+      ParallelTextData,
+      $$ParallelTextTableFilterComposer,
+      $$ParallelTextTableOrderingComposer,
+      $$ParallelTextTableAnnotationComposer,
+      $$ParallelTextTableCreateCompanionBuilder,
+      $$ParallelTextTableUpdateCompanionBuilder,
+      (
+        ParallelTextData,
+        BaseReferences<_$ContentDatabase, $ParallelTextTable, ParallelTextData>,
+      ),
+      ParallelTextData,
+      PrefetchHooks Function()
+    >;
+typedef $$ParshaAliyotTableCreateCompanionBuilder =
+    ParshaAliyotCompanion Function({
+      required String portionKey,
+      required String portionName,
+      Value<String> region,
+      required int aliyahNumber,
+      required String startRef,
+      required String endRef,
+      Value<int> rowid,
+    });
+typedef $$ParshaAliyotTableUpdateCompanionBuilder =
+    ParshaAliyotCompanion Function({
+      Value<String> portionKey,
+      Value<String> portionName,
+      Value<String> region,
+      Value<int> aliyahNumber,
+      Value<String> startRef,
+      Value<String> endRef,
+      Value<int> rowid,
+    });
+
+class $$ParshaAliyotTableFilterComposer
+    extends Composer<_$ContentDatabase, $ParshaAliyotTable> {
+  $$ParshaAliyotTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get portionKey => $composableBuilder(
+    column: $table.portionKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get portionName => $composableBuilder(
+    column: $table.portionName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get region => $composableBuilder(
+    column: $table.region,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get aliyahNumber => $composableBuilder(
+    column: $table.aliyahNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get startRef => $composableBuilder(
+    column: $table.startRef,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get endRef => $composableBuilder(
+    column: $table.endRef,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ParshaAliyotTableOrderingComposer
+    extends Composer<_$ContentDatabase, $ParshaAliyotTable> {
+  $$ParshaAliyotTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get portionKey => $composableBuilder(
+    column: $table.portionKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get portionName => $composableBuilder(
+    column: $table.portionName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get region => $composableBuilder(
+    column: $table.region,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get aliyahNumber => $composableBuilder(
+    column: $table.aliyahNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get startRef => $composableBuilder(
+    column: $table.startRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get endRef => $composableBuilder(
+    column: $table.endRef,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ParshaAliyotTableAnnotationComposer
+    extends Composer<_$ContentDatabase, $ParshaAliyotTable> {
+  $$ParshaAliyotTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get portionKey => $composableBuilder(
+    column: $table.portionKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get portionName => $composableBuilder(
+    column: $table.portionName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get region =>
+      $composableBuilder(column: $table.region, builder: (column) => column);
+
+  GeneratedColumn<int> get aliyahNumber => $composableBuilder(
+    column: $table.aliyahNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get startRef =>
+      $composableBuilder(column: $table.startRef, builder: (column) => column);
+
+  GeneratedColumn<String> get endRef =>
+      $composableBuilder(column: $table.endRef, builder: (column) => column);
+}
+
+class $$ParshaAliyotTableTableManager
+    extends
+        RootTableManager<
+          _$ContentDatabase,
+          $ParshaAliyotTable,
+          ParshaAliyotData,
+          $$ParshaAliyotTableFilterComposer,
+          $$ParshaAliyotTableOrderingComposer,
+          $$ParshaAliyotTableAnnotationComposer,
+          $$ParshaAliyotTableCreateCompanionBuilder,
+          $$ParshaAliyotTableUpdateCompanionBuilder,
+          (
+            ParshaAliyotData,
+            BaseReferences<
+              _$ContentDatabase,
+              $ParshaAliyotTable,
+              ParshaAliyotData
+            >,
+          ),
+          ParshaAliyotData,
+          PrefetchHooks Function()
+        > {
+  $$ParshaAliyotTableTableManager(
+    _$ContentDatabase db,
+    $ParshaAliyotTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ParshaAliyotTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ParshaAliyotTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ParshaAliyotTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> portionKey = const Value.absent(),
+                Value<String> portionName = const Value.absent(),
+                Value<String> region = const Value.absent(),
+                Value<int> aliyahNumber = const Value.absent(),
+                Value<String> startRef = const Value.absent(),
+                Value<String> endRef = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ParshaAliyotCompanion(
+                portionKey: portionKey,
+                portionName: portionName,
+                region: region,
+                aliyahNumber: aliyahNumber,
+                startRef: startRef,
+                endRef: endRef,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String portionKey,
+                required String portionName,
+                Value<String> region = const Value.absent(),
+                required int aliyahNumber,
+                required String startRef,
+                required String endRef,
+                Value<int> rowid = const Value.absent(),
+              }) => ParshaAliyotCompanion.insert(
+                portionKey: portionKey,
+                portionName: portionName,
+                region: region,
+                aliyahNumber: aliyahNumber,
+                startRef: startRef,
+                endRef: endRef,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ParshaAliyotTableProcessedTableManager =
+    ProcessedTableManager<
+      _$ContentDatabase,
+      $ParshaAliyotTable,
+      ParshaAliyotData,
+      $$ParshaAliyotTableFilterComposer,
+      $$ParshaAliyotTableOrderingComposer,
+      $$ParshaAliyotTableAnnotationComposer,
+      $$ParshaAliyotTableCreateCompanionBuilder,
+      $$ParshaAliyotTableUpdateCompanionBuilder,
+      (
+        ParshaAliyotData,
+        BaseReferences<_$ContentDatabase, $ParshaAliyotTable, ParshaAliyotData>,
+      ),
+      ParshaAliyotData,
+      PrefetchHooks Function()
+    >;
 
 class $ContentDatabaseManager {
   final _$ContentDatabase _db;
@@ -2359,4 +3837,8 @@ class $ContentDatabaseManager {
       $$DailyContentTableTableManager(_db, _db.dailyContent);
   $$SeedMetadataTableTableManager get seedMetadata =>
       $$SeedMetadataTableTableManager(_db, _db.seedMetadata);
+  $$ParallelTextTableTableManager get parallelText =>
+      $$ParallelTextTableTableManager(_db, _db.parallelText);
+  $$ParshaAliyotTableTableManager get parshaAliyot =>
+      $$ParshaAliyotTableTableManager(_db, _db.parshaAliyot);
 }

@@ -8,6 +8,7 @@
 /// (or invent) a non-settings field.
 library;
 
+import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
 /// The governed settings of one learner profile.
@@ -24,6 +25,10 @@ final class LearnerSettings {
     this.candleLightingMinutes = defaultCandleLightingMinutes,
     this.locationSource,
     this.locationFixedAt,
+    this.shnayimMikraMode = ShnayimMikraMode.pasuk,
+    this.shnayimMikraPace = ShnayimMikraPace.self,
+    this.shnayimMikraSource = ShnayimMikraSource.onkelos,
+    this.shnayimMikraParshaSchedule,
     this.lastChangeId,
   }) : _legacyInIsrael = inIsrael;
 
@@ -49,6 +54,33 @@ final class LearnerSettings {
           defaultCandleLightingMinutes,
       locationSource: r.optional<String>(kLocationSource),
       locationFixedAt: r.optionalInstant(kLocationFixedAt),
+      shnayimMikraMode: _decodeEnum(
+        kShnayimMikraMode,
+        r.optional<String>(kShnayimMikraMode),
+        ShnayimMikraMode.pasuk,
+        ShnayimMikraMode.values,
+        (value) => value.storageKey,
+      ),
+      shnayimMikraPace: _decodeEnum(
+        kShnayimMikraPace,
+        r.optional<String>(kShnayimMikraPace),
+        ShnayimMikraPace.self,
+        ShnayimMikraPace.values,
+        (value) => value.storageKey,
+      ),
+      shnayimMikraSource: _decodeEnum(
+        kShnayimMikraSource,
+        r.optional<String>(kShnayimMikraSource),
+        ShnayimMikraSource.onkelos,
+        ShnayimMikraSource.values,
+        (value) => value.storageKey,
+      ),
+      shnayimMikraParshaSchedule: _decodeOptionalEnum(
+        kShnayimMikraParshaSchedule,
+        r.optional<String>(kShnayimMikraParshaSchedule),
+        ShnayimMikraParshaSchedule.values,
+        (value) => value.storageKey,
+      ),
       lastChangeId: r.optionalUlid(kLastChangeId),
     );
     return settings.._validate();
@@ -72,6 +104,10 @@ final class LearnerSettings {
   static const kCandleLightingMinutes = 'candle_lighting_minutes';
   static const kLocationSource = 'location_source';
   static const kLocationFixedAt = 'location_fixed_at';
+  static const kShnayimMikraMode = 'shnayim_mikra_mode';
+  static const kShnayimMikraPace = 'shnayim_mikra_pace';
+  static const kShnayimMikraSource = 'shnayim_mikra_source';
+  static const kShnayimMikraParshaSchedule = 'shnayim_mikra_parsha_schedule';
   static const defaultTzeisMinhag = 'degrees_8_5';
   static const defaultCandleLightingMinutes = 18;
 
@@ -89,8 +125,39 @@ final class LearnerSettings {
     kCandleLightingMinutes,
     kLocationSource,
     kLocationFixedAt,
+    kShnayimMikraMode,
+    kShnayimMikraPace,
+    kShnayimMikraSource,
+    kShnayimMikraParshaSchedule,
     kLastChangeId,
   };
+
+  static T _decodeEnum<T>(
+    String field,
+    String? raw,
+    T fallback,
+    Iterable<T> values,
+    String Function(T value) storageKey,
+  ) {
+    if (raw == null) return fallback;
+    for (final value in values) {
+      if (storageKey(value) == raw) return value;
+    }
+    throw StorageFormatException(_type, field, 'unsupported value');
+  }
+
+  static T? _decodeOptionalEnum<T>(
+    String field,
+    String? raw,
+    Iterable<T> values,
+    String Function(T value) storageKey,
+  ) {
+    if (raw == null) return null;
+    for (final value in values) {
+      if (storageKey(value) == raw) return value;
+    }
+    throw StorageFormatException(_type, field, 'unsupported value');
+  }
 
   /// IANA zone id shape (`UTC`, `Asia/Jerusalem`, `America/Argentina/Salta`,
   /// `Etc/GMT+5`). Existence in the tz database is checked where the zone
@@ -143,6 +210,19 @@ final class LearnerSettings {
   /// UTC time of the latest detected fix.
   final DateTime? locationFixedAt;
 
+  /// Three-reading order, defaulting legacy learners to pasuk-by-pasuk.
+  final ShnayimMikraMode shnayimMikraMode;
+
+  /// Daily-aliyah pacing is opt-in; legacy learners are self-paced.
+  final ShnayimMikraPace shnayimMikraPace;
+
+  /// The third reading, defaulting to Onkelos for legacy learners.
+  final ShnayimMikraSource shnayimMikraSource;
+
+  /// Explicit weekly parsha minhag. Null only for legacy profiles or before
+  /// Shnayim Mikra track creation initializes it from the Yom Tov setting.
+  final ShnayimMikraParshaSchedule? shnayimMikraParshaSchedule;
+
   /// Last governed change, or null for a profile with no entry yet.
   final String? lastChangeId;
 
@@ -166,6 +246,14 @@ final class LearnerSettings {
         kCandleLightingMinutes: candleLightingMinutes,
       if (locationSource != null) kLocationSource: locationSource,
       if (locationFixedAt != null) kLocationFixedAt: locationFixedAt!.toUtc(),
+      if (shnayimMikraMode != ShnayimMikraMode.pasuk)
+        kShnayimMikraMode: shnayimMikraMode.storageKey,
+      if (shnayimMikraPace != ShnayimMikraPace.self)
+        kShnayimMikraPace: shnayimMikraPace.storageKey,
+      if (shnayimMikraSource != ShnayimMikraSource.onkelos)
+        kShnayimMikraSource: shnayimMikraSource.storageKey,
+      if (shnayimMikraParshaSchedule != null)
+        kShnayimMikraParshaSchedule: shnayimMikraParshaSchedule!.storageKey,
       if (lastChangeId != null) kLastChangeId: lastChangeId,
     };
   }
@@ -223,6 +311,10 @@ final class LearnerSettings {
       other.candleLightingMinutes == candleLightingMinutes &&
       other.locationSource == locationSource &&
       other.locationFixedAt == locationFixedAt &&
+      other.shnayimMikraMode == shnayimMikraMode &&
+      other.shnayimMikraPace == shnayimMikraPace &&
+      other.shnayimMikraSource == shnayimMikraSource &&
+      other.shnayimMikraParshaSchedule == shnayimMikraParshaSchedule &&
       other.lastChangeId == lastChangeId;
 
   @override
@@ -237,6 +329,9 @@ final class LearnerSettings {
     candleLightingMinutes,
     locationSource,
     locationFixedAt,
+    shnayimMikraMode,
+    shnayimMikraPace,
+    shnayimMikraSource,
     lastChangeId,
   );
 

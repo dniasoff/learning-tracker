@@ -7829,6 +7829,116 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t save the sub-track. Try again.';
 
   @override
+  String get shnayimMikraParshaSchedule => 'Parsha schedule';
+
+  @override
+  String get shnayimMikraScheduleEretzYisrael => 'Eretz Yisrael';
+
+  @override
+  String get shnayimMikraScheduleChutzLaaretz => 'Chutz la\'aretz';
+
+  @override
+  String get shnayimMikraSettingsTitle => 'Shnayim Mikra settings';
+
+  @override
+  String get shnayimMikraModeLabel => 'Reading order';
+
+  @override
+  String get shnayimMikraModePasuk => 'Pasuk by pasuk';
+
+  @override
+  String get shnayimMikraModeAliyah => 'Aliyah by aliyah';
+
+  @override
+  String get shnayimMikraModeParsha => 'Parsha by parsha';
+
+  @override
+  String get shnayimMikraPaceLabel => 'Pacing';
+
+  @override
+  String get shnayimMikraPaceSelf => 'Self-paced';
+
+  @override
+  String get shnayimMikraPaceDailyAliyah => 'Daily aliyah, Sunday–Friday';
+
+  @override
+  String get shnayimMikraSourceLabel => 'Third reading';
+
+  @override
+  String get shnayimMikraSettingsSaveFailed =>
+      'Could not save Shnayim Mikra settings. Try again.';
+
+  @override
+  String get shnayimMikraAliyah => 'Aliyah';
+
+  @override
+  String get shnayimMikraReaderTitle => 'Shnayim Mikra';
+
+  @override
+  String get shnayimMikraReaderLoadFailed =>
+      'The offline Torah text could not be loaded.';
+
+  @override
+  String get shnayimMikraReaderNoUnits =>
+      'No reading sections are available for this parsha.';
+
+  @override
+  String get shnayimMikraNoDailyAliyahToday =>
+      'Daily aliyah pacing runs Sunday through Friday.';
+
+  @override
+  String shnayimMikraReaderWeekComplete(String portion) {
+    return 'All readings for $portion are complete.';
+  }
+
+  @override
+  String shnayimMikraTodayAliyahDone(int remaining) {
+    return 'Today\'s aliyah is done. $remaining aliyot remain this week.';
+  }
+
+  @override
+  String shnayimMikraUnitProgress(int current, int total) {
+    return 'Section $current of $total';
+  }
+
+  @override
+  String get shnayimMikraFirstReading => 'First reading';
+
+  @override
+  String get shnayimMikraSecondReading => 'Second reading';
+
+  @override
+  String get shnayimMikraOnkelosReading => 'Onkelos';
+
+  @override
+  String get shnayimMikraRashiReading => 'Rashi';
+
+  @override
+  String get shnayimMikraNoRashi => 'No Rashi comment on this pasuk';
+
+  @override
+  String get shnayimMikraMarkReadingComplete => 'Mark this reading complete';
+
+  @override
+  String get shnayimMikraReaderSaveFailed =>
+      'Could not save progress. Try again.';
+
+  @override
+  String shnayimMikraDueBeforeShabbos(String date) {
+    return 'Due before Shabbos · $date';
+  }
+
+  @override
+  String shnayimMikraCatchUp(String portion) {
+    return 'Overdue · $portion';
+  }
+
+  @override
+  String shnayimMikraProgressVerses(int current, int total) {
+    return '$current of $total pesukim complete';
+  }
+
+  @override
   String get textReaderTranslationLanguage => 'Translation language';
 
   @override

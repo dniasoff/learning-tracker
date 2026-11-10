@@ -15,6 +15,7 @@ void main() {
     expect(unitScopeFor(CurriculumId.mishnayos, level: 1), 'seder');
     expect(unitScopeFor(CurriculumId.mishnaBerurah, level: 1), 'chelek');
     expect(unitScopeFor(CurriculumId.chumash, level: 1), 'sefer');
+    expect(unitScopeFor(CurriculumId.shnayimMikra, level: 1), 'parsha');
   });
 
   test('only curricula whose level 2 names a unit have one', () {
@@ -22,5 +23,6 @@ void main() {
     expect(hasNamedLevel2Unit(CurriculumId.bavli), isTrue);
     expect(hasNamedLevel2Unit(CurriculumId.chumash), isFalse);
     expect(hasNamedLevel2Unit(CurriculumId.tanach), isFalse);
+    expect(hasNamedLevel2Unit(CurriculumId.shnayimMikra), isFalse);
   });
 }

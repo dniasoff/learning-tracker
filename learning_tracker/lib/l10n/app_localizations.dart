@@ -12726,6 +12726,192 @@ abstract class AppLocalizations {
   /// **'Couldn\'t save the sub-track. Try again.'**
   String get subTrackLifecycleSaveFailed;
 
+  /// No description provided for @shnayimMikraParshaSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsha schedule'**
+  String get shnayimMikraParshaSchedule;
+
+  /// No description provided for @shnayimMikraScheduleEretzYisrael.
+  ///
+  /// In en, this message translates to:
+  /// **'Eretz Yisrael'**
+  String get shnayimMikraScheduleEretzYisrael;
+
+  /// No description provided for @shnayimMikraScheduleChutzLaaretz.
+  ///
+  /// In en, this message translates to:
+  /// **'Chutz la\'aretz'**
+  String get shnayimMikraScheduleChutzLaaretz;
+
+  /// No description provided for @shnayimMikraSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shnayim Mikra settings'**
+  String get shnayimMikraSettingsTitle;
+
+  /// No description provided for @shnayimMikraModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading order'**
+  String get shnayimMikraModeLabel;
+
+  /// No description provided for @shnayimMikraModePasuk.
+  ///
+  /// In en, this message translates to:
+  /// **'Pasuk by pasuk'**
+  String get shnayimMikraModePasuk;
+
+  /// No description provided for @shnayimMikraModeAliyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliyah by aliyah'**
+  String get shnayimMikraModeAliyah;
+
+  /// No description provided for @shnayimMikraModeParsha.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsha by parsha'**
+  String get shnayimMikraModeParsha;
+
+  /// No description provided for @shnayimMikraPaceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pacing'**
+  String get shnayimMikraPaceLabel;
+
+  /// No description provided for @shnayimMikraPaceSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'Self-paced'**
+  String get shnayimMikraPaceSelf;
+
+  /// No description provided for @shnayimMikraPaceDailyAliyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily aliyah, Sunday–Friday'**
+  String get shnayimMikraPaceDailyAliyah;
+
+  /// No description provided for @shnayimMikraSourceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Third reading'**
+  String get shnayimMikraSourceLabel;
+
+  /// No description provided for @shnayimMikraSettingsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save Shnayim Mikra settings. Try again.'**
+  String get shnayimMikraSettingsSaveFailed;
+
+  /// No description provided for @shnayimMikraAliyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliyah'**
+  String get shnayimMikraAliyah;
+
+  /// No description provided for @shnayimMikraReaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shnayim Mikra'**
+  String get shnayimMikraReaderTitle;
+
+  /// No description provided for @shnayimMikraReaderLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The offline Torah text could not be loaded.'**
+  String get shnayimMikraReaderLoadFailed;
+
+  /// No description provided for @shnayimMikraReaderNoUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'No reading sections are available for this parsha.'**
+  String get shnayimMikraReaderNoUnits;
+
+  /// No description provided for @shnayimMikraNoDailyAliyahToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily aliyah pacing runs Sunday through Friday.'**
+  String get shnayimMikraNoDailyAliyahToday;
+
+  /// Completion message after all assigned Shnayim Mikra reading units are marked complete.
+  ///
+  /// In en, this message translates to:
+  /// **'All readings for {portion} are complete.'**
+  String shnayimMikraReaderWeekComplete(String portion);
+
+  /// Daily aliyah pacing completion message while the parsha still has unfinished aliyot.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s aliyah is done. {remaining} aliyot remain this week.'**
+  String shnayimMikraTodayAliyahDone(int remaining);
+
+  /// Progress through the current parsha, aliyah, or pasuk task list.
+  ///
+  /// In en, this message translates to:
+  /// **'Section {current} of {total}'**
+  String shnayimMikraUnitProgress(int current, int total);
+
+  /// No description provided for @shnayimMikraFirstReading.
+  ///
+  /// In en, this message translates to:
+  /// **'First reading'**
+  String get shnayimMikraFirstReading;
+
+  /// No description provided for @shnayimMikraSecondReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Second reading'**
+  String get shnayimMikraSecondReading;
+
+  /// No description provided for @shnayimMikraOnkelosReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Onkelos'**
+  String get shnayimMikraOnkelosReading;
+
+  /// No description provided for @shnayimMikraRashiReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Rashi'**
+  String get shnayimMikraRashiReading;
+
+  /// No description provided for @shnayimMikraNoRashi.
+  ///
+  /// In en, this message translates to:
+  /// **'No Rashi comment on this pasuk'**
+  String get shnayimMikraNoRashi;
+
+  /// No description provided for @shnayimMikraMarkReadingComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark this reading complete'**
+  String get shnayimMikraMarkReadingComplete;
+
+  /// No description provided for @shnayimMikraReaderSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save progress. Try again.'**
+  String get shnayimMikraReaderSaveFailed;
+
+  /// Due date line for the current weekly Shnayim Mikra assignment.
+  ///
+  /// In en, this message translates to:
+  /// **'Due before Shabbos · {date}'**
+  String shnayimMikraDueBeforeShabbos(String date);
+
+  /// Label for an unfinished prior weekly parsha available for catch-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue · {portion}'**
+  String shnayimMikraCatchUp(String portion);
+
+  /// Number of verses completed in the current weekly Shnayim Mikra assignment.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total} pesukim complete'**
+  String shnayimMikraProgressVerses(int current, int total);
+
   /// No description provided for @textReaderTranslationLanguage.
   ///
   /// In en, this message translates to:

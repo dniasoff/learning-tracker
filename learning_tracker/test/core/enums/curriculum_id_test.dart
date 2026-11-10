@@ -23,6 +23,14 @@ void main() {
   );
 
   group('CurriculumId.fromStorageKey', () {
+    test('Shnayim Mikra uses the canonical learning-list key', () {
+      expect(CurriculumId.shnayimMikra.storageKey, 'shnayim_mikra');
+      expect(
+        CurriculumId.fromStorageKey('shnayim_mikra'),
+        CurriculumId.shnayimMikra,
+      );
+    });
+
     for (final id in CurriculumId.values) {
       test('resolves ${id.storageKey} back to CurriculumId.$id', () {
         expect(CurriculumId.fromStorageKey(id.storageKey), id);
@@ -41,5 +49,18 @@ void main() {
       expect(CurriculumId.fromStorageKey('Mishnayos'), isNull);
       expect(CurriculumId.fromStorageKey('mishnayos'), CurriculumId.mishnayos);
     });
+  });
+
+  test('released Shnayim Mikra remains selectable and decodable', () {
+    expect(
+      CurriculumId.fromStorageKey('shnayim_mikra'),
+      CurriculumId.shnayimMikra,
+    );
+    expect(CurriculumId.shnayimMikra.isReleased, isTrue);
+    expect(CurriculumId.userSelectable, contains(CurriculumId.shnayimMikra));
+    expect(
+      CurriculumId.userBrowsable,
+      isNot(contains(CurriculumId.shnayimMikra)),
+    );
   });
 }
