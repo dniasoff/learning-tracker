@@ -839,7 +839,6 @@ Future<String?> _pickDate(
     initialDate: initial,
     firstDate: DateTime(1900),
     lastDate: today,
-    initialEntryMode: DatePickerEntryMode.input,
   );
   if (picked == null) return null;
   String two(int v) => v.toString().padLeft(2, '0');
