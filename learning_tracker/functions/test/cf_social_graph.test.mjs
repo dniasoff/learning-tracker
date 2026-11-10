@@ -69,6 +69,42 @@ describe('social graph callable state', () => {
     const inbox = await call(fns.listSocialConnections, { profileId: OTHER }, strangerAuth);
     assert.equal(inbox.incomingRequests[0].fromSocialProfileId, socialProfileId(parentAuth.uid, CHILD));
     assert.equal('from_owner_uid' in inbox.incomingRequests[0], false);
+    const reader = await db.collection('social_summaries')
+      .doc(socialProfileDocId(strangerAuth.uid, OTHER))
+      .collection('readers').doc(parentAuth.uid).get();
+    assert.deepEqual(reader.get('follower_profile_ids'), [socialProfileDocId(parentAuth.uid, CHILD)]);
+    assert.deepEqual(reader.get('school_ids'), []);
+
+    await call(fns.removeFollow, {
+      profileId: CHILD,
+      toSocialProfileId: socialProfileId(strangerAuth.uid, OTHER),
+    }, parentAuth);
+    assert.equal((await reader.ref.get()).exists, false);
+  });
+
+  test('blocking removes follower summary access immediately while preserving school grants', async () => {
+    await seedAdultPair();
+    const sent = await call(fns.sendFollowRequest, {
+      fromProfileId: CHILD,
+      toSocialProfileId: socialProfileId(strangerAuth.uid, OTHER),
+    }, parentAuth);
+    await call(fns.reviewFollowRequest, {
+      requestId: sent.requestId,
+      profileId: OTHER,
+      decision: 'accept',
+    }, strangerAuth);
+    const readerRef = db.collection('social_summaries')
+      .doc(socialProfileDocId(strangerAuth.uid, OTHER))
+      .collection('readers').doc(parentAuth.uid);
+    await readerRef.set({ school_ids: ['school-1'] }, { merge: true });
+    await call(fns.blockSocialProfile, {
+      profileId: CHILD,
+      toSocialProfileId: socialProfileId(strangerAuth.uid, OTHER),
+    }, parentAuth);
+    const reader = await readerRef.get();
+    assert.deepEqual(reader.get('follower_profile_ids'), []);
+    assert.deepEqual(reader.get('school_ids'), ['school-1']);
+    assert.equal((await db.collection('social_follows').get()).size, 0);
   });
 
   test('child outbound request requires parent session and an allow-listed active school', async () => {

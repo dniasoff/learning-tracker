@@ -6564,5 +6564,59 @@
   "textReaderLoadingTranslation": "Loading translation…",
   "textReaderTranslationUnavailable": "Translation unavailable offline or right now",
   "textReaderMachineTranslated": "Machine translated",
-  "textReaderRetryTranslation": "Tap to retry"
+  "textReaderRetryTranslation": "Tap to retry",
+  "communityTitle": "Community",
+  "communityParentControls": "Child community controls",
+  "communityFollowers": "Followers",
+  "communityFollowing": "Following",
+  "communityRequests": "Requests",
+  "communityFindPeople": "Find people",
+  "communityPrivacyNotice": "Followers can see only the progress shared on this profile.",
+  "communityNoConnections": "No connections yet",
+  "communityNoRequests": "No requests",
+  "communityUnavailableProfile": "Unavailable profile",
+  "communityApprove": "Approve",
+  "communityDecline": "Decline",
+  "communityRequestPending": "Request pending",
+  "communityRemove": "Remove follower",
+  "communityBlock": "Block profile",
+  "communitySchoolId": "School ID",
+  "communityExactName": "Exact learner name",
+  "communitySearch": "Search",
+  "communitySearchOnlySchool": "Search exact names in a school you belong to.",
+  "communitySendRequest": "Send follow request",
+  "communityPauseSharing": "Pause sharing and social access",
+  "communityAllowedSchools": "Allowed schools",
+  "communityNoAllowedSchools": "No schools allowed",
+  "communitySchoolIds": "School IDs",
+  "communitySchoolIdsHelp": "Enter school IDs joined by commas, then submit.",
+  "communityProfile": "Learner profile",
+  "communitySummaryUnavailable": "This profile summary is unavailable.",
+  "communityStreak": "Streak",
+  "communityCurrentTracks": "Current tracks and position",
+  "communityThisWeek": "This week",
+  "communitySiyumim": "Siyumim",
+  "communityNoSiyumim": "No siyumim to show yet",
+  "communityUpdatedAt": "Updated {date}",
+  "@communityUpdatedAt": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "communityStreakValues": "{current} current · {best} best",
+  "@communityStreakValues": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "best": { "type": "int" }
+    }
+  },
+  "communityPosition": "Position: {position}",
+  "@communityPosition": {
+    "placeholders": { "position": { "type": "String" } }
+  },
+  "communityWeeklyCounts": "{limudim} new learning · {chazaros} review",
+  "@communityWeeklyCounts": {
+    "placeholders": {
+      "limudim": { "type": "int" },
+      "chazaros": { "type": "int" }
+    }
+  }
 }

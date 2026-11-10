@@ -244,6 +244,9 @@ describe('social graph rules', () => {
   const auditPath = 'social_audit_logs/social-audit';
   const ratePath = 'social_rate_limits/social-rate';
   const cursorPath = 'social_search_cursors/social-cursor';
+  const summaryId = 'summary-doc';
+  const summaryPath = `social_summaries/${summaryId}`;
+  const readerPath = `${summaryPath}/readers/${TUTOR}`;
 
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
@@ -276,6 +279,24 @@ describe('social graph rules', () => {
         }),
         setDoc(doc(db, ratePath), { day: '2026-11-10', request_count: 1 }),
         setDoc(doc(db, cursorPath), { owner_uid: OWNER, profile_id: profileId, expires_at: futureTs }),
+        setDoc(doc(db, summaryPath), {
+          owner_uid: OWNER,
+          profile_id: profileId,
+          display_name: 'Learner',
+          avatar_id: 0,
+          streak: { by_curriculum: [] },
+          current_tracks: [],
+          weekly_learning: { by_curriculum: [] },
+          siyumim: [],
+          computed_at: nowTs,
+          schema_version: 1,
+        }),
+        setDoc(doc(db, readerPath), {
+          owner_uid: OWNER,
+          profile_id: profileId,
+          follower_profile_ids: ['approved-profile'],
+          school_ids: [],
+        }),
       ]);
     });
   });
@@ -345,6 +366,38 @@ describe('social graph rules', () => {
     await assertFails(setDoc(doc(owner(), ratePath), { request_count: 0 }));
     await assertFails(getDoc(doc(owner(), cursorPath)));
     await assertFails(setDoc(doc(owner(), cursorPath), { forged: true }));
+  });
+
+  test('social summary reads require an owner, follower grant, or staff grant and deny malformed fields', async () => {
+    await assertSucceeds(getDoc(doc(owner(), summaryPath)));
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await assertFails(getDoc(doc(stranger(), summaryPath)));
+    await assertFails(getDoc(doc(anon(), summaryPath)));
+    await assertFails(getDoc(doc(tutor(), readerPath)));
+    await assertFails(setDoc(doc(owner(), summaryPath), { forged: true }));
+    await assertFails(deleteDoc(doc(owner(), summaryPath)));
+    await assertFails(getDocs(query(collection(tutor(), 'social_summaries'), limit(10))));
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), readerPath), {
+        owner_uid: OWNER,
+        profile_id: profileId,
+        follower_profile_ids: [],
+        school_ids: [],
+      });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'removed grant cannot read');
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), readerPath), {
+        owner_uid: OWNER,
+        profile_id: profileId,
+        follower_profile_ids: ['approved-profile'],
+        school_ids: [],
+      });
+      await updateDoc(doc(ctx.firestore(), summaryPath), { points: 42 });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'summary rejects any non-allowlisted field');
   });
 });
 

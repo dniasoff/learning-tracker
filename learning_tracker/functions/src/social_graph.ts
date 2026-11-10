@@ -33,6 +33,7 @@ const memberships = () => db.collection("school_memberships");
 const controls = () => db.collection("social_parent_controls");
 const auditLogs = () => db.collection("social_audit_logs");
 const searchCursors = () => db.collection("social_search_cursors");
+const summaries = () => db.collection("social_summaries");
 
 function opaqueId(...parts: string[]): string {
   return crypto.createHash("sha256").update(parts.join("\0")).digest("hex");
@@ -59,6 +60,65 @@ function requiredString(value: unknown, name: string, max = 128): string {
 
 function profileDocId(ref: ProfileRef): string {
   return opaqueId(ref.ownerUid, ref.profileId);
+}
+
+function summaryReaderRef(summaryOwner: ProfileRef, readerUid: string) {
+  return summaries().doc(profileDocId(summaryOwner)).collection("readers").doc(readerUid);
+}
+
+type FollowerSummaryGrantChange = {
+  summaryOwner: ProfileRef;
+  follower: ProfileRef;
+  allowed: boolean;
+};
+
+/** Reads all affected ACL documents before applying any transaction writes. */
+async function setFollowerSummaryGrants(
+  txn: FirebaseFirestore.Transaction,
+  changes: readonly FollowerSummaryGrantChange[],
+): Promise<void> {
+  const refs = new Map<string, FirebaseFirestore.DocumentReference>();
+  for (const change of changes) {
+    const ref = summaryReaderRef(change.summaryOwner, change.follower.ownerUid);
+    refs.set(ref.path, ref);
+  }
+  const snapshots = new Map<string, FirebaseFirestore.DocumentSnapshot>();
+  await Promise.all([...refs].map(async ([path, ref]) => {
+    snapshots.set(path, await txn.get(ref));
+  }));
+  const grants = new Map<string, { ref: FirebaseFirestore.DocumentReference; owner: ProfileRef; ids: Set<string>; schools: string[]; exists: boolean }>();
+  for (const change of changes) {
+    const ref = summaryReaderRef(change.summaryOwner, change.follower.ownerUid);
+    const existing = snapshots.get(ref.path)!;
+    const value = grants.get(ref.path) ?? {
+      ref,
+      owner: change.summaryOwner,
+      ids: new Set<string>(Array.isArray(existing.get("follower_profile_ids"))
+        ? existing.get("follower_profile_ids") as string[]
+        : []),
+      schools: Array.isArray(existing.get("school_ids"))
+        ? existing.get("school_ids") as string[]
+        : [],
+      exists: existing.exists,
+    };
+    const followerId = profileDocId(change.follower);
+    if (change.allowed) value.ids.add(followerId);
+    else value.ids.delete(followerId);
+    grants.set(ref.path, value);
+  }
+  for (const grant of grants.values()) {
+    if (grant.ids.size === 0 && grant.schools.length === 0) {
+      if (grant.exists) txn.delete(grant.ref);
+    } else {
+      txn.set(grant.ref, {
+        owner_uid: grant.owner.ownerUid,
+        profile_id: grant.owner.profileId,
+        follower_profile_ids: [...grant.ids],
+        school_ids: grant.schools,
+        updated_at: admin.firestore.Timestamp.now(),
+      });
+    }
+  }
 }
 
 function profileRef(ref: ProfileRef): FirebaseFirestore.DocumentReference {
@@ -267,6 +327,31 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
     }
     const socialRef = profileRef({ ownerUid: uid, profileId });
     const social = await txn.get(socialRef);
+    const child = { ownerUid: uid, profileId };
+    const [outgoingEdges, incomingEdges] = await Promise.all([
+      txn.get(follows().where("from_owner_uid", "==", uid)
+        .where("from_profile_id", "==", profileId).limit(MAX_PAGE_SIZE)),
+      txn.get(follows().where("to_owner_uid", "==", uid)
+        .where("to_profile_id", "==", profileId).limit(MAX_PAGE_SIZE)),
+    ]);
+    const grantChanges: FollowerSummaryGrantChange[] = [];
+    for (const edge of outgoingEdges.docs) {
+      const target = {
+        ownerUid: String(edge.get("to_owner_uid")),
+        profileId: String(edge.get("to_profile_id")),
+      };
+      const eligible = !data.paused && await sharedAllowedSchool(txn, child, target, allowed as string[]);
+      grantChanges.push({ summaryOwner: target, follower: child, allowed: eligible });
+    }
+    for (const edge of incomingEdges.docs) {
+      const follower = {
+        ownerUid: String(edge.get("from_owner_uid")),
+        profileId: String(edge.get("from_profile_id")),
+      };
+      const eligible = !data.paused && await sharedAllowedSchool(txn, follower, child, allowed as string[]);
+      grantChanges.push({ summaryOwner: child, follower, allowed: eligible });
+    }
+    await setFollowerSummaryGrants(txn, grantChanges);
     txn.set(controls().doc(profileDocId({ ownerUid: uid, profileId })), {
       owner_uid: uid,
       profile_id: profileId,
@@ -412,6 +497,9 @@ export const reviewFollowRequest = onCall(CALL_OPTS, async (request) => {
       return;
     }
     const decision = data.decision as "accept" | "decline";
+    if (decision === "accept") {
+      await setFollowerSummaryGrants(txn, [{ summaryOwner: to, follower: from, allowed: true }]);
+    }
     txn.update(reqRef, { state: decision === "accept" ? "accepted" : "declined", updated_at: now });
     if (decision === "accept") {
       txn.set(follows().doc(pairId(from, to)), {
@@ -458,6 +546,10 @@ export const removeFollow = onCall(CALL_OPTS, async (request) => {
     const [out, incoming, pendingOut, pendingIn] = await Promise.all([
       txn.get(edgeOut), txn.get(edgeIn), txn.get(requestOut), txn.get(requestIn),
     ]);
+    await setFollowerSummaryGrants(txn, [
+      ...(out.exists ? [{ summaryOwner: to, follower: from, allowed: false }] : []),
+      ...(incoming.exists ? [{ summaryOwner: from, follower: to, allowed: false }] : []),
+    ]);
     if (out.exists) txn.delete(edgeOut);
     if (incoming.exists) txn.delete(edgeIn);
     if (pendingOut.exists) txn.delete(requestOut);
@@ -499,6 +591,10 @@ export const blockSocialProfile = onCall(CALL_OPTS, async (request) => {
     const requestIn = requests().doc(pairId(to, from));
     const [outEdge, inEdge, outRequest, inRequest] = await Promise.all([
       txn.get(edgeOut), txn.get(edgeIn), txn.get(requestOut), txn.get(requestIn),
+    ]);
+    await setFollowerSummaryGrants(txn, [
+      ...(outEdge.exists ? [{ summaryOwner: to, follower: from, allowed: false }] : []),
+      ...(inEdge.exists ? [{ summaryOwner: from, follower: to, allowed: false }] : []),
     ]);
     txn.set(blockRef, {
       left_owner_uid: from.ownerUid,
@@ -643,6 +739,7 @@ export const searchSchoolMembers = onCall(CALL_OPTS, async (request) => {
         socialProfileId: profile.social_profile_id,
         displayName: profile.display_name,
         avatarId: profile.avatar_id,
+        summaryId: profileDocId(profile),
       })),
       nextPageToken,
     };
@@ -709,6 +806,12 @@ export const listSocialConnections = onCall(CALL_OPTS, async (request) => {
       id: doc.id,
       fromSocialProfileId: fromProfile.get("social_profile_id") ?? "unavailable",
       toSocialProfileId: toProfile.get("social_profile_id") ?? "unavailable",
+      fromSummaryId: profileDocId(from),
+      toSummaryId: profileDocId(to),
+      fromDisplayName: fromProfile.get("display_name") ?? "Unavailable profile",
+      fromAvatarId: fromProfile.get("avatar_id") ?? 0,
+      toDisplayName: toProfile.get("display_name") ?? "Unavailable profile",
+      toAvatarId: toProfile.get("avatar_id") ?? 0,
       state: data.state,
     };
     for (const key of ["created_at", "updated_at", "expires_at"]) {
@@ -747,6 +850,24 @@ export async function cleanupSocialForProfile(ownerUid: string, profileId: strin
       await batch.commit();
     }
   }
+  const profile = { ownerUid, profileId };
+  const readerGrants = await db.collectionGroup("readers")
+    .where("follower_profile_ids", "array-contains", profileDocId(profile)).get();
+  for (let i = 0; i < readerGrants.docs.length; i += 450) {
+    const batch = db.batch();
+    for (const doc of readerGrants.docs.slice(i, i + 450)) {
+      const ids = (doc.get("follower_profile_ids") as unknown[])
+        .filter((id) => id !== profileDocId(profile));
+      const schoolIds = doc.get("school_ids");
+      if (ids.length === 0 && (!Array.isArray(schoolIds) || schoolIds.length === 0)) {
+        batch.delete(doc.ref);
+      } else {
+        batch.update(doc.ref, { follower_profile_ids: ids, updated_at: admin.firestore.Timestamp.now() });
+      }
+    }
+    await batch.commit();
+  }
+  await db.recursiveDelete(summaries().doc(profileDocId(profile))).catch(() => undefined);
   await limits().doc(profileDocId({ ownerUid, profileId })).delete().catch(() => undefined);
 }
 

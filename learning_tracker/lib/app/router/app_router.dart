@@ -41,6 +41,8 @@ import 'package:learning_tracker/features/progress/presentation/screens/progress
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/social_community_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/social_summary_profile_screen.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/about_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
@@ -175,6 +177,11 @@ class AppRouter extends RootStackRouter {
           page: ProgressRoute.page,
           guards: [profileSelectionGuard],
         ),
+        AutoRoute(
+          path: 'community',
+          page: SocialCommunityRoute.page,
+          guards: [profileSelectionGuard],
+        ),
         AutoRoute(path: 'settings', page: SettingsRoute.page),
         // Public app information is available to every profile mode.
         AutoRoute(path: 'about', page: AboutRoute.page),
@@ -199,6 +206,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/progress/lifetime',
       page: LifetimeKnowledgeRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/community/profile/:summaryId',
+      page: SocialSummaryProfileRoute.page,
       guards: [authGuard],
     ),
     // Lifetime report (Story 5.2, DNI-517): a parent surface. A child, a
@@ -304,6 +316,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/parent-mode/settings',
       page: ParentSettingsRoute.page,
+      guards: [authGuard, childModeGuard, pinGuard],
+    ),
+    AutoRoute(
+      path: '/parent-mode/social',
+      page: SocialCommunityRoute.page,
       guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(

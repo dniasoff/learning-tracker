@@ -106,6 +106,18 @@ class ProgressScreen extends ConsumerWidget {
                     const SizedBox(height: 14),
                     ProgressTierCounterRow(showPoints: userMode.isChild),
                     const SizedBox(height: 18),
+                    if (!userMode.isChild)
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.groups_outlined),
+                          title: Text(l10n.communityTitle),
+                          subtitle: Text(l10n.communityPrivacyNotice),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () =>
+                              context.router.push(const SocialCommunityRoute()),
+                        ),
+                      ),
+                    if (!userMode.isChild) const SizedBox(height: 10),
                     const _RecentActivityLensTile(),
                     const SizedBox(height: 10),
                     const _SiyumimMilestonesLensTile(),
