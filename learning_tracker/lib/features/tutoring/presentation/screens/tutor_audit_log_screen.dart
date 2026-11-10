@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/audit_log_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -76,7 +77,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
   // ── Date picker helpers ───────────────────────────────────────────────────
 
   Future<void> _pickFromDate() async {
-    final picked = await showDatePicker(
+    final picked = await showLearningAppDatePicker(
       context: context,
       initialDate: _filterFrom ?? DateTimeFactory.nowLocal(),
       firstDate: DateTime(2020),
@@ -87,7 +88,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
   }
 
   Future<void> _pickToDate() async {
-    final picked = await showDatePicker(
+    final picked = await showLearningAppDatePicker(
       context: context,
       initialDate: _filterTo ?? DateTimeFactory.nowLocal(),
       firstDate: _filterFrom ?? DateTime(2020),

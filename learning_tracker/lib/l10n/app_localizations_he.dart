@@ -5173,6 +5173,58 @@ class AppLocalizationsHe extends AppLocalizations {
   String get chazaraCustomCycle => 'מחזור מותאם אישית';
 
   @override
+  String get chazaraQuickFillLabel => 'מילוי מהיר';
+
+  @override
+  String get chazaraQuickFillLearnOnly => 'לימוד בלבד';
+
+  @override
+  String get chazaraQuickFillOneDay => '1';
+
+  @override
+  String get chazaraQuickFillWeek => '1+7';
+
+  @override
+  String get chazaraQuickFillMonth => '1+7+30';
+
+  @override
+  String get chazaraPlanEditorTitle => 'מרווחי חזרה';
+
+  @override
+  String get chazaraPlanEditorHint => 'הזן את מספר הימים בין הלימוד לכל חזרה.';
+
+  @override
+  String chazaraIntervalFieldLabel(int number) {
+    return 'מרווח חזרה $number';
+  }
+
+  @override
+  String get chazaraDaysUnit => 'ימים';
+
+  @override
+  String chazaraRemoveIntervalLabel(int number) {
+    return 'הסר מרווח חזרה $number';
+  }
+
+  @override
+  String get chazaraAddInterval => 'הוסף מרווח';
+
+  @override
+  String get chazaraIntervalPositiveError => 'הזן מספר שלם וחיובי של ימים.';
+
+  @override
+  String get chazaraIntervalWholeNumberError => 'הזן מספר שלם של ימים.';
+
+  @override
+  String chazaraIntervalMaximumError(int maximum) {
+    return 'הזן עד $maximum ימים.';
+  }
+
+  @override
+  String get chazaraIntervalIncreasingError =>
+      'כל מרווח חייב להיות גדול מהמרווח שלפניו.';
+
+  @override
   String chazaraSessionsCount(int count) {
     return '$count סבבים';
   }

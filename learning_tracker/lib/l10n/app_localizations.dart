@@ -8743,6 +8743,96 @@ abstract class AppLocalizations {
   /// **'Custom Cycle'**
   String get chazaraCustomCycle;
 
+  /// No description provided for @chazaraQuickFillLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick fill'**
+  String get chazaraQuickFillLabel;
+
+  /// No description provided for @chazaraQuickFillLearnOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn only'**
+  String get chazaraQuickFillLearnOnly;
+
+  /// No description provided for @chazaraQuickFillOneDay.
+  ///
+  /// In en, this message translates to:
+  /// **'1'**
+  String get chazaraQuickFillOneDay;
+
+  /// No description provided for @chazaraQuickFillWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'1+7'**
+  String get chazaraQuickFillWeek;
+
+  /// No description provided for @chazaraQuickFillMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'1+7+30'**
+  String get chazaraQuickFillMonth;
+
+  /// No description provided for @chazaraPlanEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review intervals'**
+  String get chazaraPlanEditorTitle;
+
+  /// No description provided for @chazaraPlanEditorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the number of days between learning and each review.'**
+  String get chazaraPlanEditorHint;
+
+  /// No description provided for @chazaraIntervalFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Review interval {number}'**
+  String chazaraIntervalFieldLabel(int number);
+
+  /// No description provided for @chazaraDaysUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get chazaraDaysUnit;
+
+  /// No description provided for @chazaraRemoveIntervalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove review interval {number}'**
+  String chazaraRemoveIntervalLabel(int number);
+
+  /// No description provided for @chazaraAddInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Add interval'**
+  String get chazaraAddInterval;
+
+  /// No description provided for @chazaraIntervalPositiveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive whole number of days.'**
+  String get chazaraIntervalPositiveError;
+
+  /// No description provided for @chazaraIntervalWholeNumberError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a whole number of days.'**
+  String get chazaraIntervalWholeNumberError;
+
+  /// No description provided for @chazaraIntervalMaximumError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter no more than {maximum} days.'**
+  String chazaraIntervalMaximumError(int maximum);
+
+  /// No description provided for @chazaraIntervalIncreasingError.
+  ///
+  /// In en, this message translates to:
+  /// **'Each interval must be greater than the one before it.'**
+  String get chazaraIntervalIncreasingError;
+
   /// No description provided for @chazaraSessionsCount.
   ///
   /// In en, this message translates to:

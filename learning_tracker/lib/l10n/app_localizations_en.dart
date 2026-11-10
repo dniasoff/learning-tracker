@@ -5234,6 +5234,60 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chazaraCustomCycle => 'Custom Cycle';
 
   @override
+  String get chazaraQuickFillLabel => 'Quick fill';
+
+  @override
+  String get chazaraQuickFillLearnOnly => 'Learn only';
+
+  @override
+  String get chazaraQuickFillOneDay => '1';
+
+  @override
+  String get chazaraQuickFillWeek => '1+7';
+
+  @override
+  String get chazaraQuickFillMonth => '1+7+30';
+
+  @override
+  String get chazaraPlanEditorTitle => 'Review intervals';
+
+  @override
+  String get chazaraPlanEditorHint =>
+      'Enter the number of days between learning and each review.';
+
+  @override
+  String chazaraIntervalFieldLabel(int number) {
+    return 'Review interval $number';
+  }
+
+  @override
+  String get chazaraDaysUnit => 'days';
+
+  @override
+  String chazaraRemoveIntervalLabel(int number) {
+    return 'Remove review interval $number';
+  }
+
+  @override
+  String get chazaraAddInterval => 'Add interval';
+
+  @override
+  String get chazaraIntervalPositiveError =>
+      'Enter a positive whole number of days.';
+
+  @override
+  String get chazaraIntervalWholeNumberError => 'Enter a whole number of days.';
+
+  @override
+  String chazaraIntervalMaximumError(int maximum) {
+    return 'Enter no more than $maximum days.';
+  }
+
+  @override
+  String get chazaraIntervalIncreasingError =>
+      'Each interval must be greater than the one before it.';
+
+  @override
   String chazaraSessionsCount(int count) {
     return '$count Sessions';
   }

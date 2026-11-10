@@ -10,6 +10,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
+import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -129,7 +130,7 @@ class _FreeTickCaptureSheetState extends State<FreeTickCaptureSheet> {
   Future<void> _pickDate() async {
     _taps++;
     final today = DateUtils.dateOnly(widget.today);
-    final picked = await showDatePicker(
+    final picked = await showLearningAppDatePicker(
       context: context,
       initialDate: _date,
       firstDate: DateTime(1900),

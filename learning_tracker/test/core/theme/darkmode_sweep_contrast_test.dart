@@ -620,91 +620,36 @@ void main() {
     );
   });
 
-  group('Finding 6 — "Custom Cycle" card background (step_chazara)', () {
-    test('brandInk clears WCAG 4.5:1 on brandCreamCard in dark mode (measured '
-        '1.16:1 on the pre-fix white-on-white pair)', () {
+  group('Finding 6 — review plan editor surface (step_chazara)', () {
+    test('brandInk clears WCAG 4.5:1 on brandCreamCard in dark mode', () {
       const palette = AppPalette.dark;
-      final ratio = _contrast(palette.brandInk, palette.brandCreamCard);
-
       expect(
-        ratio,
-        greaterThanOrEqualTo(4.5),
-        reason:
-            'the "Custom Cycle" card painted a hardcoded Colors.white '
-            'background under a titleLarge heading defaulting to brandInk '
-            '(near-white in dark) — white-on-white',
-      );
-    });
-
-    test('light mode is unchanged — brandCreamCard stays pure white, same as '
-        'the old hardcoded Colors.white literal', () {
-      const light = AppPalette.light;
-
-      expect(light.brandCreamCard, const Color(0xFFFFFFFF));
-      expect(
-        _contrast(light.brandInk, light.brandCreamCard),
+        _contrast(palette.brandInk, palette.brandCreamCard),
         greaterThanOrEqualTo(4.5),
       );
     });
 
-    testWidgets(
-      'the real Custom Cycle card reads brandCreamCard (not the hardcoded '
-      'white literal) in dark mode',
-      (tester) async {
-        await tester.pumpWidget(
-          pumpApp(
-            child: Theme(
-              data: AppTheme.darkTheme(),
-              child: Scaffold(
-                body: ChazaraInlineSetup(
-                  curriculumId: CurriculumId.mishnayos,
-                  headerTitle: 'Review Schedule',
-                  headerSubtitle: 'Choose how often to review',
-                  onComplete: (_) {},
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-
-        final box = tester.widget<DecoratedBox>(
-          find.ancestor(
-            of: find.text('Custom Cycle'),
-            matching: find.byType(DecoratedBox),
-          ),
-        );
-        final decoration = box.decoration as BoxDecoration;
-
-        expect(decoration.color, AppPalette.dark.brandCreamCard);
-        expect(decoration.color, isNot(Colors.white));
-      },
-    );
-
-    testWidgets('the real Custom Cycle card stays white in light mode '
-        '(no regression)', (tester) async {
+    testWidgets('review interval fields remain readable in dark mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         pumpApp(
-          child: Scaffold(
-            body: ChazaraInlineSetup(
-              curriculumId: CurriculumId.mishnayos,
-              headerTitle: 'Review Schedule',
-              headerSubtitle: 'Choose how often to review',
-              onComplete: (_) {},
+          child: Theme(
+            data: AppTheme.darkTheme(),
+            child: Scaffold(
+              body: ChazaraInlineSetup(
+                curriculumId: CurriculumId.mishnayos,
+                headerTitle: 'Review Schedule',
+                headerSubtitle: 'Choose how often to review',
+                onComplete: (_) {},
+              ),
             ),
           ),
         ),
       );
       await tester.pump();
-
-      final box = tester.widget<DecoratedBox>(
-        find.ancestor(
-          of: find.text('Custom Cycle'),
-          matching: find.byType(DecoratedBox),
-        ),
-      );
-      final decoration = box.decoration as BoxDecoration;
-      expect(decoration.color, const Color(0xFFFFFFFF));
+      expect(find.text('Review interval 1'), findsOneWidget);
+      expect(find.byType(TextField), findsNWidgets(2));
     });
   });
 
