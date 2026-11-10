@@ -33,11 +33,11 @@ void main() {
     );
   });
 
-  test('no location seeds none; UTC is a valid zone', () {
-    const reading = CreatingDeviceSettings(timeZone: 'UTC', inIsrael: false);
+  test('no location leaves minhag unset; UTC is a valid zone', () {
+    const reading = CreatingDeviceSettings(timeZone: 'UTC');
     final seed = reading.seedFor(profileUlid);
     expect(seed.hasLocation, isFalse);
-    expect(seed.inIsrael, isFalse);
+    expect(seed.inIsrael, isNull);
   });
 
   for (final zone in [null, '', '+02:00', 'Not/A_Zone']) {
@@ -103,7 +103,7 @@ void main() {
       expect(reading.timeZone, 'Asia/Jerusalem');
       expect(reading.latitude, isNull);
       expect(reading.longitude, isNull);
-      expect(reading.inIsrael, isFalse);
+      expect(reading.inIsrael, isNull);
       expect(reading.seedFor(profileUlid).hasLocation, isFalse);
     });
   });

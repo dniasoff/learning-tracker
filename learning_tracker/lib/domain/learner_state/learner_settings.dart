@@ -18,13 +18,14 @@ final class LearnerSettings {
     required this.timeZone,
     this.latitude,
     this.longitude,
-    this.inIsrael,
+    bool? inIsrael,
+    this.yomTovDays,
     this.tzeisMinhag = defaultTzeisMinhag,
     this.candleLightingMinutes = defaultCandleLightingMinutes,
     this.locationSource,
     this.locationFixedAt,
     this.lastChangeId,
-  });
+  }) : _legacyInIsrael = inIsrael;
 
   /// Projects the settings keys out of a `learner_profiles` doc [map].
   ///
@@ -41,6 +42,7 @@ final class LearnerSettings {
       longitude: r.optionalNumber(kLongitude),
       timeZone: r.requiredString(kTimeZone),
       inIsrael: r.optional<bool>(kInIsrael),
+      yomTovDays: r.optional<int>(kYomTovDays),
       tzeisMinhag: r.optional<String>(kTzeisMinhag) ?? defaultTzeisMinhag,
       candleLightingMinutes:
           r.optional<int>(kCandleLightingMinutes) ??
@@ -65,6 +67,7 @@ final class LearnerSettings {
 
   /// Storage key `in_israel`.
   static const kInIsrael = 'in_israel';
+  static const kYomTovDays = 'yom_tov_days';
   static const kTzeisMinhag = 'tzeis_minhag';
   static const kCandleLightingMinutes = 'candle_lighting_minutes';
   static const kLocationSource = 'location_source';
@@ -81,6 +84,7 @@ final class LearnerSettings {
     kLongitude,
     kTimeZone,
     kInIsrael,
+    kYomTovDays,
     kTzeisMinhag,
     kCandleLightingMinutes,
     kLocationSource,
@@ -109,7 +113,23 @@ final class LearnerSettings {
   final String timeZone;
 
   /// Whether the learner keeps one-day yom tov; null when never set.
-  final bool? inIsrael;
+  ///
+  /// This remains stored as `in_israel` for old-client compatibility. It is
+  /// a minhag choice and is never inferred again after it has a value.
+  final bool? _legacyInIsrael;
+
+  /// Canonical minhag choice: `1` for Eretz Yisrael, `2` for chutz la'aretz.
+  /// Null on legacy documents until the next governed settings write.
+  final int? yomTovDays;
+
+  /// Backwards-compatible one-day flag. New settings mirror this field so
+  /// older clients continue to follow the selected minhag.
+  bool? get inIsrael => yomTovDays == null ? _legacyInIsrael : yomTovDays == 1;
+
+  /// Whether this learner keeps two days of Yom Tov (chutz la'aretz minhag).
+  /// Exposed for calendar consumers that should not depend on location.
+  bool get keepsTwoDaysYomTov =>
+      yomTovDays == null ? _legacyInIsrael != true : yomTovDays == 2;
 
   /// Tzeis preset: degrees_8_5, minutes_72, or rabbeinu_tam.
   final String tzeisMinhag;
@@ -136,7 +156,11 @@ final class LearnerSettings {
       if (latitude != null) kLatitude: latitude,
       if (longitude != null) kLongitude: longitude,
       kTimeZone: timeZone,
-      if (inIsrael != null) kInIsrael: inIsrael,
+      if (yomTovDays != null) ...{
+        kYomTovDays: yomTovDays,
+        kInIsrael: yomTovDays == 1,
+      } else if (_legacyInIsrael != null)
+        kInIsrael: _legacyInIsrael,
       if (tzeisMinhag != defaultTzeisMinhag) kTzeisMinhag: tzeisMinhag,
       if (candleLightingMinutes != defaultCandleLightingMinutes)
         kCandleLightingMinutes: candleLightingMinutes,
@@ -167,6 +191,9 @@ final class LearnerSettings {
     }
     final change = lastChangeId;
     if (change != null && !isUlid(change)) _fail(kLastChangeId, 'not a ULID');
+    if (yomTovDays != null && ![1, 2].contains(yomTovDays)) {
+      _fail(kYomTovDays, 'must be 1 or 2');
+    }
     if (!{'degrees_8_5', 'minutes_72', 'rabbeinu_tam'}.contains(tzeisMinhag)) {
       _fail(kTzeisMinhag, 'unsupported minhag');
     }
@@ -190,7 +217,8 @@ final class LearnerSettings {
       other.latitude == latitude &&
       other.longitude == longitude &&
       other.timeZone == timeZone &&
-      other.inIsrael == inIsrael &&
+      other._legacyInIsrael == _legacyInIsrael &&
+      other.yomTovDays == yomTovDays &&
       other.tzeisMinhag == tzeisMinhag &&
       other.candleLightingMinutes == candleLightingMinutes &&
       other.locationSource == locationSource &&
@@ -203,7 +231,8 @@ final class LearnerSettings {
     latitude,
     longitude,
     timeZone,
-    inIsrael,
+    _legacyInIsrael,
+    yomTovDays,
     tzeisMinhag,
     candleLightingMinutes,
     locationSource,

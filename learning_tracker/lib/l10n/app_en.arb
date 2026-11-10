@@ -3049,7 +3049,7 @@
   "textReaderTextUnavailableTitle": "Text not available",
   "textReaderCheckConnection": "Check your internet connection and try again.",
   "textReaderFailedToLoad": "Failed to load text",
-  "sacredTimeCardDescription": "App is silenced and locked during {term} and Yom Tov. Times use your location and selected candle-lighting and nightfall customs.",
+  "sacredTimeCardDescription": "App is silenced and locked during {term} and Yom Tov. Times are computed from your location using your chosen zmanim minhag.",
   "@sacredTimeCardDescription": {
     "placeholders": {
       "term": {
@@ -3070,8 +3070,9 @@
   "sacredTimeSourceDetected": "Detected automatically",
   "sacredTimeSourceManualCity": "Chosen from city list",
   "sacredTimeSourceManualCoords": "Manual coordinates",
-  "sacredTimeInIsraelTitle": "I am in Israel",
-  "sacredTimeInIsraelSubtitle": "One-day chag if on. Auto-set when you detect or choose a city, flip if you are visiting.",
+  "sacredTimeYomTovDays": "Yom Tov days",
+  "sacredTimeYomTovOneDay": "1 day (Eretz Yisrael minhag)",
+  "sacredTimeYomTovTwoDays": "2 days (chutz la'aretz minhag)",
   "sacredTimeLocationUpdated": "Location updated.",
   "sacredTimeLocationPermissionPermanentlyDenied": "Location permission permanently denied. Open system settings to allow.",
   "sacredTimeLocationPermissionDenied": "Location permission denied.",

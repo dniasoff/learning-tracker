@@ -195,6 +195,83 @@ void main() {
       expect(lockedDays(chained.single, jerusalemDiaspora), hasLength(3));
     });
 
+    test('London lock days match exact one/two-day minhag dates in 5787', () {
+      // Civil dates follow Hebcal's 5787 diaspora calendar and Israel
+      // calendar: https://www.hebcal.com/holidays/5787 and
+      // https://www.hebcal.com/holidays/2026-2027?i=on. These cases include
+      // Shabbos adjacency for Pesach I/II, Shavuot, Sukkot I/II, and
+      // Shemini Atzeret / Simchat Torah.
+      final cases = <(String, DateTime, DateTime, Set<String>, Set<String>)>[
+        (
+          'Pesach 1st/2nd days with Shabbos after day 2',
+          DateTime.utc(2027, 4, 21),
+          DateTime.utc(2027, 4, 25),
+          {'2027-04-22', '2027-04-24'},
+          {'2027-04-22', '2027-04-23', '2027-04-24'},
+        ),
+        (
+          'Pesach 7th/8th days',
+          DateTime.utc(2027, 4, 27),
+          DateTime.utc(2027, 4, 30),
+          {'2027-04-28'},
+          {'2027-04-28', '2027-04-29'},
+        ),
+        (
+          'Shavuot with second day on Shabbos',
+          DateTime.utc(2027, 6, 10),
+          DateTime.utc(2027, 6, 13),
+          {'2027-06-11', '2027-06-12'},
+          {'2027-06-11', '2027-06-12'},
+        ),
+        (
+          'Sukkot 1st/2nd days with first day on Shabbos',
+          DateTime.utc(2026, 9, 25),
+          DateTime.utc(2026, 9, 29),
+          {'2026-09-26'},
+          {'2026-09-26', '2026-09-27'},
+        ),
+        (
+          'Shemini Atzeret / Simchat Torah with first day on Shabbos',
+          DateTime.utc(2026, 10, 2),
+          DateTime.utc(2026, 10, 5),
+          {'2026-10-03'},
+          {'2026-10-03', '2026-10-04'},
+        ),
+      ];
+
+      for (final (name, from, to, expectedOneDay, expectedTwoDays) in cases) {
+        final oneDay = constantHistory(
+          lockSettings(
+            timeZone: 'Europe/London',
+            latitude: 51.5074,
+            longitude: -0.1278,
+            yomTovDays: 1,
+          ),
+        );
+        final twoDays = constantHistory(
+          lockSettings(
+            timeZone: 'Europe/London',
+            latitude: 51.5074,
+            longitude: -0.1278,
+            yomTovDays: 2,
+          ),
+        );
+        final oneDayDates = lockWindows(
+          oneDay,
+          from,
+          to,
+        ).expand((lock) => lockedDays(lock, oneDay)).toSet();
+        final twoDayDates = lockWindows(
+          twoDays,
+          from,
+          to,
+        ).expand((lock) => lockedDays(lock, twoDays)).toSet();
+
+        expect(oneDayDates, expectedOneDay, reason: '$name: 1-day minhag');
+        expect(twoDayDates, expectedTwoDays, reason: '$name: 2-day minhag');
+      }
+    });
+
     test('in_israel never set locks the diaspora days (fail closed)', () {
       final unset = constantHistory(
         lockSettings(

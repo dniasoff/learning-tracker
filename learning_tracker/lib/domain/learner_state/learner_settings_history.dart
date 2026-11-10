@@ -173,6 +173,7 @@ final class LearnerSettingsHistory {
     var longitude = after.longitude;
     var timeZone = after.timeZone;
     var inIsrael = after.inIsrael;
+    var yomTovDays = after.yomTovDays;
     Never bad(String field) => throw StorageFormatException(
       'LearnerSettingsHistory',
       field,
@@ -200,6 +201,9 @@ final class LearnerSettingsHistory {
         case LearnerSettings.kInIsrael:
           if (value != null && value is! bool) bad(k.field);
           inIsrael = value as bool?;
+        case LearnerSettings.kYomTovDays:
+          if (value != null && value is! int) bad(k.field);
+          yomTovDays = value as int?;
       }
     }
     return LearnerSettings(
@@ -208,6 +212,7 @@ final class LearnerSettingsHistory {
       latitude: latitude,
       longitude: longitude,
       inIsrael: inIsrael,
+      yomTovDays: yomTovDays,
       lastChangeId: previousEntryId,
     );
   }

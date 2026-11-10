@@ -527,7 +527,7 @@ void main() {
             LearnerSettingsEdit(
               latitude: _cityJerusalem.latitude,
               longitude: _cityJerusalem.longitude,
-              inIsrael: true,
+              yomTovDays: 1,
               locationSource: 'manual_city',
             ),
           ),

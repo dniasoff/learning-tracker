@@ -175,19 +175,20 @@ void main() {
       },
     );
 
-    // ── 4. In-Israel row ──────────────────────────────────────────────────────
+    // ── 4. Yom Tov minhag selector ───────────────────────────────────────────
 
-    testWidgets('in-Israel row shows Hebrew title (אני בישראל)', (
+    testWidgets('Yom Tov days selector shows Hebrew minhag choices', (
       tester,
     ) async {
       await tester.pumpWidget(_buildCard());
       await tester.pump();
 
       expect(
-        find.text('אני בישראל'),
+        find.text('ימים טובים'),
         findsOneWidget,
-        reason: 'sacredTimeInIsraelTitle must render in Hebrew',
+        reason: 'Yom Tov minhag title must render in Hebrew',
       );
+      expect(find.text('יומיים (מנהג חוץ לארץ)'), findsOneWidget);
       expect(find.text('I am in Israel'), findsNothing);
     });
 
@@ -335,7 +336,7 @@ void main() {
   );
   // ── DNI-481: the card shows the ACTIVE LEARNER's settings ─────────────────
   group('SacredTimeSettingsCard — learner settings (DNI-481)', () {
-    testWidgets('shows the learner location, zone and Israel flag', (
+    testWidgets('shows the learner location, zone and Yom Tov days', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -353,7 +354,7 @@ void main() {
       await tester.pump();
       expect(find.text('31.778, 35.235'), findsOneWidget);
       expect(find.text('Asia/Jerusalem'), findsOneWidget);
-      expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+      expect(find.text('1 day (Eretz Yisrael minhag)'), findsOneWidget);
     });
 
     testWidgets('a detect that cannot write (no own learner) says so', (

@@ -14,7 +14,7 @@
 /// of cities, bypassing the bundled 33k-city SQLite asset which is not
 /// available in the headless test environment.  After tapping a city, the
 /// active learner gets ONE governed learnerSettings change with the city's
-/// coordinates and Israel flag (DNI-481 AC-3), and the picker pops.
+/// coordinates and location-derived initial minhag (DNI-481 AC-3), and the picker pops.
 ///
 /// The idle-hint widget renders a multi-line Text containing both
 /// "Start typing to search ~33,000 cities." and "Type at least 2 letters."
@@ -291,7 +291,7 @@ void main() {
             const LearnerSettingsEdit(
               latitude: 31.76,
               longitude: 35.21,
-              inIsrael: true,
+              yomTovDays: 1,
               locationSource: 'manual_city',
             ),
           ),

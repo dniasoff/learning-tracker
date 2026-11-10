@@ -6415,7 +6415,7 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeCardDescription.
   ///
   /// In en, this message translates to:
-  /// **'App is silenced and locked during {term} and Yom Tov. Times use your location and selected candle-lighting and nightfall customs.'**
+  /// **'App is silenced and locked during {term} and Yom Tov. Times are computed from your location using your chosen zmanim minhag.'**
   String sacredTimeCardDescription(String term);
 
   /// No description provided for @sacredTimeShabbosModeLabel.
@@ -6454,17 +6454,23 @@ abstract class AppLocalizations {
   /// **'Manual coordinates'**
   String get sacredTimeSourceManualCoords;
 
-  /// No description provided for @sacredTimeInIsraelTitle.
+  /// No description provided for @sacredTimeYomTovDays.
   ///
   /// In en, this message translates to:
-  /// **'I am in Israel'**
-  String get sacredTimeInIsraelTitle;
+  /// **'Yom Tov days'**
+  String get sacredTimeYomTovDays;
 
-  /// No description provided for @sacredTimeInIsraelSubtitle.
+  /// No description provided for @sacredTimeYomTovOneDay.
   ///
   /// In en, this message translates to:
-  /// **'One-day chag if on. Auto-set when you detect or choose a city, flip if you are visiting.'**
-  String get sacredTimeInIsraelSubtitle;
+  /// **'1 day (Eretz Yisrael minhag)'**
+  String get sacredTimeYomTovOneDay;
+
+  /// No description provided for @sacredTimeYomTovTwoDays.
+  ///
+  /// In en, this message translates to:
+  /// **'2 days (chutz la\'aretz minhag)'**
+  String get sacredTimeYomTovTwoDays;
 
   /// No description provided for @sacredTimeLocationUpdated.
   ///

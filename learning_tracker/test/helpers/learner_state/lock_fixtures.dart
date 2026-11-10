@@ -15,12 +15,14 @@ LearnerSettings lockSettings({
   double? latitude,
   double? longitude,
   bool? inIsrael,
+  int? yomTovDays,
 }) => LearnerSettings(
   profileId: profileUlid,
   timeZone: timeZone,
   latitude: latitude,
   longitude: longitude,
   inIsrael: inIsrael,
+  yomTovDays: yomTovDays,
 );
 
 /// Lakewood, NJ (diaspora).

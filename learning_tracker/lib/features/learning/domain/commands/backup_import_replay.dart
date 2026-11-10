@@ -157,7 +157,7 @@ final class BackupReplayInput {
   final List<BackupDoc> rewardRedemptions;
 
   /// The source profile's current governed settings (`latitude`,
-  /// `longitude`, `time_zone`, `in_israel`; storage form, absent keys left
+  /// `longitude`, `time_zone`, `yom_tov_days`, `in_israel`; storage form, absent keys left
   /// out): the state its `learnerSettings` history ends in. A source whose
   /// seed was never logged (no seed entry in [changeLog]) still restores
   /// its settings from it (DNI-482).
@@ -469,6 +469,7 @@ const Set<String> _settingsFields = {
   LearnerSettings.kLongitude,
   LearnerSettings.kTimeZone,
   LearnerSettings.kInIsrael,
+  LearnerSettings.kYomTovDays,
 };
 
 /// The source's settings before its first [history] entry: [seed] (its
