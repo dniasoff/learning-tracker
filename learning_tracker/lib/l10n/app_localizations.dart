@@ -6208,6 +6208,18 @@ abstract class AppLocalizations {
   /// **'English Translation'**
   String get textReaderEnglishTab;
 
+  /// No description provided for @textReaderShowTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Show translation'**
+  String get textReaderShowTranslation;
+
+  /// No description provided for @textReaderHideTranslation.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide translation'**
+  String get textReaderHideTranslation;
+
   /// No description provided for @totalPointsLabel.
   ///
   /// In en, this message translates to:

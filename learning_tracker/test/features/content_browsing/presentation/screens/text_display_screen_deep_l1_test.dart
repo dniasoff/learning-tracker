@@ -372,7 +372,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  testWidgets('C2: Multi-segment English shows Arabic numeral markers (1, 2)', (
+  testWidgets('C2: Multi-segment English glosses render under Hebrew units', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -381,9 +381,20 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Arabic numeral badge text for segment 1 = '1', for segment 2 = '2'
-    expect(find.text('1'), findsWidgets);
-    expect(find.text('2'), findsWidgets);
+    expect(find.text('Verse one'), findsOneWidget);
+    expect(find.text('Verse two'), findsOneWidget);
+    final glosses = tester
+        .widgetList<Text>(find.byType(Text))
+        .where(
+          (text) =>
+              text.textDirection == TextDirection.ltr &&
+              text.textSpan?.toPlainText().startsWith('Verse ') == true,
+        );
+    expect(glosses, isNotEmpty);
+    expect(
+      glosses.every((text) => text.textDirection == TextDirection.ltr),
+      isTrue,
+    );
 
     await _tearDown(tester);
   });
@@ -732,9 +743,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Must render without exceptions; both section labels present
+    // Must render without exceptions; translation stays inline under Hebrew.
     expect(find.text('טקסט עברי'), findsOneWidget);
-    expect(find.text('תרגום לאנגלית'), findsOneWidget);
+    expect(find.text('From when may one recite the Shema'), findsOneWidget);
+    expect(find.text('תרגום לאנגלית'), findsNothing);
     // Back arrow still present
     expect(find.byIcon(Icons.arrow_back), findsOneWidget);
 

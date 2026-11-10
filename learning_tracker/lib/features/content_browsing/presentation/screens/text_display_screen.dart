@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
@@ -93,6 +94,7 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
     final textAsync = ref.watch(textContentProvider(sefariaRef));
     final fontSize = ref.watch(fontSizeProvider);
     final showNikud = ref.watch(showNikudProvider);
+    final showTranslation = ref.watch(showReaderTranslationProvider);
     final theme = Theme.of(context);
 
     // Single label renderer drives the AppBar — full breadcrumb chain so
@@ -158,6 +160,20 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
           ),
         ),
         actions: [
+          if (textAsync.asData?.value?.segments.any(
+                (segment) => segment.englishText.isNotEmpty,
+              ) ??
+              false)
+            IconButton(
+              key: const Key('text_display_translation_toggle'),
+              icon: Icon(showTranslation ? Icons.translate : Icons.g_translate),
+              tooltip: showTranslation
+                  ? AppLocalizations.of(context)!.textReaderHideTranslation
+                  : AppLocalizations.of(context)!.textReaderShowTranslation,
+              onPressed: () => ref
+                  .read(showReaderTranslationProvider.notifier)
+                  .set(!showTranslation),
+            ),
           IconButton(
             key: const Key('text_display_prev_button'),
             icon: const Icon(Icons.chevron_left),
@@ -187,6 +203,7 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
               textContent: textContent,
               fontSize: fontSize,
               showNikud: showNikud,
+              showTranslation: showTranslation,
               sefariaRef: sefariaRef,
             );
           },
@@ -308,102 +325,75 @@ class _TextContentView extends StatelessWidget {
     required this.textContent,
     required this.fontSize,
     required this.showNikud,
+    required this.showTranslation,
     required this.sefariaRef,
   });
 
   final TextContent textContent;
   final FontSize fontSize;
   final bool showNikud;
+  final bool showTranslation;
   final String sefariaRef;
 
   @override
   Widget build(BuildContext context) {
-    final segments = textContent.segments;
+    final segments = textContent.segments
+        .where(
+          (s) =>
+              s.hebrewText.isNotEmpty ||
+              (showTranslation && s.englishText.isNotEmpty),
+        )
+        .toList(growable: false);
     final showSegmentNumbers =
         segments.length > 1 && segments.any((s) => s.number != null);
+    final hasHebrew = textContent.hebrewText.isNotEmpty;
+    final hasContent = segments.isNotEmpty;
+    final label = hasHebrew
+        ? AppLocalizations.of(context)!.textReaderHebrewTab
+        : AppLocalizations.of(context)!.textReaderEnglishTab;
+    final labelBackground = hasHebrew
+        ? context.colors.statusDanger
+        : context.colors.brandBlue;
+    final alignLabelRight = !hasHebrew;
+    final hebrewStyle = AppTextStyles.hebrewBodyLarge.copyWith(
+      fontSize: 26 * fontSize.multiplier,
+      height: 1.65,
+      color: context.colors.brandInk,
+    );
+    final glossStyle = AppTextStyles.bodyLarge.copyWith(
+      fontSize: 15 * fontSize.multiplier,
+      height: 1.45,
+      color: context.colors.brandInk.withValues(alpha: 0.78),
+    );
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          Padding(
+    return CustomScrollView(
+      slivers: [
+        if (hasContent)
+          SliverPadding(
+            // Preserve the original card inset; the floating section label
+            // remains positioned independently above the card edge.
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (textContent.hebrewText.isNotEmpty) ...[
-                  _ReaderSectionCard(
-                    label: AppLocalizations.of(context)!.textReaderHebrewTab,
-                    labelBackground: context.colors.statusDanger,
-                    alignLabelRight: false,
-                    child: _NumberedSegmentColumn(
-                      segments: segments,
-                      isHebrew: true,
-                      showNumbers: showSegmentNumbers,
-                      showNikud: showNikud,
-                      baseStyle: AppTextStyles.hebrewBodyLarge.copyWith(
-                        fontSize: 26 * fontSize.multiplier,
-                        height: 1.65,
-                        color: context.colors.brandInk,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: Divider(
-                        color: context.colors.brandOutline.withValues(
-                          alpha: 0.65,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Icon(
-                      Icons.menu_book_rounded,
-                      size: 22,
-                      color: context.colors.brandBlue,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Divider(
-                        color: context.colors.brandOutline.withValues(
-                          alpha: 0.65,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                if (textContent.englishText.isNotEmpty) ...[
-                  _ReaderSectionCard(
-                    label: AppLocalizations.of(context)!.textReaderEnglishTab,
-                    labelBackground: context.colors.brandBlue,
-                    alignLabelRight: true,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _NumberedSegmentColumn(
-                          segments: segments,
-                          isHebrew: false,
-                          showNumbers: showSegmentNumbers,
-                          showNikud: showNikud,
-                          baseStyle: AppTextStyles.bodyLarge.copyWith(
-                            fontSize: 16 * fontSize.multiplier,
-                            height: 1.55,
-                            color: context.colors.brandInk,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
+            sliver: SliverList.builder(
+              itemCount: segments.length,
+              itemBuilder: (context, index) => _ReaderSegmentCard(
+                key: ValueKey('reader_segment_${segments[index].sefariaRef}'),
+                segment: segments[index],
+                isFirst: index == 0,
+                isLast: index == segments.length - 1,
+                label: label,
+                labelBackground: labelBackground,
+                alignLabelRight: alignLabelRight,
+                showNumber:
+                    showSegmentNumbers && segments[index].number != null,
+                showNikud: showNikud,
+                showTranslation: showTranslation,
+                hebrewStyle: hebrewStyle,
+                glossStyle: glossStyle,
+              ),
             ),
           ),
-          Container(
+        SliverToBoxAdapter(
+          child: Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
             decoration: BoxDecoration(
               color: context.colors.surfaceF5,
@@ -415,109 +405,215 @@ class _TextContentView extends StatelessWidget {
             ),
             child: _CompletionSection(sefariaRef: sefariaRef),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Renders a list of [TextSegment]s — one paragraph per segment with a
-/// small leading number badge when [showNumbers] is true.
-///
-/// Hebrew side uses gematriya (`א`, `ב`, …); English side uses Arabic
-/// numerals (`1`, `2`, …). The number is visually distinct (smaller,
-/// brand-blue, slight badge background) so it reads as a verse marker
-/// rather than text. Only the number itself is shown — no leading
-/// "Pasuk" / "Mishna" / etc. label.
-class _NumberedSegmentColumn extends StatelessWidget {
-  const _NumberedSegmentColumn({
-    required this.segments,
-    required this.isHebrew,
-    required this.showNumbers,
-    required this.showNikud,
-    required this.baseStyle,
-  });
-
-  final List<TextSegment> segments;
-  final bool isHebrew;
-  final bool showNumbers;
-  final bool showNikud;
-  final TextStyle baseStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    final visible = segments.where((s) {
-      final t = isHebrew ? s.hebrewText : s.englishText;
-      return t.isNotEmpty;
-    }).toList();
-
-    if (visible.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: isHebrew
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < visible.length; i++) ...[
-          _SegmentParagraph(
-            segment: visible[i],
-            isHebrew: isHebrew,
-            showNumber: showNumbers && visible[i].number != null,
-            showNikud: showNikud,
-            baseStyle: baseStyle,
-          ),
-          if (i < visible.length - 1) const SizedBox(height: 10),
-        ],
+        ),
       ],
     );
   }
 }
 
-class _SegmentParagraph extends StatelessWidget {
-  const _SegmentParagraph({
+/// A lazily-built segment in the continuous source-and-gloss reader card.
+class _ReaderSegmentCard extends StatelessWidget {
+  const _ReaderSegmentCard({
+    super.key,
     required this.segment,
-    required this.isHebrew,
+    required this.isFirst,
+    required this.isLast,
+    required this.label,
+    required this.labelBackground,
+    required this.alignLabelRight,
     required this.showNumber,
     required this.showNikud,
-    required this.baseStyle,
+    required this.showTranslation,
+    required this.hebrewStyle,
+    required this.glossStyle,
   });
 
   final TextSegment segment;
-  final bool isHebrew;
+  final bool isFirst;
+  final bool isLast;
+  final String label;
+  final Color labelBackground;
+  final bool alignLabelRight;
   final bool showNumber;
   final bool showNikud;
-  final TextStyle baseStyle;
+  final bool showTranslation;
+  final TextStyle hebrewStyle;
+  final TextStyle glossStyle;
 
   @override
   Widget build(BuildContext context) {
-    var text = isHebrew ? segment.hebrewText : segment.englishText;
-    if (isHebrew && !showNikud) {
-      text = HebrewUtils.stripNikud(text);
-    }
+    final radius = BorderRadius.only(
+      topLeft: isFirst ? const Radius.circular(28) : Radius.zero,
+      topRight: isFirst ? const Radius.circular(28) : Radius.zero,
+      bottomLeft: isLast ? const Radius.circular(28) : Radius.zero,
+      bottomRight: isLast ? const Radius.circular(28) : Radius.zero,
+    );
+    final borderSide = BorderSide(
+      color: context.colors.brandOutline.withValues(alpha: 0.45),
+    );
+    final card = Container(
+      width: double.infinity,
+      padding: EdgeInsetsDirectional.fromSTEB(
+        20,
+        isFirst ? 26 : 0,
+        20,
+        isLast ? 18 : 10,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: radius,
+        boxShadow: isFirst
+            ? [
+                BoxShadow(
+                  color: context.colors.brandInk.withValues(alpha: 0.04),
+                  blurRadius: 11,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : const [],
+        border: Border(
+          left: borderSide,
+          right: borderSide,
+          top: isFirst ? borderSide : BorderSide.none,
+          bottom: isLast ? borderSide : BorderSide.none,
+        ),
+      ),
+      child: _SegmentWithGlosses(
+        segment: segment,
+        glosses: showTranslation && segment.englishText.isNotEmpty
+            ? [
+                _SegmentGloss(
+                  text: segment.englishText,
+                  direction: TextDirection.ltr,
+                  style: glossStyle,
+                  marker:
+                      segment.hebrewText.isEmpty &&
+                          showNumber &&
+                          segment.number != null
+                      ? segment.number.toString()
+                      : null,
+                ),
+              ]
+            : const [],
+        showNumber: showNumber,
+        showNikud: showNikud,
+        hebrewStyle: hebrewStyle,
+      ),
+    );
+    if (!isFirst) return card;
 
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        card,
+        Positioned(
+          top: -12,
+          left: alignLabelRight ? null : 0,
+          right: alignLabelRight ? 0 : null,
+          child: _ReaderSectionLabel(label: label, background: labelBackground),
+        ),
+      ],
+    );
+  }
+}
+
+/// One Hebrew unit followed by its zero or more translated glosses.
+/// Additional sources (AI phrase glosses, Targum) can be added to [glosses].
+class _SegmentWithGlosses extends StatelessWidget {
+  const _SegmentWithGlosses({
+    required this.segment,
+    required this.glosses,
+    required this.showNumber,
+    required this.showNikud,
+    required this.hebrewStyle,
+  });
+
+  final TextSegment segment;
+  final List<_SegmentGloss> glosses;
+  final bool showNumber;
+  final bool showNikud;
+  final TextStyle hebrewStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    var hebrew = segment.hebrewText;
+    if (!showNikud) hebrew = HebrewUtils.stripNikud(hebrew);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (hebrew.isNotEmpty)
+          _SegmentTextLine(
+            text: hebrew,
+            direction: TextDirection.rtl,
+            style: hebrewStyle,
+            marker: showNumber && segment.number != null
+                ? Gematriya.forNumber(segment.number!)
+                : null,
+          ),
+        for (final gloss in glosses)
+          if (gloss.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(top: 2),
+              child: _SegmentTextLine(
+                text: gloss.text,
+                direction: gloss.direction,
+                style: gloss.style,
+                marker: gloss.marker,
+              ),
+            ),
+      ],
+    );
+  }
+}
+
+class _SegmentGloss {
+  const _SegmentGloss({
+    required this.text,
+    required this.direction,
+    required this.style,
+    this.marker,
+  });
+
+  final String text;
+  final TextDirection direction;
+  final TextStyle style;
+  final String? marker;
+}
+
+class _SegmentTextLine extends StatelessWidget {
+  const _SegmentTextLine({
+    required this.text,
+    required this.direction,
+    required this.style,
+    this.marker,
+  });
+
+  final String text;
+  final TextDirection direction;
+  final TextStyle style;
+  final String? marker;
+
+  @override
+  Widget build(BuildContext context) {
     final spans = <InlineSpan>[];
-    if (showNumber && segment.number != null) {
-      final marker = isHebrew
-          ? Gematriya.forNumber(segment.number!)
-          : segment.number!.toString();
+    if (marker != null) {
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.baseline,
           baseline: TextBaseline.alphabetic,
           child: Padding(
-            padding: isHebrew
+            padding: direction == TextDirection.rtl
                 ? const EdgeInsetsDirectional.only(start: 6)
                 : const EdgeInsetsDirectional.only(end: 6),
-            child: _VerseNumberBadge(marker: marker),
+            child: _VerseNumberBadge(marker: marker!),
           ),
         ),
       );
     }
-    spans.add(TextSpan(text: text, style: baseStyle));
-
+    spans.add(TextSpan(text: text, style: style));
     return Text.rich(
-      TextSpan(children: spans, style: baseStyle),
-      textDirection: isHebrew ? TextDirection.rtl : TextDirection.ltr,
+      TextSpan(children: spans, style: style),
+      textDirection: direction,
       textAlign: TextAlign.start,
     );
   }
@@ -549,74 +645,34 @@ class _VerseNumberBadge extends StatelessWidget {
   }
 }
 
-class _ReaderSectionCard extends StatelessWidget {
-  const _ReaderSectionCard({
-    required this.label,
-    required this.labelBackground,
-    required this.child,
-    this.alignLabelRight = false,
-  });
+class _ReaderSectionLabel extends StatelessWidget {
+  const _ReaderSectionLabel({required this.label, required this.background});
 
   final String label;
-  final Color labelBackground;
-  final Widget child;
-  final bool alignLabelRight;
+  final Color background;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(20, 26, 20, 18),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: context.colors.brandInk.withValues(alpha: 0.04),
-                blurRadius: 11,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            border: Border.all(
-              color: context.colors.brandOutline.withValues(alpha: 0.45),
-            ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: background.withValues(alpha: 0.26),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
-          child: child,
+        ],
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onPrimary,
+          fontWeight: FontWeight.w700,
         ),
-        Positioned(
-          top: -12,
-          left: alignLabelRight ? null : 0,
-          right: alignLabelRight ? 0 : null,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            decoration: BoxDecoration(
-              color: labelBackground,
-              borderRadius: BorderRadius.circular(999),
-              boxShadow: [
-                BoxShadow(
-                  color: labelBackground.withValues(alpha: 0.26),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                // AUD-content_browsing-08: theme's onPrimary token instead
-                // of a raw Colors.white literal (see FilledButton fix below
-                // in this file / error_display.dart / app_error_view.dart
-                // for the same pattern).
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

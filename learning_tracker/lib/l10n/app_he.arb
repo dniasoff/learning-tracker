@@ -1966,6 +1966,8 @@
   "textReaderTooltipNext": "הבא",
   "textReaderHebrewTab": "טקסט עברי",
   "textReaderEnglishTab": "תרגום לאנגלית",
+  "textReaderShowTranslation": "הצגת תרגום",
+  "textReaderHideTranslation": "הסתרת תרגום",
   "totalPointsLabel": "סה\"כ נקודות",
   "resetToDefaultOrder": "איפוס לסדר ברירת מחדל",
   "resetToDefaultOrderDialogTitle": "איפוס לסדר ברירת מחדל",
