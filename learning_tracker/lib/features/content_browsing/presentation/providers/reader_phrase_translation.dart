@@ -137,11 +137,29 @@ class PhraseTranslation {
 String _localCacheKey(PhraseTranslationKey key) =>
     'phrase_translation_${Uri.encodeComponent(key.ref)}_${key.language}_v1';
 
+/// Explicit retry signal for a failed phrase-translation request.
+final phraseTranslationRetryProvider =
+    NotifierProvider.family<
+      PhraseTranslationRetryNotifier,
+      int,
+      PhraseTranslationKey
+    >(PhraseTranslationRetryNotifier.new);
+
+class PhraseTranslationRetryNotifier extends Notifier<int> {
+  PhraseTranslationRetryNotifier(PhraseTranslationKey _);
+
+  @override
+  int build() => 0;
+
+  void retry() => state++;
+}
+
 final phraseTranslationProvider =
     FutureProvider.family<List<PhraseTranslation>, PhraseTranslationKey>((
       ref,
       key,
     ) async {
+      ref.watch(phraseTranslationRetryProvider(key));
       final prefs = await SharedPreferences.getInstance();
       final cacheKey = _localCacheKey(key);
       final cached = prefs.getString(cacheKey);

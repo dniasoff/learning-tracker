@@ -370,7 +370,7 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 
 lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-guardrails-17
 	@echo "Running packages/custom_lints unit tests..."
-	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
+	@(cd ../packages/custom_lints && dart pub get && dart test --concurrency=1) 1>&2
 
 audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="

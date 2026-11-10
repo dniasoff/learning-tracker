@@ -770,10 +770,11 @@ void main() {
         await _scrollSettingsToBottom(tester);
         await h.pump(const Duration(milliseconds: 200));
 
-        // A neighbouring, always-visible tile (Calendar Preference) renders
-        // its l10n Hebrew translation — proves the MaterialApp is genuinely
-        // running under he, not silently still en.
-        h.expectOnScreen('העדפת לוח שנה');
+        // The About tile at the end of Settings renders its l10n Hebrew
+        // translation — proving the MaterialApp is genuinely running under
+        // he, not silently still en. Calendar Preference is above the Hebrew
+        // Terms row and may be offscreen after scrolling to the list bottom.
+        h.expectOnScreen('מידע על האפליקציה');
 
         // The Hebrew Terms tile itself must be entirely absent — not merely
         // toggled — because the he locale gate skips building it at all.
