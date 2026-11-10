@@ -265,6 +265,14 @@ class _FakeSelectedProfileId extends SelectedProfileId {
 
   @override
   String? build() => _profileId;
+
+  void setProfile(String? value) => state = value;
+
+  @override
+  void select(String profileId) => setProfile(profileId);
+
+  @override
+  void clear() => setProfile(null);
 }
 
 class _FakeCompletionCommitted extends CompletionCommitted {
@@ -599,6 +607,50 @@ void main() {
   });
 
   // ── RTL / text direction ────────────────────────────────────────────────────
+
+  testWidgets('profile changes load each profile translation choice', (
+    tester,
+  ) async {
+    const firstProfile = 'learner-a';
+    const secondProfile = 'learner-b';
+    SharedPreferences.setMockInitialValues({
+      ProfileScopedPreferenceKeys.textShowTranslation(firstProfile): false,
+      ProfileScopedPreferenceKeys.textShowTranslation(secondProfile): true,
+    });
+
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        textState: AsyncData(_content()),
+        useRealTranslationPreference: true,
+        profileId: firstProfile,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(find.byTooltip('Show translation'), findsOneWidget);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(TextDisplayScreen)),
+    );
+    final selectedProfile =
+        container.read(selectedProfileIdProvider.notifier)
+            as _FakeSelectedProfileId;
+    selectedProfile.setProfile(secondProfile);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(find.byTooltip('Hide translation'), findsOneWidget);
+    expect(find.text('From when may one recite'), findsOneWidget);
+
+    selectedProfile.setProfile(firstProfile);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(find.byTooltip('Show translation'), findsOneWidget);
+    expect(find.text('From when may one recite'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
   testWidgets('RTL — Hebrew Text.rich uses TextDirection.rtl', (tester) async {
     const heText = 'מֵאֵימָתַי';
@@ -1245,6 +1297,78 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  testWidgets('English-only child segments retain their Arabic number', (
+    tester,
+  ) async {
+    final content = TextContent(
+      sefariaRef: _kRef,
+      segments: [
+        TextSegment(
+          sefariaRef: '$_kRef:1',
+          hebrewText: 'עברית מקורית',
+          englishText: 'Hebrew gloss',
+          number: 1,
+        ),
+        TextSegment(
+          sefariaRef: '$_kRef:2',
+          hebrewText: '',
+          englishText: 'English-only child',
+          number: 2,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _buildApp(router: router, textState: AsyncData(content)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.textContaining('English-only child'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('500-segment passage builds only nearby sliver rows', (
+    tester,
+  ) async {
+    final content = TextContent(
+      sefariaRef: _kRef,
+      segments: [
+        for (var i = 1; i <= 500; i++)
+          TextSegment(
+            sefariaRef: '$_kRef:$i',
+            hebrewText: 'Source segment $i',
+            englishText: 'Gloss $i',
+            number: i,
+          ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _buildApp(router: router, textState: AsyncData(content)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final rowFinder = find.byWidgetPredicate((widget) {
+      final key = widget.key;
+      return key is ValueKey<String> && key.value.startsWith('reader_segment_');
+    });
+    final builtRows = tester.widgetList(rowFinder).length;
+    expect(builtRows, greaterThan(0));
+    expect(builtRows, lessThan(50));
+    expect(
+      find.byKey(const ValueKey('reader_segment_$_kRef:500')),
+      findsNothing,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
   // ── Hebrew locale smoke test ─────────────────────────────────────────────────
 
