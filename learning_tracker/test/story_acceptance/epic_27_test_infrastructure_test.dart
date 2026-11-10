@@ -40,8 +40,8 @@ void main() {
         expect(snap.data()?['email'], 'a@b.test');
       });
 
-      test('createFakeFirestore(strictRules: true) pre-loads the project '
-          'firestore.rules and rejects unauthenticated writes', () async {
+      test('createFakeFirestore(strictRules: true) rejects unmatched writes '
+          'with its real-rules or fail-closed policy', () async {
         // Strict mode + no auth — the deny-all default match should
         // reject any write. `unmatched_collection` is deliberately not a
         // real path in firestore.rules: this test is exercising the
@@ -76,15 +76,10 @@ void main() {
       test('createFakeFirestore(strictRules: true) still denies the '
           'authenticated OWNER on the simplest real owner-only rule '
           '(users/{uid}) — a Dart-fake ceiling, not a rules bug', () async {
-        // users/{uid} in the real firestore.rules is gated ONLY by
-        // `isOwner(uid)` — no request.resource.data, no hasOnly()
-        // whitelist, nothing else. In production the authenticated
-        // owner's write succeeds. Here it still throws:
-        // fake_firebase_security_rules does not register user-defined
-        // `function` declarations (isOwner/isSignedIn/
-        // hasActiveTutorAccess) with its CEL environment at all, so the
-        // call fails evaluation and the enclosing allow clause is denied
-        // for EVERY caller, including the true owner. See
+        // The helper attempts to load the real rules, but the fake parser
+        // cannot compile their custom functions. It therefore falls back to
+        // a deny-all ruleset, which rejects even the real rules' owner path.
+        // Production owner behavior is exercised by the emulator suite. See
         // test/firestore_fake_custom_functions_test.dart for the full,
         // isolated root-cause investigation (R4, run-10) — this test
         // only pins the corrected, real-rule version of what this file
@@ -100,15 +95,9 @@ void main() {
           }),
           throwsA(isA<Exception>()),
           reason:
-              'users/{uid} is gated ONLY by isOwner(uid) in the real '
-              'firestore.rules — no request.resource.data reference at '
-              'all — yet the fake still denies the true owner, because '
-              'isOwner() is a custom function and this dependency '
-              'version does not support custom function declarations. '
-              'If this assertion ever starts failing (the write '
-              'succeeds), a future fake_firebase_security_rules upgrade '
-              'has added function support — revisit whether a dynamic '
-              'Dart-side rules matrix has become viable.',
+              'strict fake mode must remain fail-closed when its parser '
+              'cannot compile the real rules; the Firestore emulator suite '
+              'covers whether the authenticated owner can write users/{uid}.',
         );
       });
     });
