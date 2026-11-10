@@ -77,10 +77,10 @@ Future<void> _pump(
   );
   await tester.tap(find.byKey(const Key('trigger')));
   await tester.pumpAndSettle();
-  // Target 2:2, untick 2:1: the UJ-1 composition.
-  await tester.tap(find.text('Berakhot 2:2'));
-  await tester.pump();
+  // Two independently ticked rows: the UJ-1 composition.
   await tester.tap(find.byKey(const Key('upToRowTick-3')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('upToRowTick-4')));
   await tester.pumpAndSettle();
 }
 

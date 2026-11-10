@@ -110,8 +110,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Mishnayos · up to…'), findsOneWidget);
-    expect(find.text('Bavli · up to…'), findsOneWidget);
+    expect(find.text('What did you learn in Mishnayos?'), findsOneWidget);
+    expect(find.text('What did you learn in Bavli?'), findsOneWidget);
   });
 
   testWidgets('absent while the session has no learning commands', (

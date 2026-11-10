@@ -2055,6 +2055,7 @@
   "catchUpAdjustPickerConfirm": "לכלול {count} {unit}",
   "catchUpAdjustRecordItems": "רישום {count, plural, =1{פריט אחד} other{{count} פריטים}}",
   "catchUpAdjustSubTrackGroup": "{name} (לומד ב{shabbos})",
+  "catchUpAdjustStatusSkipped": "דולג",
   "catchUpCardAdjust": "התאמה…",
   "catchUpCardAvailableUntil": "זמין עד סוף {day}",
   "catchUpCardContentsError": "לא ניתן היה לטעון את מה שתוכנן.",
@@ -4188,7 +4189,7 @@
       }
     }
   },
-  "upToPickerInstruction": "הקש על ה{unit} האחרונה שלמדת",
+  "upToPickerInstruction": "סמן כל {unit} שלמדת. לחיצה ממושכת על שורה תסמן הכול עד אליה.",
   "@upToPickerInstruction": {
     "placeholders": {
       "unit": {
@@ -4226,7 +4227,7 @@
       }
     }
   },
-  "upToPickerRowTargetSemantics": "{label}, {status}, האחרון שנלמד",
+  "upToPickerRowTargetSemantics": "{label}, {status}, נבחר",
   "@upToPickerRowTargetSemantics": {
     "placeholders": {
       "label": {
@@ -4237,13 +4238,12 @@
       }
     }
   },
-  "upToPickerSetTargetAction": "סמן כאחרון שנלמד",
   "upToPickerStatusAlreadyRecorded": "כבר נרשם",
   "upToPickerStatusIncluded": "כלול",
   "upToPickerStatusNextUp": "הבא בתור",
   "upToPickerStatusNotSelected": "לא נבחר",
-  "upToPickerStatusSkipped": "דולג",
-  "upToPickerTitle": "{name} · עד…",
+  "upToPickerStatusSkipped": "לא מסומן",
+  "upToPickerTitle": "מה למדת ב{name}?",
   "@upToPickerTitle": {
     "placeholders": {
       "name": {
@@ -4251,6 +4251,7 @@
       }
     }
   },
+  "upToPickerBulkAction": "סמן הכול עד כאן",
   "sacredTimeLocationPromptAction": "הגדרת מיקום",
   "sacredTimeLocationPromptMessage": "הגדירו מיקום כדי שזמני הנעילה ב{term} וביום טוב יתאימו לאזור של הלומד.",
   "sacredTimeLocationPromptMessageNamed": "המיקום של {name} לא מוגדר. הגדירו אותו כדי שזמני הנעילה ב{term} וביום טוב יתאימו לאזור שלהם.",

@@ -4,7 +4,7 @@
 /// A rounded-top sheet on a phone and a centred dialog of at most 480px on
 /// a tablet. It lists the track's leaves from its position (lazily: rows
 /// and their labels build only as they scroll into view), lets the child
-/// tap the last leaf learnt and untick any skipped one, and pops the
+/// tick individual leaves or explicitly fill a range, and pops the
 /// [UpToSelection] on Record. Cancel, a swipe down or platform back pop
 /// null: nothing is recorded (UX-DR-166). There is no source badge or
 /// picker in the sheet: the source is the track itself.
@@ -393,29 +393,23 @@ class _UpToRowTile extends ConsumerWidget {
       label: isTarget
           ? l10n.upToPickerRowTargetSemantics(label, statusText)
           : l10n.upToPickerRowSemantics(label, statusText),
-      // The row announces itself as its tick, so a screen-reader activation
-      // does what the tick does (AC-2, AC-8): inside the run it skips or
-      // re-ticks the row, outside it makes the row the last one learnt.
-      // Cutting the run short at a row already inside it is a custom
-      // action, as the row's visible tap does.
+      // Screen-reader activation matches a tap and toggles only this row.
+      // The custom action exposes the explicit bulk range operation.
       onTap: selectable ? () => onChanged(selection.tick(index)) : null,
-      customSemanticsActions: selectable && selection.inRun(index) && !isTarget
+      customSemanticsActions: selectable
           ? {
-              CustomSemanticsAction(
-                label: l10n.upToPickerSetTargetAction,
-              ): () =>
-                  onChanged(selection.selectTarget(index)),
+              CustomSemanticsAction(label: l10n.upToPickerBulkAction): () =>
+                  onChanged(selection.tickAllUpTo(index)),
             }
           : null,
       excludeSemantics: true,
-      child: Material(
-        color: isTarget ? scheme.primaryContainer : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
+      child: GestureDetector(
+        onLongPress: selectable
+            ? () => onChanged(selection.tickAllUpTo(index))
+            : null,
+        child: Material(
+          color: isTarget ? scheme.primaryContainer : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          onTap: selectable
-              ? () => onChanged(selection.selectTarget(index))
-              : null,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 48),
             child: Row(
@@ -433,24 +427,36 @@ class _UpToRowTile extends ConsumerWidget {
                 ),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      label,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: isTarget ? FontWeight.w700 : null,
-                        color: isTarget
-                            ? scheme.onPrimaryContainer
-                            : muted
-                            ? scheme.onSurfaceVariant
-                            : scheme.onSurface,
-                        decoration: status == UpToRowStatus.skipped
-                            ? TextDecoration.lineThrough
-                            : null,
+                  child: InkWell(
+                    onTap: selectable
+                        ? () => onChanged(selection.tick(index))
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        label,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: isTarget ? FontWeight.w700 : null,
+                          color: isTarget
+                              ? scheme.onPrimaryContainer
+                              : muted
+                              ? scheme.onSurfaceVariant
+                              : scheme.onSurface,
+                          decoration: status == UpToRowStatus.skipped
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
                       ),
                     ),
                   ),
                 ),
+                if (isTarget && selectable)
+                  IconButton(
+                    key: Key('upToRowBulk-$index'),
+                    tooltip: l10n.upToPickerBulkAction,
+                    onPressed: () => onChanged(selection.tickAllUpTo(index)),
+                    icon: const Icon(Icons.done_all),
+                  ),
                 if (status == UpToRowStatus.alreadyRecorded ||
                     status == UpToRowStatus.nextUp ||
                     status == UpToRowStatus.skipped)

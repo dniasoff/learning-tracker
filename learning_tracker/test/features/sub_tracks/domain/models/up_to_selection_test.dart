@@ -1,7 +1,4 @@
-// Story 2.10 (DNI-501) AC-2 / AC-3 unit: the Up to… run selection —
-// boundaries, non-contiguous adjustments and already-recorded barriers.
-// The engine slices it is built from: domain/services/
-// up_to_selection_service_test.dart.
+// Story 2.10 (DNI-501): independent row selection and explicit range fill.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/up_to_selection.dart';
 
@@ -18,103 +15,86 @@ UpToSelection _sel(List<String> refs, {Set<String> recorded = const {}}) =>
 
 void main() {
   group('UpToSelection', () {
-    test('before a target the first row is next up and nothing is '
-        'included', () {
-      final s = _sel([_a, _b, _c]);
-      expect(s.target, isNull);
-      expect(s.statusOf(0), UpToRowStatus.nextUp);
-      expect(s.statusOf(1), UpToRowStatus.notSelected);
-      expect(s.count, 0);
-      expect(s.includedRefs, isEmpty);
+    test('starts with no selected rows and identifies the next position', () {
+      final selection = _sel([_a, _b, _c]);
+      expect(selection.target, isNull);
+      expect(selection.statusOf(0), UpToRowStatus.nextUp);
+      expect(selection.statusOf(1), UpToRowStatus.notSelected);
+      expect(selection.count, 0);
+      expect(selection.includedRefs, isEmpty);
     });
 
-    test('a target includes every row from the position through it', () {
-      final s = _sel([_a, _b, _c, _d]).selectTarget(2);
-      expect(s.includedRefs, [_a, _b, _c]);
-      expect(s.count, 3);
-      expect(s.statusOf(3), UpToRowStatus.notSelected);
+    test('tapping a later row selects only that row', () {
+      final selection = _sel([_a, _b, _c, _d]).tick(2);
+      expect(selection.includedRefs, [_c]);
+      expect(selection.count, 1);
+      expect(selection.statusOf(0), UpToRowStatus.nextUp);
+      expect(selection.statusOf(2), UpToRowStatus.included);
+      expect(selection.positionAfterRecord, _a);
     });
 
-    test('first-position target records only the position', () {
-      final s = _sel([_a, _b]).selectTarget(0);
-      expect(s.includedRefs, [_a]);
-      expect(s.positionAfterRecord, _b);
+    test('non-contiguous selections preserve the exact refs and count', () {
+      final selection = _sel([_a, _b, _c, _d, _e]).tick(0).tick(4);
+      expect(selection.includedRefs, [_a, _e]);
+      expect(selection.count, 2);
+      expect(selection.positionAfterRecord, _b);
     });
 
-    test('final-ground target records through the end; no position is '
-        'left', () {
-      final s = _sel([_a, _b, _c]).selectTarget(2);
-      expect(s.count, 3);
-      expect(s.positionAfterRecord, isNull);
+    test('a second tap toggles only the row tapped', () {
+      final selection = _sel([_a, _b, _c]).tick(2).tick(2);
+      expect(selection.includedRefs, isEmpty);
+      expect(selection.statusOf(0), UpToRowStatus.nextUp);
+      expect(selection.positionAfterRecord, _a);
     });
 
-    test('untick and re-tick inside the run update the live count', () {
-      var s = _sel([_a, _b, _c, _d, _e]).selectTarget(4);
-      expect(s.count, 5);
-      s = s.toggle(3);
-      expect(s.statusOf(3), UpToRowStatus.skipped);
-      expect(s.count, 4);
-      expect(s.includedRefs, [_a, _b, _c, _e]);
-      expect(s.positionAfterRecord, _d);
-      s = s.toggle(3);
-      expect(s.statusOf(3), UpToRowStatus.included);
-      expect(s.count, 5);
+    test(
+      'explicit range fill includes every selectable row through target',
+      () {
+        final selection = _sel([_a, _b, _c, _d]).tickAllUpTo(2);
+        expect(selection.includedRefs, [_a, _b, _c]);
+        expect(selection.count, 3);
+        expect(selection.statusOf(3), UpToRowStatus.notSelected);
+      },
+    );
+
+    test('range fill preserves selected rows after its target', () {
+      final selection = _sel([_a, _b, _c, _d, _e]).tick(4).tickAllUpTo(2);
+      expect(selection.includedRefs, [_a, _b, _c, _e]);
     });
 
-    test('non-contiguous skips: the position becomes the first unticked '
-        'leaf', () {
-      final s = _sel([_a, _b, _c, _d]).selectTarget(3).toggle(0).toggle(2);
-      expect(s.includedRefs, [_b, _d]);
-      expect(s.positionAfterRecord, _a);
+    test('untick and re-tick update the live count', () {
+      final selection = _sel([_a, _b, _c]).tickAllUpTo(2).toggle(1);
+      expect(selection.statusOf(1), UpToRowStatus.skipped);
+      expect(selection.count, 2);
+      expect(selection.includedRefs, [_a, _c]);
+      expect(selection.positionAfterRecord, _b);
+      expect(selection.toggle(1).statusOf(1), UpToRowStatus.included);
     });
 
-    test('all-skipped: count 0, nothing to record', () {
-      final s = _sel([_a, _b]).selectTarget(1).toggle(0).toggle(1);
-      expect(s.count, 0);
-      expect(s.includedRefs, isEmpty);
-      expect(s.positionAfterRecord, _a);
+    test('already-recorded rows are unchanged by taps and range fill', () {
+      final selection = _sel([_a, _b, _c, _d], recorded: {_b, _d});
+      expect(selection.isSelectable(1), isFalse);
+      expect(selection.tick(1), same(selection));
+      final filled = selection.tickAllUpTo(2);
+      expect(filled.statusOf(1), UpToRowStatus.alreadyRecorded);
+      expect(filled.toggle(1), same(filled));
+      expect(filled.includedRefs, [_a, _c]);
+      expect(filled.positionAfterRecord, isNull);
+      expect(selection.statusOf(3), UpToRowStatus.alreadyRecorded);
     });
 
-    test('a toggle outside the run is rejected; tick outside the run '
-        'extends it', () {
-      final s = _sel([_a, _b, _c]).selectTarget(0);
-      expect(s.toggle(2), same(s));
-      final extended = s.tick(2);
-      expect(extended.target, 2);
-      expect(extended.count, 3);
-      expect(extended.tick(1).statusOf(1), UpToRowStatus.skipped);
-    });
-
-    test('moving the target back drops skips past it', () {
-      final s = _sel([_a, _b, _c, _d]).selectTarget(3).toggle(3).toggle(1);
-      final back = s.selectTarget(2);
-      expect(back.skipped, {1});
-      expect(back.includedRefs, [_a, _c]);
-    });
-
-    test('already-recorded rows are barriers: never selectable, never '
-        'included, never written twice', () {
-      final s = _sel([_a, _b, _c, _d], recorded: {_b, _d});
-      expect(s.isSelectable(1), isFalse);
-      expect(s.selectTarget(1), same(s));
-      final run = s.selectTarget(2);
-      expect(run.statusOf(1), UpToRowStatus.alreadyRecorded);
-      expect(run.toggle(1), same(run));
-      expect(run.includedRefs, [_a, _c]);
-      expect(run.positionAfterRecord, isNull);
-      expect(s.statusOf(3), UpToRowStatus.alreadyRecorded);
-    });
-
-    test('every row recorded or none: exhausted', () {
+    test('exhausted means no selectable rows remain', () {
       expect(_sel(const []).isExhausted, isTrue);
       expect(_sel([_a], recorded: {_a}).isExhausted, isTrue);
       expect(_sel([_a]).isExhausted, isFalse);
     });
 
-    test('out-of-range indexes are rejected', () {
-      final s = _sel([_a]);
-      expect(s.selectTarget(-1), same(s));
-      expect(s.selectTarget(5), same(s));
+    test('invalid indexes are rejected', () {
+      final selection = _sel([_a]);
+      expect(selection.tickAllUpTo(-1), same(selection));
+      expect(selection.tickAllUpTo(5), same(selection));
+      expect(selection.toggle(-1), same(selection));
+      expect(selection.toggle(5), same(selection));
     });
   });
 }

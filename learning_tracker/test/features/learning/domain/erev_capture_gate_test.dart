@@ -100,7 +100,7 @@ Finder _upTo() => find.byWidgetPredicate(
 Future<void> _pickThrough12(WidgetTester tester) async {
   await tester.tap(_upTo().first);
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Berakhot 1:2'));
+  await tester.longPress(find.text('Berakhot 1:2'));
   await tester.pump();
 }
 
