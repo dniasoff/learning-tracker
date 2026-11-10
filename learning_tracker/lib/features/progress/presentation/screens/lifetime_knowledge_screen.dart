@@ -61,7 +61,9 @@ class _LifetimeKnowledgeScreenState
   static List<CurriculumCompletionSummary> _withProgress(
     List<CurriculumCompletionSummary> summaries,
   ) =>
-      summaries.where((s) => s.learnedLeafCount > 0).toList()
+      summaries
+          .where((s) => s.curriculumId.isBrowsable && s.learnedLeafCount > 0)
+          .toList()
         ..sort((a, b) => a.curriculumId.index.compareTo(b.curriculumId.index));
 
   @override

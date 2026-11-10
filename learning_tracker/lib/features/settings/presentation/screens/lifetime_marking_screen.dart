@@ -93,16 +93,17 @@ class LifetimeMarkingScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              for (var i = 0; i < CurriculumId.values.length; i++) ...[
+              for (var i = 0; i < CurriculumId.userSelectable.length; i++) ...[
                 if (i > 0) const SizedBox(height: 10),
                 _LifetimeLibraryCategoryCard(
-                  curriculum: CurriculumId.values[i],
+                  curriculum: CurriculumId.userSelectable[i],
                   summariesAsync: summariesAsync,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => LifetimeCurriculumMarkingScreen(
-                          curriculumId: CurriculumId.values[i].storageKey,
+                          curriculumId:
+                              CurriculumId.userSelectable[i].storageKey,
                         ),
                       ),
                     );
