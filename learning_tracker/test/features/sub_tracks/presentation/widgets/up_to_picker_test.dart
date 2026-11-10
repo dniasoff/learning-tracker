@@ -116,8 +116,13 @@ void main() {
       await _open(tester);
       expect(find.byKey(const Key('upToPickerSheet')), findsOneWidget);
       expect(find.byKey(const Key('upToPickerDialog')), findsNothing);
-      expect(find.text('School · up to…'), findsOneWidget);
-      expect(find.text('Tap the last mishna you learnt'), findsOneWidget);
+      expect(find.text('What did you learn in School?'), findsOneWidget);
+      expect(
+        find.text(
+          'Tick each mishna you learnt. Long-press a row to tick everything up to it.',
+        ),
+        findsOneWidget,
+      );
       final first = tester.getTopLeft(find.text('Berakhot 1:3')).dy;
       final second = tester.getTopLeft(find.text('Berakhot 1:4')).dy;
       expect(first, lessThan(second));
@@ -174,20 +179,69 @@ void main() {
   });
 
   group('AC-2 selection', () {
-    testWidgets('a target includes the run; untick and re-tick update the '
-        'live count', (tester) async {
+    testWidgets(
+      'tapping a later row ticks only that row and updates the count',
+      (tester) async {
+        await _open(tester);
+        await tester.tap(find.text('Berakhot 2:2'));
+        await tester.pump();
+        expect(_recordLabel(tester), 'Record 1 mishna');
+        expect(_recordEnabled(tester), isTrue);
+        for (var i = 0; i < 4; i++) {
+          expect(
+            tester.widget<Checkbox>(find.byKey(Key('upToRowTick-$i'))).value,
+            isFalse,
+          );
+        }
+        expect(
+          tester.widget<Checkbox>(find.byKey(const Key('upToRowTick-4'))).value,
+          isTrue,
+        );
+        await tester.tap(find.text('Berakhot 2:2'));
+        await tester.pump();
+        expect(_recordLabel(tester), 'Record 0 mishnayos');
+        expect(_recordEnabled(tester), isFalse);
+      },
+    );
+
+    testWidgets('long-press explicitly fills all unticked rows through it', (
+      tester,
+    ) async {
+      await _open(tester);
+      await tester.longPress(find.text('Berakhot 2:2'));
+      await tester.pump();
+      expect(_recordLabel(tester), 'Record 5 mishnayos');
+      for (var i = 0; i <= 4; i++) {
+        expect(
+          tester.widget<Checkbox>(find.byKey(Key('upToRowTick-$i'))).value,
+          isTrue,
+        );
+      }
+    });
+
+    testWidgets('selected row exposes an accessible explicit range button', (
+      tester,
+    ) async {
       await _open(tester);
       await tester.tap(find.text('Berakhot 2:2'));
       await tester.pump();
-      expect(_recordLabel(tester), 'Record 5 mishnayos');
-      expect(_recordEnabled(tester), isTrue);
-      await tester.tap(find.byKey(const Key('upToRowTick-3')));
-      await tester.pump();
-      expect(_recordLabel(tester), 'Record 4 mishnayos');
-      expect(find.text('skipped'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('upToRowTick-3')));
+      await tester.tap(find.byKey(const Key('upToRowBulk-4')));
       await tester.pump();
       expect(_recordLabel(tester), 'Record 5 mishnayos');
+    });
+
+    testWidgets('non-contiguous selections record only the ticked rows', (
+      tester,
+    ) async {
+      final host = await _open(tester);
+      await tester.tap(find.text('Berakhot 1:3'));
+      await tester.pump();
+      await tester.tap(find.text('Berakhot 2:2'));
+      await tester.pump();
+      expect(_recordLabel(tester), 'Record 2 mishnayos');
+      await tester.tap(find.byKey(const Key('upToRecord')));
+      await tester.pumpAndSettle();
+      expect(host.result!.includedRefs, [_path[0], _path[4]]);
     });
 
     testWidgets('one included row uses the singular unit', (tester) async {
@@ -210,27 +264,22 @@ void main() {
       expect(_recordLabel(tester), 'Record 0 mishnayos');
       await tester.tap(find.text('Berakhot 2:1'));
       await tester.pump();
-      expect(_recordLabel(tester), 'Record 3 mishnayos');
+      expect(_recordLabel(tester), 'Record 1 mishna');
     });
 
     testWidgets('Record pops the included leaves in track order', (
       tester,
     ) async {
       final host = await _open(tester);
-      await tester.tap(find.text('Berakhot 2:2'));
+      await tester.tap(find.text('Berakhot 1:3'));
       await tester.pump();
-      await tester.tap(find.byKey(const Key('upToRowTick-3')));
+      await tester.tap(find.text('Berakhot 2:2'));
       await tester.pump();
       await tester.tap(find.byKey(const Key('upToRecord')));
       await tester.pumpAndSettle();
       expect(host.closed, isTrue);
-      expect(host.result!.includedRefs, [
-        'Mishnah Berakhot 1:3',
-        'Mishnah Berakhot 1:4',
-        'Mishnah Berakhot 1:5',
-        'Mishnah Berakhot 2:2',
-      ]);
-      expect(host.result!.positionAfterRecord, 'Mishnah Berakhot 2:1');
+      expect(host.result!.includedRefs, [_path[0], _path[4]]);
+      expect(host.result!.positionAfterRecord, _path[1]);
     });
   });
 
@@ -310,7 +359,7 @@ void main() {
       );
       expect(find.byKey(const Key('upToPickerList')), findsNothing);
       expect(find.byKey(const Key('upToRecord')), findsNothing);
-      expect(find.text('Tap the last mishna you learnt'), findsNothing);
+      expect(find.textContaining('Long-press a row'), findsNothing);
     });
 
     testWidgets('every leaf after the position already recorded counts as '
@@ -404,12 +453,12 @@ void main() {
   });
 
   group('DNI-507: a prepared selection and confirm label', () {
-    testWidgets('opens on the given rows, target and skips, reads no slice, '
+    testWidgets('opens on the given explicit selection, reads no slice, '
         'and confirming pops the edited selection', (tester) async {
       useSurface(tester, phoneSize);
       final prepared = UpToSelection([
         for (final r in _path) UpToRow(r),
-      ]).selectTarget(2).toggle(1);
+      ]).tickAllUpTo(2).toggle(1);
       UpToSelection? result;
       await tester.pumpWidget(
         pumpApp(

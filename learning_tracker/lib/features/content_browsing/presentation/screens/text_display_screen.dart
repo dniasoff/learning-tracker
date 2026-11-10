@@ -645,11 +645,8 @@ class _ReaderSegmentCard extends ConsumerWidget {
     String language,
     TextStyle style,
   ) {
-    final async = ref.watch(
-      phraseTranslationProvider(
-        PhraseTranslationKey(segment.sefariaRef, language),
-      ),
-    );
+    final key = PhraseTranslationKey(segment.sefariaRef, language);
+    final async = ref.watch(phraseTranslationProvider(key));
     final l10n = AppLocalizations.of(context)!;
     final values = <SegmentGloss>[];
     if (async.hasValue) {
@@ -710,11 +707,8 @@ class _ReaderSegmentCard extends ConsumerWidget {
           text: l10n.textReaderRetryTranslation,
           direction: TextDirection.ltr,
           style: style.copyWith(decoration: TextDecoration.underline),
-          onTap: () => ref.invalidate(
-            phraseTranslationProvider(
-              PhraseTranslationKey(segment.sefariaRef, language),
-            ),
-          ),
+          onTap: () =>
+              ref.read(phraseTranslationRetryProvider(key).notifier).retry(),
         ),
       );
     }

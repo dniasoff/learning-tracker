@@ -1,11 +1,9 @@
-/// The Up to… run selection (Story 2.10, DNI-501; UX-DR-18, UX-DR-72).
+/// The Up to… selection (Story 2.10, DNI-501; UX-DR-18, UX-DR-72).
 ///
-/// Pure Dart: the picker's rows run from the track position through the end
-/// of its ground (sub-track) or its schedulable leaves (main track). The
-/// child taps a target; every selectable row from the position through it
-/// is included, any of them can then be unticked (skipped) or re-ticked,
-/// and only the included rows are recorded. Rows already ticked in this
-/// track are shown but never selectable, so they are never written twice.
+/// Pure Dart: each selectable row is independent. A tap toggles that row;
+/// [tickAllUpTo] is the explicit bulk action. Only included rows are
+/// recorded. Rows already ticked in this track stay selected and can never
+/// be written twice.
 library;
 
 import 'package:learning_tracker/domain/learner_state/corpus.dart';
@@ -34,39 +32,40 @@ final class UpToRow {
 
 /// What a row announces (UX-DR-157).
 enum UpToRowStatus {
-  /// The first row before any target is chosen: the track position.
+  /// The first selectable row that is not selected.
   nextUp,
 
-  /// In the run and ticked: it will be recorded.
+  /// Ticked: it will be recorded.
   included,
 
-  /// In the run but unticked: it gets no event.
+  /// Previously ticked by the user, then unticked.
   skipped,
 
   /// Ticked in this track before: not selectable.
   alreadyRecorded,
 
-  /// After the target (or no target yet): not part of the run.
+  /// Unticked: it gets no event.
   notSelected,
 }
 
 /// An immutable Up to… selection over [rows].
 final class UpToSelection {
-  /// A selection over [rows] with no target yet.
+  /// A selection over [rows] with no user-selected rows.
   UpToSelection(List<UpToRow> rows)
-    : this._(List.unmodifiable(rows), null, const {});
+    : this._(List.unmodifiable(rows), null, const {}, const {});
 
-  const UpToSelection._(this.rows, this.target, this._skipped);
+  const UpToSelection._(this.rows, this.target, this._included, this._skipped);
 
   /// The rows, from the position, in track order.
   final List<UpToRow> rows;
 
-  /// The highlighted target row index; null before the first tap.
+  /// The row most recently acted on; null before the first tap.
   final int? target;
 
+  final Set<int> _included;
   final Set<int> _skipped;
 
-  /// The skipped row indexes inside the run.
+  /// Row indexes previously ticked, then unticked.
   Set<int> get skipped => Set.unmodifiable(_skipped);
 
   /// Whether row [index] can be targeted or ticked.
@@ -77,36 +76,36 @@ final class UpToSelection {
   /// there are none): the track is exhausted.
   bool get isExhausted => !rows.any((r) => !r.recorded);
 
-  /// Whether row [index] is inside the run (position through target).
-  bool inRun(int index) {
-    final t = target;
-    return t != null && index >= 0 && index <= t;
-  }
-
-  /// Targets row [index]: the run becomes every selectable row from the
-  /// position through it, keeping the skips still inside it. A recorded or
-  /// out-of-range row is rejected (the selection is returned unchanged).
-  UpToSelection selectTarget(int index) {
+  /// Explicitly ticks every selectable row through [index], preserving
+  /// existing selections after it and leaving recorded rows unchanged.
+  UpToSelection tickAllUpTo(int index) {
     if (!isSelectable(index)) return this;
-    return UpToSelection._(rows, index, {
-      for (final i in _skipped)
-        if (i <= index) i,
-    });
+    final included = {..._included};
+    final skipped = {..._skipped};
+    for (var i = 0; i <= index; i++) {
+      if (!isSelectable(i)) continue;
+      included.add(i);
+      skipped.remove(i);
+    }
+    return UpToSelection._(rows, index, included, skipped);
   }
 
-  /// Unticks an included row, or re-ticks a skipped one. A row outside the
-  /// run, or a recorded row, is rejected (unchanged).
+  /// Toggles only row [index]. Recorded or out-of-range rows are rejected.
   UpToSelection toggle(int index) {
-    if (!isSelectable(index) || !inRun(index)) return this;
+    if (!isSelectable(index)) return this;
+    final included = {..._included};
     final next = {..._skipped};
-    if (!next.remove(index)) next.add(index);
-    return UpToSelection._(rows, target, next);
+    if (included.remove(index)) {
+      next.add(index);
+    } else {
+      included.add(index);
+      next.remove(index);
+    }
+    return UpToSelection._(rows, index, included, next);
   }
 
-  /// The tap on row [index]'s tick: inside the run it toggles the row,
-  /// outside it targets the row (so ticking a later row extends the run).
-  UpToSelection tick(int index) =>
-      inRun(index) ? toggle(index) : selectTarget(index);
+  /// A row tap or checkbox activation toggles only that row.
+  UpToSelection tick(int index) => toggle(index);
 
   /// The status row [index] announces.
   UpToRowStatus statusOf(int index) {
@@ -116,10 +115,11 @@ final class UpToSelection {
           ? UpToRowStatus.nextUp
           : UpToRowStatus.notSelected;
     }
-    if (!inRun(index)) return UpToRowStatus.notSelected;
-    return _skipped.contains(index)
-        ? UpToRowStatus.skipped
-        : UpToRowStatus.included;
+    if (_included.contains(index)) return UpToRowStatus.included;
+    if (_skipped.contains(index)) return UpToRowStatus.skipped;
+    return index == _firstSelectable
+        ? UpToRowStatus.nextUp
+        : UpToRowStatus.notSelected;
   }
 
   int get _firstSelectable => rows.indexWhere((r) => !r.recorded);
@@ -127,7 +127,7 @@ final class UpToSelection {
   /// The leaves to record, in track order.
   List<LeafRef> get includedRefs => [
     for (var i = 0; i < rows.length; i++)
-      if (statusOf(i) == UpToRowStatus.included) rows[i].ref,
+      if (_included.contains(i)) rows[i].ref,
   ];
 
   /// The live count: included rows only.
@@ -148,5 +148,5 @@ final class UpToSelection {
   @override
   String toString() =>
       'UpToSelection(${rows.length} rows, target: $target, '
-      'skipped: $_skipped)';
+      'unticked: $_skipped)';
 }

@@ -6598,6 +6598,12 @@ abstract class AppLocalizations {
   /// **'{name} (learns on {shabbos})'**
   String catchUpAdjustSubTrackGroup(String name, String shabbos);
 
+  /// Catch-up adjustment row state: planned for the day but not selected for recording.
+  ///
+  /// In en, this message translates to:
+  /// **'skipped'**
+  String get catchUpAdjustStatusSkipped;
+
   /// DRAFT copy, pending zc4. Outlined pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): opens the per-day adjust list (Story 3.4).
   ///
   /// In en, this message translates to:
@@ -12393,7 +12399,7 @@ abstract class AppLocalizations {
   /// Up to… picker instruction (UX-DR-18); unit is the curriculum's singular leaf unit.
   ///
   /// In en, this message translates to:
-  /// **'Tap the last {unit} you learnt'**
+  /// **'Tick each {unit} you learnt. Long-press a row to tick everything up to it.'**
   String upToPickerInstruction(String unit);
 
   /// Up to… picker confirm button with the live count of included rows (UX-DR-72, UX-DR-157); unit is the leaf unit, singular for 1.
@@ -12414,17 +12420,11 @@ abstract class AppLocalizations {
   /// **'{label}, {status}'**
   String upToPickerRowSemantics(String label, String status);
 
-  /// Screen-reader label of the highlighted target row of the Up to… picker (UX-DR-157).
+  /// Screen-reader label of the most recently acted-on row of the Up to… picker.
   ///
   /// In en, this message translates to:
-  /// **'{label}, {status}, last one learnt'**
+  /// **'{label}, {status}, selected'**
   String upToPickerRowTargetSemantics(String label, String status);
-
-  /// Screen-reader custom action on an Up to… picker row inside the run: makes it the last one learnt, cutting the run short there (UX-DR-157).
-  ///
-  /// In en, this message translates to:
-  /// **'Make this the last one learnt'**
-  String get upToPickerSetTargetAction;
 
   /// Up to… row state: ticked in this track before; not selectable (UX-DR-157).
   ///
@@ -12450,17 +12450,23 @@ abstract class AppLocalizations {
   /// **'not selected'**
   String get upToPickerStatusNotSelected;
 
-  /// Up to… row state: unticked inside the run; gets no event (UX-DR-157).
+  /// Up to… row state: previously ticked, then unticked; gets no event.
   ///
   /// In en, this message translates to:
-  /// **'skipped'**
+  /// **'unticked'**
   String get upToPickerStatusSkipped;
 
   /// Up to… picker title (UX-DR-18).
   ///
   /// In en, this message translates to:
-  /// **'{name} · up to…'**
+  /// **'What did you learn in {name}?'**
   String upToPickerTitle(String name);
+
+  /// No description provided for @upToPickerBulkAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick all up to here'**
+  String get upToPickerBulkAction;
 
   /// DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner.
   ///

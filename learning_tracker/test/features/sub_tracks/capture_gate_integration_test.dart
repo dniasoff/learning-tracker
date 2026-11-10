@@ -45,7 +45,7 @@ String _status(WidgetTester tester) =>
 Future<void> _recordThrough(WidgetTester tester, String target) async {
   await tester.tap(find.byKey(Key('subTrackUpTo-$schoolId')));
   await tester.pumpAndSettle();
-  await tester.tap(find.text(target));
+  await tester.longPress(find.text(target));
   await tester.pump();
   await tester.tap(find.byKey(const Key('upToRecord')));
 }

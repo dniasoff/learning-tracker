@@ -79,8 +79,9 @@ SemanticsNode _row(WidgetTester tester, int i) =>
     tester.getSemantics(find.byKey(Key('upToRow-$i')));
 
 void main() {
-  testWidgets('each row announces next up, included, skipped or already '
-      'recorded; the target is marked', (tester) async {
+  testWidgets('each row announces its independent selection state', (
+    tester,
+  ) async {
     final handle = tester.ensureSemantics();
     await _open(tester);
     expect(_row(tester, 0).label, 'Berakhot 1:3, next up');
@@ -88,18 +89,16 @@ void main() {
     expect(_row(tester, 2), isSemantics(isEnabled: false));
     await tester.tap(find.text('Berakhot 2:2'));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('upToRowTick-3')));
-    await tester.pump();
-    expect(_row(tester, 0).label, 'Berakhot 1:3, included');
-    expect(_row(tester, 3).label, 'Berakhot 2:1, skipped');
-    expect(_row(tester, 4).label, 'Berakhot 2:2, included, last one learnt');
+    expect(_row(tester, 0).label, 'Berakhot 1:3, next up');
+    expect(_row(tester, 3).label, 'Berakhot 2:1, not selected');
+    expect(_row(tester, 4).label, 'Berakhot 2:2, included, selected');
     expect(_row(tester, 4), isSemantics(isSelected: true));
     expect(_row(tester, 3), isNot(isSemantics(isSelected: true)));
     handle.dispose();
   });
 
-  testWidgets('a screen reader skips, re-ticks and retargets a row through '
-      'its semantics actions alone (AC-2, AC-8)', (tester) async {
+  testWidgets('screen-reader activation toggles one row and the custom '
+      'action explicitly fills a range', (tester) async {
     final handle = tester.ensureSemantics();
     await _open(tester);
     void act(int i, SemanticsAction action, [Object? args]) {
@@ -107,41 +106,49 @@ void main() {
       node.owner!.performAction(node.id, action, args);
     }
 
-    // Activating a row outside the run makes it the last one learnt.
+    // Activating a later row selects only that row.
     act(4, SemanticsAction.tap);
     await tester.pump();
-    expect(_row(tester, 4).label, 'Berakhot 2:2, included, last one learnt');
+    expect(_row(tester, 0).label, 'Berakhot 1:3, next up');
+    expect(_row(tester, 4).label, 'Berakhot 2:2, included, selected');
+    expect(find.bySemanticsLabel(RegExp('Record 1 mishna')), findsOneWidget);
+
+    // The explicit action fills through the selected row, skipping recorded.
+    const bulk = CustomSemanticsAction(label: 'Tick all up to here');
+    expect(_row(tester, 4), isSemantics(customActions: [bulk]));
+    act(
+      4,
+      SemanticsAction.customAction,
+      CustomSemanticsAction.getIdentifier(bulk),
+    );
+    await tester.pump();
+    expect(_row(tester, 0).label, 'Berakhot 1:3, included');
     expect(find.bySemanticsLabel(RegExp('Record 4 mishnayos')), findsOneWidget);
 
-    // Activating an included row skips it, as its tick announces.
+    // Activating an included row unticks only it.
     act(3, SemanticsAction.tap);
     await tester.pump();
-    expect(_row(tester, 3).label, 'Berakhot 2:1, skipped');
+    expect(_row(tester, 3).label, 'Berakhot 2:1, unticked, selected');
     expect(_row(tester, 3), isSemantics(isChecked: false));
     expect(find.bySemanticsLabel(RegExp('Record 3 mishnayos')), findsOneWidget);
 
-    // Activating it again re-ticks it.
+    // Activating it again re-ticks just that row.
     act(3, SemanticsAction.tap);
     await tester.pump();
-    expect(_row(tester, 3).label, 'Berakhot 2:1, included');
+    expect(_row(tester, 3).label, 'Berakhot 2:1, included, selected');
     expect(_row(tester, 3), isSemantics(isChecked: true));
     expect(find.bySemanticsLabel(RegExp('Record 4 mishnayos')), findsOneWidget);
 
-    // The custom action cuts the run short at a row inside it.
-    const setTarget = CustomSemanticsAction(
-      label: 'Make this the last one learnt',
-    );
-    expect(_row(tester, 1), isSemantics(customActions: [setTarget]));
-    expect(_row(tester, 4), isNot(isSemantics(customActions: [setTarget])));
+    // A second explicit bulk action leaves the already selected later row.
     act(
       1,
       SemanticsAction.customAction,
-      CustomSemanticsAction.getIdentifier(setTarget),
+      CustomSemanticsAction.getIdentifier(bulk),
     );
     await tester.pump();
-    expect(_row(tester, 1).label, 'Berakhot 1:4, included, last one learnt');
-    expect(_row(tester, 4).label, 'Berakhot 2:2, not selected');
-    expect(find.bySemanticsLabel(RegExp('Record 2 mishnayos')), findsOneWidget);
+    expect(_row(tester, 1).label, 'Berakhot 1:4, included, selected');
+    expect(_row(tester, 4).label, 'Berakhot 2:2, included');
+    expect(find.bySemanticsLabel(RegExp('Record 4 mishnayos')), findsOneWidget);
     handle.dispose();
   });
 
@@ -150,10 +157,10 @@ void main() {
     await _open(tester);
     await tester.tap(find.text('Berakhot 2:2'));
     await tester.pump();
-    expect(find.bySemanticsLabel(RegExp('Record 4 mishnayos')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Record 1 mishna')), findsOneWidget);
     await tester.tap(find.byKey(const Key('upToRowTick-0')));
     await tester.pump();
-    expect(find.bySemanticsLabel(RegExp('Record 3 mishnayos')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Record 2 mishnayos')), findsOneWidget);
     handle.dispose();
   });
 
@@ -209,7 +216,9 @@ void main() {
         Directionality.of(tester.element(find.byType(UpToPicker))),
         TextDirection.rtl,
       );
-      await tester.tap(find.text('Berakhot 2:2'));
+      expect(find.textContaining('מה למדת'), findsOneWidget);
+      expect(find.textContaining('לחיצה ממושכת'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('upToRowTick-0')));
       await tester.pump();
       expect(tester.takeException(), isNull);
       await tester.tap(find.byKey(const Key('upToCancel')));

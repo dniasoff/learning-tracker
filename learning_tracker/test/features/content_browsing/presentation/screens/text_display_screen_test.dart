@@ -698,6 +698,15 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('From when may one recite'), findsOneWidget);
+
+      const key = PhraseTranslationKey(_kRef, 'fr');
+      final container = ProviderScope.containerOf(
+        tester.element(find.text('Tap to retry')),
+      );
+      expect(container.read(phraseTranslationRetryProvider(key)), 0);
+      await tester.tap(find.text('Tap to retry'));
+      await tester.pump();
+      expect(container.read(phraseTranslationRetryProvider(key)), 1);
     },
   );
 
