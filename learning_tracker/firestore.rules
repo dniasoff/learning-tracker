@@ -79,6 +79,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Phrase translations are generated and written only by the callable.
+    // Any signed-in reader may reuse the shared cached translation.
+    match /phrase_translations/{translationId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if false;
+    }
+
+    match /phrase_translation_rate_limits/{limitId} {
+      allow read, write: if false;
+    }
+
     // ── Shared helpers ─────────────────────────────────────────────────────
 
     function isSignedIn() {
