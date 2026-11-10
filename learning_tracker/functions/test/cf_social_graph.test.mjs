@@ -127,6 +127,14 @@ describe('social graph callable state', () => {
       parentSessionId: sessionId,
     }, parentAuth);
     assert.equal((await db.collection('social_follows').get()).size, 1);
+    await expectHttpsError(call(fns.listSocialConnections, {
+      profileId: CHILD,
+    }, parentAuth), 'invalid-argument');
+    const parentInbox = await call(fns.listSocialConnections, {
+      profileId: CHILD,
+      parentSessionId: sessionId,
+    }, parentAuth);
+    assert.equal(parentInbox.incomingRequests.length, 1);
   });
 
   test('child-to-child follow needs both parents and both allow-lists', async () => {

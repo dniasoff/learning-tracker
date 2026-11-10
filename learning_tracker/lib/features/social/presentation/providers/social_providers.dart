@@ -9,5 +9,11 @@ final socialGraphRepositoryProvider = Provider<SocialGraphRepository>((ref) {
 });
 
 final socialConnectionsProvider = FutureProvider.autoDispose
-    .family<SocialConnections, String>((ref, profileId) =>
-        ref.watch(socialGraphRepositoryProvider).listConnections(profileId));
+    .family<SocialConnections, ({String profileId, String? parentSessionId})>(
+      (ref, query) => ref
+          .watch(socialGraphRepositoryProvider)
+          .listConnections(
+            query.profileId,
+            parentSessionId: query.parentSessionId,
+          ),
+    );

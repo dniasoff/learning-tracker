@@ -665,18 +665,28 @@ export const searchSchoolMembers = onCall(CALL_OPTS, async (request) => {
 export const listSocialConnections = onCall(CALL_OPTS, async (request) => {
   const uid = requireAuth(request);
   const data = request.data ?? {};
-  exactKeys(data, ["profileId", "limit"]);
+  exactKeys(data, ["profileId", "limit", "parentSessionId"]);
   const profileId = requiredString(data.profileId, "profileId");
   const limit = data.limit ?? MAX_PAGE_SIZE;
   if (!Number.isInteger(limit) || Number(limit) < 1 || Number(limit) > MAX_PAGE_SIZE) {
     throw new HttpsError("invalid-argument", "limit must be between 1 and 50");
   }
-  const [outgoingRequests, incomingRequests, outgoingFollows, incomingFollows] = await Promise.all([
-    requests().where("from_owner_uid", "==", uid).where("from_profile_id", "==", profileId).limit(limit).get(),
-    requests().where("to_owner_uid", "==", uid).where("to_profile_id", "==", profileId).limit(limit).get(),
-    follows().where("from_owner_uid", "==", uid).where("from_profile_id", "==", profileId).limit(limit).get(),
-    follows().where("to_owner_uid", "==", uid).where("to_profile_id", "==", profileId).limit(limit).get(),
-  ]);
+  const snapshots = await db.runTransaction(async (txn) => {
+    const learner = await txn.get(db.collection("users").doc(uid).collection("learner_profiles").doc(profileId));
+    if (!learner.exists || (learner.get("mode") !== "child" && learner.get("mode") !== "adult")) {
+      throw new HttpsError("not-found", "Learner profile is unavailable");
+    }
+    if (learner.get("mode") === "child") {
+      await assertActiveParentSessionInTransaction(txn, uid, profileId, data.parentSessionId);
+    }
+    return Promise.all([
+      txn.get(requests().where("from_owner_uid", "==", uid).where("from_profile_id", "==", profileId).limit(limit)),
+      txn.get(requests().where("to_owner_uid", "==", uid).where("to_profile_id", "==", profileId).limit(limit)),
+      txn.get(follows().where("from_owner_uid", "==", uid).where("from_profile_id", "==", profileId).limit(limit)),
+      txn.get(follows().where("to_owner_uid", "==", uid).where("to_profile_id", "==", profileId).limit(limit)),
+    ]);
+  });
+  const [outgoingRequests, incomingRequests, outgoingFollows, incomingFollows] = snapshots;
   const serialize = async (snap: FirebaseFirestore.QuerySnapshot) => Promise.all(snap.docs.map(async (doc) => {
     const data = doc.data();
     const from: ProfileRef = { ownerUid: String(data.from_owner_uid), profileId: String(data.from_profile_id) };

@@ -52,10 +52,12 @@ final class SocialGraphRepository {
   Future<SocialChildControls> getChildControls({
     required String profileId,
     required String parentSessionId,
-  }) async => SocialChildControls.fromWire(await _invoke('getChildSocialControls', {
-    'profileId': profileId,
-    'parentSessionId': parentSessionId,
-  }));
+  }) async => SocialChildControls.fromWire(
+    await _invoke('getChildSocialControls', {
+      'profileId': profileId,
+      'parentSessionId': parentSessionId,
+    }),
+  );
 
   Future<void> sendRequest({
     required String fromProfileId,
@@ -119,10 +121,15 @@ final class SocialGraphRepository {
     });
   }
 
-  Future<SocialConnections> listConnections(String profileId) async =>
-      SocialConnections.fromWire(await _invoke('listSocialConnections', {
-        'profileId': profileId,
-      }));
+  Future<SocialConnections> listConnections(
+    String profileId, {
+    String? parentSessionId,
+  }) async => SocialConnections.fromWire(
+    await _invoke('listSocialConnections', {
+      'profileId': profileId,
+      if (parentSessionId != null) 'parentSessionId': parentSessionId,
+    }),
+  );
 
   Future<SocialSearchPage> searchSchool({
     required String profileId,
@@ -145,7 +152,11 @@ final class SocialGraphRepository {
 
   static void _ensureAvatar(int avatarId) {
     if (avatarId < 0 || avatarId > 9) {
-      throw ArgumentError.value(avatarId, 'avatarId', 'Outside the bounded avatar catalog');
+      throw ArgumentError.value(
+        avatarId,
+        'avatarId',
+        'Outside the bounded avatar catalog',
+      );
     }
   }
 }

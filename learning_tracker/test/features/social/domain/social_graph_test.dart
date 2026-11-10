@@ -42,23 +42,32 @@ void main() {
     });
   });
 
-  test('relationship codec rejects unsupported payload fields and state values', () {
-    final valid = {
-      'id': 'request-1',
-      'fromSocialProfileId': _opaqueId,
-      'toSocialProfileId': _otherOpaqueId,
-      'state': 'pending',
-    };
-    expect(SocialRelationship.fromWire(valid).state, FollowRequestState.pending);
-    expect(
-      () => SocialRelationship.fromWire({...valid, 'parent_session_id': 'secret'}),
-      throwsFormatException,
-    );
-    expect(
-      () => SocialRelationship.fromWire({...valid, 'state': 'mystery'}),
-      throwsFormatException,
-    );
-  });
+  test(
+    'relationship codec rejects unsupported payload fields and state values',
+    () {
+      final valid = {
+        'id': 'request-1',
+        'fromSocialProfileId': _opaqueId,
+        'toSocialProfileId': _otherOpaqueId,
+        'state': 'pending',
+      };
+      expect(
+        SocialRelationship.fromWire(valid).state,
+        FollowRequestState.pending,
+      );
+      expect(
+        () => SocialRelationship.fromWire({
+          ...valid,
+          'parent_session_id': 'secret',
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => SocialRelationship.fromWire({...valid, 'state': 'mystery'}),
+        throwsFormatException,
+      );
+    },
+  );
 
   test('connections require all four bounded lists', () {
     final connections = SocialConnections.fromWire({
@@ -74,42 +83,48 @@ void main() {
     );
   });
 
-  test('search page codec preserves a bounded cursor and rejects unknown fields', () {
-    final page = SocialSearchPage.fromWire({
-      'profiles': [
-        {
-          'socialProfileId': _opaqueId,
-          'displayName': 'Learner',
-          'avatarId': 2,
-        },
-      ],
-      'nextPageToken': 'membership-cursor',
-    });
-    expect(page.profiles.single.socialProfileId, _opaqueId);
-    expect(page.nextPageToken, 'membership-cursor');
-    expect(
-      () => SocialSearchPage.fromWire({
-        'profiles': const [],
-        'nextPageToken': null,
-        'ownerUid': 'not-public',
-      }),
-      throwsFormatException,
-    );
-  });
+  test(
+    'search page codec preserves a bounded cursor and rejects unknown fields',
+    () {
+      final page = SocialSearchPage.fromWire({
+        'profiles': [
+          {
+            'socialProfileId': _opaqueId,
+            'displayName': 'Learner',
+            'avatarId': 2,
+          },
+        ],
+        'nextPageToken': 'membership-cursor',
+      });
+      expect(page.profiles.single.socialProfileId, _opaqueId);
+      expect(page.nextPageToken, 'membership-cursor');
+      expect(
+        () => SocialSearchPage.fromWire({
+          'profiles': const [],
+          'nextPageToken': null,
+          'ownerUid': 'not-public',
+        }),
+        throwsFormatException,
+      );
+    },
+  );
 
-  test('child control codec requires unique school ids and a boolean pause state', () {
-    final controls = SocialChildControls.fromWire({
-      'allowedSchoolIds': ['school-1', 'school-2'],
-      'paused': true,
-    });
-    expect(controls.allowedSchoolIds, ['school-1', 'school-2']);
-    expect(controls.paused, isTrue);
-    expect(
-      () => SocialChildControls.fromWire({
-        'allowedSchoolIds': ['school-1', 'school-1'],
-        'paused': false,
-      }),
-      throwsFormatException,
-    );
-  });
+  test(
+    'child control codec requires unique school ids and a boolean pause state',
+    () {
+      final controls = SocialChildControls.fromWire({
+        'allowedSchoolIds': ['school-1', 'school-2'],
+        'paused': true,
+      });
+      expect(controls.allowedSchoolIds, ['school-1', 'school-2']);
+      expect(controls.paused, isTrue);
+      expect(
+        () => SocialChildControls.fromWire({
+          'allowedSchoolIds': ['school-1', 'school-1'],
+          'paused': false,
+        }),
+        throwsFormatException,
+      );
+    },
+  );
 }

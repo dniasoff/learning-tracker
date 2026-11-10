@@ -18,10 +18,15 @@ final class SocialProfileCard {
     });
     final avatar = data['avatarId'];
     if (avatar is! int || avatar < 0 || avatar > 9) {
-      throw const FormatException('avatarId must be one of the catalog indexes');
+      throw const FormatException(
+        'avatarId must be one of the catalog indexes',
+      );
     }
     return SocialProfileCard(
-      socialProfileId: _opaqueSocialId(data['socialProfileId'], 'socialProfileId'),
+      socialProfileId: _opaqueSocialId(
+        data['socialProfileId'],
+        'socialProfileId',
+      ),
       displayName: _requiredString(data['displayName'], 'displayName'),
       avatarId: avatar,
     );
@@ -31,7 +36,10 @@ final class SocialProfileCard {
 enum FollowRequestState { pending, accepted, declined, expired, active }
 
 final class SocialChildControls {
-  const SocialChildControls({required this.allowedSchoolIds, required this.paused});
+  const SocialChildControls({
+    required this.allowedSchoolIds,
+    required this.paused,
+  });
 
   final List<String> allowedSchoolIds;
   final bool paused;
@@ -39,8 +47,10 @@ final class SocialChildControls {
   factory SocialChildControls.fromWire(Object? value) {
     final data = _strictMap(value, const {'allowedSchoolIds', 'paused'});
     final schools = data['allowedSchoolIds'];
-    if (schools is! List || schools.any((school) => school is! String) ||
-        data['paused'] is! bool || schools.toSet().length != schools.length) {
+    if (schools is! List ||
+        schools.any((school) => school is! String) ||
+        data['paused'] is! bool ||
+        schools.toSet().length != schools.length) {
       throw const FormatException('Invalid child social controls');
     }
     return SocialChildControls(
@@ -66,20 +76,24 @@ final class SocialRelationship {
   final FollowRequestState state;
 
   factory SocialRelationship.fromWire(Object? value) {
-    final data = _strictMap(value, const {
-      'id',
-      'fromSocialProfileId',
-      'toSocialProfileId',
-      'state',
-      'created_at',
-      'updated_at',
-      'expires_at',
-    }, requiredKeys: const {
-      'id',
-      'fromSocialProfileId',
-      'toSocialProfileId',
-      'state',
-    });
+    final data = _strictMap(
+      value,
+      const {
+        'id',
+        'fromSocialProfileId',
+        'toSocialProfileId',
+        'state',
+        'created_at',
+        'updated_at',
+        'expires_at',
+      },
+      requiredKeys: const {
+        'id',
+        'fromSocialProfileId',
+        'toSocialProfileId',
+        'state',
+      },
+    );
     final state = switch (data['state']) {
       'pending' => FollowRequestState.pending,
       'accepted' => FollowRequestState.accepted,
@@ -95,8 +109,14 @@ final class SocialRelationship {
     }
     return SocialRelationship(
       id: _requiredString(data['id'], 'id'),
-      fromSocialProfileId: _opaqueSocialId(data['fromSocialProfileId'], 'fromSocialProfileId'),
-      toSocialProfileId: _opaqueSocialId(data['toSocialProfileId'], 'toSocialProfileId'),
+      fromSocialProfileId: _opaqueSocialId(
+        data['fromSocialProfileId'],
+        'fromSocialProfileId',
+      ),
+      toSocialProfileId: _opaqueSocialId(
+        data['toSocialProfileId'],
+        'toSocialProfileId',
+      ),
       state: state,
     );
   }
@@ -128,8 +148,14 @@ final class SocialConnections {
     }
 
     return SocialConnections(
-      outgoingRequests: decodeList(data['outgoingRequests'], 'outgoingRequests'),
-      incomingRequests: decodeList(data['incomingRequests'], 'incomingRequests'),
+      outgoingRequests: decodeList(
+        data['outgoingRequests'],
+        'outgoingRequests',
+      ),
+      incomingRequests: decodeList(
+        data['incomingRequests'],
+        'incomingRequests',
+      ),
       following: decodeList(data['following'], 'following'),
       followers: decodeList(data['followers'], 'followers'),
     );
@@ -146,7 +172,8 @@ final class SocialSearchPage {
     final data = _strictMap(value, const {'profiles', 'nextPageToken'});
     final profiles = data['profiles'];
     final token = data['nextPageToken'];
-    if (profiles is! List || token != null && (token is! String || token.isEmpty)) {
+    if (profiles is! List ||
+        token != null && (token is! String || token.isEmpty)) {
       throw const FormatException('Invalid social search page');
     }
     return SocialSearchPage(
