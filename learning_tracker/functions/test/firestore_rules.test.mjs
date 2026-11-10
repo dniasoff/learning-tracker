@@ -14,7 +14,8 @@
 //     write (DNI-490 AC-2),
 //   • Admin-SDK-only tutor_grants / tutor_active_access.
 //
-// Coverage: 25/25 match paths in firestore.rules.
+// Coverage: the make test-rules target runs the match-path coverage gate over
+// every rule block, including the callable-only social graph collections.
 //
 // Hardening additions (emulator-hardening plan):
 //   C-EXTRA: PAYLOADS fixture derived from Dart codec encode() outputs —
@@ -229,6 +230,116 @@ describe('phrase translation cache rules', () => {
     const path = 'phrase_translation_rate_limits/owner-uid_2026-11-10';
     await assertFails(getDoc(doc(owner(), path)));
     await assertFails(setDoc(doc(owner(), path), { count: 1 }));
+  });
+});
+
+describe('social graph rules', () => {
+  const profileId = 'social-profile';
+  const profilePath = 'social_profiles/social-card';
+  const controlsPath = 'social_parent_controls/social-controls';
+  const requestPath = 'social_follow_requests/social-request';
+  const followPath = 'social_follows/social-follow';
+  const blockPath = 'social_blocks/social-block';
+  const membershipPath = 'school_memberships/social-membership';
+  const auditPath = 'social_audit_logs/social-audit';
+  const ratePath = 'social_rate_limits/social-rate';
+  const cursorPath = 'social_search_cursors/social-cursor';
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await Promise.all([
+        setDoc(doc(db, profilePath), {
+          owner_uid: OWNER, profile_id: profileId, mode: 'child',
+          display_name: 'Learner', display_name_search: 'learner', avatar_id: 0, paused: false,
+        }),
+        setDoc(doc(db, controlsPath), {
+          owner_uid: OWNER, profile_id: profileId, allowed_school_ids: ['school-1'],
+        }),
+        setDoc(doc(db, requestPath), {
+          from_owner_uid: OWNER, from_profile_id: profileId,
+          to_owner_uid: TUTOR, to_profile_id: 'recipient', state: 'pending',
+        }),
+        setDoc(doc(db, followPath), {
+          from_owner_uid: OWNER, from_profile_id: profileId,
+          to_owner_uid: TUTOR, to_profile_id: 'recipient', state: 'active',
+        }),
+        setDoc(doc(db, blockPath), {
+          left_owner_uid: OWNER, left_profile_id: profileId,
+          right_owner_uid: TUTOR, right_profile_id: 'recipient',
+        }),
+        setDoc(doc(db, membershipPath), {
+          owner_uid: OWNER, profile_id: profileId, school_id: 'school-1', state: 'active',
+        }),
+        setDoc(doc(db, auditPath), {
+          owner_uid: OWNER, profile_id: profileId, action: 'child_follow_approved',
+        }),
+        setDoc(doc(db, ratePath), { day: '2026-11-10', request_count: 1 }),
+        setDoc(doc(db, cursorPath), { owner_uid: OWNER, profile_id: profileId, expires_at: futureTs }),
+      ]);
+    });
+  });
+
+  test('owner-only social settings stay private and every graph write is callable-only', async () => {
+    for (const path of [profilePath, controlsPath, auditPath]) {
+      await assertSucceeds(getDoc(doc(owner(), path)), `owner should read ${path}`);
+      await assertFails(getDoc(doc(stranger(), path)), `unrelated account must not read ${path}`);
+      await assertFails(getDoc(doc(anon(), path)), `anonymous must not read ${path}`);
+      await assertFails(setDoc(doc(owner(), path), { forged: true }), `client writes denied for ${path}`);
+      await assertFails(deleteDoc(doc(owner(), path)), `client deletes denied for ${path}`);
+    }
+    for (const path of [requestPath, followPath, blockPath]) {
+      await assertFails(getDoc(doc(owner(), path)), `internal relationship data denied for ${path}`);
+      await assertFails(getDoc(doc(tutor(), path)), `relationship endpoints denied for ${path}`);
+      await assertFails(setDoc(doc(owner(), path), { forged: true }), `client writes denied for ${path}`);
+      await assertFails(deleteDoc(doc(owner(), path)), `client deletes denied for ${path}`);
+    }
+    for (const path of [
+      'social_profiles/client-create',
+      'social_parent_controls/client-create',
+      'social_audit_logs/client-create',
+      'social_follow_requests/client-create',
+      'social_follows/client-create',
+      'social_blocks/client-create',
+      'social_rate_limits/client-create',
+      'social_search_cursors/client-create',
+      'school_memberships/client-create',
+    ]) {
+      await assertFails(setDoc(doc(owner(), path), { forged: true }));
+    }
+    await assertSucceeds(getDocs(query(
+      collection(owner(), 'social_parent_controls'),
+      where('owner_uid', '==', OWNER),
+      limit(50),
+    )));
+    await assertSucceeds(getDocs(query(
+      collection(owner(), 'social_audit_logs'),
+      where('owner_uid', '==', OWNER),
+      limit(100),
+    )));
+    await assertFails(getDocs(query(collection(owner(), 'social_profiles'), limit(50))));
+    await assertFails(getDoc(doc(tutor(), requestPath)));
+    await assertFails(getDoc(doc(tutor(), profilePath)));
+    await assertFails(getDoc(doc(tutor(), controlsPath)));
+    await assertFails(getDoc(doc(tutor(), auditPath)));
+  });
+
+  test('graph collections cannot be listed directly; school and rate-limit data stay server-only', async () => {
+    await assertFails(getDocs(query(
+      collection(owner(), 'social_follow_requests'),
+      where('from_owner_uid', '==', OWNER),
+      limit(50),
+    )));
+    await assertFails(getDocs(query(
+      collection(owner(), 'social_follow_requests'),
+      where('from_owner_uid', '==', OWNER),
+    )));
+    await assertFails(getDoc(doc(owner(), membershipPath)));
+    await assertFails(setDoc(doc(owner(), membershipPath), { forged: true }));
+    await assertFails(getDoc(doc(owner(), ratePath)));
+    await assertFails(setDoc(doc(owner(), ratePath), { request_count: 0 }));
+    await assertFails(getDoc(doc(owner(), cursorPath)));
+    await assertFails(setDoc(doc(owner(), cursorPath), { forged: true }));
   });
 });
 

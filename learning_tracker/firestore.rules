@@ -526,6 +526,58 @@ service cloud.firestore {
       }
     }
 
+    // Social graph state is written only by callable functions (Admin SDK).
+    // Profile cards and relationship state are read through bounded callables
+    // that return opaque social profile ids. The later summary/community bead
+    // adds the narrowly scoped follower projection.
+    match /social_profiles/{profileDocId} {
+      allow get: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /social_parent_controls/{controlId} {
+      allow get: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.owner_uid == request.auth.uid
+          && request.query.limit <= 50;
+      allow create, update, delete: if false;
+    }
+
+    match /social_audit_logs/{auditId} {
+      allow get: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.owner_uid == request.auth.uid
+          && request.query.limit <= 100;
+      allow create, update, delete: if false;
+    }
+
+    match /social_follow_requests/{requestId} {
+      // Relationship docs contain internal account/profile references. The
+      // bounded list callable returns opaque social profile ids instead.
+      allow read, write: if false;
+    }
+
+    match /social_follows/{edgeId} {
+      allow read, write: if false;
+    }
+
+    match /social_blocks/{blockId} {
+      allow read, write: if false;
+    }
+
+    match /social_rate_limits/{limitId} {
+      allow read, write: if false;
+    }
+
+    match /social_search_cursors/{cursorId} {
+      allow read, write: if false;
+    }
+
+    // Read-model interface owned by the school-membership implementation
+    // bead. This bead consumes active memberships from Admin SDK only.
+    match /school_memberships/{membershipId} {
+      allow read, write: if false;
+    }
+
     // ════════════════════════════════════════════════════════════════════════
     // LIVE NESTED LAYOUT — users/{uid}/...
     // This is the layout the application actually reads and writes.
