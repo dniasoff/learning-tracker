@@ -5,14 +5,30 @@ import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.
 
 /// Parent edit of the learner's Shnayim Mikra workflow preferences.
 final class ShnayimMikraSettingsEdit {
-  const ShnayimMikraSettingsEdit({this.mode, this.pace, this.source});
+  const ShnayimMikraSettingsEdit({
+    this.mode,
+    this.pace,
+    this.source,
+    this.parshaSchedule,
+  });
 
   final ShnayimMikraMode? mode;
   final ShnayimMikraPace? pace;
   final ShnayimMikraSource? source;
+  final ShnayimMikraParshaSchedule? parshaSchedule;
 
-  bool get isEmpty => mode == null && pace == null && source == null;
+  bool get isEmpty =>
+      mode == null && pace == null && source == null && parshaSchedule == null;
 }
+
+/// Creates the initial persisted Shnayim Mikra preferences for a new track.
+/// Keep the legacy Yom Tov flag conversion at this seam so the later explicit
+/// minhag setting can replace it without changing schedule consumers.
+ShnayimMikraSettingsEdit initialShnayimMikraSettings({
+  required bool? legacyInIsrael,
+}) => ShnayimMikraSettingsEdit(
+  parshaSchedule: shnayimMikraScheduleFromLegacyYomTovFlag(legacyInIsrael),
+);
 
 /// Creates the single governed learner-settings write for Shnayim Mikra.
 ///
@@ -32,6 +48,7 @@ GovernedAction shnayimMikraSettingsAction(
     shnayimMikraMode: edit.mode ?? ShnayimMikraMode.pasuk,
     shnayimMikraPace: edit.pace ?? ShnayimMikraPace.self,
     shnayimMikraSource: edit.source ?? ShnayimMikraSource.onkelos,
+    shnayimMikraParshaSchedule: edit.parshaSchedule,
   ).toStorage();
 
   return GovernedAction([
@@ -50,6 +67,9 @@ GovernedAction shnayimMikraSettingsAction(
               LearnerSettings.kShnayimMikraPace: edit.pace!.storageKey,
             if (edit.source != null)
               LearnerSettings.kShnayimMikraSource: edit.source!.storageKey,
+            if (edit.parshaSchedule != null)
+              LearnerSettings.kShnayimMikraParshaSchedule:
+                  edit.parshaSchedule!.storageKey,
           },
         ),
       ],

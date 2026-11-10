@@ -33,3 +33,25 @@ enum ShnayimMikraSource {
 
   final String storageKey;
 }
+
+/// Weekly Torah-reading minhag used only for Shnayim Mikra scheduling.
+enum ShnayimMikraParshaSchedule {
+  eretzYisrael('eretz_yisrael'),
+  chutzLaaretz('chutz_laaretz');
+
+  const ShnayimMikraParshaSchedule(this.storageKey);
+
+  final String storageKey;
+
+  bool get usesEretzYisraelCalendar =>
+      this == ShnayimMikraParshaSchedule.eretzYisrael;
+}
+
+/// Temporary bridge from the existing one-day/two-day Yom Tov location flag.
+/// Call when creating the Shnayim Mikra track and persist the returned value;
+/// schedule reads must not call this again after the learner changes location.
+ShnayimMikraParshaSchedule shnayimMikraScheduleFromLegacyYomTovFlag(
+  bool? inIsrael,
+) => inIsrael == true
+    ? ShnayimMikraParshaSchedule.eretzYisrael
+    : ShnayimMikraParshaSchedule.chutzLaaretz;

@@ -12,7 +12,7 @@ String _key(String field) => 'learner_profiles/$profileUlid.$field';
 
 void main() {
   test(
-    'mode, pace, and source are one parent-governed learnerSettings edit',
+    'Shnayim Mikra preferences are one parent-governed learnerSettings edit',
     () async {
       final harness = GovernedHarness()
         ..seedDoc('learner_profiles', profileUlid, {
@@ -28,6 +28,7 @@ void main() {
             mode: ShnayimMikraMode.parsha,
             pace: ShnayimMikraPace.dailyAliyah,
             source: ShnayimMikraSource.rashi,
+            parshaSchedule: ShnayimMikraParshaSchedule.eretzYisrael,
           ),
         ),
       );
@@ -41,11 +42,13 @@ void main() {
         _key('shnayim_mikra_mode'): null,
         _key('shnayim_mikra_pace'): null,
         _key('shnayim_mikra_source'): null,
+        _key('shnayim_mikra_parsha_schedule'): null,
       });
       expect(entry.after, {
         _key('shnayim_mikra_mode'): 'parsha',
         _key('shnayim_mikra_pace'): 'daily_aliyah',
         _key('shnayim_mikra_source'): 'rashi',
+        _key('shnayim_mikra_parsha_schedule'): 'eretz_yisrael',
       });
       expect(harness.doc('learner_profiles', profileUlid), {
         'time_zone': 'Asia/Jerusalem',
@@ -53,6 +56,7 @@ void main() {
         'shnayim_mikra_mode': 'parsha',
         'shnayim_mikra_pace': 'daily_aliyah',
         'shnayim_mikra_source': 'rashi',
+        'shnayim_mikra_parsha_schedule': 'eretz_yisrael',
         'last_change_id': engineUlid(100),
       });
     },
@@ -67,4 +71,22 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test(
+    'new track schedule is initialized once from the legacy Yom Tov flag',
+    () {
+      expect(
+        initialShnayimMikraSettings(legacyInIsrael: true).parshaSchedule,
+        ShnayimMikraParshaSchedule.eretzYisrael,
+      );
+      expect(
+        initialShnayimMikraSettings(legacyInIsrael: false).parshaSchedule,
+        ShnayimMikraParshaSchedule.chutzLaaretz,
+      );
+      expect(
+        initialShnayimMikraSettings(legacyInIsrael: null).parshaSchedule,
+        ShnayimMikraParshaSchedule.chutzLaaretz,
+      );
+    },
+  );
 }

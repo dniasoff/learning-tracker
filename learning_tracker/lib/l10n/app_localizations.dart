@@ -12635,6 +12635,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t save the sub-track. Try again.'**
   String get subTrackLifecycleSaveFailed;
+
+  /// No description provided for @shnayimMikraParshaSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsha schedule'**
+  String get shnayimMikraParshaSchedule;
+
+  /// No description provided for @shnayimMikraScheduleEretzYisrael.
+  ///
+  /// In en, this message translates to:
+  /// **'Eretz Yisrael'**
+  String get shnayimMikraScheduleEretzYisrael;
+
+  /// No description provided for @shnayimMikraScheduleChutzLaaretz.
+  ///
+  /// In en, this message translates to:
+  /// **'Chutz la\'aretz'**
+  String get shnayimMikraScheduleChutzLaaretz;
 }
 
 class _AppLocalizationsDelegate

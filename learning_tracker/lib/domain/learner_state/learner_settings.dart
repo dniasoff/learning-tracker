@@ -27,6 +27,7 @@ final class LearnerSettings {
     this.shnayimMikraMode = ShnayimMikraMode.pasuk,
     this.shnayimMikraPace = ShnayimMikraPace.self,
     this.shnayimMikraSource = ShnayimMikraSource.onkelos,
+    this.shnayimMikraParshaSchedule,
     this.lastChangeId,
   });
 
@@ -72,6 +73,12 @@ final class LearnerSettings {
         ShnayimMikraSource.values,
         (value) => value.storageKey,
       ),
+      shnayimMikraParshaSchedule: _decodeOptionalEnum(
+        kShnayimMikraParshaSchedule,
+        r.optional<String>(kShnayimMikraParshaSchedule),
+        ShnayimMikraParshaSchedule.values,
+        (value) => value.storageKey,
+      ),
       lastChangeId: r.optionalUlid(kLastChangeId),
     );
     return settings.._validate();
@@ -97,6 +104,7 @@ final class LearnerSettings {
   static const kShnayimMikraMode = 'shnayim_mikra_mode';
   static const kShnayimMikraPace = 'shnayim_mikra_pace';
   static const kShnayimMikraSource = 'shnayim_mikra_source';
+  static const kShnayimMikraParshaSchedule = 'shnayim_mikra_parsha_schedule';
   static const defaultTzeisMinhag = 'degrees_8_5';
   static const defaultCandleLightingMinutes = 18;
 
@@ -116,6 +124,7 @@ final class LearnerSettings {
     kShnayimMikraMode,
     kShnayimMikraPace,
     kShnayimMikraSource,
+    kShnayimMikraParshaSchedule,
     kLastChangeId,
   };
 
@@ -127,6 +136,19 @@ final class LearnerSettings {
     String Function(T value) storageKey,
   ) {
     if (raw == null) return fallback;
+    for (final value in values) {
+      if (storageKey(value) == raw) return value;
+    }
+    throw StorageFormatException(_type, field, 'unsupported value');
+  }
+
+  static T? _decodeOptionalEnum<T>(
+    String field,
+    String? raw,
+    Iterable<T> values,
+    String Function(T value) storageKey,
+  ) {
+    if (raw == null) return null;
     for (final value in values) {
       if (storageKey(value) == raw) return value;
     }
@@ -177,9 +199,9 @@ final class LearnerSettings {
   /// The third reading, defaulting to Onkelos for legacy learners.
   final ShnayimMikraSource shnayimMikraSource;
 
-  /// Shnayim Mikra region follows the learner's existing Shabbat-location
-  /// flag. A profile with no region yet uses the diaspora calendar.
-  bool get shnayimMikraInIsrael => inIsrael ?? false;
+  /// Explicit weekly parsha minhag. Null only for legacy profiles or before
+  /// Shnayim Mikra track creation initializes it from the Yom Tov setting.
+  final ShnayimMikraParshaSchedule? shnayimMikraParshaSchedule;
 
   /// Last governed change, or null for a profile with no entry yet.
   final String? lastChangeId;
@@ -206,6 +228,8 @@ final class LearnerSettings {
         kShnayimMikraPace: shnayimMikraPace.storageKey,
       if (shnayimMikraSource != ShnayimMikraSource.onkelos)
         kShnayimMikraSource: shnayimMikraSource.storageKey,
+      if (shnayimMikraParshaSchedule != null)
+        kShnayimMikraParshaSchedule: shnayimMikraParshaSchedule!.storageKey,
       if (lastChangeId != null) kLastChangeId: lastChangeId,
     };
   }
@@ -262,6 +286,7 @@ final class LearnerSettings {
       other.shnayimMikraMode == shnayimMikraMode &&
       other.shnayimMikraPace == shnayimMikraPace &&
       other.shnayimMikraSource == shnayimMikraSource &&
+      other.shnayimMikraParshaSchedule == shnayimMikraParshaSchedule &&
       other.lastChangeId == lastChangeId;
 
   @override

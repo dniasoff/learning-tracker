@@ -993,11 +993,8 @@ void main() {
         CurriculumId.mishnehTorah: MishnehTorahFetcher(dio: mockDio),
       };
 
-      // The expectation is DERIVED from CurriculumId.values, not a
-      // hand-maintained literal: every curriculum that is not a composite
-      // must have a dedicated fetcher. `tanach` is the only composite
-      // (assembled from chumash + nach) and legitimately has no fetcher.
-      final expected = CurriculumId.values
+      // Shnayim Mikra reuses Chumash content and intentionally has no fetcher.
+      final expected = CurriculumId.contentCurricula
           .where(
             (id) => !CompositeCurriculumStrategy.isComposite(id.storageKey),
           )

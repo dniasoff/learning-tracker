@@ -55,6 +55,15 @@ enum CurriculumId {
   /// [fromStorageKey] being the single seam for storageKey resolution.
   static List<CurriculumId> get all => values;
 
+  /// Curricula backed by a standalone Sefaria hierarchy asset. Shnayim Mikra
+  /// is a learning workflow over Chumash verses and aliyah ranges; it has no
+  /// independent fetcher or browse hierarchy.
+  static List<CurriculumId> get contentCurricula => List.unmodifiable(
+    values.where((curriculum) => curriculum.hasContentTree),
+  );
+
+  bool get hasContentTree => this != CurriculumId.shnayimMikra;
+
   /// Curricula currently available to start or browse in the learner UI.
   /// Keep unreleased IDs in [values] so storage, codecs, and migrations can
   /// recognize them before their complete learning flow ships.

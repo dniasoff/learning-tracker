@@ -8,8 +8,8 @@
 /// hierarchy — the R8 out-of-memory driver. `loadLeavesTransient` returns the
 /// SAME leaves without retaining anything new.
 ///
-/// This test pins the invariant on the REAL bundled assets for EVERY
-/// [CurriculumId]:
+/// This test pins the invariant on the REAL bundled assets for every
+/// content-bearing [CurriculumId]:
 ///
 ///   loadLeavesTransient(c).map(sefariaRef).toSet()
 ///     == getContentForCurriculum(c).where(isLeaf).map(sefariaRef).toSet()
@@ -46,7 +46,7 @@ void main() {
       // Dart Set operations, not the `test` package's collection matchers) —
       // an `expect` call, or a matcher, per leaf/row multiplies to hundreds
       // of thousands of calls across all 9 curricula and dominates runtime.
-      for (final c in CurriculumId.values) {
+      for (final c in CurriculumId.contentCurricula) {
         // COLD path: fresh repo so loadLeavesTransient parses the asset
         // transiently (nothing cached yet) — the memory-critical path.
         final repo = _DiskContentRepository();
@@ -102,13 +102,13 @@ void main() {
     },
   );
 
-  test('union of loadLeavesTransient sefariaRefs across all 9 curricula == '
+  test('union of loadLeavesTransient sefariaRefs across content curricula == '
       '70,033 — matches the getContentForCurriculum-based union pinned in '
       'content_repository_count_leaves_test.dart', () async {
     final repo = _DiskContentRepository();
 
     final unionRefs = <String>{};
-    for (final c in CurriculumId.values) {
+    for (final c in CurriculumId.contentCurricula) {
       final leaves = await repo.loadLeavesTransient(c);
       unionRefs.addAll(leaves.map((i) => i.sefariaRef));
     }
@@ -119,6 +119,15 @@ void main() {
       reason:
           'the header denominator ("X / 70,033 sections") must remain '
           'exactly what it was before this rewiring',
+    );
+  });
+
+  test('Shnayim Mikra has no standalone transient hierarchy leaves', () async {
+    expect(
+      await _DiskContentRepository().loadLeavesTransient(
+        CurriculumId.shnayimMikra,
+      ),
+      isEmpty,
     );
   });
 }

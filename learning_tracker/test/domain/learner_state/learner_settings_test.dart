@@ -119,13 +119,13 @@ void main() {
       expect(legacyDiaspora.shnayimMikraMode, ShnayimMikraMode.pasuk);
       expect(legacyDiaspora.shnayimMikraPace, ShnayimMikraPace.self);
       expect(legacyDiaspora.shnayimMikraSource, ShnayimMikraSource.onkelos);
-      expect(legacyDiaspora.shnayimMikraInIsrael, isFalse);
+      expect(legacyDiaspora.shnayimMikraParshaSchedule, isNull);
 
       final israel = LearnerSettings.fromProfileDoc(profileUlid, {
         'time_zone': 'Asia/Jerusalem',
         'in_israel': true,
       });
-      expect(israel.shnayimMikraInIsrael, isTrue);
+      expect(israel.shnayimMikraParshaSchedule, isNull);
     },
   );
 
@@ -137,6 +137,7 @@ void main() {
       shnayimMikraMode: ShnayimMikraMode.parsha,
       shnayimMikraPace: ShnayimMikraPace.dailyAliyah,
       shnayimMikraSource: ShnayimMikraSource.rashi,
+      shnayimMikraParshaSchedule: ShnayimMikraParshaSchedule.eretzYisrael,
     );
     expect(configured.toStorage(), {
       'time_zone': 'UTC',
@@ -144,6 +145,7 @@ void main() {
       'shnayim_mikra_mode': 'parsha',
       'shnayim_mikra_pace': 'daily_aliyah',
       'shnayim_mikra_source': 'rashi',
+      'shnayim_mikra_parsha_schedule': 'eretz_yisrael',
     });
     expect(
       LearnerSettings.fromProfileDoc(profileUlid, configured.toStorage()),
@@ -154,6 +156,7 @@ void main() {
       {'time_zone': 'UTC', 'shnayim_mikra_mode': 'unknown'},
       {'time_zone': 'UTC', 'shnayim_mikra_pace': 'weekly'},
       {'time_zone': 'UTC', 'shnayim_mikra_source': 'targum'},
+      {'time_zone': 'UTC', 'shnayim_mikra_parsha_schedule': 'worldwide'},
     ]) {
       expect(
         () => LearnerSettings.fromProfileDoc(profileUlid, invalid),
@@ -161,4 +164,24 @@ void main() {
       );
     }
   });
+
+  test(
+    'stored Shnayim Mikra schedule is stable when Yom Tov location changes',
+    () {
+      final settings = LearnerSettings.fromProfileDoc(profileUlid, {
+        'time_zone': 'Europe/London',
+        'in_israel': true,
+        'shnayim_mikra_parsha_schedule': 'eretz_yisrael',
+      });
+      final afterLocationChange = LearnerSettings.fromProfileDoc(profileUlid, {
+        ...settings.toStorage(),
+        'in_israel': false,
+      });
+
+      expect(
+        afterLocationChange.shnayimMikraParshaSchedule,
+        ShnayimMikraParshaSchedule.eretzYisrael,
+      );
+    },
+  );
 }

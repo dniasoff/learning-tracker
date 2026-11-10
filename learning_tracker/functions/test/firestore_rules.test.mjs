@@ -1838,7 +1838,8 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
   const SETTINGS = { latitude: 31.77, longitude: 35.21, time_zone: 'Asia/Jerusalem', in_israel: true,
     tzeis_minhag: 'degrees_8_5', candle_lighting_minutes: 18,
     shnayim_mikra_mode: 'pasuk', shnayim_mikra_pace: 'self',
-    shnayim_mikra_source: 'onkelos' };
+    shnayim_mikra_source: 'onkelos',
+    shnayim_mikra_parsha_schedule: 'eretz_yisrael' };
 
   test('non-settings profile fields keep their plain owner field-level write', async () => {
     await assertSucceeds(setDoc(doc(owner(), PROFILE_PATH), { display_name: 'Moishy' }, { merge: true }));
@@ -1859,6 +1860,7 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
       shnayim_mikra_mode: 'aliyah', shnayim_mikra_pace: 'daily_aliyah',
       shnayim_mikra_source: 'rashi',
+      shnayim_mikra_parsha_schedule: 'chutz_laaretz',
     }, 'learnerSettings', PROFILE));
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
       location_source: 'detected',
@@ -2022,6 +2024,7 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
     await bad({ ...SETTINGS, shnayim_mikra_mode: 'weekly' });
     await bad({ ...SETTINGS, shnayim_mikra_pace: 'daily_parsha' });
     await bad({ ...SETTINGS, shnayim_mikra_source: 'targum' });
+    await bad({ ...SETTINGS, shnayim_mikra_parsha_schedule: 'worldwide' });
     // A null location (no location → fail-closed fallback, AD-36) is valid.
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
       ...SETTINGS, latitude: null, longitude: null,

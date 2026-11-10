@@ -7777,4 +7777,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get subTrackLifecycleSaveFailed =>
       'Couldn\'t save the sub-track. Try again.';
+
+  @override
+  String get shnayimMikraParshaSchedule => 'Parsha schedule';
+
+  @override
+  String get shnayimMikraScheduleEretzYisrael => 'Eretz Yisrael';
+
+  @override
+  String get shnayimMikraScheduleChutzLaaretz => 'Chutz la\'aretz';
 }

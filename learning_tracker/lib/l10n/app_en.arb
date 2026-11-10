@@ -6482,5 +6482,8 @@
   "subTrackLifecycleSaveFailed": "Couldn't save the sub-track. Try again.",
   "@subTrackLifecycleSaveFailed": {
     "description": "Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4."
-  }
+  },
+  "shnayimMikraParshaSchedule": "Parsha schedule",
+  "shnayimMikraScheduleEretzYisrael": "Eretz Yisrael",
+  "shnayimMikraScheduleChutzLaaretz": "Chutz la'aretz"
 }

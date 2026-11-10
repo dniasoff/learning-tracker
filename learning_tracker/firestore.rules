@@ -408,7 +408,8 @@ service cloud.firestore {
             'latitude', 'longitude', 'time_zone', 'in_israel', 'tzeis_minhag',
             'candle_lighting_minutes', 'location_source', 'location_fixed_at',
             'shnayim_mikra_mode', 'shnayim_mikra_pace',
-            'shnayim_mikra_source', 'last_change_id'
+            'shnayim_mikra_source', 'shnayim_mikra_parsha_schedule',
+            'last_change_id'
           ]);
     }
 
@@ -423,7 +424,8 @@ service cloud.firestore {
           && (isAbsentOrNull(d, 'location_fixed_at') || d.location_fixed_at is timestamp)
           && (isAbsentOrNull(d, 'shnayim_mikra_mode') || d.shnayim_mikra_mode in ['pasuk', 'aliyah', 'parsha'])
           && (isAbsentOrNull(d, 'shnayim_mikra_pace') || d.shnayim_mikra_pace in ['self', 'daily_aliyah'])
-          && (isAbsentOrNull(d, 'shnayim_mikra_source') || d.shnayim_mikra_source in ['onkelos', 'rashi']);
+          && (isAbsentOrNull(d, 'shnayim_mikra_source') || d.shnayim_mikra_source in ['onkelos', 'rashi'])
+          && (isAbsentOrNull(d, 'shnayim_mikra_parsha_schedule') || d.shnayim_mikra_parsha_schedule in ['eretz_yisrael', 'chutz_laaretz']);
     }
 
     // Profile doc write: ordinary owner write unless it touches the settings

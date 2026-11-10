@@ -7693,4 +7693,13 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get subTrackLifecycleSaveFailed =>
       'לא ניתן היה לשמור את מסלול המשנה. נסו שוב.';
+
+  @override
+  String get shnayimMikraParshaSchedule => 'מנהג פרשת השבוע';
+
+  @override
+  String get shnayimMikraScheduleEretzYisrael => 'ארץ ישראל';
+
+  @override
+  String get shnayimMikraScheduleChutzLaaretz => 'חוץ לארץ';
 }

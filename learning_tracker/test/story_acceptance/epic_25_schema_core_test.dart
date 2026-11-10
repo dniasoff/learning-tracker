@@ -1151,6 +1151,8 @@ void main() {
           equals({
             'calendar_cycles.dart',
             'daily_content.dart',
+            'parallel_text.dart',
+            'parsha_aliyot.dart',
             'seed_metadata.dart',
             'text_cache.dart',
           }),

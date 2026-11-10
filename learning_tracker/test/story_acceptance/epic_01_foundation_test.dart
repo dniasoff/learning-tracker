@@ -199,8 +199,8 @@ void main() {
   // ── Story 1.7: Riverpod state enums ──────────────────────────
 
   group('Story 1.7 -- Riverpod state enums', tags: ['story_1_7'], () {
-    test('CurriculumId has 5 values', () {
-      expect(CurriculumId.values, hasLength(9));
+    test('CurriculumId includes persisted and planned curricula', () {
+      expect(CurriculumId.values, hasLength(10));
       expect(
         CurriculumId.values.map((c) => c.storageKey),
         containsAll([

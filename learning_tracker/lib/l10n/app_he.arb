@@ -4312,5 +4312,8 @@
   "subTrackLifecycleNameRequired": "יש להזין שם",
   "subTrackLifecyclePositiveNumber": "יש להזין מספר גדול מ-0",
   "subTrackLifecycleWindowReversed": "חודש הסיום לפני חודש ההתחלה",
-  "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב."
+  "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב.",
+  "shnayimMikraParshaSchedule": "מנהג פרשת השבוע",
+  "shnayimMikraScheduleEretzYisrael": "ארץ ישראל",
+  "shnayimMikraScheduleChutzLaaretz": "חוץ לארץ"
 }
