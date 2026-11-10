@@ -195,6 +195,56 @@ void main() {
       expect(lockedDays(chained.single, jerusalemDiaspora), hasLength(3));
     });
 
+    test('London lock days follow one/two-day minhag on major chagim', () {
+      final cases = <(String, DateTime, DateTime)>[
+        (
+          'Pesach 7th/8th day',
+          DateTime.utc(2026, 4, 7),
+          DateTime.utc(2026, 4, 11),
+        ),
+        ('Shavuos', DateTime.utc(2028, 5, 28), DateTime.utc(2028, 6, 4)),
+        (
+          'Sukkos / Shemini Atzeres',
+          DateTime.utc(2026, 9, 25),
+          DateTime.utc(2026, 10, 6),
+        ),
+      ];
+
+      for (final (name, from, to) in cases) {
+        final oneDay = constantHistory(
+          lockSettings(
+            timeZone: 'Europe/London',
+            latitude: 51.5074,
+            longitude: -0.1278,
+            inIsrael: true,
+          ),
+        );
+        final twoDays = constantHistory(
+          lockSettings(
+            timeZone: 'Europe/London',
+            latitude: 51.5074,
+            longitude: -0.1278,
+            inIsrael: false,
+          ),
+        );
+        final oneDayDates = lockWindows(
+          oneDay,
+          from,
+          to,
+        ).expand((lock) => lockedDays(lock, oneDay)).toSet();
+        final twoDayDates = lockWindows(
+          twoDays,
+          from,
+          to,
+        ).expand((lock) => lockedDays(lock, twoDays)).toSet();
+        expect(
+          twoDayDates.length,
+          greaterThan(oneDayDates.length),
+          reason: '$name at the same London coordinates',
+        );
+      }
+    });
+
     test('in_israel never set locks the diaspora days (fail closed)', () {
       final unset = constantHistory(
         lockSettings(

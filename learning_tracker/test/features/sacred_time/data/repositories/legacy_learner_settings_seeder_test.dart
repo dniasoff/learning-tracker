@@ -48,7 +48,7 @@ void main() {
         ),
         creatingDeviceSettingsOverride(
           FakeCreatingDeviceSettingsSource(
-            CreatingDeviceSettings(timeZone: deviceZone, inIsrael: false),
+            CreatingDeviceSettings(timeZone: deviceZone),
           ),
         ),
       ],
@@ -61,8 +61,8 @@ void main() {
         .data()!,
   );
 
-  test('seeds a legacy profile of the signed-in account with the device '
-      'zone, diaspora and no location, so its settings decode', () async {
+  test('seeds a legacy profile with the device zone and no location or '
+      'minhag, so its settings decode', () async {
     final scope = LearnerScope(ownerUid: _uid, profileId: profileUlid);
     expect(await seeder().seedIfLegacy(scope), isTrue);
     final settings = LearnerSettings.fromProfileDoc(
@@ -70,7 +70,7 @@ void main() {
       await profileDoc(),
     );
     expect(settings.timeZone, 'Europe/London');
-    expect(settings.inIsrael, isFalse);
+    expect(settings.inIsrael, isNull);
     expect(settings.hasLocation, isFalse);
     expect(settings.lastChangeId, isNotNull);
     // Idempotent: a seeded profile is never seeded again.

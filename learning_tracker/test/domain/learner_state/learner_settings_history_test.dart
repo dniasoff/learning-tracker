@@ -188,6 +188,45 @@ void main() {
       expect(h.current, current);
     });
 
+    test(
+      'canonical Yom Tov days are reconstructed and mirrored by history',
+      () {
+        final seedAt = DateTime.utc(2026, 1, 1);
+        final changedAt = DateTime.utc(2026, 8, 1);
+        final seed = settingsEntry(
+          ulidA,
+          seedAt,
+          before: {'time_zone': null, 'yom_tov_days': null, 'in_israel': null},
+          after: {
+            'time_zone': 'Europe/London',
+            'yom_tov_days': 1,
+            'in_israel': true,
+          },
+        );
+        final change = settingsEntry(
+          ulidD,
+          changedAt,
+          before: {'yom_tov_days': 1, 'in_israel': true},
+          after: {'yom_tov_days': 2, 'in_israel': false},
+        );
+        final h = LearnerSettingsHistory.reconstruct(
+          current: const LearnerSettings(
+            profileId: profileUlid,
+            timeZone: 'Europe/London',
+            yomTovDays: 2,
+            inIsrael: false,
+          ),
+          entries: [seed, change],
+        );
+        expect(h.at(seedAt).yomTovDays, 1);
+        expect(
+          h.at(changedAt.subtract(const Duration(seconds: 1))).yomTovDays,
+          1,
+        );
+        expect(h.at(changedAt).keepsTwoDaysYomTov, isTrue);
+      },
+    );
+
     test('original_at orders an imported entry before later live ones', () {
       final imported = settingsEntry(
         ulidE,

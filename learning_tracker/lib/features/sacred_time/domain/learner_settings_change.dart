@@ -27,6 +27,7 @@ final class LearnerSettingsEdit {
     this.longitude,
     this.timeZone,
     this.inIsrael,
+    this.yomTovDays,
     this.tzeisMinhag,
     this.candleLightingMinutes,
     this.locationSource,
@@ -45,6 +46,9 @@ final class LearnerSettingsEdit {
   /// The new Israel (one-day yom tov) flag.
   final bool? inIsrael;
 
+  /// The canonical one- or two-day minhag.
+  final int? yomTovDays;
+
   final String? tzeisMinhag;
   final int? candleLightingMinutes;
   final String? locationSource;
@@ -56,6 +60,7 @@ final class LearnerSettingsEdit {
       longitude == null &&
       timeZone == null &&
       inIsrael == null &&
+      yomTovDays == null &&
       tzeisMinhag == null &&
       candleLightingMinutes == null &&
       locationSource == null &&
@@ -68,6 +73,7 @@ final class LearnerSettingsEdit {
       other.longitude == longitude &&
       other.timeZone == timeZone &&
       other.inIsrael == inIsrael &&
+      other.yomTovDays == yomTovDays &&
       other.tzeisMinhag == tzeisMinhag &&
       other.candleLightingMinutes == candleLightingMinutes &&
       other.locationSource == locationSource &&
@@ -79,6 +85,7 @@ final class LearnerSettingsEdit {
     longitude,
     timeZone,
     inIsrael,
+    yomTovDays,
     tzeisMinhag,
     candleLightingMinutes,
     locationSource,
@@ -88,7 +95,7 @@ final class LearnerSettingsEdit {
   @override
   String toString() =>
       'LearnerSettingsEdit(location: ${latitude != null}, '
-      'timeZone: $timeZone, inIsrael: $inIsrael)';
+      'timeZone: $timeZone, yomTovDays: $yomTovDays, inIsrael: $inIsrael)';
 }
 
 /// Rounds a coordinate to 3 decimal places (about 111 m) before it is
@@ -125,6 +132,8 @@ GovernedAction learnerSettingsAction(
       timeZone: edit.timeZone ?? 'UTC',
       latitude: latitude,
       longitude: longitude,
+      inIsrael: edit.inIsrael,
+      yomTovDays: edit.yomTovDays,
       tzeisMinhag: edit.tzeisMinhag ?? LearnerSettings.defaultTzeisMinhag,
       candleLightingMinutes:
           edit.candleLightingMinutes ??
@@ -148,7 +157,11 @@ GovernedAction learnerSettingsAction(
             if (latitude != null) LearnerSettings.kLatitude: latitude,
             if (longitude != null) LearnerSettings.kLongitude: longitude,
             if (edit.timeZone != null) LearnerSettings.kTimeZone: edit.timeZone,
-            if (edit.inIsrael != null) LearnerSettings.kInIsrael: edit.inIsrael,
+            if (edit.yomTovDays != null) ...{
+              LearnerSettings.kYomTovDays: edit.yomTovDays,
+              LearnerSettings.kInIsrael: edit.yomTovDays == 1,
+            } else if (edit.inIsrael != null)
+              LearnerSettings.kInIsrael: edit.inIsrael,
             if (edit.tzeisMinhag != null)
               LearnerSettings.kTzeisMinhag: edit.tzeisMinhag,
             if (edit.candleLightingMinutes != null)

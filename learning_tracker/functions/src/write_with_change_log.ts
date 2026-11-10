@@ -245,12 +245,13 @@ const FIELD_SPECS: Readonly<Record<string, Readonly<Record<string, Check>>>> = {
     ended_at: ENDED_AT,
   },
   learner_profiles: {
-    // Location may be unknown; the IANA time_zone and in_israel are required
-    // once written (AD-37 / AD-41) and can never be cleared.
+    // Location may be unknown; time_zone is required once seeded. The legacy
+    // in_israel flag is mirrored with canonical yom_tov_days.
     latitude: nullable((v) => num(v) && Math.abs(v as number) <= 90),
     longitude: nullable((v) => num(v) && Math.abs(v as number) <= 180),
     time_zone: str(64),
     in_israel: bool,
+    yom_tov_days: intIn(1, 2),
   },
 };
 

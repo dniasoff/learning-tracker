@@ -3734,7 +3734,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים לפי המיקום ומנהגי הדלקת הנרות וצאת הכוכבים שבחרתם.';
+    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים לפי המיקום ובהתאם למנהג הזמנים שבחרתם.';
   }
 
   @override
@@ -3758,11 +3758,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sacredTimeSourceManualCoords => 'קואורדינטות ידניות';
 
   @override
-  String get sacredTimeInIsraelTitle => 'אני בישראל';
+  String get sacredTimeYomTovDays => 'ימים טובים';
 
   @override
-  String get sacredTimeInIsraelSubtitle =>
-      'חג של יום אחד כאשר מופעל. נקבע אוטומטית כשמזהים או בוחרים עיר; שנו אם אתם מבקרים.';
+  String get sacredTimeYomTovOneDay => 'יום אחד (מנהג ארץ ישראל)';
+
+  @override
+  String get sacredTimeYomTovTwoDays => 'יומיים (מנהג חוץ לארץ)';
 
   @override
   String get sacredTimeLocationUpdated => 'המיקום עודכן.';

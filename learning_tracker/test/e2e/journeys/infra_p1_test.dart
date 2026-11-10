@@ -22,8 +22,8 @@
 /// The snackbar text (l10n.sacredTimeLocationUpdated = "Location updated.")
 /// confirms the call path completed without a real GPS fix.
 ///
-/// ### E2E-1104 — In-Israel toggle
-/// The In-Israel toggle is rendered by [SacredTimeSettingsCard._InIsraelRow]
+/// ### E2E-1104 — Yom Tov minhag
+/// The Yom Tov days selector is rendered by [SacredTimeSettingsCard]
 /// and shows the active learner's `in_israel` (DNI-481: a learner setting,
 /// not a device preference). Toggling it writes one governed
 /// learnerSettings change and NO device preference.
@@ -92,7 +92,7 @@
 library;
 
 import 'package:flutter/material.dart'
-    show Key, ListView, Row, Scrollable, Switch;
+    show DropdownButtonFormField, Key, ListView, Scrollable, Switch;
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     show AsyncData, ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -360,6 +360,7 @@ void main() {
               latitude: 31.76,
               longitude: 35.21,
               timeZone: 'Asia/Jerusalem',
+              yomTovDays: 1,
               inIsrael: true,
               locationSource: 'detected',
               locationFixedAt: DateTime.utc(2026, 6, 1),
@@ -372,86 +373,64 @@ void main() {
 
   // ── E2E-1104 ─────────────────────────────────────────────────────────────────
 
-  group('E2E-1104 — In-Israel toggle updates Yom Tov window computation', () {
+  group('E2E-1104 — Yom Tov minhag updates lock settings', () {
     // Key assertions (catalog §2 Area 11):
-    //  • SacredTimeSettingsCard renders "I am in Israel" toggle
-    //  • Toggle starts OFF (the learner's in_israel unset); tapping writes
-    //    ONE governed learnerSettings change (DNI-481) and no device pref
+    //  • SacredTimeSettingsCard renders the days selector
+    //  • Choosing a minhag writes ONE governed learnerSettings change
     //
     // Note: Wave-3 plan §3 also lists this journey. Per §2 and the Wave-2
     // catalog (line 417) it is P1.
 
-    testWidgets('In-Israel switch in SacredTimeSettingsCard is toggleable; '
-        'toggling ON writes the learner in_israel=true as a governed change', (
-      tester,
-    ) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'israel1104@test.com',
-        displayName: 'IsraelUser',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
+    testWidgets(
+      'Yom Tov days selector writes the learner minhag as a governed change',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(
+          email: 'israel1104@test.com',
+          displayName: 'IsraelUser',
+        );
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
 
-      final fakeGw = _FakeNotificationGateway();
-      final commands = _RecordingCommands();
+        final fakeGw = _FakeNotificationGateway();
+        final commands = _RecordingCommands();
 
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ..._infraSilences(h),
-          ..._notificationSilenceOverrides(fakeGw),
-          ..._learnerSettingsOverrides(commands),
-        ],
-      );
+        await h.pumpApp(
+          path: '/dashboard',
+          extraOverrides: [
+            ..._infraSilences(h),
+            ..._notificationSilenceOverrides(fakeGw),
+            ..._learnerSettingsOverrides(commands),
+          ],
+        );
 
-      await _goToSettings(h);
+        await _goToSettings(h);
 
-      // Scroll to expose SacredTimeSettingsCard "I am in Israel" toggle.
-      await _scrollSettingsTo(tester, 'I am in Israel');
+        await _scrollSettingsTo(tester, 'Yom Tov days');
+        h.expectOnScreen('Yom Tov days', routeName: 'SacredTimeSettingsCard');
+        await tester.tap(find.byType(DropdownButtonFormField<bool>));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text("2 days (chutz la'aretz minhag)").last);
+        await tester.pump();
+        // Drain microtasks for the async governed setting write.
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.pump();
 
-      // "I am in Israel" row must be visible.
-      h.expectOnScreen('I am in Israel', routeName: 'SacredTimeSettingsCard');
-
-      // The In-Israel Switch lives inside the row labelled "I am in Israel".
-      // Use a descendant finder anchored to the label text Row so we don't
-      // accidentally tap a different Switch that scrolled into view.
-      final israelRow = find.ancestor(
-        of: find.text('I am in Israel'),
-        matching: find.byType(Row),
-      );
-      final israelSwitch = find.descendant(
-        of: israelRow.first,
-        matching: find.byType(Switch),
-      );
-      expect(
-        israelSwitch,
-        findsWidgets,
-        reason: 'In-Israel Switch must be present in SacredTimeSettingsCard',
-      );
-
-      // Tap to toggle ON → LearnerSettingsEditor.setInIsrael(true).
-      // Use the first match (innermost Row wraps the Switch directly).
-      await tester.tap(israelSwitch.first, warnIfMissed: false);
-      await tester.pump();
-      // Drain microtasks for the async SharedPreferences write inside setInIsrael.
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pump();
-
-      // Key assertion: one governed learnerSettings change, and no device
-      // preference (the retired Sacred Time keys are never written).
-      expect(commands.applied, [
-        learnerSettingsAction(
-          _learnerId,
-          const LearnerSettingsEdit(inIsrael: true),
-        ),
-      ]);
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        prefs.getKeys().where((k) => k.startsWith('sacred_time_')),
-        isEmpty,
-      );
-    });
+        // Key assertion: one governed learnerSettings change, and no device
+        // preference (the retired Sacred Time keys are never written).
+        expect(commands.applied, [
+          learnerSettingsAction(
+            _learnerId,
+            const LearnerSettingsEdit(yomTovDays: 2),
+          ),
+        ]);
+        final prefs = await SharedPreferences.getInstance();
+        expect(
+          prefs.getKeys().where((k) => k.startsWith('sacred_time_')),
+          isEmpty,
+        );
+      },
+    );
   });
 
   // ── E2E-1106 ─────────────────────────────────────────────────────────────────

@@ -3780,7 +3780,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'App is silenced and locked during $term and Yom Tov. Times use your location and selected candle-lighting and nightfall customs.';
+    return 'App is silenced and locked during $term and Yom Tov. Times are computed from your location using your chosen zmanim minhag.';
   }
 
   @override
@@ -3804,11 +3804,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sacredTimeSourceManualCoords => 'Manual coordinates';
 
   @override
-  String get sacredTimeInIsraelTitle => 'I am in Israel';
+  String get sacredTimeYomTovDays => 'Yom Tov days';
 
   @override
-  String get sacredTimeInIsraelSubtitle =>
-      'One-day chag if on. Auto-set when you detect or choose a city, flip if you are visiting.';
+  String get sacredTimeYomTovOneDay => '1 day (Eretz Yisrael minhag)';
+
+  @override
+  String get sacredTimeYomTovTwoDays => '2 days (chutz la\'aretz minhag)';
 
   @override
   String get sacredTimeLocationUpdated => 'Location updated.';

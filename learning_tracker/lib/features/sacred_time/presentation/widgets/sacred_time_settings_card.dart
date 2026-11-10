@@ -16,7 +16,7 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/sac
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// AUD-sacred_time-08: whether Sacred Time's settings actions (Detect /
-/// Choose City / the in-Israel switch) require a Parent PIN challenge
+/// Choose City / the Yom Tov minhag selector) require a Parent PIN challenge
 /// before executing.
 ///
 /// [SacredTimeSettingsCard] is shown to every profile — including children
@@ -34,7 +34,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// list, it stays loading or errors — never a fabricated `false` — and the
 /// card disables its actions until it resolves (see
 /// [SacredTimeSettingsCard.pinGuard]). A child with a Parent PIN therefore
-/// cannot reach Detect or the Israel switch unauthenticated during a cold
+/// cannot reach Detect or the minhag selector unauthenticated during a cold
 /// start or a transient read failure.
 final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
   ref,
@@ -235,12 +235,14 @@ class SacredTimeSettingsCard extends ConsumerWidget {
                   activeProfileId: activeProfileId,
                 ),
                 const Divider(height: 28),
-                _InIsraelRow(
-                  value: settings.asData?.value?.inIsrael ?? false,
-                  enabled: guardResolved && settings.asData?.value != null,
-                  pinGuardRequired: pinGuardRequired,
-                  activeProfileId: activeProfileId,
-                ),
+                if (settings.asData?.value != null) ...[
+                  _YomTovDaysRow(
+                    value: settings.asData!.value!.inIsrael ?? false,
+                    enabled: guardResolved && holderIsParentMode,
+                    pinGuardRequired: pinGuardRequired,
+                    activeProfileId: activeProfileId,
+                  ),
+                ],
                 if (holderIsParentMode && settings.asData?.value != null) ...[
                   const Divider(height: 28),
                   _ZmanimSettings(
@@ -624,34 +626,34 @@ String? _editOutcomeMessage(
   LearnerSettingsEditOutcome.unavailable => l10n.sacredTimeSettingsUnavailable,
 };
 
-class _InIsraelRow extends ConsumerWidget {
-  const _InIsraelRow({
+class _YomTovDaysRow extends ConsumerWidget {
+  const _YomTovDaysRow({
     required this.value,
     required this.enabled,
     required this.pinGuardRequired,
     required this.activeProfileId,
   });
 
-  /// The learner's current flag (`false` when never set: diaspora).
+  /// Whether the learner follows the one-day Eretz Yisrael minhag.
   final bool value;
 
   /// False while no learner's settings are loaded, or while the PIN guard
   /// is unresolved (fail closed).
   final bool enabled;
 
-  /// AUD-sacred_time-08: the switch changes a learner setting, so it is
+  /// AUD-sacred_time-08: the selector changes a learner setting, so it is
   /// gated like the location actions.
   final bool pinGuardRequired;
   final String? activeProfileId;
 
-  Future<void> _set(BuildContext context, WidgetRef ref, bool next) async {
+  Future<void> _set(BuildContext context, WidgetRef ref, bool oneDay) async {
     if (pinGuardRequired &&
         !await _verifySacredTimeParentPin(context, ref, activeProfileId)) {
       return;
     }
     final outcome = await ref
         .read(learnerSettingsEditorProvider)
-        .setInIsrael(next);
+        .setYomTovDays(oneDay ? 1 : 2);
     if (!context.mounted) return;
     final message = _editOutcomeMessage(outcome, AppLocalizations.of(context)!);
     if (message != null) {
@@ -663,36 +665,22 @@ class _InIsraelRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        const Icon(Icons.flag_outlined, size: 20),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppLocalizations.of(context)!.sacredTimeInIsraelTitle,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                AppLocalizations.of(context)!.sacredTimeInIsraelSubtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Switch(
-          value: value,
-          onChanged: enabled ? (v) => _set(context, ref, v) : null,
+    final l10n = AppLocalizations.of(context)!;
+    return DropdownButtonFormField<bool>(
+      initialValue: value,
+      decoration: InputDecoration(labelText: l10n.sacredTimeYomTovDays),
+      items: [
+        DropdownMenuItem(value: true, child: Text(l10n.sacredTimeYomTovOneDay)),
+        DropdownMenuItem(
+          value: false,
+          child: Text(l10n.sacredTimeYomTovTwoDays),
         ),
       ],
+      onChanged: enabled
+          ? (v) {
+              if (v != null) _set(context, ref, v);
+            }
+          : null,
     );
   }
 }
