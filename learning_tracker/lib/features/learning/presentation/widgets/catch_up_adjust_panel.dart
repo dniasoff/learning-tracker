@@ -488,7 +488,7 @@ class _AdjustRow extends ConsumerWidget {
     final label = ref.watch(upToLeafLabelProvider(leaf));
     final status = included
         ? l10n.upToPickerStatusIncluded
-        : l10n.upToPickerStatusSkipped;
+        : l10n.catchUpAdjustStatusSkipped;
     return Semantics(
       container: true,
       button: true,

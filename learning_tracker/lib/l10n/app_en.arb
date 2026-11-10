@@ -3140,6 +3140,10 @@
     }
   },
   "catchUpAdjustSubTrackGroup": "{name} (learns on {shabbos})",
+  "catchUpAdjustStatusSkipped": "skipped",
+  "@catchUpAdjustStatusSkipped": {
+    "description": "Catch-up adjustment row state: planned for the day but not selected for recording."
+  },
   "@catchUpAdjustSubTrackGroup": {
     "description": "DRAFT copy, pending zc4. Heading of a sub-track group in a catch-up card's Adjust panel (DNI-507 AC-1): {name} is the sub-track's name, {shabbos} the Shabbos term in running text.",
     "placeholders": {

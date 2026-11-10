@@ -6592,6 +6592,12 @@ abstract class AppLocalizations {
   /// **'{name} (learns on {shabbos})'**
   String catchUpAdjustSubTrackGroup(String name, String shabbos);
 
+  /// Catch-up adjustment row state: planned for the day but not selected for recording.
+  ///
+  /// In en, this message translates to:
+  /// **'skipped'**
+  String get catchUpAdjustStatusSkipped;
+
   /// DRAFT copy, pending zc4. Outlined pill on the Learn-tab catch-up card (DNI-505, UX-DR-37): opens the per-day adjust list (Story 3.4).
   ///
   /// In en, this message translates to:

@@ -2054,6 +2054,7 @@
   "catchUpAdjustPickerConfirm": "לכלול {count} {unit}",
   "catchUpAdjustRecordItems": "רישום {count, plural, =1{פריט אחד} other{{count} פריטים}}",
   "catchUpAdjustSubTrackGroup": "{name} (לומד ב{shabbos})",
+  "catchUpAdjustStatusSkipped": "דולג",
   "catchUpCardAdjust": "התאמה…",
   "catchUpCardAvailableUntil": "זמין עד סוף {day}",
   "catchUpCardContentsError": "לא ניתן היה לטעון את מה שתוכנן.",

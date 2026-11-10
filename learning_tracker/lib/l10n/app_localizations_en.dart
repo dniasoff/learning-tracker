@@ -3896,6 +3896,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get catchUpAdjustStatusSkipped => 'skipped';
+
+  @override
   String get catchUpCardAdjust => 'Adjust…';
 
   @override
