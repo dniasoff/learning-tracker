@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
 import 'package:learning_tracker/domain/learner_state/storage_codec.dart';
 
 import '../../helpers/learner_state_fixtures.dart';
@@ -107,5 +108,57 @@ void main() {
       legacy.candleLightingMinutes,
       LearnerSettings.defaultCandleLightingMinutes,
     );
+  });
+
+  test(
+    'Shnayim Mikra defaults preserve legacy documents and follow region',
+    () {
+      final legacyDiaspora = LearnerSettings.fromProfileDoc(profileUlid, {
+        'time_zone': 'UTC',
+      });
+      expect(legacyDiaspora.shnayimMikraMode, ShnayimMikraMode.pasuk);
+      expect(legacyDiaspora.shnayimMikraPace, ShnayimMikraPace.self);
+      expect(legacyDiaspora.shnayimMikraSource, ShnayimMikraSource.onkelos);
+      expect(legacyDiaspora.shnayimMikraInIsrael, isFalse);
+
+      final israel = LearnerSettings.fromProfileDoc(profileUlid, {
+        'time_zone': 'Asia/Jerusalem',
+        'in_israel': true,
+      });
+      expect(israel.shnayimMikraInIsrael, isTrue);
+    },
+  );
+
+  test('Shnayim Mikra settings round-trip and reject unknown enum values', () {
+    const configured = LearnerSettings(
+      profileId: profileUlid,
+      timeZone: 'UTC',
+      inIsrael: true,
+      shnayimMikraMode: ShnayimMikraMode.parsha,
+      shnayimMikraPace: ShnayimMikraPace.dailyAliyah,
+      shnayimMikraSource: ShnayimMikraSource.rashi,
+    );
+    expect(configured.toStorage(), {
+      'time_zone': 'UTC',
+      'in_israel': true,
+      'shnayim_mikra_mode': 'parsha',
+      'shnayim_mikra_pace': 'daily_aliyah',
+      'shnayim_mikra_source': 'rashi',
+    });
+    expect(
+      LearnerSettings.fromProfileDoc(profileUlid, configured.toStorage()),
+      configured,
+    );
+
+    for (final invalid in [
+      {'time_zone': 'UTC', 'shnayim_mikra_mode': 'unknown'},
+      {'time_zone': 'UTC', 'shnayim_mikra_pace': 'weekly'},
+      {'time_zone': 'UTC', 'shnayim_mikra_source': 'targum'},
+    ]) {
+      expect(
+        () => LearnerSettings.fromProfileDoc(profileUlid, invalid),
+        throwsA(isA<StorageFormatException>()),
+      );
+    }
   });
 }

@@ -1,7 +1,7 @@
 # Shnayim Mikra v'Echad Targum: product and implementation proposal
 
 **Bead:** `learning-tracker-l84`  
-**Status:** Planning proposal only; no production changes in this step.
+**Status:** Accepted proposal; calendar/data spike and first two implementation phases completed.
 
 ## Recommendation
 
@@ -122,6 +122,13 @@ Bead 1 is a gating fact-finding deliverable; beads 2–6 can be split/paralleliz
 - Built the updated bundled asset from a copy of the shipped seed using the committed deterministic builder: 13,662 parallel-text rows and 405 aliyah ranges. The resulting DB is 459,599,872 raw bytes / 64,895,800 xz bytes; relative to the spike baseline, +6,168,576 raw / +815,324 compressed bytes after canonical ref prefixes and text cleaning. Build used `--shnayim-mikra-only`; existing Chumash text and calendar rows were preserved.
 - Targeted validation passed: seed builder completed and schema/metadata were inspected (schema v6, seed v16, 5,846 Onkelos, 7,816 Rashi, 405 aliyah rows); parallel-text repository tests and the 5787–5788 calendar/aliyah fixture tests all pass. `flutter pub get` and `dart run build_runner build -d` completed. The full test suite was not run.
 
+## Phase 3 curriculum and governed settings findings
+
+- Added `CurriculumId.shnayimMikra` (`shnayim_mikra`) with English/Hebrew display names, a single Parsha curriculum level, daily target fallback, and visual/setup/siyum/pace mappings so existing curriculum utilities remain exhaustive.
+- Added strict governed learner settings: `shnayim_mikra_mode` (`pasuk`, `aliyah`, `parsha`), `shnayim_mikra_pace` (`self`, `daily_aliyah`), and `shnayim_mikra_source` (`onkelos`, `rashi`). Legacy profiles default to pasuk/self/Onkelos. Region is not duplicated: `shnayimMikraInIsrael` follows existing `in_israel`; if unset, it resolves to diaspora. The existing parent-editable Shabbat location setting remains the region editor.
+- Added one `learnerSettings` governed edit action. Firestore recognizes the new keys and validates allowed values; the existing `learnerSettings` rule requires a parent actor, so child-mode writes are denied. The settings fields are not exposed in child mode; the parent settings surface can wire the edit action in the UI phase.
+- Targeted validation passed: curriculum ID/defaults, strict learner settings codec, storage schema golden, governed settings action, existing learner settings command, curriculum picker, and progress/siyum tests (93 tests passed). Targeted Dart analysis reported no issues; the Firestore rules test file passes `node --check`. The Firestore emulator rules matrix was updated but not executed in this worktree.
+
 ## Decisions confirmed by user
 
 1. **Region:** Use the learner's existing Shabbat location `in_israel` value; make it editable in settings. No setup question.
@@ -135,11 +142,11 @@ Bead 1 is a gating fact-finding deliverable; beads 2–6 can be split/paralleliz
 - `kosher_dart 2.0.20` exposes `JewishCalendar.getParshah()` and a mutable `inIsrael` flag; the method returns `Parsha.NONE` on festival Shabbosos with no weekly reading. This is a viable candidate for calculating the upcoming Shabbos assignment from the learner's existing region flag.
 - Added `learning_tracker/test/fixtures/calendar/parsha_cycle_5787_5788.json` from Hebcal's REST calendar output for years 5787 and 5788 (`yt=H`, `i=on/off`; CC BY 4.0) and `learning_tracker/test/features/scheduler/domain/services/parsha_cycle_fixture_test.dart`. The fixture has 212 Shabbat/region rows, 56 weekly parsha forms (including doubles), and festival Vezot aliyot for Israel and diaspora.
 - Cases include festival readings, the 5787 Shavuot split (Nasso / no weekly parsha, then Beha'alotcha / Nasso), diaspora Chukat-Balak, reunion at Pinchas, and 5788 double portions. The aliyah fixture covers 405 boundaries and maps continuously across all 5,846 Chumash refs when festival Vezot is included. A local Python consistency check found no missing ref endpoints or enum names.
-- The targeted Flutter test could not run here: the requested `TMPDIR=/home/daniel/scratch/subtracks/tmp systemd-run --user --scope -p MemoryMax=6G flutter test ...` wrapper reports `Failed to find executable flutter`, and neither `flutter` nor `dart` is installed on this runner. The committed test still needs execution on a Flutter-enabled host.
+- The committed calendar fixture test was run on the Flutter-enabled host after `PATH=/home/daniel/development/flutter/bin:$PATH` was supplied; it passed. Phase 2's combined focused validation reran the calendar/aliyah fixture test successfully alongside repository coverage.
 
 ### Sefaria coverage and source constraint
 
-- The local Sefaria Mongo dump at `/home/daniel/repos/sefaria_dump/dump` and generated `book_text_cache.json` are absent in both the story worktree and main checkout. I validated against Sefaria's live versioned texts API as a fallback; repeat this scan against the local Mongo seed source before implementing the seed builder. API references and semantics: [Texts v3](https://developers.sefaria.org/reference/get-v3-texts) and [Sefaria text references](https://developers.sefaria.org/docs/text-references).
+- The local Sefaria Mongo dump at `/home/daniel/repos/sefaria_dump/dump` and generated `book_text_cache.json` were absent in both the story worktree and main checkout. Phase 1 therefore validated against Sefaria's live versioned texts API; Phase 2 captured that response as a checked-in deterministic seed input, so seed builds are offline and reproducible. API references and semantics: [Texts v3](https://developers.sefaria.org/reference/get-v3-texts) and [Sefaria text references](https://developers.sefaria.org/docs/text-references).
 - The checked-in manifest has 5,846 Chumash verse refs. The selected Hebrew Public Domain Onkelos editions returned non-empty text for all 5,846. The selected Public Domain Hebrew Rashi editions returned 7,816 comment strings over 5,669 positioned pesukim: 3,900 pesukim have comments, 2,098 have multiple comments, and 1,946 have none or no position. Rashi refs are comment-grained (for example, `Rashi on Genesis 1:1:1`); Onkelos refs are verse-grained (for example, `Onkelos Genesis 1:1`).
 - The content DB simulation appended a source-keyed `parallel_text` table to a copy of the shipped 453,431,296-byte raw DB. It stored Onkelos as 5,846 rows (1,282,345 UTF-8 text bytes) and Rashi as 7,816 comment rows (combined Hebrew text 3,730,191 UTF-8 bytes). The measured xz sizes below use the repository's `xz -9 --extreme` setting. These are live-API payload measurements, before seed cleaning and with no English text, rather than a local-Mongo build.
 

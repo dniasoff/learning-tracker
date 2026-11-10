@@ -1836,7 +1836,9 @@ describe('DNI-471 AC-2 — each governed collection maps to its AD-38 entity', (
 describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch', () => {
   const PROFILE_PATH = `users/${OWNER}/learner_profiles/${PROFILE}`;
   const SETTINGS = { latitude: 31.77, longitude: 35.21, time_zone: 'Asia/Jerusalem', in_israel: true,
-    tzeis_minhag: 'degrees_8_5', candle_lighting_minutes: 18 };
+    tzeis_minhag: 'degrees_8_5', candle_lighting_minutes: 18,
+    shnayim_mikra_mode: 'pasuk', shnayim_mikra_pace: 'self',
+    shnayim_mikra_source: 'onkelos' };
 
   test('non-settings profile fields keep their plain owner field-level write', async () => {
     await assertSucceeds(setDoc(doc(owner(), PROFILE_PATH), { display_name: 'Moishy' }, { merge: true }));
@@ -1854,6 +1856,10 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, SETTINGS, 'learnerSettings', PROFILE));
     // Field-level change of one setting.
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, { in_israel: false }, 'learnerSettings', PROFILE));
+    await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
+      shnayim_mikra_mode: 'aliyah', shnayim_mikra_pace: 'daily_aliyah',
+      shnayim_mikra_source: 'rashi',
+    }, 'learnerSettings', PROFILE));
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
       location_source: 'detected',
       location_fixed_at: Timestamp.fromDate(new Date('2026-11-06T12:00:00Z')),
@@ -2013,6 +2019,9 @@ describe('DNI-471 AC-2 — learner_profiles settings keys take the AD-38 branch'
     await bad({ ...SETTINGS, tzeis_minhag: 'unknown' });
     await bad({ ...SETTINGS, candle_lighting_minutes: 19 });
     await bad({ ...SETTINGS, location_source: 'gps' });
+    await bad({ ...SETTINGS, shnayim_mikra_mode: 'weekly' });
+    await bad({ ...SETTINGS, shnayim_mikra_pace: 'daily_parsha' });
+    await bad({ ...SETTINGS, shnayim_mikra_source: 'targum' });
     // A null location (no location → fail-closed fallback, AD-36) is valid.
     await assertSucceeds(governedWrite(owner(), PROFILE_PATH, {
       ...SETTINGS, latitude: null, longitude: null,

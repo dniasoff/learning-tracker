@@ -19,7 +19,7 @@ void main() {
       );
     }
 
-    testWidgets('displays all 9 curricula (scrollable)', (tester) async {
+    testWidgets('displays all curricula (scrollable)', (tester) async {
       await tester.pumpWidget(
         wrapWithL10n(CurriculumPickerStep(onSelected: (_) {})),
       );
@@ -27,6 +27,12 @@ void main() {
       // Verify at least the first few visible curricula render
       expect(find.text(CurriculumId.mishnayos.displayNameHe), findsWidgets);
       expect(find.text(CurriculumId.bavli.displayNameHe), findsWidgets);
+      await tester.scrollUntilVisible(
+        find.text(CurriculumId.shnayimMikra.displayNameHe),
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text(CurriculumId.shnayimMikra.displayNameHe), findsWidgets);
 
       // Verify multiple InkWell widgets rendered (one per curriculum tile)
       expect(find.byType(InkWell), findsWidgets);

@@ -166,6 +166,10 @@ PaceUnitOptions paceUnitOptionsFor(CurriculumId id) {
       fine: CurriculumLabels.leaf(id),
       defaultKey: 'pasuk',
     ),
+    CurriculumId.shnayimMikra => PaceUnitOptions.single(
+      key: 'parsha',
+      level: CurriculumLabels.leaf(id),
+    ),
     CurriculumId.nach || CurriculumId.tanach => PaceUnitOptions.dual(
       coarseKey: 'perek',
       coarse: CurriculumLabels.level(id, 3),

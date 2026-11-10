@@ -20,6 +20,7 @@ enum CurriculumId {
   mishnayos('mishnayos'),
   bavli('bavli'),
   yerushalmi('yerushalmi'),
+  shnayimMikra('shnayim_mikra'),
   mishnehTorah('mishneh_torah'),
   mishnaBerurah('mishna_berurah'),
   mussar('mussar');
@@ -61,6 +62,7 @@ enum CurriculumId {
     CurriculumId.yerushalmi => 'Talmud Yerushalmi',
     CurriculumId.mishnaBerurah => 'Mishna Berurah',
     CurriculumId.chumash => 'Chumash',
+    CurriculumId.shnayimMikra => 'Shnayim Mikra',
     CurriculumId.mishnehTorah => 'Mishneh Torah',
     CurriculumId.tanach => 'Tanach',
     CurriculumId.nach => 'Nach',
@@ -77,6 +79,8 @@ enum CurriculumId {
     CurriculumId.mishnaBerurah =>
       '\u05DE\u05E9\u05E0\u05D4 \u05D1\u05E8\u05D5\u05E8\u05D4',
     CurriculumId.chumash => '\u05D7\u05D5\u05DE\u05E9',
+    CurriculumId.shnayimMikra =>
+      '\u05E9\u05E0\u05D9\u05D9\u05DD \u05DE\u05E7\u05E8\u05D0',
     CurriculumId.mishnehTorah =>
       '\u05DE\u05E9\u05E0\u05D4 \u05EA\u05D5\u05E8\u05D4',
     CurriculumId.tanach => '\u05EA\u05E0"\u05DA',

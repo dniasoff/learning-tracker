@@ -38,6 +38,7 @@ class CurriculumDefaults {
     CurriculumId.yerushalmi: 1,
     CurriculumId.mishnaBerurah: 2,
     CurriculumId.chumash: 5,
+    CurriculumId.shnayimMikra: 1,
     CurriculumId.mishnehTorah: 1,
     CurriculumId.tanach: 3,
     CurriculumId.nach: 3,
@@ -342,6 +343,16 @@ class CurriculumLabels {
         hePlural: 'פסוקים',
         valueKind: LevelValueKind.ordinal,
         prefixLabelInDisplay: true,
+      ),
+    ],
+    CurriculumId.shnayimMikra: [
+      LevelLabels(
+        en: 'Parsha',
+        enPlural: 'Parshiyos',
+        he: 'פרשה',
+        hePlural: 'פרשיות',
+        valueKind: LevelValueKind.named,
+        prefixLabelInDisplay: false,
       ),
     ],
     CurriculumId.mishnehTorah: [

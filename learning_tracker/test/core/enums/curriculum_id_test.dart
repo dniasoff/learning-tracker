@@ -7,6 +7,14 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 // rather than throwing or silently defaulting.
 void main() {
   group('CurriculumId.fromStorageKey', () {
+    test('Shnayim Mikra uses the canonical learning-list key', () {
+      expect(CurriculumId.shnayimMikra.storageKey, 'shnayim_mikra');
+      expect(
+        CurriculumId.fromStorageKey('shnayim_mikra'),
+        CurriculumId.shnayimMikra,
+      );
+    });
+
     for (final id in CurriculumId.values) {
       test('resolves ${id.storageKey} back to CurriculumId.$id', () {
         expect(CurriculumId.fromStorageKey(id.storageKey), id);

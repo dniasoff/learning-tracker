@@ -39,6 +39,8 @@ String unitScopeFor(CurriculumId curriculum, {required int level}) {
         return 'siman';
       case CurriculumId.mishnehTorah:
         return 'hilchos';
+      case CurriculumId.shnayimMikra:
+        return 'parsha';
       case CurriculumId.chumash:
       case CurriculumId.nach:
       case CurriculumId.tanach:
@@ -78,6 +80,8 @@ String unitScopeFor(CurriculumId curriculum, {required int level}) {
       return 'seder';
     case CurriculumId.mishnaBerurah:
       return 'chelek';
+    case CurriculumId.shnayimMikra:
+      return 'parsha';
     case CurriculumId.mishnehTorah:
     case CurriculumId.chumash:
     case CurriculumId.nach:
@@ -112,6 +116,8 @@ bool hasNamedLevel2Unit(CurriculumId curriculum) {
     case CurriculumId.mishnaBerurah:
     case CurriculumId.mishnehTorah:
       return true;
+    case CurriculumId.shnayimMikra:
+      return false;
     case CurriculumId.chumash:
     case CurriculumId.nach:
     case CurriculumId.tanach:

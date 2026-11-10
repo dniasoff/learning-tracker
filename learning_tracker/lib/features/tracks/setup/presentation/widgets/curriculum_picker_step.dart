@@ -257,6 +257,11 @@ class _CurriculumTile extends ConsumerWidget {
         iconColor: Color(0xFFB23749),
         background: Color(0xFFFFE0E5),
       ),
+      CurriculumId.shnayimMikra => const _CurriculumStyle(
+        icon: Icons.menu_book_rounded,
+        iconColor: Color(0xFFB23749),
+        background: Color(0xFFFFE0E5),
+      ),
       CurriculumId.nach => const _CurriculumStyle(
         icon: Icons.description_rounded,
         iconColor: Color(0xFF646B79),

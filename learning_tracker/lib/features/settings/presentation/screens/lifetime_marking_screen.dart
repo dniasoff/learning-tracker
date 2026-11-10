@@ -124,6 +124,7 @@ IconData _curriculumIcon(CurriculumId id) {
     CurriculumId.yerushalmi => Icons.library_books_outlined,
     CurriculumId.mishnaBerurah => Icons.rule_folder_outlined,
     CurriculumId.chumash => Icons.menu_book_outlined,
+    CurriculumId.shnayimMikra => Icons.menu_book_outlined,
     CurriculumId.mishnehTorah => Icons.import_contacts_outlined,
     CurriculumId.tanach => Icons.article_outlined,
     CurriculumId.nach => Icons.record_voice_over_outlined,

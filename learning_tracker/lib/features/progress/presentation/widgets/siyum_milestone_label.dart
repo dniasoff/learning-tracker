@@ -19,6 +19,8 @@ String curriculumCompleteSiyumLabel({
       return terms.siyumHaMishnayos;
     case CurriculumId.chumash:
       return terms.siyumHaTorah;
+    case CurriculumId.shnayimMikra:
+      return '${terms.siyum} Shnayim Mikra';
     case CurriculumId.nach:
       return terms.siyumNach;
     case CurriculumId.tanach:
@@ -54,6 +56,8 @@ String aggregateSiyumLabel({
     case CurriculumId.mishnaBerurah:
     case CurriculumId.mishnehTorah:
       return '${terms.siyumChelek} $aggregateName';
+    case CurriculumId.shnayimMikra:
+      return '${terms.siyum} $aggregateName';
     case CurriculumId.bavli:
     case CurriculumId.yerushalmi:
     case CurriculumId.mishnayos:
