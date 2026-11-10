@@ -19,10 +19,10 @@ class SeedMetadata extends Table {
   IntColumn get calendarCycleCount => integer()();
 
   /// Number of bundled Onkelos and Rashi text rows.
-  IntColumn get parallelTextCount => integer().withDefault(const Constant(0))();
+  IntColumn get parallelTextCount => integer()();
 
   /// Number of bundled weekly and festival aliyah boundary rows.
-  IntColumn get parshaAliyahCount => integer().withDefault(const Constant(0))();
+  IntColumn get parshaAliyahCount => integer()();
 
   /// SHA-256 hash of all content (refs + calendar keys) for integrity checks.
   /// Null when not computed by the seed build pipeline.

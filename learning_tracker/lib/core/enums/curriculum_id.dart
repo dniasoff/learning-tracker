@@ -65,10 +65,16 @@ enum CurriculumId {
   bool get hasContentTree => this != CurriculumId.shnayimMikra;
 
   /// Curricula currently available to start or browse in the learner UI.
-  /// Keep unreleased IDs in [values] so storage, codecs, and migrations can
-  /// recognize them before their complete learning flow ships.
-  static List<CurriculumId> get userSelectable =>
-      List.unmodifiable(values.where((curriculum) => curriculum.isReleased));
+  /// Keep unreleased IDs and Chumash/Nach source curricula in [values] so
+  /// storage, codecs, and migrations can still recognize them.
+  static List<CurriculumId> get userSelectable => List.unmodifiable(
+    values.where(
+      (curriculum) =>
+          curriculum.isReleased &&
+          curriculum != CurriculumId.chumash &&
+          curriculum != CurriculumId.nach,
+    ),
+  );
 
   /// Curricula with standalone trees available in the Browse catalog.
   /// Workflow curricula such as Shnayim Mikra remain learnable without
@@ -79,6 +85,11 @@ enum CurriculumId {
 
   /// Whether the curriculum's complete learner-facing flow has shipped.
   bool get isReleased => true;
+
+  /// Whether this curriculum should be presented as a standalone user-facing
+  /// choice or browse root.
+  bool get isBrowsable =>
+      isReleased && this != CurriculumId.chumash && this != CurriculumId.nach;
 
   /// Display name in English.
   String get displayNameEn => switch (this) {

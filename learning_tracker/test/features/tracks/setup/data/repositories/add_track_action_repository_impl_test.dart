@@ -31,6 +31,8 @@ import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart'
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/tracks/setup/data/repositories/add_track_action_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/add_track_action_repository.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/add_track_providers.dart'
+    show addTrackActivationChangesProvider;
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -109,6 +111,7 @@ void main() {
         (ref) => FirestoreAddTrackActionRepository(
           ref: ref,
           clock: () => governedTestNow,
+          activationChanges: container.read(addTrackActivationChangesProvider),
         ),
       ),
     );

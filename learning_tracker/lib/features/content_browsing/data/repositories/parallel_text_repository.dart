@@ -3,8 +3,8 @@ import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 
 /// One verse translation or one comment in a parallel reading source.
-final class ParallelText {
-  const ParallelText({
+final class ParallelTextEntry {
+  const ParallelTextEntry({
     required this.sourceKey,
     required this.sefariaRef,
     required this.hebrewText,
@@ -32,7 +32,7 @@ final class ParallelTextRepository {
 
   /// Returns the Onkelos verse or all Rashi comments for [chumashVerseRef].
   /// Rashi results are ordered by the numeric comment suffix in their refs.
-  Future<List<ParallelText>> getForVerse({
+  Future<List<ParallelTextEntry>> getForVerse({
     required String sourceKey,
     required String chumashVerseRef,
   }) async {
@@ -62,7 +62,7 @@ final class ParallelTextRepository {
         .get();
     final result = [
       for (final row in rows)
-        ParallelText(
+        ParallelTextEntry(
           sourceKey: row.read<String>('source_key'),
           sefariaRef: row.read<String>('sefaria_ref'),
           hebrewText: HebrewUtils.decodeHtmlEntities(

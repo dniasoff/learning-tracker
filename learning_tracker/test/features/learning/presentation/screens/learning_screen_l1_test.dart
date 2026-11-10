@@ -570,6 +570,9 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Browse'), findsOneWidget);
+    expect(find.text(CurriculumId.tanach.displayNameEn), findsOneWidget);
+    expect(find.text(CurriculumId.chumash.displayNameEn), findsNothing);
+    expect(find.text(CurriculumId.nach.displayNameEn), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -1074,18 +1077,18 @@ void main() {
         () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
       ).thenAnswer((_) async => null);
 
-      // Use a single-curriculum screen so the first Browse card is always
-      // chumash (first value in CurriculumId.values).
+      // Browse presents the combined Tanach root even when the learner only
+      // tracks one of its source curricula.
       await tester.pumpWidget(
         _buildScreen(curricula: [CurriculumId.chumash], router: router),
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // The Browse section must be visible with a chumash card.
+      // The Browse section must be visible with a Tanach card.
       expect(find.text('Browse'), findsOneWidget);
 
-      // Tap the first (and only) chumash Browse card InkWell.
+      // Tap the Tanach Browse card InkWell.
       // The card occupies a large area; we find the InkWell by its
       // borderRadius and tap the centre. Because all cards share the same
       // structure we find them by Icon and tap the first card area.
@@ -1097,7 +1100,7 @@ void main() {
       await tester.pump();
 
       // Verify router.push was called with ContentHierarchyRoute whose
-      // curriculumId matches CurriculumId.chumash.storageKey ('chumash').
+      // curriculumId matches CurriculumId.tanach.storageKey ('tanach').
       // This is the E4 fix invariant: the tap MUST use in-app navigation,
       // never an external URL/launchUrl.
       final captured = verify(
@@ -1111,12 +1114,12 @@ void main() {
         captured.any(
           (arg) =>
               arg is ContentHierarchyRoute &&
-              arg.args?.curriculumId == CurriculumId.chumash.storageKey,
+              arg.args?.curriculumId == CurriculumId.tanach.storageKey,
         ),
         isTrue,
         reason:
             'E4 fix: tapping a Browse card MUST push ContentHierarchyRoute('
-            "curriculumId: '${CurriculumId.chumash.storageKey}') via "
+            "curriculumId: '${CurriculumId.tanach.storageKey}') via "
             'context.router — must never fire launchUrl or an external intent.',
       );
 

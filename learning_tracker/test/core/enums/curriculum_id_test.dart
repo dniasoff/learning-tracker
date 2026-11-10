@@ -6,6 +6,22 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 // round-trip through it, and unknown/empty keys must resolve to null
 // rather than throwing or silently defaulting.
 void main() {
+  test(
+    'userSelectable hides Tanach source curricula but retains storage IDs',
+    () {
+      expect(CurriculumId.userSelectable, contains(CurriculumId.tanach));
+      expect(
+        CurriculumId.userSelectable,
+        isNot(contains(CurriculumId.chumash)),
+      );
+      expect(CurriculumId.userSelectable, isNot(contains(CurriculumId.nach)));
+      expect(
+        CurriculumId.all,
+        containsAll([CurriculumId.chumash, CurriculumId.nach]),
+      );
+    },
+  );
+
   group('CurriculumId.fromStorageKey', () {
     test('Shnayim Mikra uses the canonical learning-list key', () {
       expect(CurriculumId.shnayimMikra.storageKey, 'shnayim_mikra');

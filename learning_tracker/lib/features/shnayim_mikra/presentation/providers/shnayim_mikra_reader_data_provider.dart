@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -10,6 +9,7 @@ import 'package:learning_tracker/features/content_browsing/data/repositories/par
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
+import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 
 /// Complete, live learning-event log used for assignment-specific progress.
 final shnayimMikraReaderEventsProvider = StreamProvider.autoDispose
@@ -63,7 +63,7 @@ final class ShnayimMikraVerseReading {
   const ShnayimMikraVerseReading({required this.text, required this.parallel});
 
   final TextSegment text;
-  final List<ParallelText> parallel;
+  final List<ParallelTextEntry> parallel;
 }
 
 /// One aliyah in the selected parsha, ordered by verse.

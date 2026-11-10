@@ -33,8 +33,7 @@ class CurriculumPickerStep extends StatelessWidget {
     final featured = <CurriculumId>[
       CurriculumId.mishnayos,
       CurriculumId.bavli,
-      CurriculumId.chumash,
-      CurriculumId.nach,
+      CurriculumId.tanach,
       CurriculumId.mishnaBerurah,
     ];
     final remaining = CurriculumId.userSelectable

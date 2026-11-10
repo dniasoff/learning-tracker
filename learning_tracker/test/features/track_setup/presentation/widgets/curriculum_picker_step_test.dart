@@ -19,9 +19,7 @@ void main() {
       );
     }
 
-    testWidgets('displays all released curricula including Shnayim Mikra', (
-      tester,
-    ) async {
+    testWidgets('displays only user-selectable curricula', (tester) async {
       await tester.pumpWidget(
         wrapWithL10n(CurriculumPickerStep(onSelected: (_) {})),
       );
@@ -38,6 +36,9 @@ void main() {
         find.text(CurriculumId.shnayimMikra.displayNameHe),
         findsOneWidget,
       );
+      expect(find.text(CurriculumId.tanach.displayNameHe), findsOneWidget);
+      expect(find.text(CurriculumId.chumash.displayNameHe), findsNothing);
+      expect(find.text(CurriculumId.nach.displayNameHe), findsNothing);
 
       // Verify multiple InkWell widgets rendered (one per curriculum tile)
       expect(find.byType(InkWell), findsWidgets);

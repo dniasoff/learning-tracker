@@ -101,10 +101,9 @@ The core layer (`lib/core/`) provides shared infrastructure that all feature mod
 ### Database
 
 - **ORM:** Drift (SQLite)
-- **Three-database split:**
-  - **User DB** (`user_acc_<id>.db`) — per-account, read-write; schema **v14**. 21 tables, 22 DAOs. Holds all user-generated data: profiles, progress, configuration, streaks, sync state.
-  - **Content DB** (`content.db.gz`) — read-only seed shipped in the APK assets, decompressed on first launch; schema **v5**. 4 tables (TextCache ~52K rows, CalendarCycles ~35K rows, DailyContent, SeedMetadata).
-  - **Device Registry DB** (`device_registry.db`) — workspace-level, schema **v1**. 2 tables: DeviceAccounts + DeviceState; tracks up to 5 accounts per device and the last active account.
+- **Two local databases:**
+  - **Content DB** (`content.db.gz`) — read-only seed shipped in the APK assets, decompressed on first launch; schema **v6**. 6 tables for cached text, calendar cycles, daily content, seed metadata, parallel text, and parsha aliyah ranges.
+  - **Device Registry DB** (`device_registry.db`) — workspace-level, schema **v2**. 2 tables: DeviceAccounts + DeviceState; tracks accounts on the device and the last active account. User-generated data lives in Firestore.
 - **Profile scoping:** All user-facing tables include `profileId` participating in the primary key or a composite unique index, enforcing multi-profile isolation.
 - **Append-only tables:** `Completions`, `CompletionEvents`, and `LearningLedger` are never updated or deleted, preserving a full audit trail.
 - **Cascade deletes:** Profile deletion cascades across dependent tables.
@@ -235,7 +234,7 @@ lib/features/<feature>/
 
 ## Feature Dependency Graph
 
-> **AUD-docs-15 regenerated 2026-10-03** (1.28 cutover release; adds the `learner_state` feature) by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from a real grep of `import 'package:learning_tracker/features/...'` across every file. The full cross-feature import graph is dense — **99 edges among 15 nodes** — so this diagram keeps only "significant" dependencies (an edge survives if ≥6 distinct files make that import) plus, for any node that would otherwise be edge-less at that threshold, its single heaviest real edge. Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node here — every feature module imports `core/` (databases, navigation, shared services); that edge is universal, not differentiating. `sync` dropped out as a node in this revision — `lib/features/sync/` was deleted wholesale in the Firestore-native rewrite (Phase 3 P3-5).
+> **AUD-docs-15 regenerated 2026-11-10** by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from imports of `package:learning_tracker/features/...`. The full cross-feature import graph has **132 edges among 18 nodes**; this diagram keeps the generated backbone at minimum weight 6, plus each otherwise unconnected node's heaviest real edge. Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node because every feature imports shared core code.
 
 ```mermaid
 graph TD
@@ -253,6 +252,7 @@ graph TD
     sacred_time["sacred_time"]
     scheduler["scheduler"]
     settings["settings"]
+    shnayim_mikra["shnayim_mikra"]
     sub_tracks["sub_tracks"]
     tracks["tracks"]
     tutoring["tutoring"]
@@ -261,19 +261,17 @@ graph TD
     dashboard --> scheduler
     dashboard --> tracks
     gamification --> learning
-    learner_state --> content_browsing
     notifications --> learner_state
     onboarding --> tracks
     profiles --> tutoring
-    progress --> content_browsing
-    progress --> learning
-    progress --> profiles
-    progress --> tracks
+    progress --> learner_state
     sacred_time --> profiles
-    scheduler --> tracks
-    settings --> account
-    tracks --> learning
+    shnayim_mikra --> learner_state
+    sub_tracks --> learner_state
     sub_tracks --> learning
+    sub_tracks --> profiles
+    sub_tracks --> tutoring
+    settings --> account
     tracks --> onboarding
     tracks --> scheduler
     tracks --> settings
@@ -504,13 +502,13 @@ Firebase Authentication handles cloud-born accounts (email/password and Google S
 
 ## Database Schema
 
-> **AUD-docs-15/16 regenerated 2026-08-18** by `tool/gen_arch_tables.dart` (`make gen-arch-tables` to reprint; `make check-arch-tables` fails CI if this section drifts from a fresh run). The former "User DB" (`lib/core/database/user/user_database.dart`, 24 profile-scoped tables) was archived wholesale in the Firestore-native rewrite (Phase 3 P3-5) — every table it held is now a Firestore document under `lib/data/firestore/**`/`lib/data/repositories/**`, not a local Drift table. `tool/gen_arch_tables.dart`'s User DB spec was removed in the same commit that fixed `make audit`'s crash on the now-deleted `user_database.dart` path. Two local Drift databases remain, both genuinely device-local (not profile-scoped user data): the content cache and the device registry.
+> **AUD-docs-15/16 regenerated 2026-11-10** by `tool/gen_arch_tables.dart` (`make gen-arch-tables` to reprint; `make check-arch-tables` fails CI if this section drifts from a fresh run). Two local Drift databases remain, both device-local: the content cache and the device registry. User-generated data is stored in Firestore.
 
 Schema versions:
 
 | Database | Schema Version | Tables | DAOs |
 | --- | --- | --- | --- |
-| Content DB (`content.db.gz`) | **v5** | 4 | 4 |
+| Content DB (`content.db.gz`) | **v6** | 6 | 4 |
 | Registry DB (`device_registry.db`) | **v2** | 2 | — (inline) |
 
 ### Database Schema — Generated Table List
@@ -522,11 +520,13 @@ The table below is generated by `tool/gen_arch_tables.dart` from the Drift `@Dri
 | Content DB | TextCache | 4 |
 | Content DB | CalendarCycles | 5 |
 | Content DB | DailyContent | 3 |
-| Content DB | SeedMetadata | 7 |
+| Content DB | SeedMetadata | 9 |
+| Content DB | ParallelText | 6 |
+| Content DB | ParshaAliyot | 6 |
 | Registry DB | DeviceAccounts | 11 |
 | Registry DB | DeviceState | 2 |
 
-_Generated by `tool/gen_arch_tables.dart`. Total: 4 Content DB + 2 Registry DB = 6 tables._
+_Generated by `tool/gen_arch_tables.dart`. Total: 6 Content DB + 2 Registry DB = 8 tables._
 
 ### Key Schema Notes
 
