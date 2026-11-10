@@ -105,6 +105,23 @@ Create/sequence these implementation beads after this planning bead is accepted;
 
 Bead 1 is a gating fact-finding deliverable; beads 2–6 can be split/parallelized once its interfaces are agreed. Keep each implementation bead narrow enough for one review round where possible; do not include a full-suite run on every bead.
 
+## Phase 2 implementation findings
+
+- Added checked-in deterministic source input at `learning_tracker/tool/data/shnayim_mikra_seed.json`, generated from the Sefaria v3 Texts API response captured 2026-11-10. All records retain canonical Sefaria refs after the seed step prefixes Onkelos/Rashi, source keys, Hebrew text, selected version title, and license. The seed builder makes no network calls and verifies all 5,846 Onkelos verse refs exactly match the checked-in Chumash manifest; it also verifies 7,816 Rashi comment refs and Public Domain status.
+- Exact selected Sefaria versions (all Public Domain):
+
+| Book | Onkelos | Rashi |
+|---|---|---|
+| Genesis | `Onkelos Genesis` | `Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934` |
+| Exodus | `Onkelos Exodus` | `Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934` |
+| Leviticus | `Onkelos Leviticus` | `Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934` |
+| Numbers | `Onkelos Numbers` | `Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann -- corrected vocalization` |
+| Deuteronomy | `Onkelos Deuteronomy` | `Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934` |
+
+- Added the source-keyed `parallel_text` schema and repository (verse-level Onkelos; comment-level Rashi, numerically ordered; empty Rashi result represents no commentary), plus `parsha_aliyot` for weekly kosher_dart portion enum keys and region-specific Vezot readings. The seed migration moves Content DB schema 5→6; bundled seed version 15→16 forces existing installs to replace from the updated offline asset. Seed metadata now records both row counts and the hash covers the new keys/boundaries.
+- Built the updated bundled asset from a copy of the shipped seed using the committed deterministic builder: 13,662 parallel-text rows and 405 aliyah ranges. The resulting DB is 459,599,872 raw bytes / 64,895,800 xz bytes; relative to the spike baseline, +6,168,576 raw / +815,324 compressed bytes after canonical ref prefixes and text cleaning. Build used `--shnayim-mikra-only`; existing Chumash text and calendar rows were preserved.
+- Targeted validation passed: seed builder completed and schema/metadata were inspected (schema v6, seed v16, 5,846 Onkelos, 7,816 Rashi, 405 aliyah rows); parallel-text repository tests and the 5787–5788 calendar/aliyah fixture tests all pass. `flutter pub get` and `dart run build_runner build -d` completed. The full test suite was not run.
+
 ## Decisions confirmed by user
 
 1. **Region:** Use the learner's existing Shabbat location `in_israel` value; make it editable in settings. No setup question.

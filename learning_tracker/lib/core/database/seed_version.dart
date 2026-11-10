@@ -10,4 +10,4 @@
 /// tab. SeedManager now stamps this constant into the extracted db after a
 /// replace, so bumping this value alone is sufficient to force a re-seed (and
 /// cannot loop). Bump this whenever the bundled content asset changes.
-const int bundledSeedVersion = 15;
+const int bundledSeedVersion = 16;
