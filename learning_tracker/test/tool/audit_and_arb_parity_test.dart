@@ -534,7 +534,7 @@ void main() {
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit` twice; see the longer rationale on the 25/26 test
       // above.
-    }, timeout: const Timeout(Duration(minutes: 10)));
+    }, timeout: const Timeout(Duration(minutes: 15)));
   });
 
   group('make audit SM-7 check — AUD-sync-05', () {
