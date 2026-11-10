@@ -35,7 +35,7 @@ sealed class UpToRequest {
   /// The curriculum storage key.
   final String curriculumId;
 
-  /// The track name in the title ("School · up to…").
+  /// The track name used in the picker's question ("What did you learn in School?").
   final String name;
 
   /// `main` or the sub-track ULID.

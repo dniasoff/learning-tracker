@@ -7561,7 +7561,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String upToPickerInstruction(String unit) {
-    return 'Tap the last $unit you learnt';
+    return 'Tick each $unit you learnt. Long-press a row to tick everything up to it.';
   }
 
   @override
@@ -7581,11 +7581,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String upToPickerRowTargetSemantics(String label, String status) {
-    return '$label, $status, last one learnt';
+    return '$label, $status, selected';
   }
-
-  @override
-  String get upToPickerSetTargetAction => 'Make this the last one learnt';
 
   @override
   String get upToPickerStatusAlreadyRecorded => 'already recorded';
@@ -7600,12 +7597,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get upToPickerStatusNotSelected => 'not selected';
 
   @override
-  String get upToPickerStatusSkipped => 'skipped';
+  String get upToPickerStatusSkipped => 'unticked';
 
   @override
   String upToPickerTitle(String name) {
-    return '$name · up to…';
+    return 'What did you learn in $name?';
   }
+
+  @override
+  String get upToPickerBulkAction => 'Tick all up to here';
 
   @override
   String get sacredTimeLocationPromptAction => 'Set location';

@@ -112,7 +112,7 @@ Set<String> _pendingMain(WidgetTester tester) =>
 Future<void> _recordThrough12(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('mainTrackUpTo-mishnayos')));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Berakhot 1:2'));
+  await tester.longPress(find.text('Berakhot 1:2'));
   await tester.pump();
   await tester.tap(find.byKey(const Key('upToRecord')));
 }
@@ -137,16 +137,16 @@ void main() {
     expect(builds.single, 1);
     await tester.tap(find.byKey(const Key('mainTrackUpTo-mishnayos')));
     await tester.pumpAndSettle();
-    expect(find.text('Mishnayos · up to…'), findsOneWidget);
+    expect(find.text('What did you learn in Mishnayos?'), findsOneWidget);
     // schedulableRefs from the main position, led by today's new learning.
     final y1 = tester.getTopLeft(find.text('Berakhot 1:1')).dy;
     final y2 = tester.getTopLeft(find.text('Berakhot 1:2')).dy;
     final y3 = tester.getTopLeft(find.text('Berakhot 1:3')).dy;
     expect(y1 < y2 && y2 < y3, isTrue);
 
-    await tester.tap(find.text('Berakhot 1:3'));
+    await tester.tap(find.byKey(const Key('upToRowTick-0')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('upToRowTick-1')));
+    await tester.tap(find.byKey(const Key('upToRowTick-2')));
     await tester.pump();
     expect(find.text('Record 2 mishnayos'), findsOneWidget);
     await tester.tap(find.byKey(const Key('upToRecord')));
@@ -177,7 +177,7 @@ void main() {
     expect(main.streak?.lastDay, '2026-09-01');
     expect(main.learntLeaves, {'Mishnah Berakhot 1:1', 'Mishnah Berakhot 1:3'});
 
-    // The skipped leaf leads the next picker.
+    // The unticked leaf leads the next picker.
     await tester.tap(find.byKey(const Key('mainTrackUpTo-mishnayos')));
     await tester.pumpAndSettle();
     expect(find.text('Berakhot 1:1'), findsNothing);

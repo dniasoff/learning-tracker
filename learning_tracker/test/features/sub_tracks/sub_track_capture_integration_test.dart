@@ -95,7 +95,7 @@ String _status(WidgetTester tester) =>
 Future<void> _pickTargetUntick(WidgetTester tester) async {
   await tester.tap(find.byKey(Key('subTrackUpTo-$schoolId')));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Berakhot 2:2'));
+  await tester.longPress(find.text('Berakhot 2:2'));
   await tester.pump();
   await tester.tap(find.byKey(const Key('upToRowTick-3')));
   await tester.pump();
@@ -253,7 +253,7 @@ void main() {
     await tester.tap(find.byKey(Key('subTrackUpTo-$schoolId')));
     await tester.pumpAndSettle();
     expect(find.text('already recorded'), findsOneWidget);
-    await tester.tap(find.text('Berakhot 2:2'));
+    await tester.longPress(find.text('Berakhot 2:2'));
     await tester.pump();
     await tester.tap(find.byKey(const Key('upToRecord')));
     await tester.pumpAndSettle();
@@ -281,6 +281,8 @@ void main() {
     await tester.tap(find.byKey(Key('subTrackUpTo-$schoolId')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Berakhot 1:3'));
+    await tester.pump();
+    await tester.tap(find.text('Berakhot 1:1'));
     await tester.pump();
     // The rows are frozen as first loaded; meanwhile another device
     // records 1:2 in School.

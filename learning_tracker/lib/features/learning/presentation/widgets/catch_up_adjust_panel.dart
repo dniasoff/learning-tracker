@@ -272,25 +272,17 @@ class _CatchUpAdjustPanelState extends ConsumerState<CatchUpAdjustPanel> {
   }
 }
 
-/// The shared picker's starting selection over [rows] (AC-2): the rows
-/// from the group's first planned leaf, targeted at its last ticked leaf
-/// with every unticked leaf before it skipped; no target when none is
-/// ticked.
+/// The shared picker's starting selection over [rows] (AC-2): exactly the
+/// group's current ticks, with no implied selections between them.
 UpToSelection catchUpUpToSelectionOf(CatchUpPickerRows rows) {
   var selection = UpToSelection([
     for (final r in rows.rows)
       UpToRow(r.ref, recorded: rows.recorded.contains(r.ref)),
   ]);
   final included = rows.included.toSet();
-  var target = -1;
   for (var i = 0; i < rows.rows.length; i++) {
-    if (included.contains(rows.rows[i].ref)) target = i;
-  }
-  if (target < 0) return selection;
-  selection = selection.selectTarget(target);
-  for (var i = 0; i < target; i++) {
-    if (selection.isSelectable(i) && !included.contains(rows.rows[i].ref)) {
-      selection = selection.toggle(i);
+    if (selection.isSelectable(i) && included.contains(rows.rows[i].ref)) {
+      selection = selection.tick(i);
     }
   }
   return selection;

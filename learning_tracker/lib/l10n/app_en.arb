@@ -6184,7 +6184,7 @@
       }
     }
   },
-  "upToPickerInstruction": "Tap the last {unit} you learnt",
+  "upToPickerInstruction": "Tick each {unit} you learnt. Long-press a row to tick everything up to it.",
   "@upToPickerInstruction": {
     "description": "Up to… picker instruction (UX-DR-18); unit is the curriculum's singular leaf unit.",
     "placeholders": {
@@ -6226,9 +6226,9 @@
       }
     }
   },
-  "upToPickerRowTargetSemantics": "{label}, {status}, last one learnt",
+  "upToPickerRowTargetSemantics": "{label}, {status}, selected",
   "@upToPickerRowTargetSemantics": {
-    "description": "Screen-reader label of the highlighted target row of the Up to… picker (UX-DR-157).",
+    "description": "Screen-reader label of the most recently acted-on row of the Up to… picker.",
     "placeholders": {
       "label": {
         "type": "String"
@@ -6237,10 +6237,6 @@
         "type": "String"
       }
     }
-  },
-  "upToPickerSetTargetAction": "Make this the last one learnt",
-  "@upToPickerSetTargetAction": {
-    "description": "Screen-reader custom action on an Up to… picker row inside the run: makes it the last one learnt, cutting the run short there (UX-DR-157)."
   },
   "upToPickerStatusAlreadyRecorded": "already recorded",
   "@upToPickerStatusAlreadyRecorded": {
@@ -6258,11 +6254,11 @@
   "@upToPickerStatusNotSelected": {
     "description": "Up to… row state: after the target (UX-DR-157)."
   },
-  "upToPickerStatusSkipped": "skipped",
+  "upToPickerStatusSkipped": "unticked",
   "@upToPickerStatusSkipped": {
-    "description": "Up to… row state: unticked inside the run; gets no event (UX-DR-157)."
+    "description": "Up to… row state: previously ticked, then unticked; gets no event."
   },
-  "upToPickerTitle": "{name} · up to…",
+  "upToPickerTitle": "What did you learn in {name}?",
   "@upToPickerTitle": {
     "description": "Up to… picker title (UX-DR-18).",
     "placeholders": {
@@ -6271,6 +6267,7 @@
       }
     }
   },
+  "upToPickerBulkAction": "Tick all up to here",
   "sacredTimeLocationPromptAction": "Set location",
   "@sacredTimeLocationPromptAction": {
     "description": "DRAFT copy, pending zc4. DNI-481 AC-2 (UX-DR-99): action of the after-lock prompt; opens the city picker for the learner."

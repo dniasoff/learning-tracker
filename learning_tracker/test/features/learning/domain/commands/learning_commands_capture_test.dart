@@ -449,6 +449,18 @@ void main() {
       expect(result.alreadyRecordedRefs, isEmpty);
     });
 
+    test('a non-contiguous explicit ref set writes only those leaves and '
+        'keeps points one-to-one with main-track events', () async {
+      final h = _Harness();
+      final result =
+          await h.capture(refs: [_b11, _b13], stage: 1) as CaptureSuccess;
+
+      expect(h.written.where((e) => e.isLearn).map((e) => e.ref), [_b11, _b13]);
+      expect(h.written.any((e) => e.ref == _b12), isFalse);
+      expect(result.eventIds, hasLength(2));
+      expect(h.awards.map((a) => a.eventId).toSet(), result.eventIds.toSet());
+    });
+
     test('main: a leaf learnt from any source is no longer schedulable '
         'and is dropped, with no pts_ entry for it', () async {
       final h = _Harness(events: [engineLearn(1, _b11, source: school)]);

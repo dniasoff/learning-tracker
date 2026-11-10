@@ -1,5 +1,5 @@
 // Story 2.10 (DNI-501) AC-12 integration: UJ-1. Main tasks in the morning;
-// at bedtime School Up to… → target → untick 2:1 → Record 4 mishnayos, and
+// at bedtime School Up to… → long-press range → untick 2:1 → Record 4 mishnayos, and
 // Rebbe +1. Each source is captured in ≤ 4 taps (SM-4, prd-deviations #15).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +18,9 @@ final _bedtime = engineAt(1200);
 void main() {
   testWidgets('UJ-1: School reads Next: Berakhot 2:1; 4 School and 1 Rebbe '
       'events; distinct count rises by the new leaves; the streak is the '
-      'morning main learning only; 4 taps and 1 tap', (tester) async {
+      'morning main learning only; 3 taps, a long-press and 1 tap', (
+    tester,
+  ) async {
     final rig = CaptureRig(
       now: _morning,
       subTracks: [
@@ -63,7 +65,7 @@ void main() {
     }
 
     await schoolTap(find.byKey(Key('subTrackUpTo-$schoolId')));
-    await schoolTap(find.text('Berakhot 2:2'));
+    await tester.longPress(find.text('Berakhot 2:2'));
     await schoolTap(find.byKey(const Key('upToRowTick-3'))); // 2:1
     expect(find.text('Record 4 mishnayos'), findsOneWidget);
     await schoolTap(find.byKey(const Key('upToRecord')));
@@ -73,7 +75,7 @@ void main() {
     await tester.tap(find.byKey(Key('subTrackPlusOne-$rebbeId')));
     await tester.pumpAndSettle();
 
-    expect(schoolTaps, 4);
+    expect(schoolTaps, 3);
     expect(rebbeTaps, 1);
     expect(
       tester.widget<Text>(find.byKey(Key('subTrackRowStatus-$schoolId'))).data,

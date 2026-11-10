@@ -7481,7 +7481,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String upToPickerInstruction(String unit) {
-    return 'הקש על ה$unit האחרונה שלמדת';
+    return 'סמן כל $unit שלמדת. לחיצה ממושכת על שורה תסמן הכול עד אליה.';
   }
 
   @override
@@ -7501,11 +7501,8 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String upToPickerRowTargetSemantics(String label, String status) {
-    return '$label, $status, האחרון שנלמד';
+    return '$label, $status, נבחר';
   }
-
-  @override
-  String get upToPickerSetTargetAction => 'סמן כאחרון שנלמד';
 
   @override
   String get upToPickerStatusAlreadyRecorded => 'כבר נרשם';
@@ -7520,12 +7517,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get upToPickerStatusNotSelected => 'לא נבחר';
 
   @override
-  String get upToPickerStatusSkipped => 'דולג';
+  String get upToPickerStatusSkipped => 'לא מסומן';
 
   @override
   String upToPickerTitle(String name) {
-    return '$name · עד…';
+    return 'מה למדת ב$name?';
   }
+
+  @override
+  String get upToPickerBulkAction => 'סמן הכול עד כאן';
 
   @override
   String get sacredTimeLocationPromptAction => 'הגדרת מיקום';

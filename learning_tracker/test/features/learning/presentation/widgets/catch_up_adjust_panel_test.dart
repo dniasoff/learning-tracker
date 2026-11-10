@@ -194,7 +194,7 @@ void main() {
       await openAdjust(tester);
       await openUpTo(tester, rigRebbe);
       expect(sheet, findsOneWidget);
-      expect(find.text('Rebbe · up to…'), findsOneWidget);
+      expect(find.text('What did you learn in Rebbe?'), findsOneWidget);
       expect(
         find.descendant(of: pickerRow(0), matching: find.text('Beitzah 3:1')),
         findsOneWidget,
@@ -209,9 +209,7 @@ void main() {
           matching: find.byType(Scrollable),
         ),
       );
-      await tester.tap(
-        find.descendant(of: pickerRow(11), matching: find.byType(InkWell)),
-      );
+      await tester.longPress(pickerRow(11));
       await tester.pump();
       expect(confirmText(tester), 'Include 12 mishnayos');
       await tester.scrollUntilVisible(
@@ -263,15 +261,13 @@ void main() {
       await openAdjust(tester);
       await openUpTo(tester, _main);
       // Main: 2:7–2:10 planned, then 2:11 and 2:12.
-      await tester.tap(
-        find.descendant(of: pickerRow(5), matching: find.byType(InkWell)),
-      );
+      await tester.longPress(pickerRow(5));
       await tester.pump();
       await tester.tap(confirm);
       await tester.pumpAndSettle();
       expect(_recordText(tester), 'Record 16 mishnayos');
-      // Narrow back to 2:8: 2:9 and 2:10 stay as skipped planned rows,
-      // 2:11 and 2:12 leave the panel.
+      // Toggling the planned 2:8 row changes only that row; the later
+      // selected rows remain included.
       await openUpTo(tester, _main);
       await tester.tap(
         find.descendant(of: pickerRow(1), matching: find.byType(InkWell)),
@@ -279,17 +275,10 @@ void main() {
       await tester.pump();
       await tester.tap(confirm);
       await tester.pumpAndSettle();
-      expect(adjustRow(_main, rigLeaf(2, 11)), findsNothing);
+      expect(adjustRow(_main, rigLeaf(2, 11)), findsOneWidget);
       expect(adjustRow(_main, rigLeaf(2, 10)), findsOneWidget);
-      expect(_recordText(tester), 'Record 12 mishnayos');
-      // Wide again, then Record.
-      await openUpTo(tester, _main);
-      await tester.tap(
-        find.descendant(of: pickerRow(4), matching: find.byType(InkWell)),
-      );
-      await tester.pump();
-      await tester.tap(confirm);
-      await tester.pumpAndSettle();
+      expect(adjustRow(_main, rigLeaf(2, 12)), findsOneWidget);
+      expect(_recordText(tester), 'Record 15 mishnayos');
       await tester.ensureVisible(adjustRecord);
       await tester.tap(adjustRecord);
       await settleAdjust(tester);
