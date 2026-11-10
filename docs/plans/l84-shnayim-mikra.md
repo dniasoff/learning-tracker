@@ -129,6 +129,14 @@ Bead 1 is a gating fact-finding deliverable; beads 2–6 can be split/paralleliz
 - Added one `learnerSettings` governed edit action. Firestore recognizes the new keys and validates allowed values; the existing `learnerSettings` rule requires a parent actor, so child-mode writes are denied. The settings fields are not exposed in child mode; the parent settings surface can wire the edit action in the UI phase.
 - Targeted validation passed: curriculum ID/defaults, strict learner settings codec, storage schema golden, governed settings action, existing learner settings command, curriculum picker, and progress/siyum tests (93 tests passed). Targeted Dart analysis reported no issues; the Firestore rules test file passes `node --check`. The Firestore emulator rules matrix was updated but not executed in this worktree.
 
+## Phase 4 weekly assignment and learning-list projection findings
+
+- Added `ShnayimMikraWeeklyAssignment` using `kosher_dart`'s `JewishCalendar.getParshah()` and the governed learner `in_israel` setting. It skips `Parsha.NONE` festival Shabbosos, keeps paired portions as one enum/key, and selects the next regular Shabbos assignment.
+- Each assignment has a stable `YYYY-MM-DD:PARSHA_ENUM` key, a Friday civil due date, and a region-correct Simchas Torah catch-up limit. The assignment is overdue starting Shabbos and remains eligible through Simchas Torah inclusive. Projection keeps available previous assignments separate from the next week's assignment.
+- Added an active-learner schedule provider that derives date/time from `LearnerZone` using the learner's stored IANA time zone and uses the same editable `in_israel` setting as the Shabbat location configuration. The learning screen now includes a weekly assignment slot for an active Shnayim Mikra track.
+- Phase 4's slot currently presents assignment and catch-up count; reader navigation, completion-derived progress and localized strings are delivered in the following phases. The completion keys are already accepted by the projection so phase 5 can remove completed assignments from catch-up.
+- Targeted tests cover every regular 5787–5788 fixture row in both regions, festival skipping, a paired sedra, Friday due/Simchas Torah grace, and a new weekly assignment alongside overdue catch-up. The Learning screen and calendar/content tests passed. Whole-tree format and `flutter analyze --fatal-infos` gates passed before the phase push.
+
 ## Decisions confirmed by user
 
 1. **Region:** Use the learner's existing Shabbat location `in_israel` value; make it editable in settings. No setup question.

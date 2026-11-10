@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/learn_sl
 import 'package:learning_tracker/features/learning/presentation/widgets/lock_ignored_notice.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
+import 'package:learning_tracker/features/shnayim_mikra/presentation/widgets/shnayim_mikra_weekly_slot.dart';
 import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -129,6 +130,8 @@ class LearningScreen extends ConsumerWidget {
                     // Catch-up cards sit at the top of the tab, before the
                     // streak and today's tasks (DNI-505 AC-2, UX-DR-57).
                     const CatchUpCardsSlot(),
+                    if (activeCurricula.contains(CurriculumId.shnayimMikra))
+                      const ShnayimMikraWeeklySlot(),
                     _StreakHeroCard(
                       streakAsync: streakAsync,
                       onRetry: () => ref.invalidate(dashboardStreakProvider),
