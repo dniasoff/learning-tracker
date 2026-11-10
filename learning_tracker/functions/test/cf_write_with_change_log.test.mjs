@@ -355,6 +355,37 @@ describe('writeWithChangeLog — AD-31 void targets', () => {
     await seedLearningGrant();
   });
 
+  test('Shnayim Mikra requires assignment metadata on every event and source on pass 3', async () => {
+    const shnayim = (id, source, metadata = {}) => ({
+      id,
+      fields: {
+        kind: 'learn', curriculum_id: 'shnayim_mikra', ref: 'Genesis 1:1',
+        source, date_state: 'dated', learned_on: '2026-09-30', ...metadata,
+      },
+    });
+    const cycle = { assignment_key: '2026-10-03:BERESHIT:israel' };
+
+    for (const event of [
+      shnayim(ulid(3), 'main'),
+      shnayim(ulid(4), 'shnayim_mikra_pass_1'),
+      shnayim(ulid(5), 'shnayim_mikra_pass_3', cycle),
+    ]) {
+      await expectHttpsError(
+        helper.writeWithChangeLog(tutorAuth, tutorReq([event])),
+        'invalid-argument',
+      );
+    }
+    assert.equal((await events().get()).size, 0);
+
+    await helper.writeWithChangeLog(tutorAuth, tutorReq([
+      shnayim(ulid(6), 'main', cycle),
+      shnayim(ulid(7), 'shnayim_mikra_pass_3', {
+        ...cycle, commentary_source: 'rashi',
+      }),
+    ]));
+    assert.equal((await events().get()).size, 2);
+  });
+
   test('a void targeting a learn event is written with server recorded_at and actor', async () => {
     await helper.writeWithChangeLog(tutorAuth, tutorReq([learn(ulid(1))]));
     const res = await helper.writeWithChangeLog(tutorAuth, tutorReq([voidOf(ulid(2), ulid(1))]));

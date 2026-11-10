@@ -260,10 +260,11 @@ service cloud.firestore {
           && (d.source == 'main' || isUlid(d.source)
                 || (d.curriculum_id == 'shnayim_mikra'
                     && d.source in ['shnayim_mikra_pass_1', 'shnayim_mikra_pass_2', 'shnayim_mikra_pass_3']))
-          && (isAbsentOrNull(d, 'assignment_key')
-                || (d.curriculum_id == 'shnayim_mikra'
+          && (d.curriculum_id == 'shnayim_mikra'
+                ? (d.keys().hasAll(['assignment_key'])
                     && isBoundedString(d.assignment_key, 120)
-                    && d.assignment_key.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}:[A-Z_]+:(israel|diaspora)$')))
+                    && d.assignment_key.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}:[A-Z_]+:(israel|diaspora)$'))
+                : isAbsentOrNull(d, 'assignment_key'))
           && (isAbsentOrNull(d, 'commentary_source')
                 || (d.source == 'shnayim_mikra_pass_3'
                     && d.commentary_source in ['onkelos', 'rashi']))

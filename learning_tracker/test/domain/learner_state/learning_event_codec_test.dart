@@ -35,6 +35,23 @@ LearningEvent _learn({
   actor: parentActor,
 );
 
+LearningEvent _shnayimMikra({
+  String source = LearningEvent.sourceMain,
+  String? assignmentKey = '2026-10-03:BERESHIT:israel',
+  String? commentarySource,
+}) => LearningEvent.learn(
+  id: ulidA,
+  curriculumId: 'shnayim_mikra',
+  ref: 'Genesis 1:1',
+  source: source,
+  dateState: DateState.dated,
+  learnedOn: '2026-09-01',
+  assignmentKey: assignmentKey,
+  commentarySource: commentarySource,
+  recordedAt: t0,
+  actor: parentActor,
+);
+
 void main() {
   group('invalid event field combinations are rejected during encoding', () {
     test('void without target_id', () {
@@ -172,22 +189,53 @@ void main() {
     });
 
     test('Shnayim Mikra cycle and pass-three commentary round-trip', () {
-      final event = LearningEvent.learn(
-        id: ulidA,
-        curriculumId: 'shnayim_mikra',
-        ref: 'Genesis 1:1',
+      final event = _shnayimMikra(
         source: LearningEvent.sourceShnayimMikraPass3,
-        dateState: DateState.dated,
-        learnedOn: '2026-09-01',
-        assignmentKey: '2026-10-03:BERESHIT:israel',
         commentarySource: 'onkelos',
-        recordedAt: t0,
-        actor: parentActor,
       );
       final decoded = LearningEvent.fromStorage(ulidA, event.toStorage());
       expect(decoded.assignmentKey, '2026-10-03:BERESHIT:israel');
       expect(decoded.commentarySource, 'onkelos');
     });
+
+    test('Shnayim Mikra construction requires cycle and pass-three source', () {
+      expect(
+        () => _shnayimMikra(assignmentKey: null),
+        _rejects('assignment_key'),
+      );
+      expect(
+        () => _shnayimMikra(source: LearningEvent.sourceShnayimMikraPass3),
+        _rejects('commentary_source'),
+      );
+    });
+
+    test('encoding validates the Shnayim Mikra assignment-key shape', () {
+      expect(
+        () => _shnayimMikra(assignmentKey: 'not-a-cycle').toStorage(),
+        _rejects('assignment_key'),
+      );
+    });
+
+    test(
+      'decoding requires cycle on every Shnayim Mikra event and source on pass 3',
+      () {
+        final completion = _shnayimMikra().toStorage()
+          ..remove('assignment_key');
+        expect(
+          () => LearningEvent.fromStorage(ulidA, completion),
+          _rejects('assignment_key'),
+        );
+
+        final pass3 = _shnayimMikra(
+          source: LearningEvent.sourceShnayimMikraPass3,
+          commentarySource: 'rashi',
+        ).toStorage()..remove('commentary_source');
+        expect(
+          () => LearningEvent.fromStorage(ulidA, pass3),
+          _rejects('commentary_source'),
+        );
+      },
+    );
 
     test('non-ULID event id never reaches storage', () {
       final event = LearningEvent.learn(

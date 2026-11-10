@@ -1460,8 +1460,19 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
     })));
     await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
       curriculum_id: 'shnayim_mikra', ref: 'Genesis 1:1',
+      source: 'main', stage: null,
+      assignment_key: '2026-10-03:BERESHIT:israel',
+    })));
+    await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
+      curriculum_id: 'shnayim_mikra', ref: 'Genesis 1:1',
       source: 'shnayim_mikra_pass_2', stage: null,
       assignment_key: '2026-10-03:BERESHIT:israel',
+    })));
+    await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
+      curriculum_id: 'shnayim_mikra', ref: 'Genesis 1:1',
+      source: 'shnayim_mikra_pass_3', stage: null,
+      assignment_key: '2026-10-03:BERESHIT:israel',
+      commentary_source: 'rashi',
     })));
     await assertSucceeds(setDoc(doc(db, `${EVENTS}/${nextUlid()}`), learnEvent({
       date_state: 'before_tracking', learned_on: '2019-05-01', ref: 'Berakhot',
@@ -1531,6 +1542,14 @@ describe('DNI-471 AC-1 — learning_events are append-only owner events', () => 
     await bad(learnEvent({ learned_on: 20190501 }));
     await bad(learnEvent({ source: 'sub-track-1' }));
     await bad(learnEvent({ source: 'shnayim_mikra_pass_1' }));
+    await bad(learnEvent({ curriculum_id: 'shnayim_mikra' })); // main completion requires assignment_key
+    await bad(learnEvent({
+      curriculum_id: 'shnayim_mikra', source: 'shnayim_mikra_pass_1', stage: null,
+    })); // every pass requires assignment_key
+    await bad(learnEvent({
+      curriculum_id: 'shnayim_mikra', source: 'shnayim_mikra_pass_3', stage: null,
+      assignment_key: '2026-10-03:BERESHIT:israel',
+    })); // pass 3 requires commentary_source
     await bad(learnEvent({ stage: 2, source: nextUlid() })); // stage is main-only
     await bad(learnEvent({ stage: '2' }));
     await bad(learnEvent({ ref: '' }));

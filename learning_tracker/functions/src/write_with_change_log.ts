@@ -583,10 +583,8 @@ function validateEvents(raw: unknown): LearningEventIntent[] {
         fields.curriculum_id !== "shnayim_mikra") {
         reject("invalid-argument", "Shnayim Mikra pass sources require shnayim_mikra");
       }
-      const passSource = typeof fields.source === "string" &&
-        ["shnayim_mikra_pass_1", "shnayim_mikra_pass_2", "shnayim_mikra_pass_3"].includes(fields.source);
-      if (passSource && fields.assignment_key === undefined) {
-        reject("invalid-argument", "Shnayim Mikra pass events require assignment_key");
+      if (fields.curriculum_id === "shnayim_mikra" && fields.assignment_key === undefined) {
+        reject("invalid-argument", "Shnayim Mikra events require assignment_key");
       }
       if ((fields.assignment_key !== undefined || fields.commentary_source !== undefined) &&
         fields.curriculum_id !== "shnayim_mikra") {

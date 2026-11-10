@@ -57,11 +57,12 @@ enum DateState {
 
 /// One `learning_events/{ulid}` document.
 ///
-/// Construct with [LearningEvent.learn] or [LearningEvent.voidOf]. The
-/// constructors do not validate; [toStorage] and [LearningEvent.fromStorage]
-/// both run the full AD-52 / AD-31 field-combination check and throw
-/// [StorageFormatException] on any violation, so an invalid event can be
-/// neither written nor read.
+/// Construct with [LearningEvent.learn] or [LearningEvent.voidOf]. The learn
+/// constructor immediately requires Shnayim Mikra cycle metadata and the
+/// pass-three commentary source; [toStorage] and [LearningEvent.fromStorage]
+/// also run the full AD-52 / AD-31 field-combination check and throw
+/// [StorageFormatException] on any violation, so malformed data cannot be
+/// written or read.
 final class LearningEvent {
   /// A `learn` event.
   LearningEvent.learn({
@@ -82,7 +83,9 @@ final class LearningEvent {
     this.revertsActionId,
   }) : kind = LearningEventKind.learn,
        _recordedAt = recordedAt.toUtc(),
-       _originalRecordedAt = originalRecordedAt?.toUtc();
+       _originalRecordedAt = originalRecordedAt?.toUtc() {
+    _validateShnayimMikraRequiredFields();
+  }
 
   /// A `void` event cancelling [targetId].
   LearningEvent.voidOf({
@@ -398,10 +401,16 @@ final class LearningEvent {
               !_validAssignmentKey(assignmentKey!))) {
         _fail(kAssignmentKey, 'invalid Shnayim Mikra assignment key');
       }
+      if (curriculumId == 'shnayim_mikra' && assignmentKey == null) {
+        _fail(kAssignmentKey, 'required for Shnayim Mikra learn');
+      }
       if (commentarySource != null &&
           (src != sourceShnayimMikraPass3 ||
               !const ['onkelos', 'rashi'].contains(commentarySource))) {
         _fail(kCommentarySource, 'only on a pass-3 marker with a known source');
+      }
+      if (src == sourceShnayimMikraPass3 && commentarySource == null) {
+        _fail(kCommentarySource, 'required for a pass-3 marker');
       }
       final state = dateState;
       if (state == null) _fail(kDateState, 'required for learn');
@@ -428,6 +437,15 @@ final class LearningEvent {
 
   static bool _validAssignmentKey(String key) =>
       RegExp(r'^\d{4}-\d{2}-\d{2}:[A-Z_]+:(israel|diaspora)$').hasMatch(key);
+
+  void _validateShnayimMikraRequiredFields() {
+    if (curriculumId == 'shnayim_mikra' && assignmentKey == null) {
+      _fail(kAssignmentKey, 'required for Shnayim Mikra learn');
+    }
+    if (source == sourceShnayimMikraPass3 && commentarySource == null) {
+      _fail(kCommentarySource, 'required for a pass-3 marker');
+    }
+  }
 
   @override
   bool operator ==(Object other) =>
