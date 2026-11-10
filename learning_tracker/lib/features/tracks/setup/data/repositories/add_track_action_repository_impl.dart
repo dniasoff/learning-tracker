@@ -10,7 +10,10 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart'
+    show activeLearnerScopeProvider;
 import 'package:learning_tracker/data/firestore/repository_providers.dart';
 import 'package:learning_tracker/data/repositories/firestore_curriculum_scope_repository.dart';
 import 'package:learning_tracker/data/repositories/firestore_goal_repository.dart';
@@ -20,7 +23,9 @@ import 'package:learning_tracker/data/repositories/firestore_study_day_config_re
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/shnayim_mikra/domain/shnayim_mikra_settings_change.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/profile_program.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/repositories/add_track_action_repository.dart';
 
@@ -107,6 +112,31 @@ final class FirestoreAddTrackActionRepository
         programs: programs,
         goals: goals,
       );
+    }
+
+    // Initialize Shnayim Mikra's parsha minhag once, in the same governed
+    // activation action. This reads the legacy one-day/two-day proxy only at
+    // track creation; later location edits cannot rewrite this setting.
+    if (curriculumId == CurriculumId.shnayimMikra) {
+      final scope = await _ref.read(activeLearnerScopeProvider.future);
+      if (scope == null) throw const AddTrackNotReadyException();
+      final settingsSubscription = _ref.listen(
+        learnerLockSettingsProvider(scope).future,
+        (_, _) {},
+      );
+      final settingsHistory = await settingsSubscription.read();
+      settingsSubscription.close();
+      if (settingsHistory.current.shnayimMikraParshaSchedule == null) {
+        final initialSettings = initialShnayimMikraSettings(
+          legacyInIsrael: settingsHistory.current.inIsrael,
+        );
+        changes.add(
+          shnayimMikraSettingsAction(
+            scope.profileId,
+            initialSettings,
+          ).changes.single,
+        );
+      }
     }
 
     final writer = _ref.read(ownerGovernedWriterProvider);

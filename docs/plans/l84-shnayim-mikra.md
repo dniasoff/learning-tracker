@@ -145,6 +145,13 @@ Bead 1 is a gating fact-finding deliverable; beads 2–6 can be split/paralleliz
 - Reopening the reader skips already completed pesukim/aliyot/parshiyos, and the learning-list card shows completed verses in the current assignment. An incomplete three-pass unit remains uncompleted until its final pass is marked; its in-flight pass position is currently held in the reader view for the open session and is not yet synced as a separate partial event.
 - Targeted tests cover the reading-unit order and daily-aliyah boundaries, the independent Chumash-derived corpus and event/point separation, parallel-text seed lookup, weekly assignment behavior, and the existing text-reader widget. Whole-tree gates and the required `CurriculumId.values` test-file sweep are run before the phase push.
 
+## Phase 6 settings and release findings
+
+- The release gate is removed only after the three-pass reader, weekly assignment card, and settings flow are present. Shnayim Mikra appears in learning-track selection, while Browse remains limited to curricula with standalone content trees; Shnayim Mikra reuses Chumash text through its dedicated workflow.
+- Adding a new Shnayim Mikra track appends its initial parsha minhag to the same governed activation action. It reads the legacy one-day/two-day proxy once (`in_israel == true` → Eretz Yisrael; otherwise Chutz la'aretz); existing values are preserved on re-add, and later location changes do not update the stored preference.
+- The learning-list settings control is shown for adult profiles and for child profiles after the parent PIN is authenticated. It is hidden during a tutored session. The governed learnerSettings writer and Firestore parent-only rule remain the authorization boundary. The settings dialog edits mode, pace, third-reading source, and Eretz Yisrael/Chutz la'aretz schedule; mode/source/schedule labels are localized in English and Hebrew.
+- Focused release coverage verifies CurriculumId selection/decoding, the activation action's initial schedule patch, and the parent/child/tutor editor-visibility rule. No full test suite is run.
+
 ## Decisions confirmed by user
 
 1. **Parsha schedule:** Store an independent Shnayim Mikra minhag setting, Eretz Yisrael or Chutz la'aretz, editable in that track's parent settings. Initialize it once from the learner's existing Yom Tov minhag proxy (`in_israel`: one day → Eretz Yisrael, two days → Chutz la'aretz) behind `shnayimMikraScheduleFromLegacyYomTovFlag`; never change it when location changes. A separate lane will replace the proxy with an explicit one-day/two-day minhag setting. No setup question.

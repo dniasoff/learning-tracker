@@ -7704,6 +7704,37 @@ class AppLocalizationsHe extends AppLocalizations {
   String get shnayimMikraScheduleChutzLaaretz => 'חוץ לארץ';
 
   @override
+  String get shnayimMikraSettingsTitle => 'הגדרות שניים מקרא';
+
+  @override
+  String get shnayimMikraModeLabel => 'סדר הקריאה';
+
+  @override
+  String get shnayimMikraModePasuk => 'פסוק אחר פסוק';
+
+  @override
+  String get shnayimMikraModeAliyah => 'עלייה אחר עלייה';
+
+  @override
+  String get shnayimMikraModeParsha => 'פרשה אחר פרשה';
+
+  @override
+  String get shnayimMikraPaceLabel => 'קצב';
+
+  @override
+  String get shnayimMikraPaceSelf => 'בקצב אישי';
+
+  @override
+  String get shnayimMikraPaceDailyAliyah => 'עלייה יומית, מיום ראשון עד שישי';
+
+  @override
+  String get shnayimMikraSourceLabel => 'קריאה שלישית';
+
+  @override
+  String get shnayimMikraSettingsSaveFailed =>
+      'שמירת הגדרות שניים מקרא נכשלה. נסו שוב.';
+
+  @override
   String get shnayimMikraAliyah => 'עלייה';
 
   @override

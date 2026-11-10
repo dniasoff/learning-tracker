@@ -7788,6 +7788,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shnayimMikraScheduleChutzLaaretz => 'Chutz la\'aretz';
 
   @override
+  String get shnayimMikraSettingsTitle => 'Shnayim Mikra settings';
+
+  @override
+  String get shnayimMikraModeLabel => 'Reading order';
+
+  @override
+  String get shnayimMikraModePasuk => 'Pasuk by pasuk';
+
+  @override
+  String get shnayimMikraModeAliyah => 'Aliyah by aliyah';
+
+  @override
+  String get shnayimMikraModeParsha => 'Parsha by parsha';
+
+  @override
+  String get shnayimMikraPaceLabel => 'Pacing';
+
+  @override
+  String get shnayimMikraPaceSelf => 'Self-paced';
+
+  @override
+  String get shnayimMikraPaceDailyAliyah => 'Daily aliyah, Sunday–Friday';
+
+  @override
+  String get shnayimMikraSourceLabel => 'Third reading';
+
+  @override
+  String get shnayimMikraSettingsSaveFailed =>
+      'Could not save Shnayim Mikra settings. Try again.';
+
+  @override
   String get shnayimMikraAliyah => 'Aliyah';
 
   @override

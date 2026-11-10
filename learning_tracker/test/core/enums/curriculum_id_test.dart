@@ -35,14 +35,15 @@ void main() {
     });
   });
 
-  test('unreleased Shnayim Mikra remains decodable from a stored track', () {
+  test('released Shnayim Mikra remains selectable and decodable', () {
     expect(
       CurriculumId.fromStorageKey('shnayim_mikra'),
       CurriculumId.shnayimMikra,
     );
-    expect(CurriculumId.shnayimMikra.isReleased, isFalse);
+    expect(CurriculumId.shnayimMikra.isReleased, isTrue);
+    expect(CurriculumId.userSelectable, contains(CurriculumId.shnayimMikra));
     expect(
-      CurriculumId.userSelectable,
+      CurriculumId.userBrowsable,
       isNot(contains(CurriculumId.shnayimMikra)),
     );
   });

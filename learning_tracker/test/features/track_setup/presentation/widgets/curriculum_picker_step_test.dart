@@ -19,7 +19,7 @@ void main() {
       );
     }
 
-    testWidgets('displays released curricula and hides unreleased ones', (
+    testWidgets('displays all released curricula including Shnayim Mikra', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -30,11 +30,14 @@ void main() {
       expect(find.text(CurriculumId.mishnayos.displayNameHe), findsWidgets);
       expect(find.text(CurriculumId.bavli.displayNameHe), findsWidgets);
       await tester.scrollUntilVisible(
-        find.text(CurriculumId.mussar.displayNameHe),
+        find.text(CurriculumId.shnayimMikra.displayNameHe),
         100,
         scrollable: find.byType(Scrollable).last,
       );
-      expect(find.text(CurriculumId.shnayimMikra.displayNameHe), findsNothing);
+      expect(
+        find.text(CurriculumId.shnayimMikra.displayNameHe),
+        findsOneWidget,
+      );
 
       // Verify multiple InkWell widgets rendered (one per curriculum tile)
       expect(find.byType(InkWell), findsWidgets);

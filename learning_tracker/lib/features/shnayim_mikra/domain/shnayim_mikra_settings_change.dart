@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/governed_change.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
@@ -20,6 +21,19 @@ final class ShnayimMikraSettingsEdit {
   bool get isEmpty =>
       mode == null && pace == null && source == null && parshaSchedule == null;
 }
+
+/// Whether this active profile may be shown the governed settings editor.
+/// Firestore rules remain the write boundary; this keeps child and tutor
+/// sessions from being offered a parent-only control.
+bool canEditShnayimMikraSettings({
+  required ProfileMode? profileMode,
+  required String? profileId,
+  required String? parentPinProfileId,
+  required bool isTutored,
+}) =>
+    !isTutored &&
+    profileId != null &&
+    (profileMode == ProfileMode.adult || parentPinProfileId == profileId);
 
 /// Creates the initial persisted Shnayim Mikra preferences for a new track.
 /// Keep the legacy Yom Tov flag conversion at this seam so the later explicit

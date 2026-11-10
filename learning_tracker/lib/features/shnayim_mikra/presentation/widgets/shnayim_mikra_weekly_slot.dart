@@ -3,11 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
+import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
+import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
+import 'package:learning_tracker/features/shnayim_mikra/domain/shnayim_mikra_settings_change.dart';
 import 'package:learning_tracker/features/shnayim_mikra/domain/shnayim_mikra_weekly_assignment.dart';
 import 'package:learning_tracker/features/shnayim_mikra/presentation/providers/shnayim_mikra_reader_data_provider.dart';
 import 'package:learning_tracker/features/shnayim_mikra/presentation/providers/shnayim_mikra_schedule_provider.dart';
 import 'package:learning_tracker/features/shnayim_mikra/presentation/screens/shnayim_mikra_reader_screen.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Weekly and catch-up assignments for the learning list.
@@ -33,6 +42,19 @@ final class ShnayimMikraWeeklySlot extends ConsumerWidget {
           )),
         );
         final scope = ref.watch(activeLearnerScopeProvider).asData?.value;
+        final profile = ref.watch(activeProfileProvider).asData?.value;
+        final parentPinProfileId = ref.watch(
+          parentPinAuthenticatedProfileIdProvider,
+        );
+        final settingsHistory = scope == null
+            ? null
+            : ref.watch(learnerLockSettingsProvider(scope)).asData?.value;
+        final isParent = canEditShnayimMikraSettings(
+          profileMode: profile?.mode,
+          profileId: profile?.profileId,
+          parentPinProfileId: parentPinProfileId,
+          isTutored: ref.watch(activeTutoredProfileSelectionProvider) != null,
+        );
         final state = scope == null
             ? null
             : ref.watch(learnerStateProvider(scope)).asData?.value;
@@ -70,7 +92,25 @@ final class ShnayimMikraWeeklySlot extends ConsumerWidget {
                   ].join(' · '),
                   style: theme.textTheme.bodySmall,
                 ),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isParent && settingsHistory != null && scope != null)
+                      IconButton(
+                        key: const ValueKey('shnayimMikra.settings'),
+                        tooltip: l10n.shnayimMikraSettingsTitle,
+                        icon: const Icon(Icons.tune),
+                        onPressed: () => _editSettings(
+                          context,
+                          ref,
+                          scope.profileId,
+                          settingsHistory.current,
+                          l10n,
+                        ),
+                      ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
                 onTap: () => _openReader(context, current),
               ),
               for (final assignment in projection.catchUp)
@@ -89,6 +129,148 @@ final class ShnayimMikraWeeklySlot extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _editSettings(
+    BuildContext context,
+    WidgetRef ref,
+    String profileId,
+    LearnerSettings current,
+    AppLocalizations l10n,
+  ) async {
+    var mode = current.shnayimMikraMode;
+    var pace = current.shnayimMikraPace;
+    var source = current.shnayimMikraSource;
+    var schedule =
+        current.shnayimMikraParshaSchedule ??
+        shnayimMikraScheduleFromLegacyYomTovFlag(current.inIsrael);
+    final edit = await showDialog<ShnayimMikraSettingsEdit>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(l10n.shnayimMikraSettingsTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<ShnayimMikraMode>(
+                  initialValue: mode,
+                  decoration: InputDecoration(
+                    labelText: l10n.shnayimMikraModeLabel,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: ShnayimMikraMode.pasuk,
+                      child: Text(l10n.shnayimMikraModePasuk),
+                    ),
+                    DropdownMenuItem(
+                      value: ShnayimMikraMode.aliyah,
+                      child: Text(l10n.shnayimMikraModeAliyah),
+                    ),
+                    DropdownMenuItem(
+                      value: ShnayimMikraMode.parsha,
+                      child: Text(l10n.shnayimMikraModeParsha),
+                    ),
+                  ],
+                  onChanged: (value) => setDialogState(() {
+                    mode = value!;
+                    if (mode != ShnayimMikraMode.aliyah) {
+                      pace = ShnayimMikraPace.self;
+                    }
+                  }),
+                ),
+                DropdownButtonFormField<ShnayimMikraPace>(
+                  initialValue: pace,
+                  decoration: InputDecoration(
+                    labelText: l10n.shnayimMikraPaceLabel,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: ShnayimMikraPace.self,
+                      child: Text(l10n.shnayimMikraPaceSelf),
+                    ),
+                    DropdownMenuItem(
+                      value: ShnayimMikraPace.dailyAliyah,
+                      child: Text(l10n.shnayimMikraPaceDailyAliyah),
+                    ),
+                  ],
+                  onChanged: mode == ShnayimMikraMode.aliyah
+                      ? (value) => setDialogState(() => pace = value!)
+                      : null,
+                ),
+                DropdownButtonFormField<ShnayimMikraSource>(
+                  initialValue: source,
+                  decoration: InputDecoration(
+                    labelText: l10n.shnayimMikraSourceLabel,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: ShnayimMikraSource.onkelos,
+                      child: Text(l10n.shnayimMikraOnkelosReading),
+                    ),
+                    DropdownMenuItem(
+                      value: ShnayimMikraSource.rashi,
+                      child: Text(l10n.shnayimMikraRashiReading),
+                    ),
+                  ],
+                  onChanged: (value) => setDialogState(() => source = value!),
+                ),
+                DropdownButtonFormField<ShnayimMikraParshaSchedule>(
+                  initialValue: schedule,
+                  decoration: InputDecoration(
+                    labelText: l10n.shnayimMikraParshaSchedule,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: ShnayimMikraParshaSchedule.eretzYisrael,
+                      child: Text(l10n.shnayimMikraScheduleEretzYisrael),
+                    ),
+                    DropdownMenuItem(
+                      value: ShnayimMikraParshaSchedule.chutzLaaretz,
+                      child: Text(l10n.shnayimMikraScheduleChutzLaaretz),
+                    ),
+                  ],
+                  onChanged: (value) => setDialogState(() => schedule = value!),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(
+                ShnayimMikraSettingsEdit(
+                  mode: mode,
+                  pace: pace,
+                  source: source,
+                  parshaSchedule: schedule,
+                ),
+              ),
+              child: Text(l10n.save),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (edit == null || !context.mounted) return;
+    try {
+      final commands = await ref.read(learningCommandsProvider.future);
+      if (commands == null) throw const GovernedWriterNotReadyException();
+      requireOwnerSuccess(
+        await commands.applyGovernedChange(
+          shnayimMikraSettingsAction(profileId, edit),
+        ),
+      );
+    } on Object {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.shnayimMikraSettingsSaveFailed)),
+        );
+      }
+    }
   }
 
   void _openReader(

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/domain/learner_state/change_log_entry.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
@@ -11,6 +12,45 @@ import '../../../helpers/learner_state_fixtures.dart';
 String _key(String field) => 'learner_profiles/$profileUlid.$field';
 
 void main() {
+  test('settings editor is parent-only and hidden in tutored sessions', () {
+    expect(
+      canEditShnayimMikraSettings(
+        profileMode: ProfileMode.adult,
+        profileId: profileUlid,
+        parentPinProfileId: null,
+        isTutored: false,
+      ),
+      isTrue,
+    );
+    expect(
+      canEditShnayimMikraSettings(
+        profileMode: ProfileMode.child,
+        profileId: profileUlid,
+        parentPinProfileId: profileUlid,
+        isTutored: false,
+      ),
+      isTrue,
+    );
+    expect(
+      canEditShnayimMikraSettings(
+        profileMode: ProfileMode.child,
+        profileId: profileUlid,
+        parentPinProfileId: null,
+        isTutored: false,
+      ),
+      isFalse,
+    );
+    expect(
+      canEditShnayimMikraSettings(
+        profileMode: ProfileMode.child,
+        profileId: profileUlid,
+        parentPinProfileId: profileUlid,
+        isTutored: true,
+      ),
+      isFalse,
+    );
+  });
+
   test(
     'Shnayim Mikra preferences are one parent-governed learnerSettings edit',
     () async {

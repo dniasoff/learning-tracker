@@ -70,8 +70,15 @@ enum CurriculumId {
   static List<CurriculumId> get userSelectable =>
       List.unmodifiable(values.where((curriculum) => curriculum.isReleased));
 
+  /// Curricula with standalone trees available in the Browse catalog.
+  /// Workflow curricula such as Shnayim Mikra remain learnable without
+  /// pretending to have a second, independent Chumash hierarchy.
+  static List<CurriculumId> get userBrowsable => List.unmodifiable(
+    userSelectable.where((curriculum) => curriculum.hasContentTree),
+  );
+
   /// Whether the curriculum's complete learner-facing flow has shipped.
-  bool get isReleased => this != CurriculumId.shnayimMikra;
+  bool get isReleased => true;
 
   /// Display name in English.
   String get displayNameEn => switch (this) {

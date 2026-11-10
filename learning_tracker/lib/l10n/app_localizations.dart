@@ -12654,6 +12654,66 @@ abstract class AppLocalizations {
   /// **'Chutz la\'aretz'**
   String get shnayimMikraScheduleChutzLaaretz;
 
+  /// No description provided for @shnayimMikraSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shnayim Mikra settings'**
+  String get shnayimMikraSettingsTitle;
+
+  /// No description provided for @shnayimMikraModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading order'**
+  String get shnayimMikraModeLabel;
+
+  /// No description provided for @shnayimMikraModePasuk.
+  ///
+  /// In en, this message translates to:
+  /// **'Pasuk by pasuk'**
+  String get shnayimMikraModePasuk;
+
+  /// No description provided for @shnayimMikraModeAliyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliyah by aliyah'**
+  String get shnayimMikraModeAliyah;
+
+  /// No description provided for @shnayimMikraModeParsha.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsha by parsha'**
+  String get shnayimMikraModeParsha;
+
+  /// No description provided for @shnayimMikraPaceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pacing'**
+  String get shnayimMikraPaceLabel;
+
+  /// No description provided for @shnayimMikraPaceSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'Self-paced'**
+  String get shnayimMikraPaceSelf;
+
+  /// No description provided for @shnayimMikraPaceDailyAliyah.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily aliyah, Sunday–Friday'**
+  String get shnayimMikraPaceDailyAliyah;
+
+  /// No description provided for @shnayimMikraSourceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Third reading'**
+  String get shnayimMikraSourceLabel;
+
+  /// No description provided for @shnayimMikraSettingsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save Shnayim Mikra settings. Try again.'**
+  String get shnayimMikraSettingsSaveFailed;
+
   /// No description provided for @shnayimMikraAliyah.
   ///
   /// In en, this message translates to:
