@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -19,8 +20,10 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/learner_state/engine_fixtures.dart';
+import '../../../../helpers/learner_state/fake_learner_state.dart';
 import '../../../../helpers/learner_state/progress_fixtures.dart';
 import '../../../../helpers/pump_app.dart';
 
@@ -29,6 +32,8 @@ class _NoStages extends Fake implements StageDefinitionRepository {
   Future<List<StageDefinition>> getStagesForCurriculum(CurriculumId c) async =>
       const [];
 }
+
+class _MockContentRepository extends Mock implements ContentRepository {}
 
 class _English extends UseHebrewTerms {
   @override
@@ -58,6 +63,44 @@ Widget _app(LearnerState state, Widget child) => pumpApp(
 Finder _semantics(Pattern pattern) => find.bySemanticsLabel(pattern);
 
 void main() {
+  test('Tanach lifetime summaries union Chumash and Nach progress once', () async {
+    final repo = _MockContentRepository();
+    when(
+      () => repo.getContentForCurriculum(CurriculumId.tanach),
+    ).thenAnswer((_) async => progressContent());
+    final sharedRef = 'Mishnah Berakhot 1:1';
+    final additionalRef = 'Mishnah Berakhot 1:2';
+    final state = fakeLearnerState(
+      curricula: {
+        'chumash': FakeCurriculumState(learntLeaves: {sharedRef}),
+        'nach': FakeCurriculumState(
+          learntLeaves: {sharedRef, additionalRef},
+        ),
+      },
+      countedLearns: [
+        engineLearn(1, sharedRef, curriculumId: 'chumash'),
+        engineLearn(2, sharedRef, curriculumId: 'nach'),
+        engineLearn(3, additionalRef, curriculumId: 'nach'),
+      ],
+    );
+
+    final allSources = await computeLifetimeViewSummary(
+      state: state,
+      corpus: progressCorpus(),
+      repo: repo,
+      curriculum: CurriculumId.tanach,
+    );
+    final trackOnly = await computeItemsLearnedSummary(
+      state: state,
+      corpus: progressCorpus(),
+      repo: repo,
+      curriculum: CurriculumId.tanach,
+    );
+
+    expect(allSources!.learnedLeafCount, 2);
+    expect(trackOnly!.learnedLeafCount, 2);
+  });
+
   group('curriculum progress screen', () {
     testWidgets('repeats leave the distinct count unchanged; nodes carry '
         'state, count and semantics', (tester) async {

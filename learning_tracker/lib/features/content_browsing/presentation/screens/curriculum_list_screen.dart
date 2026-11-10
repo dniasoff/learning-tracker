@@ -90,21 +90,12 @@ class CurriculumListScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
 
-          // Chumash and Nach are source curricula for the composite Tanach
-          // Browse tree. Keep their IDs and all non-Browse entry points intact;
-          // this list presents the single user-facing Tanach root only.
-          ...CurriculumId.values
-              .where(
-                (curriculum) =>
-                    curriculum != CurriculumId.chumash &&
-                    curriculum != CurriculumId.nach,
-              )
-              .map(
-                (curriculum) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _CurriculumCard(curriculum: curriculum),
-                ),
-              ),
+          ...CurriculumId.userSelectable.map(
+            (curriculum) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _CurriculumCard(curriculum: curriculum),
+            ),
+          ),
 
           const SizedBox(height: 24),
 

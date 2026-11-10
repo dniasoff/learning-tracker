@@ -230,7 +230,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
             onSelected: (_) => setState(() => _curriculum = null),
           ),
           const SizedBox(width: 8),
-          ...CurriculumId.values.map(
+          ...CurriculumId.userSelectable.map(
             (curriculum) => Padding(
               padding: const EdgeInsetsDirectional.only(end: 8),
               child: _FilterPill(
