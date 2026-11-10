@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { beforeEach, describe, test } from 'node:test';
 import {
   call,
@@ -17,6 +18,12 @@ import {
 const SCHOOL = 'school-1';
 const CHILD = 'child-profile';
 const OTHER = 'adult-profile';
+
+function pairDocId(fromUid, fromProfileId, toUid, toProfileId) {
+  return createHash('sha256')
+    .update([fromUid, fromProfileId, toUid, toProfileId].join('\0'))
+    .digest('hex');
+}
 
 async function member(uid, profileId, schoolId = SCHOOL) {
   await db.collection('school_memberships').add({
@@ -236,26 +243,63 @@ describe('social graph callable state', () => {
     }, parentAuth), 'permission-denied');
   });
 
-  test('block removes both directional edges and hides the pair from future requests', async () => {
+  test('block atomically removes both directional edges and requests', async () => {
     await seedAdultPair();
-    const sent = await call(fns.sendFollowRequest, {
-      fromProfileId: CHILD,
-      toSocialProfileId: socialProfileId(strangerAuth.uid, OTHER),
-    }, parentAuth);
-    await call(fns.reviewFollowRequest, {
-      requestId: sent.requestId,
-      profileId: OTHER,
-      decision: 'accept',
-    }, strangerAuth);
+    for (const [fromUid, fromProfileId, toUid, toProfileId] of [
+      [parentAuth.uid, CHILD, strangerAuth.uid, OTHER],
+      [strangerAuth.uid, OTHER, parentAuth.uid, CHILD],
+    ]) {
+      const fields = {
+        from_owner_uid: fromUid,
+        from_profile_id: fromProfileId,
+        to_owner_uid: toUid,
+        to_profile_id: toProfileId,
+      };
+      const id = pairDocId(fromUid, fromProfileId, toUid, toProfileId);
+      await db.collection('social_follows').doc(id).set({ ...fields, state: 'active' });
+      await db.collection('social_follow_requests').doc(id).set({ ...fields, state: 'pending' });
+    }
     await call(fns.blockSocialProfile, {
       profileId: OTHER,
       toSocialProfileId: socialProfileId(parentAuth.uid, CHILD),
     }, strangerAuth);
     assert.equal((await db.collection('social_follows').get()).size, 0);
+    assert.equal((await db.collection('social_follow_requests').get()).size, 0);
     await expectHttpsError(call(fns.sendFollowRequest, {
       fromProfileId: CHILD,
       toSocialProfileId: socialProfileId(strangerAuth.uid, OTHER),
     }, parentAuth), 'not-found');
+  });
+
+  test('a stale edge or request cannot be listed or accepted after either endpoint blocks', async () => {
+    await seedAdultPair();
+    await call(fns.blockSocialProfile, {
+      profileId: OTHER,
+      toSocialProfileId: socialProfileId(parentAuth.uid, CHILD),
+    }, strangerAuth);
+
+    const staleId = pairDocId(parentAuth.uid, CHILD, strangerAuth.uid, OTHER);
+    const staleFields = {
+      from_owner_uid: parentAuth.uid,
+      from_profile_id: CHILD,
+      to_owner_uid: strangerAuth.uid,
+      to_profile_id: OTHER,
+    };
+    await db.collection('social_follows').doc(staleId).set({ ...staleFields, state: 'active' });
+    await db.collection('social_follow_requests').doc(staleId).set({ ...staleFields, state: 'pending' });
+
+    const senderConnections = await call(fns.listSocialConnections, { profileId: CHILD }, parentAuth);
+    const recipientConnections = await call(fns.listSocialConnections, { profileId: OTHER }, strangerAuth);
+    assert.equal(senderConnections.following.length, 0);
+    assert.equal(senderConnections.outgoingRequests.length, 0);
+    assert.equal(recipientConnections.followers.length, 0);
+    assert.equal(recipientConnections.incomingRequests.length, 0);
+    await expectHttpsError(call(fns.reviewFollowRequest, {
+      requestId: staleId,
+      profileId: OTHER,
+      decision: 'accept',
+    }, strangerAuth), 'not-found');
+    assert.equal((await db.collection('social_follows').doc(staleId).get()).exists, true);
   });
 
   test('either endpoint can remove the accepted follow without creating a block', async () => {

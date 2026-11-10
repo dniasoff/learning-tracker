@@ -481,7 +481,6 @@ export const blockSocialProfile = onCall(CALL_OPTS, async (request) => {
   const data = request.data ?? {};
   exactKeys(data, ["profileId", "toSocialProfileId", "parentSessionId"]);
   const from: ProfileRef = { ownerUid: uid, profileId: requiredString(data.profileId, "profileId") };
-  let target: ProfileRef | undefined;
   const now = admin.firestore.Timestamp.now();
   await db.runTransaction(async (txn) => {
     const learner = await txn.get(db.collection("users").doc(uid).collection("learner_profiles").doc(from.profileId));
@@ -493,8 +492,14 @@ export const blockSocialProfile = onCall(CALL_OPTS, async (request) => {
     if (from.ownerUid === to.ownerUid && from.profileId === to.profileId) {
       throw new HttpsError("invalid-argument", "A profile cannot block itself");
     }
-    target = to;
     const blockRef = blocks().doc(blockId(from, to));
+    const edgeOut = follows().doc(pairId(from, to));
+    const edgeIn = follows().doc(pairId(to, from));
+    const requestOut = requests().doc(pairId(from, to));
+    const requestIn = requests().doc(pairId(to, from));
+    const [outEdge, inEdge, outRequest, inRequest] = await Promise.all([
+      txn.get(edgeOut), txn.get(edgeIn), txn.get(requestOut), txn.get(requestIn),
+    ]);
     txn.set(blockRef, {
       left_owner_uid: from.ownerUid,
       left_profile_id: from.profileId,
@@ -504,6 +509,10 @@ export const blockSocialProfile = onCall(CALL_OPTS, async (request) => {
       blocked_by_profile_id: from.profileId,
       created_at: now,
     });
+    if (outEdge.exists) txn.delete(edgeOut);
+    if (inEdge.exists) txn.delete(edgeIn);
+    if (outRequest.exists) txn.delete(requestOut);
+    if (inRequest.exists) txn.delete(requestIn);
     if (learner.get("mode") === "child") {
       txn.set(auditLogs().doc(), {
         owner_uid: uid,
@@ -514,26 +523,6 @@ export const blockSocialProfile = onCall(CALL_OPTS, async (request) => {
       });
     }
   });
-  const to = target;
-  if (!to) return { success: true };
-  const queries = [
-    follows().where("from_owner_uid", "==", from.ownerUid).where("from_profile_id", "==", from.profileId)
-      .where("to_owner_uid", "==", to.ownerUid).where("to_profile_id", "==", to.profileId),
-    follows().where("from_owner_uid", "==", to.ownerUid).where("from_profile_id", "==", to.profileId)
-      .where("to_owner_uid", "==", from.ownerUid).where("to_profile_id", "==", from.profileId),
-    requests().where("from_owner_uid", "==", from.ownerUid).where("from_profile_id", "==", from.profileId)
-      .where("to_owner_uid", "==", to.ownerUid).where("to_profile_id", "==", to.profileId),
-    requests().where("from_owner_uid", "==", to.ownerUid).where("from_profile_id", "==", to.profileId)
-      .where("to_owner_uid", "==", from.ownerUid).where("to_profile_id", "==", from.profileId),
-  ];
-  for (const query of queries) {
-    const snap = await query.get();
-    for (let i = 0; i < snap.docs.length; i += 450) {
-      const batch = db.batch();
-      for (const doc of snap.docs.slice(i, i + 450)) batch.delete(doc.ref);
-      await batch.commit();
-    }
-  }
   return { success: true };
 });
 
@@ -671,7 +660,7 @@ export const listSocialConnections = onCall(CALL_OPTS, async (request) => {
   if (!Number.isInteger(limit) || Number(limit) < 1 || Number(limit) > MAX_PAGE_SIZE) {
     throw new HttpsError("invalid-argument", "limit must be between 1 and 50");
   }
-  const snapshots = await db.runTransaction(async (txn) => {
+  const visibleDocs = await db.runTransaction(async (txn) => {
     const learner = await txn.get(db.collection("users").doc(uid).collection("learner_profiles").doc(profileId));
     if (!learner.exists || (learner.get("mode") !== "child" && learner.get("mode") !== "adult")) {
       throw new HttpsError("not-found", "Learner profile is unavailable");
@@ -679,15 +668,35 @@ export const listSocialConnections = onCall(CALL_OPTS, async (request) => {
     if (learner.get("mode") === "child") {
       await assertActiveParentSessionInTransaction(txn, uid, profileId, data.parentSessionId);
     }
-    return Promise.all([
+    const snapshots = await Promise.all([
       txn.get(requests().where("from_owner_uid", "==", uid).where("from_profile_id", "==", profileId).limit(limit)),
       txn.get(requests().where("to_owner_uid", "==", uid).where("to_profile_id", "==", profileId).limit(limit)),
       txn.get(follows().where("from_owner_uid", "==", uid).where("from_profile_id", "==", profileId).limit(limit)),
       txn.get(follows().where("to_owner_uid", "==", uid).where("to_profile_id", "==", profileId).limit(limit)),
     ]);
+    const docs = snapshots.flatMap((snapshot) => snapshot.docs);
+    const pairIds = new Set<string>();
+    for (const doc of docs) {
+      const edge = doc.data();
+      const from = { ownerUid: String(edge.from_owner_uid), profileId: String(edge.from_profile_id) };
+      const to = { ownerUid: String(edge.to_owner_uid), profileId: String(edge.to_profile_id) };
+      pairIds.add(blockId(from, to));
+    }
+    const blockSnapshots = await Promise.all(
+      [...pairIds].map((id) => txn.get(blocks().doc(id))),
+    );
+    const blockedPairs = new Set(blockSnapshots.filter((snapshot) => snapshot.exists).map((snapshot) => snapshot.id));
+    const withoutBlocks = (snapshot: FirebaseFirestore.QuerySnapshot) => snapshot.docs.filter((doc) => {
+      const edge = doc.data();
+      return !blockedPairs.has(blockId(
+        { ownerUid: String(edge.from_owner_uid), profileId: String(edge.from_profile_id) },
+        { ownerUid: String(edge.to_owner_uid), profileId: String(edge.to_profile_id) },
+      ));
+    });
+    return snapshots.map(withoutBlocks);
   });
-  const [outgoingRequests, incomingRequests, outgoingFollows, incomingFollows] = snapshots;
-  const serialize = async (snap: FirebaseFirestore.QuerySnapshot) => Promise.all(snap.docs.map(async (doc) => {
+  const [outgoingRequests, incomingRequests, outgoingFollows, incomingFollows] = visibleDocs;
+  const serialize = async (docs: FirebaseFirestore.QueryDocumentSnapshot[]) => Promise.all(docs.map(async (doc) => {
     const data = doc.data();
     const from: ProfileRef = { ownerUid: String(data.from_owner_uid), profileId: String(data.from_profile_id) };
     const to: ProfileRef = { ownerUid: String(data.to_owner_uid), profileId: String(data.to_profile_id) };
