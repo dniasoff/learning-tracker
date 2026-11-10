@@ -1,10 +1,8 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/features/social/domain/social_graph.dart';
 
-typedef SocialCallableInvoker = Future<Object?> Function(
-  String name,
-  Map<String, Object?> data,
-);
+typedef SocialCallableInvoker =
+    Future<Object?> Function(String name, Map<String, Object?> data);
 
 /// Callable-only client for social graph state. No client writes to Firestore.
 final class SocialGraphRepository {

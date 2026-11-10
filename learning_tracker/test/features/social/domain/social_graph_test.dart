@@ -71,14 +71,14 @@ void main() {
 
   test('connections require all four bounded lists', () {
     final connections = SocialConnections.fromWire({
-      'outgoingRequests': const [],
-      'incomingRequests': const [],
-      'following': const [],
-      'followers': const [],
+      'outgoingRequests': const <Object?>[],
+      'incomingRequests': const <Object?>[],
+      'following': const <Object?>[],
+      'followers': const <Object?>[],
     });
     expect(connections.followers, isEmpty);
     expect(
-      () => SocialConnections.fromWire({'followers': const []}),
+      () => SocialConnections.fromWire({'followers': const <Object?>[]}),
       throwsFormatException,
     );
   });
@@ -100,7 +100,7 @@ void main() {
       expect(page.nextPageToken, 'membership-cursor');
       expect(
         () => SocialSearchPage.fromWire({
-          'profiles': const [],
+          'profiles': const <Object?>[],
           'nextPageToken': null,
           'ownerUid': 'not-public',
         }),
