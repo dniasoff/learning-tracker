@@ -280,9 +280,14 @@ describe('social graph rules', () => {
     });
   });
 
-  test('owner-only social settings stay private and every graph write is callable-only', async () => {
-    for (const path of [profilePath, controlsPath, auditPath]) {
-      await assertSucceeds(getDoc(doc(owner(), path)), `owner should read ${path}`);
+  test('private social identity stays owner-only and all graph writes are callable-only', async () => {
+    await assertSucceeds(getDoc(doc(owner(), profilePath)));
+    await assertFails(getDoc(doc(stranger(), profilePath)));
+    await assertFails(getDoc(doc(anon(), profilePath)));
+    await assertFails(setDoc(doc(owner(), profilePath), { forged: true }));
+    await assertFails(deleteDoc(doc(owner(), profilePath)));
+    for (const path of [controlsPath, auditPath]) {
+      await assertFails(getDoc(doc(owner(), path)), `PIN-gated data denied directly for ${path}`);
       await assertFails(getDoc(doc(stranger(), path)), `unrelated account must not read ${path}`);
       await assertFails(getDoc(doc(anon(), path)), `anonymous must not read ${path}`);
       await assertFails(setDoc(doc(owner(), path), { forged: true }), `client writes denied for ${path}`);
@@ -307,12 +312,12 @@ describe('social graph rules', () => {
     ]) {
       await assertFails(setDoc(doc(owner(), path), { forged: true }));
     }
-    await assertSucceeds(getDocs(query(
+    await assertFails(getDocs(query(
       collection(owner(), 'social_parent_controls'),
       where('owner_uid', '==', OWNER),
       limit(50),
     )));
-    await assertSucceeds(getDocs(query(
+    await assertFails(getDocs(query(
       collection(owner(), 'social_audit_logs'),
       where('owner_uid', '==', OWNER),
       limit(100),

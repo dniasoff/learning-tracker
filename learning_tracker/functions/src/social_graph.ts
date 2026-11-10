@@ -645,7 +645,7 @@ export const searchSchoolMembers = onCall(CALL_OPTS, async (request) => {
         profile_id: profileId,
         school_id: schoolId,
         query_hash: opaqueId("search", exactName),
-        last_membership_id: pageDocs.at(-1)?.id,
+        last_membership_id: pageDocs[pageDocs.length - 1]?.id,
         expires_at: admin.firestore.Timestamp.fromMillis(now.toMillis() + 15 * 60 * 1000),
       });
     }

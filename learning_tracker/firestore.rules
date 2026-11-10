@@ -537,17 +537,12 @@ service cloud.firestore {
     }
 
     match /social_parent_controls/{controlId} {
-      allow get: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.owner_uid == request.auth.uid
-          && request.query.limit <= 50;
-      allow create, update, delete: if false;
+      // Reads as well as writes stay behind PIN-verified callables.
+      allow read, write: if false;
     }
 
     match /social_audit_logs/{auditId} {
-      allow get: if isSignedIn() && resource.data.owner_uid == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.owner_uid == request.auth.uid
-          && request.query.limit <= 100;
-      allow create, update, delete: if false;
+      allow read, write: if false;
     }
 
     match /social_follow_requests/{requestId} {

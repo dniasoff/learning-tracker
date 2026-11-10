@@ -103,11 +103,11 @@ the later community bead.
 | Collection | Key and fields | Client access |
 |---|---|---|
 | `social_profiles/{profileKey}` | SHA-256 of `(owner_uid, profile_id)`; chosen display name, bounded avatar index, mode and pause state | Owner `get`; no client writes or list |
-| `social_parent_controls/{profileKey}` | Same profile key; parent-managed `allowed_school_ids` | Owner reads; no client writes |
+| `social_parent_controls/{profileKey}` | Same profile key; parent-managed `allowed_school_ids` and pause state | Callable-only reads/writes, requiring a live parent session |
 | `social_follow_requests/{requestKey}` | SHA-256 of directional `(from owner/profile, to owner/profile)`; state and server timestamps | Callable-only reads/writes; responses expose opaque social profile ids |
 | `social_follows/{edgeKey}` | Same directional key; one accepted edge per direction | Callable-only reads/writes |
 | `social_blocks/{pairKey}` | SHA-256 of the sorted profile pair; blocker endpoint and server timestamp | Callable-only reads/writes |
-| `social_audit_logs/{entryId}` | Parent account/profile, action and server time; no names or learning data | Owning account reads; no client writes |
+| `social_audit_logs/{entryId}` | Parent account/profile, action and server time; no names or learning data | Server-only reads/writes |
 | `social_search_cursors/{cursorId}` | Short-lived, caller/school/query-bound cursor state; expires after 15 minutes | Callable-only reads/writes; TTL cleanup |
 | `school_memberships/{membershipId}` | Interface consumed by ay8: `owner_uid`, `profile_id`, `school_id`, `state: active` | Admin SDK only in ay8; school bead supplies membership lifecycle and rules |
 
