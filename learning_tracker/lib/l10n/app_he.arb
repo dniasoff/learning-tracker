@@ -4316,5 +4316,15 @@
   "subTrackLifecycleNameRequired": "יש להזין שם",
   "subTrackLifecyclePositiveNumber": "יש להזין מספר גדול מ-0",
   "subTrackLifecycleWindowReversed": "חודש הסיום לפני חודש ההתחלה",
-  "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב."
+  "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב.",
+  "textReaderTranslationLanguage": "שפת התרגום",
+  "textReaderTranslationLanguageDialogTitle": "שפת התרגום",
+  "textReaderSearchLanguages": "חיפוש שפות",
+  "textReaderSefariaEnglish": "אנגלית של ספריא",
+  "textReaderOfflineLabel": "לא מקוון",
+  "textReaderClose": "סגירה",
+  "textReaderLoadingTranslation": "התרגום בטעינה…",
+  "textReaderTranslationUnavailable": "התרגום אינו זמין במצב לא מקוון או כרגע",
+  "textReaderMachineTranslated": "תרגום מכונה",
+  "textReaderRetryTranslation": "הקשה כדי לנסות שוב"
 }

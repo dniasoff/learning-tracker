@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/reader_phrase_translation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
 import 'package:learning_tracker/features/learning/domain/commands/learning_analytics.dart';
@@ -95,6 +96,7 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
     final fontSize = ref.watch(fontSizeProvider);
     final showNikud = ref.watch(showNikudProvider);
     final showTranslation = ref.watch(showReaderTranslationProvider);
+    final translationLanguage = ref.watch(readerTranslationLanguageProvider);
     final theme = Theme.of(context);
 
     // Single label renderer drives the AppBar — full breadcrumb chain so
@@ -160,10 +162,12 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
           ),
         ),
         actions: [
-          if (textAsync.asData?.value?.segments.any(
-                (segment) => segment.englishText.isNotEmpty,
-              ) ??
-              false)
+          if ((textAsync.asData?.value?.segments.any(
+                    (segment) => segment.englishText.isNotEmpty,
+                  ) ??
+                  false) ||
+              (translationLanguage != 'sefaria' &&
+                  (textAsync.asData?.value?.hebrewText.isNotEmpty ?? false)))
             IconButton(
               key: const Key('text_display_translation_toggle'),
               icon: Icon(showTranslation ? Icons.translate : Icons.g_translate),
@@ -173,6 +177,19 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
               onPressed: () => ref
                   .read(showReaderTranslationProvider.notifier)
                   .set(!showTranslation),
+            ),
+          if (textAsync.asData?.value?.hebrewText.isNotEmpty ?? false)
+            IconButton(
+              key: const Key('text_display_language_picker'),
+              icon: const Icon(Icons.language),
+              tooltip: AppLocalizations.of(
+                context,
+              )!.textReaderTranslationLanguage,
+              onPressed: () => _showTranslationLanguagePicker(
+                context,
+                ref,
+                translationLanguage,
+              ),
             ),
           IconButton(
             key: const Key('text_display_prev_button'),
@@ -204,6 +221,7 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
               fontSize: fontSize,
               showNikud: showNikud,
               showTranslation: showTranslation,
+              translationLanguage: translationLanguage,
               sefariaRef: sefariaRef,
             );
           },
@@ -213,6 +231,97 @@ class _TextDisplayScreenState extends ConsumerState<TextDisplayScreen> {
       ),
     );
   }
+}
+
+Future<void> _showTranslationLanguagePicker(
+  BuildContext context,
+  WidgetRef ref,
+  String selected,
+) async {
+  final isHebrew = Localizations.localeOf(context).languageCode == 'he';
+  final l10n = AppLocalizations.of(context)!;
+  var query = '';
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          final languages = readerLanguages.where((language) {
+            final search =
+                '${language.code} ${language.nativeName} ${language.englishName} ${language.hebrewName}'
+                    .toLowerCase();
+            return search.contains(query.toLowerCase());
+          });
+          return AlertDialog(
+            title: Text(l10n.textReaderTranslationLanguageDialogTitle),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    key: const Key('text_display_language_search'),
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: l10n.textReaderSearchLanguages,
+                      prefixIcon: const Icon(Icons.search),
+                    ),
+                    onChanged: (value) => setDialogState(() => query = value),
+                  ),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        ListTile(
+                          key: const Key('reader_language_sefaria'),
+                          title: Text(l10n.textReaderSefariaEnglish),
+                          subtitle: Text(l10n.textReaderOfflineLabel),
+                          trailing: selected == 'sefaria'
+                              ? const Icon(Icons.check)
+                              : null,
+                          onTap: () {
+                            ref
+                                .read(
+                                  readerTranslationLanguageProvider.notifier,
+                                )
+                                .setLanguage('sefaria');
+                            Navigator.of(dialogContext).pop();
+                          },
+                        ),
+                        for (final language in languages)
+                          ListTile(
+                            key: Key('reader_language_${language.code}'),
+                            title: Text(language.label(isHebrew)),
+                            trailing: selected == language.code
+                                ? const Icon(Icons.check)
+                                : null,
+                            onTap: () {
+                              ref
+                                  .read(
+                                    readerTranslationLanguageProvider.notifier,
+                                  )
+                                  .setLanguage(language.code);
+                              Navigator.of(dialogContext).pop();
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.textReaderClose),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
 }
 
 /// Maps [sefariaRef] to its [CurriculumId] via the pre-built [ContentIndex].
@@ -326,6 +435,7 @@ class _TextContentView extends StatelessWidget {
     required this.fontSize,
     required this.showNikud,
     required this.showTranslation,
+    required this.translationLanguage,
     required this.sefariaRef,
   });
 
@@ -333,6 +443,7 @@ class _TextContentView extends StatelessWidget {
   final FontSize fontSize;
   final bool showNikud;
   final bool showTranslation;
+  final String translationLanguage;
   final String sefariaRef;
 
   @override
@@ -341,7 +452,9 @@ class _TextContentView extends StatelessWidget {
         .where(
           (s) =>
               s.hebrewText.isNotEmpty ||
-              (showTranslation && s.englishText.isNotEmpty),
+              (showTranslation &&
+                  translationLanguage == 'sefaria' &&
+                  s.englishText.isNotEmpty),
         )
         .toList(growable: false);
     final showSegmentNumbers =
@@ -387,6 +500,7 @@ class _TextContentView extends StatelessWidget {
                     showSegmentNumbers && segments[index].number != null,
                 showNikud: showNikud,
                 showTranslation: showTranslation,
+                translationLanguage: translationLanguage,
                 hebrewStyle: hebrewStyle,
                 glossStyle: glossStyle,
               ),
@@ -412,7 +526,7 @@ class _TextContentView extends StatelessWidget {
 }
 
 /// A lazily-built segment in the continuous source-and-gloss reader card.
-class _ReaderSegmentCard extends StatelessWidget {
+class _ReaderSegmentCard extends ConsumerWidget {
   const _ReaderSegmentCard({
     super.key,
     required this.segment,
@@ -424,6 +538,7 @@ class _ReaderSegmentCard extends StatelessWidget {
     required this.showNumber,
     required this.showNikud,
     required this.showTranslation,
+    required this.translationLanguage,
     required this.hebrewStyle,
     required this.glossStyle,
   });
@@ -437,11 +552,12 @@ class _ReaderSegmentCard extends StatelessWidget {
   final bool showNumber;
   final bool showNikud;
   final bool showTranslation;
+  final String translationLanguage;
   final TextStyle hebrewStyle;
   final TextStyle glossStyle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final radius = BorderRadius.only(
       topLeft: isFirst ? const Radius.circular(28) : Radius.zero,
       topRight: isFirst ? const Radius.circular(28) : Radius.zero,
@@ -480,7 +596,10 @@ class _ReaderSegmentCard extends StatelessWidget {
       ),
       child: _SegmentWithGlosses(
         segment: segment,
-        glosses: showTranslation && segment.englishText.isNotEmpty
+        glosses:
+            showTranslation &&
+                translationLanguage == 'sefaria' &&
+                segment.englishText.isNotEmpty
             ? [
                 _SegmentGloss(
                   text: segment.englishText,
@@ -494,6 +613,10 @@ class _ReaderSegmentCard extends StatelessWidget {
                       : null,
                 ),
               ]
+            : showTranslation &&
+                  translationLanguage != 'sefaria' &&
+                  segment.hebrewText.isNotEmpty
+            ? _aiGlosses(context, ref, segment, translationLanguage, glossStyle)
             : const [],
         showNumber: showNumber,
         showNikud: showNikud,
@@ -514,6 +637,97 @@ class _ReaderSegmentCard extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  List<_SegmentGloss> _aiGlosses(
+    BuildContext context,
+    WidgetRef ref,
+    TextSegment segment,
+    String language,
+    TextStyle style,
+  ) {
+    final async = ref.watch(
+      phraseTranslationProvider(
+        PhraseTranslationKey(segment.sefariaRef, language),
+      ),
+    );
+    final l10n = AppLocalizations.of(context)!;
+    final values = <_SegmentGloss>[];
+    if (async.hasValue) {
+      for (final phrase in async.requireValue) {
+        values.add(
+          _SegmentGloss(
+            text: phrase.source,
+            direction: TextDirection.rtl,
+            style: style.copyWith(fontSize: style.fontSize! * .92),
+          ),
+        );
+        values.add(
+          _SegmentGloss(
+            text: phrase.translation,
+            direction: TextDirection.ltr,
+            style: style,
+          ),
+        );
+      }
+      values.add(
+        _SegmentGloss(
+          text: l10n.textReaderMachineTranslated,
+          direction: TextDirection.ltr,
+          style: style.copyWith(
+            fontSize: style.fontSize! * .75,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+      return values;
+    }
+    if (async.isLoading) {
+      values.add(
+        _SegmentGloss(
+          text: l10n.textReaderLoadingTranslation,
+          direction: TextDirection.ltr,
+          style: style,
+        ),
+      );
+    } else {
+      values.add(
+        _SegmentGloss(
+          text: l10n.textReaderTranslationUnavailable,
+          direction: TextDirection.ltr,
+          style: style.copyWith(color: Theme.of(context).colorScheme.error),
+        ),
+      );
+      if (segment.englishText.isNotEmpty)
+        values.add(
+          _SegmentGloss(
+            text: segment.englishText,
+            direction: TextDirection.ltr,
+            style: style,
+          ),
+        );
+      values.add(
+        _SegmentGloss(
+          text: l10n.textReaderRetryTranslation,
+          direction: TextDirection.ltr,
+          style: style.copyWith(decoration: TextDecoration.underline),
+          onTap: () => ref.invalidate(
+            phraseTranslationProvider(
+              PhraseTranslationKey(segment.sefariaRef, language),
+            ),
+          ),
+        ),
+      );
+    }
+    if (segment.englishText.isNotEmpty && async.isLoading)
+      values.add(
+        _SegmentGloss(
+          text: segment.englishText,
+          direction: TextDirection.ltr,
+          style: style,
+        ),
+      );
+    return values;
   }
 }
 
@@ -559,6 +773,7 @@ class _SegmentWithGlosses extends StatelessWidget {
                 direction: gloss.direction,
                 style: gloss.style,
                 marker: gloss.marker,
+                onTap: gloss.onTap,
               ),
             ),
       ],
@@ -572,12 +787,14 @@ class _SegmentGloss {
     required this.direction,
     required this.style,
     this.marker,
+    this.onTap,
   });
 
   final String text;
   final TextDirection direction;
   final TextStyle style;
   final String? marker;
+  final VoidCallback? onTap;
 }
 
 class _SegmentTextLine extends StatelessWidget {
@@ -586,12 +803,14 @@ class _SegmentTextLine extends StatelessWidget {
     required this.direction,
     required this.style,
     this.marker,
+    this.onTap,
   });
 
   final String text;
   final TextDirection direction;
   final TextStyle style;
   final String? marker;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -611,11 +830,12 @@ class _SegmentTextLine extends StatelessWidget {
       );
     }
     spans.add(TextSpan(text: text, style: style));
-    return Text.rich(
+    final line = Text.rich(
       TextSpan(children: spans, style: style),
       textDirection: direction,
       textAlign: TextAlign.start,
     );
+    return onTap == null ? line : InkWell(onTap: onTap, child: line);
   }
 }
 

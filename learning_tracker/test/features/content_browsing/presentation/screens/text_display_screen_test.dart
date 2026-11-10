@@ -45,6 +45,7 @@ import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/reader_phrase_translation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/text_display_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -119,6 +120,9 @@ Widget _buildApp({
   Locale locale = const Locale('en'),
   bool disableRetry = false,
   bool useRealTranslationPreference = false,
+  String translationLanguage = 'sefaria',
+  Future<List<PhraseTranslation>>? phraseTranslations,
+  bool leavePhraseTranslationLoading = false,
   String? profileId,
 }) {
   final tasks = dailyTasks ?? [_task(ref: _kRef), _task(ref: _kRef2)];
@@ -159,6 +163,20 @@ Widget _buildApp({
         showReaderTranslationProvider.overrideWith(
           () => _FakeShowReaderTranslation(),
         ),
+      readerTranslationLanguageProvider.overrideWith(
+        () => _FakeReaderTranslationLanguage(translationLanguage),
+      ),
+      if (translationLanguage != 'sefaria')
+        phraseTranslationProvider(
+          PhraseTranslationKey(_kRef, translationLanguage),
+        ).overrideWith((ref) {
+          if (leavePhraseTranslationLoading)
+            return Completer<List<PhraseTranslation>>().future;
+          return phraseTranslations ??
+              Future<List<PhraseTranslation>>.error(
+                StateError('not connected'),
+              );
+        }),
       if (profileId != null)
         selectedProfileIdProvider.overrideWith(
           () => _FakeSelectedProfileId(profileId),
@@ -256,6 +274,13 @@ class _FakeShowNikudNotifier extends ShowNikud {
 class _FakeShowReaderTranslation extends ShowReaderTranslation {
   @override
   bool build() => true;
+}
+
+class _FakeReaderTranslationLanguage extends ReaderTranslationLanguageNotifier {
+  _FakeReaderTranslationLanguage(this.initialLanguage);
+  final String initialLanguage;
+  @override
+  String build() => initialLanguage;
 }
 
 class _FakeSelectedProfileId extends SelectedProfileId {
@@ -605,6 +630,76 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
   });
+
+  testWidgets(
+    'AI language picker is searchable and shows ordered phrase pairs',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          textState: AsyncData(_content()),
+          translationLanguage: 'es',
+          phraseTranslations: Future.value(const [
+            PhraseTranslation('מֵאֵימָתַי', '¿Desde cuándo?'),
+            PhraseTranslation('קוֹרִין', 'se recita'),
+          ]),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(
+        find.byKey(const Key('text_display_language_picker')),
+        findsOneWidget,
+      );
+      expect(find.text('מֵאֵימָתַי'), findsOneWidget);
+      expect(find.text('¿Desde cuándo?'), findsOneWidget);
+      expect(find.text('קוֹרִין'), findsOneWidget);
+      expect(find.text('Machine translated'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('text_display_language_picker')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text_display_language_search')),
+        'Spanish',
+      );
+      await tester.pump();
+      expect(find.byKey(const Key('reader_language_es')), findsOneWidget);
+      expect(find.byKey(const Key('reader_language_ja')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'AI translation loading and unavailable states retain Sefaria English',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          textState: AsyncData(_content()),
+          translationLanguage: 'fr',
+          leavePhraseTranslationLoading: true,
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Loading translation…'), findsOneWidget);
+      expect(find.text('From when may one recite'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          textState: AsyncData(_content()),
+          translationLanguage: 'fr',
+          disableRetry: true,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.text('Translation unavailable offline or right now'),
+        findsOneWidget,
+      );
+      expect(find.text('From when may one recite'), findsOneWidget);
+    },
+  );
 
   // ── RTL / text direction ────────────────────────────────────────────────────
 

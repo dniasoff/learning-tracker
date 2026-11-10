@@ -212,6 +212,26 @@ const tutor = () => env.authenticatedContext(TUTOR).firestore();
 const stranger = () => env.authenticatedContext(STRANGER).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
 
+describe('phrase translation cache rules', () => {
+  const path = 'phrase_translations/test-translation';
+
+  test('signed-in users can read shared translations, but clients cannot write them', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), path), { phrases: [{ source: 'שלום', translation: 'hello' }] });
+    });
+    await assertSucceeds(getDoc(doc(owner(), path)));
+    await assertSucceeds(getDocs(query(collection(tutor(), 'phrase_translations'), limit(5))));
+    await assertFails(getDoc(doc(anon(), path)));
+    await assertFails(setDoc(doc(owner(), 'phrase_translations/client-write'), { phrases: [] }));
+  });
+
+  test('rate-limit counters are inaccessible to all clients', async () => {
+    const path = 'phrase_translation_rate_limits/owner-uid_2026-11-10';
+    await assertFails(getDoc(doc(owner(), path)));
+    await assertFails(setDoc(doc(owner(), path), { count: 1 }));
+  });
+});
+
 // ── Helper: assert the standard owner-write / tutor-read / stranger-deny matrix.
 // `path` is the full Firestore path to the document being tested.
 // `validDoc` is a valid payload for owner create/update.
