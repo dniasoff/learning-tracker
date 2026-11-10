@@ -339,12 +339,15 @@ void main() {
         final source = ContentDatabase(NativeDatabase(File(sourcePath)));
         await source.customInsert(
           'INSERT INTO seed_metadata '
-          '(version, built_at, build_id, text_cache_count, calendar_cycle_count) '
-          'VALUES (?, ?, ?, ?, ?)',
+          '(version, built_at, build_id, text_cache_count, '
+          'calendar_cycle_count, parallel_text_count, parsha_aliyah_count) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?)',
           variables: [
             Variable.withInt(bundledSeedVersion),
             Variable.withString('2026-04-11T00:00:00Z'),
             Variable.withString('seed-test'),
+            Variable.withInt(0),
+            Variable.withInt(0),
             Variable.withInt(0),
             Variable.withInt(0),
           ],
@@ -399,6 +402,87 @@ void main() {
         } finally {
           await opened.close();
         }
+      },
+    );
+
+    test(
+      'legacy seed without parallel_text migrates with zero text counts',
+      () async {
+        final tmp = await Directory.systemTemp.createTemp(
+          'seed_mgr_legacy_test',
+        );
+        addTearDown(() async {
+          try {
+            await tmp.delete(recursive: true);
+          } catch (e) {
+            debugPrint('Temp dir cleanup failed for ${tmp.path}: $e');
+          }
+        });
+
+        // Model a v5 seed created before the parallel-text feature. It has
+        // neither the parallel_text table nor the two v6 metadata columns.
+        final sourcePath = '${tmp.path}/legacy-source.db';
+        final legacy = sqlite.sqlite3.open(sourcePath);
+        legacy.execute(
+          'CREATE TABLE seed_metadata ('
+          'version INTEGER NOT NULL PRIMARY KEY, '
+          'built_at TEXT NOT NULL, '
+          'build_id TEXT NOT NULL, '
+          'text_cache_count INTEGER NOT NULL, '
+          'calendar_cycle_count INTEGER NOT NULL, '
+          'content_hash TEXT, '
+          "min_app_version TEXT NOT NULL DEFAULT '1.0.0')",
+        );
+        legacy.execute(
+          'INSERT INTO seed_metadata '
+          '(version, built_at, build_id, text_cache_count, calendar_cycle_count) '
+          "VALUES ($bundledSeedVersion, '2026-04-11T00:00:00Z', 'legacy', 0, 0)",
+        );
+        legacy.execute('PRAGMA user_version = 5');
+        expect(
+          legacy.select(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name='parallel_text'",
+          ),
+          isEmpty,
+        );
+        legacy.dispose();
+
+        final sourceBytes = await File(sourcePath).readAsBytes();
+        final gzippedBytes = Uint8List.fromList(gzip.encode(sourceBytes));
+        const seedAssetKey = 'assets/db/content.db.gz';
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMessageHandler('flutter/assets', (ByteData? message) async {
+              final requestedKey = utf8.decode(message!.buffer.asUint8List());
+              if (requestedKey != seedAssetKey) return null;
+              return ByteData.view(gzippedBytes.buffer);
+            });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMessageHandler('flutter/assets', null);
+        });
+
+        final resolved = await SeedManager(
+          dbDirectory: tmp.path,
+        ).ensureContentDb();
+        expect(await File(resolved).readAsBytes(), sourceBytes);
+
+        // Opening the extracted legacy seed applies v6's additive migration:
+        // the absent table is created and absent counts are backfilled to 0.
+        final upgraded = ContentDatabase(NativeDatabase(File(resolved)));
+        addTearDown(upgraded.close);
+        final metadata = await upgraded.seedMetadataDao.getVersion();
+        expect(metadata, isNotNull);
+        expect(metadata!.version, bundledSeedVersion);
+        expect(metadata.parallelTextCount, 0);
+        expect(metadata.parshaAliyahCount, 0);
+        expect(
+          await upgraded
+              .customSelect('SELECT COUNT(*) AS count FROM parallel_text')
+              .getSingle()
+              .then((row) => row.read<int>('count')),
+          0,
+        );
       },
     );
 
