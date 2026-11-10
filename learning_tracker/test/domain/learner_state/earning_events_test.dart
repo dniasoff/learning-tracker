@@ -43,6 +43,36 @@ void main() {
       expect(firstLearningEarners(events.reversed, corpus), {engineUlid(3)});
     });
 
+    test('Shnayim Mikra earns once per verse in each assignment cycle', () {
+      final events = [
+        engineLearn(
+          1,
+          b11,
+          curriculumId: 'shnayim_mikra',
+          assignmentKey: '2026-10-03:BERESHIT:israel',
+        ),
+        engineLearn(
+          2,
+          b11,
+          minutes: 10,
+          curriculumId: 'shnayim_mikra',
+          assignmentKey: '2026-10-03:BERESHIT:israel',
+        ),
+        engineLearn(
+          3,
+          b11,
+          minutes: 20,
+          curriculumId: 'shnayim_mikra',
+          assignmentKey: '2027-10-02:BERESHIT:israel',
+        ),
+      ];
+
+      expect(firstLearningEarners(events, corpus), {
+        engineUlid(1),
+        engineUlid(3),
+      });
+    });
+
     test('an unknown ref or a container ref covers no leaf', () {
       expect(
         firstLearningEarners([

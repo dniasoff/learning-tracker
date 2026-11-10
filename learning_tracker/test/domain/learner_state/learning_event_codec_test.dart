@@ -171,6 +171,24 @@ void main() {
       expect(() => _learn(source: 'sub-1').toStorage(), _rejects('source'));
     });
 
+    test('Shnayim Mikra cycle and pass-three commentary round-trip', () {
+      final event = LearningEvent.learn(
+        id: ulidA,
+        curriculumId: 'shnayim_mikra',
+        ref: 'Genesis 1:1',
+        source: LearningEvent.sourceShnayimMikraPass3,
+        dateState: DateState.dated,
+        learnedOn: '2026-09-01',
+        assignmentKey: '2026-10-03:BERESHIT:israel',
+        commentarySource: 'onkelos',
+        recordedAt: t0,
+        actor: parentActor,
+      );
+      final decoded = LearningEvent.fromStorage(ulidA, event.toStorage());
+      expect(decoded.assignmentKey, '2026-10-03:BERESHIT:israel');
+      expect(decoded.commentarySource, 'onkelos');
+    });
+
     test('non-ULID event id never reaches storage', () {
       final event = LearningEvent.learn(
         id: '',

@@ -108,6 +108,8 @@ LearningEvent engineLearn(
   int? stage,
   int? originalMinutes,
   String learnedOn = '2026-09-01',
+  String? assignmentKey,
+  String? commentarySource,
 }) => LearningEvent.learn(
   id: engineUlid(id),
   curriculumId: curriculumId,
@@ -117,6 +119,8 @@ LearningEvent engineLearn(
   dateState: dateState,
   learnedOn: dateState == DateState.beforeTracking ? null : learnedOn,
   stage: stage,
+  assignmentKey: assignmentKey,
+  commentarySource: commentarySource,
   recordedAt: engineAt(minutes),
   originalRecordedAt: originalMinutes == null
       ? null

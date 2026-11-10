@@ -151,7 +151,8 @@ final class ShnayimMikraWeeklyAssignment {
     );
   }
 
-  String get key => '${_dateKey(shabbosDate)}:$portionKey';
+  String get key =>
+      '${_dateKey(shabbosDate)}:$portionKey:${inIsrael ? 'israel' : 'diaspora'}';
 
   bool isOverdueOn(DateTime date) => !date.isBefore(dueAt);
 

@@ -1,11 +1,31 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
+import 'package:learning_tracker/domain/learner_state/learning_event.dart';
+import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/parallel_text_repository.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/parsha_aliyah_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
+
+/// Complete, live learning-event log used for assignment-specific progress.
+final shnayimMikraReaderEventsProvider = StreamProvider.autoDispose
+    .family<List<LearningEvent>, LearnerScope>((ref, scope) async* {
+      final repository = await ref.watch(
+        learningEventRepositoryProvider.future,
+      );
+      if (repository == null) return;
+      await for (final read in repository.watchAll(scope)) {
+        if (read is CompleteReadReady<LearningEvent>) {
+          if (!read.isClean)
+            throw StateError('Learning event log is unreadable');
+          yield read.items;
+        }
+      }
+    }, retry: (retryCount, error) => null);
 
 /// Verse refs grouped by aliyah for progress projection and the reader.
 final shnayimMikraParshaVerseRefsProvider = FutureProvider.autoDispose

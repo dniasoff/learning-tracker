@@ -85,6 +85,8 @@ int remainingShnayimMikraAliyot<T>(
 int completedShnayimMikraPassCount({
   required List<String> refs,
   required List<LearningEvent> events,
+  required String assignmentKey,
+  required String commentarySource,
 }) {
   final counted = countEvents(events);
   final byId = {for (final event in events) event.id: event};
@@ -94,6 +96,9 @@ int completedShnayimMikraPassCount({
       for (final event in byId.values)
         if (event.isLearn &&
             event.source == source &&
+            event.assignmentKey == assignmentKey &&
+            (source != LearningEvent.sourceShnayimMikraPass3 ||
+                event.commentarySource == commentarySource) &&
             !counted.voidedIds.contains(event.id) &&
             !counted.lockIgnoredIds.contains(event.id))
           event.ref!,
@@ -102,4 +107,22 @@ int completedShnayimMikraPassCount({
     passes++;
   }
   return passes;
+}
+
+/// Completed verse refs for one assignment cycle, excluding voided events.
+Set<String> completedShnayimMikraRefs({
+  required List<LearningEvent> events,
+  required String assignmentKey,
+}) {
+  final counted = countEvents(events);
+  return {
+    for (final event in events)
+      if (event.isLearn &&
+          event.curriculumId == 'shnayim_mikra' &&
+          event.source == LearningEvent.sourceMain &&
+          event.assignmentKey == assignmentKey &&
+          !counted.voidedIds.contains(event.id) &&
+          !counted.lockIgnoredIds.contains(event.id))
+        event.ref!,
+  };
 }

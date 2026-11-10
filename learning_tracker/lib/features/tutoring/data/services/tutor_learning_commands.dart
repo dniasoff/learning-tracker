@@ -87,7 +87,8 @@ final class _PlannedCall {
 }
 
 /// Tutor [LearningCommands] bound to one tutored [selection].
-final class TutorLearningCommands implements LearningCommands {
+final class TutorLearningCommands
+    implements LearningCommands, ShnayimMikraLearningCommands {
   /// Creates the commands. [preflight] runs the permission, online and
   /// device-user lock checks; [events] reads the talmid's complete event
   /// log; [corpus] a curriculum's ContentIndex corpus. [subTracks] reads
@@ -259,6 +260,24 @@ final class TutorLearningCommands implements LearningCommands {
   // ── Commands ───────────────────────────────────────────────────────────
 
   @override
+  Future<CaptureResult> captureShnayimMikra({
+    required String assignmentKey,
+    required List<LeafRef> refs,
+    required String source,
+    required DateState dateState,
+    String? commentarySource,
+    bool skipRecorded = true,
+  }) => capture(
+    curriculumId: 'shnayim_mikra',
+    refs: refs,
+    source: source,
+    dateState: dateState,
+    skipRecorded: skipRecorded,
+    assignmentKey: assignmentKey,
+    commentarySource: commentarySource,
+  );
+
+  @override
   Future<CaptureResult> capture({
     required String curriculumId,
     List<LeafRef> refs = const [],
@@ -271,11 +290,29 @@ final class TutorLearningCommands implements LearningCommands {
     CaptureGesture gesture = CaptureGesture.plusOne,
     int skippedCount = 0,
     int taps = 1,
+    String? assignmentKey,
+    String? commentarySource,
   }) => _preflight((now, history) async {
     // Epic 1: tutors record main-track learning, dated or before tracking.
     // Story 4.2 (AC-1): or the talmid's sub-track learning — the Story 4.1
     // contract: a dated leaf event with no stage.
     if (curriculumId.isEmpty || dateState == DateState.catchUp) {
+      return _invalid;
+    }
+    if (assignmentKey != null && curriculumId != 'shnayim_mikra') {
+      return _invalid;
+    }
+    if (LearningEvent.shnayimMikraPassSources.contains(source) &&
+        assignmentKey == null) {
+      return _invalid;
+    }
+    if (commentarySource != null &&
+        (source != LearningEvent.sourceShnayimMikraPass3 ||
+            !const ['onkelos', 'rashi'].contains(commentarySource))) {
+      return _invalid;
+    }
+    if (source == LearningEvent.sourceShnayimMikraPass3 &&
+        commentarySource == null) {
       return _invalid;
     }
     final onSubTrack = source != LearningEvent.sourceMain;
@@ -297,7 +334,14 @@ final class TutorLearningCommands implements LearningCommands {
     if (skipRecorded && leaves.isNotEmpty) {
       // DNI-501 AC-2 on a tutor device: a leaf the log already records in
       // this track is never written twice.
-      final recorded = await _recordedIn(curriculumId, source, now, history);
+      final recorded = await _recordedIn(
+        curriculumId,
+        source,
+        now,
+        history,
+        assignmentKey,
+        commentarySource,
+      );
       if (recorded != null && recorded.isNotEmpty) {
         alreadyRecorded = [
           for (final r in leaves)
@@ -329,6 +373,8 @@ final class TutorLearningCommands implements LearningCommands {
           learnedOn: day,
           stage: stage,
           source: source,
+          assignmentKey: assignmentKey,
+          commentarySource: commentarySource,
         ),
       for (final node in nodeList)
         TutorLearnEvent(
@@ -383,6 +429,8 @@ final class TutorLearningCommands implements LearningCommands {
     String source,
     DateTime now,
     LearnerSettingsHistory history,
+    String? assignmentKey,
+    String? commentarySource,
   ) async {
     try {
       final (log, corpus) = await (
@@ -390,8 +438,15 @@ final class TutorLearningCommands implements LearningCommands {
         _corpus(curriculumId),
       ).wait.timeout(_readWait);
       return {
-        for (final e in log.counted.learns)
+        for (final e in log.byId.values)
           if (e.curriculumId == curriculumId &&
+              e.isLearn &&
+              !log.counted.voidedIds.contains(e.id) &&
+              !log.counted.lockIgnoredIds.contains(e.id) &&
+              (source != LearningEvent.sourceShnayimMikraPass3 ||
+                  e.commentarySource == commentarySource) &&
+              (source != LearningEvent.sourceMain || !e.isShnayimMikraPass) &&
+              (assignmentKey == null || e.assignmentKey == assignmentKey) &&
               (source == LearningEvent.sourceMain || e.source == source))
             ...?(corpus == null
                 ? (e.level == null && e.ref != null ? [e.ref!] : null)

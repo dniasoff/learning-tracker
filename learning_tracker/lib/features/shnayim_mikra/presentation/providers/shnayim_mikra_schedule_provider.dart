@@ -3,7 +3,7 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
-import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/domain/learner_state/shnayim_mikra_reading_plan.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/shnayim_mikra/domain/shnayim_mikra_weekly_assignment.dart';
 import 'package:learning_tracker/features/shnayim_mikra/presentation/providers/shnayim_mikra_reader_data_provider.dart';
@@ -45,10 +45,9 @@ final shnayimMikraScheduleProjectionProvider =
             shnayimMikraDueAtForShabbos(shabbosDate, history),
       );
       if (projection.catchUp.isEmpty) return projection;
-      final learnerState = await ref.watch(learnerStateProvider(scope).future);
-      final learnedRefs =
-          learnerState.curricula['shnayim_mikra']?.learntLeaves ??
-          const <String>{};
+      final events = await ref.watch(
+        shnayimMikraReaderEventsProvider(scope).future,
+      );
       final completedKeys = <String>{};
       for (final assignment in projection.catchUp) {
         final aliyahRefs = await ref.watch(
@@ -57,7 +56,11 @@ final shnayimMikraScheduleProjectionProvider =
             assignment.inIsrael,
           )).future,
         );
-        if (aliyahRefs.expand((refs) => refs).every(learnedRefs.contains)) {
+        final completedRefs = completedShnayimMikraRefs(
+          events: events,
+          assignmentKey: assignment.key,
+        );
+        if (aliyahRefs.expand((refs) => refs).every(completedRefs.contains)) {
           completedKeys.add(assignment.key);
         }
       }

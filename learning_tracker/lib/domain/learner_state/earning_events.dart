@@ -47,10 +47,12 @@ bool canEarn(LearningEvent event) =>
 /// points (AD-50, `prd-deviations` #5).
 ///
 /// Per leaf of [corpus], only the earliest event covering it (by
-/// `effectiveAt`, then id) can earn, and only when [canEarn] holds for it. A
-/// sub-track or `before_tracking` (leaf or node) event that comes first
-/// blocks earning for that leaf; a later main tick never earns it. An event
-/// covering several new leaves earns once.
+/// `effectiveAt`, then id) can earn, and only when [canEarn] holds for it.
+/// Shnayim Mikra's leaves are grouped by [LearningEvent.assignmentKey], so
+/// the same verse can earn in a later weekly cycle. A sub-track or
+/// `before_tracking` (leaf or node) event that comes first blocks earning for
+/// that leaf/cycle; a later main tick never earns it. An event covering
+/// several new leaves earns once.
 ///
 /// [countedLearns] are the curriculum's counted `learn` events; they are
 /// ordered here, so the caller's order does not matter. Leaves are resolved
@@ -61,25 +63,31 @@ Set<String> firstLearningEarners(
   Corpus corpus,
 ) {
   final ordered = [...countedLearns]..sort(compareEventsByEffectiveAt);
-  final seen = <LeafRef>{};
+  // Shnayim Mikra repeats the same verse in a new weekly cycle. Treat each
+  // assignment's verse as a fresh earning unit, while preserving ordinary
+  // lifetime first-learning semantics for every other curriculum.
+  final seen = <(LeafRef, String?)>{};
   // Node events already expanded into [seen]. A later event on the same
   // node covers exactly the same leaves, all already seen, so it can never
   // be a first learning: skip re-expanding it (AD-54 — a log can hold many
   // `before_tracking` events on the same whole volume).
-  final expandedNodes = <(String, String)>{};
+  final expandedNodes = <(String, String, String?)>{};
   final out = <String>{};
   for (final e in ordered) {
     final ref = e.ref;
     final level = e.level;
+    final assignmentKey = e.curriculumId == 'shnayim_mikra'
+        ? e.assignmentKey
+        : null;
     if (e.isLearn &&
         ref != null &&
         level != null &&
-        !expandedNodes.add((level, ref))) {
+        !expandedNodes.add((level, ref, assignmentKey))) {
       continue;
     }
     var first = false;
     for (final leaf in coveredLeaves(e, corpus)) {
-      if (seen.add(leaf)) first = true;
+      if (seen.add((leaf, assignmentKey))) first = true;
     }
     if (first && canEarn(e)) out.add(e.id);
   }

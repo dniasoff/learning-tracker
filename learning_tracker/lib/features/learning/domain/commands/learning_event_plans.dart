@@ -86,6 +86,8 @@ List<WriteUnit> planCapture({
   required CivilDate? learnedOn,
   required int? stage,
   required int? amount,
+  String? assignmentKey,
+  String? commentarySource,
 }) {
   final ids = stamp.ids(leaves.length + nodes.length);
   var i = 0;
@@ -98,6 +100,8 @@ List<WriteUnit> planCapture({
     dateState: dateState,
     learnedOn: dateState == DateState.beforeTracking ? null : learnedOn,
     stage: stage,
+    assignmentKey: assignmentKey,
+    commentarySource: commentarySource,
     recordedAt: stamp.nowUtc,
     actor: stamp.actor,
   );
@@ -136,6 +140,8 @@ LearningEvent copyOf(CommandStamp stamp, String id, LearningEvent target) =>
       dateState: target.dateState!,
       learnedOn: target.learnedOn,
       stage: target.stage,
+      assignmentKey: target.assignmentKey,
+      commentarySource: target.commentarySource,
       originalRecordedAt: effectiveAt(target),
       recordedAt: stamp.nowUtc,
       actor: stamp.actor,
@@ -151,6 +157,8 @@ final class ResolvedReplacement {
     required this.dateState,
     required this.learnedOn,
     required this.stage,
+    this.assignmentKey,
+    this.commentarySource,
     required this.redate,
   });
 
@@ -172,6 +180,10 @@ final class ResolvedReplacement {
   /// The new `stage`.
   final int? stage;
 
+  final String? assignmentKey;
+
+  final String? commentarySource;
+
   /// Whether `learned_on` or `date_state` changes (a re-date).
   final bool redate;
 
@@ -182,7 +194,9 @@ final class ResolvedReplacement {
       source == t.source &&
       dateState == t.dateState &&
       learnedOn == t.learnedOn &&
-      stage == t.stage;
+      stage == t.stage &&
+      assignmentKey == t.assignmentKey &&
+      commentarySource == t.commentarySource;
 }
 
 /// The replacement event of [target] with [fields] (AD-31, FR-4).
@@ -206,6 +220,8 @@ LearningEvent replacementOf(
   dateState: fields.dateState,
   learnedOn: fields.learnedOn,
   stage: fields.stage,
+  assignmentKey: fields.assignmentKey,
+  commentarySource: fields.commentarySource,
   originalRecordedAt: fields.redate ? null : effectiveAt(target),
   recordedAt: stamp.nowUtc,
   actor: stamp.actor,

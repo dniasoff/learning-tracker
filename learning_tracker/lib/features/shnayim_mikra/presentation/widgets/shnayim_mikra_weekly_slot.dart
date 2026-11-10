@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_settings.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
-import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/domain/learner_state/shnayim_mikra_reading_plan.dart';
 import 'package:learning_tracker/features/learning/domain/commands/owner_governed_writer.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -57,13 +57,14 @@ final class ShnayimMikraWeeklySlot extends ConsumerWidget {
         );
         final state = scope == null
             ? null
-            : ref.watch(learnerStateProvider(scope)).asData?.value;
+            : ref.watch(shnayimMikraReaderEventsProvider(scope)).asData?.value;
         final refs = refsAsync.asData?.value.expand((aliyah) => aliyah);
-        final learned =
-            state
-                ?.curricula[CurriculumId.shnayimMikra.storageKey]
-                ?.learntLeaves ??
-            const <String>{};
+        final learned = state == null
+            ? const <String>{}
+            : completedShnayimMikraRefs(
+                events: state,
+                assignmentKey: current.key,
+              );
         final progress = refs == null
             ? null
             : l10n.shnayimMikraProgressVerses(

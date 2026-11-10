@@ -400,9 +400,10 @@ void main() {
       'Shnayim Mikra passes persist idempotently, sync, and can be undone',
       () async {
         final firstDevice = _Harness();
+        const cycle = '2026-10-03:BERESHIT:israel';
         Future<CaptureResult> markPass(DefaultLearningCommands commands) =>
-            commands.capture(
-              curriculumId: 'shnayim_mikra',
+            commands.captureShnayimMikra(
+              assignmentKey: cycle,
               refs: const ['Genesis 1:1'],
               source: LearningEvent.sourceShnayimMikraPass2,
               dateState: DateState.dated,
@@ -426,6 +427,37 @@ void main() {
         final counted = countEvents(firstDevice.fakeReads.eventLog);
         expect(counted.voidedIds, contains(target.id));
         expect(counted.learns, isEmpty);
+      },
+    );
+
+    test(
+      'unit points deduplicate within a cycle and can be earned next year',
+      () async {
+        final h = _Harness();
+        Future<CaptureResult> complete(String cycle) =>
+            h.commands.captureShnayimMikra(
+              assignmentKey: cycle,
+              refs: const ['Genesis 1:1'],
+              source: LearningEvent.sourceMain,
+              dateState: DateState.dated,
+              skipRecorded: true,
+            );
+        const cycle5787 = '2026-10-03:BERESHIT:israel';
+        const cycle5788 = '2027-10-02:BERESHIT:israel';
+
+        await complete(cycle5787);
+        h.sync();
+        await complete(cycle5787);
+        expect(h.written, hasLength(1));
+        expect(h.awards, hasLength(1));
+
+        await complete(cycle5788);
+        expect(h.written, hasLength(2));
+        expect(h.awards, hasLength(2));
+        expect(h.written.map((event) => event.assignmentKey), [
+          cycle5787,
+          cycle5788,
+        ]);
       },
     );
 

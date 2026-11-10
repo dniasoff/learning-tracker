@@ -6,13 +6,11 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/learning_event.dart';
-import 'package:learning_tracker/domain/learner_state/ports/complete_read.dart';
-import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_preferences.dart';
 import 'package:learning_tracker/domain/learner_state/shnayim_mikra_reading_plan.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/segment_with_glosses.dart';
-import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/commands/capture_result.dart';
+import 'package:learning_tracker/features/learning/domain/commands/learning_commands.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_command_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/shnayim_mikra/domain/shnayim_mikra_weekly_assignment.dart';
@@ -47,16 +45,15 @@ class _ShnayimMikraReaderScreenState
     if (settings == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final learnerState = ref.watch(learnerStateProvider(scope)).asData?.value;
-    if (learnerState == null) {
+    final eventsAsync = ref.watch(shnayimMikraReaderEventsProvider(scope));
+    final events = eventsAsync.asData?.value;
+    if (events == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final completed =
-        learnerState
-            .curricula[CurriculumId.shnayimMikra.storageKey]
-            ?.learntLeaves ??
-        const <String>{};
-    final eventsAsync = ref.watch(shnayimMikraReaderEventsProvider(scope));
+    final completed = completedShnayimMikraRefs(
+      events: events,
+      assignmentKey: widget.assignment.key,
+    );
     final source = settings.shnayimMikraSource;
     final learnerWallTime = LearnerZone.of(
       settings.timeZone,
@@ -162,13 +159,12 @@ class _ShnayimMikraReaderScreenState
             );
           }
           final task = tasks[taskIndex];
-          final persistedPass = eventsAsync.asData?.value == null
-              ? 0
-              : completedShnayimMikraPassCount(
-                  refs: [for (final verse in task.items) verse.text.sefariaRef],
-                  events: eventsAsync.asData!.value,
-                );
-          final passIndex = eventsAsync.hasValue ? persistedPass : 0;
+          final passIndex = completedShnayimMikraPassCount(
+            refs: [for (final verse in task.items) verse.text.sefariaRef],
+            events: events,
+            assignmentKey: widget.assignment.key,
+            commentarySource: source.storageKey,
+          );
           final passLabel = switch (passIndex) {
             0 => l10n.shnayimMikraFirstReading,
             1 => l10n.shnayimMikraSecondReading,
@@ -258,7 +254,12 @@ class _ShnayimMikraReaderScreenState
                     child: FilledButton(
                       onPressed: _saving
                           ? null
-                          : () => _completePass(task, passIndex, l10n),
+                          : () => _completePass(
+                              task,
+                              passIndex,
+                              source.storageKey,
+                              l10n,
+                            ),
                       child: _saving
                           ? const CircularProgressIndicator()
                           : Text(l10n.shnayimMikraMarkReadingComplete),
@@ -314,20 +315,25 @@ class _ShnayimMikraReaderScreenState
   Future<void> _completePass(
     ShnayimMikraReadingUnit<ShnayimMikraVerseReading> task,
     int passIndex,
+    String commentarySource,
     AppLocalizations l10n,
   ) async {
     setState(() => _saving = true);
     try {
       final commands = await ref.read(learningCommandsProvider.future);
-      if (commands == null) throw StateError('Learning commands unavailable');
+      if (commands == null) {
+        throw StateError('Cycle-aware learning commands unavailable');
+      }
+      final shnayimCommands = commands as ShnayimMikraLearningCommands;
       if (passIndex < 3) {
         final source = LearningEvent.shnayimMikraPassSources[passIndex];
-        final markerResult = await commands.capture(
-          curriculumId: CurriculumId.shnayimMikra.storageKey,
+        final markerResult = await shnayimCommands.captureShnayimMikra(
+          assignmentKey: widget.assignment.key,
           refs: [for (final verse in task.items) verse.text.sefariaRef],
           source: source,
           dateState: DateState.dated,
           skipRecorded: true,
+          commentarySource: passIndex == 2 ? commentarySource : null,
         );
         if (markerResult is! CaptureSuccess) {
           throw StateError(l10n.shnayimMikraReaderSaveFailed);
@@ -338,8 +344,8 @@ class _ShnayimMikraReaderScreenState
           return;
         }
       }
-      final result = await commands.capture(
-        curriculumId: CurriculumId.shnayimMikra.storageKey,
+      final result = await shnayimCommands.captureShnayimMikra(
+        assignmentKey: widget.assignment.key,
         refs: [for (final verse in task.items) verse.text.sefariaRef],
         source: LearningEvent.sourceMain,
         dateState: DateState.dated,
@@ -367,18 +373,3 @@ class _ShnayimMikraReaderScreenState
       .map((word) => '${word[0]}${word.substring(1).toLowerCase()}')
       .join('–');
 }
-
-final shnayimMikraReaderEventsProvider = StreamProvider.autoDispose
-    .family<List<LearningEvent>, LearnerScope>((ref, scope) async* {
-      final repository = await ref.watch(
-        learningEventRepositoryProvider.future,
-      );
-      if (repository == null) return;
-      await for (final read in repository.watchAll(scope)) {
-        if (read is CompleteReadReady<LearningEvent>) {
-          if (!read.isClean)
-            throw StateError('Learning event log is unreadable');
-          yield read.items;
-        }
-      }
-    }, retry: (retryCount, error) => null);

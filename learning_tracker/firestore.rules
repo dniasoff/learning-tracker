@@ -223,7 +223,8 @@ service cloud.firestore {
       return isUlid(eventId)
           && d.keys().hasOnly([
                'kind', 'curriculum_id', 'ref', 'level', 'source', 'date_state',
-               'learned_on', 'stage', 'target_id', 'reverts_action_id',
+               'learned_on', 'stage', 'assignment_key', 'commentary_source',
+               'target_id', 'reverts_action_id',
                'original_recorded_at', 'recorded_at', 'actor'
              ])
           && d.keys().hasAll(['kind', 'recorded_at', 'actor'])
@@ -259,6 +260,20 @@ service cloud.firestore {
           && (d.source == 'main' || isUlid(d.source)
                 || (d.curriculum_id == 'shnayim_mikra'
                     && d.source in ['shnayim_mikra_pass_1', 'shnayim_mikra_pass_2', 'shnayim_mikra_pass_3']))
+          && (isAbsentOrNull(d, 'assignment_key')
+                || (d.curriculum_id == 'shnayim_mikra'
+                    && isBoundedString(d.assignment_key, 120)
+                    && d.assignment_key.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}:[A-Z_]+:(israel|diaspora)$')))
+          && (isAbsentOrNull(d, 'commentary_source')
+                || (d.source == 'shnayim_mikra_pass_3'
+                    && d.commentary_source in ['onkelos', 'rashi']))
+          && (d.source != 'shnayim_mikra_pass_3'
+                || (d.keys().hasAll(['assignment_key', 'commentary_source'])
+                    && d.commentary_source in ['onkelos', 'rashi']))
+          && (d.source != 'shnayim_mikra_pass_1'
+                && d.source != 'shnayim_mikra_pass_2'
+                && d.source != 'shnayim_mikra_pass_3'
+                || d.keys().hasAll(['assignment_key']))
           && d.date_state in ['dated', 'catch_up', 'before_tracking']
           && (isDateString(d.learned_on)
                 || (d.learned_on == null && d.date_state == 'before_tracking'))

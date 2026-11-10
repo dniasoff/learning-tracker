@@ -283,6 +283,9 @@ const EVENT_LEARN_FIELDS: Readonly<Record<string, Check>> = {
   learned_on: nullable(date),
   stage: int,
   original_recorded_at: (v) => typeof v === "string" && !Number.isNaN(Date.parse(v)),
+  assignment_key: (v) => typeof v === "string" &&
+    /^\d{4}-\d{2}-\d{2}:[A-Z_]+:(israel|diaspora)$/.test(v),
+  commentary_source: oneOf("onkelos", "rashi"),
 };
 
 const EVENT_VOID_FIELDS: Readonly<Record<string, Check>> = {
@@ -579,6 +582,21 @@ function validateEvents(raw: unknown): LearningEventIntent[] {
       if (typeof fields.source === "string" && fields.source.startsWith("shnayim_mikra_pass_") &&
         fields.curriculum_id !== "shnayim_mikra") {
         reject("invalid-argument", "Shnayim Mikra pass sources require shnayim_mikra");
+      }
+      const passSource = typeof fields.source === "string" &&
+        ["shnayim_mikra_pass_1", "shnayim_mikra_pass_2", "shnayim_mikra_pass_3"].includes(fields.source);
+      if (passSource && fields.assignment_key === undefined) {
+        reject("invalid-argument", "Shnayim Mikra pass events require assignment_key");
+      }
+      if ((fields.assignment_key !== undefined || fields.commentary_source !== undefined) &&
+        fields.curriculum_id !== "shnayim_mikra") {
+        reject("invalid-argument", "Shnayim Mikra metadata requires shnayim_mikra");
+      }
+      if (fields.source === "shnayim_mikra_pass_3" && fields.commentary_source === undefined) {
+        reject("invalid-argument", "Pass 3 requires commentary_source");
+      }
+      if (fields.source !== "shnayim_mikra_pass_3" && fields.commentary_source !== undefined) {
+        reject("invalid-argument", "commentary_source is only valid on pass 3");
       }
       if (!beforeTracking && fields.level !== undefined) {
         reject("invalid-argument", "level is only allowed on before_tracking events");

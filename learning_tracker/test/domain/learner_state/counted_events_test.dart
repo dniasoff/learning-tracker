@@ -31,6 +31,7 @@ void main() {
       'Genesis 1:1',
       curriculumId: 'shnayim_mikra',
       source: LearningEvent.sourceShnayimMikraPass2,
+      assignmentKey: '2026-10-03:BERESHIT:israel',
     );
     final counted = countEvents([pass]);
     expect(counted.learns, isEmpty);
