@@ -4556,5 +4556,6 @@
   "schoolProgressConsent": "אני מבין/ה ומסכים/ה שצוות בית הספר יוכל לצפות בהתקדמות שלי.",
   "schoolParentProgressConsent": "אני מאשר/ת לילד להצטרף ומבין/ה שצוות בית הספר יוכל לצפות בהתקדמות שלו.",
   "schoolJoinAction": "הצטרפות לבית הספר",
-  "schoolJoinSucceeded": "הצטרפת לבית הספר"
+  "schoolJoinSucceeded": "הצטרפת לבית הספר",
+  "schoolAdminMembershipRemovalBlocked": "מנהלי בית הספר צריכים להסיר או להעביר את תפקיד הניהול לפני עזיבה או הסרה כחברים."
 }

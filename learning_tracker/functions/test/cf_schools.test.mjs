@@ -110,6 +110,68 @@ describe('school profile and membership callables', () => {
     assert.deepEqual((await staffControls.get()).get('active_staff_school_ids'), [otherSchool.schoolId]);
   });
 
+  test('active admins must be demoted before leaving or being removed as members', async () => {
+    await seedSocialProfile(parentAuth.uid, 'owner-profile', 'adult');
+    await seedSocialProfile(strangerAuth.uid, 'admin-profile', 'adult');
+    const created = await call(fns.createSchool, { name: 'Admin Membership School', profileId: 'owner-profile' }, parentAuth);
+    const invite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, { inviteCode: invite.inviteCode, profileId: 'admin-profile', progressConsent: true }, strangerAuth);
+    await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'admin-profile' }, parentAuth);
+
+    for (const attempt of [
+      () => call(fns.leaveSchool, { schoolId: created.schoolId, profileId: 'admin-profile' }, strangerAuth),
+      () => call(fns.removeSchoolMember, { schoolId: created.schoolId, ownerUid: strangerAuth.uid, profileId: 'admin-profile' }, parentAuth),
+    ]) {
+      await assert.rejects(attempt(), (error) => {
+        assert.equal(error.code, 'failed-precondition');
+        assert.match(error.message, /Remove or transfer admin role first/);
+        return true;
+      });
+    }
+    const membershipRef = db.collection('school_memberships').doc(memberId(created.schoolId, strangerAuth.uid, 'admin-profile'));
+    assert.equal((await membershipRef.get()).get('state'), 'active');
+    assert.deepEqual((await db.collection('social_user_controls').doc(strangerAuth.uid).get()).get('active_staff_school_ids'), [created.schoolId]);
+
+    await call(fns.removeSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid }, parentAuth);
+    await call(fns.leaveSchool, { schoolId: created.schoolId, profileId: 'admin-profile' }, strangerAuth);
+    assert.equal((await membershipRef.get()).get('state'), 'removed');
+    assert.deepEqual((await db.collection('social_user_controls').doc(strangerAuth.uid).get()).get('active_staff_school_ids'), []);
+    assert.deepEqual((await db.collection('social_profiles').doc(summaryId(strangerAuth.uid, 'admin-profile')).get()).get('active_school_ids'), []);
+  });
+
+  test('a demoted admin can be removed as a member and staff access is revoked', async () => {
+    await seedSocialProfile(parentAuth.uid, 'owner-profile', 'adult');
+    await seedSocialProfile(strangerAuth.uid, 'target-profile', 'adult');
+    const created = await call(fns.createSchool, { name: 'Admin Transfer School', profileId: 'owner-profile' }, parentAuth);
+    const invite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, { inviteCode: invite.inviteCode, profileId: 'target-profile', progressConsent: true }, strangerAuth);
+    await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth);
+    const controls = db.collection('social_user_controls');
+    assert.deepEqual((await controls.doc(parentAuth.uid).get()).get('active_staff_school_ids'), []);
+    assert.deepEqual((await controls.doc(strangerAuth.uid).get()).get('active_staff_school_ids'), [created.schoolId]);
+    await expectHttpsError(call(fns.removeSchoolMember, { schoolId: created.schoolId, ownerUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth), 'failed-precondition');
+    await call(fns.removeSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid }, parentAuth);
+    await call(fns.removeSchoolMember, { schoolId: created.schoolId, ownerUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth);
+    assert.equal((await db.collection('school_memberships').doc(memberId(created.schoolId, strangerAuth.uid, 'target-profile')).get()).get('state'), 'removed');
+    assert.deepEqual((await controls.doc(strangerAuth.uid).get()).get('active_staff_school_ids'), []);
+  });
+
+  test('transferring admin rights revokes only the source staff school grant', async () => {
+    await seedSocialProfile(parentAuth.uid, 'owner-profile', 'adult');
+    await seedSocialProfile(strangerAuth.uid, 'target-profile', 'adult');
+    const created = await call(fns.createSchool, { name: 'Admin Transfer School', profileId: 'owner-profile' }, parentAuth);
+    const invite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, { inviteCode: invite.inviteCode, profileId: 'target-profile', progressConsent: true }, strangerAuth);
+    await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth);
+    await call(fns.transferSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth);
+
+    const controls = db.collection('social_user_controls');
+    assert.deepEqual((await controls.doc(parentAuth.uid).get()).get('active_staff_school_ids'), []);
+    assert.deepEqual((await controls.doc(strangerAuth.uid).get()).get('active_staff_school_ids'), [created.schoolId]);
+    assert.equal((await db.collection('school_admins').doc(staffId(created.schoolId, parentAuth.uid)).get()).get('state'), 'transferred');
+    assert.equal((await db.collection('school_admins').doc(staffId(created.schoolId, strangerAuth.uid)).get()).get('state'), 'active');
+  });
+
   test('admin removal of a member deletes that member school read grant', async () => {
     await seedSocialProfile(strangerAuth.uid, 'member-profile', 'adult');
     const created = await call(fns.createSchool, { name: 'Removal School' }, parentAuth);

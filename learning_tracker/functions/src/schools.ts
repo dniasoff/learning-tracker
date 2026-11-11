@@ -328,6 +328,10 @@ async function changeMember(schoolId: string, targetUid: string, profileId: stri
     else if (targetUid !== actorUid) throw new HttpsError("permission-denied", "A learner can only leave their own membership");
     const snap = await txn.get(memberRef);
     if (!snap.exists || snap.get("state") !== "active") throw new HttpsError("not-found", "Membership is unavailable");
+    const staff = await txn.get(admins().doc(staffId(schoolId, targetUid)));
+    if (staff.exists && staff.get("state") === "active") {
+      throw new HttpsError("failed-precondition", "Remove or transfer admin role first");
+    }
   });
   await revokeStaffSchoolAccess(targetUid, schoolId);
   await revokeSchoolDependentSocial({ ownerUid: targetUid, profileId }, schoolId);
@@ -338,6 +342,10 @@ async function changeMember(schoolId: string, targetUid: string, profileId: stri
     else if (targetUid !== actorUid) throw new HttpsError("permission-denied", "A learner can only leave their own membership");
     const snap = await txn.get(memberRef);
     if (!snap.exists || snap.get("state") !== "active") throw new HttpsError("not-found", "Membership is unavailable");
+    const staff = await txn.get(admins().doc(staffId(schoolId, targetUid)));
+    if (staff.exists && staff.get("state") === "active") {
+      throw new HttpsError("failed-precondition", "Remove or transfer admin role first");
+    }
     txn.update(memberRef, { state: "removed", ended_at: now, ended_by_uid: actorUid, reason_code: reason ?? null, updated_at: now });
     txn.update(schools().doc(schoolId), { membership_revision: admin.firestore.FieldValue.increment(1), updated_at: now });
     txn.set(audit().doc(), { school_id: schoolId, actor_uid: actorUid, subject_uid: targetUid, action: action === "remove" ? "school_member_removed" : "school_member_left", at: now, details: { profile_id: profileId, reason_code: reason ?? null } });

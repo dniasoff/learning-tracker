@@ -53,6 +53,10 @@ class SchoolProfileScreen extends ConsumerWidget {
                 leading: const Icon(Icons.school_outlined),
                 title: Text(admin),
               ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(l10n.schoolAdminMembershipRemovalBlocked),
+            ),
             TextButton.icon(
               onPressed: () => _report(context, ref, l10n),
               icon: const Icon(Icons.flag_outlined),

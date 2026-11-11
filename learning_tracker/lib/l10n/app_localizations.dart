@@ -13313,6 +13313,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You joined the school'**
   String get schoolJoinSucceeded;
+
+  /// No description provided for @schoolAdminMembershipRemovalBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'School administrators must remove or transfer their admin role before leaving or being removed as a member.'**
+  String get schoolAdminMembershipRemovalBlocked;
 }
 
 class _AppLocalizationsDelegate

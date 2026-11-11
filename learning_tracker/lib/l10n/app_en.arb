@@ -6715,5 +6715,6 @@
   "schoolProgressConsent": "I understand and agree that school staff can view my progress.",
   "schoolParentProgressConsent": "I approve this child joining and understand school staff can view the child’s progress.",
   "schoolJoinAction": "Join school",
-  "schoolJoinSucceeded": "You joined the school"
+  "schoolJoinSucceeded": "You joined the school",
+  "schoolAdminMembershipRemovalBlocked": "School administrators must remove or transfer their admin role before leaving or being removed as a member."
 }

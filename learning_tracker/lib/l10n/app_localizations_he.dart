@@ -8070,4 +8070,8 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get schoolJoinSucceeded => 'הצטרפת לבית הספר';
+
+  @override
+  String get schoolAdminMembershipRemovalBlocked =>
+      'מנהלי בית הספר צריכים להסיר או להעביר את תפקיד הניהול לפני עזיבה או הסרה כחברים.';
 }

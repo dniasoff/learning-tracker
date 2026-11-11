@@ -40,6 +40,12 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Verified'), findsOneWidget);
+    expect(
+      find.text(
+        'School administrators must remove or transfer their admin role before leaving or being removed as a member.',
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Report school'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Impersonation'));
@@ -48,5 +54,38 @@ void main() {
       'schoolId': profile.schoolId,
       'category': 'impersonation',
     });
+  });
+
+  testWidgets('admin membership guidance is localized in Hebrew', (
+    tester,
+  ) async {
+    const profile = SchoolProfile(
+      schoolId: 'school_12345678',
+      name: 'בית ספר צפון',
+      verified: false,
+      createdAt: null,
+      adminNames: ['מנהל'],
+      status: 'active',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          schoolProfileProvider.overrideWith((ref, id) async => profile),
+        ],
+        child: const MaterialApp(
+          locale: Locale('he'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SchoolProfileScreen(schoolId: 'school_12345678'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'מנהלי בית הספר צריכים להסיר או להעביר את תפקיד הניהול לפני עזיבה או הסרה כחברים.',
+      ),
+      findsOneWidget,
+    );
   });
 }

@@ -8158,4 +8158,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schoolJoinSucceeded => 'You joined the school';
+
+  @override
+  String get schoolAdminMembershipRemovalBlocked =>
+      'School administrators must remove or transfer their admin role before leaving or being removed as a member.';
 }
