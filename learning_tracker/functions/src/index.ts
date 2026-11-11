@@ -82,6 +82,7 @@ export {
   removeFollow,
   blockSocialProfile,
   unblockSocialProfile,
+  publishSocialSummary,
   searchSchoolMembers,
   listSocialConnections,
 } from "./social_graph";

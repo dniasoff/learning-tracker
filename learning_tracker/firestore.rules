@@ -101,6 +101,39 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Shared read boundary for follower and school-staff progress. The
+    // per-viewer ACL is server-maintained; follower and school grants occupy
+    // separate arrays so either lane can revoke its grant independently.
+    function socialChildFollowerSchoolAccess(summaryId, readerPath) {
+      let child = get(/databases/$(database)/documents/social_profiles/$(summaryId)).data;
+      let parent = get(/databases/$(database)/documents/social_parent_controls/$(summaryId)).data;
+      let reader = get(readerPath).data;
+      return child.mode == 'child'
+          && child.paused != true
+          && parent.paused != true
+          && parent.controls_update_pending != true
+          && reader.child_school_ids is list
+          && reader.child_school_ids.size() > 0
+          && reader.child_school_ids[0] is string
+          && child.active_school_ids is list
+          && child.active_school_ids.hasAny([reader.child_school_ids[0]])
+          && parent.allowed_school_ids is list
+          && parent.allowed_school_ids.hasAny([reader.child_school_ids[0]])
+          && reader.active_school_ids is list
+          && reader.active_school_ids.hasAny([reader.child_school_ids[0]]);
+    }
+
+    function socialSummaryMayRead(summaryId) {
+      let readerPath = /databases/$(database)/documents/social_summaries/$(summaryId)/readers/$(request.auth.uid);
+      return isSignedIn() && exists(readerPath)
+            && ((get(readerPath).data.follower_profile_ids is list
+                  && get(readerPath).data.follower_profile_ids.size() > 0
+                  && (get(/databases/$(database)/documents/social_profiles/$(summaryId)).data.mode != 'child'
+                    || socialChildFollowerSchoolAccess(summaryId, readerPath)))
+              || (get(readerPath).data.school_ids is list
+                  && get(readerPath).data.school_ids.size() > 0));
+    }
+
     // Server-controlled rollout claim. It remains absent/false until the
     // minimum-version client rollout is complete, preserving old-client
     // behavior while new clients learn to send a parent session id.
@@ -126,21 +159,6 @@ service cloud.firestore {
       let accessId = request.auth.uid + '_' + ownerUid + '_' + profileId;
       return isSignedIn()
           && exists(/databases/$(database)/documents/tutor_active_access/$(accessId));
-    }
-
-    // The social projection is deliberately narrower than the learner's
-    // progress subtree. Its server-maintained per-account ACL supports both
-    // approved followers and school staff without granting source-event reads.
-    function hasSocialSummaryAccess(summaryId) {
-      let readerPath = /databases/$(database)/documents/social_summaries/$(summaryId)/readers/$(request.auth.uid);
-      return isSignedIn() && exists(readerPath);
-    }
-
-    function hasSchoolStaffSummaryAccess(summaryId) {
-      let readerPath = /databases/$(database)/documents/social_summaries/$(summaryId)/readers/$(request.auth.uid);
-      return isSignedIn() && exists(readerPath)
-          && get(readerPath).data.school_ids is list
-          && get(readerPath).data.school_ids.size() > 0;
     }
 
     // ── Sub-tracks feature helpers (AD-38 / AD-46 / AD-52 / AD-54) ──────────
@@ -580,6 +598,36 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // One whitelisted projection per learner profile. Raw events, points,
+    // settings, tutor data and change history are never reachable here.
+    match /social_summaries/{summaryId} {
+      allow get: if socialSummaryMayRead(summaryId)
+        && resource.data.keys().hasOnly([
+          'display_name', 'avatar_id', 'streak',
+          'current_tracks', 'weekly_learning', 'siyumim', 'computed_at',
+          'schema_version'
+        ])
+        && resource.data.display_name is string
+        && resource.data.avatar_id is int
+        && resource.data.streak is map
+        && resource.data.streak.keys().hasOnly(['by_curriculum', 'overall'])
+        && resource.data.streak.by_curriculum is list
+        && resource.data.current_tracks is list
+        && resource.data.weekly_learning is map
+        && resource.data.weekly_learning.keys().hasOnly(['week_start', 'by_curriculum', 'overall'])
+        && resource.data.weekly_learning.week_start is string
+        && resource.data.weekly_learning.by_curriculum is list
+        && resource.data.siyumim is list
+        && resource.data.computed_at is timestamp
+        && resource.data.schema_version is int;
+      allow list: if false;
+      allow create, update, delete: if false;
+
+      match /readers/{readerUid} {
+        allow read, write: if false;
+      }
+    }
+
     match /social_parent_controls/{controlId} {
       // Reads as well as writes stay behind PIN-verified callables.
       allow read, write: if false;
@@ -637,17 +685,6 @@ service cloud.firestore {
     }
     match /school_rate_limits/{limitId} {
       allow read, write: if false;
-    }
-
-    match /social_summaries/{summaryId} {
-      allow get: if isSignedIn()
-          && (resource.data.owner_uid == request.auth.uid
-              || hasSocialSummaryAccess(summaryId)
-              || hasSchoolStaffSummaryAccess(summaryId));
-      allow list, create, update, delete: if false;
-      match /readers/{readerUid} {
-        allow read, write: if false;
-      }
     }
 
     // ════════════════════════════════════════════════════════════════════════

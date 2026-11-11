@@ -90,6 +90,7 @@ const PAYLOADS = convertTimestamps(_rawPayloads);
 const OWNER = 'owner-uid';
 const TUTOR = 'tutor-uid';
 const STRANGER = 'stranger-uid';
+const STAFF = 'school-staff-uid';
 const PROFILE = '5';
 const PARENT_SESSION_ID = 'a'.repeat(64);
 const NEW_PROFILE_SESSION_ID = 'b'.repeat(64);
@@ -211,6 +212,7 @@ const cutoverOwner = () => env.authenticatedContext(OWNER, {
 }).firestore();
 const tutor = () => env.authenticatedContext(TUTOR).firestore();
 const stranger = () => env.authenticatedContext(STRANGER).firestore();
+const staff = () => env.authenticatedContext(STAFF).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
 
 describe('phrase translation cache rules', () => {
@@ -236,7 +238,7 @@ describe('phrase translation cache rules', () => {
 describe('social graph rules', () => {
   const profileId = 'social-profile';
   const profilePath = 'social_profiles/social-card';
-  const controlsPath = 'social_parent_controls/social-controls';
+  const controlsPath = 'social_parent_controls/social-card';
   const requestPath = 'social_follow_requests/social-request';
   const followPath = 'social_follows/social-follow';
   const blockPath = 'social_blocks/social-block';
@@ -244,8 +246,10 @@ describe('social graph rules', () => {
   const auditPath = 'social_audit_logs/social-audit';
   const ratePath = 'social_rate_limits/social-rate';
   const cursorPath = 'social_search_cursors/social-cursor';
-  const summaryPath = 'social_summaries/summary-card';
-  const readerPath = `${summaryPath}/readers/${STRANGER}`;
+  const summaryId = 'social-card';
+  const summaryPath = `social_summaries/${summaryId}`;
+  const readerPath = `${summaryPath}/readers/${STAFF}`;
+  const followerReaderPath = `${summaryPath}/readers/${TUTOR}`;
 
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
@@ -258,7 +262,11 @@ describe('social graph rules', () => {
           display_name: 'Learner', display_name_search: 'learner', avatar_id: 0, paused: false,
         }),
         setDoc(doc(db, controlsPath), {
-          owner_uid: OWNER, profile_id: profileId, allowed_school_ids: ['school-1'],
+          owner_uid: OWNER,
+          profile_id: profileId,
+          allowed_school_ids: ['school-1'],
+          paused: false,
+          controls_update_pending: false,
         }),
         setDoc(doc(db, requestPath), {
           from_owner_uid: OWNER, from_profile_id: profileId,
@@ -280,8 +288,28 @@ describe('social graph rules', () => {
         }),
         setDoc(doc(db, ratePath), { day: '2026-11-10', request_count: 1 }),
         setDoc(doc(db, cursorPath), { owner_uid: OWNER, profile_id: profileId, expires_at: futureTs }),
-        setDoc(doc(db, summaryPath), { owner_uid: OWNER, profile_id: profileId, streak: {}, current_tracks: [], weekly_learning: {}, siyumim: [], computed_at: pastTs, schema_version: 1 }),
-        setDoc(doc(db, readerPath), { owner_uid: OWNER, profile_id: profileId, follower_profile_ids: [], school_ids: ['school-1'] }),
+        setDoc(doc(db, summaryPath), {
+          display_name: 'Learner',
+          avatar_id: 0,
+          streak: { by_curriculum: [] },
+          current_tracks: [],
+          weekly_learning: { week_start: '2026-11-08', by_curriculum: [] },
+          siyumim: [],
+          computed_at: pastTs,
+          schema_version: 1,
+        }),
+        setDoc(doc(db, followerReaderPath), {
+          owner_uid: OWNER,
+          profile_id: profileId,
+          follower_profile_ids: ['approved-profile'],
+          school_ids: [],
+        }),
+        setDoc(doc(db, readerPath), {
+          owner_uid: OWNER,
+          profile_id: profileId,
+          follower_profile_ids: [],
+          school_ids: ['school-1'],
+        }),
       ]);
     });
   });
@@ -357,7 +385,8 @@ describe('social graph rules', () => {
     await assertFails(getDoc(doc(owner(), readerPath)));
     await assertFails(setDoc(doc(owner(), readerPath), { school_ids: ['forged'] }));
     await assertSucceeds(getDoc(doc(owner(), summaryPath)));
-    await assertSucceeds(getDoc(doc(stranger(), summaryPath)));
+    await assertSucceeds(getDoc(doc(staff(), summaryPath)));
+    await assertFails(getDoc(doc(stranger(), summaryPath)));
     await assertFails(setDoc(doc(owner(), summaryPath), { points: 99 }));
     await assertFails(getDoc(doc(anon(), summaryPath)));
     await assertFails(getDoc(doc(tutor(), 'social_summaries/summary-without-reader')));
@@ -365,6 +394,85 @@ describe('social graph rules', () => {
     await assertFails(setDoc(doc(owner(), ratePath), { request_count: 0 }));
     await assertFails(getDoc(doc(owner(), cursorPath)));
     await assertFails(setDoc(doc(owner(), cursorPath), { forged: true }));
+  });
+
+  test('social summary reads require a follower or staff grant and deny malformed fields', async () => {
+    await assertFails(getDoc(doc(owner(), summaryPath)));
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await assertFails(getDoc(doc(stranger(), summaryPath)));
+    await assertFails(getDoc(doc(anon(), summaryPath)));
+    await assertFails(getDoc(doc(tutor(), followerReaderPath)));
+    await assertFails(setDoc(doc(owner(), summaryPath), { forged: true }));
+    await assertFails(deleteDoc(doc(owner(), summaryPath)));
+    await assertFails(getDocs(query(collection(tutor(), 'social_summaries'), limit(10))));
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), followerReaderPath), {
+        owner_uid: OWNER,
+        profile_id: profileId,
+        follower_profile_ids: [],
+        school_ids: [],
+      });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'removed grant cannot read');
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), followerReaderPath), {
+        owner_uid: OWNER,
+        profile_id: profileId,
+        follower_profile_ids: ['approved-profile'],
+        school_ids: [],
+      });
+      await updateDoc(doc(ctx.firestore(), summaryPath), { points: 42 });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'summary rejects any non-allowlisted field');
+  });
+
+  async function installChildFollowerGrant() {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await Promise.all([
+        updateDoc(doc(db, profilePath), { mode: 'child', paused: false, active_school_ids: ['school-1'] }),
+        updateDoc(doc(db, controlsPath), {
+          paused: false,
+          controls_update_pending: false,
+          allowed_school_ids: ['school-1'],
+        }),
+        updateDoc(doc(db, followerReaderPath), {
+          follower_profile_ids: ['approved-profile'],
+          school_ids: [],
+          child_school_ids: ['school-1'],
+          active_school_ids: ['school-1'],
+        }),
+      ]);
+    });
+  }
+
+  test('child follower read succeeds only while the child remains a school member', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), profilePath), { active_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  test('child follower read stops when the follower leaves the school', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), followerReaderPath), { active_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  test('child follower read stops when parent removes the school from the allow-list', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), controlsPath), { allowed_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
   });
 });
 

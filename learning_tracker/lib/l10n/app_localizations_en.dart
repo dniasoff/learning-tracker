@@ -7970,6 +7970,131 @@ class AppLocalizationsEn extends AppLocalizations {
   String get textReaderRetryTranslation => 'Tap to retry';
 
   @override
+  String get communityTitle => 'Community';
+
+  @override
+  String get communityParentControls => 'Child community controls';
+
+  @override
+  String get communityFollowers => 'Followers';
+
+  @override
+  String get communityFollowing => 'Following';
+
+  @override
+  String get communityRequests => 'Requests';
+
+  @override
+  String get communityFindPeople => 'Find people';
+
+  @override
+  String get communityPrivacyNotice =>
+      'Followers can see only the progress shared on this profile.';
+
+  @override
+  String get communityNoConnections => 'No connections yet';
+
+  @override
+  String get communityNoRequests => 'No requests';
+
+  @override
+  String get communityUnavailableProfile => 'Unavailable profile';
+
+  @override
+  String get communityApprove => 'Approve';
+
+  @override
+  String get communityDecline => 'Decline';
+
+  @override
+  String get communityRequestPending => 'Request pending';
+
+  @override
+  String get communityRemove => 'Remove follower';
+
+  @override
+  String get communityBlock => 'Block profile';
+
+  @override
+  String get communitySchoolId => 'School ID';
+
+  @override
+  String get communityExactName => 'Exact learner name';
+
+  @override
+  String get communitySearch => 'Search';
+
+  @override
+  String get communitySearchOnlySchool =>
+      'Search exact names in a school you belong to.';
+
+  @override
+  String get communitySendRequest => 'Send follow request';
+
+  @override
+  String get communityPauseSharing => 'Pause sharing and social access';
+
+  @override
+  String get communityAllowedSchools => 'Allowed schools';
+
+  @override
+  String get communityNoAllowedSchools => 'No schools allowed';
+
+  @override
+  String get communitySchoolIds => 'School IDs';
+
+  @override
+  String get communitySchoolIdsHelp =>
+      'Enter school IDs joined by commas, then submit.';
+
+  @override
+  String get communityProfile => 'Learner profile';
+
+  @override
+  String get communitySummaryUnavailable =>
+      'This profile summary is unavailable.';
+
+  @override
+  String get communityStreak => 'Streak';
+
+  @override
+  String get communityCurrentTracks => 'Current tracks and position';
+
+  @override
+  String get communityThisWeek => 'This week';
+
+  @override
+  String communityWeekOf(String date) {
+    return 'Week of $date';
+  }
+
+  @override
+  String get communitySiyumim => 'Siyumim';
+
+  @override
+  String get communityNoSiyumim => 'No siyumim to show yet';
+
+  @override
+  String communityUpdatedAt(String date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String communityStreakValues(int current, int best) {
+    return '$current current · $best best';
+  }
+
+  @override
+  String communityPosition(String position) {
+    return 'Position: $position';
+  }
+
+  @override
+  String communityWeeklyCounts(int limudim, int chazaros) {
+    return '$limudim new learning · $chazaros review';
+  }
+
+  @override
   String get schoolProfileTitle => 'School';
 
   @override

@@ -46,6 +46,8 @@ import 'package:learning_tracker/features/settings/presentation/screens/about_sc
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/social_community_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/social_summary_profile_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/join_school_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/school_profile_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/school_roster_screen.dart';
@@ -178,6 +180,11 @@ class AppRouter extends RootStackRouter {
           page: ProgressRoute.page,
           guards: [profileSelectionGuard],
         ),
+        AutoRoute(
+          path: 'community',
+          page: SocialCommunityRoute.page,
+          guards: [profileSelectionGuard],
+        ),
         AutoRoute(path: 'settings', page: SettingsRoute.page),
         // Public app information is available to every profile mode.
         AutoRoute(path: 'about', page: AboutRoute.page),
@@ -202,6 +209,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/progress/lifetime',
       page: LifetimeKnowledgeRoute.page,
+      guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/community/profile/:summaryId',
+      page: SocialSummaryProfileRoute.page,
       guards: [authGuard],
     ),
     // Lifetime report (Story 5.2, DNI-517): a parent surface. A child, a
@@ -307,6 +319,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/parent-mode/settings',
       page: ParentSettingsRoute.page,
+      guards: [authGuard, childModeGuard, pinGuard],
+    ),
+    AutoRoute(
+      path: '/parent-mode/social',
+      page: SocialCommunityRoute.page,
       guards: [authGuard, childModeGuard, pinGuard],
     ),
     AutoRoute(
@@ -437,9 +454,9 @@ class AppRouter extends RootStackRouter {
     ),
     // Deep-link entry: /invite?token=<grantId>
     AutoRoute(path: '/invite', page: AcceptInviteRoute.page),
-    AutoRoute(path: '/schools/join', page: JoinSchoolRoute.page),
-    AutoRoute(path: '/schools/:schoolId', page: SchoolProfileRoute.page),
     AutoRoute(path: '/schools/:schoolId/roster', page: SchoolRosterRoute.page),
+    AutoRoute(path: '/schools/:schoolId', page: SchoolProfileRoute.page),
+    AutoRoute(path: '/schools/join', page: JoinSchoolRoute.page),
     AutoRoute(
       path: '/tutor/decline',
       page: DeclineInviteRoute.page,

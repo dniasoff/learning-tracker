@@ -12972,6 +12972,228 @@ abstract class AppLocalizations {
   /// **'Tap to retry'**
   String get textReaderRetryTranslation;
 
+  /// No description provided for @communityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get communityTitle;
+
+  /// No description provided for @communityParentControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Child community controls'**
+  String get communityParentControls;
+
+  /// No description provided for @communityFollowers.
+  ///
+  /// In en, this message translates to:
+  /// **'Followers'**
+  String get communityFollowers;
+
+  /// No description provided for @communityFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get communityFollowing;
+
+  /// No description provided for @communityRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests'**
+  String get communityRequests;
+
+  /// No description provided for @communityFindPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'Find people'**
+  String get communityFindPeople;
+
+  /// No description provided for @communityPrivacyNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Followers can see only the progress shared on this profile.'**
+  String get communityPrivacyNotice;
+
+  /// No description provided for @communityNoConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'No connections yet'**
+  String get communityNoConnections;
+
+  /// No description provided for @communityNoRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests'**
+  String get communityNoRequests;
+
+  /// No description provided for @communityUnavailableProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable profile'**
+  String get communityUnavailableProfile;
+
+  /// No description provided for @communityApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get communityApprove;
+
+  /// No description provided for @communityDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get communityDecline;
+
+  /// No description provided for @communityRequestPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Request pending'**
+  String get communityRequestPending;
+
+  /// No description provided for @communityRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove follower'**
+  String get communityRemove;
+
+  /// No description provided for @communityBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block profile'**
+  String get communityBlock;
+
+  /// No description provided for @communitySchoolId.
+  ///
+  /// In en, this message translates to:
+  /// **'School ID'**
+  String get communitySchoolId;
+
+  /// No description provided for @communityExactName.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact learner name'**
+  String get communityExactName;
+
+  /// No description provided for @communitySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get communitySearch;
+
+  /// No description provided for @communitySearchOnlySchool.
+  ///
+  /// In en, this message translates to:
+  /// **'Search exact names in a school you belong to.'**
+  String get communitySearchOnlySchool;
+
+  /// No description provided for @communitySendRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Send follow request'**
+  String get communitySendRequest;
+
+  /// No description provided for @communityPauseSharing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause sharing and social access'**
+  String get communityPauseSharing;
+
+  /// No description provided for @communityAllowedSchools.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed schools'**
+  String get communityAllowedSchools;
+
+  /// No description provided for @communityNoAllowedSchools.
+  ///
+  /// In en, this message translates to:
+  /// **'No schools allowed'**
+  String get communityNoAllowedSchools;
+
+  /// No description provided for @communitySchoolIds.
+  ///
+  /// In en, this message translates to:
+  /// **'School IDs'**
+  String get communitySchoolIds;
+
+  /// No description provided for @communitySchoolIdsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter school IDs joined by commas, then submit.'**
+  String get communitySchoolIdsHelp;
+
+  /// No description provided for @communityProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner profile'**
+  String get communityProfile;
+
+  /// No description provided for @communitySummaryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile summary is unavailable.'**
+  String get communitySummaryUnavailable;
+
+  /// No description provided for @communityStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get communityStreak;
+
+  /// No description provided for @communityCurrentTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Current tracks and position'**
+  String get communityCurrentTracks;
+
+  /// No description provided for @communityThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get communityThisWeek;
+
+  /// No description provided for @communityWeekOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Week of {date}'**
+  String communityWeekOf(String date);
+
+  /// No description provided for @communitySiyumim.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyumim'**
+  String get communitySiyumim;
+
+  /// No description provided for @communityNoSiyumim.
+  ///
+  /// In en, this message translates to:
+  /// **'No siyumim to show yet'**
+  String get communityNoSiyumim;
+
+  /// No description provided for @communityUpdatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {date}'**
+  String communityUpdatedAt(String date);
+
+  /// No description provided for @communityStreakValues.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} current · {best} best'**
+  String communityStreakValues(int current, int best);
+
+  /// No description provided for @communityPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Position: {position}'**
+  String communityPosition(String position);
+
+  /// No description provided for @communityWeeklyCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'{limudim} new learning · {chazaros} review'**
+  String communityWeeklyCounts(int limudim, int chazaros);
+
   /// No description provided for @schoolProfileTitle.
   ///
   /// In en, this message translates to:

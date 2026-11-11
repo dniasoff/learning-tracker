@@ -7883,6 +7883,130 @@ class AppLocalizationsHe extends AppLocalizations {
   String get textReaderRetryTranslation => 'הקשה כדי לנסות שוב';
 
   @override
+  String get communityTitle => 'קהילה';
+
+  @override
+  String get communityParentControls => 'בקרת הורה על הקהילה';
+
+  @override
+  String get communityFollowers => 'עוקבים';
+
+  @override
+  String get communityFollowing => 'במעקב';
+
+  @override
+  String get communityRequests => 'בקשות';
+
+  @override
+  String get communityFindPeople => 'מציאת אנשים';
+
+  @override
+  String get communityPrivacyNotice =>
+      'עוקבים רואים רק את ההתקדמות ששותפה בפרופיל זה.';
+
+  @override
+  String get communityNoConnections => 'עדיין אין קשרים';
+
+  @override
+  String get communityNoRequests => 'אין בקשות';
+
+  @override
+  String get communityUnavailableProfile => 'הפרופיל אינו זמין';
+
+  @override
+  String get communityApprove => 'אישור';
+
+  @override
+  String get communityDecline => 'דחייה';
+
+  @override
+  String get communityRequestPending => 'הבקשה ממתינה';
+
+  @override
+  String get communityRemove => 'הסרת עוקב';
+
+  @override
+  String get communityBlock => 'חסימת פרופיל';
+
+  @override
+  String get communitySchoolId => 'מזהה בית ספר';
+
+  @override
+  String get communityExactName => 'שם מדויק של לומד';
+
+  @override
+  String get communitySearch => 'חיפוש';
+
+  @override
+  String get communitySearchOnlySchool =>
+      'חיפוש בשם מדויק בבתי ספר שבהם יש לך חברות.';
+
+  @override
+  String get communitySendRequest => 'שליחת בקשת מעקב';
+
+  @override
+  String get communityPauseSharing => 'השהיית השיתוף והגישה החברתית';
+
+  @override
+  String get communityAllowedSchools => 'בתי ספר מורשים';
+
+  @override
+  String get communityNoAllowedSchools => 'אין בתי ספר מורשים';
+
+  @override
+  String get communitySchoolIds => 'מזהי בתי ספר';
+
+  @override
+  String get communitySchoolIdsHelp =>
+      'יש להזין מזהי בתי ספר מופרדים בפסיקים ולשלוח.';
+
+  @override
+  String get communityProfile => 'פרופיל לומד';
+
+  @override
+  String get communitySummaryUnavailable => 'סיכום הפרופיל אינו זמין.';
+
+  @override
+  String get communityStreak => 'רצף לימוד';
+
+  @override
+  String get communityCurrentTracks => 'מסלולים נוכחיים ומיקום';
+
+  @override
+  String get communityThisWeek => 'השבוע';
+
+  @override
+  String communityWeekOf(String date) {
+    return 'השבוע שמתחיל ב־$date';
+  }
+
+  @override
+  String get communitySiyumim => 'סיומים';
+
+  @override
+  String get communityNoSiyumim => 'אין עדיין סיומים להצגה';
+
+  @override
+  String communityUpdatedAt(String date) {
+    return 'עודכן $date';
+  }
+
+  @override
+  String communityStreakValues(int current, int best) {
+    return '$current נוכחי · $best הטוב ביותר';
+  }
+
+  @override
+  String communityPosition(String position) {
+    return 'מיקום: $position';
+  }
+
+  @override
+  String communityWeeklyCounts(int limudim, int chazaros) {
+    return '$limudim לימוד חדש · $chazaros חזרות';
+  }
+
+  @override
   String get schoolProfileTitle => 'בית ספר';
 
   @override

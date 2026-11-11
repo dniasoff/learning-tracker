@@ -50,9 +50,11 @@ const ROOT_COLLECTIONS = [
   'tutor_grants', 'users', 'tutor_active_access', 'social_profiles',
   'social_parent_controls', 'social_follow_requests', 'social_follows',
   'social_blocks', 'social_rate_limits', 'school_memberships',
-  'social_audit_logs', 'social_search_cursors', 'schools', 'school_admins',
-  'school_invites', 'school_audit_logs', 'school_reports', 'school_rate_limits',
+  'social_audit_logs', 'social_search_cursors',
+  'schools', 'school_admins', 'school_invites', 'school_audit_logs',
+  'school_reports', 'school_rate_limits',
   'social_summaries',
+  'social_summary_rate_limits',
 ];
 
 /**
