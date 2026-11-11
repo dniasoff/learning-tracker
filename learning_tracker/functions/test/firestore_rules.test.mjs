@@ -265,12 +265,16 @@ describe('social graph rules', () => {
         }),
         setDoc(doc(db, summaryProfilePath), {
           owner_uid: OWNER, profile_id: profileId, mode: 'adult', paused: false,
+          active_school_ids: ['school-1'],
         }),
         setDoc(doc(db, summaryControlsPath), {
           owner_uid: OWNER, profile_id: profileId, allowed_school_ids: [], paused: false,
         }),
         setDoc(doc(db, `social_user_controls/${TUTOR}`), {
           active_social_child_profile_ids: ['approved-profile'],
+        }),
+        setDoc(doc(db, `social_user_controls/${STAFF}`), {
+          active_staff_school_ids: ['school-1'],
         }),
         setDoc(doc(db, controlsPath), {
           owner_uid: OWNER,
@@ -401,6 +405,12 @@ describe('social graph rules', () => {
     await assertFails(getDoc(doc(owner(), summaryPath)));
     await assertSucceeds(getDoc(doc(staff(), summaryPath)));
     await assertFails(getDoc(doc(stranger(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `social_user_controls/${STAFF}`), {
+        active_staff_school_ids: [],
+      });
+    });
+    await assertFails(getDoc(doc(staff(), summaryPath)), 'removed staff mirror denies summary reads');
     await assertFails(setDoc(doc(owner(), summaryPath), { points: 99 }));
     await assertFails(getDoc(doc(anon(), summaryPath)));
     await assertFails(getDoc(doc(tutor(), 'social_summaries/summary-without-reader')));

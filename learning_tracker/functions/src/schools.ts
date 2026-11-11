@@ -2,7 +2,12 @@ import * as crypto from "crypto";
 import admin from "firebase-admin";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { assertActiveParentSessionInTransaction } from "./parent_session_validation";
-import { refreshSocialMembershipMirror, revokeSocialGrantsForMembershipChange } from "./social_graph";
+import {
+  grantSocialStaffSchoolAccess,
+  refreshSocialMembershipMirror,
+  revokeSocialGrantsForMembershipChange,
+  revokeStaffSchoolAccess,
+} from "./social_graph";
 import { CALL_OPTS, db } from "./shared";
 
 const MAX_SCHOOLS_PER_ACCOUNT = 10;
@@ -113,6 +118,12 @@ async function refreshSchoolReaders(schoolId: string, forceInactive = false) {
     admins().where("school_id", "==", schoolId).get(),
   ]);
   const schoolIsActive = !forceInactive && school.exists && school.get("status") === "active";
+  await Promise.all(staff.docs.map((doc) => {
+    const uid = String(doc.get("owner_uid"));
+    return schoolIsActive && doc.get("state") === "active"
+      ? grantSocialStaffSchoolAccess(uid, schoolId)
+      : revokeStaffSchoolAccess(uid, schoolId);
+  }));
   for (const member of members.docs) {
     const ref = { ownerUid: String(member.get("owner_uid")), profileId: String(member.get("profile_id")) };
     const memberIsActive = member.get("state") === "active";
@@ -166,6 +177,7 @@ export const createSchool = onCall(CALL_OPTS, async (request) => {
     txn.create(adminRef, { school_id: schoolRef.id, owner_uid: uid, profile_id: profileId, role: "admin", state: "active", created_at: now });
   });
   await auditEvent(schoolRef.id, uid, "school_created");
+  await refreshSchoolReaders(schoolRef.id);
   return { schoolId: schoolRef.id, name, createdAt: now.toDate().toISOString(), verified: false };
 });
 
@@ -317,6 +329,7 @@ async function changeMember(schoolId: string, targetUid: string, profileId: stri
     const snap = await txn.get(memberRef);
     if (!snap.exists || snap.get("state") !== "active") throw new HttpsError("not-found", "Membership is unavailable");
   });
+  await revokeStaffSchoolAccess(targetUid, schoolId);
   await revokeSchoolDependentSocial({ ownerUid: targetUid, profileId }, schoolId);
   await revokeSchoolReaderForMember(schoolId, { ownerUid: targetUid, profileId });
   await db.runTransaction(async (txn) => {
@@ -392,6 +405,7 @@ export const removeSchoolAdmin = onCall(CALL_OPTS, async (request) => {
     const target = await txn.get(admins().doc(staffId(schoolId, targetUid)));
     if (!target.exists || target.get("state") !== "active") throw new HttpsError("not-found", "School administrator is unavailable");
   });
+  await revokeStaffSchoolAccess(targetUid, schoolId);
   await revokeSchoolReaderForUid(schoolId, targetUid);
   await db.runTransaction(async (txn) => {
     await requireActiveSchool(txn, schools().doc(schoolId));
@@ -426,6 +440,7 @@ export const transferSchoolAdmin = onCall(CALL_OPTS, async (request) => {
     const member = await txn.get(memberRef);
     if (!member.exists || member.get("state") !== "active") throw new HttpsError("failed-precondition", "Only an active member can receive admin rights");
   });
+  await revokeStaffSchoolAccess(uid, schoolId);
   await revokeSchoolReaderForUid(schoolId, uid);
   await db.runTransaction(async (txn) => {
     await requireActiveSchool(txn, schools().doc(schoolId));
@@ -484,6 +499,10 @@ export const setSchoolSuspended = onCall(CALL_OPTS, async (request) => {
       throw new HttpsError("failed-precondition", "School cannot be suspended in its current state");
     }
     const revision = Number(school.get("membership_revision") ?? 0);
+    const staffSnap = await admins().where("school_id", "==", ref.id).where("state", "==", "active").get();
+    await Promise.all(staffSnap.docs.map((staff) =>
+      revokeStaffSchoolAccess(String(staff.get("owner_uid")), ref.id),
+    ));
     const memberSnap = await memberships().where("school_id", "==", ref.id).get();
     for (const member of memberSnap.docs) {
       await revokeSchoolDependentSocial({
@@ -534,6 +553,10 @@ export const deleteSchool = onCall(CALL_OPTS, async (request) => {
     const members = await txn.get(memberships().where("school_id", "==", ref.id));
     return { members, revision: Number(school.get("membership_revision") ?? 0) };
   });
+  const staffSnap = await admins().where("school_id", "==", ref.id).where("state", "==", "active").get();
+  await Promise.all(staffSnap.docs.map((staff) =>
+    revokeStaffSchoolAccess(String(staff.get("owner_uid")), ref.id),
+  ));
   for (const member of preflight.members.docs) {
     await revokeSchoolDependentSocial({
       ownerUid: String(member.get("owner_uid")),
@@ -587,6 +610,7 @@ export async function cleanupSchoolAccess(ownerUid: string, profileId?: string):
   const adminSnap = await adminQuery.get();
   for (const doc of adminSnap.docs) {
     const schoolId = String(doc.get("school_id"));
+    await revokeStaffSchoolAccess(ownerUid, schoolId);
     const active = await admins().where("school_id", "==", schoolId).where("state", "==", "active").get();
     if (active.size > 1) {
       await revokeSchoolReaderForUid(schoolId, ownerUid);
