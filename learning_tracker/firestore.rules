@@ -152,14 +152,59 @@ service cloud.firestore {
           && reader.school_ids.hasAny(summaryProfile.active_school_ids);
     }
 
+    function socialGroupSchoolIsActive(groupPath) {
+      let group = get(groupPath).data;
+      return group.group_type != 'school'
+          || (group.school_id is string
+            && get(/databases/$(database)/documents/schools/$(group.school_id)).data.status == 'active');
+    }
+
+    // A summary grant records one active shared group for this reader. The
+    // live group and both account memberships are checked on every read, so a
+    // removal/deletion fence denies access before paginated ACL cleanup ends.
+    function socialGroupGrantIsActive(summaryId, readerPath, summaryProfilePath) {
+      let reader = get(readerPath).data;
+      let summaryProfile = get(summaryProfilePath).data;
+      let groupIds = reader.get('group_ids', []);
+      let groupId = groupIds.size() == 1 ? groupIds[0] : '_no_active_group';
+      let groupPath = /databases/$(database)/documents/learning_groups/$(groupId);
+      let ownerMemberPath = /databases/$(database)/documents/learning_groups/$(groupId)/members/$(summaryProfile.owner_uid)/group_profiles/$(summaryProfile.profile_id);
+      let readerMemberPath = /databases/$(database)/documents/learning_groups/$(groupId)/members/$(request.auth.uid)/group_profiles/$(reader.reader_profile_id);
+      let childControlsPath = /databases/$(database)/documents/social_parent_controls/$(summaryId);
+      let ownerControlsPath = /databases/$(database)/documents/social_user_controls/$(summaryProfile.owner_uid);
+      return groupIds.size() == 1
+          && get(groupPath).data.status == 'active'
+          && socialGroupSchoolIsActive(groupPath)
+          && get(ownerMemberPath).data.state == 'active'
+          && get(readerMemberPath).data.state == 'active'
+          && get(readerMemberPath).data.owner_uid == request.auth.uid
+          && (summaryProfile.mode != 'child'
+            || ((summaryProfile.owner_uid == request.auth.uid
+              || (get(ownerMemberPath).data.approved_reader_uids is list
+                && get(ownerMemberPath).data.approved_reader_uids.hasAny([request.auth.uid])))
+              && summaryProfile.paused != true
+              && get(childControlsPath).data.paused != true
+              && get(childControlsPath).data.controls_update_pending != true
+              && get(ownerControlsPath).data.active_social_child_profile_ids is list
+              && get(ownerControlsPath).data.active_social_child_profile_ids.hasAny([get(ownerMemberPath).data.social_profile_id])
+              && (get(groupPath).data.group_type != 'school'
+                || (get(groupPath).data.school_id is string
+                  && summaryProfile.active_school_ids is list
+                  && summaryProfile.active_school_ids.hasAny([get(groupPath).data.school_id])
+                  && get(childControlsPath).data.allowed_school_ids is list
+                  && get(childControlsPath).data.allowed_school_ids.hasAny([get(groupPath).data.school_id])))));
+    }
+
     function socialSummaryMayRead(summaryId) {
       let readerPath = /databases/$(database)/documents/social_summaries/$(summaryId)/readers/$(request.auth.uid);
       let summaryProfilePath = /databases/$(database)/documents/social_profiles/$(summaryId);
-      return isSignedIn() && exists(readerPath)
+      return isSignedIn()
             && exists(summaryProfilePath)
+            && exists(readerPath)
             && ((socialFollowerGrantIsActive(readerPath)
                   && (get(summaryProfilePath).data.mode != 'child'
                     || socialChildFollowerSchoolAccess(summaryId, readerPath)))
+              || socialGroupGrantIsActive(summaryId, readerPath, summaryProfilePath)
               || socialStaffGrantIsActive(readerPath, summaryProfilePath));
     }
 
@@ -733,6 +778,31 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /school_rate_limits/{limitId} {
+      allow read, write: if false;
+    }
+
+    // Group state, invitations, roster entries and parent approvals are
+    // callable-only. The only cross-account read is the sanitized social
+    // summary, gated above by current group membership.
+    match /learning_groups/{groupId} {
+      allow read, write: if false;
+      match /members/{uid} {
+        allow read, write: if false;
+        match /group_profiles/{profileId} {
+          allow read, write: if false;
+        }
+      }
+    }
+    match /learning_group_invites/{inviteId} {
+      allow read, write: if false;
+    }
+    match /learning_group_parent_approvals/{approvalId} {
+      allow read, write: if false;
+    }
+    match /learning_group_audit_logs/{auditId} {
+      allow read, write: if false;
+    }
+    match /learning_group_rate_limits/{limitId} {
       allow read, write: if false;
     }
 

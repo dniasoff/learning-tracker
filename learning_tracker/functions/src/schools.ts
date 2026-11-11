@@ -8,6 +8,7 @@ import {
   revokeSocialGrantsForMembershipChange,
   revokeStaffSchoolAccess,
 } from "./social_graph";
+import { cleanupLearningGroupsForSchool } from "./groups";
 import { CALL_OPTS, db } from "./shared";
 
 const MAX_SCHOOLS_PER_ACCOUNT = 10;
@@ -700,6 +701,7 @@ export const deleteSchool = onCall(CALL_OPTS, async (request) => {
     txn.set(audit().doc(), { school_id: ref.id, actor_uid: uid, action: "school_deletion_started", at: admin.firestore.Timestamp.now() });
     return { members };
   });
+  await cleanupLearningGroupsForSchool(ref.id);
   const staffSnap = await admins().where("school_id", "==", ref.id).where("state", "==", "active").get();
   await Promise.all(staffSnap.docs.map((staff) =>
     revokeStaffSchoolAccess(String(staff.get("owner_uid")), ref.id),

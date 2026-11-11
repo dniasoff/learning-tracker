@@ -80,6 +80,17 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
     });
   }
 
+  Future<void> _openGroups(String profileId) async {
+    final profile = await ref.read(activeProfileProvider.future);
+    if (!mounted) return;
+    await context.router.push(
+      LearningGroupsRoute(
+        profileId: profileId,
+        isAdult: profile?.mode.name == 'adult',
+      ),
+    );
+  }
+
   Future<void> _sendRequest(SocialProfileCard target) async {
     final scope = await _scope();
     final profile = await ref.read(activeProfileProvider.future);
@@ -126,6 +137,12 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
               : l10n.communityTitle,
         ),
         actions: [
+          if (profileId != null)
+            IconButton(
+              tooltip: l10n.groupTitle,
+              onPressed: () => _openGroups(profileId),
+              icon: const Icon(Icons.groups_outlined),
+            ),
           IconButton(
             tooltip: l10n.communityVisibilityTitle,
             onPressed: () =>

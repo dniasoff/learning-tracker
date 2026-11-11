@@ -123,8 +123,16 @@ learner account/profile pair. Its fields include `owner_uid`, `profile_id`,
 uses active membership records for school-scoped search and child allow-list
 checks. School functions maintain the membership records and the
 `social_summaries/{sha256(ownerUid + NUL + profileId)}/readers/{staffUid}` ACL.
-The reader ACL has independent `follower_profile_ids` and `school_ids` grants;
-staff can read only the sanitized social summary, never learner source data.
+The reader ACL has independent `follower_profile_ids`, `school_ids`, and
+`group_ids` grants; staff and group members can read only the sanitized social
+summary, never learner source data. `group_ids` holds one representative active
+shared group and the ACL stores a reader profile ID for that account. Removing
+one profile recomputes this reader profile in the same transaction when another
+profile from the account remains in the group. Firestore rules re-check group
+status and both profile memberships on every summary read. For child
+profiles the profile-scoped group member record carries the parent's explicit
+approval of that reader; the child's sharing pause and school allow-list still
+fence reads. Multiple profiles from one account may be members at once.
 
 School identity, admin, invite, report, audit, and rate-limit data are callable
 only. `createSchool` immediately creates an active unverified identity and
@@ -132,6 +140,28 @@ assigns the creator as the first admin. Verification and suspension callables
 require the Firebase Auth custom claim `app_owner: true`; the operations-only
 `functions/scripts/set_app_owner_claim.mjs --uid <uid> [--revoke]` script is
 the only supported claim grant path.
+
+## Learning groups (top-level)
+
+| Collection | Key and fields | Client access |
+|---|---|---|
+| `learning_groups/{groupId}` | Group name, private/school type, optional school ID, admin UID, status fence and roster revision | Callable-only reads/writes |
+| `learning_groups/{groupId}/members/{uid}` | Account-level group presence and active profile IDs, allowing adult and child family profiles to share a group | Callable-only reads/writes; rules consult status for summary reads |
+| `learning_groups/{groupId}/members/{uid}/group_profiles/{profileId}` | Profile-scoped role, mode, opaque `member_id`, active/revoking/removed state, and child-approved reader UIDs | Callable-only reads/writes; rules consult profile status for summary reads |
+| `learning_group_invites/{sha256(token)}` | Hashed random token, expiry, bounded use count and state | Callable-only reads/writes |
+| `learning_group_parent_approvals/{sha256(group, child UID, child profile, reader UID)}` | Parent review for a later member's access to each child profile summary | Callable-only reads/writes |
+| `learning_group_audit_logs/{entryId}` | Actor UID, group ID, action and timestamp; no learning data | Callable-only reads/writes |
+| `learning_group_rate_limits/{limitId}` | Per-account/day creation, invite and redemption counters | Callable-only reads/writes |
+
+Group roster membership and summary visibility are separate permissions. Adult
+group members receive the group's sanitized summary grant after accepting an
+invite. A parent PIN approval to add a child grants current members access to
+that child's chosen social summary fields. Later joiners receive no child
+summary grant until the parent approves them; revocation removes the child
+member's approval in a transaction before removing the ACL entry. Group and
+member status fences are written before resumable ACL/invite cleanup. School
+hosted groups are fenced while their school is suspended and are cleaned up
+when the school is deleted.
 
 ---
 

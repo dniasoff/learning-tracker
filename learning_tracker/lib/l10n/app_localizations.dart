@@ -13397,6 +13397,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{# siyum} other{# siyumim}}'**
   String communitySiyumCount(int count);
+
+  /// No description provided for @groupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning groups'**
+  String get groupTitle;
+
+  /// No description provided for @groupCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create group'**
+  String get groupCreate;
+
+  /// No description provided for @groupName.
+  ///
+  /// In en, this message translates to:
+  /// **'Group name'**
+  String get groupName;
+
+  /// No description provided for @groupSchoolIdOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'School ID (leave blank for a private group)'**
+  String get groupSchoolIdOptional;
+
+  /// No description provided for @groupCreateSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Group created'**
+  String get groupCreateSuccess;
+
+  /// No description provided for @groupInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Create invite'**
+  String get groupInvite;
+
+  /// No description provided for @groupInviteCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite code'**
+  String get groupInviteCode;
+
+  /// No description provided for @groupJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Join with invite'**
+  String get groupJoin;
+
+  /// No description provided for @groupInviteEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter invite code'**
+  String get groupInviteEntry;
+
+  /// No description provided for @groupJoinConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and join'**
+  String get groupJoinConfirm;
+
+  /// No description provided for @groupJoinConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'These members will be able to see the profile parts you choose to share for this child.'**
+  String get groupJoinConsent;
+
+  /// No description provided for @groupMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get groupMembers;
+
+  /// No description provided for @groupAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get groupAdmin;
+
+  /// No description provided for @groupPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Private group'**
+  String get groupPrivate;
+
+  /// No description provided for @groupSchoolHosted.
+  ///
+  /// In en, this message translates to:
+  /// **'School group'**
+  String get groupSchoolHosted;
+
+  /// No description provided for @groupLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave group'**
+  String get groupLeave;
+
+  /// No description provided for @groupTransferAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Make admin'**
+  String get groupTransferAdmin;
+
+  /// No description provided for @groupRemoveMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove member'**
+  String get groupRemoveMember;
+
+  /// No description provided for @groupDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete group'**
+  String get groupDelete;
+
+  /// No description provided for @groupParentApprovals.
+  ///
+  /// In en, this message translates to:
+  /// **'Group profile approvals'**
+  String get groupParentApprovals;
+
+  /// No description provided for @groupApproveMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow this member to see the child’s shared profile'**
+  String get groupApproveMember;
+
+  /// No description provided for @groupRevokeMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove approval'**
+  String get groupRevokeMember;
+
+  /// No description provided for @groupNoGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'No groups yet'**
+  String get groupNoGroups;
+
+  /// No description provided for @groupNoApprovals.
+  ///
+  /// In en, this message translates to:
+  /// **'No group approvals to review'**
+  String get groupNoApprovals;
+
+  /// No description provided for @groupInvitationCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite code: {code}'**
+  String groupInvitationCreated(String code);
 }
 
 class _AppLocalizationsDelegate

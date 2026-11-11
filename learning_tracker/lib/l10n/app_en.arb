@@ -6735,5 +6735,33 @@
   "communitySiyumCount": "{count, plural, =1{# siyum} other{# siyumim}}",
   "@communitySiyumCount": {
     "placeholders": { "count": { "type": "int" } }
+  },
+  "groupTitle": "Learning groups",
+  "groupCreate": "Create group",
+  "groupName": "Group name",
+  "groupSchoolIdOptional": "School ID (leave blank for a private group)",
+  "groupCreateSuccess": "Group created",
+  "groupInvite": "Create invite",
+  "groupInviteCode": "Invite code",
+  "groupJoin": "Join with invite",
+  "groupInviteEntry": "Enter invite code",
+  "groupJoinConfirm": "Review and join",
+  "groupJoinConsent": "These members will be able to see the profile parts you choose to share for this child.",
+  "groupMembers": "Members",
+  "groupAdmin": "Admin",
+  "groupPrivate": "Private group",
+  "groupSchoolHosted": "School group",
+  "groupLeave": "Leave group",
+  "groupTransferAdmin": "Make admin",
+  "groupRemoveMember": "Remove member",
+  "groupDelete": "Delete group",
+  "groupParentApprovals": "Group profile approvals",
+  "groupApproveMember": "Allow this member to see the child’s shared profile",
+  "groupRevokeMember": "Remove approval",
+  "groupNoGroups": "No groups yet",
+  "groupNoApprovals": "No group approvals to review",
+  "groupInvitationCreated": "Invite code: {code}",
+  "@groupInvitationCreated": {
+    "placeholders": { "code": { "type": "String" } }
   }
 }

@@ -12,6 +12,7 @@ import {
 } from "./write_with_change_log";
 import { cleanupSocialForAccount, cleanupSocialForProfile } from "./social_graph";
 import { cleanupSchoolAccess } from "./schools";
+import { cleanupGroupsForAccount } from "./groups";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Account & learner-data deletion
@@ -45,6 +46,7 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
   const uid = user.uid;
   const now = admin.firestore.Timestamp.now();
   logger.info(`onUserDeleted: starting cascade for uid=${uid}`);
+  await cleanupGroupsForAccount(uid);
   await cleanupSocialForAccount(uid);
   await cleanupSchoolAccess(uid);
 
@@ -155,6 +157,7 @@ export const deleteLearnerProfile = onCall(CALL_OPTS, async (request) => {
     .doc(profileId);
 
   logger.info(`deleteLearnerProfile: uid=${uid} profileId=${profileId}`);
+  await cleanupGroupsForAccount(uid, profileId);
   await cleanupSchoolAccess(uid, profileId);
   await cleanupSocialForProfile(uid, profileId);
   await db.recursiveDelete(profileRef);
@@ -226,6 +229,7 @@ export const deleteAccountData = onCall(CALL_OPTS, async (request) => {
 
   const userDocRef = db.collection("users").doc(uid);
   logger.info(`deleteAccountData: starting for uid=${uid}`);
+  await cleanupGroupsForAccount(uid);
   await cleanupSchoolAccess(uid);
   await cleanupSocialForAccount(uid);
   await db.recursiveDelete(userDocRef);

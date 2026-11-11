@@ -4576,5 +4576,33 @@
   "communitySiyumCount": "{count, plural, =1{סיום אחד} other{{count} סיומים}}",
   "@communitySiyumCount": {
     "placeholders": { "count": { "type": "int" } }
+  },
+  "groupTitle": "קבוצות לימוד",
+  "groupCreate": "יצירת קבוצה",
+  "groupName": "שם הקבוצה",
+  "groupSchoolIdOptional": "מזהה בית ספר (השאירו ריק לקבוצה פרטית)",
+  "groupCreateSuccess": "הקבוצה נוצרה",
+  "groupInvite": "יצירת הזמנה",
+  "groupInviteCode": "קוד הזמנה",
+  "groupJoin": "הצטרפות עם הזמנה",
+  "groupInviteEntry": "הזנת קוד הזמנה",
+  "groupJoinConfirm": "בדיקה והצטרפות",
+  "groupJoinConsent": "חברי הקבוצה האלה יוכלו לראות את חלקי הפרופיל שתבחרו לשתף עבור הילד הזה.",
+  "groupMembers": "חברים",
+  "groupAdmin": "מנהל",
+  "groupPrivate": "קבוצה פרטית",
+  "groupSchoolHosted": "קבוצת בית ספר",
+  "groupLeave": "עזיבת הקבוצה",
+  "groupTransferAdmin": "העברה לתפקיד מנהל",
+  "groupRemoveMember": "הסרת חבר",
+  "groupDelete": "מחיקת הקבוצה",
+  "groupParentApprovals": "אישורי פרופיל בקבוצה",
+  "groupApproveMember": "לאפשר לחבר הזה לראות את הפרופיל המשותף של הילד",
+  "groupRevokeMember": "ביטול האישור",
+  "groupNoGroups": "אין עדיין קבוצות",
+  "groupNoApprovals": "אין אישורים קבוצתיים לבדיקה",
+  "groupInvitationCreated": "קוד הזמנה: {code}",
+  "@groupInvitationCreated": {
+    "placeholders": { "code": { "type": "String" } }
   }
 }

@@ -57,6 +57,8 @@ const ROOT_COLLECTIONS = [
   'social_summaries',
   'social_summary_visibility',
   'social_summary_rate_limits',
+  'learning_groups', 'learning_group_invites', 'learning_group_parent_approvals',
+  'learning_group_audit_logs', 'learning_group_rate_limits',
 ];
 
 /**
