@@ -2,6 +2,7 @@ import * as crypto from "crypto";
 import admin from "firebase-admin";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { assertActiveParentSessionInTransaction } from "./parent_session_validation";
+import { refreshSocialMembershipMirror, revokeSocialGrantsForMembershipChange } from "./social_graph";
 import { CALL_OPTS, db } from "./shared";
 
 const MAX_SCHOOLS_PER_ACCOUNT = 10;
@@ -105,17 +106,38 @@ async function setSummaryReader(ref: ProfileRef, uid: string, schoolId: string, 
     }
   });
 }
-async function refreshSchoolReaders(schoolId: string) {
-  const [members, staff] = await Promise.all([
+async function refreshSchoolReaders(schoolId: string, forceInactive = false) {
+  const [school, members, staff] = await Promise.all([
+    schools().doc(schoolId).get(),
     memberships().where("school_id", "==", schoolId).get(),
     admins().where("school_id", "==", schoolId).get(),
   ]);
-  const activeStaff = staff.docs.filter((doc) => doc.get("state") === "active").map((doc) => String(doc.get("owner_uid")));
-  const allStaff = staff.docs.map((doc) => String(doc.get("owner_uid")));
+  const schoolIsActive = !forceInactive && school.exists && school.get("status") === "active";
   for (const member of members.docs) {
     const ref = { ownerUid: String(member.get("owner_uid")), profileId: String(member.get("profile_id")) };
-    const staffUids = member.get("state") === "active" ? activeStaff : allStaff;
-    await Promise.all(staffUids.map((uid) => setSummaryReader(ref, uid, schoolId, member.get("state") === "active")));
+    const memberIsActive = member.get("state") === "active";
+    await Promise.all(staff.docs.map((doc) => {
+      const canRead = schoolIsActive && memberIsActive && doc.get("state") === "active";
+      return setSummaryReader(ref, String(doc.get("owner_uid")), schoolId, canRead);
+    }));
+  }
+}
+async function revokeSchoolDependentSocial(ref: ProfileRef, schoolId: string) {
+  await revokeSocialGrantsForMembershipChange(summaryId(ref), schoolId);
+}
+async function revokeSchoolReaderForMember(schoolId: string, ref: ProfileRef) {
+  const staff = await admins().where("school_id", "==", schoolId).get();
+  await Promise.all(staff.docs.map((doc) =>
+    setSummaryReader(ref, String(doc.get("owner_uid")), schoolId, false),
+  ));
+}
+async function revokeSchoolReaderForUid(schoolId: string, uid: string) {
+  const members = await memberships().where("school_id", "==", schoolId).get();
+  for (const member of members.docs) {
+    await setSummaryReader({
+      ownerUid: String(member.get("owner_uid")),
+      profileId: String(member.get("profile_id")),
+    }, uid, schoolId, false);
   }
 }
 
@@ -139,7 +161,7 @@ export const createSchool = onCall(CALL_OPTS, async (request) => {
     if (existing.size >= MAX_SCHOOLS_PER_ACCOUNT) throw new HttpsError("resource-exhausted", "School administrator limit reached");
     txn.create(schoolRef, {
       name, created_by_uid: uid, created_by_profile_id: profileId,
-      created_at: now, updated_at: now, status: "active", verified: false,
+      created_at: now, updated_at: now, status: "active", verified: false, membership_revision: 0,
     });
     txn.create(adminRef, { school_id: schoolRef.id, owner_uid: uid, profile_id: profileId, role: "admin", state: "active", created_at: now });
   });
@@ -231,9 +253,11 @@ export const joinSchoolWithInvite = onCall(CALL_OPTS, async (request) => {
       role: "member", state: "active", progress_consent: true,
       joined_at: now, updated_at: now,
     });
+    txn.update(schools().doc(schoolId), { membership_revision: admin.firestore.FieldValue.increment(1), updated_at: now });
     txn.set(audit().doc(), { school_id: schoolId, actor_uid: uid, subject_uid: uid, action: "school_member_joined", at: now, details: { mode } });
     return { schoolId, name: school.get("name") };
   });
+  await refreshSocialMembershipMirror(summaryId({ ownerUid: uid, profileId }));
   await refreshSchoolReaders(result.schoolId);
   return { ...result, success: true };
 });
@@ -292,7 +316,17 @@ async function changeMember(schoolId: string, targetUid: string, profileId: stri
     else if (targetUid !== actorUid) throw new HttpsError("permission-denied", "A learner can only leave their own membership");
     const snap = await txn.get(memberRef);
     if (!snap.exists || snap.get("state") !== "active") throw new HttpsError("not-found", "Membership is unavailable");
+  });
+  await revokeSchoolDependentSocial({ ownerUid: targetUid, profileId }, schoolId);
+  await revokeSchoolReaderForMember(schoolId, { ownerUid: targetUid, profileId });
+  await db.runTransaction(async (txn) => {
+    await requireActiveSchool(txn, schools().doc(schoolId));
+    if (action === "remove") await requireAdmin(txn, schoolId, actorUid);
+    else if (targetUid !== actorUid) throw new HttpsError("permission-denied", "A learner can only leave their own membership");
+    const snap = await txn.get(memberRef);
+    if (!snap.exists || snap.get("state") !== "active") throw new HttpsError("not-found", "Membership is unavailable");
     txn.update(memberRef, { state: "removed", ended_at: now, ended_by_uid: actorUid, reason_code: reason ?? null, updated_at: now });
+    txn.update(schools().doc(schoolId), { membership_revision: admin.firestore.FieldValue.increment(1), updated_at: now });
     txn.set(audit().doc(), { school_id: schoolId, actor_uid: actorUid, subject_uid: targetUid, action: action === "remove" ? "school_member_removed" : "school_member_left", at: now, details: { profile_id: profileId, reason_code: reason ?? null } });
   });
   await setSummaryReader({ ownerUid: targetUid, profileId }, actorUid, schoolId, false);
@@ -339,6 +373,7 @@ export const addSchoolAdmin = onCall(CALL_OPTS, async (request) => {
     if (!member.exists || member.get("state") !== "active") throw new HttpsError("failed-precondition", "Only active members can become admins");
     txn.set(admins().doc(staffId(schoolId, targetUid)), { school_id: schoolId, owner_uid: targetUid, profile_id: profileId, role: "admin", state: "active", created_at: now, updated_at: now });
     txn.set(memberRef, { role: "admin", updated_at: now }, { merge: true });
+    txn.update(schools().doc(schoolId), { membership_revision: admin.firestore.FieldValue.increment(1), updated_at: now });
     txn.set(audit().doc(), { school_id: schoolId, actor_uid: uid, subject_uid: targetUid, action: "school_admin_added", at: now });
   });
   await refreshSchoolReaders(schoolId);
@@ -354,12 +389,21 @@ export const removeSchoolAdmin = onCall(CALL_OPTS, async (request) => {
     await requireActiveSchool(txn, schools().doc(schoolId));
     await requireAdmin(txn, schoolId, uid);
     if (uid === targetUid) throw new HttpsError("failed-precondition", "Transfer admin rights before leaving the school");
+    const target = await txn.get(admins().doc(staffId(schoolId, targetUid)));
+    if (!target.exists || target.get("state") !== "active") throw new HttpsError("not-found", "School administrator is unavailable");
+  });
+  await revokeSchoolReaderForUid(schoolId, targetUid);
+  await db.runTransaction(async (txn) => {
+    await requireActiveSchool(txn, schools().doc(schoolId));
+    await requireAdmin(txn, schoolId, uid);
+    if (uid === targetUid) throw new HttpsError("failed-precondition", "Transfer admin rights before leaving the school");
     const ref = admins().doc(staffId(schoolId, targetUid));
     const target = await txn.get(ref);
     if (!target.exists || target.get("state") !== "active") throw new HttpsError("not-found", "School administrator is unavailable");
     txn.update(ref, { state: "removed", ended_at: admin.firestore.Timestamp.now() });
     const memberRef = memberships().doc(membershipId(schoolId, { ownerUid: targetUid, profileId: String(target.get("profile_id") ?? "") }));
     txn.set(memberRef, { role: "member", updated_at: admin.firestore.Timestamp.now() }, { merge: true });
+    txn.update(schools().doc(schoolId), { membership_revision: admin.firestore.FieldValue.increment(1), updated_at: admin.firestore.Timestamp.now() });
     txn.set(audit().doc(), { school_id: schoolId, actor_uid: uid, subject_uid: targetUid, action: "school_admin_removed", at: admin.firestore.Timestamp.now() });
   });
   await refreshSchoolReaders(schoolId);
@@ -377,6 +421,14 @@ export const transferSchoolAdmin = onCall(CALL_OPTS, async (request) => {
   const now = admin.firestore.Timestamp.now();
   await db.runTransaction(async (txn) => {
     await requireActiveSchool(txn, schools().doc(schoolId));
+    await requireAdmin(txn, schoolId, uid);
+    const memberRef = memberships().doc(membershipId(schoolId, { ownerUid: targetUid, profileId }));
+    const member = await txn.get(memberRef);
+    if (!member.exists || member.get("state") !== "active") throw new HttpsError("failed-precondition", "Only an active member can receive admin rights");
+  });
+  await revokeSchoolReaderForUid(schoolId, uid);
+  await db.runTransaction(async (txn) => {
+    await requireActiveSchool(txn, schools().doc(schoolId));
     const source = await requireAdmin(txn, schoolId, uid);
     const memberRef = memberships().doc(membershipId(schoolId, { ownerUid: targetUid, profileId }));
     const member = await txn.get(memberRef);
@@ -384,6 +436,7 @@ export const transferSchoolAdmin = onCall(CALL_OPTS, async (request) => {
     txn.set(admins().doc(staffId(schoolId, targetUid)), { school_id: schoolId, owner_uid: targetUid, profile_id: profileId, role: "admin", state: "active", created_at: now, updated_at: now });
     txn.update(source.ref, { state: "transferred", ended_at: now, transferred_to_uid: targetUid });
     txn.set(memberRef, { role: "admin", updated_at: now }, { merge: true });
+    txn.update(schools().doc(schoolId), { membership_revision: admin.firestore.FieldValue.increment(1), updated_at: now });
     txn.set(audit().doc(), { school_id: schoolId, actor_uid: uid, subject_uid: targetUid, action: "school_admin_transferred", at: now });
   });
   await refreshSchoolReaders(schoolId);
@@ -425,13 +478,44 @@ export const setSchoolSuspended = onCall(CALL_OPTS, async (request) => {
   exactKeys(data, ["schoolId", "suspended"]);
   if (typeof data.suspended !== "boolean") throw new HttpsError("invalid-argument", "suspended must be a boolean");
   const ref = schoolRef(data.schoolId);
-  await ref.update({ status: data.suspended ? "suspended" : "active", updated_at: admin.firestore.Timestamp.now() });
+  if (data.suspended) {
+    const school = await ref.get();
+    if (!school.exists || !["active", "suspended"].includes(String(school.get("status")))) {
+      throw new HttpsError("failed-precondition", "School cannot be suspended in its current state");
+    }
+    const revision = Number(school.get("membership_revision") ?? 0);
+    const memberSnap = await memberships().where("school_id", "==", ref.id).get();
+    for (const member of memberSnap.docs) {
+      await revokeSchoolDependentSocial({
+        ownerUid: String(member.get("owner_uid")),
+        profileId: String(member.get("profile_id")),
+      }, ref.id);
+    }
+    await refreshSchoolReaders(ref.id, true);
+    await db.runTransaction(async (txn) => {
+      const current = await txn.get(ref);
+      if (!current.exists || !["active", "suspended"].includes(String(current.get("status"))) || Number(current.get("membership_revision") ?? 0) !== revision) {
+        throw new HttpsError("aborted", "School memberships changed during suspension; retry the operation");
+      }
+      txn.update(ref, { status: "suspended", updated_at: admin.firestore.Timestamp.now() });
+    });
+  } else {
+    await ref.update({ status: "active", updated_at: admin.firestore.Timestamp.now() });
+    const memberSnap = await memberships().where("school_id", "==", ref.id).where("state", "==", "active").get();
+    for (const member of memberSnap.docs) {
+      await refreshSocialMembershipMirror(summaryId({
+        ownerUid: String(member.get("owner_uid")),
+        profileId: String(member.get("profile_id")),
+      }));
+    }
+  }
   if (data.suspended) {
     const inviteSnap = await invites().where("school_id", "==", ref.id).where("state", "==", "active").get();
     const batch = db.batch();
     inviteSnap.docs.forEach((doc) => batch.update(doc.ref, { state: "revoked", updated_at: admin.firestore.Timestamp.now() }));
     await batch.commit();
   }
+  if (!data.suspended) await refreshSchoolReaders(ref.id);
   await auditEvent(ref.id, request.auth!.uid, data.suspended ? "school_suspended" : "school_unsuspended");
   return { success: true };
 });
@@ -441,10 +525,26 @@ export const deleteSchool = onCall(CALL_OPTS, async (request) => {
   const data = request.data ?? {};
   exactKeys(data, ["schoolId"]);
   const ref = schoolRef(data.schoolId);
-  await db.runTransaction(async (txn) => {
+  const preflight = await db.runTransaction(async (txn) => {
     const school = await txn.get(ref);
     if (!school.exists || !["active", "suspended"].includes(String(school.get("status")))) {
       throw new HttpsError("not-found", "School is unavailable");
+    }
+    await requireAdmin(txn, ref.id, uid);
+    const members = await txn.get(memberships().where("school_id", "==", ref.id));
+    return { members, revision: Number(school.get("membership_revision") ?? 0) };
+  });
+  for (const member of preflight.members.docs) {
+    await revokeSchoolDependentSocial({
+      ownerUid: String(member.get("owner_uid")),
+      profileId: String(member.get("profile_id")),
+    }, ref.id);
+  }
+  await refreshSchoolReaders(ref.id, true);
+  await db.runTransaction(async (txn) => {
+    const school = await txn.get(ref);
+    if (!school.exists || !["active", "suspended"].includes(String(school.get("status"))) || Number(school.get("membership_revision") ?? 0) !== preflight.revision) {
+      throw new HttpsError("aborted", "School memberships changed during deletion; retry the operation");
     }
     await requireAdmin(txn, ref.id, uid);
     txn.update(ref, { status: "deleting", updated_at: admin.firestore.Timestamp.now() });
@@ -477,16 +577,32 @@ export async function cleanupSchoolAccess(ownerUid: string, profileId?: string):
   for (const member of members.docs) {
     const schoolId = String(member.get("school_id"));
     const ref = { ownerUid, profileId: String(member.get("profile_id")) };
-    await setSummaryReader(ref, ownerUid, schoolId, false);
+    await revokeSchoolDependentSocial(ref, schoolId);
+    await revokeSchoolReaderForMember(schoolId, ref);
     await member.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now(), removal_reason: "account_deleted" });
     await refreshSchoolReaders(schoolId);
   }
-  const adminSnap = await admins().where("owner_uid", "==", ownerUid).get();
+  let adminQuery: FirebaseFirestore.Query = admins().where("owner_uid", "==", ownerUid);
+  if (profileId) adminQuery = adminQuery.where("profile_id", "==", profileId);
+  const adminSnap = await adminQuery.get();
   for (const doc of adminSnap.docs) {
     const schoolId = String(doc.get("school_id"));
     const active = await admins().where("school_id", "==", schoolId).where("state", "==", "active").get();
-    if (active.size > 1) await doc.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now() });
-    else await schools().doc(schoolId).update({ status: "suspended", updated_at: admin.firestore.Timestamp.now() }).catch(() => undefined);
+    if (active.size > 1) {
+      await revokeSchoolReaderForUid(schoolId, ownerUid);
+      await doc.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now() });
+    } else {
+      const schoolMembers = await memberships().where("school_id", "==", schoolId).get();
+      for (const member of schoolMembers.docs) {
+        await revokeSchoolDependentSocial({
+          ownerUid: String(member.get("owner_uid")),
+          profileId: String(member.get("profile_id")),
+        }, schoolId);
+      }
+      await refreshSchoolReaders(schoolId, true);
+      await doc.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now() });
+      await schools().doc(schoolId).update({ status: "suspended", updated_at: admin.firestore.Timestamp.now() }).catch(() => undefined);
+    }
     await refreshSchoolReaders(schoolId);
   }
 }
