@@ -14,7 +14,7 @@ void main() {
     });
 
     expect(member.summaryId, 'opaque-summary-id');
-    expect(member.mode, 'child');
+    expect(member.mode, LearningGroupMemberMode.child);
   });
 
   test('group member rejects a response without its summary id', () {

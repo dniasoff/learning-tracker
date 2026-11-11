@@ -37,6 +37,8 @@ final class LearningGroupSummary {
   }
 }
 
+enum LearningGroupMemberMode { adult, child }
+
 final class LearningGroupMember {
   const LearningGroupMember({
     required this.memberId,
@@ -53,7 +55,7 @@ final class LearningGroupMember {
   final String displayName;
   final String avatarId;
   final String role;
-  final String mode;
+  final LearningGroupMemberMode mode;
   final bool isSelf;
 
   factory LearningGroupMember.fromWire(Object? value) {
@@ -73,7 +75,9 @@ final class LearningGroupMember {
       displayName: map['displayName'] as String,
       avatarId: map['avatarId'] as String,
       role: map['role'] as String,
-      mode: map['mode'] as String,
+      mode: map['mode'] == 'adult'
+          ? LearningGroupMemberMode.adult
+          : LearningGroupMemberMode.child,
       isSelf: map['isSelf'] as bool,
     );
   }
